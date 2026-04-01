@@ -85,7 +85,7 @@ def test_invalid_modem_config(fixture_path: Path):
 # │ with_optional_identity   │ notes                       │ "Test notes"   │
 # │ auth_form.json           │ auth.encoding               │ "base64"       │
 # │ auth_url_token.json      │ auth.ajax_login             │ True           │
-# │ auth_url_token.json      │ session.token_prefix        │ "ct_"          │
+# │ auth_url_token.json      │ auth.token_prefix           │ "ct_"          │
 # │ auth_form_pbkdf2.json    │ auth.pbkdf2_iterations      │ 1000           │
 # │ auth_form_nonce.json     │ auth.nonce_length           │ 8              │
 # │ auth_basic.json          │ auth.challenge_cookie       │ False          │
@@ -107,7 +107,7 @@ FIELD_ACCESS_CASES = [
     ("with_optional_identity.json",      "notes",                   "Test notes"),
     ("auth_form.json",                   "auth.encoding",           "base64"),
     ("auth_url_token.json",              "auth.ajax_login",         True),
-    ("auth_url_token.json",              "session.token_prefix",    "ct_"),
+    ("auth_url_token.json",              "auth.token_prefix",       "ct_"),
     ("auth_form_pbkdf2.json",            "auth.pbkdf2_iterations",  1000),
     ("auth_form_pbkdf2.json",            "auth.csrf_header",        "X-CSRF-TOKEN"),
     ("auth_form_nonce.json",             "auth.nonce_length",       8),

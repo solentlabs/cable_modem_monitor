@@ -193,16 +193,22 @@ from the login response body during authentication.
 
 **Flow:**
 
-1. Auth manager authenticates via form POST
-2. Login response body contains the session token
-3. Auth manager stores the token and passes it to the loader via config
-4. Loader appends the token to each page URL:
+1. Auth manager authenticates via URL-encoded credentials (base64 in
+   query string)
+2. Auth manager evaluates the login response using `success_indicator`:
+   - Body **contains** indicator → body is the data page, no token
+   - Body **does not contain** indicator → body is the session token
+   - Empty body → fall back to `cookie_name`
+3. Token stored in `auth_context.url_token`
+4. Collector passes token to loader
+5. Loader appends the token to each page URL:
    `{protocol}://{host}{path}?{token_prefix}{token}`
 
-The token prefix (e.g., `ct_`) is configured in modem.yaml's session
-section (`session.token_prefix`). The token value itself is extracted
-by the auth manager during login. The loader doesn't know how the
-token was obtained — it just appends whatever the auth manager provides.
+The token prefix (e.g., `ct_`) and cookie name are configured on the
+auth strategy (`auth.token_prefix`, `auth.cookie_name`). The collector
+prefers `auth_context.url_token` (body-derived) over cookie extraction.
+The loader doesn't know how the token was obtained — it just appends
+whatever the collector provides.
 
 ---
 
@@ -237,6 +243,25 @@ policy (see Signal and Policy Separation in `ARCHITECTURE.md`).
 | Login page on data URL | `LOAD_AUTH` | Clear session, increment auth streak |
 | Empty response body | Empty parsed result | Parser handles gracefully |
 | SSL handshake failure | `SSLError` | Check `legacy_ssl` flag |
+
+---
+
+## HNAP Header Parsing Warning Suppression
+
+Some HNAP modems send malformed HTTP headers with debug timing data
+prepended to header values. urllib3 emits a
+`HeaderParsingError` warning for each malformed header, producing
+noisy log entries on every poll cycle.
+
+Core suppresses these warnings globally alongside the existing
+`InsecureRequestWarning` suppression in `connectivity.py`. The filter
+is harmless for modems that don't trigger it — standard urllib3 header
+parsing warnings are infrastructure noise for cable modem monitoring,
+not actionable signals.
+
+**Implementation:** A `logging.Filter` on the `urllib3.connectionpool`
+logger that drops log records containing "Failed to parse headers."
+Applied once at module import time.
 
 ---
 

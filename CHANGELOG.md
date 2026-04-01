@@ -9,6 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **HNAP stale session recovery** — Reused HNAP sessions that return
+  HTTP errors now trigger re-authentication on the next poll cycle.
+  v3.14 uses signal-based recovery (`HNAPLoadError` → `LOAD_AUTH`)
+  instead of v3.13's within-poll zero-channel heuristic. (Related
+  to #117)
+- **url_token body token extraction** — `UrlTokenAuthManager` now
+  extracts the session token from the login response body (not just
+  cookies). On some SB8200 firmware the body token differs from the
+  cookie value. Uses `success_indicator` as a response type
+  discriminator: body contains indicator → data page (no token);
+  body is short string → token; empty body → cookie fallback.
+  (Related to #81)
+- **Pre-login cookie clearing** — `UrlTokenAuthManager` clears the
+  stale session cookie before sending the login request. Modems that
+  reject re-login when an existing session cookie is present (SB8200)
+  no longer fail on session re-establishment.
+- **Form auth Referer header** — `FormAuthManager` now sends
+  `Referer: {base_url}` on login POST requests. Defensive measure
+  restored from v3.13 for firmware that validates the Referer header.
+- **HNAP header parsing warnings** — Added urllib3 warning filter for
+  HNAP modems that send malformed HTTP headers with debug timing data
+  prepended (S34 firmware quirk). Suppresses noisy "Failed to parse
+  headers" warnings in HA logs on every poll cycle.
+- **Auth log_level parameter** — All 8 auth managers now accept a
+  `log_level` parameter, consistent with the existing action executor
+  pattern. Config flow auth logs at INFO for visibility; polling auth
+  logs at DEBUG to keep steady-state logs clean.
+
+### Added
+
+- **HNAP auth diagnostics** — `HnapAuthDiagnostics` dataclass captures
+  challenge and login request/response pairs (passwords redacted) for
+  field debugging. Accessible via `HnapAuthManager.last_auth_diagnostics`.
+
+### Changed
+
+- **cookie_name ownership** — `cookie_name` moved from `SessionConfig`
+  to individual auth strategy configs (`FormAuth`, `BasicAuth`,
+  `UrlTokenAuth`, etc.). `token_prefix` moved to `UrlTokenAuth`.
+  `SessionConfig` is now lifecycle-only (`max_concurrent`, `headers`).
+  This restores the v3.13 boundary where auth owns the cookie it
+  produces. 14 modem.yaml files, collector, test harness, and MCP
+  config generator updated. 7 spec files updated.
+
+## [3.14.0-alpha.6] - 2026-04-01
+
+### Fixed
+
 - **HNAP PrivateKey cookie** — HNAP data requests now include the
   `PrivateKey` cookie alongside `uid`, matching the Login.js protocol.
   Some firmware returns HTTP 500 without it. Regression from v3.13

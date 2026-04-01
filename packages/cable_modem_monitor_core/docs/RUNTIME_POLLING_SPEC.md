@@ -51,7 +51,7 @@ decides whether to retry, backoff, or report.
 - Validates session state before each poll using strategy-specific
   checks: HNAP verifies `uid` cookie + private key (the private key is
   also set as a `PrivateKey` cookie); cookie-based strategies verify
-  `session.cookie_name` is present in the cookie jar;
+  `auth.cookie_name` is present in the cookie jar;
   basic and none are stateless (always valid)
 - Backs off on failure (suppresses login for N polls after lockout)
 - Executes `actions.logout` for single-session modems after each poll

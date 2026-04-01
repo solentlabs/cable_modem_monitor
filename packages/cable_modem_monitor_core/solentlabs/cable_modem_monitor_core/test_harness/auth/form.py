@@ -30,7 +30,7 @@ class FormAuthHandler(AuthHandler):
     Args:
         login_path: The login endpoint path (from modem.yaml ``auth.action``).
         cookie_name: Session cookie name if cookie-based (from
-            modem.yaml ``session.cookie_name``). Empty for IP-based.
+            modem.yaml ``auth.cookie_name``). Empty for IP-based.
         logout_path: The logout endpoint path (from modem.yaml
             ``actions.logout.endpoint``). Empty if no logout.
         restart_path: The restart endpoint path (from modem.yaml

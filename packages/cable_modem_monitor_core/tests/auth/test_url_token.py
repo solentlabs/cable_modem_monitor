@@ -59,8 +59,13 @@ class TestUrlTokenAuthManager:
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
 
-    def test_success_indicator_missing_fails(self, session: requests.Session) -> None:
-        """Failure when success indicator is not in response."""
+    def test_success_indicator_absent_extracts_body_as_token(self, session: requests.Session) -> None:
+        """Body without success_indicator is treated as session token.
+
+        success_indicator is a response type discriminator:
+        - Present → body is data page
+        - Absent → body is the token string
+        """
         entries, _ = load_auth_fixture("har_url_token_login_error.json")
         with HARMockServer(entries) as server:
             config = UrlTokenAuth(
@@ -72,8 +77,9 @@ class TestUrlTokenAuthManager:
             manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
-            assert result.success is False
-            assert "indicator" in result.error
+            # New behavior: body without indicator = token extraction (not failure)
+            assert result.success is True
+            assert result.auth_context.url_token == "Error: bad credentials"
 
     def test_ajax_login_header(self, session: requests.Session) -> None:
         """AJAX login adds X-Requested-With header."""

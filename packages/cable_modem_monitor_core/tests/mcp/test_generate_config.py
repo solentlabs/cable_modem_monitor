@@ -110,23 +110,23 @@ class TestSessionBehavior:
         fixture = load_fixture(self._find_fixture("table_no_cookie"))
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         modem = yaml.safe_load(result.modem_yaml)
-        assert "session" not in modem or not modem.get("session", {}).get("cookie_name")
+        assert not modem.get("auth", {}).get("cookie_name")
 
     def test_session_with_cookie(self) -> None:
-        """Session with cookie_name appears in modem.yaml."""
+        """Session with cookie_name appears on auth in modem.yaml."""
         fixture = load_fixture(self._find_fixture("table_form_auth"))
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         modem = yaml.safe_load(result.modem_yaml)
-        assert modem["session"]["cookie_name"] == "session"
+        assert modem["auth"]["cookie_name"] == "session"
         assert modem["session"]["max_concurrent"] == 1
 
     def test_url_token_session(self) -> None:
-        """URL token session has cookie_name and token_prefix."""
+        """URL token session has cookie_name and token_prefix on auth."""
         fixture = load_fixture(self._find_fixture("url_token_with_session"))
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         modem = yaml.safe_load(result.modem_yaml)
-        assert modem["session"]["cookie_name"] == "sessionId"
-        assert modem["session"]["token_prefix"] == "ct_"
+        assert modem["auth"]["cookie_name"] == "sessionId"
+        assert modem["auth"]["token_prefix"] == "ct_"
 
 
 # ---------------------------------------------------------------------------

@@ -15,8 +15,6 @@ auth:
   encoding: plain
   success:
     redirect: "/cgi-bin/luci/admin/gateway/wan_status"
-
-session:
   cookie_name: "sysauth"
 
 hardware:

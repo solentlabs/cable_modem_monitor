@@ -366,9 +366,9 @@ the same session mechanism.
    GET /cmconnectionstatus.html?{login_prefix}{base64_token}
    Headers: Authorization: Basic {base64_token}  (if auth_header_data)
             X-Requested-With: XMLHttpRequest      (if ajax_login)
-3. Response sets session cookie (session.cookie_name)
+3. Response sets session cookie (auth.cookie_name)
 4. Subsequent data requests:
-   GET /cmswinfo.html?{session.token_prefix}{session_token}
+   GET /cmswinfo.html?{auth.token_prefix}{session_token}
 ```
 
 **Auth config fields** (login mechanics only):
@@ -424,7 +424,7 @@ CSRF tokens, and a JavaScript login flow that performs double PBKDF2 hashing.
 2. Client computes: hash1 = PBKDF2(password, salt, iterations, keylen)
 3. Client computes: hash2 = PBKDF2(hash1, saltwebui, iterations, keylen)
 4. POST /api/v1/session/login  { password: "<hash2>" }
-   → Response: sets PHPSESSID cookie (session.cookie_name), returns CSRF token
+   → Response: sets PHPSESSID cookie (auth.cookie_name), returns CSRF token
 5. Subsequent GETs use PHPSESSID cookie only (no CSRF on GETs)
 6. Subsequent POSTs (e.g., logout) include PHPSESSID cookie + X-CSRF-TOKEN header (auth.csrf_header)
    If csrf_init_endpoint is set, fetch a fresh token before each POST
@@ -510,7 +510,7 @@ credentials before submission.
 4. POST login (login_endpoint):
    {"EncryptData": "<hex>", "Name": "<user>", "AuthData": "<encrypt_aad>"}
    → Response: {"p_status": "Match", "encryptData": "<hex>", ...}
-   → Sets session cookie (session.cookie_name)
+   → Sets session cookie (auth.cookie_name)
 5. Decrypt response:
    AES-CCM decrypt encryptData with aad=decrypt_aad → CSRF nonce
    → Set csrf_header on session for subsequent requests
@@ -1238,7 +1238,7 @@ values, not different behaviors. Every variation maps to a config field:
 | Password field name | `auth.password_field` |
 | Password encoding | `auth.encoding` |
 | HMAC algorithm | `auth.hmac_algorithm` |
-| Session cookie name | `session.cookie_name` |
+| Session cookie name | `auth.cookie_name` |
 | Logout mechanism | `actions.logout` (shared action schema) |
 | Concurrency limit | `session.max_concurrent` |
 | CSRF token | `auth.csrf_header` (strategy-specific; `form_pbkdf2` currently) |

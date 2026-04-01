@@ -103,7 +103,7 @@ class TestXmlFormatHardStop:
 
 
 # ---------------------------------------------------------------------------
-# auth:none + session.cookie_name warning — fixture-driven
+# auth:none validation warnings — fixture-driven
 # ---------------------------------------------------------------------------
 
 WARNING_FIXTURES = sorted(WARNING_DIR.glob("*.json")) if WARNING_DIR.is_dir() else []
@@ -115,7 +115,7 @@ WARNING_FIXTURES = sorted(WARNING_DIR.glob("*.json")) if WARNING_DIR.is_dir() el
     ids=[f.stem for f in WARNING_FIXTURES],
 )
 def test_auth_none_session_cookie_warning(fixture_path: Path) -> None:
-    """ModemConfig emits (or not) a warning for auth:none + session.cookie_name."""
+    """ModemConfig validation warnings (fixture-driven)."""
     fixture = load_fixture(fixture_path)
     expected_warning = fixture.get("_expected_warning")
 

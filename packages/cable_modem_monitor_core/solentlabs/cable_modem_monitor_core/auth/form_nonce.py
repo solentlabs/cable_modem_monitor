@@ -39,6 +39,7 @@ class FormNonceAuthManager(BaseAuthManager):
         password: str,
         *,
         timeout: int = 10,
+        log_level: int = logging.DEBUG,
     ) -> AuthResult:
         """Execute the nonce-based login flow.
 
@@ -99,7 +100,8 @@ class FormNonceAuthManager(BaseAuthManager):
         if text.startswith(config.success_prefix):
             response_url = text[len(config.success_prefix) :].strip()
 
-        _logger.debug(
+        _logger.log(
+            log_level,
             "Nonce login succeeded: status=%d, redirect=%s",
             response.status_code,
             response_url,

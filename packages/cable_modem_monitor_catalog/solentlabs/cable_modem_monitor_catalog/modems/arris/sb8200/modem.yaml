@@ -10,8 +10,6 @@ auth:
   success_indicator: "Downstream Bonded Channels"
   ajax_login: true
   auth_header_data: false
-
-session:
   cookie_name: "sessionId"
   token_prefix: "ct_"
 

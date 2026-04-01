@@ -29,7 +29,12 @@ _SESSION_COOKIE_INDICATORS: frozenset[str] = get_session_cookie_indicators()
 
 @dataclass
 class SessionDetail:
-    """Result of Phase 3 session detection."""
+    """Result of Phase 3 session detection.
+
+    ``cookie_name`` and ``token_prefix`` are detected here but belong
+    on the auth strategy in modem.yaml (auth owns the cookie it
+    produces). The MCP config generator places them on the auth block.
+    """
 
     cookie_name: str = ""
     max_concurrent: int | None = None

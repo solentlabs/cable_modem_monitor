@@ -10,8 +10,6 @@ auth:
   username_field: user
   password_field: pws
   encoding: plain
-
-session:
   cookie_name: "userid"
 
 hardware:

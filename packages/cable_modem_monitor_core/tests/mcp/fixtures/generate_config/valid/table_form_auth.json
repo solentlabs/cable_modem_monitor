@@ -19,11 +19,10 @@
       "confidence": "high"
     },
     "session": {
-      "cookie_name": "session",
       "max_concurrent": 1,
       "max_concurrent_confidence": "unknown",
       "headers": {},
-      "token_prefix": ""
+      "cookie_name": "session"
     },
     "actions": {
       "logout": {"type": "http", "method": "GET", "endpoint": "/logout.asp"},

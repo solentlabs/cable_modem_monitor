@@ -12,8 +12,6 @@ auth:
   username_field: loginName
   password_field: loginPassword
   encoding: plain
-
-session:
   cookie_name: "XSRF_TOKEN"
 
 hardware:

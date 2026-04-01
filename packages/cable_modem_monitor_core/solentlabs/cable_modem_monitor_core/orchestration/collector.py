@@ -32,6 +32,7 @@ from .signals import CollectorSignal
 
 _logger = logging.getLogger(__name__)
 _LOGOUT_LOG_LEVEL: Final[int] = logging.DEBUG
+_DEFAULT_AUTH_LOG_LEVEL: Final[int] = logging.DEBUG
 
 
 class LoginLockoutError(Exception):
@@ -242,9 +243,10 @@ class ModemDataCollector:
             has_key = bool(self._auth_context.private_key)
             return has_uid and has_key
 
-        # Cookie-based: verify session cookie
-        if self._modem_config.session and self._modem_config.session.cookie_name:
-            return self._modem_config.session.cookie_name in self._session.cookies
+        # Cookie-based: verify session cookie (cookie_name is on auth config)
+        cookie_name = getattr(self._modem_config.auth, "cookie_name", "")
+        if cookie_name:
+            return cookie_name in self._session.cookies
 
         # URL token: verify token exists
         if self._auth_context.url_token:
@@ -267,12 +269,21 @@ class ModemDataCollector:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def authenticate(self) -> AuthResult:
+    def authenticate(
+        self,
+        *,
+        log_level: int = _DEFAULT_AUTH_LOG_LEVEL,
+    ) -> AuthResult:
         """Authenticate the session if not already valid.
 
         Short-circuits if the session is already valid. Called internally
         before data collection and externally by the orchestrator before
         restart actions.
+
+        Args:
+            log_level: Log level for auth manager non-error messages.
+                Config flow passes ``logging.INFO`` for visibility;
+                polling uses the default ``logging.DEBUG``.
         """
         if self.session_is_valid:
             self._session_reused = True
@@ -287,6 +298,7 @@ class ModemDataCollector:
             self._username,
             self._password,
             timeout=self._modem_config.timeout,
+            log_level=log_level,
         )
 
         if result.success:
@@ -311,12 +323,16 @@ class ModemDataCollector:
         """Fetch HTTP resources."""
         targets = collect_fetch_targets(self._parser_config)
 
+        # Prefer body-derived token from auth_context; fall back to cookie
         url_token = ""
-        token_prefix = ""
-        if self._modem_config.session:
-            token_prefix = self._modem_config.session.token_prefix
-            if self._modem_config.session.cookie_name and token_prefix:
-                url_token = self._session.cookies.get(self._modem_config.session.cookie_name, "") or ""
+        token_prefix = getattr(self._modem_config.auth, "token_prefix", "")
+        if token_prefix:
+            if self._auth_context and self._auth_context.url_token:
+                url_token = self._auth_context.url_token
+            else:
+                cookie_name = getattr(self._modem_config.auth, "cookie_name", "")
+                if cookie_name:
+                    url_token = self._session.cookies.get(cookie_name, "") or ""
 
         loader = HTTPResourceLoader(
             session=self._session,

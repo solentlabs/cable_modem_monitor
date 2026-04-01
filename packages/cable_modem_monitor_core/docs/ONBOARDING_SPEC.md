@@ -246,12 +246,12 @@ Examine post-login requests for session artifacts:
 
 | Evidence | Config |
 |----------|--------|
-| `Set-Cookie` header after login with named cookie | `session.cookie_name: "<name>"` |
+| `Set-Cookie` header after login with named cookie | `auth.cookie_name: "<name>"` (auth owns the cookie it produces) |
 | Same cookie sent on all subsequent requests | Confirms cookie-based session |
-| No cookies on any request | Stateless — no `session` block needed |
+| No cookies on any request | Stateless — no cookie_name needed |
 | Logout endpoint visible in HAR | `actions.logout` (see Phase 4) |
 | `X-Requested-With: XMLHttpRequest` on data requests | `session.headers: { X-Requested-With: "XMLHttpRequest" }` |
-| Token in URL query string on data requests | `session.token_prefix: "<prefix>"` |
+| Token in URL query string on data requests | `auth.token_prefix: "<prefix>"` (url_token strategy only) |
 | CSRF token header on POST requests | Belongs to auth strategy config, not session |
 
 **Single-session detection:** Cannot be determined from HAR alone. If
@@ -1378,11 +1378,11 @@ auth:
   username_field: "loginUsername"
   password_field: "loginPassword"
   encoding: base64
+  cookie_name: "session"
   success:
     redirect: "/home.asp"
 
 session:
-  cookie_name: "session"
   max_concurrent: 0  # UNVERIFIED
 
 actions:

@@ -169,8 +169,7 @@ AUTH_FACTORY_CASES = [
     (
         _make_config(
             {
-                "auth": {"strategy": "form", "action": "/login"},
-                "session": {"cookie_name": "s"},
+                "auth": {"strategy": "form", "action": "/login", "cookie_name": "s"},
             }
         ),
         FormAuthHandler,
@@ -442,8 +441,7 @@ class TestHARMockServerFormAuth:
         """Cookie-based session allows auth via cookie header."""
         config = _make_config(
             {
-                "auth": {"strategy": "form", "action": "/goform/login"},
-                "session": {"cookie_name": "session"},
+                "auth": {"strategy": "form", "action": "/goform/login", "cookie_name": "session"},
             }
         )
         with HARMockServer(entries, modem_config=config) as server:
@@ -536,8 +534,8 @@ class TestHARMockServerActions:
         """Config with form auth, logout, and restart actions."""
         return _make_config(
             {
-                "auth": {"strategy": "form", "action": "/goform/login"},
-                "session": {"cookie_name": "session", "max_concurrent": 1},
+                "auth": {"strategy": "form", "action": "/goform/login", "cookie_name": "session"},
+                "session": {"max_concurrent": 1},
                 "actions": {
                     "logout": {"type": "http", "method": "GET", "endpoint": "/goform/logout"},
                     "restart": {"type": "http", "method": "POST", "endpoint": "/goform/restart"},

@@ -14,7 +14,8 @@ for lockout handling.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 import requests
 
@@ -30,6 +31,23 @@ if TYPE_CHECKING:
     from ..models.modem_config.auth import HnapAuth
 
 _logger = logging.getLogger(__name__)
+
+
+@dataclass
+class HnapAuthDiagnostics:
+    """Diagnostic data from the last HNAP auth attempt.
+
+    Passwords are redacted. ``LoginPassword`` is the HMAC-derived
+    hash (not reversible to the user's password).
+
+    See ORCHESTRATION_SPEC.md § HNAP Auth Diagnostics.
+    """
+
+    challenge_request: dict[str, Any] = field(default_factory=dict)
+    challenge_response: dict[str, Any] = field(default_factory=dict)
+    login_request: dict[str, Any] = field(default_factory=dict)
+    login_response: dict[str, Any] = field(default_factory=dict)
+
 
 # Pre-auth signing key used for the initial challenge request,
 # before the private key is derived from the challenge response.
@@ -55,6 +73,15 @@ class HnapAuthManager(BaseAuthManager):
 
     def __init__(self, config: HnapAuth) -> None:
         self._hmac_algorithm = config.hmac_algorithm
+        self._diagnostics: HnapAuthDiagnostics | None = None
+
+    @property
+    def last_auth_diagnostics(self) -> HnapAuthDiagnostics | None:
+        """Diagnostic data from the last HNAP auth attempt.
+
+        Returns ``None`` if no auth attempt has been made.
+        """
+        return self._diagnostics
 
     def authenticate(
         self,
@@ -64,6 +91,7 @@ class HnapAuthManager(BaseAuthManager):
         password: str,
         *,
         timeout: int = 10,
+        log_level: int = logging.DEBUG,
     ) -> AuthResult:
         """Execute the HNAP challenge-response login flow.
 
@@ -73,12 +101,14 @@ class HnapAuthManager(BaseAuthManager):
             username: Username credential (typically ``"admin"``).
             password: Password credential.
             timeout: Per-request timeout in seconds.
+            log_level: Log level for non-error messages.
 
         Returns:
             ``AuthResult`` with ``auth_context.private_key`` on
             success, or error detail on failure (including lockout
             detection).
         """
+        self._diagnostics = HnapAuthDiagnostics()
         url = f"{base_url.rstrip('/')}{HNAP_ENDPOINT}"
 
         # Phase 1: Request challenge
@@ -176,6 +206,11 @@ class HnapAuthManager(BaseAuthManager):
         self._public_key = public_key
         self._cookie = cookie
 
+        # Store diagnostics (phase 1)
+        if self._diagnostics is not None:
+            self._diagnostics.challenge_request = body
+            self._diagnostics.challenge_response = data
+
         _logger.debug("HNAP challenge received")
         return None
 
@@ -252,6 +287,11 @@ class HnapAuthManager(BaseAuthManager):
                 success=False,
                 error=(f"HNAP login response is not valid JSON " f"(status {response.status_code})"),
             )
+
+        # Store diagnostics (phase 2)
+        if self._diagnostics is not None:
+            self._diagnostics.login_request = body
+            self._diagnostics.login_response = data
 
         login_response = data.get("LoginResponse", {})
         login_result = login_response.get("LoginResult", "")

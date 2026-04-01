@@ -8,10 +8,10 @@
     "action": "/goform/login",
     "username_field": "loginUsername",
     "password_field": "loginPassword",
-    "encoding": "base64"
+    "encoding": "base64",
+    "cookie_name": "session"
   },
   "session": {
-    "cookie_name": "session",
     "max_concurrent": 1
   },
   "actions": {

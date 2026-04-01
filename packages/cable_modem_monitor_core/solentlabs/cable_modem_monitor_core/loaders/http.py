@@ -43,7 +43,7 @@ class HTTPResourceLoader:
         timeout: Per-request timeout in seconds.
         url_token: URL token for ``url_token`` auth (empty for other
             strategies).
-        token_prefix: Token prefix from ``session.token_prefix``
+        token_prefix: Token prefix from ``auth.token_prefix``
             (e.g., ``ct_``).
         detect_login_pages: When True, check HTML responses for login
             page indicators (``<input type="password">``). Raises

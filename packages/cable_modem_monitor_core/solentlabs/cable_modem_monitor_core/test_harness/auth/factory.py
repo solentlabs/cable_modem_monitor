@@ -45,9 +45,7 @@ def _extract_action_config(modem_config: ModemConfig) -> _ActionConfig:
     """
     from ...models.modem_config.actions import HttpAction
 
-    cookie_name = ""
-    if modem_config.session is not None:
-        cookie_name = modem_config.session.cookie_name
+    cookie_name = getattr(modem_config.auth, "cookie_name", "")
     logout_path = ""
     restart_path = ""
     restart_method = "POST"
@@ -147,7 +145,7 @@ def create_auth_handler(
     Args:
         modem_config: Validated ``ModemConfig`` instance (or None for no auth).
             Uses ``auth.strategy`` to select the handler and
-            ``session.cookie_name`` for session tracking.
+            ``auth.cookie_name`` for session tracking.
         har_entries: HAR ``log.entries`` list. Required for HNAP auth
             to build the merged data response. Ignored for other
             strategies.

@@ -14,8 +14,6 @@ auth:
   nonce_length: 8
   success_prefix: "Url:"
   error_prefix: "Error:"
-
-session:
   cookie_name: "credential"
 
 hardware:

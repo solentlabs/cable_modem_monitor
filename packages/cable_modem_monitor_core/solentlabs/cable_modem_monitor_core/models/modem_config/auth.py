@@ -24,6 +24,7 @@ class BasicAuth(BaseModel):
     model_config = ConfigDict(extra="forbid")
     strategy: Literal["basic"]
     challenge_cookie: bool = False
+    cookie_name: str = ""
 
 
 class FormSuccess(BaseModel):
@@ -44,6 +45,7 @@ class FormAuth(BaseModel):
     username_field: str = "username"
     password_field: str = "password"
     encoding: Literal["plain", "base64"] = "plain"
+    cookie_name: str = ""
     hidden_fields: dict[str, str] = Field(default_factory=dict)
     login_page: str = ""
     form_selector: str = ""
@@ -60,6 +62,7 @@ class FormNonceAuth(BaseModel):
     password_field: str = "password"
     nonce_field: str
     nonce_length: int = 8
+    cookie_name: str = ""
     success_prefix: str = "Url:"
     error_prefix: str = "Error:"
 
@@ -74,6 +77,8 @@ class UrlTokenAuth(BaseModel):
     success_indicator: str = ""
     ajax_login: bool = False
     auth_header_data: bool = False
+    cookie_name: str = ""
+    token_prefix: str = ""
 
 
 class HnapAuth(BaseModel):
@@ -96,6 +101,7 @@ class FormPbkdf2Auth(BaseModel):
     double_hash: bool = True
     csrf_init_endpoint: str = ""
     csrf_header: str = ""
+    cookie_name: str = ""
 
 
 class FormSjclAuth(BaseModel):
@@ -122,6 +128,7 @@ class FormSjclAuth(BaseModel):
     encrypt_aad: str = "loginPassword"
     decrypt_aad: str = "nonce"
     csrf_header: str = ""
+    cookie_name: str = ""
 
 
 AuthConfig = Annotated[

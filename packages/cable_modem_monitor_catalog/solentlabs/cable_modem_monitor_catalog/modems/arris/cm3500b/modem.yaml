@@ -9,8 +9,6 @@ auth:
   method: POST
   username_field: username
   password_field: password
-
-session:
   cookie_name: "credential"
 
 hardware:

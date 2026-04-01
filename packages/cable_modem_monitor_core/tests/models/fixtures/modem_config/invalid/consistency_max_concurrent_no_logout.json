@@ -3,8 +3,8 @@
   "_config": {
     "manufacturer": "Solent Labs", "model": "T1", "transport": "http",
     "default_host": "192.168.100.1",
-    "auth": {"strategy": "form", "action": "/login"},
-    "session": {"cookie_name": "s", "max_concurrent": 1},
+    "auth": {"strategy": "form", "action": "/login", "cookie_name": "s"},
+    "session": {"max_concurrent": 1},
     "hardware": {"docsis_version": "3.0"},
     "status": "confirmed",
     "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Shall we play a game?"}]},

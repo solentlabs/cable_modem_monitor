@@ -98,8 +98,9 @@ class ModemDataCollector:
 
         Strategy-specific local check: HNAP verifies uid cookie +
         private key (the private key is also set as a PrivateKey
-        cookie); cookie-based strategies verify the session cookie is
-        present; basic and none are always valid.
+        cookie); cookie-based strategies verify the session cookie
+        (``auth.cookie_name``) is present; basic and none are always
+        valid.
 
         This is a local check — the server may have expired the session
         even if this returns True. Used for diagnostics and by clients
@@ -226,6 +227,47 @@ Example — successful collection with no channels:
 | Auth/resource | INFO first poll, DEBUG after | Steady-state noise reduction | Auth strategy, session state, resource loading. Visible at INFO for first-poll diagnostics, drops to DEBUG after to avoid flooding multi-modem logs |
 | Failures | WARNING/ERROR always | Never demoted | Auth failures, connectivity errors, parse errors. Always visible regardless of poll count |
 | Wire data | DEBUG always | Troubleshooting only | Request/response details, parsing internals |
+
+### Auth Log Level
+
+Auth managers accept an optional `log_level` parameter (default
+`logging.DEBUG`). The collector passes this through from its caller:
+
+- **Polling** (normal operation): `log_level=logging.DEBUG` — auth
+  details hidden in steady-state logs.
+- **Config flow** (setup wizard): `log_level=logging.INFO` — auth
+  details visible so users see why auth failed during setup.
+
+This mirrors the existing `log_level` pattern used by action execution
+(both HTTP and HNAP actions). Auth managers use the level for all
+non-error log calls during `authenticate()`. Errors and warnings are
+always logged regardless of `log_level`.
+
+### HNAP Auth Diagnostics
+
+The HNAP auth manager stores challenge and login request-response
+pairs for diagnostic retrieval. Passwords are redacted — only the
+computed `LoginPassword` hash (already HMAC-derived, not reversible)
+is stored.
+
+```python
+@dataclass
+class HnapAuthDiagnostics:
+    """Diagnostic data from the last HNAP auth attempt.
+
+    Passwords are redacted. LoginPassword is the HMAC-derived
+    hash, not the user's password.
+    """
+
+    challenge_request: dict[str, Any]   # Phase 1 request body
+    challenge_response: dict[str, Any]  # Phase 1 response body
+    login_request: dict[str, Any]       # Phase 2 request body
+    login_response: dict[str, Any]      # Phase 2 response body
+```
+
+Accessible via `HnapAuthManager.last_auth_diagnostics`. Returns
+`None` if no auth attempt has been made. The HA diagnostics builder
+surfaces this for users debugging HNAP auth failures.
 
 ### Exceptions
 

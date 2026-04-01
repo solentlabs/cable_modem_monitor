@@ -13,10 +13,10 @@
     "ccm_tag_length": 16,
     "encrypt_aad": "loginPassword",
     "decrypt_aad": "nonce",
-    "csrf_header": "csrfNonce"
+    "csrf_header": "csrfNonce",
+    "cookie_name": "PHPSESSID"
   },
   "session": {
-    "cookie_name": "PHPSESSID",
     "max_concurrent": 1,
     "headers": {"X-Requested-With": "XMLHttpRequest"}
   },

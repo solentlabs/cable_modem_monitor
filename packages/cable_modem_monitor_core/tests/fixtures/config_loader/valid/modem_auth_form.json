@@ -1,4 +1,4 @@
 {
   "_type": "modem",
-  "_yaml": "manufacturer: Solent Labs\nmodel: T200\ntransport: http\ndefault_host: '192.168.100.1'\nauth:\n  strategy: form\n  action: /goform/login\n  username_field: loginUsername\n  password_field: loginPassword\n  encoding: base64\nsession:\n  cookie_name: session\n  max_concurrent: 1\nactions:\n  logout:\n    type: http\n    method: GET\n    endpoint: /logout.asp\nhardware:\n  docsis_version: '3.0'\n  chipset: Broadcom BCM3384\nstatus: confirmed\nattribution:\n  contributors:\n    - github: tester\n      contribution: Initial capture\nisps:\n  - Various\n"
+  "_yaml": "manufacturer: Solent Labs\nmodel: T200\ntransport: http\ndefault_host: '192.168.100.1'\nauth:\n  strategy: form\n  action: /goform/login\n  username_field: loginUsername\n  password_field: loginPassword\n  encoding: base64\n  cookie_name: session\nsession:\n  max_concurrent: 1\nactions:\n  logout:\n    type: http\n    method: GET\n    endpoint: /logout.asp\nhardware:\n  docsis_version: '3.0'\n  chipset: Broadcom BCM3384\nstatus: confirmed\nattribution:\n  contributors:\n    - github: tester\n      contribution: Initial capture\nisps:\n  - Various\n"
 }

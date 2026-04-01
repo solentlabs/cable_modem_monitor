@@ -40,6 +40,7 @@ class FormAuthManager(BaseAuthManager):
         password: str,
         *,
         timeout: int = 10,
+        log_level: int = logging.DEBUG,
     ) -> AuthResult:
         """Execute the form login flow.
 
@@ -84,13 +85,17 @@ class FormAuthManager(BaseAuthManager):
         }
         form_data.update(config.hidden_fields)
 
-        # Step 3: POST to login endpoint
+        # Step 3: POST to login endpoint with Referer header.
+        # Some modem firmware rejects login POSTs without a matching
+        # Referer header (defensive measure from v3.13, HAR evidence
+        # shows 60% of modems send it, none reject it).
         login_url = f"{base_url}{config.action}"
         try:
             response = session.request(
                 config.method,
                 login_url,
                 data=form_data,
+                headers={"Referer": base_url},
                 allow_redirects=True,
                 timeout=timeout,
             )
@@ -108,7 +113,8 @@ class FormAuthManager(BaseAuthManager):
             return AuthResult(success=False, error=error)
 
         response_path = urlparse(response.url).path if response.url else ""
-        _logger.debug(
+        _logger.log(
+            log_level,
             "Form login succeeded: status=%d, url=%s, cookies=%s",
             response.status_code,
             response_path,

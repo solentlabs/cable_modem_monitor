@@ -5,6 +5,8 @@ See MODEM_YAML_SPEC.md ``none`` strategy.
 
 from __future__ import annotations
 
+import logging
+
 import requests
 
 from .base import AuthResult, BaseAuthManager
@@ -25,6 +27,7 @@ class NoneAuthManager(BaseAuthManager):
         password: str,
         *,
         timeout: int = 10,  # noqa: ARG002
+        log_level: int = logging.DEBUG,  # noqa: ARG002
     ) -> AuthResult:
         """No-op — always succeeds."""
         return AuthResult(success=True)

@@ -8,9 +8,7 @@
     "login_page": "/status.html",
     "login_prefix": "login_",
     "success_indicator": "Downstream Bonded Channels",
-    "ajax_login": true
-  },
-  "session": {
+    "ajax_login": true,
     "cookie_name": "sessionId",
     "token_prefix": "ct_"
   },

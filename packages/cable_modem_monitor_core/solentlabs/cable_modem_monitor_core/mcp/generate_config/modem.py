@@ -34,12 +34,18 @@ def _add_identity(result: dict[str, Any], analysis: dict[str, Any], metadata: di
 
 
 def _add_analysis_blocks(result: dict[str, Any], analysis: dict[str, Any]) -> None:
-    """Add auth, session, and actions blocks from analysis output."""
-    auth_block = _build_auth_block(analysis.get("auth", {}))
+    """Add auth, session, and actions blocks from analysis output.
+
+    ``cookie_name`` and ``token_prefix`` are detected by session analysis
+    but belong on the auth strategy config (auth owns the cookie it
+    produces). This function moves them from session to auth.
+    """
+    session_data = analysis.get("session", {})
+    auth_block = _build_auth_block(analysis.get("auth", {}), session_data)
     if auth_block:
         result["auth"] = auth_block
 
-    session_block = _build_session_block(analysis.get("session", {}))
+    session_block = _build_session_block(session_data)
     if session_block:
         result["session"] = session_block
 
@@ -68,8 +74,16 @@ def _add_metadata_fields(result: dict[str, Any], metadata: dict[str, Any]) -> No
         result["references"] = metadata["references"]
 
 
-def _build_auth_block(auth: dict[str, Any]) -> dict[str, Any] | None:
-    """Build auth config from analysis auth detail."""
+def _build_auth_block(
+    auth: dict[str, Any],
+    session_data: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Build auth config from analysis auth detail.
+
+    ``cookie_name`` and ``token_prefix`` are detected by session
+    analysis but belong on the auth strategy (auth owns the cookie
+    it produces). They are moved from *session_data* to the auth block.
+    """
     strategy = auth.get("strategy")
     if not strategy:
         return None
@@ -79,6 +93,13 @@ def _build_auth_block(auth: dict[str, Any]) -> dict[str, Any] | None:
     for key, value in auth.get("fields", {}).items():
         result[key] = value
 
+    # Move cookie_name and token_prefix from session to auth
+    if session_data:
+        if session_data.get("cookie_name"):
+            result["cookie_name"] = session_data["cookie_name"]
+        if session_data.get("token_prefix"):
+            result["token_prefix"] = session_data["token_prefix"]
+
     _clean_auth_defaults(result)
     return result
 
@@ -87,15 +108,12 @@ def _build_session_block(session: dict[str, Any]) -> dict[str, Any] | None:
     """Build session config from analysis session detail.
 
     Omits empty/default values so the config stays clean.
+    ``cookie_name`` and ``token_prefix`` belong on auth, not session.
     """
     result: dict[str, Any] = {}
 
-    if session.get("cookie_name"):
-        result["cookie_name"] = session["cookie_name"]
     if session.get("max_concurrent"):
         result["max_concurrent"] = session["max_concurrent"]
-    if session.get("token_prefix"):
-        result["token_prefix"] = session["token_prefix"]
     if session.get("headers"):
         result["headers"] = session["headers"]
 

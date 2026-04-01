@@ -40,6 +40,7 @@ class BasicAuthManager(BaseAuthManager):
         password: str,
         *,
         timeout: int = 10,
+        log_level: int = logging.DEBUG,
     ) -> AuthResult:
         """Set Basic auth credentials on the session.
 
@@ -62,7 +63,8 @@ class BasicAuthManager(BaseAuthManager):
                     allow_redirects=False,
                     timeout=timeout,
                 )
-                _logger.debug(
+                _logger.log(
+                    log_level,
                     "Challenge cookie request: status=%d, cookies=%s",
                     resp.status_code,
                     list(session.cookies.keys()),

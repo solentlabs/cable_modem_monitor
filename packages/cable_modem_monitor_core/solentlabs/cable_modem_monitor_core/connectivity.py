@@ -31,6 +31,29 @@ from urllib3.util.ssl_ import create_urllib3_context
 # verify=False.  The warning is noise, not a signal.
 urllib3.disable_warnings(InsecureRequestWarning)
 
+
+class _HNAPHeaderParsingFilter(logging.Filter):
+    """Suppress urllib3 "Failed to parse headers" warnings.
+
+    Some HNAP modems send malformed HTTP headers with debug timing
+    data prepended to header values. urllib3 emits a warning for each,
+    producing noisy log entries on every poll. This filter drops those
+    records at the logging level so they never reach any handler.
+
+    See RESOURCE_LOADING_SPEC.md § HNAP Header Parsing Warning Suppression.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Return False to drop records containing the header parse warning."""
+        return "Failed to parse headers" not in record.getMessage()
+
+
+# Apply the filter once at import time — safe for all modems since
+# standard header parsing warnings are infrastructure noise.
+logging.getLogger("urllib3.connectionpool").addFilter(
+    _HNAPHeaderParsingFilter(),
+)
+
 _logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------

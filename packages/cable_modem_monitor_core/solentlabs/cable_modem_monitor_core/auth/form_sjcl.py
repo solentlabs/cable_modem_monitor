@@ -73,6 +73,7 @@ class FormSjclAuthManager(BaseAuthManager):
         password: str,
         *,
         timeout: int = 10,
+        log_level: int = logging.DEBUG,
     ) -> AuthResult:
         """Execute the SJCL AES-CCM login flow.
 
@@ -174,7 +175,8 @@ class FormSjclAuthManager(BaseAuthManager):
             if isinstance(val_result, AuthResult):
                 return val_result
 
-        _logger.debug(
+        _logger.log(
+            log_level,
             "SJCL login succeeded: cookies=%s",
             list(session.cookies.keys()),
         )

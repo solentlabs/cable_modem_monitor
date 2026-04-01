@@ -38,7 +38,7 @@ def _print_banner(config: ServerConfig, server: HARMockServer) -> None:
     default_host = mc.default_host
     docsis = getattr(mc.hardware, "docsis_version", "unknown") if mc.hardware else "unknown"
     status = mc.status if hasattr(mc, "status") else "unknown"
-    cookie = mc.session.cookie_name if mc.session else ""
+    cookie = getattr(mc.auth, "cookie_name", "")
     route_count = len(server.routes)
 
     def _row(label: str, value: str) -> str:

@@ -9,10 +9,10 @@
     "pbkdf2_iterations": 1000,
     "pbkdf2_key_length": 128,
     "csrf_init_endpoint": "/api/v1/session/init_page",
-    "csrf_header": "X-CSRF-TOKEN"
+    "csrf_header": "X-CSRF-TOKEN",
+    "cookie_name": "PHPSESSID"
   },
   "session": {
-    "cookie_name": "PHPSESSID",
     "max_concurrent": 1,
     "headers": {"X-Requested-With": "XMLHttpRequest"}
   },

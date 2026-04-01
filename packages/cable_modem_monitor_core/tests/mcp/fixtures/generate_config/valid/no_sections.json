@@ -6,7 +6,7 @@
     "transport": "http",
     "confidence": "high",
     "auth": {"strategy": "basic", "fields": {}, "confidence": "high"},
-    "session": {"cookie_name": "", "max_concurrent": null, "headers": {}, "token_prefix": ""},
+    "session": {"max_concurrent": null, "headers": {}},
     "actions": {"logout": null, "restart": null},
     "sections": null,
     "warnings": [],

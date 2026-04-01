@@ -16,8 +16,6 @@ auth:
     locale: "false"
   success:
     redirect: "/at_a_glance.jst"
-
-session:
   cookie_name: "DUKSID"
 
 hardware:

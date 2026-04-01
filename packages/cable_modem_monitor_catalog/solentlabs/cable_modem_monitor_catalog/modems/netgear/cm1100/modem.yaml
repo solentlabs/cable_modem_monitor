@@ -10,8 +10,6 @@ auth:
   username_field: loginUsername
   password_field: loginPassword
   encoding: plain
-
-session:
   cookie_name: "SessionID"
 
 hardware:

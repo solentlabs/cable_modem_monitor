@@ -9,6 +9,7 @@ See MODEM_YAML_SPEC.md Auth section and RESOURCE_LOADING_SPEC.md.
 from __future__ import annotations
 
 import abc
+import logging
 from dataclasses import dataclass, field
 
 import requests
@@ -73,6 +74,7 @@ class BaseAuthManager(abc.ABC):
         password: str,
         *,
         timeout: int = 10,
+        log_level: int = logging.DEBUG,
     ) -> AuthResult:
         """Authenticate and prepare the session.
 
@@ -82,6 +84,9 @@ class BaseAuthManager(abc.ABC):
             username: Username credential.
             password: Password credential.
             timeout: Per-request timeout in seconds from modem.yaml.
+            log_level: Log level for non-error messages. Config flow
+                uses INFO for visibility; polling uses DEBUG to avoid
+                log noise.
 
         Returns:
             AuthResult with success flag and optional login response.

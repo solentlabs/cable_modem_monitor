@@ -38,6 +38,7 @@ class FormPbkdf2AuthManager(BaseAuthManager):
         password: str,
         *,
         timeout: int = 10,
+        log_level: int = logging.DEBUG,
     ) -> AuthResult:
         """Execute the PBKDF2 challenge-response login flow.
 
@@ -91,7 +92,8 @@ class FormPbkdf2AuthManager(BaseAuthManager):
             return login_result
         response = login_result
 
-        _logger.debug(
+        _logger.log(
+            log_level,
             "PBKDF2 login succeeded: status=%d, cookies=%s",
             response.status_code,
             list(session.cookies.keys()),

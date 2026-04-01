@@ -1,14 +1,14 @@
 {
-  "_description": "auth:none with session.cookie_name emits UserWarning",
+  "_description": "auth:none with session block — no warning (cookie_name moved to auth)",
   "_config": {
     "manufacturer": "Solent Labs", "model": "T100", "transport": "http",
     "default_host": "192.168.100.1",
     "auth": {"strategy": "none"},
-    "session": {"cookie_name": "sessionId"},
+    "session": {"max_concurrent": 0},
     "hardware": {"docsis_version": "3.0"},
     "status": "confirmed",
     "attribution": {"contributors": [{"github": "t", "contribution": "t"}]},
     "isps": ["ISP"]
   },
-  "_expected_warning": "auth:none"
+  "_expected_warning": null
 }

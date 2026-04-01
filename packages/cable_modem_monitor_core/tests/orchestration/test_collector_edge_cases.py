@@ -62,11 +62,16 @@ def _make_config(
         config.auth = MagicMock()
         config.auth.strategy = auth_type
 
-    if cookie_name or max_concurrent or token_prefix:
+    # cookie_name and token_prefix live on auth (auth owns the cookie).
+    # Only set on auth types that support them (not NoneAuth/HnapAuth).
+    if hasattr(config.auth, "cookie_name") or isinstance(config.auth, MagicMock):
+        config.auth.cookie_name = cookie_name
+    if hasattr(config.auth, "token_prefix") or isinstance(config.auth, MagicMock):
+        config.auth.token_prefix = token_prefix
+
+    if max_concurrent:
         config.session = MagicMock()
-        config.session.cookie_name = cookie_name
         config.session.max_concurrent = max_concurrent
-        config.session.token_prefix = token_prefix
         config.session.headers = {}
     else:
         config.session = None
@@ -96,9 +101,7 @@ class TestSessionHeaders:
         config.timeout = 10
         config.auth = NoneAuth(strategy="none")
         config.session = MagicMock()
-        config.session.cookie_name = ""
         config.session.max_concurrent = 0
-        config.session.token_prefix = ""
         config.session.headers = {"X-Custom": "value"}
         config.actions = None
         config.behaviors = None
@@ -313,7 +316,7 @@ class TestUrlTokenExtraction:
     def test_url_token_from_cookie(self) -> None:
         """token_prefix + cookie_name → url_token extracted."""
         config = _make_config(
-            auth_type="none",
+            auth_type="form",
             cookie_name="auth_token",
             token_prefix="?token=",
         )
@@ -341,7 +344,7 @@ class TestUrlTokenExtraction:
     def test_no_url_token_without_prefix(self) -> None:
         """No token_prefix → url_token is empty."""
         config = _make_config(
-            auth_type="none",
+            auth_type="form",
             cookie_name="auth_token",
             token_prefix="",
         )

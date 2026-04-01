@@ -6,7 +6,6 @@ transport constraints, auth-session-action consistency, required fields by statu
 
 from __future__ import annotations
 
-import warnings
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -88,16 +87,6 @@ class ModemConfig(BaseModel):
             errors.append(
                 "session.max_concurrent: 1 requires actions.logout — "
                 "single-session modem without logout locks users out"
-            )
-
-        # auth:none + session.cookie_name -> unusual, warn
-        if strategy == "none" and self.session and self.session.cookie_name:
-            warnings.warn(
-                f"auth:none with session.cookie_name='{self.session.cookie_name}' — "
-                "session tracking on a no-auth modem is unusual. "
-                "Verify the auth strategy is correct.",
-                UserWarning,
-                stacklevel=2,
             )
 
         if errors:

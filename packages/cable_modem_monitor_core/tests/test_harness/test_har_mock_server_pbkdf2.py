@@ -197,8 +197,8 @@ class TestHARMockServerPbkdf2Auth:
                     "double_hash": True,
                     "csrf_init_endpoint": "/api/v1/session/language",
                     "csrf_header": "X-CSRF-TOKEN",
+                    "cookie_name": "PHPSESSID",
                 },
-                "session": {"cookie_name": "PHPSESSID"},
             }
         )
 

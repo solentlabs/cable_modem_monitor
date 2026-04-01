@@ -322,22 +322,16 @@ def _run_pipeline(
         else:
             # HTTP: per-page fetching
             targets = collect_fetch_targets(parser_config)
+            # Prefer body-derived token from auth_context; fall back to cookie
             url_token = ""
-            token_prefix = ""
-            if modem_config.session:
-                token_prefix = modem_config.session.token_prefix
-                # Extract URL token from session cookies only when
-                # both cookie_name and token_prefix are configured
-                # (url_token strategy).  Other strategies may set
-                # cookie_name for session tracking without URL tokens.
-                if modem_config.session.cookie_name and token_prefix:
-                    url_token = (
-                        session.cookies.get(
-                            modem_config.session.cookie_name,
-                            "",
-                        )
-                        or ""
-                    )
+            token_prefix = getattr(modem_config.auth, "token_prefix", "")
+            if token_prefix:
+                if auth_result.auth_context.url_token:
+                    url_token = auth_result.auth_context.url_token
+                else:
+                    cookie_name = getattr(modem_config.auth, "cookie_name", "")
+                    if cookie_name:
+                        url_token = session.cookies.get(cookie_name, "") or ""
 
             loader = HTTPResourceLoader(
                 session=session,

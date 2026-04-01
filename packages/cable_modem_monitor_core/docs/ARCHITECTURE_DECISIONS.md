@@ -128,21 +128,48 @@ Core strategy.
 pattern requires a Core change — but this is intentional, as it
 becomes available to all future modems using the same protocol.
 
-### Session is independent from auth
+### Session is lifecycle, auth owns the cookie
 
-**Decision:** Session config (`cookie_name`, `max_concurrent`,
-`token_prefix`, `headers`) is a separate top-level section in
-modem.yaml, not nested under auth.
+**Decision:** `cookie_name` and `token_prefix` live on the auth
+strategy config, not the session section. Session config
+(`max_concurrent`, `headers`) is a separate top-level section that
+owns post-login lifecycle — concurrency limits, static request
+headers, and logout timing. Auth owns everything about the login flow
+and its outputs, including which cookie the login response produces.
 
-**Rationale:** The same auth strategy can use different session
-mechanisms across modems. Session owns post-login state; auth owns
-login mechanics. Logout is an action (`actions.logout`), not a session
-field — HAR evidence shows logout needs the same config surface as
-restart (method, endpoint, params, pre-fetch).
+**Rationale:** The cookie is an output of the login flow — the modem's
+`Set-Cookie` header in the login response establishes it. Auth managers
+need the cookie name for protocol-level operations: `url_token`
+clears stale cookies before re-login (matching the browser's
+`eraseCookie()` call), and session validity checking asks "is this
+auth cookie still present?" Placing `cookie_name` on session created
+a cross-boundary dependency: the auth manager needed session config to
+execute its own login flow, violating the separation it was designed
+to enforce.
+
+v3.12 and v3.13 stored `session_cookie_name` on the auth config
+(`UrlTokenSessionConfig`). The v3.14 spec moved it to a separate
+`session` section for cleaner YAML structure, but this broke
+`url_token` pre-login cookie clearing and body token fallback — two
+protocol behaviors that only surfaced during real-hardware testing
+(SB8200, Issue #81). The move back restores the boundary that
+v3.12/v3.13 got right: auth owns credentials and their artifacts,
+session owns lifecycle.
+
+Similarly, `token_prefix` is part of the `url_token` auth protocol —
+the auth flow produces a body token, and `token_prefix` describes how
+to inject it into subsequent requests. It belongs on `UrlTokenAuth`,
+not session.
+
+**Evidence:** Journal entries 2026-01-16 (resource-loader-architecture)
+and 2026-01-27 (session-cookie-clearing-browser-behavior) document the
+original discovery. The v3.14 gap analysis (2026-04-01) identified the
+regression.
 
 **Constrains:** No `logout_url` or `logout_required` convenience
 fields. The `max_concurrent: 1` constraint requires `actions.logout`
-to be declared (build-time validation error).
+to be declared (build-time validation error). Auth strategies that
+don't use cookies leave `cookie_name` empty (default).
 
 ---
 

@@ -9,10 +9,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SessionConfig(BaseModel):
-    """Post-login session state."""
+    """Post-login session lifecycle.
+
+    Session owns concurrency limits and static request headers.
+    Cookie names and token prefixes live on the auth strategy —
+    auth owns the cookie it produces. See ARCHITECTURE_DECISIONS.md
+    "Session is lifecycle, auth owns the cookie."
+    """
 
     model_config = ConfigDict(extra="forbid")
-    cookie_name: str = ""
     max_concurrent: int = 0
-    token_prefix: str = ""
     headers: dict[str, str] = Field(default_factory=dict)

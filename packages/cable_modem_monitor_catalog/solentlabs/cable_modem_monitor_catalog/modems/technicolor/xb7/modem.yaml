@@ -14,8 +14,6 @@ auth:
   encoding: plain
   success:
     redirect: "/at_a_glance.jst"
-
-session:
   cookie_name: "session"
 
 hardware:

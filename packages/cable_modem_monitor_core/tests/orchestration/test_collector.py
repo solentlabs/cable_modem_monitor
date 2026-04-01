@@ -86,12 +86,15 @@ def _make_config(
         config.auth = MagicMock()
         config.auth.strategy = auth_type
 
-    # Session
-    if cookie_name or max_concurrent or logout_endpoint:
+    # cookie_name lives on auth (auth owns the cookie it produces).
+    # NoneAuth and HnapAuth don't have cookie_name — only set on mocks.
+    if hasattr(config.auth, "cookie_name") or isinstance(config.auth, MagicMock):
+        config.auth.cookie_name = cookie_name
+
+    # Session (lifecycle only: max_concurrent, headers)
+    if max_concurrent or logout_endpoint:
         config.session = MagicMock()
-        config.session.cookie_name = cookie_name
         config.session.max_concurrent = max_concurrent
-        config.session.token_prefix = ""
         config.session.headers = {}
     else:
         config.session = None

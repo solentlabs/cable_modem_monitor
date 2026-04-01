@@ -12,8 +12,6 @@ auth:
   encoding: plain
   success:
     redirect: "/basicUX.html"
-
-session:
   cookie_name: "sec"
 
 hardware:

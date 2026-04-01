@@ -48,11 +48,12 @@ default_host: "192.168.100.1"
 # Auth
 auth:
   strategy: url_token
+  cookie_name: "sessionId"        # auth owns the cookie it produces
+  token_prefix: "ct_"             # url_token only
   # ... strategy-specific fields
 
-# Session (independent from auth)
+# Session (lifecycle only — independent from auth)
 session:
-  cookie_name: "sessionId"
   # ... session fields
 
 # Actions (optional)
@@ -165,11 +166,13 @@ header on every request.
 auth:
   strategy: basic
   challenge_cookie: false
+  cookie_name: ""
 ```
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `challenge_cookie` | bool | `false` | If `true`, retry with server-set cookie on initial 401. Some modems (CM1200 HTTPS) return a challenge cookie that must be included in the retry. |
+| `cookie_name` | string | `""` | Session cookie produced by login. Empty = stateless. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md "Session is lifecycle, auth owns the cookie." |
 
 **Success detection:** Always succeeds. Basic auth is per-request
 (credentials sent on every request), so there is no login response
@@ -192,6 +195,7 @@ auth:
   username_field: "loginUsername"
   password_field: "loginPassword"
   encoding: plain
+  cookie_name: "SessionID"
   hidden_fields:
     webToken: ""
   success:
@@ -205,6 +209,7 @@ auth:
 | `username_field` | string | `"username"` | Form field name for username |
 | `password_field` | string | `"password"` | Form field name for password |
 | `encoding` | enum | `plain` | `plain` or `base64` — how the password is encoded before POST |
+| `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `hidden_fields` | map | `{}` | Additional form fields to include (e.g., CSRF tokens, static values) |
 | `login_page` | string | `""` | Page to fetch before login to extract hidden fields or nonces. If empty, POST directly without pre-fetch. |
 | `form_selector` | string | `""` | CSS selector to find the login form on `login_page` (for extracting action URL and hidden fields dynamically) |
@@ -283,6 +288,7 @@ auth:
   password_field: "password"
   nonce_field: "ar_nonce"
   nonce_length: 8
+  cookie_name: "credential"
   success_prefix: "Url:"
   error_prefix: "Error:"
 ```
@@ -294,6 +300,7 @@ auth:
 | `password_field` | string | `"password"` | Form field name for the password credential |
 | `nonce_field` | string | required | Form field name for the client-generated nonce |
 | `nonce_length` | int | `8` | Length of the random nonce string (digits only) |
+| `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `success_prefix` | string | `"Url:"` | Response body prefix indicating successful login |
 | `error_prefix` | string | `"Error:"` | Response body prefix indicating failed login |
 
@@ -326,8 +333,6 @@ auth:
   success_indicator: "Downstream Bonded Channels"
   ajax_login: true
   auth_header_data: false
-
-session:
   cookie_name: "sessionId"
   token_prefix: "ct_"
 ```
@@ -336,18 +341,43 @@ session:
 |-------|------|---------|-------------|
 | `login_page` | string | required | Page URL that accepts the token login |
 | `login_prefix` | string | `""` | Prefix before base64 token in login URL. Empty = bare base64. |
-| `success_indicator` | string | `""` | String to match in login response body |
+| `success_indicator` | string | `""` | Dual-purpose field: auth success check AND response type discriminator. See below. |
 | `ajax_login` | bool | `false` | Include `X-Requested-With: XMLHttpRequest` header on login |
 | `auth_header_data` | bool | `false` | Include `Authorization: Basic` header on data requests |
+| `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
+| `token_prefix` | string | `""` | URL token prefix for subsequent data page requests (e.g., `ct_`). The token value is extracted by the auth manager from the login response body. |
 
-Session cookie and token prefix for subsequent requests are declared in
-the `session` section — see [Session](#session).
+**Success detection and response type discrimination:**
 
-**Success detection:** If `success_indicator` is provided, the
-login response body must contain that string. Otherwise, any
-successful HTTP response is treated as success. The session token
-is extracted from cookies by the runner using `session.cookie_name`
-— the auth manager does not read session config.
+`success_indicator` serves two roles for `url_token`:
+
+1. **Data page detection:** Response body **contains** `success_indicator`
+   → the body is the data page itself (modem served data directly during
+   login). Token is `None` — no URL injection needed. The response is
+   passed to the loader as an auth response reuse candidate.
+2. **Token extraction gate:** Response body **does not contain** indicator
+   → the body is treated as a server-issued session token (typically
+   20-40 chars alphanumeric). Extracted via `response.text.strip()` →
+   `auth_context.url_token`.
+3. **Empty body fallback:** Body is empty → fall back to cookie via
+   `cookie_name`.
+4. **Empty cookie fallback:** Cookie is empty → no token injection
+   (loader attempts without).
+
+The collector prefers `auth_context.url_token` (body-derived) over
+cookie extraction when both are available. This ordering matters because
+on some firmware variants (SB8200, Issue #81) the response body token
+differs from the cookie value.
+
+Without the `success_indicator` guard, the auth manager would use an
+entire HTML data page as a URL parameter, silently breaking any
+url_token variant where the login response returns data directly.
+
+**Pre-login cookie clearing:** Before the login request, the auth
+manager deletes any existing session cookie (`cookie_name`) from the
+session. This matches the browser's `eraseCookie("sessionId")` call
+before `$.ajax` login — without it, the modem rejects re-login
+attempts with 401 because it sees an active session.
 
 Evidence: modems that encode credentials in URL query strings and
 issue session tokens for subsequent requests. Firmware variants of
@@ -401,9 +431,9 @@ auth:
   double_hash: true
   csrf_init_endpoint: "/api/v1/session/init_page"
   csrf_header: "X-CSRF-TOKEN"
+  cookie_name: "PHPSESSID"
 
 session:
-  cookie_name: "PHPSESSID"
   max_concurrent: 1
   headers:
     X-Requested-With: "XMLHttpRequest"
@@ -424,10 +454,10 @@ actions:
 | `double_hash` | bool | `true` | Hash twice: first with `salt`, then with `saltwebui` |
 | `csrf_init_endpoint` | string | `""` | Endpoint to fetch a fresh CSRF token (e.g., `/api/v1/session/init_page`). Called before each POST that requires CSRF (login, logout). If empty, CSRF token is extracted from the login response and reused for all POSTs. |
 | `csrf_header` | string | `""` | Header name for the CSRF token (e.g., `X-CSRF-TOKEN`). The `form_pbkdf2` strategy fetches the token value (via `csrf_init_endpoint` or login response) and attaches it as this header. Which requests carry the token and how the token is obtained are strategy-specific — other strategies that need CSRF may define their own fields. |
+| `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 
-Session cookie, CSRF header, and session-wide headers are declared
-in the `session` section. Logout is declared in `actions.logout`.
-See [Session](#session) and [Actions](#actions).
+Session-wide headers and logout are declared in their respective
+sections. See [Session](#session) and [Actions](#actions).
 
 **Success detection:** The login response JSON is checked for an
 `error` key — if present and truthy, login failed (the `message`
@@ -463,9 +493,9 @@ auth:
   encrypt_aad: "loginPassword"
   decrypt_aad: "nonce"
   csrf_header: "csrfNonce"
+  cookie_name: "PHPSESSID"
 
 session:
-  cookie_name: "PHPSESSID"
   max_concurrent: 1
   headers:
     X-Requested-With: "XMLHttpRequest"
@@ -488,6 +518,7 @@ actions:
 | `encrypt_aad` | string | `"loginPassword"` | AAD (Additional Authenticated Data) for encrypting the login payload |
 | `decrypt_aad` | string | `"nonce"` | AAD for decrypting the server's nonce response |
 | `csrf_header` | string | `""` | Header name for the CSRF nonce extracted from the decrypted login response. If empty, nonce decryption is skipped. |
+| `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 
 **Auth flow:**
 
@@ -515,31 +546,26 @@ in `base_95x.js` or similar JS files in HAR captures.
 
 ## Session
 
-Session owns post-login state: cookie names, CSRF headers, token
-prefixes, concurrency limits, and session-wide HTTP headers. Auth
-strategies own login mechanics only — if a field is needed to complete
-login (e.g., `csrf_init_endpoint`), it stays in auth. Everything the
-system needs after login succeeds belongs here.
+Session owns post-login lifecycle: concurrency limits and session-wide
+HTTP headers. Auth strategies own login mechanics and cookie names —
+the cookie is an output of the login flow, so auth owns it. See
+ARCHITECTURE_DECISIONS.md "Session is lifecycle, auth owns the cookie."
 
 How to end a session (logout) is declared in `actions.logout` — see
-[Actions](#actions). Session declares the *state*; actions declare
-the *operations*.
+[Actions](#actions). Session declares the *lifecycle*; auth declares
+the *credentials and cookies*; actions declare the *operations*.
 
-The same auth strategy can use different session mechanisms across
-modems. For HNAP, session is implicit (always `uid` + `PrivateKey`
-cookies, `HNAP_AUTH` header).
+For HNAP, session is implicit (always `uid` + `PrivateKey` cookies,
+`HNAP_AUTH` header) — no session block needed.
 
 ```yaml
 session:
-  cookie_name: "session"
   max_concurrent: 1
 ```
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `cookie_name` | string | `""` | Session cookie name. Empty = stateless (no cookie tracking). |
 | `max_concurrent` | int | `0` | Max concurrent sessions. `0` = unlimited. `1` = single-session modem. |
-| `token_prefix` | string | `""` | URL token prefix for subsequent requests (url_token auth only) |
 | `headers` | map | `{}` | Static headers added to all requests for this session (e.g., `X-Requested-With: XMLHttpRequest` for SPA-style modems). Dynamic headers (CSRF tokens, HNAP signatures, auth tokens) are managed by auth strategies — each strategy defines its own fields for token acquisition and header injection. |
 
 ### Stateless
@@ -550,14 +576,11 @@ Common with `none` and `basic` auth.
 
 ### Cookie-based
 
-```yaml
-session:
-  cookie_name: "session"
-```
-
-After successful auth, the modem sets a cookie. The session maintains
-this cookie across requests. No further configuration needed unless
-the modem has concurrency limits or requires explicit logout.
+Cookie-based modems declare `cookie_name` on the auth strategy (not
+in session). The session section is only needed if the modem has
+concurrency limits, explicit logout, or session-wide headers. After
+successful auth, the modem sets the cookie declared in `auth.cookie_name`.
+The session maintains this cookie across requests.
 
 ### Single-session modems
 
@@ -565,8 +588,12 @@ Some modems allow only one active session. If a second session is
 attempted while one is active, login fails.
 
 ```yaml
-session:
+auth:
+  strategy: form
+  # ... strategy fields ...
   cookie_name: "session"
+
+session:
   max_concurrent: 1
 
 actions:
@@ -601,7 +628,6 @@ session-wide headers to apply to all requests:
 
 ```yaml
 session:
-  cookie_name: "PHPSESSID"
   headers:
     X-Requested-With: "XMLHttpRequest"
 ```
@@ -749,10 +775,10 @@ auth:
   strategy: form_pbkdf2
   csrf_init_endpoint: "/api/v1/session/init_page"
   csrf_header: "X-CSRF-TOKEN"
+  cookie_name: "PHPSESSID"
   # ... other form_pbkdf2 fields
 
 session:
-  cookie_name: "PHPSESSID"
   max_concurrent: 1
   headers:
     X-Requested-With: "XMLHttpRequest"
@@ -963,9 +989,8 @@ failures.
 
 ### Auth-session-action consistency
 
-- `auth.strategy: none` + `session.cookie_name` → warning (stateless
-  auth with session cookie is unusual but not invalid — some modems
-  set a cookie even without login)
+- `auth.strategy: none` + `auth.cookie_name` → N/A (`none` has no
+  `cookie_name` field — cookie-tracking requires an auth strategy)
 - `auth.strategy: basic` + `session.max_concurrent: 1` → error (Basic
   Auth is stateless, concurrent session limits don't apply)
 - `auth.strategy: hnap` + explicit `session` block → error (HNAP

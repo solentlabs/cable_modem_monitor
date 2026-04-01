@@ -12,8 +12,6 @@ auth:
   double_hash: true
   csrf_init_endpoint: "/api/v1/session/language"
   csrf_header: "X-CSRF-TOKEN"
-
-session:
   cookie_name: "PHPSESSID"
 
 hardware:
