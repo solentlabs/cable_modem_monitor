@@ -660,6 +660,39 @@ only generate parser.py when necessary.
 | Unit stripping | `unit` field on column/row mapping |
 | OFDM vs QAM detection | `channel_type.map` |
 | Label-based system info extraction | `html_fields` format with `label` selector |
+| CSS-targeted system info extraction | `html_fields` format with `css` selector |
+| Attribute-encoded values (e.g., CSS class status) | `html_fields` `css` selector with `attribute` field |
+
+#### CSS-encoded status values
+
+Some modems render status indicators as CSS classes or data attributes
+rather than visible text. For example, a provisioning status table may
+use Bootstrap classes (`class="success"`) with glyphicon icons instead
+of displaying the word "Online". The automated Phase 6 label detection
+(which matches visible text via regex) will miss these fields because
+there is no text content to match against.
+
+These values are configured in parser.yaml using `html_fields` with a
+`css` selector and the `attribute` field:
+
+```yaml
+html_fields:
+  - field: provisioning_status
+    css: "td.provisioning-result span"
+    attribute: "class"
+    pattern: "label-(?P<value>\\w+)"
+```
+
+The `css` selector targets the element, `attribute` reads the named
+attribute (instead of text content), and the optional `pattern`
+extracts the meaningful portion via a named capture group.
+
+This pattern appears in modems like the CGA2121, where provisioning
+tables use CSS classes to indicate pass/fail status. During onboarding,
+these fields start as Tier 3 (passthrough) since they are
+modem-specific. They can be elevated to Tier 2 when the same pattern
+appears across multiple modems. See
+[PARSING_SPEC.md](PARSING_SPEC.md) for full `html_fields` semantics.
 
 ### parser.py contract
 

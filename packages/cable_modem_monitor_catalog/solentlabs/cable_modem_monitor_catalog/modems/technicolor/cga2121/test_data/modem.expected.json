@@ -170,12 +170,17 @@
     }
   ],
   "system_info": {
+    "dhcp_status": "success",
     "downstream_channel_count": 24,
+    "ds_scanning_status": "success",
     "hardware_version": "1.01",
     "model": "CGA2121",
+    "registration_status": "success",
     "software_version": "CGA2121E-5_65_0-ES-13-E113C5-c7410r5714-241120",
     "system_uptime": "18 days 00h:09m:46s",
-    "upstream_channel_count": 4
+    "tftp_status": "success",
+    "upstream_channel_count": 4,
+    "us_ranging_status": "success"
   },
   "upstream": [
     {

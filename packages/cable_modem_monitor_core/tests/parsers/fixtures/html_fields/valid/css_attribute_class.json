@@ -1,0 +1,10 @@
+{
+  "_description": "CSS selector with class attribute extracts space-joined class names",
+  "_html": "<html><body><td class=\"success\"><span class=\"glyphicon glyphicon-ok\"></span></td></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"css": "td", "attribute": "class", "field": "status", "type": "string"}]
+  },
+  "_expected": {"status": "success"}
+}

@@ -21,6 +21,7 @@ jobs:
       - name: Build and test devcontainer
         uses: devcontainers/ci@v0.3
         with:
+          push: never
           runCmd: |
             set -e  # Exit on first error
             echo "=== Devcontainer Smoke Test ==="

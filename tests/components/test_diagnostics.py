@@ -405,6 +405,9 @@ async def test_diagnostics_delegates_to_builder(mock_runtime_data):
     assert "core_diagnostics" in result
     assert "modem_data" in result
     assert result["modem_data"]["connection_status"] == "online"
+    # Full system_info pass-through (includes tier 3 fields)
+    assert "system_info" in result
+    assert result["system_info"]["software_version"] == "4502.9.016"
 
 
 # -----------------------------------------------------------------------

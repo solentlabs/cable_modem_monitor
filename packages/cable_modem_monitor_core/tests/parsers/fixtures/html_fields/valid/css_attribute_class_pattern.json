@@ -1,0 +1,10 @@
+{
+  "_description": "CSS selector with multi-value class attribute and pattern extracts matching class",
+  "_html": "<html><body><span class=\"glyphicon glyphicon-ok\"></span></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"css": "span", "attribute": "class", "pattern": "(glyphicon-ok|glyphicon-remove)", "field": "icon", "type": "string"}]
+  },
+  "_expected": {"icon": "glyphicon-ok"}
+}

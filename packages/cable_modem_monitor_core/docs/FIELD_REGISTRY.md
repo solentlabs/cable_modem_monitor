@@ -96,6 +96,25 @@ Examples: `t3_timeouts`, `t4_timeouts`, `security_type`,
 
 ---
 
+## HA Entity Mapping
+
+Tiers define naming authority — which fields Core validates and which
+the registry standardizes. How each field becomes an HA entity is
+determined by the data section it belongs to, not its tier:
+
+- **Channel fields:** Tier 1 numeric fields (`power`, `snr`, etc.)
+  become their own sensor entity. All other channel fields (any tier)
+  become attributes on that channel's sensor.
+- **System info fields:** Fields with a dedicated sensor class
+  (currently Tier 1 canonical + aggregates) are consumed by that class.
+  All remaining fields (any tier) become a dynamic
+  `SystemInfoFieldSensor` entity.
+
+See [ENTITY_MODEL_SPEC.md § Field Pass-Through](../../../custom_components/cable_modem_monitor/docs/ENTITY_MODEL_SPEC.md#field-pass-through)
+for the full mapping rules.
+
+---
+
 ## Naming Rules (all tiers)
 
 - snake_case, lowercase, no abbreviations except industry-standard

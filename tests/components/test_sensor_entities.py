@@ -39,8 +39,10 @@ from custom_components.cable_modem_monitor.sensor import (
     ModemStatusSensor,
     ModemSystemUptimeSensor,
     PingLatencySensor,
+    SystemInfoFieldSensor,
     _create_channel_sensors,
     _create_lan_sensors,
+    _humanize_field_name,
     _index_channels,
 )
 
@@ -66,6 +68,17 @@ MODEM_DATA_WITH_LAN: dict[str, Any] = {
 MODEM_DATA_LAN_SINGLE: dict[str, Any] = {
     **MOCK_MODEM_DATA,
     "lan_stats": {"eth0": {"received_bytes": 42000}},
+}
+
+# System_info with Tier 3 pass-through fields (not consumed by dedicated sensors)
+MODEM_DATA_WITH_PASSTHROUGH: dict[str, Any] = {
+    **MOCK_MODEM_DATA,
+    "system_info": {
+        **MOCK_MODEM_DATA["system_info"],
+        "ds_scanning_status": "success",
+        "us_ranging_status": "success",
+        "dhcp_status": "success",
+    },
 }
 
 # -----------------------------------------------------------------------
@@ -400,6 +413,102 @@ def test_lan_stats_sensor_value(mock_runtime_data):
 
 
 # -----------------------------------------------------------------------
+# _humanize_field_name — pure function
+# -----------------------------------------------------------------------
+
+# ┌──────────────────────────┬──────────────────────────┬─────────────────────┐
+# │ field                    │ expected                 │ description         │
+# ├──────────────────────────┼──────────────────────────┼─────────────────────┤
+# │ ds_scanning_status       │ DS Scanning Status       │ ds abbreviation     │
+# │ us_ranging_status        │ US Ranging Status        │ us abbreviation     │
+# │ dhcp_status              │ DHCP Status              │ dhcp abbreviation   │
+# │ registration_status      │ Registration Status      │ no abbreviation     │
+# │ software_version         │ Software Version         │ simple words        │
+# │ tftp_status              │ TFTP Status              │ tftp abbreviation   │
+# │ ip_address               │ IP Address               │ ip abbreviation     │
+# │ snr_margin               │ SNR Margin               │ snr abbreviation    │
+# └──────────────────────────┴──────────────────────────┴─────────────────────┘
+#
+# fmt: off
+HUMANIZE_CASES = [
+    ("ds_scanning_status",  "DS Scanning Status",  "ds_prefix"),
+    ("us_ranging_status",   "US Ranging Status",   "us_prefix"),
+    ("dhcp_status",         "DHCP Status",         "dhcp_abbreviation"),
+    ("registration_status", "Registration Status", "no_abbreviation"),
+    ("software_version",    "Software Version",    "simple_words"),
+    ("tftp_status",         "TFTP Status",         "tftp_abbreviation"),
+    ("ip_address",          "IP Address",          "ip_abbreviation"),
+    ("snr_margin",          "SNR Margin",          "snr_abbreviation"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "field,expected,desc",
+    HUMANIZE_CASES,
+    ids=[c[2] for c in HUMANIZE_CASES],
+)
+def test_humanize_field_name(field, expected, desc):
+    """_humanize_field_name handles abbreviations and title case."""
+    assert _humanize_field_name(field) == expected
+
+
+# -----------------------------------------------------------------------
+# SystemInfoFieldSensor — Tier 3 dynamic pass-through
+# -----------------------------------------------------------------------
+
+
+def test_system_info_field_sensor_value(mock_runtime_data):
+    """SystemInfoFieldSensor reads field value from system_info."""
+    modem_data: dict[str, Any] = {
+        "system_info": {"ds_scanning_status": "success"},
+        "downstream": [],
+        "upstream": [],
+    }
+    sensor = _make_sensor(
+        SystemInfoFieldSensor,
+        mock_runtime_data,
+        modem_data=modem_data,
+        field="ds_scanning_status",
+    )
+    assert sensor.native_value == "success"
+    assert sensor._attr_name == "DS Scanning Status"
+    assert sensor._attr_unique_id == "test_entry_cable_modem_ds_scanning_status"
+
+
+def test_system_info_field_sensor_missing(mock_runtime_data):
+    """SystemInfoFieldSensor returns None when field absent from system_info."""
+    modem_data: dict[str, Any] = {
+        "system_info": {},
+        "downstream": [],
+        "upstream": [],
+    }
+    sensor = _make_sensor(
+        SystemInfoFieldSensor,
+        mock_runtime_data,
+        modem_data=modem_data,
+        field="nonexistent",
+    )
+    assert sensor.native_value is None
+
+
+def test_system_info_field_sensor_numeric(mock_runtime_data):
+    """SystemInfoFieldSensor passes through numeric values without conversion."""
+    modem_data: dict[str, Any] = {
+        "system_info": {"temperature": 42.5},
+        "downstream": [],
+        "upstream": [],
+    }
+    sensor = _make_sensor(
+        SystemInfoFieldSensor,
+        mock_runtime_data,
+        modem_data=modem_data,
+        field="temperature",
+    )
+    assert sensor.native_value == 42.5
+
+
+# -----------------------------------------------------------------------
 # _create_data_dependent_entities — extracted helper
 # -----------------------------------------------------------------------
 
@@ -446,6 +555,39 @@ def test_create_data_dependent_entities_no_channels(mock_runtime_data):
 
     # 2 channel counts + 1 software version + 0 channels + 0 LAN = 3
     assert len(entities) == 3
+
+
+def test_create_data_dependent_entities_with_passthrough(mock_runtime_data):
+    """Tier 3 system_info fields produce dynamic SystemInfoFieldSensor instances."""
+    from custom_components.cable_modem_monitor.sensor import (
+        _create_data_dependent_entities,
+    )
+
+    coord, entry = _make_coord_and_entry(MODEM_DATA_WITH_PASSTHROUGH, mock_runtime_data)
+    entities = _create_data_dependent_entities(coord, entry, MODEM_DATA_WITH_PASSTHROUGH)
+
+    # Base case has 19 entities (see test_create_data_dependent_entities).
+    # MODEM_DATA_WITH_PASSTHROUGH adds 3 Tier 3 fields → 19 + 3 = 22.
+    assert len(entities) == 22
+
+    passthrough = [e for e in entities if isinstance(e, SystemInfoFieldSensor)]
+    assert len(passthrough) == 3
+    passthrough_fields = {s._field for s in passthrough}
+    assert passthrough_fields == {"ds_scanning_status", "us_ranging_status", "dhcp_status"}
+
+
+def test_create_data_dependent_entities_passthrough_sorted(mock_runtime_data):
+    """Tier 3 dynamic sensors are created in sorted field order."""
+    from custom_components.cable_modem_monitor.sensor import (
+        _create_data_dependent_entities,
+    )
+
+    coord, entry = _make_coord_and_entry(MODEM_DATA_WITH_PASSTHROUGH, mock_runtime_data)
+    entities = _create_data_dependent_entities(coord, entry, MODEM_DATA_WITH_PASSTHROUGH)
+
+    passthrough = [e for e in entities if isinstance(e, SystemInfoFieldSensor)]
+    fields = [s._field for s in passthrough]
+    assert fields == sorted(fields)
 
 
 # -----------------------------------------------------------------------

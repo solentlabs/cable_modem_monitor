@@ -3,7 +3,7 @@
 <!-- Status & Installation -->
 [![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor)](https://github.com/solentlabs/cable_modem_monitor/releases)
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
-[![HA integration usage](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/custom_integrations.json)
+[![HA integration usage](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <!-- Packages -->

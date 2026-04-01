@@ -60,11 +60,17 @@ output (some gated by config).
 | US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
 | Total Uncorrected | `_total_uncorrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
+| System Info Field³ | `_{field}` | pass-through | — | — | — | Dynamic per-field sensor for Tier 3 system_info fields |
 
 ¹ See [Status Sensor](#status-sensor) for the priority cascade that
 produces the display state.
 
 ² Channel counts and error totals appear in `modem_data.system_info`.
+
+³ Dynamic sensor created for each `system_info` field not consumed by
+a dedicated sensor class above. One `SystemInfoFieldSensor` class
+handles all dynamic fields, parameterized by field name. Created only
+when the field is present in parser output. See § Field Pass-Through.
 Modems with native values have them mapped in parser.yaml. Modems
 without native values declare derivation rules in parser.yaml's
 `aggregate` section — the parser coordinator computes them from
@@ -205,22 +211,70 @@ channel bonding works.
 
 ## Field Pass-Through
 
-All fields from parser output flow to HA. The tier determines how:
+All fields from parser output flow to HA. Channels and system_info use
+different patterns:
 
-| Tier | HA Mapping | Examples |
-|------|-----------|----------|
-| Tier 1 canonical, numeric | Own sensor entity | `power`, `snr`, `frequency`, `corrected`, `uncorrected` |
-| Tier 1 canonical, string/enum | Attribute on channel sensor | `lock_status`, `modulation`, `channel_type` |
-| Tier 2 registered | Attribute on channel or system sensor | `channel_width`, `temperature`, `ranging_status`, `boot_status` |
-| Tier 3 unregistered | Attribute on channel or system sensor | `t3_timeouts`, `security_type`, `provisioned_speed_down` |
+- **Channel fields** that are not a sensor metric become attributes on
+  the channel sensor (e.g., `modulation`, `lock_status`).
+- **System info fields** that lack a dedicated sensor class become
+  their own sensor entity via `SystemInfoFieldSensor`.
 
-The integration does not decide which attributes are "important enough"
+The integration does not decide which fields are "important enough"
 for their own entity. It exposes everything the parser provides. Users
 create template sensors/binary_sensors from attributes for their own
 automations.
 
-See [FIELD_REGISTRY.md](../../../packages/cable_modem_monitor_core/docs/FIELD_REGISTRY.md)
-for field naming authority and tier definitions.
+[FIELD_REGISTRY.md](../../../packages/cable_modem_monitor_core/docs/FIELD_REGISTRY.md)
+defines field naming authority across three tiers (canonical, registered,
+unregistered). Tiers govern naming validation, not HA entity type — the
+sections below define how each data section maps to HA entities.
+
+### Channel Field Pass-Through
+
+| FIELD_REGISTRY Tier | HA Mapping | Examples |
+|---------------------|-----------|----------|
+| Tier 1 canonical, numeric | Own sensor entity (one per channel) | `power`, `snr`, `frequency`, `corrected`, `uncorrected` |
+| Tier 1 canonical, string/enum | Attribute on channel sensor | `lock_status`, `modulation`, `channel_type` |
+| Tier 2 registered | Attribute on channel sensor | `channel_width`, `ranging_status` |
+| Tier 3 unregistered | Attribute on channel sensor | `t3_timeouts`, `security_type` |
+
+All non-metric fields from the channel dict are exposed as
+`extra_state_attributes` on the channel's primary sensor.
+
+### System Info Pass-Through
+
+System info fields use a consumed/dynamic pattern:
+
+| Pattern | HA Entity | Fields |
+|---------|-----------|--------|
+| Consumed (dedicated class) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected` |
+| Dynamic (pass-through) | Generic `SystemInfoFieldSensor(field=key)` | Everything else in `system_info` |
+
+**Consumed fields** are those with a dedicated sensor class in
+`sensor.py` (see § Entity Catalog — System Sensors). They are listed
+in `_CONSUMED_SYSTEM_INFO_FIELDS`:
+
+- `software_version`, `system_uptime` — Tier 1 canonical, always
+  from parser.yaml mappings
+- `downstream_channel_count`, `upstream_channel_count` — always
+  computed by the coordinator (`len(channels)`); native value from
+  parser.yaml takes precedence if mapped
+- `total_corrected`, `total_uncorrected` — declared in parser.yaml's
+  `aggregate` section (scoped sums from channel data); native mapping
+  takes precedence if the modem reports totals directly
+
+The grouping is by HA entity ownership, not by FIELD_REGISTRY tier.
+
+**Dynamic fields** are everything else. `_create_data_dependent_entities`
+loops over `system_info` keys, skips consumed fields, and creates a
+`SystemInfoFieldSensor` for each remaining key. Field presence gates
+creation — no data, no sensor. Straight pass-through — no type
+conversion or boolean mapping.
+
+**Graduation:** When a dynamic field gets a dedicated sensor class, add
+it to `_CONSUMED_SYSTEM_INFO_FIELDS`. The dynamic sensor for that field
+stops being created. No entity migration — the dedicated class takes
+over with its own unique_id.
 
 ---
 

@@ -176,6 +176,44 @@ _LAN_METRICS = [
 _DS_ALWAYS_FIELDS = frozenset(("power", "snr"))
 _US_ALWAYS_FIELDS = frozenset(("power",))
 
+# System info fields consumed by dedicated sensor classes.
+# Dynamic SystemInfoFieldSensor skips these — the dedicated class owns them.
+# When a field graduates to a dedicated sensor, add it here.
+# fmt: off
+_CONSUMED_SYSTEM_INFO_FIELDS = frozenset({
+    "software_version",
+    "system_uptime",
+    "downstream_channel_count",
+    "upstream_channel_count",
+    "total_corrected",
+    "total_uncorrected",
+})
+# fmt: on
+
+# Abbreviations uppercased in humanized field names.
+_SYSINFO_ABBREVIATIONS = frozenset(
+    {
+        "ds",
+        "us",
+        "dhcp",
+        "tftp",
+        "ip",
+        "mac",
+        "snr",
+        "fft",
+        "ofdm",
+    }
+)
+
+
+def _humanize_field_name(field: str) -> str:
+    """Convert snake_case field to Title Case, uppercasing known abbreviations.
+
+    Examples: ``ds_scanning_status`` → ``DS Scanning Status``,
+    ``dhcp_status`` → ``DHCP Status``.
+    """
+    return " ".join(w.upper() if w in _SYSINFO_ABBREVIATIONS else w.title() for w in field.split("_"))
+
 
 # ------------------------------------------------------------------
 # Base classes
@@ -545,6 +583,37 @@ class ModemLastBootTimeSensor(_SystemInfoSensor):
         return self._snapshot.stats_last_reset
 
 
+class SystemInfoFieldSensor(_SystemInfoSensor):
+    """Dynamic sensor for Tier 3 system_info fields.
+
+    Created for each system_info field not consumed by a dedicated
+    sensor class.  Parameterized by field name — one class handles
+    all pass-through fields.  Value is returned as-is with no type
+    conversion.
+
+    See ENTITY_MODEL_SPEC.md § Field Pass-Through.
+    """
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+        *,
+        field: str,
+    ) -> None:
+        """Initialize with the system_info field name."""
+        super().__init__(coordinator, entry)
+        self._field = field
+        self._attr_name = _humanize_field_name(field)
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_{field}"
+        self._attr_icon = "mdi:information-outline"
+
+    @functools.cached_property
+    def native_value(self) -> str | int | float | None:
+        """Return the field value as-is (no type conversion)."""
+        return self._get_system_info().get(self._field)
+
+
 # ------------------------------------------------------------------
 # Per-channel sensors
 # ------------------------------------------------------------------
@@ -866,6 +935,11 @@ def _create_data_dependent_entities(
 
     # LAN stats sensors
     entities.extend(_create_lan_sensors(data_coord, entry, modem_data))
+
+    # Tier 3 dynamic system_info sensors (pass-through)
+    for field in sorted(system_info):
+        if field not in _CONSUMED_SYSTEM_INFO_FIELDS:
+            entities.append(SystemInfoFieldSensor(data_coord, entry, field=field))
 
     return entities
 

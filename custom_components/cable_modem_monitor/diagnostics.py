@@ -359,6 +359,11 @@ def _build_diagnostics_dict(
     else:
         diagnostics["modem_data"] = {"note": "No snapshot available"}
 
+    # Full system_info pass-through — includes tier 3 fields not
+    # cherry-picked in the modem_data summary above.
+    if modem_data:
+        diagnostics["system_info"] = system_info
+
     # Channel dump — pass through parser output as-is.  Parsers emit
     # sparse dicts (only fields the modem produces), already validated
     # against field_registry by validate_modem_data.

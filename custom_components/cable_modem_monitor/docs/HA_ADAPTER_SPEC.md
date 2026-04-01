@@ -432,6 +432,7 @@ Combines Core's `OrchestratorDiagnostics` with HA-side context.
   (`custom_components.cable_modem_monitor`) and Core package
   (`solentlabs.cable_modem_monitor_core`) loggers
 - Full channel dump (downstream + upstream with all fields)
+- Full system_info dump (all fields, including dynamic/tier 3)
 - Config entry details (host, protocol, supports_icmp, etc.)
 - Coordinator state (last_update_success, update_interval)
 - Generic auth diagnostics (per-strategy, not HNAP-specific)

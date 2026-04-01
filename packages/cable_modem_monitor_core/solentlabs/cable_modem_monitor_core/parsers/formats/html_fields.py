@@ -1,4 +1,4 @@
-"""HTMLFieldsParser — extract system_info from HTML via label or id.
+"""HTMLFieldsParser — extract system_info from HTML via label, id, or CSS.
 
 Produces a flat ``dict[str, str]`` from named fields in HTML pages.
 Used for system_info sources with ``format: html_fields``.
@@ -103,10 +103,7 @@ def _extract_by_id(soup: BeautifulSoup | Tag, element_id: str, attribute: str = 
     element = soup.find(id=element_id)
     if element is None or not isinstance(element, Tag):
         return None
-    if attribute:
-        val = element.get(attribute)
-        return str(val) if val is not None else None
-    return str(element.get_text())
+    return _element_value(element, attribute)
 
 
 def _extract_by_css(soup: BeautifulSoup | Tag, css_selector: str, attribute: str = "") -> str | None:
@@ -114,10 +111,26 @@ def _extract_by_css(soup: BeautifulSoup | Tag, css_selector: str, attribute: str
     element = soup.select_one(css_selector)
     if element is None or not isinstance(element, Tag):
         return None
-    if attribute:
-        val = element.get(attribute)
-        return str(val) if val is not None else None
-    return str(element.get_text())
+    return _element_value(element, attribute)
+
+
+def _element_value(element: Tag, attribute: str) -> str | None:
+    """Extract text content or an attribute value from an element.
+
+    BeautifulSoup returns multi-valued HTML attributes (e.g. ``class``)
+    as lists. This function joins them with spaces to match the original
+    HTML representation, so downstream patterns and consumers see
+    ``"success"`` or ``"glyphicon glyphicon-ok"`` instead of a Python
+    list repr.
+    """
+    if not attribute:
+        return str(element.get_text())
+    val = element.get(attribute)
+    if val is None:
+        return None
+    if isinstance(val, list):
+        return " ".join(str(v) for v in val)
+    return str(val)
 
 
 def _extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:

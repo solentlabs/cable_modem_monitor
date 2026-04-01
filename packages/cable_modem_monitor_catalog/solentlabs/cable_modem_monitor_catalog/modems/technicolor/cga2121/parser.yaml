@@ -63,3 +63,26 @@ system_info:
         - css: "th[data-i18n='atg_system_uptime'] + td"
           field: system_uptime
           type: string
+    - format: html_fields
+      resource: "/st_docsis.html"
+      fields:
+        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(1)"
+          attribute: "class"
+          field: ds_scanning_status
+          type: string
+        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(2)"
+          attribute: "class"
+          field: us_ranging_status
+          type: string
+        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(3)"
+          attribute: "class"
+          field: dhcp_status
+          type: string
+        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(4)"
+          attribute: "class"
+          field: tftp_status
+          type: string
+        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(5)"
+          attribute: "class"
+          field: registration_status
+          type: string

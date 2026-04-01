@@ -1228,7 +1228,7 @@ overlap — each source owns distinct fields.
 
 | Format | Source type | How fields are found |
 |--------|------------|---------------------|
-| `html_fields` | HTML page | Two selector types (see below) |
+| `html_fields` | HTML page | Three selector types (see below) |
 | `javascript` | HTML page | JS function body → delimited string → offset |
 | `hnap` | HNAP response | Action response key → JSON key |
 | `json` | REST response | Object path → JSON key |
@@ -1239,11 +1239,49 @@ overlap — each source owns distinct fields.
 |----------|------------|-----------|
 | `label: "text"` | Value appears next to a text label | Find element containing label text, cascade through structural patterns (td→sibling td, th→paired td, span→sibling span, dt→dd) to locate the adjacent value element |
 | `id: "element_id"` | Value is in an element with a known HTML id | Direct element lookup via `id` attribute, extract text content |
+| `css: "selector"` | Value is in an element targeted by CSS selector | CSS selector query via `select_one()`, extract text content |
 
-Both selectors support an optional `pattern` field — a regex with a
-single capture group applied to the extracted text. If omitted, the
-full `get_text()` result is the value. Regex is compiled and validated
-at config load time.
+Use `css` when the target element has no id and no adjacent text label
+— for example, elements identified by `data-*` attributes, positional
+selectors (`nth-child`), or attribute-value matches
+(`th[data-i18n='key'] + td`).
+
+#### `html_fields` optional fields
+
+All three selector types support these optional fields:
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `attribute` | string | Extract an HTML attribute value instead of text content. When omitted, `get_text()` is used. |
+| `pattern` | string | Regex applied to the extracted value (text or attribute). A single capture group returns `group(1)`; no capture group returns the full match. No match → field is skipped. |
+
+**`attribute` and multi-valued HTML attributes:** BeautifulSoup returns
+some HTML attributes (notably `class`) as lists. The parser joins
+list-valued attributes with spaces to match the original HTML
+representation. For example, `class="glyphicon glyphicon-ok"` extracts
+as `"glyphicon glyphicon-ok"`, not a Python list. Use `pattern` to
+isolate a specific value when the attribute contains multiple tokens.
+
+**Use case — CSS-encoded status indicators:** Some modems encode status
+as CSS classes rather than visible text (e.g., Bootstrap `class="success"`
+or `class="danger"` with icon glyphicons). These elements have no text
+content, so `get_text()` returns nothing useful. Use `css` + `attribute`
+to extract the class value:
+
+```yaml
+# Extract provisioning status from a CSS-encoded indicator
+- css: "td.provisioning-status"
+  attribute: "class"
+  pattern: "(success|danger)"
+  field: provisioning_status
+  type: string
+```
+
+The raw attribute value passes through as the field value. No value
+mapping is applied — the parser extracts what the modem provides. If
+the same pattern appears across multiple modems, the field can be
+elevated from Tier 3 (modem-specific) to Tier 2 (registered) in the
+field registry.
 
 The `label` cascade is anti-fragile: firmware updates that change HTML
 structure (e.g., `<th>/<td>` to `<td>/<td>`) don't break configs
