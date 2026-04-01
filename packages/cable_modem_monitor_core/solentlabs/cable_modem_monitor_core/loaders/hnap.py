@@ -110,11 +110,13 @@ class HNAPLoader:
         if response.status_code == 401:
             raise HNAPLoadError(
                 "HNAP request returned 401 Unauthorized " "(session may have expired)",
+                status_code=401,
             )
 
         if response.status_code >= 400:
             raise HNAPLoadError(
                 f"HNAP request returned HTTP {response.status_code}",
+                status_code=response.status_code,
             )
 
         try:
@@ -136,7 +138,16 @@ class HNAPLoader:
 
 
 class HNAPLoadError(Exception):
-    """An HNAP resource request failed."""
+    """An HNAP resource request failed.
+
+    Attributes:
+        status_code: HTTP status code if the error was an HTTP response.
+            None for connection/timeout errors and JSON parse errors.
+    """
+
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def _collect_hnap_actions(parser_config: ParserConfig) -> list[str]:

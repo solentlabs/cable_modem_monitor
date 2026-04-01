@@ -409,6 +409,55 @@ modem's web UI. Session is still valid in memory.
 
 ---
 
+### UC-21: HNAP stale session — HTTP error on reused HNAP session
+
+**Preconditions:** HNAP modem. Session reused from prior poll. Server
+has expired the session (firmware timeout or max-session limit).
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `get_modem_data()` | | |
+| 2 | Collector: session valid (uid cookie + key) → reuse | | |
+| 3 | Resource Loader: POST /HNAP1/ with stale session → HTTP 404 | | |
+| 4 | Collector: HNAP error + reused session → LOAD_AUTH | | |
+| 5 | Orchestrator: streak++, collector.clear_session() | session cleared | |
+| 6 | Return `ModemSnapshot(AUTH_FAILED)` | | |
+
+**Assertions:**
+- Signal is LOAD_AUTH (not LOAD_ERROR) — session context determines routing
+- Session is cleared so next poll starts with fresh login (→ UC-18)
+- Auth failure streak is incremented
+- WARNING log: "HNAP HTTP 404 on reused session [MODEL] — session likely expired"
+
+**Note:** Some HNAP firmware returns 404 for expired sessions, not 401.
+Others may return 500. The routing does not depend on the specific status
+code — any HTTP error on a reused HNAP session is treated as a stale
+session, because `/HNAP1/` is a fixed endpoint that always exists on
+HNAP modems (RESOURCE_LOADING_SPEC § HNAP Batching).
+
+---
+
+### UC-22: HNAP server error on fresh session
+
+**Preconditions:** HNAP modem. Fresh login just completed. Modem has
+a firmware issue or temporary overload.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `get_modem_data()` | | |
+| 2 | Collector: no session → fresh login → success | | |
+| 3 | Resource Loader: POST /HNAP1/ → HTTP 500 | | |
+| 4 | Collector: HNAP error + fresh session → LOAD_ERROR | | |
+| 5 | Return `ModemSnapshot(UNREACHABLE)` | | |
+
+**Assertions:**
+- Signal is LOAD_ERROR (not LOAD_AUTH) — fresh session rules out stale session
+- Session is NOT cleared — avoid unnecessary re-login that could trigger lockout
+- Auth failure streak NOT incremented
+- INFO log: "HNAP load error [MODEL]: ..."
+
+---
+
 ## Connectivity Failures
 
 ### UC-30: Connection refused — modem offline

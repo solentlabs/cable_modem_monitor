@@ -122,6 +122,24 @@ loader batches all actions into one `GetMultipleHNAPs` request.
 4. Extract `GetMultipleHNAPsResponse` as the `hnap_response` dict
 5. Individual action responses become keys within `hnap_response`
 
+### HNAP Error Classification
+
+HNAP errors during data fetching are classified by transport context:
+
+| Condition | Signal | Rationale |
+|-----------|--------|-----------|
+| HTTP error + reused session | `LOAD_AUTH` | `/HNAP1/` always exists — HTTP error means server rejected the session |
+| HTTP error + fresh session | `LOAD_ERROR` | Auth succeeded but server errored — genuine problem, not stale session |
+| Connection error / timeout | `CONNECTIVITY` | Modem unreachable |
+| Invalid JSON (HTTP 200) | `LOAD_ERROR` | Response arrived but is malformed |
+
+This differs from HTTP transport, where 401/403 maps to `LOAD_AUTH`
+and other status codes map to `LOAD_ERROR` regardless of session state.
+HNAP firmware uses non-standard status codes for session rejection
+(some return 404, others 500, rather than 401), so status code alone
+cannot distinguish auth failure from server error. The session-reuse
+context resolves the ambiguity.
+
 ### Path Deduplication
 
 Multiple sections in parser.yaml can reference the same URL path.

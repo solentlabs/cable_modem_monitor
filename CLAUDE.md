@@ -146,7 +146,8 @@ Authoritative doc indexes:
 | Irreversible Operations | Stop and verify before destructive git ops             |
 | Branch Management       | Rebase over cherry-pick                                |
 | Merge Strategy          | Merge commits for releases, squash for PRs             |
-| Release Flow            | Step-by-step release process                           |
+| Alpha/Beta Release Flow | Tag on feature branch, CI vs publish distinction       |
+| Stable Release Flow     | Step-by-step stable release process                    |
 | Release Checklist       | Pre-release verification items                         |
 | PR and Issue Rules      | No auto-close keywords                                 |
 | Issue Labels            | Label meanings and when to change them                 |
@@ -282,7 +283,27 @@ When applying a fix to multiple feature branches (e.g., v3.11.0 and v3.12.0):
 
 - Creates one clean commit on main
 
-## Release Flow
+## Alpha/Beta Release Flow
+
+Pre-release versions (alpha, beta) are tagged directly on the feature
+branch. **CI runs on push. Publishing runs on tag push. These are
+separate steps — don't skip the tag.**
+
+1. Commit the fix
+2. Run `scripts/release.py <version>` to bump versions
+3. Stage and commit the version bump
+4. Push the branch → CI runs (tests, hassfest, CodeQL)
+5. **Wait for CI to pass**
+6. Tag: `git tag v<version> <sha>`
+7. Push the tag: `git push origin v<version>` → PyPI publish runs
+8. Verify publish: `gh run list --workflow publish.yml --limit 1`
+
+**Common mistake:** Pushing the branch and assuming the package is
+published. It's not — the publish workflow only triggers on tag push.
+If you skip step 6-7, the version bump is committed but the package
+never reaches PyPI.
+
+## Stable Release Flow
 
 Follow this exact sequence for clean releases:
 

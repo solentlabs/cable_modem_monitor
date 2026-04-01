@@ -392,3 +392,47 @@ class TestHnapSessionValidity:
         collector = ModemDataCollector(config, None, None, "http://localhost", "", "")
         collector._auth_context = AuthContext(url_token="token123")
         assert collector.session_is_valid is True
+
+
+# ------------------------------------------------------------------
+# Tests — session reuse flag tracking
+# ------------------------------------------------------------------
+
+
+class TestSessionReusedFlag:
+    """_session_reused tracks whether authenticate() reused the session."""
+
+    def test_reused_when_session_valid(self) -> None:
+        """authenticate() sets _session_reused=True when session is valid."""
+        config = _make_config(auth_type="hnap", transport="hnap")
+        collector = ModemDataCollector(config, None, None, "http://localhost", "", "pw")
+        # Simulate authenticated HNAP session
+        collector._auth_context = AuthContext(private_key="some_key")
+        collector._session.cookies.set("uid", "session123")
+        collector._last_auth_result = AuthResult(success=True)
+
+        collector.authenticate()
+        assert collector._session_reused is True
+
+    def test_not_reused_when_fresh_login(self) -> None:
+        """authenticate() sets _session_reused=False on fresh login."""
+        config = _make_config(auth_type="hnap", transport="hnap")
+        collector = ModemDataCollector(config, None, None, "http://localhost", "", "pw")
+        # No auth context — session is not valid
+
+        with patch.object(
+            collector._auth_manager,
+            "authenticate",
+            return_value=AuthResult(
+                success=True,
+                auth_context=AuthContext(private_key="new_key"),
+            ),
+        ):
+            collector.authenticate()
+        assert collector._session_reused is False
+
+    def test_initially_false(self) -> None:
+        """_session_reused defaults to False before any authenticate() call."""
+        config = _make_config(auth_type="hnap", transport="hnap")
+        collector = ModemDataCollector(config, None, None, "http://localhost", "", "pw")
+        assert collector._session_reused is False

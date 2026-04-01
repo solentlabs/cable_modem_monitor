@@ -25,6 +25,7 @@ import pytest
 import requests
 from solentlabs.cable_modem_monitor_core.auth.base import AuthContext, AuthResult
 from solentlabs.cable_modem_monitor_core.loaders.fetch_list import ResourceTarget
+from solentlabs.cable_modem_monitor_core.loaders.hnap import HNAPLoadError
 from solentlabs.cable_modem_monitor_core.loaders.http import (
     HTTPResourceLoader,
     LoginPageDetectedError,
@@ -310,6 +311,108 @@ SIGNAL_CLASSIFICATION_CASES = [
 def test_signal_classification(kwargs: dict[str, Any], expected_signal: CollectorSignal, desc: str) -> None:
     """execute() classifies pipeline failures into correct signals."""
     result = _run_collector_with_failure(**kwargs)
+    assert result.signal == expected_signal
+    assert result.success is False
+
+
+# ------------------------------------------------------------------
+# Tests — HNAP signal classification (table-driven, UC-21/UC-22)
+# ------------------------------------------------------------------
+
+
+def _make_hnap_load_error(
+    *,
+    status_code: int | None = None,
+    cause: Exception | None = None,
+) -> HNAPLoadError:
+    """Build an HNAPLoadError with controlled attributes."""
+    msg = f"HNAP request returned HTTP {status_code}" if status_code else "HNAP request failed"
+    err = HNAPLoadError(msg, status_code=status_code)
+    if cause is not None:
+        err.__cause__ = cause
+    return err
+
+
+def _run_hnap_collector_with_failure(
+    *,
+    load_error: HNAPLoadError,
+    session_reused: bool,
+) -> Any:
+    """Create an HNAP collector and execute with a controlled HNAP failure.
+
+    Sets _session_reused to simulate whether authenticate() short-circuited.
+    Patches _load_resources to raise the given HNAPLoadError.
+    """
+    config = _make_config(auth_type="hnap", transport="hnap")
+    collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "pw")
+
+    with (
+        patch.object(
+            collector,
+            "authenticate",
+            return_value=MagicMock(success=True),
+        ),
+        patch.object(collector, "_load_resources", side_effect=load_error),
+        patch.object(
+            collector,
+            "_parse",
+            return_value={"downstream": [], "upstream": [], "system_info": {}},
+        ),
+    ):
+        collector._session_reused = session_reused
+        return collector.execute()
+
+
+# ┌───────────────────────────────────┬──────────────┬────────────────┬───────────────────────────────┐
+# │ HNAPLoadError                     │ sess_reused  │ expected       │ description                   │
+# ├───────────────────────────────────┼──────────────┼────────────────┼───────────────────────────────┤
+# │ status_code=None + ConnError      │ True         │ CONNECTIVITY   │ UC-30: connection refused      │
+# │ status_code=None + Timeout        │ True         │ CONNECTIVITY   │ UC-31: timeout                 │
+# │ status_code=401, reused           │ True         │ LOAD_AUTH      │ UC-21: stale session (401)     │
+# │ status_code=404, reused           │ True         │ LOAD_AUTH      │ UC-21: S33 stale session (404) │
+# │ status_code=500, reused           │ True         │ LOAD_AUTH      │ UC-21: server-side expiry      │
+# │ status_code=401, fresh            │ False        │ LOAD_ERROR     │ UC-22: fresh session error     │
+# │ status_code=500, fresh            │ False        │ LOAD_ERROR     │ UC-22: fresh session error     │
+# │ status_code=None + ValueError     │ True         │ LOAD_ERROR     │ JSON parse error               │
+# │ status_code=None + ValueError     │ False        │ LOAD_ERROR     │ JSON parse error (fresh)       │
+# └───────────────────────────────────┴──────────────┴────────────────┴───────────────────────────────┘
+#
+_HNAP_CONN = _make_hnap_load_error(cause=requests.ConnectionError("refused"))
+_HNAP_TIMEOUT = _make_hnap_load_error(cause=requests.Timeout("timed out"))
+_HNAP_401 = _make_hnap_load_error(status_code=401)
+_HNAP_404 = _make_hnap_load_error(status_code=404)
+_HNAP_500 = _make_hnap_load_error(status_code=500)
+_HNAP_JSON = _make_hnap_load_error(cause=ValueError("No JSON"))
+
+# fmt: off
+HNAP_SIGNAL_CASES = [
+    # (load_error,  reused, expected,                     description)
+    (_HNAP_CONN,    True,   CollectorSignal.CONNECTIVITY, "UC-30: conn refused"),
+    (_HNAP_TIMEOUT, True,   CollectorSignal.CONNECTIVITY, "UC-31: timeout"),
+    (_HNAP_401,     True,   CollectorSignal.LOAD_AUTH,    "UC-21: stale (401)"),
+    (_HNAP_404,     True,   CollectorSignal.LOAD_AUTH,    "UC-21: stale (404)"),
+    (_HNAP_500,     True,   CollectorSignal.LOAD_AUTH,    "UC-21: stale (500)"),
+    (_HNAP_401,     False,  CollectorSignal.LOAD_ERROR,   "UC-22: fresh 401"),
+    (_HNAP_500,     False,  CollectorSignal.LOAD_ERROR,   "UC-22: fresh 500"),
+    (_HNAP_JSON,    True,   CollectorSignal.LOAD_ERROR,   "JSON parse (reused)"),
+    (_HNAP_JSON,    False,  CollectorSignal.LOAD_ERROR,   "JSON parse (fresh)"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "load_error,session_reused,expected_signal,desc",
+    HNAP_SIGNAL_CASES,
+    ids=[c[3] for c in HNAP_SIGNAL_CASES],
+)
+def test_hnap_signal_classification(
+    load_error: HNAPLoadError,
+    session_reused: bool,
+    expected_signal: CollectorSignal,
+    desc: str,
+) -> None:
+    """HNAP errors route to correct signal based on status code + session reuse (UC-21/UC-22)."""
+    result = _run_hnap_collector_with_failure(load_error=load_error, session_reused=session_reused)
     assert result.signal == expected_signal
     assert result.success is False
 

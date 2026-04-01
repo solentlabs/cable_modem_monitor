@@ -110,8 +110,9 @@ class ModemDataCollector:
         """Invalidate the current session.
 
         Called by the orchestrator when it has external evidence that
-        the session is dead: LOAD_AUTH signal (401 on data page) or
-        connectivity transition (unreachable → responsive).
+        the session is dead: LOAD_AUTH signal (HTTP 401/403 on data
+        page, or HNAP HTTP error on reused session) or connectivity
+        transition (unreachable → responsive).
         """
 ```
 
@@ -163,7 +164,7 @@ class CollectorSignal(Enum):
     AUTH_LOCKOUT = "auth_lockout"    # Firmware anti-brute-force triggered
     CONNECTIVITY = "connectivity"    # Connection refused, timeout, DNS failure
     LOAD_ERROR = "load_error"        # HTTP error on data page (5xx, 404)
-    LOAD_AUTH = "load_auth"          # HTTP 401/403 on data page (session or strategy issue)
+    LOAD_AUTH = "load_auth"          # Session expired: HTTP 401/403, or HNAP HTTP error on reused session
     PARSE_ERROR = "parse_error"      # Parser exception (malformed response)
 ```
 
@@ -204,6 +205,12 @@ Example — HTTP 401 on a data page:
 - **Log** (WARNING): `"HTTP 401 on /status.html [MODEL] — session likely expired"`
 - **Signal**: `CollectorSignal.LOAD_AUTH`
 - **ModemResult.error**: `"401 on /status.html — session likely expired"`
+
+Example — HNAP 404 on reused session:
+
+- **Log** (WARNING): `"HNAP HTTP 404 on reused session [MODEL] — session likely expired"`
+- **Signal**: `CollectorSignal.LOAD_AUTH`
+- **ModemResult.error**: `"HNAP HTTP 404 — session expired"`
 
 Example — successful collection with no channels:
 
@@ -901,7 +908,16 @@ Poll N:   LOAD_AUTH (streak: 1), session cleared
 Poll N+1: fresh login → collection succeeds (streak: 0)
 ```
 
-If persistent (modem always returns 401 on data pages), the streak
+**LOAD_AUTH on HNAP (stale session):**
+Server-side session expiry on HNAP modems with firmware session timeouts.
+The firmware may return a non-standard HTTP code (404, 500) instead of 401.
+
+```text
+Poll N:   LOAD_AUTH (streak: 1), session cleared  [HNAP HTTP 404 on reused session]
+Poll N+1: fresh login → collection succeeds (streak: 0)
+```
+
+If persistent (modem always returns errors on data pages), the streak
 grows and the circuit trips — same as wrong credentials.
 
 ### State Ownership

@@ -297,3 +297,92 @@ class TestErrors:
 
         with pytest.raises(HNAPLoadError, match="request failed"):
             loader.fetch(config)
+
+
+# ------------------------------------------------------------------
+# Tests — HNAPLoadError status_code attribute (UC-21, UC-22)
+# ------------------------------------------------------------------
+
+
+class _StatusCodeHandler(BaseHTTPRequestHandler):
+    """HNAP mock that returns a configurable HTTP status code."""
+
+    status_code: int = 200
+
+    def do_POST(self) -> None:  # noqa: N802
+        """Return configured status code."""
+        self.send_response(self.__class__.status_code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        if self.__class__.status_code == 200:
+            body = json.dumps({"GetMultipleHNAPsResponse": {}}).encode()
+            self.wfile.write(body)
+
+    def log_message(self, format: str, *args: Any) -> None:
+        """Suppress server log output."""
+
+
+# ┌─────────────┬──────────────────┬───────────────────────┐
+# │ HTTP status │ expected attr    │ description           │
+# ├─────────────┼──────────────────┼───────────────────────┤
+# │ 401         │ status_code=401  │ unauthorized          │
+# │ 404         │ status_code=404  │ not found (S33 stale) │
+# │ 500         │ status_code=500  │ server error          │
+# └─────────────┴──────────────────┴───────────────────────┘
+#
+# fmt: off
+HNAP_STATUS_CODE_CASES = [
+    # (http_status, expected_status_code, description)
+    (401,           401,                  "unauthorized"),
+    (404,           404,                  "not found"),
+    (500,           500,                  "server error"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "http_status,expected_status_code,desc",
+    HNAP_STATUS_CODE_CASES,
+    ids=[c[2] for c in HNAP_STATUS_CODE_CASES],
+)
+def test_hnap_load_error_carries_status_code(
+    http_status: int,
+    expected_status_code: int,
+    desc: str,
+) -> None:
+    """HNAPLoadError carries the HTTP status code from the response."""
+    _StatusCodeHandler.status_code = http_status
+    server = HTTPServer(("127.0.0.1", 0), _StatusCodeHandler)
+    port = server.server_address[1]
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        session = requests.Session()
+        loader = HNAPLoader(
+            session=session,
+            base_url=f"http://127.0.0.1:{port}",
+            private_key="key",
+        )
+        config = _make_parser_config()
+
+        with pytest.raises(HNAPLoadError) as exc_info:
+            loader.fetch(config)
+        assert exc_info.value.status_code == expected_status_code
+    finally:
+        server.shutdown()
+
+
+def test_hnap_load_error_connection_has_no_status_code() -> None:
+    """Connection error produces HNAPLoadError with status_code=None."""
+    session = requests.Session()
+    loader = HNAPLoader(
+        session=session,
+        base_url="http://127.0.0.1:1",
+        private_key="key",
+        timeout=1,
+    )
+    config = _make_parser_config()
+
+    with pytest.raises(HNAPLoadError) as exc_info:
+        loader.fetch(config)
+    assert exc_info.value.status_code is None

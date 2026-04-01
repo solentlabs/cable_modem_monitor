@@ -18,6 +18,7 @@ from ..auth.base import AuthContext, AuthResult, BaseAuthManager
 from ..auth.factory import create_auth_manager
 from ..connectivity import create_session
 from ..loaders.fetch_list import collect_fetch_targets
+from ..loaders.hnap import HNAPLoadError
 from ..loaders.http import (
     HTTPResourceLoader,
     LoginPageDetectedError,
@@ -88,6 +89,7 @@ class ModemDataCollector:
         self._auth_manager: BaseAuthManager = create_auth_manager(modem_config)
         self._auth_context: AuthContext | None = None
         self._last_auth_result: AuthResult | None = None
+        self._session_reused: bool = False
 
         # Configure session with static headers
         session_headers: dict[str, str] = {}
@@ -151,6 +153,8 @@ class ModemDataCollector:
                 signal=CollectorSignal.LOAD_AUTH,
                 error=str(exc),
             )
+        except HNAPLoadError as exc:
+            return self._classify_hnap_error(exc)
         except ResourceLoadError as exc:
             if exc.status_code in (401, 403):
                 hint = _auth_failure_hint(self._modem_config)
@@ -271,9 +275,11 @@ class ModemDataCollector:
         restart actions.
         """
         if self.session_is_valid:
+            self._session_reused = True
             _logger.debug("Session valid — reusing")
             return self._last_auth_result or AuthResult(success=True)
 
+        self._session_reused = False
         _logger.debug("No active session — authenticating")
         result = self._auth_manager.authenticate(
             self._session,
@@ -346,6 +352,54 @@ class ModemDataCollector:
             timeout=self._modem_config.timeout,
         )
         return loader.fetch(self._parser_config)
+
+    def _classify_hnap_error(self, exc: HNAPLoadError) -> ModemResult:
+        """Route an HNAP load failure to the correct signal.
+
+        HNAP uses a single fixed endpoint (/HNAP1/) so HTTP errors
+        are never "page not found." The session-reuse context determines
+        whether the error is a stale session (LOAD_AUTH) or a genuine
+        server problem (LOAD_ERROR). See UC-21 and UC-22.
+        """
+        cause = exc.__cause__
+
+        # Connection/timeout — modem unreachable (UC-30/UC-31)
+        if exc.status_code is None and isinstance(cause, requests.ConnectionError | requests.Timeout):
+            _logger.info(
+                "HNAP connection failed [%s]: %s",
+                self._modem_config.model,
+                exc,
+            )
+            return ModemResult(
+                success=False,
+                signal=CollectorSignal.CONNECTIVITY,
+                error=str(exc),
+            )
+
+        # HTTP error on reused session — stale (UC-21)
+        if exc.status_code is not None and self._session_reused:
+            _logger.warning(
+                "HNAP HTTP %s on reused session [%s] — session likely expired",
+                exc.status_code,
+                self._modem_config.model,
+            )
+            return ModemResult(
+                success=False,
+                signal=CollectorSignal.LOAD_AUTH,
+                error=f"HNAP HTTP {exc.status_code} — session expired",
+            )
+
+        # Fresh session HTTP error or JSON parse — genuine problem (UC-22)
+        _logger.info(
+            "HNAP load error [%s]: %s",
+            self._modem_config.model,
+            exc,
+        )
+        return ModemResult(
+            success=False,
+            signal=CollectorSignal.LOAD_ERROR,
+            error=str(exc),
+        )
 
     def _parse(self, resources: dict[str, Any]) -> dict[str, Any]:
         """Parse resources into ModemData."""
