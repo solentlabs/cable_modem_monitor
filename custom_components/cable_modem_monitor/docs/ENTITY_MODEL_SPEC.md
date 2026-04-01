@@ -60,7 +60,7 @@ output (some gated by config).
 | US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
 | Total Uncorrected | `_total_uncorrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
-| System Info Field³ | `_{field}` | pass-through | — | — | — | Dynamic per-field sensor for Tier 3 system_info fields |
+| System Info Field³ | `_{field}` | pass-through | — | — | — | Dynamic per-field sensor for non-consumed system_info fields |
 
 ¹ See [Status Sensor](#status-sensor) for the priority cascade that
 produces the display state.
@@ -75,7 +75,7 @@ Modems with native values have them mapped in parser.yaml. Modems
 without native values declare derivation rules in parser.yaml's
 `aggregate` section — the parser coordinator computes them from
 channel data. Channel counts (`len(channels)`) are always computed
-by the coordinator if not natively mapped. Consumers read from one
+by the parser coordinator if not natively mapped. Consumers read from one
 place regardless of source. See
 [PARSING_SPEC.md](../../../packages/cable_modem_monitor_core/docs/PARSING_SPEC.md#aggregate-derived-system_info-fields).
 
@@ -196,7 +196,7 @@ Channels are keyed by `(channel_type, channel_id)`:
 - **Downstream types:** `qam`, `ofdm`
 - **Upstream types:** `atdma`, `ofdma`
 
-The coordinator normalizes raw parser output into indexed dicts
+The DataUpdateCoordinator normalizes raw parser output into indexed dicts
 (`_downstream_by_id`, `_upstream_by_id`) for O(1) lookup. Channels
 are sorted by frequency within each type and assigned a 1-based
 `_index`.
@@ -257,7 +257,7 @@ in `_CONSUMED_SYSTEM_INFO_FIELDS`:
 - `software_version`, `system_uptime` — Tier 1 canonical, always
   from parser.yaml mappings
 - `downstream_channel_count`, `upstream_channel_count` — always
-  computed by the coordinator (`len(channels)`); native value from
+  computed by the parser coordinator (`len(channels)`); native value from
   parser.yaml takes precedence if mapped
 - `total_corrected`, `total_uncorrected` — declared in parser.yaml's
   `aggregate` section (scoped sums from channel data); native mapping

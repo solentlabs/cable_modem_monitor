@@ -1821,6 +1821,10 @@ the aggregate computation for that field. This handles the common
 case: a modem natively reports totals → map them directly. A modem
 that doesn't → declare the aggregate to compute them.
 
+**Empty scope:** If the scoped channel set is empty (e.g.,
+`downstream.qam` but the modem has only OFDM channels), the aggregate
+field is omitted from `system_info`. It is not set to zero.
+
 **Execution:** The coordinator runs aggregate computation after all
 sections are extracted and parser.py hooks have run. Results are
 merged into `system_info` alongside channel counts, before the

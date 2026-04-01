@@ -676,10 +676,9 @@ class ConnectionStatus(Enum):
     UNREACHABLE = "unreachable"
     NO_SIGNAL = "no_signal"
 
-# Note: "degraded" (health passes but data fetch fails) is a
-# display-layer composition of connection_status + health_status, not
-# a Core signal. The HA Status sensor cascade evaluates whether to
-# surface this combination as a display state.
+# Note: The "Degraded" display state in the HA Status sensor cascade
+# comes from HealthStatus.DEGRADED (ICMP responds, HTTP fails), which
+# is a health probe signal. ConnectionStatus has no DEGRADED value.
 
 
 class DocsisStatus(Enum):
