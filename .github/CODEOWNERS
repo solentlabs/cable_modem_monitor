@@ -29,7 +29,6 @@
 
 # Release and version management
 /CHANGELOG.md @kwschulz
-/scripts/maintenance/update_versions.py @kwschulz
 
 # Testing infrastructure
 /.pre-commit-config.yaml @kwschulz

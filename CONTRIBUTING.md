@@ -239,7 +239,24 @@ make docker-start
 make docker-restart
 ```
 
-See [Testing on HA](./docs/setup/TESTING_ON_HA.md) for detailed instructions and troubleshooting.
+**Testing a PR:**
+
+```bash
+gh pr checkout XX
+make docker-start
+```
+
+**Debug logging** — add this to your HA `configuration.yaml` to see
+detailed integration logs:
+
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.cable_modem_monitor: debug
+```
+
+Then check Settings → System → Logs after restarting.
 
 ## Project Architecture
 

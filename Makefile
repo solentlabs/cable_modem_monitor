@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
+.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
 
 # Default target - show help
 help:
@@ -32,8 +32,6 @@ help:
 	@echo "  make docker-clean   - Remove container and all test data"
 	@echo ""
 	@echo "Maintenance:"
-	@echo "  make sync-version - Sync version from const.py to manifest.json"
-	@echo ""
 	@echo "For more details, see scripts/README.md"
 
 # Run full test suite with coverage
@@ -105,10 +103,6 @@ validate:
 # Cross-platform validation (auto-installs tools, works without venv)
 validate-host:
 	@python scripts/dev/validate.py
-
-# Sync version numbers
-sync-version:
-	@python3 scripts/maintenance/update_versions.py
 
 # Docker development environment
 docker-start:

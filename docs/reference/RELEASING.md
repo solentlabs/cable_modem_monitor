@@ -20,46 +20,44 @@ Releases follow a PR-based workflow:
 git checkout feature/your-branch
 git status  # Should be clean
 
-# Run the release script with --no-push
-# This updates version numbers and CHANGELOG but doesn't push
-.venv/bin/python scripts/release.py 3.8.0 --no-push
+# Run the release script
+.venv/bin/python scripts/release.py 3.14.0
 ```
 
 The release script will:
-- Update `manifest.json` version
-- Update `const.py` VERSION
-- Update version test assertion
+- Validate version format and clean working directory
+- Run tests and code quality checks (pytest, ruff, black, mypy)
+- Verify translations are in sync
+- Update version in manifest.json, const.py, pyproject.toml files, and test assertions
 - Move `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` in CHANGELOG.md
-- Create a local commit (but NOT push)
-- Create a local tag (which we'll delete - see next step)
+- Print changed files and suggested next steps
 
-### 2. Delete the Premature Tag
+The script does **not** stage, commit, tag, push, or create releases —
+the developer handles all git operations.
 
-The release script creates a tag, but we want to tag `main` after merging, not the feature branch:
-
-```bash
-# Delete the local tag (we'll recreate it on main later)
-git tag -d v3.8.0
-```
-
-### 3. Push and Create/Update PR
+### 2. Stage, Commit, and Push
 
 ```bash
+# Review changed files, stage, and commit
+git diff
+git add <changed-files>
+git commit -m "chore: bump version to 3.14.0"
+
 # Push your feature branch
 git push origin feature/your-branch
 
 # Create PR if it doesn't exist, or it will update the existing one
-gh pr create --title "feat: v3.8.0 - Your Release Title" --body "..."
+gh pr create --title "feat: v3.14.0 - Your Release Title" --body "..."
 # Or update existing PR via GitHub UI
 ```
 
-### 4. Review and Merge
+### 3. Review and Merge
 
 - Wait for CI to pass
 - Review the changes
 - Merge the PR (squash or merge commit)
 
-### 5. Tag Main and Push
+### 4. Tag Main and Push
 
 After the PR is merged:
 
@@ -69,7 +67,7 @@ git checkout main
 git pull origin main
 
 # Create the release tag on main
-git tag -a v3.8.0 -m "Cable Modem Monitor v3.8.0
+git tag -a v3.14.0 -m "Cable Modem Monitor v3.14.0
 
 Key features:
 - Feature 1
@@ -77,10 +75,10 @@ Key features:
 - See CHANGELOG.md for details"
 
 # Push the tag (triggers release workflow)
-git push origin v3.8.0
+git push origin v3.14.0
 ```
 
-### 6. Verify Release
+### 5. Verify Release
 
 The tag push triggers `.github/workflows/release.yml` which:
 - Creates a GitHub Release
@@ -102,12 +100,12 @@ For urgent fixes to a released version:
 
 ```bash
 # Create hotfix branch from the release tag
-git checkout -b hotfix/3.8.1 v3.8.0
+git checkout -b hotfix/3.14.1 v3.14.0
 
 # Make fixes, commit, then follow normal release process
-.venv/bin/python scripts/release.py 3.8.1 --no-push
-git tag -d v3.8.1  # Delete premature tag
-git push origin hotfix/3.8.1
+.venv/bin/python scripts/release.py 3.14.1
+# Stage and commit version bump, then push
+git push origin hotfix/3.14.1
 # Create PR, merge, then tag main
 ```
 
@@ -130,18 +128,18 @@ If you accidentally pushed a tag to the wrong branch:
 
 ```bash
 # Delete remote tag
-git push origin --delete v3.8.0
+git push origin --delete v3.14.0
 
 # Delete local tag
-git tag -d v3.8.0
+git tag -d v3.14.0
 
 # Start fresh from the tagging step
 ```
 
 ### Release workflow didn't trigger
 
-Ensure the tag follows the pattern `v*` (e.g., `v3.8.0`). Check `.github/workflows/release.yml` for the trigger configuration.
+Ensure the tag follows the pattern `v*` (e.g., `v3.14.0`). Check `.github/workflows/release.yml` for the trigger configuration.
 
 ---
 
-*Last updated: 2025-11-28*
+*Last updated: 2026-04-02*
