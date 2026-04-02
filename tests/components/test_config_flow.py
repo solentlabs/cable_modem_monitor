@@ -165,6 +165,38 @@ async def test_validation_progress_unexpected_error():
     assert isinstance(progress.error, ValueError)
 
 
+async def test_validation_progress_connection_error():
+    """ConnectionError maps to network_unreachable."""
+    progress = _ValidationProgress()
+
+    async def _raise():
+        raise ConnectionError("Modem unreachable")
+
+    loop = asyncio.get_event_loop()
+    progress.task = loop.create_task(_raise())
+    await asyncio.sleep(0)
+
+    assert await progress.collect() is False
+    assert progress.error_key == "network_unreachable"
+    assert isinstance(progress.error, ConnectionError)
+
+
+async def test_validation_progress_permission_error():
+    """PermissionError extracts error key from colon-delimited format."""
+    progress = _ValidationProgress()
+
+    async def _raise():
+        raise PermissionError("auth_error:invalid_auth:Bad password")
+
+    loop = asyncio.get_event_loop()
+    progress.task = loop.create_task(_raise())
+    await asyncio.sleep(0)
+
+    assert await progress.collect() is False
+    assert progress.error_key == "invalid_auth"
+    assert isinstance(progress.error, PermissionError)
+
+
 # -----------------------------------------------------------------------
 # Config flow — Step 1a: Manufacturer selection
 # -----------------------------------------------------------------------
@@ -619,3 +651,169 @@ async def test_options_password_preserved(hass: HomeAssistant):
     # Validate was called with the original password, not blank
     call_kwargs = mock_validate.call_args
     assert call_kwargs.kwargs["password"] == "password"
+
+
+# -----------------------------------------------------------------------
+# Reauth flow
+# -----------------------------------------------------------------------
+
+
+async def test_reauth_shows_form(hass: HomeAssistant):
+    """Reauth flow shows credential form."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        data=MOCK_ENTRY_DATA,
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
+
+    with patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True):
+        await hass.config_entries.async_setup(entry.entry_id)
+
+    result: Any = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_REAUTH, "entry_id": entry.entry_id},
+        data=entry.data,
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+
+
+async def test_reauth_success(hass: HomeAssistant):
+    """Successful reauth updates entry and aborts with reauth_successful."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        data=MOCK_ENTRY_DATA,
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
+
+    with (
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            return_value=MOCK_VALIDATION_RESULT,
+        ),
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+
+        result: Any = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_REAUTH, "entry_id": entry.entry_id},
+            data=entry.data,
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={
+                "host": "192.168.100.1",
+                "username": "admin",
+                "password": "newpassword",
+            },
+        )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data["password"] == "newpassword"
+
+
+async def test_reauth_failure_shows_error(hass: HomeAssistant):
+    """Failed reauth re-shows form with invalid_auth error."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        data=MOCK_ENTRY_DATA,
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
+
+    with (
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            side_effect=PermissionError("auth_error:invalid_auth:Bad password"),
+        ),
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+
+        result: Any = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_REAUTH, "entry_id": entry.entry_id},
+            data=entry.data,
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={
+                "host": "192.168.100.1",
+                "username": "admin",
+                "password": "wrongpassword",
+            },
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"]["base"] == "invalid_auth"
+
+
+# -----------------------------------------------------------------------
+# Edge cases
+# -----------------------------------------------------------------------
+
+
+async def test_duplicate_host_aborts(hass: HomeAssistant):
+    """Duplicate hostname aborts with already_configured."""
+    existing = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        data=MOCK_ENTRY_DATA,
+        unique_id="192.168.100.1",
+    )
+    existing.add_to_hass(hass)
+
+    with (
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_SINGLE_VARIANT,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            return_value=MOCK_VALIDATION_RESULT,
+        ),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        await hass.config_entries.async_setup(existing.entry_id)
+
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"manufacturer": "__all__"},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"model": "Solent Labs/TPS-2000", "entity_prefix": "model"},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"host": "192.168.100.1"},
+        )
+
+        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
+            result = await hass.config_entries.flow.async_configure(result["flow_id"])
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"

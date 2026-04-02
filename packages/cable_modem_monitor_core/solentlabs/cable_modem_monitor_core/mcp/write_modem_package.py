@@ -111,7 +111,7 @@ def write_modem_package(
 
     # Write golden file
     golden_path = test_data / f"{prefix}.expected.json"
-    golden_content = json.dumps(golden_file, indent=2, ensure_ascii=False) + "\n"
+    golden_content = json.dumps(golden_file, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
     _write_text(golden_path, golden_content, result)
 
     # Copy HAR file

@@ -12,6 +12,9 @@ Scans HTML/HTM/JSON fixture files for potential personally identifiable informat
 
 Also validates HAR files for the same patterns.
 
+Reference data (safe values, allowlists) is loaded from
+``data/pii_safe_values.json`` so it can be reused by other tools.
+
 Exit codes:
 - 0: No PII found
 - 1: Potential PII detected (review required)
@@ -27,26 +30,64 @@ from pathlib import Path
 from har_capture.patterns import load_allowlist
 from har_capture.sanitization import check_for_pii
 
-# Build a simple set of known allowlisted values for backwards compatibility
+# ---------------------------------------------------------------------------
+# Load reference data
+# ---------------------------------------------------------------------------
+
+_DATA_DIR = Path(__file__).parent / "data"
+
+
+def _load_safe_values() -> dict[str, list[str]]:
+    """Load safe-value reference data from the JSON sidecar file.
+
+    Returns a dict mapping section name → list of values.
+    """
+    path = _DATA_DIR / "pii_safe_values.json"
+    raw = json.loads(path.read_text())
+    return {key: section["values"] for key, section in raw.items() if isinstance(section, dict) and "values" in section}
+
+
+_SAFE = _load_safe_values()
+
+# Build a simple set of known allowlisted values from har-capture
 _allowlist = load_allowlist()
 PII_ALLOWLIST = set(_allowlist.get("static_placeholders", {}).get("values", []))
-# Add hash prefixes as well (e.g., "SERIAL_", "WIFI_")
 for prefix in _allowlist.get("hash_prefixes", {}).get("values", []):
-    PII_ALLOWLIST.add(prefix.rstrip("_"))  # Add without trailing underscore
+    PII_ALLOWLIST.add(prefix.rstrip("_"))
 
-# Additional patterns specific to fixture validation
+# ---------------------------------------------------------------------------
+# Reference data (from JSON)
+# ---------------------------------------------------------------------------
+
+SAFE_MACS: set[str] = set(_SAFE["safe_macs"])
+SAFE_IP_PREFIXES: tuple[str, ...] = tuple(_SAFE["safe_ip_prefixes"])
+SAFE_SSID_VALUES: set[str] = set(_SAFE["safe_ssids"])
+TAGVALUE_SAFE_PATTERNS: set[str] = set(_SAFE["safe_tagvalue_patterns"])
+_SAFE_SERIAL_PREFIXES: tuple[str, ...] = tuple(_SAFE["safe_serial_prefixes"])
+_CODE_INDICATORS: tuple[str, ...] = tuple(_SAFE["code_indicators"])
+_SAFE_IPV6_PREFIXES: tuple[str, ...] = tuple(_SAFE["safe_ipv6_prefixes"])
+
+# Known safe values (har-capture allowlist + common placeholders)
+SAFE_VALUES = set(PII_ALLOWLIST) | {
+    "00:00:00:00:00:00",
+    "ff:ff:ff:ff:ff:ff",
+    "0.0.0.0",
+}
+
+# ---------------------------------------------------------------------------
+# Regex patterns (logic — stays in code)
+# ---------------------------------------------------------------------------
+
 WIFI_CRED_PATTERN = re.compile(
     r"var\s+tagValueList\s*=\s*['\"]([^'\"]+)['\"]",
     re.IGNORECASE,
 )
 
-# Motorola password variable pattern
 MOTO_PASSWORD_PATTERN = re.compile(
     r"var\s+Current(?:Pw|Password)[A-Za-z]*\s*=\s*['\"]([^'\"]+)['\"]",
     re.IGNORECASE,
 )
 
-# SSID patterns (HTML and JSON)
 SSID_PATTERNS = [
     re.compile(r'class="[^"]*ssidValue[^"]*"[^>]*>([^<]+)<', re.IGNORECASE),
     re.compile(r'"ssid"\s*:\s*"([^"]+)"', re.IGNORECASE),
@@ -54,7 +95,6 @@ SSID_PATTERNS = [
     re.compile(r'"networkName"\s*:\s*"([^"]+)"', re.IGNORECASE),
 ]
 
-# Session/CSRF token patterns
 SESSION_TOKEN_PATTERNS = [
     re.compile(r'"sessionid"\s*:\s*"([a-f0-9]{16,})"', re.IGNORECASE),
     re.compile(r'"token"\s*:\s*"([a-f0-9]{16,})"', re.IGNORECASE),
@@ -62,131 +102,15 @@ SESSION_TOKEN_PATTERNS = [
     re.compile(r'"auth[_-]?token"\s*:\s*"([^"]+)"', re.IGNORECASE),
 ]
 
-# IP address pattern for JSON/text content
 IP_PATTERN = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")
 
-# Known safe values (anonymized placeholders)
-SAFE_VALUES = set(PII_ALLOWLIST) | {
-    "00:00:00:00:00:00",
-    "ff:ff:ff:ff:ff:ff",
-    "0.0.0.0",
-}
+# JS/code identifier: starts with s/S, all word characters (SNRLevel, SnmpLog, etc.)
+_JS_IDENT = re.compile(r"^[sS]\w+$")
 
-# Safe MAC addresses (zeroed, broadcast, documentation, test patterns)
-SAFE_MACS = {
-    "00:00:00:00:00:00",
-    "ff:ff:ff:ff:ff:ff",
-    # Common test/example MAC ranges
-    "00:11:22:33:44:51",
-    "00:11:22:33:44:52",
-    "00:11:22:33:44:53",
-    "00:11:22:33:44:54",
-    "00:11:22:33:44:55",
-    # Sanitized placeholders
-    "aa:bb:cc:dd:ee:ff",
-}
 
-# Safe IP prefixes for fixture files
-# RESTRICTIVE: Only allow modem LAN IPs and special addresses
-# ISP-assigned IPs (even private ranges like 10.x) should be redacted
-SAFE_IP_PREFIXES = (
-    "192.168.100.",  # Standard cable modem LAN IP
-    "192.168.0.",  # Common router LAN
-    "192.168.1.",  # Common router LAN
-    "127.",  # Localhost
-    "0.0.0.0",  # Unspecified
-    "255.",  # Subnet masks and broadcast addresses
-    # RFC 5737 TEST-NET ranges (documentation IPs - safe)
-    "192.0.2.",  # TEST-NET-1
-    "198.51.100.",  # TEST-NET-2
-    "203.0.113.",  # TEST-NET-3
-    # har-capture format-preserving hashes produce IPs in 140-145.x.x.x
-    "140.",
-    "141.",
-    "142.",
-    "143.",
-    "144.",
-    "145.",
-    # Well-known public DNS (not user PII)
-    "1.1.1.1",
-    "1.0.0.1",
-    "8.8.8.8",
-    "8.8.4.4",
-    "9.9.9.9",
-    "208.67.222.222",
-    "208.67.220.220",
-)
-
-# Safe SSIDs (redacted placeholders or test values)
-SAFE_SSID_VALUES = {
-    "***redacted***",
-    "***redacted_ssid***",
-    "***redacted_ssid_guest***",
-    "test_network",
-    "test_ssid",
-}
-
-# Safe values for tagValueList (status values, device names, redacted placeholders)
-TAGVALUE_SAFE_PATTERNS = {
-    "redacted",
-    # Status values
-    "good",
-    "locked",
-    "not locked",
-    "atdma",
-    "unknown",
-    "operational",
-    "ok",
-    "none",
-    "&nbsp;",
-    "enabled",
-    "disabled",
-    "bpi+",
-    "qam256",
-    "qam64",
-    "qpsk",
-    "retail",
-    "ipv6 only",
-    "ipv6only",
-    "success",
-    "primary",
-    "backup primary",
-    "honor mdd",
-    "dhcpclient",
-    "fixed ip",
-    "enable",
-    "off",
-    "on",
-    "both",
-    "in progress",
-    "synchronized",
-    "not synchronized",
-    "done",
-    "automatic",
-    "sharedkey",
-    "configured",
-    "security",
-    "allowed",
-    # Common device/config names (not passwords)
-    "sharedlna",
-    "readydlna",
-    "devname1",
-    "devname2",
-    "devname3",
-    "testschedule1",
-    "testschedule2",
-    "testschedule",
-    "macbookpro",
-    "familyroom",
-    "livingroom",
-    "bedroom",
-    "kitchen",
-    "rokustreaming",
-    "rokustreamingstick",
-    "appletv",
-    "firetv",
-    "herschel",  # Device name from fixtures
-}
+# ---------------------------------------------------------------------------
+# Safe-value checks
+# ---------------------------------------------------------------------------
 
 
 def is_safe_ip(ip: str) -> bool:
@@ -202,19 +126,6 @@ def is_safe_mac(mac: str) -> bool:
     # har-capture format-preserving hashes produce 02:xx:xx:xx:xx:xx
     # (locally-administered bit set)
     return mac_lower.startswith("02:")
-
-
-# har-capture sanitized serial number prefixes
-_SAFE_SERIAL_PREFIXES = ("SNTLABS", "SERIAL_", "SN_")
-
-# Patterns in matches that indicate JS code, not real credentials/data
-_CODE_INDICATORS = ("=", "(", ".", "function", "document", "!0", "!1", "::")
-
-# har-capture redacted IPv6/MAC placeholders
-_SAFE_IPV6_PREFIXES = ("aaaa:", "abcd:", "aa:bb:cc:dd", "fe80:")
-
-# JS/code identifier: starts with s/S, all word characters (SNRLevel, SnmpLog, etc.)
-_JS_IDENT = re.compile(r"^[sS]\w+$")
 
 
 def _is_safe_ip_finding(match: str) -> bool:
@@ -265,6 +176,11 @@ def _is_safe_finding(finding: dict[str, str]) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# File-type checkers
+# ---------------------------------------------------------------------------
+
+
 def check_motorola_passwords(content: str, filepath: Path) -> list[str]:
     """Check for Motorola JavaScript password variables.
 
@@ -274,7 +190,6 @@ def check_motorola_passwords(content: str, filepath: Path) -> list[str]:
 
     for match in MOTO_PASSWORD_PATTERN.finditer(content):
         password = match.group(1)
-        # Skip already-redacted values
         if password.startswith("***"):
             continue
         issues.append(f"  Motorola password variable found: '{password}'")
@@ -297,17 +212,13 @@ def check_tagvaluelist_credentials(content: str, filepath: Path) -> list[str]:
             val_stripped = val.strip()
             val_lower = val_stripped.lower()
 
-            # Check if this looks like a credential:
-            # - 8+ characters
-            # - Alphanumeric only
-            # - Not a known safe value
             if (
                 len(val_stripped) >= 8
                 and re.match(r"^[a-zA-Z0-9]+$", val_stripped)
                 and val_lower not in TAGVALUE_SAFE_PATTERNS
-                and not re.match(r"^\d+$", val_stripped)  # Not pure numbers
-                and not val_stripped.startswith("***")  # Not already redacted
-                and not re.match(r"^V\d", val_stripped)  # Not version strings
+                and not re.match(r"^\d+$", val_stripped)
+                and not val_stripped.startswith("***")
+                and not re.match(r"^V\d", val_stripped)
                 and not val_stripped.endswith("Hz")
                 and not val_stripped.endswith("dB")
                 and not val_stripped.endswith("dBmV")
@@ -327,11 +238,8 @@ def check_ssids(content: str, filepath: Path) -> list[str]:
             ssid = match.group(1).strip()
             ssid_lower = ssid.lower()
 
-            # Skip already-redacted or safe values
             if ssid_lower in SAFE_SSID_VALUES or ssid.startswith("***"):
                 continue
-
-            # Skip empty or whitespace-only
             if not ssid or ssid.isspace():
                 continue
 
@@ -348,7 +256,6 @@ def check_session_tokens(content: str, filepath: Path) -> list[str]:
         for match in pattern.finditer(content):
             token = match.group(1)
 
-            # Skip already-redacted values
             if token.startswith("***"):
                 continue
 
@@ -365,21 +272,16 @@ def check_ips_in_content(content: str, filepath: Path) -> list[str]:
     for match in IP_PATTERN.finditer(content):
         ip = match.group(1)
 
-        # Skip duplicates
         if ip in seen_ips:
             continue
         seen_ips.add(ip)
 
-        # Skip safe IPs
         if is_safe_ip(ip):
             continue
 
-        # Validate it's a real IP (each octet 0-255)
         octets = ip.split(".")
         if not all(0 <= int(o) <= 255 for o in octets):
             continue
-        # Skip firmware/DOCSIS versions that look like IPs
-        # Leading zeros (01.05.063.13) or all-small octets (5.7.1.5)
         if any(len(o) > 1 and o.startswith("0") for o in octets):
             continue
         if all(int(o) < 10 for o in octets):
@@ -417,17 +319,9 @@ def check_json_file(filepath: Path) -> list[str]:
     except Exception as e:
         return [f"  Failed to read file: {e}"]
 
-    # Check for WiFi SSIDs
-    ssid_issues = check_ssids(content, filepath)
-    issues.extend(ssid_issues)
-
-    # Check for session tokens
-    token_issues = check_session_tokens(content, filepath)
-    issues.extend(token_issues)
-
-    # Check for non-allowed IPs
-    ip_issues = check_ips_in_content(content, filepath)
-    issues.extend(ip_issues)
+    issues.extend(check_ssids(content, filepath))
+    issues.extend(check_session_tokens(content, filepath))
+    issues.extend(check_ips_in_content(content, filepath))
 
     findings = check_for_pii(content, str(filepath))
     for finding in findings:
@@ -447,7 +341,6 @@ def check_har_file(filepath: Path) -> list[str]:  # noqa: C901
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
         return [f"  Failed to parse HAR file: {e}"]
 
-    # Extract all text content from HAR and check it
     def extract_text(obj: dict | list | str, path: str = "") -> None:  # noqa: C901
         if isinstance(obj, dict):
             for key, value in obj.items():
@@ -457,7 +350,6 @@ def check_har_file(filepath: Path) -> list[str]:  # noqa: C901
                     for finding in findings:
                         if not _is_safe_finding(finding):
                             issues.append(f"  {finding['pattern']}: {finding['match']} (in {new_path})")
-                    # Also check for tagValueList in HTML content
                     if "tagValueList" in value:
                         tagvalue_issues = check_tagvaluelist_credentials(value, filepath)
                         for issue in tagvalue_issues:
@@ -472,6 +364,11 @@ def check_har_file(filepath: Path) -> list[str]:  # noqa: C901
     return issues
 
 
+# ---------------------------------------------------------------------------
+# Directory scanning and metadata checks
+# ---------------------------------------------------------------------------
+
+
 def check_metadata_exists(fixture_dir: Path) -> bool:
     """Check if metadata.yaml exists in fixture directory or parent.
 
@@ -479,7 +376,6 @@ def check_metadata_exists(fixture_dir: Path) -> bool:
     """
     if (fixture_dir / "metadata.yaml").exists():
         return True
-    # Check parent for extended/supplementary directories
     return bool(fixture_dir.parent and (fixture_dir.parent / "metadata.yaml").exists())
 
 
@@ -536,35 +432,31 @@ def _scan_directory(root: Path) -> tuple[int, int]:
     return files_checked, exit_code
 
 
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+
 def main() -> int:
-    """Run PII checks on fixture files across all fixture locations."""
-    # Directories containing real modem data (contributor HAR captures,
-    # golden files derived from real responses).  Core test fixtures are
-    # intentionally synthetic and should NOT be scanned here.
-    fixture_roots = [
-        # v3.13 legacy path (may not exist on v3.14+)
-        Path("tests/parsers"),
-        # Catalog modem test data (HAR files, golden files)
-        Path("packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems"),
-    ]
+    """Run PII checks on catalog fixture files.
 
-    total_checked = 0
-    exit_code = 0
+    Invoked from repo root by pre-commit and CI. Path is relative
+    to the repo root.
+    """
+    fixture_root = Path("packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems")
 
-    for root in fixture_roots:
-        if not root.exists():
-            continue
-        checked, code = _scan_directory(root)
-        total_checked += checked
-        if code != 0:
-            exit_code = 1
+    if not fixture_root.exists():
+        print("PII check: catalog modems directory not found")
+        return 0
 
-    if total_checked == 0:
+    files_checked, exit_code = _scan_directory(fixture_root)
+
+    if files_checked == 0:
         print("PII check: no fixture files found")
         return 0
 
     if exit_code == 0:
-        print(f"PII check: {total_checked} fixture files clean")
+        print(f"PII check: {files_checked} fixture files clean")
 
     return exit_code
 

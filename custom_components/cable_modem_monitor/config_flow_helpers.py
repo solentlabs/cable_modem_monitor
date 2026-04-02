@@ -323,7 +323,7 @@ def _run_validation(
         _LOGGER.info("Protocol detected: %s (legacy_ssl=%s)", protocol, legacy_ssl)
 
     # -- Step 2: Load config from catalog -------------------------------------
-    modem_yaml = modem_dir / f"modem-{variant}.yaml" if variant else modem_dir / "modem.yaml"
+    modem_yaml = (modem_dir / f"modem-{variant}.yaml") if variant else (modem_dir / "modem.yaml")
     parser_yaml = modem_dir / "parser.yaml"
     parser_py = modem_dir / "parser.py"
 

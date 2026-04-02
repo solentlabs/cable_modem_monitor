@@ -131,7 +131,7 @@ repos:
 
       - id: check-fixture-pii
         name: Check fixtures for PII
-        entry: scripts/dev/run-python.sh scripts/dev/check-fixture-pii.py
+        entry: scripts/dev/run-python.sh packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py
         language: script
         pass_filenames: false
         files: (packages/cable_modem_monitor_catalog/.*\.(har|json|html|htm)$)

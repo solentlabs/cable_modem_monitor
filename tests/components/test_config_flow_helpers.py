@@ -12,6 +12,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from solentlabs.cable_modem_monitor_core.catalog_manager import (
+    ModemSummary,
+    VariantInfo,
+)
 from solentlabs.cable_modem_monitor_core.connectivity import ConnectivityResult
 from solentlabs.cable_modem_monitor_core.orchestration.models import ModemResult
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
@@ -20,6 +24,12 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
 
 from custom_components.cable_modem_monitor.config_flow_helpers import (
     _run_validation,
+    build_model_display_name,
+    classify_error,
+    detect_probes,
+    filter_by_manufacturer,
+    format_variant_label,
+    get_manufacturers,
 )
 
 # =====================================================================
@@ -82,6 +92,260 @@ def _setup_modem_dir(tmp_path: Path) -> Path:
     (modem_dir / "parser.yaml").touch()
     (modem_dir / "parser.py").touch()
     return modem_dir
+
+
+# =====================================================================
+# Pure-function helpers — format_variant_label
+# =====================================================================
+
+# ┌───────────────┬──────────────┬──────────────────────────────────────┬──────────────────────┐
+# │ auth_strategy │ isps         │ expected                             │ description          │
+# ├───────────────┼──────────────┼──────────────────────────────────────┼──────────────────────┤
+# │ "none"        │ []           │ "No Authentication"                  │ no_auth_no_isps      │
+# │ "basic"       │ ["ISP-A"]    │ "Basic Authentication (ISP-A)"       │ basic_one_isp        │
+# │ "form_nonce"  │ ["A", "B"]   │ "Form Login (Nonce) (A, B)"          │ nonce_multi_isp      │
+# │ "unknown_x"   │ []           │ "unknown_x"                          │ unlisted_strategy    │
+# └───────────────┴──────────────┴──────────────────────────────────────┴──────────────────────┘
+#
+# fmt: off
+VARIANT_LABEL_CASES = [
+    ("none",       [],           "No Authentication",             "no_auth_no_isps"),
+    ("basic",      ["ISP-A"],    "Basic Authentication (ISP-A)",  "basic_one_isp"),
+    ("form_nonce", ["A", "B"],   "Form Login (Nonce) (A, B)",     "nonce_multi_isp"),
+    ("unknown_x",  [],           "unknown_x",                     "unlisted_strategy"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "auth_strategy,isps,expected,desc",
+    VARIANT_LABEL_CASES,
+    ids=[c[3] for c in VARIANT_LABEL_CASES],
+)
+def test_format_variant_label(auth_strategy, isps, expected, desc):
+    """format_variant_label builds correct label from strategy + ISPs."""
+    variant = VariantInfo(name=None, auth_strategy=auth_strategy, isps=isps)
+    assert format_variant_label(variant) == expected
+
+
+# =====================================================================
+# Pure-function helpers — get_manufacturers / filter_by_manufacturer
+# =====================================================================
+
+
+def test_get_manufacturers_normalizes_and_deduplicates():
+    """Case variations consolidated into single title-case entry."""
+    summaries = [
+        ModemSummary(manufacturer="ARRIS", model="SB8200", path=Path("/fake")),
+        ModemSummary(manufacturer="Arris", model="SB6183", path=Path("/fake")),
+        ModemSummary(manufacturer="netgear", model="CM1100", path=Path("/fake")),
+    ]
+    assert get_manufacturers(summaries) == ["Arris", "Netgear"]
+
+
+def test_get_manufacturers_empty():
+    """Empty summaries returns empty list."""
+    assert get_manufacturers([]) == []
+
+
+def test_filter_by_manufacturer_case_insensitive():
+    """Matches normalized manufacturer name across case variations."""
+    summaries = [
+        ModemSummary(manufacturer="ARRIS", model="SB8200", path=Path("/fake")),
+        ModemSummary(manufacturer="Netgear", model="CM1100", path=Path("/fake")),
+        ModemSummary(manufacturer="arris", model="SB6183", path=Path("/fake")),
+    ]
+    result = filter_by_manufacturer(summaries, "Arris")
+    assert len(result) == 2
+    assert all(r.manufacturer.lower() == "arris" for r in result)
+
+
+def test_filter_by_manufacturer_no_match():
+    """No match returns empty list."""
+    summaries = [ModemSummary(manufacturer="Arris", model="SB8200", path=Path("/fake"))]
+    assert filter_by_manufacturer(summaries, "Motorola") == []
+
+
+# =====================================================================
+# Pure-function helpers — build_model_display_name
+# =====================================================================
+
+# ┌──────────────┬──────────┬────────────┬──────────────────────────┬─────────────────────────────┬────────────────┐
+# │ manufacturer │ model    │ aliases    │ status                   │ expected                    │ description    │
+# ├──────────────┼──────────┼────────────┼──────────────────────────┼─────────────────────────────┼────────────────┤
+# │ "ARRIS"      │ "SB8200" │ []         │ "verified"               │ "Arris SB8200"              │ basic          │
+# │ "Motorola"   │ "MB8611" │ ["MB8600"] │ "verified"               │ "Motorola MB8611 (MB8600)"  │ with_alias     │
+# │ "netgear"    │ "CM1100" │ []         │ "awaiting_verification"  │ "Netgear CM1100 *"          │ unverified     │
+# │ "ARRIS"      │ "S33"    │ ["S33v2"]  │ "awaiting_verification"  │ "Arris S33 (S33v2) *"       │ alias_and_star │
+# └──────────────┴──────────┴────────────┴──────────────────────────┴─────────────────────────────┴────────────────┘
+#
+# fmt: off
+DISPLAY_NAME_CASES = [
+    ("ARRIS",    "SB8200", [],         "verified",              "Arris SB8200",             "basic"),
+    ("Motorola", "MB8611", ["MB8600"], "verified",              "Motorola MB8611 (MB8600)",  "with_alias"),
+    ("netgear",  "CM1100", [],         "awaiting_verification", "Netgear CM1100 *",          "unverified"),
+    ("ARRIS",    "S33",    ["S33v2"],  "awaiting_verification", "Arris S33 (S33v2) *",       "alias_and_star"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "manufacturer,model,aliases,status,expected,desc",
+    DISPLAY_NAME_CASES,
+    ids=[c[5] for c in DISPLAY_NAME_CASES],
+)
+def test_build_model_display_name(manufacturer, model, aliases, status, expected, desc):
+    """build_model_display_name formats manufacturer, model, aliases, status."""
+    summary = ModemSummary(
+        manufacturer=manufacturer,
+        model=model,
+        model_aliases=aliases,
+        status=status,
+        path=Path("/fake"),
+    )
+    assert build_model_display_name(summary) == expected
+
+
+# =====================================================================
+# Pure-function helpers — classify_error
+# =====================================================================
+
+# ┌────────────────┬──────────────────┬──────────────┐
+# │ signal         │ expected key     │ description  │
+# ├────────────────┼──────────────────┼──────────────┤
+# │ CONNECTIVITY   │ "cannot_connect" │ connectivity │
+# │ AUTH_FAILED    │ "invalid_auth"   │ auth_failed  │
+# │ AUTH_LOCKOUT   │ "invalid_auth"   │ auth_lockout │
+# │ LOAD_ERROR     │ "cannot_connect" │ load_error   │
+# │ LOAD_AUTH      │ "invalid_auth"   │ load_auth    │
+# │ PARSE_ERROR    │ "parse_failed"   │ parse_error  │
+# │ OK             │ "unknown"        │ unmapped     │
+# │ None           │ "unknown"        │ no_signal    │
+# └────────────────┴──────────────────┴──────────────┘
+#
+# fmt: off
+CLASSIFY_ERROR_CASES = [
+    (CollectorSignal.CONNECTIVITY, "cannot_connect", "connectivity"),
+    (CollectorSignal.AUTH_FAILED,  "invalid_auth",   "auth_failed"),
+    (CollectorSignal.AUTH_LOCKOUT, "invalid_auth",   "auth_lockout"),
+    (CollectorSignal.LOAD_ERROR,   "cannot_connect", "load_error"),
+    (CollectorSignal.LOAD_AUTH,    "invalid_auth",   "load_auth"),
+    (CollectorSignal.PARSE_ERROR,  "parse_failed",   "parse_error"),
+    (CollectorSignal.OK,           "unknown",         "unmapped"),
+    (None,                         "unknown",         "no_signal"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "signal,expected,desc",
+    CLASSIFY_ERROR_CASES,
+    ids=[c[2] for c in CLASSIFY_ERROR_CASES],
+)
+def test_classify_error(signal, expected, desc):
+    """classify_error maps CollectorSignal to strings.json error key."""
+    assert classify_error("some error", signal) == expected
+
+
+# =====================================================================
+# detect_probes
+# =====================================================================
+
+
+class TestDetectProbes:
+    """Test health probe detection with mocked ICMP/HTTP."""
+
+    @patch(f"{_MODULE}.test_http_head", return_value=True)
+    @patch(f"{_MODULE}.test_icmp", return_value=True)
+    def test_both_probes_succeed(self, mock_icmp, mock_head):
+        """Both ICMP and HEAD succeed."""
+        config = MagicMock()
+        config.health.supports_head = True
+        result = detect_probes("192.168.100.1", "http://192.168.100.1", config)
+        assert result == {"supports_icmp": True, "supports_head": True}
+
+    @patch(f"{_MODULE}.test_http_head", return_value=True)
+    @patch(f"{_MODULE}.test_icmp", return_value=False)
+    def test_icmp_fails(self, mock_icmp, mock_head):
+        """ICMP blocked but HEAD succeeds."""
+        config = MagicMock()
+        config.health.supports_head = True
+        result = detect_probes("192.168.100.1", "http://192.168.100.1", config)
+        assert result == {"supports_icmp": False, "supports_head": True}
+
+    @patch(f"{_MODULE}.test_http_head")
+    @patch(f"{_MODULE}.test_icmp", return_value=True)
+    def test_head_skipped_when_modem_rejects(self, mock_icmp, mock_head):
+        """HEAD not tested when modem.yaml says supports_head=False."""
+        config = MagicMock()
+        config.health.supports_head = False
+        result = detect_probes("192.168.100.1", "http://192.168.100.1", config)
+        assert result == {"supports_icmp": True, "supports_head": False}
+        mock_head.assert_not_called()
+
+    @patch(f"{_MODULE}.test_http_head", return_value=False)
+    @patch(f"{_MODULE}.test_icmp", return_value=True)
+    def test_no_health_config(self, mock_icmp, mock_head):
+        """No health section — HEAD tested normally."""
+        config = MagicMock()
+        config.health = None
+        result = detect_probes("192.168.100.1", "http://192.168.100.1", config)
+        assert result == {"supports_icmp": True, "supports_head": False}
+
+    @patch(f"{_MODULE}.test_http_head", return_value=True)
+    @patch(f"{_MODULE}.test_icmp", return_value=True)
+    def test_legacy_ssl_forwarded(self, mock_icmp, mock_head):
+        """legacy_ssl kwarg forwarded to test_http_head."""
+        config = MagicMock()
+        config.health.supports_head = True
+        detect_probes("192.168.100.1", "https://192.168.100.1", config, legacy_ssl=True)
+        mock_head.assert_called_once_with("https://192.168.100.1", legacy_ssl=True)
+
+
+# =====================================================================
+# Variant path — modem-{variant}.yaml
+# =====================================================================
+
+
+class TestVariantPath:
+    """Verify _run_validation loads modem-{variant}.yaml when variant is set."""
+
+    @patch(f"{_MODULE}.detect_probes")
+    @patch(f"{_MODULE}.ModemDataCollector")
+    @patch(f"{_MODULE}.load_post_processor")
+    @patch(f"{_MODULE}.load_parser_config")
+    @patch(f"{_MODULE}.load_modem_config")
+    @patch(f"{_MODULE}.detect_protocol")
+    def test_variant_loads_variant_yaml(
+        self,
+        mock_detect,
+        mock_load_modem,
+        mock_load_parser,
+        mock_load_post,
+        mock_collector_cls,
+        mock_probes,
+        tmp_path,
+    ):
+        """variant='v2' loads modem-v2.yaml instead of modem.yaml."""
+        modem_dir = tmp_path / "test_mfr" / "test_model"
+        modem_dir.mkdir(parents=True)
+        (modem_dir / "modem-v2.yaml").touch()
+        (modem_dir / "parser.yaml").touch()
+        (modem_dir / "parser.py").touch()
+
+        mock_detect.return_value = ConnectivityResult(success=True, protocol="http", working_url="http://192.168.100.1")
+        mock_load_modem.return_value = MagicMock()
+        mock_load_parser.return_value = MagicMock()
+        mock_load_post.return_value = MagicMock()
+        mock_probes.return_value = {"supports_icmp": True, "supports_head": True}
+
+        collector = MagicMock()
+        collector.execute.return_value = _ok_result()
+        mock_collector_cls.return_value = collector
+
+        _run_validation("192.168.100.1", None, "admin", "pw", modem_dir, "v2")
+
+        mock_load_modem.assert_called_once_with(modem_dir / "modem-v2.yaml")
 
 
 # =====================================================================
