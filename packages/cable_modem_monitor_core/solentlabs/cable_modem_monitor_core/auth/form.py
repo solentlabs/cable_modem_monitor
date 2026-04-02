@@ -14,8 +14,6 @@ import requests
 from ..models.modem_config.auth import FormAuth
 from .base import AuthResult, BaseAuthManager
 
-_logger = logging.getLogger(__name__)
-
 
 class FormAuthManager(BaseAuthManager):
     """HTML form POST login.
@@ -113,13 +111,6 @@ class FormAuthManager(BaseAuthManager):
             return AuthResult(success=False, error=error)
 
         response_path = urlparse(response.url).path if response.url else ""
-        _logger.log(
-            log_level,
-            "Form login succeeded: status=%d, url=%s, cookies=%s",
-            response.status_code,
-            response_path,
-            list(session.cookies.keys()),
-        )
 
         return AuthResult(
             success=True,

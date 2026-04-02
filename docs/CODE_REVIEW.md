@@ -233,14 +233,16 @@ def test_validation(input: str, expected: bool, desc: str):
 
 ### Consistent Exception Types
 
-Use project-defined exceptions from `core/exceptions.py`:
+Define exceptions alongside the code that raises them. Each module
+owns its own error types:
 
 ```python
-from custom_components.cable_modem_monitor.core.exceptions import (
-    CannotConnectError,
-    AuthenticationError,
-    ParseError,
-)
+# In loaders/http.py
+class ResourceLoadError(Exception): ...
+class LoginPageDetectedError(ResourceLoadError): ...
+
+# In orchestration/collector.py
+class LoginLockoutError(Exception): ...
 ```
 
 ### Meaningful Error Messages

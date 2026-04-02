@@ -205,7 +205,8 @@ class ModemDataCollector:
         ds_count = len(data.get("downstream", []))
         us_count = len(data.get("upstream", []))
         _logger.debug(
-            "Collection complete: %d downstream, %d upstream channels",
+            "Collection complete [%s]: %d downstream, %d upstream channels",
+            self._modem_config.model,
             ds_count,
             us_count,
         )
@@ -287,11 +288,11 @@ class ModemDataCollector:
         """
         if self.session_is_valid:
             self._session_reused = True
-            _logger.debug("Session valid — reusing")
+            _logger.debug("Session valid [%s] — reusing", self._modem_config.model)
             return self._last_auth_result or AuthResult(success=True)
 
         self._session_reused = False
-        _logger.debug("No active session — authenticating")
+        _logger.debug("No active session [%s] — authenticating", self._modem_config.model)
         result = self._auth_manager.authenticate(
             self._session,
             self._base_url,
@@ -304,6 +305,12 @@ class ModemDataCollector:
         if result.success:
             self._auth_context = result.auth_context
             self._last_auth_result = result
+            _logger.debug(
+                "Auth succeeded [%s]: status=%d, url=%s",
+                self._modem_config.model,
+                result.response.status_code if result.response else 0,
+                result.response_url or "(none)",
+            )
 
         return result
 
@@ -341,6 +348,7 @@ class ModemDataCollector:
             url_token=url_token,
             token_prefix=token_prefix,
             detect_login_pages=self._detect_login_pages,
+            model=self._modem_config.model,
         )
 
         # On session reuse, don't pass auth_result — there's no
@@ -444,17 +452,17 @@ class ModemDataCollector:
         if self._modem_config.session is None or self._modem_config.session.max_concurrent != 1:
             return
 
-        _logger.debug("Executing logout action")
+        _logger.debug("Executing logout [%s]", self._modem_config.model)
         try:
             execute_action(self, self._modem_config, actions.logout, log_level=_LOGOUT_LOG_LEVEL)
         except Exception:
-            _logger.debug("Logout failed (best-effort)", exc_info=True)
+            _logger.debug("Logout failed (best-effort) [%s]", self._modem_config.model, exc_info=True)
         else:
             # Session is dead server-side after logout — clear local
             # state so next poll re-authenticates instead of reusing
             # a stale session.
             self.clear_session()
-            _logger.debug("Session cleared after logout")
+            _logger.debug("Session cleared after logout [%s]", self._modem_config.model)
 
 
 def _auth_failure_hint(modem_config: Any) -> str:

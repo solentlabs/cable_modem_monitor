@@ -67,6 +67,28 @@ during implementation, not just at review time.
 - All function signatures must have type hints.
 - Use `from __future__ import annotations` for modern syntax.
 
+### Log Messages
+
+All runtime log messages that relate to a specific modem must include
+the `[MODEL]` tag. The tag goes at the end of the subject phrase,
+before the separator (`:` or ` —`) that introduces details:
+
+```
+{Subject} [MODEL]: {details}
+{Subject} [MODEL] — {details}
+```
+
+Examples:
+```python
+_logger.info("Parse complete [%s]: %d DS, %d US", model, ds, us)
+_logger.debug("Fetched /path [%s]: 200 (1234 bytes)", model)
+_logger.debug("Session cleared after logout [%s]", model)
+```
+
+Auth success logging belongs in the **collector**, not in individual
+auth managers — the collector has the model name and logs the
+`AuthResult` centrally.
+
 ### Formatting, Lint, and Type Checking
 
 All three must pass before staging. Run from the repo root:

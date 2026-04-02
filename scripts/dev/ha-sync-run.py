@@ -9,11 +9,14 @@ This script:
 4. Verifies the integration is mounted
 
 Usage:
-    python scripts/dev/ha-sync-run.py
+    python scripts/dev/ha-sync-run.py           # info logging (default)
+    python scripts/dev/ha-sync-run.py --debug    # debug logging
 """
 
+import argparse
 import os
 import platform
+import re
 import shutil
 import socket
 import subprocess
@@ -230,31 +233,26 @@ def stop_other_ha_containers() -> list[str]:
     return stopped
 
 
-def ensure_dev_config() -> None:
-    """Ensure test-ha-config has a dev-friendly configuration.yaml."""
-    config_dir = get_project_dir() / "test-ha-config"
-    config_file = config_dir / "configuration.yaml"
+_INTEGRATION_LOGGERS = [
+    "custom_components.cable_modem_monitor",
+    "solentlabs.cable_modem_monitor_core",
+    "solentlabs.cable_modem_monitor_catalog",
+]
 
-    config_dir.mkdir(exist_ok=True)
 
-    needs_update = True
-    if config_file.exists():
-        try:
-            content = config_file.read_text()
-            if "logger:" in content and "cable_modem_monitor" in content:
-                needs_update = False
-        except PermissionError:
-            pass
-
-    if needs_update:
-        config_content = """\
+def _build_config(log_level: str) -> str:
+    """Build a dev-friendly configuration.yaml."""
+    logger_lines = "\n".join(f"    {ns}: {log_level}" for ns in _INTEGRATION_LOGGERS)
+    return f"""\
 # Development configuration for Cable Modem Monitor
 
 # Logger configuration - quiet HA core, verbose for our integration
 logger:
   default: warning
   logs:
-    custom_components.cable_modem_monitor: info
+{logger_lines}
+    # Suppress duplicate "custom integration not tested" warnings from HA loader
+    homeassistant.loader: error
 
 # Loads default set of integrations. Do not remove.
 default_config:
@@ -267,27 +265,65 @@ automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
 """
+
+
+def _write_config(config_dir: Path, config_file: Path, content: str) -> None:
+    """Write configuration.yaml, falling back to docker for root-owned files."""
+    try:
+        config_file.write_text(content)
+    except PermissionError:
+        print_info("Updating configuration.yaml via docker (root-owned file)...")
+        subprocess.run(
+            [
+                "docker",
+                "run",
+                "--rm",
+                "-v",
+                f"{config_dir}:/config",
+                "alpine",
+                "sh",
+                "-c",
+                f"cat > /config/configuration.yaml << 'EOFCONFIG'\n{content}EOFCONFIG",
+            ],
+            capture_output=True,
+            timeout=30,
+        )
+
+
+def ensure_dev_config(log_level: str = "info") -> None:
+    """Ensure test-ha-config has a dev-friendly configuration.yaml.
+
+    Creates the file if missing, or updates log levels if they don't
+    match the requested level.
+    """
+    config_dir = get_project_dir() / "test-ha-config"
+    config_file = config_dir / "configuration.yaml"
+
+    config_dir.mkdir(exist_ok=True)
+
+    if config_file.exists():
         try:
-            config_file.write_text(config_content)
-            print_success("Created configuration.yaml with dev-friendly logger settings")
+            content = config_file.read_text()
         except PermissionError:
-            print_info("Updating configuration.yaml via docker (root-owned file)...")
-            subprocess.run(
-                [
-                    "docker",
-                    "run",
-                    "--rm",
-                    "-v",
-                    f"{config_dir}:/config",
-                    "alpine",
-                    "sh",
-                    "-c",
-                    f"cat > /config/configuration.yaml << 'EOFCONFIG'\n{config_content}EOFCONFIG",
-                ],
-                capture_output=True,
-                timeout=30,
-            )
-            print_success("Updated configuration.yaml with dev-friendly logger settings")
+            content = ""
+
+        if "logger:" in content and "cable_modem_monitor" in content:
+            # Config exists — reconcile log levels
+            updated = content
+            for ns in _INTEGRATION_LOGGERS:
+                pattern = re.compile(rf"({re.escape(ns)}:\s*)\w+")
+                updated = pattern.sub(rf"\g<1>{log_level}", updated)
+
+            if updated != content:
+                _write_config(config_dir, config_file, updated)
+                print_success(f"Logger level set to {log_level}")
+            else:
+                print_success(f"Logger level already {log_level}")
+            return
+
+    # No config or missing logger block — write from scratch
+    _write_config(config_dir, config_file, _build_config(log_level))
+    print_success(f"Created configuration.yaml (logger: {log_level})")
 
 
 def start_container() -> bool:
@@ -313,9 +349,6 @@ def start_container() -> bool:
         print_info("Removing existing container...")
         subprocess.run(["docker", "stop", "-t", "30", CONTAINER_NAME], capture_output=True, timeout=60)
         subprocess.run(["docker", "rm", "-f", CONTAINER_NAME], capture_output=True, timeout=30)
-
-    # Ensure dev config exists
-    ensure_dev_config()
 
     # Start container
     result = subprocess.run(
@@ -381,7 +414,17 @@ def install_packages() -> bool:
 
 
 def main() -> int:
-    print_header("Start Home Assistant")
+    parser = argparse.ArgumentParser(description="Start or restart HA dev container")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging for the integration",
+    )
+    args = parser.parse_args()
+    log_level = "debug" if args.debug else "info"
+
+    mode_label = f" ({YELLOW}DEBUG{NC})" if args.debug else ""
+    print_header(f"Start Home Assistant{mode_label}")
 
     total_steps = 2
 
@@ -391,12 +434,14 @@ def main() -> int:
     # restart — has packages available when HA loads integrations.
     if is_container_running():
         print_step(1, total_steps, "Restarting Home Assistant...")
+        ensure_dev_config(log_level)
         if not restart_container():
             print_error_header("RESTART FAILED")
             return 1
         print_success("Container restarted (entrypoint installs packages)")
     else:
         print_step(1, total_steps, "Starting Home Assistant...")
+        ensure_dev_config(log_level)
         if not start_container():
             print_error_header("START FAILED")
             print_info("Check Docker Desktop is running")
@@ -424,7 +469,11 @@ def main() -> int:
 
     # Success
     print_success_header("READY")
-    print(f"   URL: {BLUE}http://localhost:{HA_PORT}{NC}\n")
+    print(f"   URL: {BLUE}http://localhost:{HA_PORT}{NC}")
+    if args.debug:
+        print(f"   Logging: {YELLOW}DEBUG{NC} (all integration namespaces)\n")
+    else:
+        print("   Logging: INFO\n")
     return 0
 
 

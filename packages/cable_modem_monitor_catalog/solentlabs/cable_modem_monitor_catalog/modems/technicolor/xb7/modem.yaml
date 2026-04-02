@@ -8,12 +8,10 @@ default_host: "10.0.0.1"
 auth:
   strategy: form
   action: "/check.jst"
-  method: POST
   username_field: username
   password_field: password
   cookie_name: "session"
 
-  encoding: plain
   success:
     redirect: "/at_a_glance.jst"
 hardware:

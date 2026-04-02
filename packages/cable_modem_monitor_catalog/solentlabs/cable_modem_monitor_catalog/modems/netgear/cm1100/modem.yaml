@@ -11,7 +11,6 @@ auth:
   password_field: loginPassword
   cookie_name: "SessionID"
 
-  encoding: plain
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"

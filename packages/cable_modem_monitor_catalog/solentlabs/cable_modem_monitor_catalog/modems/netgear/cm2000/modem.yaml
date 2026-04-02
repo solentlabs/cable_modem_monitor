@@ -8,7 +8,6 @@ auth:
   login_page: "/"
   username_field: loginName
   password_field: loginPassword
-  encoding: plain
   success:
     redirect: "/DocsisStatus.htm"
 actions:
