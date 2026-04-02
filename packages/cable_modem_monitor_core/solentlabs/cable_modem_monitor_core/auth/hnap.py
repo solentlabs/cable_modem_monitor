@@ -314,8 +314,6 @@ class HnapAuthManager(BaseAuthManager):
                 error=f"HNAP login unexpected result: {login_result!r}",
             )
 
-        _logger.debug("HNAP login succeeded (result=%s)", login_result)
-
         return AuthResult(
             success=True,
             auth_context=AuthContext(private_key=private_key),

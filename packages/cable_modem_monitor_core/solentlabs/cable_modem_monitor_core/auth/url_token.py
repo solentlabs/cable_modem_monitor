@@ -179,7 +179,6 @@ class UrlTokenAuthManager(BaseAuthManager):
 
         # Data page detection: indicator present → body is the data page
         if config.success_indicator and config.success_indicator in response.text:
-            _logger.log(log_level, "URL token auth: login response is data page")
             response_path = urlparse(response.url).path if response.url else ""
             return AuthResult(
                 success=True,

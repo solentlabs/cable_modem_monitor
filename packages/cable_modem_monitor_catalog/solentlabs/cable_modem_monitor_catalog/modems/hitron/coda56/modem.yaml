@@ -11,7 +11,6 @@ auth:
   password_field: pws
   cookie_name: "userid"
 
-  encoding: plain
 hardware:
   docsis_version: "3.1"
   chipset: unknown

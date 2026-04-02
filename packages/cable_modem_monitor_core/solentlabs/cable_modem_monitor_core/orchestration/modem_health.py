@@ -94,8 +94,9 @@ class HealthMonitor:
             icmp_ok, icmp_ms = self._probe_icmp()
 
         # HTTP probe
+        http_bytes: int | None = None
         if self._http_probe:
-            http_ok, http_ms = self._probe_http()
+            http_ok, http_ms, http_bytes = self._probe_http()
 
         # Derive status
         health_status = self._derive_status(icmp_ok, http_ok)
@@ -107,7 +108,7 @@ class HealthMonitor:
         )
         self._latest = info
 
-        self._log_result(info, icmp_ok, http_ok)
+        self._log_result(info, icmp_ok, http_ok, http_bytes)
         return info
 
     @property
@@ -147,13 +148,13 @@ class HealthMonitor:
             return success, latency_ms
 
         except subprocess.TimeoutExpired:
-            _logger.debug("ICMP probe: subprocess timeout (%ds)", self._timeout)
+            _logger.debug("ICMP probe [%s]: subprocess timeout (%ds)", self._model, self._timeout)
             return False, None
         except OSError as exc:
-            _logger.debug("ICMP probe: OS error — %s", exc)
+            _logger.debug("ICMP probe [%s]: OS error — %s", self._model, exc)
             return False, None
 
-    def _probe_http(self) -> tuple[bool, float | None]:
+    def _probe_http(self) -> tuple[bool, float | None, int | None]:
         """Run an HTTP HEAD or GET probe.
 
         Uses a pre-configured session (no auth, verify=False, optional
@@ -162,7 +163,8 @@ class HealthMonitor:
         a 3xx is as valid a sign of life as a 200.
 
         Returns:
-            Tuple of (success, latency_ms). latency_ms is None on failure.
+            Tuple of (success, latency_ms, response_bytes).
+            latency_ms and response_bytes are None on failure.
         """
         try:
             if self._http_method == "HEAD":
@@ -179,18 +181,11 @@ class HealthMonitor:
                 )
 
             latency_ms = max(0.0, response.elapsed.total_seconds() * 1000)
-            _logger.debug(
-                "HTTP %s probe: %d (%.1fms, %d bytes)",
-                self._http_method,
-                response.status_code,
-                latency_ms,
-                len(response.content),
-            )
-            return True, latency_ms
+            return True, latency_ms, len(response.content)
 
         except requests.RequestException as exc:
-            _logger.debug("HTTP %s probe failed: %s", self._http_method, exc)
-            return False, None
+            _logger.debug("HTTP %s probe [%s] failed: %s", self._http_method, self._model, exc)
+            return False, None, None
 
     # ------------------------------------------------------------------
     # Internal — status derivation
@@ -255,7 +250,7 @@ class HealthMonitor:
         match = _PING_TIME_RE.search(stdout)
         if match:
             return float(match.group(1))
-        _logger.debug("ICMP probe: could not parse latency from output")
+        _logger.debug("ICMP probe [%s]: could not parse latency from output", self._model)
         return None
 
     @staticmethod
@@ -279,6 +274,7 @@ class HealthMonitor:
         info: HealthInfo,
         icmp_ok: bool | None,
         http_ok: bool | None,
+        http_bytes: int | None = None,
     ) -> None:
         """Log the health check result.
 
@@ -287,7 +283,7 @@ class HealthMonitor:
         - INFO: other status transitions (recovery, first check)
         - DEBUG: routine checks with no status change
         """
-        detail = self._probe_detail(info, icmp_ok, http_ok)
+        detail = self._probe_detail(info, icmp_ok, http_ok, http_bytes)
         status = info.health_status.value
         changed = info.health_status != self._previous_status
         self._previous_status = info.health_status
@@ -307,13 +303,14 @@ class HealthMonitor:
         info: HealthInfo,
         icmp_ok: bool | None,
         http_ok: bool | None,
+        http_bytes: int | None = None,
     ) -> str:
         """Build human-readable probe detail string for log messages."""
         parts: list[str] = []
 
         if icmp_ok is not None:
             if info.icmp_latency_ms is not None:
-                parts.append(f"ICMP {info.icmp_latency_ms:.0f}ms")
+                parts.append(f"ICMP {info.icmp_latency_ms:.1f}ms")
             elif icmp_ok:
                 parts.append("ICMP OK")
             else:
@@ -321,7 +318,8 @@ class HealthMonitor:
 
         if http_ok is not None:
             if info.http_latency_ms is not None:
-                parts.append(f"HTTP {self._http_method} {info.http_latency_ms:.0f}ms")
+                size = f", {http_bytes} bytes" if http_bytes else ""
+                parts.append(f"HTTP {self._http_method} {info.http_latency_ms:.1f}ms{size}")
             elif http_ok:
                 parts.append(f"HTTP {self._http_method} OK")
             else:

@@ -9,12 +9,10 @@ default_host: "192.168.0.1"
 auth:
   strategy: form
   action: "/cgi-bin/luci"
-  method: POST
   username_field: luci_username
   password_field: luci_password
   cookie_name: "sysauth"
 
-  encoding: plain
   success:
     redirect: "/cgi-bin/luci/admin/gateway/wan_status"
 hardware:

@@ -364,10 +364,17 @@ class TestG7HnapAuthDiagnostics:
 
 
 class TestG9AuthLogLevel:
-    """G-9: Auth managers respect log_level parameter."""
+    """G-9: Auth managers respect log_level parameter.
 
-    def test_form_log_level_info(self, session: requests.Session, caplog: pytest.LogCaptureFixture) -> None:
-        """Form auth at INFO logs success at INFO."""
+    Auth success logging was moved from individual auth managers to the
+    collector (which logs with [MODEL] prefix). The log_level parameter
+    remains on the base interface for error/warning logging.
+    """
+
+    def test_form_auth_succeeds_without_logging(
+        self, session: requests.Session, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Form auth success is silent — collector handles the log."""
         entries, _ = load_auth_fixture("har_form_login.json")
         with HARMockServer(entries) as server:
             config = FormAuth(
@@ -381,57 +388,7 @@ class TestG9AuthLogLevel:
                     server.base_url,
                     "admin",
                     "pw",
-                    log_level=logging.INFO,
                 )
             assert result.success is True
-            # Check for INFO-level success log
-            info_records = [
-                r for r in caplog.records if r.levelno == logging.INFO and "Form login succeeded" in r.message
-            ]
-            assert len(info_records) == 1
-
-    def test_form_log_level_debug(self, session: requests.Session, caplog: pytest.LogCaptureFixture) -> None:
-        """Form auth at DEBUG logs success at DEBUG."""
-        entries, _ = load_auth_fixture("har_form_login.json")
-        with HARMockServer(entries) as server:
-            config = FormAuth(
-                strategy="form",
-                action="/goform/login",
-            )
-            manager = FormAuthManager(config)
-            with caplog.at_level(logging.DEBUG):
-                result = manager.authenticate(
-                    session,
-                    server.base_url,
-                    "admin",
-                    "pw",
-                    log_level=logging.DEBUG,
-                )
-            assert result.success is True
-            # Check for DEBUG-level success log
-            debug_records = [
-                r for r in caplog.records if r.levelno == logging.DEBUG and "Form login succeeded" in r.message
-            ]
-            assert len(debug_records) == 1
-
-    def test_url_token_log_level(self, session: requests.Session, caplog: pytest.LogCaptureFixture) -> None:
-        """url_token auth respects log_level."""
-        entries, _ = load_auth_fixture("har_url_token_login.json")
-        with HARMockServer(entries) as server:
-            config = UrlTokenAuth(
-                strategy="url_token",
-                login_page="/login.html",
-                success_indicator="Downstream Bonded Channels",
-            )
-            manager = UrlTokenAuthManager(config)
-            with caplog.at_level(logging.DEBUG):
-                result = manager.authenticate(
-                    session,
-                    server.base_url,
-                    "admin",
-                    "pw",
-                    log_level=logging.INFO,
-                )
-            assert result.success is True
-            info_records = [r for r in caplog.records if r.levelno == logging.INFO and "URL token" in r.message]
-            assert len(info_records) >= 1
+            auth_logs = [r for r in caplog.records if "login succeeded" in r.message.lower()]
+            assert len(auth_logs) == 0

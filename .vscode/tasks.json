@@ -123,7 +123,7 @@
       "detail": "Verify Docker is installed and running before executing Docker commands"
     },
     {
-      "label": "🚀 HA: Start (Fresh)",
+      "label": "🚀 HA: Start",
       "type": "shell",
       "command": "python3 ${workspaceFolder}/scripts/dev/ha-sync-run.py",
       "dependsOn": ["🐳 Check Docker Status"],
@@ -135,7 +135,22 @@
         "clear": true
       },
       "problemMatcher": [],
-      "detail": "Start HA if needed, restart if running"
+      "detail": "Start HA with info logging (restart if already running)"
+    },
+    {
+      "label": "🚀 HA: Start (Debug)",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/scripts/dev/ha-sync-run.py --debug",
+      "dependsOn": ["🐳 Check Docker Status"],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": [],
+      "detail": "Start HA with debug logging for all integration namespaces"
     },
     {
       "label": "⏹️ HA: Stop",
@@ -234,18 +249,6 @@
       },
       "problemMatcher": [],
       "detail": "Lint & format check (auto-installs tools if missing)"
-    },
-    {
-      "label": "🔌 Check Extension Conflicts",
-      "type": "shell",
-      "command": "echo '🔌 Checking VSCode extensions...' && echo '' && echo 'Recommended extensions: 10' && echo 'Unwanted extensions: 7' && echo '' && echo 'If you have conflicting extensions installed, please disable them for this workspace.' && echo 'See .vscode/extensions.json for details.'",
-      "group": "none",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
     },
     {
       "label": "🔄 Fresh Start (Reset VS Code State)",

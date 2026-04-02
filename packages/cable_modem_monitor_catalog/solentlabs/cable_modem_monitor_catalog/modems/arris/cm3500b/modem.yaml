@@ -6,7 +6,6 @@ default_host: "192.168.100.1"
 auth:
   strategy: form
   action: "/cgi-bin/login_cgi"
-  method: POST
   username_field: username
   password_field: password
   cookie_name: "credential"

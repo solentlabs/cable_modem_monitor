@@ -78,12 +78,6 @@ class ModemParserCoordinator:
             result["system_info"] = system_info
 
         self._enrich_derived_fields(result)
-
-        _logger.debug(
-            "Parse complete: %d DS, %d US channels",
-            len(result.get("downstream", [])),
-            len(result.get("upstream", [])),
-        )
         return result
 
     def _extract_channel_section(

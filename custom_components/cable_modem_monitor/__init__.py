@@ -127,7 +127,10 @@ def _attach_health_recovery_listener(
     it sees RESPONSIVE health — this listener just ensures the poll
     happens promptly rather than waiting for the next scheduled scan.
     """
-    previous: list[HealthStatus] = [HealthStatus.UNKNOWN]
+    # Start as RESPONSIVE so the first successful health check is not
+    # misinterpreted as "recovery from UNKNOWN" — avoids a spurious
+    # immediate poll right after the initial data fetch.
+    previous: list[HealthStatus] = [HealthStatus.RESPONSIVE]
 
     @callback
     def _on_health_update() -> None:

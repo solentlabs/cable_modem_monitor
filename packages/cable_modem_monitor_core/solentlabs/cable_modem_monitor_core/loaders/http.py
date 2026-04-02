@@ -60,6 +60,7 @@ class HTTPResourceLoader:
         url_token: str = "",
         token_prefix: str = "",
         detect_login_pages: bool = False,
+        model: str = "",
     ) -> None:
         self._session = session
         self._base_url = base_url.rstrip("/")
@@ -67,6 +68,7 @@ class HTTPResourceLoader:
         self._url_token = url_token
         self._token_prefix = token_prefix
         self._detect_login_pages = detect_login_pages
+        self._model = model
 
     def fetch(
         self,
@@ -103,8 +105,9 @@ class HTTPResourceLoader:
             # Auth response reuse — skip fetch if login landed here
             if reuse_path and reuse_response and target.path == reuse_path:
                 _logger.debug(
-                    "Reusing auth response for %s",
+                    "Reusing auth response for %s [%s]",
                     target.path,
+                    self._model,
                 )
                 decoded = _decode_response(
                     reuse_response.text,
@@ -125,8 +128,9 @@ class HTTPResourceLoader:
                 ) from e
 
             _logger.debug(
-                "Fetched %s: %d (%d bytes)",
+                "Fetched %s [%s]: %d (%d bytes)",
                 target.path,
+                self._model,
                 response.status_code,
                 len(response.content),
             )
