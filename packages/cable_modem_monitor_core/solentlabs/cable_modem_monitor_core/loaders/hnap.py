@@ -107,6 +107,12 @@ class HNAPLoader:
                 f"HNAP GetMultipleHNAPs request failed: {e}",
             ) from e
 
+        _logger.debug(
+            "HNAP POST: %d (%d bytes)",
+            response.status_code,
+            len(response.content),
+        )
+
         if response.status_code == 401:
             raise HNAPLoadError(
                 "HNAP request returned 401 Unauthorized " "(session may have expired)",

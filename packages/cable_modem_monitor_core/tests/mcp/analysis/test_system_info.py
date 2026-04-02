@@ -15,6 +15,7 @@ from solentlabs.cable_modem_monitor_core.mcp.analysis.format.types import (
     PageAnalysis,
 )
 from solentlabs.cable_modem_monitor_core.mcp.analysis.mapping.system_info import (
+    _is_directional_js,
     _match_label,
     detect_system_info,
 )
@@ -24,6 +25,36 @@ from tests.conftest import collect_fixtures, load_fixture
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "system_info"
 VALID_DIR = FIXTURES_DIR / "valid"
 VALID_FIXTURES = collect_fixtures(VALID_DIR)
+
+
+# =====================================================================
+# JS direction filter - table-driven
+# =====================================================================
+
+# fmt: off
+JS_DIRECTION_CASES = [
+    # (function_name,              expected, desc)
+    ("InitDsTagValue",             True,     "ds keyword — directional"),
+    ("InitUsTagValue",             True,     "us keyword — directional"),
+    ("InitDsOfdmTagValue",         True,     "ds compound — directional"),
+    ("InitUsOfdmaTagValue",        True,     "us compound — directional"),
+    ("InitDownstreamData",         True,     "downstream keyword — directional"),
+    ("InitUpstreamData",           True,     "upstream keyword — directional"),
+    ("InitTagValue",               False,    "generic — non-directional"),
+    ("InitDiagTagValue",           False,    "diagnostic — non-directional"),
+    ("InitSystemInfoTagValue",     False,    "system info — non-directional"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "name,expected,desc",
+    JS_DIRECTION_CASES,
+    ids=[c[2] for c in JS_DIRECTION_CASES],
+)
+def test_is_directional_js(name: str, expected: bool, desc: str) -> None:
+    """JS function names are correctly classified as directional or not."""
+    assert _is_directional_js(name) is expected
 
 
 # =====================================================================
@@ -259,14 +290,14 @@ class TestJsSystemInfoDetection:
         assert "system_uptime" in detected_fields
         assert "software_version" in detected_fields
 
-    def test_js_function_non_system_name_skipped(self) -> None:
-        """JS function without 'system' or 'info' in name is not checked."""
+    def test_directional_js_function_skipped(self) -> None:
+        """Directional JS functions (ds/us) are skipped for system_info."""
         page = PageAnalysis(
-            resource="/data.htm",
+            resource="/data.html",
             content_type="text/html",
             js_functions=[
                 DetectedJsFunction(
-                    name="InitDsTableTagValue",
+                    name="InitDsTagValue",
                     body="",
                     delimiter="|",
                     values=["System Up Time", "3 days"],
@@ -274,7 +305,45 @@ class TestJsSystemInfoDetection:
             ],
         )
         result = detect_system_info([page], [])
-        # No JS sources detected because function name doesn't match
+        # Directional function skipped — no JS system_info sources
+        assert result is None
+
+    def test_non_directional_js_function_checked(self) -> None:
+        """Non-directional JS functions are checked for system_info labels."""
+        page = PageAnalysis(
+            resource="/status.htm",
+            content_type="text/html",
+            js_functions=[
+                DetectedJsFunction(
+                    name="InitTagValue",
+                    body="var tagValueList = '...';",
+                    delimiter="|",
+                    values=["", "System Up Time", "5 days 2 hours"],
+                ),
+            ],
+        )
+        result = detect_system_info([page], [])
+        assert result is not None
+
+        detected_fields = {f.field for src in result.sources for f in src.fields}
+        assert "system_uptime" in detected_fields
+
+    def test_non_directional_js_no_matching_values(self) -> None:
+        """Non-directional JS function with no system_info labels yields nothing."""
+        page = PageAnalysis(
+            resource="/status.html",
+            content_type="text/html",
+            js_functions=[
+                DetectedJsFunction(
+                    name="InitDiagTagValue",
+                    body="",
+                    delimiter="|",
+                    values=["0", "1", "0", "0", "0", "0", "0", "1", "", ""],
+                ),
+            ],
+        )
+        result = detect_system_info([page], [])
+        # Numeric status codes don't match any label — no system_info detected
         assert result is None
 
 

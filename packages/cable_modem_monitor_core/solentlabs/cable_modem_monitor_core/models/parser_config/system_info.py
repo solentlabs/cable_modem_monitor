@@ -79,6 +79,7 @@ class JSSystemInfoFieldMapping(BaseModel):
     offset: int
     field: str
     type: str
+    map: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> JSSystemInfoFieldMapping:

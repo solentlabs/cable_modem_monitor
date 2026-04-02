@@ -110,19 +110,21 @@ def detect_system_info(
                     )
                 )
 
-        # javascript: JS functions with system info patterns
+        # javascript: non-directional JS functions may contain system
+        # info labels. Directional functions (ds/us in name) belong to
+        # channel sections and are skipped here.
         for js_func in page.js_functions:
-            name_lower = js_func.name.lower()
-            if "system" in name_lower or "info" in name_lower:
-                fields = _match_js_system_info(js_func.values)
-                if fields:
-                    sources.append(
-                        SystemInfoSourceDetail(
-                            format="javascript",
-                            resource=page.resource,
-                            fields=fields,
-                        )
+            if _is_directional_js(js_func.name):
+                continue
+            fields = _match_js_system_info(js_func.values)
+            if fields:
+                sources.append(
+                    SystemInfoSourceDetail(
+                        format="javascript",
+                        resource=page.resource,
+                        fields=fields,
                     )
+                )
 
         # json: JSON data with system info keys
         if page.json_data is not None:
@@ -192,6 +194,24 @@ def _match_label(label: str, selector_type: str) -> tuple[str, int]:
             return _LABEL_FIELD_MAP[normalized]
 
     return "", 0
+
+
+# -----------------------------------------------------------------------
+# JavaScript direction filter
+# -----------------------------------------------------------------------
+
+_DIRECTIONAL_KEYWORDS: frozenset[str] = frozenset({"ds", "us", "downstream", "upstream"})
+
+
+def _is_directional_js(name: str) -> bool:
+    """Return True if the JS function name indicates channel direction.
+
+    Directional functions (e.g., InitDsTableTagValue, InitUsTableTagValue)
+    belong to channel sections. Non-directional functions are candidates
+    for system_info detection.
+    """
+    lower = name.lower()
+    return any(kw in lower for kw in _DIRECTIONAL_KEYWORDS)
 
 
 # -----------------------------------------------------------------------

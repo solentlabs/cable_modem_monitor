@@ -23,7 +23,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
@@ -41,6 +41,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemIdentity,
     ModemSnapshot,
 )
+from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
 from solentlabs.cable_modem_monitor_core.test_harness.runner import (
     load_post_processor,
 )
@@ -108,6 +109,38 @@ async def async_migrate_entry(
         _CURRENT_VERSION,
     )
     return await async_run_migrations(hass, entry, _CURRENT_VERSION)
+
+
+def _attach_health_recovery_listener(
+    hass: HomeAssistant,
+    health_coordinator: DataUpdateCoordinator[HealthInfo],
+    data_coordinator: DataUpdateCoordinator[ModemSnapshot],
+    model: str,
+) -> None:
+    """Register a listener that triggers an immediate poll on health recovery.
+
+    When health transitions from UNRESPONSIVE/UNKNOWN to RESPONSIVE,
+    schedules an immediate data poll so recovery latency is bounded by
+    the health check interval (~30s) rather than the scan interval (~10m).
+
+    The Core orchestrator independently clears connectivity backoff when
+    it sees RESPONSIVE health — this listener just ensures the poll
+    happens promptly rather than waiting for the next scheduled scan.
+    """
+    previous: list[HealthStatus] = [HealthStatus.UNKNOWN]
+
+    @callback
+    def _on_health_update() -> None:
+        if health_coordinator.data is None:
+            return
+        current = health_coordinator.data.health_status
+        was_down = previous[0] in (HealthStatus.UNRESPONSIVE, HealthStatus.UNKNOWN)
+        previous[0] = current
+        if was_down and current == HealthStatus.RESPONSIVE:
+            _LOGGER.info("Health recovery [%s] — scheduling immediate poll", model)
+            hass.async_create_task(data_coordinator.async_request_refresh())
+
+    health_coordinator.async_add_listener(_on_health_update)
 
 
 async def async_setup_entry(
@@ -183,8 +216,14 @@ async def async_setup_entry(
             config_entry=entry,
         )
 
-    # Step 8: First poll (always runs, even when polling is disabled)
+    # Model name for logging (used by recovery listener and step 8+)
     model = entry.data.get(CONF_MODEL, host)
+
+    # Step 7b: Health recovery listener — trigger immediate poll on recovery
+    if health_coordinator is not None:
+        _attach_health_recovery_listener(hass, health_coordinator, data_coordinator, model)
+
+    # Step 8: First poll (always runs, even when polling is disabled)
     await data_coordinator.async_config_entry_first_refresh()
     if health_coordinator is not None:
         await health_coordinator.async_config_entry_first_refresh()

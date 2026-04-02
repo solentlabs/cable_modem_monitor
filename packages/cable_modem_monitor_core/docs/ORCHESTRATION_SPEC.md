@@ -352,21 +352,25 @@ class Orchestrator:
         1. If is_restarting, return UNREACHABLE immediately (no HTTP
            traffic to a rebooting modem)
         2. Check circuit breaker — if open, return AUTH_FAILED
-        3. Check connectivity backoff — if active, decrement and
-           return UNREACHABLE
-        4. Check auth backoff — if active, decrement and return
+        3. Health recovery check — if connectivity backoff is active
+           and HealthMonitor reports RESPONSIVE, clear the backoff
+           (modem is proven reachable, no reason to keep skipping)
+        4. Check connectivity backoff — if still active after step 3,
+           decrement and return UNREACHABLE
+        5. Check auth backoff — if active, decrement and return
            AUTH_FAILED
-        5. Run ModemDataCollector
-        6. If collection failed, apply signal → policy mapping
-        7. On success, derive connection_status from data
-        8. Derive docsis_status from lock_status fields
-        9. Read latest HealthInfo from HealthMonitor (if present)
-        10. Detect state transitions (unreachable → online)
-        11. Return combined result
+        6. Run ModemDataCollector
+        7. If collection failed, apply signal → policy mapping
+        8. On success, derive connection_status from data
+        9. Derive docsis_status from lock_status fields
+        10. Read latest HealthInfo from HealthMonitor (if present)
+        11. Detect state transitions (unreachable → online)
+        12. Return combined result
 
         The HealthMonitor runs on its own cadence, independent of
         get_modem_data(). The orchestrator reads the latest health
-        result but does not trigger a probe.
+        result for the snapshot (step 10) and for backoff decisions
+        (step 3), but does not trigger a new probe.
 
         The caller decides when to poll (schedule, service call,
         automation). The orchestrator applies the same backoff and

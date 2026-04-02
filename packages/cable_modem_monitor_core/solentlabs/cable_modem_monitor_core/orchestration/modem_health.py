@@ -180,10 +180,11 @@ class HealthMonitor:
 
             latency_ms = max(0.0, response.elapsed.total_seconds() * 1000)
             _logger.debug(
-                "HTTP %s probe: %d (%.1fms)",
+                "HTTP %s probe: %d (%.1fms, %d bytes)",
                 self._http_method,
                 response.status_code,
                 latency_ms,
+                len(response.content),
             )
             return True, latency_ms
 

@@ -28,6 +28,7 @@ Use case coverage (orchestrator level):
 - UC-33: Parser error — PARSER_ISSUE
 - UC-34: Status transition — unreachable → online
 - UC-35: All-or-nothing page loading
+- UC-36: Health recovery clears connectivity backoff
 - UC-42: Restart during restart — rejected
 - UC-43: Poll during restart — short-circuit
 - UC-44: Restart not supported
@@ -1328,3 +1329,160 @@ class TestCounterResetDetection:
             orch.get_modem_data()
 
         assert any("Counter reset detected" in r.message for r in caplog.records)
+
+
+# ==================================================================
+# Health Recovery Clears Connectivity Backoff
+# ==================================================================
+
+
+def _make_health_monitor(status_value: str) -> MagicMock:
+    """Build a mock HealthMonitor with the given health status.
+
+    Args:
+        status_value: HealthStatus enum value string (e.g., "responsive").
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.models import HealthInfo
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    health_status = HealthStatus(status_value)
+    monitor = MagicMock()
+    monitor.latest = HealthInfo(health_status=health_status)
+    return monitor
+
+
+# Table-driven: each row is (health_status_value, has_monitor, expect_clear, description)
+#
+# ┌──────────────────┬─────────────┬──────────────┬─────────────────────────────┐
+# │ health_status    │ has_monitor │ expect_clear │ description                 │
+# ├──────────────────┼─────────────┼──────────────┼─────────────────────────────┤
+# │ responsive       │ yes         │ yes          │ recovery clears backoff     │
+# │ unresponsive     │ yes         │ no           │ still down                  │
+# │ degraded         │ yes         │ no           │ HTTP probe failing          │
+# │ icmp_blocked     │ yes         │ no           │ conservative for v1         │
+# │ unknown          │ yes         │ no           │ no probe data               │
+# │ (none)           │ no          │ no           │ no health monitor           │
+# └──────────────────┴─────────────┴──────────────┴─────────────────────────────┘
+#
+# fmt: off
+HEALTH_RECOVERY_CASES = [
+    ("responsive",   True,  True,  "recovery_clears_backoff"),
+    ("unresponsive", True,  False, "still_down"),
+    ("degraded",     True,  False, "http_probe_failing"),
+    ("icmp_blocked", True,  False, "conservative_for_v1"),
+    ("unknown",      True,  False, "no_probe_data"),
+    ("responsive",   False, False, "no_health_monitor"),
+]
+# fmt: on
+
+
+class TestHealthRecoveryClearsBackoff:
+    """UC-36: Health recovery clears connectivity backoff.
+
+    When the health monitor reports RESPONSIVE while connectivity
+    backoff is active, the orchestrator clears the backoff and the
+    poll proceeds immediately.
+    """
+
+    @pytest.mark.parametrize(
+        "health_status, has_monitor, expect_clear, desc",
+        HEALTH_RECOVERY_CASES,
+        ids=[c[3] for c in HEALTH_RECOVERY_CASES],
+    )
+    def test_health_recovery_during_backoff(
+        self,
+        health_status: str,
+        has_monitor: bool,
+        expect_clear: bool,
+        desc: str,
+    ) -> None:
+        """Backoff is cleared only when health monitor reports RESPONSIVE."""
+        # Build collector: first call fails (triggers backoff), second succeeds
+        collector = _mock_collector(
+            [
+                _fail_result(CollectorSignal.CONNECTIVITY),
+                _ok_result(),
+            ]
+        )
+        health_monitor = _make_health_monitor(health_status) if has_monitor else None
+        orch = _make_orchestrator(collector=collector, health_monitor=health_monitor)
+
+        # Poll 1: CONNECTIVITY failure → streak=1, backoff=1
+        orch.get_modem_data()
+        assert orch.diagnostics().connectivity_backoff_remaining == 1
+
+        # Poll 2: backoff should be checked — health recovery may clear it
+        snapshot = orch.get_modem_data()
+
+        if expect_clear:
+            # Health cleared the backoff → collector ran → success
+            assert snapshot.connection_status == ConnectionStatus.ONLINE
+            assert orch.diagnostics().connectivity_streak == 0
+            assert orch.diagnostics().connectivity_backoff_remaining == 0
+            assert collector.execute.call_count == 2
+        else:
+            # Backoff was not cleared → poll skipped
+            assert snapshot.connection_status == ConnectionStatus.UNREACHABLE
+            assert collector.execute.call_count == 1
+
+    def test_health_responsive_no_backoff_is_noop(self) -> None:
+        """RESPONSIVE health with no active backoff does not affect normal flow."""
+        health_monitor = _make_health_monitor("responsive")
+        collector = _mock_collector([_ok_result()])
+        orch = _make_orchestrator(collector=collector, health_monitor=health_monitor)
+
+        snapshot = orch.get_modem_data()
+
+        assert snapshot.connection_status == ConnectionStatus.ONLINE
+        assert orch.diagnostics().connectivity_streak == 0
+        assert orch.diagnostics().connectivity_backoff_remaining == 0
+        assert collector.execute.call_count == 1
+
+    def test_health_recovery_logged(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Health-triggered backoff clear is logged at INFO level."""
+        collector = _mock_collector(
+            [
+                _fail_result(CollectorSignal.CONNECTIVITY),
+                _ok_result(),
+            ]
+        )
+        health_monitor = _make_health_monitor("responsive")
+        orch = _make_orchestrator(collector=collector, health_monitor=health_monitor)
+
+        orch.get_modem_data()  # triggers backoff
+
+        with caplog.at_level(logging.INFO):
+            orch.get_modem_data()  # health recovery clears backoff
+
+        assert any("Health recovery" in r.message for r in caplog.records)
+
+    def test_health_recovery_clears_deep_backoff(self) -> None:
+        """Health recovery clears even a high-streak backoff (streak=4, backoff=6)."""
+        collector = _mock_collector()
+        collector.execute.return_value = _fail_result(CollectorSignal.CONNECTIVITY)
+        health_monitor = _make_health_monitor("unresponsive")
+        orch = _make_orchestrator(collector=collector, health_monitor=health_monitor)
+
+        # Build up streak 1-3, draining backoff after each
+        for _ in range(3):
+            orch.get_modem_data()  # execute → CONNECTIVITY
+            while orch.diagnostics().connectivity_backoff_remaining > 0:
+                orch.get_modem_data()
+
+        # Streak=3, backoff fully drained. Next execute → streak=4, backoff=6
+        orch.get_modem_data()
+        assert orch.diagnostics().connectivity_backoff_remaining == 6
+        assert orch.diagnostics().connectivity_streak == 4
+
+        # Now health recovers — switch to RESPONSIVE and provide success result
+        from solentlabs.cable_modem_monitor_core.orchestration.models import HealthInfo
+        from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+        health_monitor.latest = HealthInfo(health_status=HealthStatus.RESPONSIVE)
+        collector.execute.return_value = _ok_result()
+
+        snapshot = orch.get_modem_data()
+
+        assert snapshot.connection_status == ConnectionStatus.ONLINE
+        assert orch.diagnostics().connectivity_streak == 0
+        assert orch.diagnostics().connectivity_backoff_remaining == 0

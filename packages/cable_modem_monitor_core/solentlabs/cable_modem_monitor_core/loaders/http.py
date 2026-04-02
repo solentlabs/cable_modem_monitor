@@ -124,6 +124,13 @@ class HTTPResourceLoader:
                     f"Failed to fetch {target.path}: {e}",
                 ) from e
 
+            _logger.debug(
+                "Fetched %s: %d (%d bytes)",
+                target.path,
+                response.status_code,
+                len(response.content),
+            )
+
             if response.status_code in (401, 403):
                 raise ResourceLoadError(
                     f"HTTP {response.status_code} on {target.path}" " — session likely expired",
