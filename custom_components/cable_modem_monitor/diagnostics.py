@@ -316,6 +316,8 @@ def _build_diagnostics_dict(
             "auth_failure_streak": core_diag.auth_failure_streak,
             "circuit_breaker_open": core_diag.circuit_breaker_open,
             "session_is_valid": core_diag.session_is_valid,
+            "connectivity_streak": core_diag.connectivity_streak,
+            "connectivity_backoff_remaining": core_diag.connectivity_backoff_remaining,
             "last_poll_timestamp": core_diag.last_poll_timestamp,
         },
         "data_coordinator": {

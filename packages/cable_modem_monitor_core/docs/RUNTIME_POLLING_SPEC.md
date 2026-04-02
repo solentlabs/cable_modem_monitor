@@ -272,8 +272,8 @@ strategy returns `AuthResult.FAILURE`.
 | Login backoff counter | Orchestrator | Anti-brute-force suppression | Decremented each poll |
 | Auth failure streak | Orchestrator | Circuit breaker threshold tracking | Reset on successful collection |
 | Circuit open flag | Orchestrator | Stops polling on persistent auth failure | Cleared by client reauth |
-| Connectivity streak | Orchestrator | Tracks consecutive unreachable failures | Reset on success, non-connectivity failure, or reset_connectivity() |
-| Connectivity backoff | Orchestrator | Exponential backoff: min(2^(streak-1), 6) | Decremented each poll, cleared by reset_connectivity() |
+| Connectivity streak | Orchestrator | Tracks consecutive unreachable failures | Reset on success, non-connectivity failure, reset_connectivity(), or health recovery |
+| Connectivity backoff | Orchestrator | Exponential backoff: min(2^(streak-1), 6) | Decremented each poll, cleared by reset_connectivity() or health recovery |
 | Last poll status | Orchestrator | Detect status transitions (e.g., unreachable → online) | Updated each poll |
 | Parser instance | Orchestrator | Skip re-instantiation | Integration lifetime |
 | Working URL | Orchestrator | Protocol (HTTP/HTTPS) | Integration lifetime |
@@ -293,7 +293,18 @@ sensors update immediately — no waiting for the next data poll. This
 gives faster outage detection, especially for unplanned reboots.
 
 Health checks and data collection run independently on their own
-cadences with no coupling. Neither pipeline suppresses the other.
+cadences — neither pipeline suppresses the other. However, health
+status feeds back into the connectivity backoff policy: when the
+orchestrator detects that health is `RESPONSIVE` while a connectivity
+backoff is active, it clears the backoff immediately. This prevents
+the system from skipping polls against a modem that is proven
+reachable. If the subsequent poll fails, the backoff re-engages
+normally.
+
+The platform adapter may additionally schedule an immediate data
+poll when it detects a health recovery transition (e.g.,
+`UNRESPONSIVE` → `RESPONSIVE`), reducing recovery latency from up
+to one `scan_interval` to one `health_check_interval`.
 
 See `ORCHESTRATION_SPEC.md` § HealthMonitor for the probe API and
 status derivation matrix.

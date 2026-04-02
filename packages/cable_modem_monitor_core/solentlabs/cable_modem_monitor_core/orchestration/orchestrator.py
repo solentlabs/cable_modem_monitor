@@ -23,7 +23,13 @@ from .actions import execute_action
 from .models import ModemSnapshot, OrchestratorDiagnostics, RestartResult
 from .policy import SignalPolicy
 from .restart import RestartMonitor
-from .signals import CollectorSignal, ConnectionStatus, DocsisStatus, RestartPhase
+from .signals import (
+    CollectorSignal,
+    ConnectionStatus,
+    DocsisStatus,
+    HealthStatus,
+    RestartPhase,
+)
 from .status import derive_connection_status, derive_docsis_status
 
 if TYPE_CHECKING:
@@ -285,6 +291,18 @@ class Orchestrator:
                 DocsisStatus.UNKNOWN,
                 error="Circuit breaker open — reconfigure credentials",
             )
+
+        # Health recovery — clear connectivity backoff if modem is proven reachable
+        if (
+            self._health_monitor is not None
+            and self._policy.connectivity_backoff_remaining > 0
+            and self._health_monitor.latest.health_status == HealthStatus.RESPONSIVE
+        ):
+            _logger.info(
+                "Health recovery detected [%s] — clearing connectivity backoff",
+                self._modem_config.model,
+            )
+            self._policy.reset_connectivity()
 
         # Connectivity backoff
         if self._policy.check_connectivity_backoff():

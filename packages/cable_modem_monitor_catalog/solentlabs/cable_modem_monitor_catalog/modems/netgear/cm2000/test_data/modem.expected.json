@@ -351,12 +351,19 @@
     }
   ],
   "system_info": {
+    "cm_status": "Good",
     "current_time": "Fri Nov 28 14:29:17 2025",
     "downstream_channel_count": 32,
+    "ds_partial_service": "No",
+    "ds_power_status": "Warning",
+    "ds_snr_status": "Good",
     "hardware_version": "1.01",
+    "internet_access": "Down",
     "software_version": "V8.01.02",
     "system_uptime": "10 days 01:41:16",
-    "upstream_channel_count": 4
+    "upstream_channel_count": 4,
+    "us_partial_service": "No",
+    "us_power_status": "Good"
   },
   "upstream": [
     {

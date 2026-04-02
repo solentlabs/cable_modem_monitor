@@ -395,6 +395,24 @@ for downstream/upstream and `html_fields` for system_info, because
 channel data naturally appears in tables while system info appears as
 label-value pairs.
 
+#### JavaScript function classification
+
+A single HTML page may contain multiple JS functions with delimited
+data. The analyzer classifies each function by direction:
+
+- **Directional** — function name contains `ds`, `us`, `downstream`,
+  or `upstream` (case-insensitive). These are channel data functions
+  and are routed to downstream/upstream section assembly.
+- **Non-directional** — everything else. These are candidates for
+  system_info detection. The analyzer checks their delimited values
+  against the system_info label map. Functions with matching values
+  produce system_info sources; functions with no matches are flagged
+  as warnings for the LLM layer to inspect.
+
+This direction-based classification avoids false negatives from name
+patterns. Generic function names (e.g., no directional keyword) that
+contain system_info fields would be missed by a name-matching approach.
+
 ### Phase 6: Field Mapping Extraction
 
 This is the most labor-intensive phase. `analyze_har` must map source field

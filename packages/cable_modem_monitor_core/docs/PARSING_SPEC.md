@@ -1233,6 +1233,44 @@ overlap — each source owns distinct fields.
 | `hnap` | HNAP response | Action response key → JSON key |
 | `json` | REST response | Object path → JSON key |
 
+#### `javascript` system info field schema
+
+Each JS function in a `javascript` system_info source maps positional
+offsets to system_info field names. The field schema is:
+
+| Property | Type | Required | Description |
+|----------|------|:--------:|-------------|
+| `offset` | integer | yes | Position in the delimited string (0-based) |
+| `field` | string | yes | Output field name |
+| `type` | string | yes | Field type (see Common Concepts) |
+| `map` | dict | no | Value mapping (exact match, applied before type conversion) |
+
+The `map` attribute is the same as on channel field mappings — it
+transforms raw values to human-readable strings at extraction time.
+This is useful for status indicator functions where the modem returns
+numeric codes instead of human-readable text.
+
+```yaml
+# Status indicators with value mapping
+- format: javascript
+  resource: "/status.htm"
+  functions:
+    - name: "InitStatusTagValue"
+      delimiter: "|"
+      fields:
+        - offset: 1
+          field: power_status
+          type: string
+          map:
+            "0": "Good"
+            "1": "Warning"
+            "2": "Critical"
+```
+
+Without `map`, the raw value passes through as-is — suitable for
+fields that are already human-readable (uptime strings, version
+strings).
+
 #### `html_fields` selector types
 
 | Selector | When to use | Algorithm |
@@ -1722,8 +1760,9 @@ raw value to a canonical type at extraction time. Use this when the
 modem provides a dedicated channel type column/row/field.
 
 All mapping types support ``map``: ``ColumnMapping`` (table),
-``RowMapping`` (transposed), ``ChannelMapping`` (HNAP, JS), and
-``JsonChannelMapping`` (JSON).
+``RowMapping`` (transposed), ``ChannelMapping`` (HNAP, JS),
+``JsonChannelMapping`` (JSON), and ``JSSystemInfoFieldMapping``
+(system_info javascript).
 
 **HTML table** (column mapping):
 
