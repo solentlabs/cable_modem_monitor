@@ -13,10 +13,17 @@ submission. For each modem:
 Golden file drift = pipeline can't reproduce what was manually crafted.
 Zero drift = pipeline is production-ready for contributor onboarding.
 
+Baseline mode (--baseline):
+    Compares results against a recorded baseline. Fails only on
+    regressions (status got worse). Use --update-baseline to record
+    the current state after pipeline improvements.
+
 Usage:
     .venv/bin/python packages/cable_modem_monitor_catalog/scripts/mcp_pipeline_regression.py
     .venv/bin/python packages/cable_modem_monitor_catalog/scripts/mcp_pipeline_regression.py --modem arris/sb8200
     .venv/bin/python packages/cable_modem_monitor_catalog/scripts/mcp_pipeline_regression.py -v
+    .venv/bin/python .../mcp_pipeline_regression.py --baseline baseline.json
+    .venv/bin/python .../mcp_pipeline_regression.py --update-baseline baseline.json
 """
 
 from __future__ import annotations
@@ -405,6 +412,106 @@ def _print_summary(results: list[ModemResult]) -> None:
         print()
 
 
+# ---------------------------------------------------------------------------
+# Baseline comparison
+# ---------------------------------------------------------------------------
+
+# Severity ordering: clean < drift < failure
+_STATUS_SEVERITY = {"clean": 0, "drift": 1, "failure": 2}
+
+
+def _result_status(result: ModemResult) -> str:
+    """Classify a result as clean, drift, or failure."""
+    if result.stage_failed:
+        return "failure"
+    if result.golden_diffs:
+        return "drift"
+    return "clean"
+
+
+def _result_key(result: ModemResult) -> str:
+    """Unique key for a result: modem_id:har_filename."""
+    return f"{result.modem}:{result.har_file}"
+
+
+def _load_baseline(path: Path) -> dict[str, str]:
+    """Load baseline file. Returns {key: status}."""
+    data = json.loads(path.read_text())
+    return data.get("results", {})
+
+
+def _save_baseline(path: Path, results: list[ModemResult]) -> None:
+    """Write current results as the new baseline."""
+    baseline = {_result_key(r): _result_status(r) for r in results}
+    data = {
+        "_comment": "MCP pipeline regression baseline. Update with --update-baseline.",
+        "results": dict(sorted(baseline.items())),
+    }
+    path.write_text(json.dumps(data, indent=2) + "\n")
+
+
+def _compare_baseline(
+    results: list[ModemResult],
+    baseline: dict[str, str],
+) -> tuple[list[str], list[str]]:
+    """Compare results against baseline.
+
+    Returns (regressions, improvements) as human-readable messages.
+    A regression is when a modem's status gets worse (higher severity).
+    """
+    regressions: list[str] = []
+    improvements: list[str] = []
+
+    for r in results:
+        key = _result_key(r)
+        current = _result_status(r)
+        expected = baseline.get(key)
+
+        if expected is None:
+            # New modem not in baseline — not a regression, but flag it
+            if current != "clean":
+                regressions.append(f"  NEW {key}: {current} (not in baseline)")
+            continue
+
+        cur_sev = _STATUS_SEVERITY[current]
+        exp_sev = _STATUS_SEVERITY[expected]
+
+        if cur_sev > exp_sev:
+            regressions.append(f"  REGRESSED {key}: {expected} -> {current}")
+        elif cur_sev < exp_sev:
+            improvements.append(f"  IMPROVED  {key}: {expected} -> {current}")
+
+    # Modems removed from catalog (in baseline but not in results)
+    result_keys = {_result_key(r) for r in results}
+    for key in sorted(baseline):
+        if key not in result_keys:
+            improvements.append(f"  REMOVED   {key}: was {baseline[key]}")
+
+    return regressions, improvements
+
+
+def _print_baseline_comparison(
+    regressions: list[str],
+    improvements: list[str],
+) -> None:
+    """Print baseline comparison results."""
+    if improvements:
+        print(f"\nIMPROVEMENTS ({len(improvements)}):")
+        for msg in improvements:
+            print(msg)
+        print("\n  Run with --update-baseline to lock in improvements.")
+
+    if regressions:
+        print(f"\nREGRESSIONS ({len(regressions)}):")
+        for msg in regressions:
+            print(msg)
+        print("\n  Pipeline changes made things worse. Fix before merging.")
+    elif not improvements:
+        print("\nBASELINE: No changes detected.")
+    else:
+        print("\nBASELINE: No regressions. Pipeline improved!")
+
+
 def main() -> None:
     """Run the regression sweep."""
     parser = argparse.ArgumentParser(description="MCP pipeline regression — golden file drift test")
@@ -414,6 +521,17 @@ def main() -> None:
         "-v",
         action="store_true",
         help="Show per-modem details",
+    )
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        help="Compare against baseline file (fail only on regressions)",
+    )
+    parser.add_argument(
+        "--update-baseline",
+        type=Path,
+        metavar="PATH",
+        help="Run sweep and write results as new baseline",
     )
     args = parser.parse_args()
 
@@ -432,6 +550,23 @@ def main() -> None:
 
     _print_summary(results)
 
+    # Update baseline mode — write and exit
+    if args.update_baseline:
+        _save_baseline(args.update_baseline, results)
+        print(f"Baseline written to {args.update_baseline}")
+        sys.exit(0)
+
+    # Baseline comparison mode — fail only on regressions
+    if args.baseline:
+        if not args.baseline.exists():
+            print(f"Baseline file not found: {args.baseline}")
+            sys.exit(1)
+        baseline = _load_baseline(args.baseline)
+        regressions, improvements = _compare_baseline(results, baseline)
+        _print_baseline_comparison(regressions, improvements)
+        sys.exit(1 if regressions else 0)
+
+    # Default mode — fail on any failure or drift
     has_failures = any(r.stage_failed for r in results)
     has_drift = any(r.golden_diffs and not r.stage_failed for r in results)
     sys.exit(1 if has_failures or has_drift else 0)

@@ -82,6 +82,11 @@ jobs:
         run: |
           pytest tests/ -v --tb=short --cov=solentlabs/cable_modem_monitor_catalog --cov-report=term-missing --cov-fail-under=90
 
+      - name: MCP pipeline regression
+        continue-on-error: true
+        run: |
+          python packages/cable_modem_monitor_catalog/scripts/mcp_pipeline_regression.py -v
+
   lint:
     name: Code Quality
     runs-on: ubuntu-latest
