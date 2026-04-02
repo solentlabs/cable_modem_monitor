@@ -78,7 +78,7 @@ def execute_action(
             model=model,
         )
 
-    _logger.error("Unknown action type [%s]: %s", model, type(action).__name__)
+    _logger.warning("Unknown action type [%s]: %s", model, type(action).__name__)
     return ActionResult(
         success=False,
         message=f"Unknown action type: {type(action).__name__}",

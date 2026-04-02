@@ -74,7 +74,7 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
     if isinstance(auth, FormSjclAuth):
         return FormSjclAuthManager(auth)
 
-    _logger.error(
+    _logger.warning(
         "Unknown auth strategy type: %s, falling back to NoneAuthManager",
         type(auth).__name__,
     )

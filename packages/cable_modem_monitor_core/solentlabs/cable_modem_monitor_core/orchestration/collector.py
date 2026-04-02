@@ -189,7 +189,7 @@ class ModemDataCollector:
         try:
             data = self._parse(resources)
         except Exception as exc:
-            _logger.error("Parse error [%s]: %s", self._modem_config.model, exc)
+            _logger.warning("Parse error [%s]: %s", self._modem_config.model, exc)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.PARSE_ERROR,

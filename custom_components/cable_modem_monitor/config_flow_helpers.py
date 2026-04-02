@@ -46,7 +46,7 @@ from .lib.host_validation import parse_host_input
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
-_LOGGER = logging.getLogger(__name__.replace("_helpers", ""))
+_LOGGER = logging.getLogger(f"{__package__}.config_flow")
 
 
 # ---------------------------------------------------------------------------
