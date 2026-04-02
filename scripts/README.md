@@ -6,7 +6,6 @@ This directory contains various scripts for development and maintenance of the C
 
 - **Python**: 3.11 or higher
 - **Git**: For version control operations
-- **SSH**: For deployment to Home Assistant (configured as `homeassistant` host)
 - **Bash**: For shell scripts (Linux/macOS/WSL)
 - **Optional**: GNU Make for convenient command shortcuts
 
@@ -18,7 +17,6 @@ Use the Makefile for easy access to common commands:
 make help          # Show all available commands
 make test          # Run full test suite
 make clean         # Clean up test artifacts
-make deploy        # Deploy to Home Assistant
 ```
 
 ## Directory Structure
@@ -31,20 +29,10 @@ Scripts used during development and testing:
 | `cleanup_test_artifacts.py` | Removes test cache and coverage files | 0: Success |
 | `quick_test.sh` | Quick test run (assumes venv exists) | 0: Pass, 1: Fail |
 | `run_tests_local.sh` | Full test suite with venv setup and coverage | 0: Pass, 1: Fail |
-| `setup_vscode_testing.ps1` | Configures VS Code for testing (PowerShell) | 0: Success |
 | `test_simple.sh` | Basic tests without venv (global install) | 0: Pass, 1: Fail |
 | `test-codeql.sh` | Run CodeQL query tests (requires CodeQL CLI) | 0: Pass, 1: Fail |
 | `fresh_start.py` | Reset VS Code state to test new developer experience (cross-platform) | 0: Success |
-| `fresh-start.sh` | Reset VS Code state (Linux/macOS - legacy, use .py version) | 0: Success |
-| `fresh-start.ps1` | Reset VS Code state (Windows - legacy, use .py version) | 0: Success |
-
-### `maintenance/` - Maintenance Scripts
-Scripts for maintaining the integration in production:
-
-| Script | Purpose | Exit Codes | Environment Variables |
-|--------|---------|------------|----------------------|
-| `cleanup_entities.py` | Cleans up Home Assistant entities | 0: Success, 1: Error | None |
-| `update_versions.py` | Sync version from const.py to manifest.json | 0: Success, 1: Error | None |
+| `validate.py` | Cross-platform validation (auto-installs tools) | 0: Pass, 1: Fail |
 
 ## Usage
 
@@ -92,7 +80,6 @@ bash scripts/dev/test-codeql.sh
 
 **Testing Fresh Developer Experience:**
 
-**Recommended (Cross-platform Python):**
 ```bash
 # Works on all platforms (Windows, macOS, Linux)
 python scripts/dev/fresh_start.py
@@ -101,50 +88,7 @@ python scripts/dev/fresh_start.py
 code .
 ```
 
-**Or use VS Code Task:**
-- Press `Ctrl+Shift+P`
-- Select "Tasks: Run Task"
-- Choose "🔄 Fresh Start (Reset VS Code State)"
-- Close VS Code when prompted
-- Run `code .`
-
-**Alternative (platform-specific scripts):**
-```bash
-# Linux/macOS
-./scripts/dev/fresh-start.sh
-
-# Windows PowerShell
-.\scripts\dev\fresh-start.ps1
-```
-
 > **Note:** This is only needed to test onboarding. Normal development doesn't require this.
-
-### Maintenance Operations
-
-**Version Management:**
-```bash
-# Sync version from const.py to manifest.json and hacs.json
-python3 scripts/maintenance/update_versions.py
-# OR use Make
-make sync-version
-```
-
-**Entity Cleanup:**
-```bash
-# Check entity status (read-only)
-python3 scripts/maintenance/cleanup_entities.py --check
-
-# Preview cleanup without changes
-python3 scripts/maintenance/cleanup_entities.py --dry-run
-
-# Remove orphaned entities (creates backup)
-python3 scripts/maintenance/cleanup_entities.py --cleanup
-
-# Nuclear option: remove ALL cable modem entities
-python3 scripts/maintenance/cleanup_entities.py --nuclear
-```
-
-> **Note:** Entity cleanup should be run on your Home Assistant host as it operates on `/config/.storage/core.entity_registry`.
 
 ### Pre-commit Hooks
 
@@ -164,7 +108,7 @@ make check
 
 ## Testing on Home Assistant
 
-Use the Docker-based local HA instance for testing. See [TESTING_ON_HA.md](../docs/setup/TESTING_ON_HA.md) for details.
+Use the Docker-based local HA instance for testing. See [CONTRIBUTING.md](../CONTRIBUTING.md#5-test-on-local-ha-optional) for details.
 
 ```bash
 make docker-start    # Start HA with integration mounted

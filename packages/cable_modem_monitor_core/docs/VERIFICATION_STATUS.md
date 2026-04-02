@@ -26,23 +26,6 @@ class ParserStatus(StrEnum):
 ### Using Status in Parsers
 
 Status is declared in each modem's `modem.yaml` under `status`.
-The `list-supported-modems.py` script reads these values to generate the
-modem database.
-
-## Current Status
-
-### Tools
-
-```bash
-# Human-readable table
-python scripts/dev/list-supported-modems.py
-
-# JSON output
-python scripts/dev/list-supported-modems.py --json
-
-# Markdown table
-python scripts/dev/list-supported-modems.py --markdown
-```
 
 ---
 

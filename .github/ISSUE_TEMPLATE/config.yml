@@ -10,8 +10,8 @@ contact_links:
     url: https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md
     about: Check common issues and solutions
   - name: Testing on Home Assistant
-    url: https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/setup/TESTING_ON_HA.md
-    about: How to deploy a development branch to your HA instance for testing
+    url: https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#5-test-on-local-ha-optional
+    about: How to test a development branch on your HA instance
   - name: Contributing Guide
     url: https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md
     about: Learn how to contribute to the project
