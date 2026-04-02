@@ -348,6 +348,7 @@ def _run_validation(
     auth_signals = (CollectorSignal.AUTH_FAILED, CollectorSignal.AUTH_LOCKOUT, CollectorSignal.LOAD_AUTH)
     if not result.success and auto_detected_http and result.signal in auth_signals:
         _LOGGER.info("Auth failed on auto-detected HTTP — retrying with HTTPS")
+        http_result = result  # preserve the original auth signal
         https_url = f"https://{host}"
         result = _try_collect(
             modem_config,
@@ -374,6 +375,11 @@ def _run_validation(
             )
             if result.success:
                 base_url, protocol, legacy_ssl = https_url, "https", True
+        elif result.signal == CollectorSignal.CONNECTIVITY:
+            # HTTPS not available — restore the original HTTP auth error
+            # so the user sees "Login failed" instead of "Modem not responding"
+            _LOGGER.info("HTTPS not available — using original HTTP auth result")
+            result = http_result
 
     if not result.success:
         _LOGGER.error("Validation failed: signal=%s, error=%s", result.signal, result.error)

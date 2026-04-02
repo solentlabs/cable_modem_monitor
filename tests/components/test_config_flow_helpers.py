@@ -99,6 +99,8 @@ def _setup_modem_dir(tmp_path: Path) -> Path:
 # │ 6 │ auto       │ http │ AUTH_FAIL  │ AUTH_FAIL│ OK      │ https, T       │
 # │ 7 │ auto       │ http │ LOAD_AUTH  │ OK       │ —       │ https, F       │
 # │ 8 │ auto       │ http │ PARSE_ERR  │ —        │ —       │ RuntimeError   │
+# │ 9 │ auto       │ http │ AUTH_FAIL  │ CONNECT  │ —       │ PermError      │
+# │10 │ auto       │ http │ LOAD_AUTH  │ CONNECT  │ —       │ PermError      │
 # └───┴────────────┴──────┴────────────┴──────────┴─────────┴────────────────┘
 
 _RETRY_CASE = tuple[
@@ -146,6 +148,14 @@ PROTOCOL_RETRY_CASES: list[_RETRY_CASE] = [
      [_parse_error_result()],
      RuntimeError, None, None,
      "auto HTTP + parse error -> no retry"),
+    (None, "http",
+     [_auth_failed_result(), _connectivity_result()],
+     PermissionError, None, None,
+     "auto HTTP auth fail + HTTPS unreachable -> PermissionError (not RuntimeError)"),
+    (None, "http",
+     [_load_auth_result(), _connectivity_result()],
+     PermissionError, None, None,
+     "auto HTTP login page + HTTPS unreachable -> PermissionError (not RuntimeError)"),
 ]
 # fmt: on
 
