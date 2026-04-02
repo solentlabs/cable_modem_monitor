@@ -307,6 +307,8 @@ async def async_unload_entry(
     Cancels any in-progress restart (cooperative via cancel_event),
     then unloads platforms.  ``runtime_data`` is auto-cleaned by HA.
     """
+    model = entry.data.get("model", "unknown")
+
     # Cancel restart if in progress
     if entry.runtime_data.cancel_event is not None:
         entry.runtime_data.cancel_event.set()
@@ -318,6 +320,7 @@ async def async_unload_entry(
     if unload_ok and not hass.config_entries.async_entries(DOMAIN):
         async_unregister_services(hass)
 
+    _LOGGER.info("Unloaded [%s]", model)
     return unload_ok
 
 

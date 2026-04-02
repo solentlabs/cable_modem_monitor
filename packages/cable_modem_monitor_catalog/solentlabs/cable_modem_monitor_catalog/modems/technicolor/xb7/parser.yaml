@@ -83,3 +83,33 @@ upstream:
   selector:
     match: "Upstream"
     type: header_text
+
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/network_setup.jst"
+      fields:
+        - field: system_uptime
+          label: "System Uptime"
+          type: string
+        - field: software_version
+          label: "Download Version"
+          type: string
+        - field: serial_number
+          label: "Serial Number"
+          type: string
+        - field: mac_address
+          label: "CM MAC"
+          type: string
+        - field: downstream_status
+          label: "Acquire Downstream Channel"
+          type: string
+        - field: upstream_status
+          label: "Upstream Ranging"
+          type: string
+        - field: hardware_version
+          label: "HW Version"
+          type: string
+        - field: model_name
+          label: "Model"
+          type: string

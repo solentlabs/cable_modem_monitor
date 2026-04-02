@@ -284,6 +284,27 @@ def _format_channel_label(
     return f"{ch_type.upper()} Ch {ch_id}"
 
 
+def _build_hardware_diag_entities(
+    entity_prefix: str,
+    system_info: dict[str, Any],
+) -> list[str]:
+    """Build YAML entities for hardware diagnostics (CPU, memory).
+
+    Only some modems expose these fields. Returns empty list when absent.
+    """
+    lines: list[str] = []
+    if "cpu_speed" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_cpu_speed")
+        lines.append("        name: CPU Speed")
+    if "memory_total" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_memory_total")
+        lines.append("        name: Memory Total")
+    if "memory_free" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_memory_free")
+        lines.append("        name: Memory Free")
+    return lines
+
+
 def _build_status_card_yaml(
     entity_prefix: str,
     system_info: dict[str, Any],
@@ -320,6 +341,9 @@ def _build_status_card_yaml(
             "        icon: mdi:speedometer",
         ]
     )
+    if "docsis_status" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_docsis_status")
+        lines.append("        name: Modem Status")
     if "software_version" in system_info:
         lines.append(f"      - entity: sensor.{entity_prefix}_software_version")
         lines.append("        name: Software Version")
@@ -346,6 +370,7 @@ def _build_status_card_yaml(
                 "        name: Total Uncorrected Errors",
             ]
         )
+    lines.extend(_build_hardware_diag_entities(entity_prefix, system_info))
     if has_restart:
         lines.append(f"      - entity: button.{entity_prefix}_restart_modem")
         lines.append("        name: Restart")
