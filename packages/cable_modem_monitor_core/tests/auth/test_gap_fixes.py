@@ -12,9 +12,12 @@ Covers:
 from __future__ import annotations
 
 import logging
+from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 import requests
+from requests.cookies import RequestsCookieJar
 from solentlabs.cable_modem_monitor_core.auth.form import FormAuthManager
 from solentlabs.cable_modem_monitor_core.auth.hnap import (
     HnapAuthDiagnostics,
@@ -201,7 +204,7 @@ class TestG3FormRefererHeader:
         sent_headers: dict[str, str] = {}
         original_request = session.request
 
-        def capturing_request(*args: object, **kwargs: object) -> requests.Response:
+        def capturing_request(*args: Any, **kwargs: Any) -> requests.Response:
             """Capture headers from the request call."""
             hdrs = kwargs.get("headers", {})
             if isinstance(hdrs, dict):
@@ -295,8 +298,6 @@ class TestG7HnapAuthDiagnostics:
         Uses a mock session with sequential responses to simulate
         the two-phase HNAP login (challenge, then login).
         """
-        from unittest.mock import MagicMock
-
         challenge_json = {
             "LoginResponse": {
                 "Challenge": "abc123",
@@ -317,7 +318,7 @@ class TestG7HnapAuthDiagnostics:
         mock_login.status_code = 200
 
         session = MagicMock(spec=requests.Session)
-        session.cookies = requests.cookies.RequestsCookieJar()
+        session.cookies = RequestsCookieJar()
         session.post = MagicMock(side_effect=[mock_challenge, mock_login])
 
         config = HnapAuth(strategy="hnap", hmac_algorithm="md5")

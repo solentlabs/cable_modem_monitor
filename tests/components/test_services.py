@@ -787,7 +787,7 @@ def test_generate_dashboard_no_snapshot(
     mock_runtime_data: CableModemRuntimeData,
 ) -> None:
     """Returns error YAML when no modem data available."""
-    mock_runtime_data.data_coordinator.data = None
+    mock_runtime_data.data_coordinator.data = None  # type: ignore[assignment]
 
     entry = _make_mock_entry(mock_runtime_data)
     entry.data = {"entity_prefix": "none", "host": "192.168.100.1"}

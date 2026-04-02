@@ -35,6 +35,18 @@ repos:
           - pytest-socket
         files: ^packages/[^/]+/solentlabs/.*\.py$
 
+  # Type checking with Pyright (catches errors Pylance shows in VS Code)
+  # Uses the project venv — matches pyrightconfig.json at repo root.
+  # Scoped to the same paths as mypy (Core/Catalog source + tests).
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: .venv/bin/pyright
+        language: system
+        files: ^(packages/|custom_components/|tests/).*\.py$
+        pass_filenames: false
+
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
