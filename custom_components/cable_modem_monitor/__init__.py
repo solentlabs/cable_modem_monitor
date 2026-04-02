@@ -225,6 +225,15 @@ async def async_setup_entry(
 
     # Step 8: First poll (always runs, even when polling is disabled)
     await data_coordinator.async_config_entry_first_refresh()
+
+    # Log first-poll result at HA level (Core logs parse details under solentlabs.*)
+    snapshot = data_coordinator.data
+    if snapshot and snapshot.modem_data:
+        _LOGGER.info("First poll complete [%s] — data received", model)
+    else:
+        status = snapshot.connection_status.value if snapshot else "unknown"
+        _LOGGER.info("First poll complete [%s] — no data (%s)", model, status)
+
     if health_coordinator is not None:
         await health_coordinator.async_config_entry_first_refresh()
         _LOGGER.info("Health monitoring started [%s] — every %ds", model, health_check_interval)

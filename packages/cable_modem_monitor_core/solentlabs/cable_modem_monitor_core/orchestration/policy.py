@@ -194,11 +194,11 @@ class SignalPolicy:
             return ConnectionStatus.UNREACHABLE
 
         if signal == CollectorSignal.PARSE_ERROR:
-            _logger.error("Parse error [%s] — reporting parser_issue", self._model)
+            _logger.warning("Parse error [%s] — reporting parser_issue", self._model)
             return ConnectionStatus.PARSER_ISSUE
 
         # Defensive — should never reach here
-        _logger.error("Unknown signal: %s", signal)
+        _logger.warning("Unknown signal: %s", signal)
         return ConnectionStatus.UNREACHABLE
 
     def reset(self) -> None:

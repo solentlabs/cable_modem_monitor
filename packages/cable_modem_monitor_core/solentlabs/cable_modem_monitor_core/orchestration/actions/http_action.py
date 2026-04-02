@@ -174,7 +174,7 @@ def _resolve_endpoint(
         # Extraction failed — use fallback or fail
         page_preview = pre_resp.text[:500] if pre_resp.text else "(empty)"
         if action.endpoint:
-            _logger.error(
+            _logger.warning(
                 'Action endpoint extraction failed [%s] — keyword "%s" not '
                 "found in any form action. Falling back to static "
                 "endpoint %s. Page content preview: %s",
@@ -185,7 +185,7 @@ def _resolve_endpoint(
             )
             return action.endpoint
 
-        _logger.error(
+        _logger.warning(
             'Action endpoint extraction failed [%s] — keyword "%s" not '
             "found in any form action. No static endpoint fallback. "
             "Page content preview: %s",
