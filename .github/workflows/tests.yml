@@ -179,4 +179,4 @@ jobs:
 
       - name: Check fixtures for PII
         run: |
-          python scripts/dev/check-fixture-pii.py
+          python packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py

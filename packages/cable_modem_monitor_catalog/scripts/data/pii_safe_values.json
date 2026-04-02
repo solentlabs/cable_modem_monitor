@@ -1,0 +1,150 @@
+{
+  "_description": "Reference data for PII fixture scanning. Values here are known-safe and will not trigger PII warnings. Designed to be reusable by har-capture and other tools.",
+
+  "safe_macs": {
+    "_description": "MAC addresses that are known-safe (zeroed, broadcast, test ranges, sanitized placeholders). Format-preserving hashes (02:xx) are handled in code.",
+    "values": [
+      "00:00:00:00:00:00",
+      "ff:ff:ff:ff:ff:ff",
+      "00:11:22:33:44:51",
+      "00:11:22:33:44:52",
+      "00:11:22:33:44:53",
+      "00:11:22:33:44:54",
+      "00:11:22:33:44:55",
+      "aa:bb:cc:dd:ee:ff"
+    ]
+  },
+
+  "safe_ip_prefixes": {
+    "_description": "IP prefixes that are safe in fixture files. Restrictive: only modem LAN IPs, localhost, documentation ranges, har-capture hash ranges, and well-known public DNS.",
+    "values": [
+      "192.168.100.",
+      "192.168.0.",
+      "192.168.1.",
+      "127.",
+      "0.0.0.0",
+      "255.",
+      "192.0.2.",
+      "198.51.100.",
+      "203.0.113.",
+      "140.",
+      "141.",
+      "142.",
+      "143.",
+      "144.",
+      "145.",
+      "1.1.1.1",
+      "1.0.0.1",
+      "8.8.8.8",
+      "8.8.4.4",
+      "9.9.9.9",
+      "208.67.222.222",
+      "208.67.220.220"
+    ]
+  },
+
+  "safe_ssids": {
+    "_description": "WiFi SSID values that are known-safe (redacted placeholders or test values).",
+    "values": [
+      "***redacted***",
+      "***redacted_ssid***",
+      "***redacted_ssid_guest***",
+      "test_network",
+      "test_ssid"
+    ]
+  },
+
+  "safe_tagvalue_patterns": {
+    "_description": "Values that appear in Motorola tagValueList fields and are known-safe (status strings, device types, config values — not credentials).",
+    "values": [
+      "redacted",
+      "good",
+      "locked",
+      "not locked",
+      "atdma",
+      "unknown",
+      "operational",
+      "ok",
+      "none",
+      "&nbsp;",
+      "enabled",
+      "disabled",
+      "bpi+",
+      "qam256",
+      "qam64",
+      "qpsk",
+      "retail",
+      "ipv6 only",
+      "ipv6only",
+      "success",
+      "primary",
+      "backup primary",
+      "honor mdd",
+      "dhcpclient",
+      "fixed ip",
+      "enable",
+      "off",
+      "on",
+      "both",
+      "in progress",
+      "synchronized",
+      "not synchronized",
+      "done",
+      "automatic",
+      "sharedkey",
+      "configured",
+      "security",
+      "allowed",
+      "sharedlna",
+      "readydlna",
+      "devname1",
+      "devname2",
+      "devname3",
+      "testschedule1",
+      "testschedule2",
+      "testschedule",
+      "macbookpro",
+      "familyroom",
+      "livingroom",
+      "bedroom",
+      "kitchen",
+      "rokustreaming",
+      "rokustreamingstick",
+      "appletv",
+      "firetv"
+    ]
+  },
+
+  "safe_serial_prefixes": {
+    "_description": "Serial number prefixes produced by har-capture sanitization.",
+    "values": [
+      "SNTLABS",
+      "SERIAL_",
+      "SN_"
+    ]
+  },
+
+  "code_indicators": {
+    "_description": "Substrings that indicate a match is JavaScript/code, not real credentials or PII.",
+    "values": [
+      "=",
+      "(",
+      ".",
+      "function",
+      "document",
+      "!0",
+      "!1",
+      "::"
+    ]
+  },
+
+  "safe_ipv6_prefixes": {
+    "_description": "IPv6 address prefixes from har-capture redaction or documentation ranges.",
+    "values": [
+      "aaaa:",
+      "abcd:",
+      "aa:bb:cc:dd",
+      "fe80:"
+    ]
+  }
+}
