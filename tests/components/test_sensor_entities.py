@@ -385,6 +385,105 @@ def test_health_sensor_http_latency(mock_runtime_data):
     assert sensor.native_value == 15  # rounded from 14.8
 
 
+def test_ping_latency_caches_last_value(mock_runtime_data):
+    """Ping latency sensor returns cached value when probe returns None."""
+    coord = MagicMock()
+    coord.last_update_success = True
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = MOCK_ENTRY_DATA
+    entry.runtime_data = mock_runtime_data
+
+    sensor = PingLatencySensor(coord, entry)
+
+    # First update: real value
+    coord.data = HealthInfo(
+        health_status=HealthStatus.RESPONSIVE,
+        icmp_latency_ms=4.2,
+        http_latency_ms=100.0,
+    )
+    vars(sensor).pop("native_value", None)
+    assert sensor.native_value == 4
+
+    # Second update: probe returns None — sensor keeps cached value
+    coord.data = HealthInfo(
+        health_status=HealthStatus.RESPONSIVE,
+        icmp_latency_ms=None,
+        http_latency_ms=100.0,
+    )
+    vars(sensor).pop("native_value", None)
+    assert sensor.native_value == 4
+
+    # Third update: new value — sensor updates
+    coord.data = HealthInfo(
+        health_status=HealthStatus.RESPONSIVE,
+        icmp_latency_ms=6.1,
+        http_latency_ms=100.0,
+    )
+    vars(sensor).pop("native_value", None)
+    assert sensor.native_value == 6
+
+
+def test_http_latency_caches_last_value(mock_runtime_data):
+    """HTTP latency sensor returns cached value when probe returns None."""
+    coord = MagicMock()
+    coord.last_update_success = True
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = MOCK_ENTRY_DATA
+    entry.runtime_data = mock_runtime_data
+
+    sensor = HttpLatencySensor(coord, entry)
+
+    # First update: real value
+    coord.data = HealthInfo(
+        health_status=HealthStatus.RESPONSIVE,
+        icmp_latency_ms=3.0,
+        http_latency_ms=110.7,
+    )
+    vars(sensor).pop("native_value", None)
+    assert sensor.native_value == 111
+
+    # Second update: probe returns None — sensor keeps cached value
+    coord.data = HealthInfo(
+        health_status=HealthStatus.RESPONSIVE,
+        icmp_latency_ms=3.0,
+        http_latency_ms=None,
+    )
+    vars(sensor).pop("native_value", None)
+    assert sensor.native_value == 111
+
+    # Third update: new value — sensor updates
+    coord.data = HealthInfo(
+        health_status=HealthStatus.RESPONSIVE,
+        icmp_latency_ms=3.0,
+        http_latency_ms=95.2,
+    )
+    vars(sensor).pop("native_value", None)
+    assert sensor.native_value == 95
+
+
+def test_latency_sensors_return_none_when_never_measured(mock_runtime_data):
+    """Latency sensors return None when no measurement has ever succeeded."""
+    coord = MagicMock()
+    coord.last_update_success = True
+    coord.data = HealthInfo(
+        health_status=HealthStatus.RESPONSIVE,
+        icmp_latency_ms=None,
+        http_latency_ms=None,
+    )
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = MOCK_ENTRY_DATA
+    entry.runtime_data = mock_runtime_data
+
+    ping = PingLatencySensor(coord, entry)
+    assert ping.native_value is None
+
+    http = HttpLatencySensor(coord, entry)
+    assert http.native_value is None
+
+
 def test_lan_stats_sensor_value(mock_runtime_data):
     """LAN stats sensor reads interface data."""
     coord = MagicMock()

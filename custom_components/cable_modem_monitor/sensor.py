@@ -768,19 +768,26 @@ class PingLatencySensor(HealthSensorBase):
         self._attr_native_unit_of_measurement = "ms"
         self._attr_icon = "mdi:speedometer"
         self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._last_value: int | None = None
 
     @functools.cached_property
     def native_value(self) -> int | None:
-        """Return ping latency in milliseconds."""
+        """Return ping latency in milliseconds.
+
+        Caches last known value to avoid flicker when a probe
+        intermittently returns None.
+        """
         latency = self._health_info.icmp_latency_ms
-        return int(round(latency)) if latency is not None else None
+        if latency is not None:
+            self._last_value = int(round(latency))
+        return self._last_value
 
 
 class HttpLatencySensor(HealthSensorBase):
     """HTTP latency sensor.
 
-    Always created when health coordinator exists.  HTTP latency may be
-    None when suppressed by collection evidence — this is transient.
+    Always created when health coordinator exists.  Caches last known
+    value to avoid flicker when the HTTP probe intermittently fails.
     """
 
     def __init__(
@@ -795,12 +802,19 @@ class HttpLatencySensor(HealthSensorBase):
         self._attr_native_unit_of_measurement = "ms"
         self._attr_icon = "mdi:web-clock"
         self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._last_value: int | None = None
 
     @functools.cached_property
     def native_value(self) -> int | None:
-        """Return HTTP latency in milliseconds."""
+        """Return HTTP latency in milliseconds.
+
+        Caches last known value to avoid flicker when a probe
+        intermittently returns None.
+        """
         latency = self._health_info.http_latency_ms
-        return int(round(latency)) if latency is not None else None
+        if latency is not None:
+            self._last_value = int(round(latency))
+        return self._last_value
 
 
 # ------------------------------------------------------------------
