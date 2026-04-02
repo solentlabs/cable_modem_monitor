@@ -3,8 +3,8 @@ downstream:
   resource: "/cgi-bin/status"
   tables:
     - selector:
-        type: header_text
         match: "Downstream Bonded Channels"
+        type: header_text
       row_start: 2
       columns:
         - index: 1
@@ -41,8 +41,8 @@ upstream:
   resource: "/cgi-bin/status"
   tables:
     - selector:
-        type: header_text
         match: "Upstream Bonded Channels"
+        type: header_text
       row_start: 2
       columns:
         - index: 1

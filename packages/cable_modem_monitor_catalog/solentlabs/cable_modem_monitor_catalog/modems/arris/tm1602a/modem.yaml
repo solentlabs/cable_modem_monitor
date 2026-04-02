@@ -10,11 +10,13 @@ hardware:
   docsis_version: "3.0"
   chipset: Intel Puma 6
 
-sources:
-  auth_config: "[#112 TM1602A HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/112) — no login required"
-  chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Arris_TM1602A)"
-
 status: awaiting_verification
+
+sources:
+  auth_config:
+    "[#112 TM1602A HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/112)
+    — no login required"
+  chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Arris_TM1602A)"
 
 attribution:
   contributors:
@@ -23,7 +25,6 @@ attribution:
 
 isps:
   - Spectrum
-
 notes: |
   DOCSIS 3.0 / PacketCable 2.0 Telephony Modem (released ~2016).
   No authentication required — CGI endpoints are publicly accessible.

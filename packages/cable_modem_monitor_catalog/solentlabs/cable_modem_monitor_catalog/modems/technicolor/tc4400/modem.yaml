@@ -4,19 +4,19 @@ model_aliases:
   - TC4400AM
 transport: http
 default_host: "192.168.100.1"
-timeout: 20
-
 auth:
   strategy: basic
+
+behaviors:
+  restart:
+    window_seconds: 300
 
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
   release_date: "2017"
 
-behaviors:
-  restart:
-    window_seconds: 300
+timeout: 20
 
 status: awaiting_verification
 
@@ -28,7 +28,9 @@ sources:
 attribution:
   contributors:
     - github: Mar1usW3
-      contribution: "[Issue #1](https://github.com/solentlabs/cable_modem_monitor/issues/1) verification"
+      contribution:
+        "[Issue #1](https://github.com/solentlabs/cable_modem_monitor/issues/1)
+        verification"
     - github: MrHankey777x
       contribution: "TC4400AM variant confirmation (Issue #94)"
 
@@ -42,7 +44,6 @@ isps:
   - Vodafone Germany
   - Unitymedia
   - Teksavvy
-
 notes: |
   DOCSIS 3.1 standalone cable modem. Supports SC-QAM and OFDM channel types.
   System uptime available in cmswinfo.html.

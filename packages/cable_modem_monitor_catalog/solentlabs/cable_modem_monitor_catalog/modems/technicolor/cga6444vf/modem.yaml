@@ -6,14 +6,14 @@ default_host: "192.168.0.1"
 auth:
   strategy: form_pbkdf2
   login_endpoint: "/api/v1/session/login"
-  salt_trigger: "seeksalthash"
-  pbkdf2_iterations: 1000
-  pbkdf2_key_length: 128
-  double_hash: true
-  csrf_init_endpoint: "/api/v1/session/language"
-  csrf_header: "X-CSRF-TOKEN"
   cookie_name: "PHPSESSID"
 
+  csrf_header: "X-CSRF-TOKEN"
+  csrf_init_endpoint: "/api/v1/session/language"
+  double_hash: true
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+  salt_trigger: "seeksalthash"
 hardware:
   docsis_version: "3.1"
   chipset: unknown
@@ -21,7 +21,9 @@ hardware:
 status: awaiting_verification
 
 sources:
-  auth_config: "[#120 CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120) — PBKDF2 double-hash auth"
+  auth_config:
+    "[#120 CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120)
+    — PBKDF2 double-hash auth"
 
 attribution:
   contributors:
@@ -30,7 +32,6 @@ attribution:
 
 isps:
   - Vodafone
-
 notes: |
   DOCSIS 3.1 gateway (Vodafone-branded). Same Technicolor REST platform
   family as CGA4236 but different API structure. JSON API at /api/v1/.

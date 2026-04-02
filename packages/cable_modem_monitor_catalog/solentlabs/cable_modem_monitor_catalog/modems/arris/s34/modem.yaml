@@ -13,9 +13,9 @@ actions:
   restart:
     type: hnap
     action_name: SetArrisConfigurationInfo
-    pre_fetch_action: GetArrisConfigurationInfo
     params:
       Action: reboot
+    pre_fetch_action: GetArrisConfigurationInfo
     response_key: SetArrisConfigurationInfoResponse
     result_key: SetArrisConfigurationInfoResult
     success_value: OK
@@ -33,8 +33,8 @@ status: awaiting_verification
 sources:
   auth_config: "[PR #90 S34 support](https://github.com/solentlabs/cable_modem_monitor/pull/90)"
   chipset: "Same platform as S33"
-  hardware: "[SURFboard S34 page](https://www.surfboard.com/products/cable-modems/s34/)"
   detection_hints: "[PR #90 S34 support](https://github.com/solentlabs/cable_modem_monitor/pull/90)"
+  hardware: "[SURFboard S34 page](https://www.surfboard.com/products/cable-modems/s34/)"
 attribution:
   contributors:
     - github: rplancha

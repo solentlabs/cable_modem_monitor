@@ -21,16 +21,16 @@ actions:
   restart:
     type: http
     method: POST
-    pre_fetch_url: "/MotoSecurity.asp"
     endpoint: "/goform/MotoSecurity"
     params:
-      UserId: ""
-      OldPassword: ""
-      NewUserId: ""
-      Password: ""
-      PasswordReEnter: ""
       MotoSecurityAction: "1"
 
+      NewUserId: ""
+      OldPassword: ""
+      Password: ""
+      PasswordReEnter: ""
+      UserId: ""
+    pre_fetch_url: "/MotoSecurity.asp"
 behaviors:
   restart:
     window_seconds: 300
@@ -40,15 +40,15 @@ hardware:
   chipset: "Broadcom BCM3384"
   release_date: "2017"
 
-sources:
-  chipset: "https://techinfodepot.shoutwiki.com/wiki/Motorola_MB7621"
-  docsis_version: "https://www.motorola.com/us/mb7621/p"
-  isps: "https://www.amazon.com/MOTOROLA-MB7621-Approved-Spectrum-Downloads/dp/B077BL65HS"
-  auth_config: "Maintainer hardware HAR capture"
-  restart: "HAR verified — all form fields from MotoSecurity.asp (2026-03-26 capture)"
-
-  detection_hints: "Maintainer verified"
 status: confirmed
+
+sources:
+  docsis_version: "https://www.motorola.com/us/mb7621/p"
+  auth_config: "Maintainer hardware HAR capture"
+  chipset: "https://techinfodepot.shoutwiki.com/wiki/Motorola_MB7621"
+  detection_hints: "Maintainer verified"
+  isps: "https://www.amazon.com/MOTOROLA-MB7621-Approved-Spectrum-Downloads/dp/B077BL65HS"
+  restart: "HAR verified — all form fields from MotoSecurity.asp (2026-03-26 capture)"
 
 attribution:
   contributors:
@@ -65,7 +65,6 @@ isps:
   - Comcast Xfinity
   - Suddenlink
   - BrightHouse
-
 notes: |
   DOCSIS 3.0 24x8 cable modem (released 2017). Broadcom BCM3384 chipset.
   Form-based authentication with base64 password encoding.

@@ -11,27 +11,30 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: "Intel Puma 6"
-  release_date: "2016"
   end_of_life: "2023"
 
-sources:
-  chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6190"
-  auth_config: "[#93 SB6190 support](https://github.com/solentlabs/cable_modem_monitor/issues/93) — no login required on older firmware"
-
-  detection_hints: "[PR #22 SB6190 parser](https://github.com/solentlabs/cable_modem_monitor/pull/22)"
+  release_date: "2016"
 status: awaiting_verification
 
+sources:
+  auth_config:
+    "[#93 SB6190 support](https://github.com/solentlabs/cable_modem_monitor/issues/93)
+    — no login required on older firmware"
+
+  chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6190"
+  detection_hints: "[PR #22 SB6190 parser](https://github.com/solentlabs/cable_modem_monitor/pull/22)"
 attribution:
   contributors:
     - github: sfennell
-      contribution: "[PR #22](https://github.com/solentlabs/cable_modem_monitor/pull/22) verification"
+      contribution:
+        "[PR #22](https://github.com/solentlabs/cable_modem_monitor/pull/22)
+        verification"
 
 isps:
   - Comcast
   - Cox
   - Spectrum
   - TWC
-
 notes: |
   Two firmware variants with different auth requirements:
   - Older firmware: No authentication required

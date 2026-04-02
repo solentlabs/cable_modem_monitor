@@ -3,8 +3,8 @@ downstream:
   resource: "/MotoConnection.asp"
   tables:
     - selector:
-        type: header_text
         match: "SNR"
+        type: header_text
       row_start: 1
       columns:
         - index: 1
@@ -44,8 +44,8 @@ upstream:
   resource: "/MotoConnection.asp"
   tables:
     - selector:
-        type: header_text
         match: "Symb. Rate"
+        type: header_text
       row_start: 1
       columns:
         - index: 1
@@ -71,6 +71,23 @@ upstream:
       filter:
         lock_status: "locked"
 
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/MotoConnection.asp"
+      fields:
+        - field: system_uptime
+          label: "System Up Time"
+          type: string
+    - format: html_fields
+      resource: "/MotoSwInfo.asp"
+      fields:
+        - field: hardware_version
+          label: "Hardware Version"
+          type: string
+        - field: software_version
+          label: "Software Version"
+          type: string
 aggregate:
   total_corrected:
     channels: downstream
@@ -78,21 +95,3 @@ aggregate:
   total_uncorrected:
     channels: downstream
     sum: uncorrected
-
-system_info:
-  sources:
-    - format: html_fields
-      resource: "/MotoConnection.asp"
-      fields:
-        - label: "System Up Time"
-          field: system_uptime
-          type: string
-    - format: html_fields
-      resource: "/MotoSwInfo.asp"
-      fields:
-        - label: "Hardware Version"
-          field: hardware_version
-          type: string
-        - label: "Software Version"
-          field: software_version
-          type: string

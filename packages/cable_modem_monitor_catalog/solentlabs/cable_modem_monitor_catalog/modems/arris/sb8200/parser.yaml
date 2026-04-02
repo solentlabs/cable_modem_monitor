@@ -3,8 +3,8 @@ downstream:
   resource: "/cmconnectionstatus.html"
   tables:
     - selector:
-        type: header_text
         match: "Downstream Bonded Channels"
+        type: header_text
       row_start: 1
       columns:
         - index: 0
@@ -20,9 +20,9 @@ downstream:
           field: channel_type
           type: string
           map:
+            "Other": "ofdm"
             "QAM256": "qam"
             "QAM64": "qam"
-            "Other": "ofdm"
         - index: 3
           field: frequency
           type: frequency
@@ -46,8 +46,8 @@ upstream:
   resource: "/cmconnectionstatus.html"
   tables:
     - selector:
-        type: header_text
         match: "Upstream Bonded Channels"
+        type: header_text
       row_start: 1
       columns:
         - index: 1
@@ -60,8 +60,8 @@ upstream:
           field: channel_type
           type: string
           map:
-            "SC-QAM Upstream": "qam"
             "OFDM Upstream": "ofdma"
+            "SC-QAM Upstream": "qam"
         - index: 4
           field: frequency
           type: frequency

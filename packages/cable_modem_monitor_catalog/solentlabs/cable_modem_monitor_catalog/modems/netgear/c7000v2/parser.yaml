@@ -3,9 +3,9 @@ downstream:
   resource: "/DocsisStatus.htm"
   functions:
     - name: "InitDsTableTagValue"
-      channel_type: "qam"
       delimiter: "|"
       fields_per_channel: 9
+      channel_type: "qam"
       fields:
         - offset: 1
           field: lock_status

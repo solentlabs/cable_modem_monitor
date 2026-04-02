@@ -3,6 +3,8 @@ downstream:
   resource: "/cgi-bin/luci/admin/gateway/wan_status"
   arrays:
     - array_path: "docsis.dschannel.dschannel"
+      channel_type:
+        fixed: "qam"
       fields:
         - key: "channelID"
           field: channel_id
@@ -28,12 +30,12 @@ downstream:
         - key: "uncorrectableCodewords"
           field: uncorrected
           type: integer
-      channel_type:
-        fixed: "qam"
       filter:
         lock_status: "locked"
 
     - array_path: "docsis.ofdmchannel.ofdmchannel"
+      channel_type:
+        fixed: "ofdm"
       fields:
         - key: "ofdmID"
           field: channel_id
@@ -62,8 +64,6 @@ downstream:
         - key: "status"
           field: status
           type: string
-      channel_type:
-        fixed: "ofdm"
       filter:
         status: "1"
 
@@ -102,6 +102,8 @@ upstream:
           not: "UNSUPPORTED"
 
     - array_path: "docsis.ofdmachannel.ofdmachannel"
+      channel_type:
+        fixed: "ofdma"
       fields:
         - key: "ofdmaID"
           field: channel_id
@@ -127,12 +129,10 @@ upstream:
         - key: "status"
           field: status
           type: string
-      channel_type:
-        fixed: "ofdma"
       filter:
-        status: "1"
         power_state: "ON"
 
+        status: "1"
 system_info:
   sources:
     - format: json

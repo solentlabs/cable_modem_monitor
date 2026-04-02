@@ -1,10 +1,9 @@
 manufacturer: Arris
 model: TG3442DE
-brands: [Touchstone]
+brands:
+  - Touchstone
 transport: http
 default_host: "192.168.0.1"
-timeout: 10
-
 auth:
   strategy: form_sjcl
   login_page: "/"
@@ -12,20 +11,20 @@ auth:
   # change. Confirmed: base_95x.js login() calls it with AAD
   # "loginPassword"; changePassword() was removed from the codebase.
   login_endpoint: "/php/ajaxSet_Password.php"
-  session_validation_endpoint: "/php/ajaxSet_Session.php"
-  pbkdf2_iterations: 1000
-  pbkdf2_key_length: 128
   ccm_tag_length: 16
-  encrypt_aad: "loginPassword"
-  decrypt_aad: "nonce"
-  csrf_header: "csrfNonce"
   cookie_name: "PHPSESSID"
 
+  csrf_header: "csrfNonce"
+  decrypt_aad: "nonce"
+  encrypt_aad: "loginPassword"
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+  session_validation_endpoint: "/php/ajaxSet_Session.php"
 session:
-  max_concurrent: 1
   headers:
     X-Requested-With: "XMLHttpRequest"
 
+  max_concurrent: 1
 actions:
   logout:
     type: http
@@ -36,15 +35,18 @@ hardware:
   docsis_version: "3.1"
   chipset: Intel Puma 7
 
+timeout: 10
+
 status: awaiting_verification
+sources:
+  auth_config: "[#86 Arris TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"
+  chipset: "[TG3442DE Teardown](https://github.com/nox-x/TG3442DE-Teardown)"
 attribution:
   contributors:
     - github: samuelengelking
       contribution: "HAR capture and initial modem request"
-sources:
-  auth_config: "[#86 Arris TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"
-  chipset: "[TG3442DE Teardown](https://github.com/nox-x/TG3442DE-Teardown)"
-isps: [Vodafone DE]
+isps:
+  - Vodafone DE
 notes: |
   Arris Touchstone TG3442DE gateway (Vodafone Germany).
   Firmware: 01.05.063.13.EURO.PC20.

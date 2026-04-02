@@ -16,8 +16,8 @@ actions:
     type: hnap
     action_name: SetStatusSecuritySettings
     params:
-      MotoStatusSecurityAction: "1"
       MotoStatusSecXXX: XXX
+      MotoStatusSecurityAction: "1"
     response_key: SetStatusSecuritySettingsResponse
     result_key: SetStatusSecuritySettingsResult
     success_value: OK
@@ -35,12 +35,14 @@ status: awaiting_verification
 sources:
   auth_config: "[#6 MB8611 fails to connect](https://github.com/solentlabs/cable_modem_monitor/issues/6)"
   chipset: "[AfrozAhmad Review](https://afrozahmad.com/blog/motorola-mb8611-cable-modem-review/)"
-  hardware: "[Motorola MB8611 page](https://www.motorola.com/us/mb8611)"
   detection_hints: "[#6 MB8611 fails to connect](https://github.com/solentlabs/cable_modem_monitor/issues/6)"
+  hardware: "[Motorola MB8611 page](https://www.motorola.com/us/mb8611)"
 attribution:
   contributors:
     - github: cvonk
-      contribution: "HAR captures, debug logs, iterative testing (Issue #6, November 2025)"
+      contribution:
+        "HAR captures, debug logs, iterative testing (Issue #6, November
+        2025)"
     - github: dlindnegm
       contribution: "Original HTML page captures (Issue #4, October 2025)"
     - github: BowlesCR

@@ -6,9 +6,9 @@ downstream:
     # Layout: channel_num | lock_status | modulation | channel_id |
     #         frequency | power | snr | corrected | uncorrected
     - name: "InitDsTableTagValue"
-      channel_type: "qam"
       delimiter: "|"
       fields_per_channel: 9
+      channel_type: "qam"
       fields:
         - offset: 1
           field: lock_status
@@ -39,14 +39,14 @@ downstream:
           type: integer
       filter:
         lock_status: "locked"
-    # DOCSIS 3.1 OFDM: 11 fields per channel
-    # Layout: channel_num | lock_status | profile_ids | channel_id |
-    #         frequency | power | snr | active_range |
-    #         unerrored_cw | correctable_cw | uncorrectable_cw
+      # DOCSIS 3.1 OFDM: 11 fields per channel
+      # Layout: channel_num | lock_status | profile_ids | channel_id |
+      #         frequency | power | snr | active_range |
+      #         unerrored_cw | correctable_cw | uncorrectable_cw
     - name: "InitDsOfdmTableTagValue"
-      channel_type: "ofdm"
       delimiter: "|"
       fields_per_channel: 11
+      channel_type: "ofdm"
       fields:
         - offset: 1
           field: lock_status
@@ -106,13 +106,13 @@ upstream:
           unit: "dBmV"
       filter:
         lock_status: "locked"
-    # DOCSIS 3.1 OFDMA: 6 fields per channel
-    # Layout: channel_num | lock_status | profile_ids | channel_id |
-    #         frequency | power
+      # DOCSIS 3.1 OFDMA: 6 fields per channel
+      # Layout: channel_num | lock_status | profile_ids | channel_id |
+      #         frequency | power
     - name: "InitUsOfdmaTableTagValue"
-      channel_type: "ofdma"
       delimiter: "|"
       fields_per_channel: 6
+      channel_type: "ofdma"
       fields:
         - offset: 1
           field: lock_status

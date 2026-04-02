@@ -2,60 +2,61 @@ downstream:
   format: table_transposed
   resource: "/cmSignalData.htm"
   tables:
-    - selector:
-        type: header_text
-        match: "Downstream"
-      rows:
-        - label: "Channel ID"
-          field: channel_id
-          type: integer
-        - label: "Frequency"
-          field: frequency
-          type: frequency
-          unit: "Hz"
-        - label: "Signal to Noise Ratio"
-          field: snr
-          type: float
-          unit: "dB"
-        - label: "Power Level"
-          field: power
-          type: float
-          unit: "dBmV"
-      channel_type:
+    - channel_type:
         fixed: qam
 
-    - selector:
-        type: header_text
-        match: "Signal Stats (Codewords)"
-      merge_by: [channel_id]
       rows:
-        - label: "Channel ID"
-          field: channel_id
+        - field: channel_id
+          label: "Channel ID"
           type: integer
-        - label: "Total Correctable Codewords"
-          field: corrected
+        - field: frequency
+          label: "Frequency"
+          type: frequency
+          unit: "Hz"
+        - field: snr
+          label: "Signal to Noise Ratio"
+          type: float
+          unit: "dB"
+        - field: power
+          label: "Power Level"
+          type: float
+          unit: "dBmV"
+      selector:
+        match: "Downstream"
+        type: header_text
+    - merge_by:
+        - channel_id
+      rows:
+        - field: channel_id
+          label: "Channel ID"
           type: integer
-        - label: "Total Uncorrectable Codewords"
-          field: uncorrected
+        - field: corrected
+          label: "Total Correctable Codewords"
+          type: integer
+        - field: uncorrected
+          label: "Total Uncorrectable Codewords"
           type: integer
 
+      selector:
+        match: "Signal Stats (Codewords)"
+        type: header_text
 upstream:
   format: table_transposed
   resource: "/cmSignalData.htm"
-  selector:
-    type: header_text
-    match: "Upstream"
-  rows:
-    - label: "Channel ID"
-      field: channel_id
-      type: integer
-    - label: "Frequency"
-      field: frequency
-      type: frequency
-      unit: "Hz"
-    - label: "Power Level"
-      field: power
-      type: float
-      unit: "dBmV"
   channel_type:
     fixed: atdma
+  rows:
+    - field: channel_id
+      label: "Channel ID"
+      type: integer
+    - field: frequency
+      label: "Frequency"
+      type: frequency
+      unit: "Hz"
+    - field: power
+      label: "Power Level"
+      type: float
+      unit: "dBmV"
+  selector:
+    match: "Upstream"
+    type: header_text

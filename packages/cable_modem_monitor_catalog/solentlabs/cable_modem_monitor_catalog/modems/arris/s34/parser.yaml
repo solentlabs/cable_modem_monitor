@@ -1,89 +1,89 @@
 downstream:
   format: hnap
-  response_key: GetCustomerStatusDownstreamChannelInfoResponse
   data_key: CustomerConnDownstreamChannel
-  record_delimiter: "|+|"
   field_delimiter: "^"
   fields:
-    - field: lock_status
+    - index: 1
+      field: lock_status
       type: lock_status
-      index: 1
-    - field: channel_type
+    - index: 2
+      field: channel_type
       type: string
-      index: 2
       map:
         "256QAM": "qam"
         "OFDM PLC": "ofdm"
-    - field: channel_id
+    - index: 3
+      field: channel_id
       type: integer
-      index: 3
-    - field: frequency
+    - index: 4
+      field: frequency
       type: frequency
-      index: 4
-    - field: power
+    - index: 5
+      field: power
       type: float
-      index: 5
-    - field: snr
+    - index: 6
+      field: snr
       type: float
-      index: 6
-    - field: corrected
+    - index: 7
+      field: corrected
       type: integer
-      index: 7
-    - field: uncorrected
+    - index: 8
+      field: uncorrected
       type: integer
-      index: 8
   filter:
     channel_id:
       not: 0
 
+  record_delimiter: "|+|"
+  response_key: GetCustomerStatusDownstreamChannelInfoResponse
 upstream:
   format: hnap
-  response_key: GetCustomerStatusUpstreamChannelInfoResponse
   data_key: CustomerConnUpstreamChannel
-  record_delimiter: "|+|"
   field_delimiter: "^"
   fields:
-    - field: lock_status
+    - index: 1
+      field: lock_status
       type: lock_status
-      index: 1
-    - field: channel_type
+    - index: 2
+      field: channel_type
       type: string
-      index: 2
       map:
-        "SC-QAM": "qam"
         "OFDMA": "ofdma"
-    - field: channel_id
+        "SC-QAM": "qam"
+    - index: 3
+      field: channel_id
       type: integer
-      index: 3
-    - field: symbol_rate
+    - index: 4
+      field: symbol_rate
       type: frequency
-      index: 4
-    - field: frequency
+    - index: 5
+      field: frequency
       type: frequency
-      index: 5
-    - field: power
+    - index: 6
+      field: power
       type: float
-      index: 6
   filter:
     channel_id:
       not: 0
 
+  record_delimiter: "|+|"
+  response_key: GetCustomerStatusUpstreamChannelInfoResponse
 system_info:
   sources:
     - format: hnap
-      response_key: GetArrisDeviceStatusResponse
       fields:
-        - source: FirmwareVersion
-          field: firmware_version
+        - field: firmware_version
+          source: FirmwareVersion
           type: string
-        - source: StatusSoftwareModelName
-          field: model_name
+        - field: model_name
+          source: StatusSoftwareModelName
           type: string
 
+      response_key: GetArrisDeviceStatusResponse
 aggregate:
   total_corrected:
+    channels: downstream
     sum: corrected
-    channels: downstream
   total_uncorrected:
-    sum: uncorrected
     channels: downstream
+    sum: uncorrected

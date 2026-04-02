@@ -2,83 +2,84 @@ downstream:
   format: table_transposed
   resource: "/network_setup.jst"
   tables:
-    - selector:
-        type: header_text
-        match: "Downstream"
-      rows:
-        - label: "Channel ID"
-          field: channel_id
-          type: integer
-        - label: "Lock Status"
-          field: lock_status
-          type: lock_status
-        - label: "Frequency"
-          field: frequency
-          type: frequency
-          unit: "MHz"
-        - label: "SNR"
-          field: snr
-          type: float
-          unit: "dB"
-        - label: "Power Level"
-          field: power
-          type: float
-          unit: "dBmV"
-        - label: "Modulation"
-          field: modulation
-          type: string
-      channel_type:
+    - channel_type:
         field: modulation
         map:
           "256 QAM": "qam"
           "OFDM": "ofdm"
 
-    - selector:
-        type: header_text
-        match: "CM Error Codewords"
-      merge_by: [channel_id]
       rows:
-        - label: "Channel ID"
-          field: channel_id
+        - field: channel_id
+          label: "Channel ID"
           type: integer
-        - label: "Correctable Codewords"
-          field: corrected
+        - field: lock_status
+          label: "Lock Status"
+          type: lock_status
+        - field: frequency
+          label: "Frequency"
+          type: frequency
+          unit: "MHz"
+        - field: snr
+          label: "SNR"
+          type: float
+          unit: "dB"
+        - field: power
+          label: "Power Level"
+          type: float
+          unit: "dBmV"
+        - field: modulation
+          label: "Modulation"
+          type: string
+      selector:
+        match: "Downstream"
+        type: header_text
+    - merge_by:
+        - channel_id
+      rows:
+        - field: channel_id
+          label: "Channel ID"
           type: integer
-        - label: "Uncorrectable Codewords"
-          field: uncorrected
+        - field: corrected
+          label: "Correctable Codewords"
+          type: integer
+        - field: uncorrected
+          label: "Uncorrectable Codewords"
           type: integer
 
+      selector:
+        match: "CM Error Codewords"
+        type: header_text
 upstream:
   format: table_transposed
   resource: "/network_setup.jst"
-  selector:
-    type: header_text
-    match: "Upstream"
   rows:
-    - label: "Channel ID"
-      field: channel_id
+    - field: channel_id
+      label: "Channel ID"
       type: integer
-    - label: "Lock Status"
-      field: lock_status
+    - field: lock_status
+      label: "Lock Status"
       type: lock_status
-    - label: "Frequency"
-      field: frequency
+    - field: frequency
+      label: "Frequency"
       type: frequency
       unit: "MHz"
-    - label: "Power Level"
-      field: power
+    - field: power
+      label: "Power Level"
       type: float
       unit: "dBmV"
-    - label: "Modulation"
-      field: modulation
+    - field: modulation
+      label: "Modulation"
       type: string
-    - label: "Symbol Rate"
-      field: symbol_rate
+    - field: symbol_rate
+      label: "Symbol Rate"
       type: integer
-    - label: "Channel Type"
-      field: channel_type
-      type: string
+    - field: channel_type
+      label: "Channel Type"
       map:
         "ATDMA": "atdma"
         "TDMA": "atdma"
         "TDMA_AND_ATDMA": "atdma"
+      type: string
+  selector:
+    match: "Upstream"
+    type: header_text

@@ -11,11 +11,11 @@ auth:
   method: POST
   username_field: username
   password_field: password
+  cookie_name: "session"
+
   encoding: plain
   success:
     redirect: "/at_a_glance.jst"
-  cookie_name: "session"
-
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
@@ -30,13 +30,14 @@ sources:
 attribution:
   contributors:
     - github: esand
-      contribution: "[Issue #2](https://github.com/solentlabs/cable_modem_monitor/issues/2) verification"
+      contribution:
+        "[Issue #2](https://github.com/solentlabs/cable_modem_monitor/issues/2)
+        verification"
 
 isps:
   - Rogers
   - Comcast
   - Xfinity
-
 notes: |
   DOCSIS 3.1 cable modem + router gateway (CGM4331COM).
   Transposed table format: rows are metrics, columns are channels.

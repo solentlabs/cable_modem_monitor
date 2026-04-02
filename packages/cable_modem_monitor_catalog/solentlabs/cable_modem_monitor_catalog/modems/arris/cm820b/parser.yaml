@@ -3,8 +3,8 @@ downstream:
   resource: "/cgi-bin/status_cgi"
   tables:
     - selector:
-        type: header_text
         match: "DCID"
+        type: header_text
       row_start: 1
       columns:
         - index: 1
@@ -39,8 +39,8 @@ upstream:
   resource: "/cgi-bin/status_cgi"
   tables:
     - selector:
-        type: header_text
         match: "UCID"
+        type: header_text
       row_start: 2
       columns:
         - index: 1
@@ -66,27 +66,27 @@ system_info:
     - format: html_fields
       resource: "/cgi-bin/status_cgi"
       fields:
-        - label: "System Uptime"
-          field: system_uptime
+        - field: system_uptime
+          label: "System Uptime"
           type: string
     - format: html_fields
       resource: "/cgi-bin/vers_cgi"
       fields:
-        - label: "Firmware Name"
-          field: firmware_name
+        - field: firmware_name
+          label: "Firmware Name"
           type: string
-        - label: "Firmware Build Time"
-          field: firmware_build_time
+        - field: firmware_build_time
+          label: "Firmware Build Time"
           type: string
-        - label: "System"
-          field: hardware_version
-          type: string
+        - field: hardware_version
+          label: "System"
           pattern: "HW_REV:\\s*(.+)"
-        - label: "System"
-          field: software_version
           type: string
+        - field: software_version
+          label: "System"
           pattern: "SW_REV:\\s*(.+)"
-        - label: "System"
-          field: model
           type: string
+        - field: model
+          label: "System"
           pattern: "MODEL:\\s*(.+)"
+          type: string

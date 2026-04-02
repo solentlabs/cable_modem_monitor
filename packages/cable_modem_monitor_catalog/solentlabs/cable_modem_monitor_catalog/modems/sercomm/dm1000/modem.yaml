@@ -18,7 +18,9 @@ hardware:
 status: awaiting_verification
 
 sources:
-  auth_config: "[#92 Sercomm DM1000](https://github.com/solentlabs/cable_modem_monitor/issues/92) — form POST with base64-encoded password"
+  auth_config:
+    "[#92 Sercomm DM1000](https://github.com/solentlabs/cable_modem_monitor/issues/92)
+    — form POST with base64-encoded password"
 
 attribution:
   contributors:
@@ -27,7 +29,6 @@ attribution:
 
 isps:
   - Koodo
-
 notes: |
   DOCSIS 3.1 cable modem. Base64-encoded JSON API via /setup.cgi?todo= endpoints.
   IP-based session tracking (no cookies, no auth headers after login).

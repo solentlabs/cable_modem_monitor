@@ -15,9 +15,9 @@ actions:
   restart:
     type: hnap
     action_name: SetArrisConfigurationInfo
-    pre_fetch_action: GetArrisConfigurationInfo
     params:
       Action: reboot
+    pre_fetch_action: GetArrisConfigurationInfo
     response_key: SetArrisConfigurationInfoResponse
     result_key: SetArrisConfigurationInfoResult
     success_value: OK
@@ -33,10 +33,12 @@ hardware:
 
 status: awaiting_verification
 sources:
-  auth_config: "[#32 Arris S33](https://github.com/solentlabs/cable_modem_monitor/issues/32), [#117 S33v2 crash](https://github.com/solentlabs/cable_modem_monitor/issues/117)"
+  auth_config:
+    "[#32 Arris S33](https://github.com/solentlabs/cable_modem_monitor/issues/32),
+    [#117 S33v2 crash](https://github.com/solentlabs/cable_modem_monitor/issues/117)"
   chipset: "[ModemGuides](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison)"
-  hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
   detection_hints: "[#87 S33 data not updating](https://github.com/solentlabs/cable_modem_monitor/issues/87)"
+  hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
 attribution:
   contributors:
     - github: mmiller7

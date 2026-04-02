@@ -11,13 +11,13 @@ auth:
   method: POST
   username_field: username
   password_field: password
+  cookie_name: "DUKSID"
+
   encoding: plain
   hidden_fields:
     locale: "false"
   success:
     redirect: "/at_a_glance.jst"
-  cookie_name: "DUKSID"
-
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
@@ -34,7 +34,6 @@ attribution:
 
 isps:
   - Rogers
-
 notes: |
   DOCSIS 3.1 gateway (CGM4140COM). Same .jst page platform as XB7/CGM4331COM.
   Transposed table format: rows are metrics, columns are channels.

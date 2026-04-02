@@ -4,6 +4,8 @@ downstream:
   arrays:
     # SC-QAM downstream channels
     - array_path: "data.DSTbl"
+      channel_type:
+        fixed: qam
       fields:
         - key: ChannelID
           field: channel_id
@@ -33,12 +35,12 @@ downstream:
         - key: LockStatus
           field: lock_status
           type: lock_status
-      channel_type:
-        fixed: qam
       filter:
         lock_status: "locked"
-    # OFDM downstream channels
+      # OFDM downstream channels
     - array_path: "data.exDSTbl"
+      channel_type:
+        fixed: ofdm
       fields:
         - key: ChannelID
           field: channel_id
@@ -58,8 +60,6 @@ downstream:
         - key: LockStatus
           field: lock_status
           type: lock_status
-      channel_type:
-        fixed: ofdm
       filter:
         lock_status: "locked"
 
@@ -69,6 +69,8 @@ upstream:
   arrays:
     # SC-QAM upstream channels
     - array_path: "data.USTbl"
+      channel_type:
+        fixed: atdma
       fields:
         - key: ChannelID
           field: channel_id
@@ -90,12 +92,12 @@ upstream:
         - key: LockStatus
           field: lock_status
           type: lock_status
-      channel_type:
-        fixed: atdma
       filter:
         lock_status: "locked"
-    # OFDMA upstream channels
+      # OFDMA upstream channels
     - array_path: "data.exUSTbl"
+      channel_type:
+        fixed: ofdma
       fields:
         - key: ChannelID
           field: channel_id
@@ -103,8 +105,8 @@ upstream:
         - key: CentralFrequency
           field: frequency
           type: frequency
-          unit: "MHz"
           fallback_key: StartFrequency
+          unit: "MHz"
         - key: PowerLevel
           field: power
           type: float
@@ -112,8 +114,6 @@ upstream:
         - key: LockStatus
           field: lock_status
           type: lock_status
-      channel_type:
-        fixed: ofdma
       filter:
         lock_status: "locked"
 

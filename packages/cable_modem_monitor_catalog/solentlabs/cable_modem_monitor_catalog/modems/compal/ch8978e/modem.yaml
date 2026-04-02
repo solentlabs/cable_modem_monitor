@@ -9,18 +9,19 @@ hardware:
 
 status: unsupported
 
+sources:
+  auth_config:
+    "[#79 — Compal CH8978E](https://github.com/solentlabs/cable_modem_monitor/issues/79)
+    — auth required but mechanism unknown"
+  detection_hints: "[Pyür forum — hidden signal pages](https://www.pyforum.de/viewtopic.php?t=1345)"
+
 attribution:
   contributors:
     - github: leptitchat
       contribution: "Modem request and testing"
 
-sources:
-  auth_config: "[#79 — Compal CH8978E](https://github.com/solentlabs/cable_modem_monitor/issues/79) — auth required but mechanism unknown"
-  detection_hints: "[Pyür forum — hidden signal pages](https://www.pyforum.de/viewtopic.php?t=1345)"
-
 isps:
   - "Pyür"
-
 notes: |
   ISP: Pyür (Germany). Modem in bridge mode.
   Pyür firmware hides channel info pages. On older Compal models (CH7485E, CH7467CE),

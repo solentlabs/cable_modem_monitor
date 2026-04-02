@@ -4,6 +4,8 @@ downstream:
   arrays:
     # SC-QAM downstream channels
     - array_path: "data.downstream"
+      channel_type:
+        fixed: qam
       fields:
         - key: channelid
           field: channel_id
@@ -25,12 +27,12 @@ downstream:
         - key: locked
           field: lock_status
           type: lock_status
-      channel_type:
-        fixed: qam
       filter:
         lock_status: "locked"
-    # OFDM downstream channels
+      # OFDM downstream channels
     - array_path: "data.ofdm_downstream"
+      channel_type:
+        fixed: ofdm
       fields:
         - key: channelid_ofdm
           field: channel_id
@@ -49,8 +51,6 @@ downstream:
         - key: locked_ofdm
           field: lock_status
           type: lock_status
-      channel_type:
-        fixed: ofdm
       filter:
         lock_status: "locked"
 
@@ -60,24 +60,9 @@ upstream:
   arrays:
     # SC-QAM upstream channels
     - array_path: "data.upstream"
-      fields:
-        - key: channelidup
-          field: channel_id
-          type: integer
-        - key: CentralFrequency
-          field: frequency
-          type: frequency
-        - key: power
-          field: power
-          type: float
-          unit: "dBmV"
-        - key: FFT
-          field: modulation
-          type: string
       channel_type:
         fixed: atdma
-    # OFDMA upstream channels
-    - array_path: "data.ofdma_upstream"
+      # OFDMA upstream channels
       fields:
         - key: channelidup
           field: channel_id
@@ -92,9 +77,24 @@ upstream:
         - key: FFT
           field: modulation
           type: string
+    - array_path: "data.ofdma_upstream"
       channel_type:
         fixed: ofdma
 
+      fields:
+        - key: channelidup
+          field: channel_id
+          type: integer
+        - key: CentralFrequency
+          field: frequency
+          type: frequency
+        - key: power
+          field: power
+          type: float
+          unit: "dBmV"
+        - key: FFT
+          field: modulation
+          type: string
 system_info:
   sources:
     - format: json

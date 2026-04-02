@@ -13,7 +13,9 @@
 downstream:
   format: javascript_json
   resource: "/php/status_docsis_data.php"
-  variable: "json_dsData"
+  filter:
+    lock_status: "locked"
+
   mappings:
     - key: ChannelID
       field: channel_id
@@ -31,27 +33,32 @@ downstream:
       field: lock_status
       type: lock_status
       map:
+        "ACTIVE": "Active"
         "OPERATE": "Locked"
         "SUCCESS": "Locked"
-        "ACTIVE": "Active"
     - key: ChannelType
       field: channel_type
       type: string
       map:
-        "SC-QAM": "qam"
         "OFDM": "ofdm"
+        "SC-QAM": "qam"
     - key: PowerLevel
       field: power
       type: float
       separator: "/"
       separator_index: 0
-  filter:
-    lock_status: "locked"
-
+  variable: "json_dsData"
 upstream:
   format: javascript_json
   resource: "/php/status_docsis_data.php"
-  variable: "json_usData"
+  filter:
+    lock_status: "locked"
+
+  # System info: firmware version from status_about_data.php.
+  # The js_FWVersion variable is a simple 'var x = value' assignment,
+  # not a tagValueList — extracted by parser.py PostProcessor.
+  # This dummy source triggers the resource fetch so the PostProcessor
+  # can access it.
   mappings:
     - key: ChannelID
       field: channel_id
@@ -66,29 +73,22 @@ upstream:
       field: lock_status
       type: lock_status
       map:
+        "ACTIVE": "Active"
         "OPERATE": "Locked"
         "SUCCESS": "Locked"
-        "ACTIVE": "Active"
     - key: ChannelType
       field: channel_type
       type: string
       map:
-        "SC-QAM": "qam"
         "OFDM": "ofdm"
         "OFDMA": "ofdma"
+        "SC-QAM": "qam"
     - key: PowerLevel
       field: power
       type: float
       separator: "/"
       separator_index: 0
-  filter:
-    lock_status: "locked"
-
-# System info: firmware version from status_about_data.php.
-# The js_FWVersion variable is a simple 'var x = value' assignment,
-# not a tagValueList — extracted by parser.py PostProcessor.
-# This dummy source triggers the resource fetch so the PostProcessor
-# can access it.
+  variable: "json_usData"
 system_info:
   sources:
     - format: html_fields

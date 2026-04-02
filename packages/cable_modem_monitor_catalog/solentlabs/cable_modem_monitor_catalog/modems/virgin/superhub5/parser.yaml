@@ -13,8 +13,8 @@ downstream:
       field: channel_type
       type: string
       map:
-        "sc_qam": "qam"
         "ofdm": "ofdm"
+        "sc_qam": "qam"
     - key: "modulation"
       field: modulation
       type: string

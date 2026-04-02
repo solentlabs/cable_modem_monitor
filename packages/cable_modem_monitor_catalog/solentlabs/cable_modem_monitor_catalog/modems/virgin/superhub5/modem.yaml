@@ -18,11 +18,11 @@ hardware:
 status: awaiting_verification
 
 sources:
-  chipset: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
   auth_config: "Synthetic HAR — no authentication required"
 
-  hardware: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
+  chipset: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
   detection_hints: "[Issue #82](https://github.com/solentlabs/cable_modem_monitor/issues/82)"
+  hardware: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
 attribution:
   contributors:
     - github: Dinth
@@ -30,7 +30,6 @@ attribution:
 
 isps:
   - Virgin Media UK
-
 notes: |
   DOCSIS 3.1 gateway. OEM: Sagemcom F3896LG-VMB. Chipset: Broadcom BCM3390.
   Also marketed as "Hub 5" or "SuperHub 5".

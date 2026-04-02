@@ -3,8 +3,8 @@ downstream:
   resource: "/st_docsis.html"
   tables:
     - selector:
-        type: css
         match: "th[data-i18n='ds_link_ds_ch_id']"
+        type: css
       row_start: 1
       columns:
         - index: 0
@@ -29,8 +29,8 @@ upstream:
   resource: "/st_docsis.html"
   tables:
     - selector:
-        type: css
         match: "td[data-i18n='ds_link_us_ch_id']"
+        type: css
       row_start: 1
       columns:
         - index: 0
@@ -66,23 +66,23 @@ system_info:
     - format: html_fields
       resource: "/st_docsis.html"
       fields:
-        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(1)"
-          attribute: "class"
+        - attribute: "class"
+          css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(1)"
           field: ds_scanning_status
           type: string
-        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(2)"
-          attribute: "class"
+        - attribute: "class"
+          css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(2)"
           field: us_ranging_status
           type: string
-        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(3)"
-          attribute: "class"
+        - attribute: "class"
+          css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(3)"
           field: dhcp_status
           type: string
-        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(4)"
-          attribute: "class"
+        - attribute: "class"
+          css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(4)"
           field: tftp_status
           type: string
-        - css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(5)"
-          attribute: "class"
+        - attribute: "class"
+          css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(5)"
           field: registration_status
           type: string

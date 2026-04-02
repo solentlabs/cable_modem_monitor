@@ -3,11 +3,9 @@ downstream:
   resource: "/DocsisStatus.asp"
   tables:
     - selector:
-        type: id
         match: "dsTable"
+        type: id
       row_start: 1
-      channel_type:
-        fixed: "qam"
       columns:
         - index: 1
           field: lock_status
@@ -36,13 +34,15 @@ downstream:
           field: uncorrected
           type: integer
 
+      channel_type:
+        fixed: "qam"
 upstream:
   format: table
   resource: "/DocsisStatus.asp"
   tables:
     - selector:
-        type: id
         match: "usTable"
+        type: id
       row_start: 1
       columns:
         - index: 1
@@ -73,13 +73,13 @@ system_info:
     - format: html_fields
       resource: "/DocsisStatus.asp"
       fields:
-        - id: "SystemUpTime"
+        - field: system_uptime
+          id: "SystemUpTime"
           pattern: "System Up Time:\\s*(.*)"
-          field: system_uptime
           type: string
-        - id: "CurrentSystemTime"
+        - field: current_time
+          id: "CurrentSystemTime"
           pattern: "Current System Time:\\s*(.*)"
-          field: current_time
           type: string
     - format: javascript
       resource: "/RouterStatus.asp"

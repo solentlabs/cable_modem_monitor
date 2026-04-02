@@ -30,7 +30,6 @@ attribution:
 isps:
   - Vodafone Germany
   - Vodafone
-
 notes: |
   EuroDOCSIS 3.1 cable modem. HTTPS with self-signed certificate.
   4 table sections: DS QAM (24ch), DS OFDM (2ch), US QAM (4ch), US OFDMA (1ch).

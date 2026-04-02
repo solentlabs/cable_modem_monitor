@@ -12,11 +12,11 @@ auth:
   method: POST
   username_field: luci_username
   password_field: luci_password
+  cookie_name: "sysauth"
+
   encoding: plain
   success:
     redirect: "/cgi-bin/luci/admin/gateway/wan_status"
-  cookie_name: "sysauth"
-
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
@@ -25,11 +25,11 @@ hardware:
 status: awaiting_verification
 
 sources:
-  chipset: "Inferred from `puma_hw_ver` fields in firmware response"
   auth_config: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
 
-  hardware: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
+  chipset: "Inferred from `puma_hw_ver` fields in firmware response"
   detection_hints: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
+  hardware: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
 attribution:
   contributors:
     - github: MrAct1on
@@ -39,7 +39,6 @@ isps:
   - Cox
   - Spectrum
   - Xfinity
-
 notes: |
   Gateway device (modem + router combo) with DOCSIS 3.1.
   Uses LuCI (OpenWrt-based) web interface with JSON endpoints.

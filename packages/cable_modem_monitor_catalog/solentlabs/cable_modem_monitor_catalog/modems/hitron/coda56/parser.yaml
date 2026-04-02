@@ -3,6 +3,9 @@ downstream:
   resource: "/data/dsinfo.asp"
   # Response is root-level JSON array; loader wraps as {"_raw": [...]}
   array_path: "_raw"
+  channel_type:
+    fixed: qam
+
   fields:
     - key: channelId
       field: channel_id
@@ -23,17 +26,14 @@ downstream:
       field: modulation
       type: string
       map:
-        "2": "256QAM"
         "1": "64QAM"
+        "2": "256QAM"
     - key: correcteds
       field: corrected
       type: integer
     - key: uncorrect
       field: uncorrected
       type: integer
-  channel_type:
-    fixed: qam
-
 upstream:
   format: json
   resource: "/data/usinfo.asp"

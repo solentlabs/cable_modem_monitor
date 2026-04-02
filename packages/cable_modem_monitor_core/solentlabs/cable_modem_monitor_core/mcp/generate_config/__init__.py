@@ -17,7 +17,14 @@ from typing import Any
 from ...validation.cross_file import validate_cross_file
 from .modem import build_modem_dict
 from .parser import build_parser_dict
-from .validation import to_yaml, validate_modem, validate_parser
+from .validation import (
+    MODEM_KEY_ORDER,
+    PARSER_KEY_ORDER,
+    normalize_key_order,
+    to_yaml,
+    validate_modem,
+    validate_parser,
+)
 
 
 @dataclass
@@ -75,9 +82,9 @@ def generate_config(
         cross_errors = validate_cross_file(modem_config, parser_config)
         errors.extend(cross_errors)
 
-    # Serialize to YAML
-    modem_yaml = to_yaml(modem_dict)
-    parser_yaml = to_yaml(parser_dict) if parser_dict else None
+    # Normalize key ordering and serialize to YAML
+    modem_yaml = to_yaml(normalize_key_order(modem_dict, MODEM_KEY_ORDER))
+    parser_yaml = to_yaml(normalize_key_order(parser_dict, PARSER_KEY_ORDER)) if parser_dict else None
 
     return GenerateConfigResult(
         modem_yaml=modem_yaml,

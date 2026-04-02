@@ -7,8 +7,8 @@ downstream:
     #          Frequency | Power | SNR/MER | Unerrored CW |
     #          Correctable CW | Uncorrectable CW
     - selector:
-        type: id
         match: "dsTable"
+        type: id
       row_start: 1
       columns:
         - index: 1
@@ -42,10 +42,10 @@ downstream:
         fixed: qam
       filter:
         lock_status: "locked"
-    # OFDM downstream: 2 channels
+      # OFDM downstream: 2 channels
     - selector:
-        type: id
         match: "d31dsTable"
+        type: id
       row_start: 1
       columns:
         - index: 1
@@ -79,8 +79,8 @@ upstream:
     # Columns: Channel | Lock Status | Modulation | Channel ID |
     #          Frequency | Power
     - selector:
-        type: id
         match: "usTable"
+        type: id
       row_start: 1
       columns:
         - index: 1
@@ -105,10 +105,10 @@ upstream:
           unit: "dBmV"
       filter:
         lock_status: "locked"
-    # OFDMA upstream: 2 channels
+      # OFDMA upstream: 2 channels
     - selector:
-        type: id
         match: "d31usTable"
+        type: id
       row_start: 1
       columns:
         - index: 1

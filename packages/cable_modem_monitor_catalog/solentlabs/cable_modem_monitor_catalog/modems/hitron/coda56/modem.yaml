@@ -9,9 +9,9 @@ auth:
   login_page: "/home.html"
   username_field: user
   password_field: pws
-  encoding: plain
   cookie_name: "userid"
 
+  encoding: plain
 hardware:
   docsis_version: "3.1"
   chipset: unknown
@@ -19,7 +19,9 @@ hardware:
 status: awaiting_verification
 
 sources:
-  auth_config: "[#89 Hitron CODA56](https://github.com/solentlabs/cable_modem_monitor/issues/89) — guest mode (user=nologin/pws=nologin)"
+  auth_config:
+    "[#89 Hitron CODA56](https://github.com/solentlabs/cable_modem_monitor/issues/89)
+    — guest mode (user=nologin/pws=nologin)"
 
 attribution:
   contributors:
@@ -29,7 +31,6 @@ attribution:
 isps:
   - Comcast
   - Xfinity
-
 notes: |
   DOCSIS 3.0 cable modem. GoAhead-Webs server with HTTPS + HSTS.
   JSON API via /data/*.asp endpoints (Content-Type: text/html but JSON body).

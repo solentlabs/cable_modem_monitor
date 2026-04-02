@@ -10,12 +10,12 @@ actions:
   restart:
     type: http
     method: POST
-    pre_fetch_url: "/RouterStatus.htm"
-    endpoint_pattern: "RouterStatus"
     endpoint: "/goform/RouterStatus"
+    endpoint_pattern: "RouterStatus"
     params:
       buttonSelect: "2"
 
+    pre_fetch_url: "/RouterStatus.htm"
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3384"
@@ -30,11 +30,12 @@ sources:
 attribution:
   contributors:
     - github: Anthranilic
-      contribution: "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61) diagnostics"
+      contribution:
+        "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61)
+        diagnostics"
 
 isps:
   - Comcast
-
 notes: |
   Nighthawk AC1900 WiFi Cable Modem Router combo. DOCSIS 3.0, 24x8 channel bonding.
   Same page structure and JS parsing as C3700. Multi-page parsing:

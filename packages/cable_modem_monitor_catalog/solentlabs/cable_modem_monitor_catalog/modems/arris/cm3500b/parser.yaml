@@ -4,8 +4,8 @@ downstream:
   tables:
     # Downstream QAM: 24 channels, standard 9-column table
     - selector:
-        type: header_text
         match: "DCID"
+        type: header_text
       row_start: 1
       columns:
         - index: 1
@@ -34,11 +34,11 @@ downstream:
           type: integer
       channel_type:
         fixed: qam
-    # Downstream OFDM: sub-header row ("Pilot", "PLC", "Data") auto-skipped
-    # (only 3 cells, less than mapped indices). Data rows have 9 cells.
+      # Downstream OFDM: sub-header row ("Pilot", "PLC", "Data") auto-skipped
+      # (only 3 cells, less than mapped indices). Data rows have 9 cells.
     - selector:
-        type: header_text
         match: "Average RxMER"
+        type: header_text
       row_start: 1
       columns:
         - index: 0
@@ -71,8 +71,8 @@ upstream:
   tables:
     # Upstream QAM: 4 channels, 7-column table
     - selector:
-        type: header_text
         match: "UCID"
+        type: header_text
       row_start: 1
       columns:
         - index: 1
@@ -95,12 +95,12 @@ upstream:
           type: string
       channel_type:
         fixed: atdma
-    # Upstream OFDMA: firmware quirk — 9 data cells vs 7 header cells.
-    # Extra cells [4,5] are subcarrier indices (not in header).
-    # Actual frequencies are at [6,7], power at [8].
+      # Upstream OFDMA: firmware quirk — 9 data cells vs 7 header cells.
+      # Extra cells [4,5] are subcarrier indices (not in header).
+      # Actual frequencies are at [6,7], power at [8].
     - selector:
-        type: header_text
         match: "Tx Power"
+        type: header_text
       row_start: 1
       columns:
         - index: 0
@@ -132,15 +132,15 @@ system_info:
     - format: html_fields
       resource: "/cgi-bin/status_cgi"
       fields:
-        - label: "System Uptime"
-          field: system_uptime
+        - field: system_uptime
+          label: "System Uptime"
           type: string
-        - label: "CM Status"
-          field: cm_status
+        - field: cm_status
+          label: "CM Status"
           type: string
-        - label: "Time and Date"
-          field: current_time
+        - field: current_time
+          label: "Time and Date"
           type: string
-        - label: "Hardware Model"
-          field: hardware_version
+        - field: hardware_version
+          label: "Hardware Model"
           type: string

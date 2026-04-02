@@ -1,10 +1,13 @@
 downstream:
   format: json
   resource: "/setup.cgi?todo=RF_DS_param"
+  array_path: "nodes"
+  channel_type:
+    fixed: qam
+
   encoding: base64
   # Response is base64-encoded root-level JSON array; loader decodes
   # base64, then wraps non-dict result as {"_raw": [...]}
-  array_path: "nodes"
   fields:
     - key: DCIDD
       field: channel_id
@@ -30,14 +33,11 @@ downstream:
     - key: uncorrectedsD
       field: uncorrected
       type: integer
-  channel_type:
-    fixed: qam
-
 upstream:
   format: json
   resource: "/setup.cgi?todo=RF_US_param"
-  encoding: base64
   array_path: "nodes"
+  encoding: base64
   fields:
     - key: upstream
       field: channel_id
