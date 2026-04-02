@@ -253,6 +253,35 @@ def update_package_versions(repo_root: Path, version: str) -> bool:
     return all_ok
 
 
+def update_catalog_core_dependency(repo_root: Path, version: str) -> bool:
+    """Update Catalog's dependency pin on Core in pyproject.toml.
+
+    Core and Catalog are always released in lock-step, so the dependency
+    must be an exact pin (==) rather than a lower-bound (>=).  This also
+    avoids uv's refusal to resolve transitive pre-release dependencies
+    when HA installs the packages without --prerelease=allow.
+    """
+    pyproject_path = repo_root / "packages" / "cable_modem_monitor_catalog" / "pyproject.toml"
+
+    try:
+        content = pyproject_path.read_text(encoding="utf-8")
+        new_content, count = re.subn(
+            r'"solentlabs-cable-modem-monitor-core==[^"]+"',
+            f'"solentlabs-cable-modem-monitor-core=={version}"',
+            content,
+        )
+        if count != 1:
+            print_error(f"Expected 1 core dependency pin in catalog pyproject.toml, found {count}")
+            return False
+
+        pyproject_path.write_text(new_content, encoding="utf-8")
+        print_success(f"Updated catalog→core dependency pin → =={version}")
+        return True
+    except Exception as e:
+        print_error(f"Failed to update catalog core dependency: {e}")
+        return False
+
+
 def update_changelog(repo_root: Path, version: str) -> bool:
     """Update CHANGELOG.md to move Unreleased to new version."""
     changelog_path = repo_root / "CHANGELOG.md"
@@ -502,6 +531,7 @@ def update_all_files(repo_root: Path, version: str, skip_changelog: bool) -> Non
     success = update_const_py(repo_root, version) and success
     success = update_version_test(repo_root, version) and success
     success = update_package_versions(repo_root, version) and success
+    success = update_catalog_core_dependency(repo_root, version) and success
 
     if not skip_changelog:
         success = update_changelog(repo_root, version) and success
@@ -579,6 +609,15 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
     for path, label, needle in checks:
         if not _check_file_contains(path, label, needle):
             all_correct = False
+
+    # Check catalog→core dependency pin
+    catalog_dep_pin = f'"solentlabs-cable-modem-monitor-core=={version}"'
+    if not _check_file_contains(
+        pkg / "cable_modem_monitor_catalog" / "pyproject.toml",
+        "catalog→core dependency",
+        catalog_dep_pin,
+    ):
+        all_correct = False
 
     if all_correct:
         print_success("All version files are consistent!")

@@ -9,7 +9,7 @@ description = "Cable Modem Monitor Catalog — modem config files and parser ove
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "solentlabs-cable-modem-monitor-core>=3.14.0a1",
+    "solentlabs-cable-modem-monitor-core==3.14.0-alpha.7",
 ]
 license = "MIT"
 authors = [
