@@ -3,7 +3,7 @@
     {
       "channel_id": 4,
       "channel_type": "qam",
-      "corrected": 933992547,
+      "corrected": 0,
       "frequency": 146000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -14,7 +14,7 @@
     {
       "channel_id": 1,
       "channel_type": "qam",
-      "corrected": 933523951,
+      "corrected": 0,
       "frequency": 122000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -25,7 +25,7 @@
     {
       "channel_id": 2,
       "channel_type": "qam",
-      "corrected": 933369998,
+      "corrected": 0,
       "frequency": 130000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -36,7 +36,7 @@
     {
       "channel_id": 3,
       "channel_type": "qam",
-      "corrected": 933533013,
+      "corrected": 0,
       "frequency": 138000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -47,7 +47,7 @@
     {
       "channel_id": 5,
       "channel_type": "qam",
-      "corrected": 933537404,
+      "corrected": 0,
       "frequency": 154000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -58,7 +58,7 @@
     {
       "channel_id": 6,
       "channel_type": "qam",
-      "corrected": 933541102,
+      "corrected": 0,
       "frequency": 162000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -69,7 +69,7 @@
     {
       "channel_id": 7,
       "channel_type": "qam",
-      "corrected": 933545050,
+      "corrected": 0,
       "frequency": 170000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -80,7 +80,7 @@
     {
       "channel_id": 8,
       "channel_type": "qam",
-      "corrected": 933549117,
+      "corrected": 0,
       "frequency": 178000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -91,7 +91,7 @@
     {
       "channel_id": 9,
       "channel_type": "qam",
-      "corrected": 933552582,
+      "corrected": 0,
       "frequency": 186000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -102,7 +102,7 @@
     {
       "channel_id": 10,
       "channel_type": "qam",
-      "corrected": 933556422,
+      "corrected": 0,
       "frequency": 194000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -113,7 +113,7 @@
     {
       "channel_id": 11,
       "channel_type": "qam",
-      "corrected": 933560172,
+      "corrected": 7,
       "frequency": 202000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -124,7 +124,7 @@
     {
       "channel_id": 12,
       "channel_type": "qam",
-      "corrected": 933563708,
+      "corrected": 90,
       "frequency": 210000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -135,7 +135,7 @@
     {
       "channel_id": 13,
       "channel_type": "qam",
-      "corrected": 909470942,
+      "corrected": 26,
       "frequency": 218000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -146,7 +146,7 @@
     {
       "channel_id": 14,
       "channel_type": "qam",
-      "corrected": 933571830,
+      "corrected": 124,
       "frequency": 226000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -157,7 +157,7 @@
     {
       "channel_id": 15,
       "channel_type": "qam",
-      "corrected": 933575075,
+      "corrected": 72,
       "frequency": 234000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -168,7 +168,7 @@
     {
       "channel_id": 16,
       "channel_type": "qam",
-      "corrected": 933577041,
+      "corrected": 24,
       "frequency": 242000000,
       "lock_status": "locked",
       "modulation": "256-QAM",
@@ -186,8 +186,13 @@
     }
   ],
   "system_info": {
+    "cpu_speed": "1503",
+    "docsis_status": "OPERATIONAL",
     "downstream_channel_count": 17,
     "hardware_version": "1.0",
+    "memory_free": "28476",
+    "memory_total": "233520",
+    "model_name": "CGA4236TCH1",
     "software_version": "CGA4236TCH1-19.3B71-031-PCU-RT-230724",
     "system_uptime": "153513",
     "upstream_channel_count": 5

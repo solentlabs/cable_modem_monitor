@@ -82,6 +82,7 @@
     }
   ],
   "system_info": {
+    "docsis_status": "OPERATIONAL",
     "downstream_channel_count": 8,
     "firmware_build_time": "Mon Nov 20 11:04:06 EST 2017",
     "firmware_name": "TS0901103S5R_112017_WBM760_CM820",
@@ -96,6 +97,7 @@
       "channel_id": 6,
       "channel_type": "atdma",
       "frequency": 47000000,
+      "modulation": "32QAM",
       "power": 46.25,
       "symbol_rate": 5120
     },
@@ -103,6 +105,7 @@
       "channel_id": 8,
       "channel_type": "atdma",
       "frequency": 61000000,
+      "modulation": "32QAM",
       "power": 47.25,
       "symbol_rate": 5120
     },
@@ -110,6 +113,7 @@
       "channel_id": 7,
       "channel_type": "atdma",
       "frequency": 54000000,
+      "modulation": "32QAM",
       "power": 45.75,
       "symbol_rate": 5120
     },
@@ -117,6 +121,7 @@
       "channel_id": 5,
       "channel_type": "atdma",
       "frequency": 40000000,
+      "modulation": "32QAM",
       "power": 47.25,
       "symbol_rate": 5120
     }

@@ -70,6 +70,10 @@ _LOGGER = logging.getLogger(__name__)
 # Sentinel value for the "All manufacturers" option
 _ALL_MANUFACTURERS = "__all__"
 
+# Sentinel value for the default variant (modem.yaml, name=None).
+# HA's SelectSelector rejects empty-string option values.
+_DEFAULT_VARIANT = "__default__"
+
 
 # =============================================================================
 # Validation progress helper
@@ -308,12 +312,13 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     ) -> config_entries.ConfigFlowResult:
         """Step 2 — Select variant (only shown for multi-variant modems)."""
         if user_input is not None:
-            self._selected_variant = user_input["variant"] or None
+            raw = user_input["variant"]
+            self._selected_variant = None if raw == _DEFAULT_VARIANT else raw
             return await self.async_step_connection()
 
         variant_options = []
         for v in self._variants:
-            value = v.name or ""
+            value = v.name or _DEFAULT_VARIANT
             label = format_variant_label(v)
             variant_options.append(selector.SelectOptionDict(value=value, label=label))
 

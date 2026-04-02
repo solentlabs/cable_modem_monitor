@@ -78,6 +78,9 @@ system_info:
         - field: model_name
           source: StatusSoftwareModelName
           type: string
+        - field: docsis_status
+          source: InternetConnection
+          type: string
 
       response_key: GetArrisDeviceStatusResponse
 aggregate:

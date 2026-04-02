@@ -344,14 +344,16 @@
     {
       "channel_id": 1,
       "channel_type": "ofdm",
+      "corrected": 7169600829,
       "frequency": 380000000,
       "lock_status": "locked",
       "power": 5.4,
-      "snr": 42.9
+      "snr": 42.9,
+      "uncorrected": 12612
     }
   ],
   "system_info": {
-    "current_time": "--- --- -- --:--:-- ----",
+    "docsis_status": "Not Synchronized",
     "downstream_channel_count": 32,
     "upstream_channel_count": 3
   },

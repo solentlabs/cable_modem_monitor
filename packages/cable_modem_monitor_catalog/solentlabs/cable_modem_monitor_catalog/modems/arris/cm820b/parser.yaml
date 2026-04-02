@@ -58,6 +58,9 @@ upstream:
           field: symbol_rate
           type: integer
           unit: "kSym/s"
+        - index: 6
+          field: modulation
+          type: string
       channel_type:
         fixed: atdma
 
@@ -66,6 +69,9 @@ system_info:
     - format: html_fields
       resource: "/cgi-bin/status_cgi"
       fields:
+        - field: docsis_status
+          label: "CM Status"
+          type: string
         - field: system_uptime
           label: "System Uptime"
           type: string

@@ -25,10 +25,9 @@ downstream:
         - key: Modulation
           field: modulation
           type: string
-        - key: Octets
+        - key: Correcteds
           field: corrected
           type: integer
-          fallback_key: Correcteds
         - key: Uncorrectables
           field: uncorrected
           type: integer
@@ -132,5 +131,25 @@ system_info:
           path: "data"
         - key: UpTime
           field: system_uptime
+          type: string
+          path: "data"
+        - key: CMStatus
+          field: docsis_status
+          type: string
+          path: "data"
+        - key: ModelName
+          field: model_name
+          type: string
+          path: "data"
+        - key: ProcessorSpeed
+          field: cpu_speed
+          type: string
+          path: "data"
+        - key: MemTotal
+          field: memory_total
+          type: string
+          path: "data"
+        - key: MemFree
+          field: memory_free
           type: string
           path: "data"

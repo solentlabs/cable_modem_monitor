@@ -66,6 +66,12 @@ downstream:
           field: snr
           type: float
           unit: "dB"
+        - offset: 9
+          field: corrected
+          type: integer
+        - offset: 10
+          field: uncorrected
+          type: integer
       filter:
         lock_status: "locked"
 
@@ -139,8 +145,8 @@ system_info:
         - name: "InitTagValue"
           delimiter: "|"
           fields:
-            - offset: 10
-              field: current_time
+            - offset: 3
+              field: docsis_status
               type: string
             - offset: 14
               field: system_uptime

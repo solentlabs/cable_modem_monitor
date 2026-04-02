@@ -1275,7 +1275,7 @@ strings).
 
 | Selector | When to use | Algorithm |
 |----------|------------|-----------|
-| `label: "text"` | Value appears next to a text label | Find element containing label text, cascade through structural patterns (td→sibling td, th→paired td, span→sibling span, dt→dd) to locate the adjacent value element |
+| `label: "text"` | Value appears next to a text label | Find element containing label text, cascade through structural patterns (td→sibling td, th→paired td, span→sibling span, dt→dd) to locate the adjacent value element. Prefers leaf elements over ancestors — if a parent element contains the label text only because a child does, the child matches instead. |
 | `id: "element_id"` | Value is in an element with a known HTML id | Direct element lookup via `id` attribute, extract text content |
 | `css: "selector"` | Value is in an element targeted by CSS selector | CSS selector query via `select_one()`, extract text content |
 

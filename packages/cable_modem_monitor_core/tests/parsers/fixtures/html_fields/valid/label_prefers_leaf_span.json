@@ -1,0 +1,16 @@
+{
+  "_description": "Wrapper div (no block-level children) contains label text via nested span — cascade prefers the leaf span over the ancestor div",
+  "_html": "<html><body><div class=\"module forms\"><div class=\"form-row\"><span class=\"readonlyLabel\">System Uptime:</span><span class=\"value\">21 days 15h: 20m: 33s</span></div><div class=\"form-row\"><span class=\"readonlyLabel\">HW Version:</span><span class=\"value\">2.0</span></div></div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/status.html",
+    "fields": [
+      {"label": "System Uptime", "field": "system_uptime", "type": "string"},
+      {"label": "HW Version", "field": "hardware_version", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "system_uptime": "21 days 15h: 20m: 33s",
+    "hardware_version": "2.0"
+  }
+}

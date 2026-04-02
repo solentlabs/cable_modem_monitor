@@ -140,12 +140,13 @@ def _extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:
     label. This is anti-fragile — firmware updates that change HTML
     structure don't break configs because multiple patterns are tried.
 
-    Elements that contain block-level children (``table``, ``div``,
-    ``section``, ``article``, ``ul``, ``ol``, ``dl``) are skipped as
-    wrapper elements. These wrappers have ``get_text()`` that includes
-    all nested content, causing false-positive substring matches on
-    label text. If a label genuinely lives inside a wrapper element,
-    use ``css`` or ``id`` selectors instead.
+    Two kinds of elements are skipped as wrappers:
+
+    1. Elements with block-level children (``table``, ``div``, etc.) —
+       their ``get_text()`` includes all nested content.
+    2. Elements whose direct child (also a cascade-supported tag)
+       contains the label text — the child is a more specific match
+       and will be found later in the loop.
 
     Cascade order:
     1. ``<td>label</td><td>value</td>`` (sibling cells)
@@ -171,6 +172,12 @@ def _extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:
         if label_lower not in text.lower():
             continue
 
+        # Prefer leaf matches: if a direct child is also a cascade-
+        # supported tag and contains the label text, skip this element
+        # and let the child match on a later iteration.
+        if _has_child_with_label(element, label_lower):
+            continue
+
         # Try structural patterns based on element type
         value = _try_label_cascade(element)
         if value is not None:
@@ -181,6 +188,22 @@ def _extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:
 
 # Block-level tags that indicate a wrapper element when found as children.
 _BLOCK_LEVEL_TAGS = ["table", "div", "section", "article", "ul", "ol", "dl"]
+
+# Tags that participate in the label cascade — used to detect when a
+# parent element should defer to a more specific child match.
+_SEARCH_TAGS = frozenset({"td", "th", "span", "dt", "div", "label"})
+
+
+def _has_child_with_label(element: Tag, label_lower: str) -> bool:
+    """Check if a direct child (cascade-supported tag) contains the label text."""
+    for child in element.children:
+        if not isinstance(child, Tag):
+            continue
+        if child.name not in _SEARCH_TAGS:
+            continue
+        if label_lower in child.get_text(strip=True).lower():
+            return True
+    return False
 
 
 _CascadeHandler = Callable[[Tag], str | None]
