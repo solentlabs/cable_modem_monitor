@@ -109,6 +109,10 @@
       "name": "Generar Panel",
       "description": "Genera YAML de Lovelace listo para usar para tu panel de modem de cable. Copia la salida y pegala en una tarjeta Manual.",
       "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+        },
         "include_status_card": {
           "name": "Tarjeta de Estado",
           "description": "Estado del modem, tiempo de actividad, cantidad de canales y boton de reinicio."

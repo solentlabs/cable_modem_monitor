@@ -109,6 +109,10 @@
       "name": "Создать панель управления",
       "description": "Генерирует готовый к использованию Lovelace YAML для панели управления кабельным модемом. Скопируйте результат и вставьте его в карточку «Вручную».",
       "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+        },
         "include_status_card": {
           "name": "Карточка состояния",
           "description": "Состояние модема, время работы, количество каналов и кнопка перезагрузки."

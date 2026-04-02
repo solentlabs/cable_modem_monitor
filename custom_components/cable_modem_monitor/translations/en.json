@@ -109,6 +109,10 @@
       "name": "Generate Dashboard",
       "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
       "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+        },
         "include_status_card": {
           "name": "Status Card",
           "description": "Modem status, uptime, channel counts, and restart button."

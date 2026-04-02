@@ -109,6 +109,10 @@
       "name": "Generer le Tableau de Bord",
       "description": "Genere du YAML Lovelace pret a l'emploi pour votre tableau de bord de modem cable. Copiez la sortie et collez-la dans une carte Manuel.",
       "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+        },
         "include_status_card": {
           "name": "Carte d'Etat",
           "description": "Etat du modem, temps de fonctionnement, nombre de canaux et bouton de redemarrage."

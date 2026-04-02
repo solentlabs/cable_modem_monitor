@@ -109,6 +109,10 @@
       "name": "Genera Dashboard",
       "description": "Genera YAML Lovelace pronto all'uso per la dashboard del tuo modem via cavo. Copia l'output e incollalo in una scheda Manuale.",
       "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+        },
         "include_status_card": {
           "name": "Scheda di Stato",
           "description": "Stato del modem, tempo di attivita, numero di canali e pulsante di riavvio."

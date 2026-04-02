@@ -109,6 +109,10 @@
       "name": "生成仪表板",
       "description": "生成可直接使用的 Lovelace YAML，用于您的有线调制解调器仪表板。复制输出内容并粘贴到手动卡片中。",
       "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+        },
         "include_status_card": {
           "name": "状态卡片",
           "description": "调制解调器状态、运行时间、频道数量和重启按钮。"

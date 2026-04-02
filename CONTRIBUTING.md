@@ -241,6 +241,27 @@ make docker-restart
 
 See [Testing on HA](./docs/setup/TESTING_ON_HA.md) for detailed instructions and troubleshooting.
 
+## Project Architecture
+
+The codebase is split into three layers:
+
+| Package | Path | Responsibility |
+|---------|------|----------------|
+| **Core** | `packages/cable_modem_monitor_core/` | Auth, HTTP loading, parsing, orchestration, test harness. Platform-agnostic — no HA imports. |
+| **Catalog** | `packages/cable_modem_monitor_catalog/` | Modem configs (`modem.yaml`), parsers (`parser.yaml` / `parser.py`), HAR fixtures and golden files. |
+| **HA Adapter** | `custom_components/cable_modem_monitor/` | Config flow, sensors, services, coordinators. Thin wrapper that imports from Core and Catalog. |
+
+Core and Catalog are published to PyPI as standalone packages. The HA
+adapter declares them as dependencies in `manifest.json`.
+
+**Specs** (authoritative design docs):
+- Core: [`packages/cable_modem_monitor_core/docs/`](packages/cable_modem_monitor_core/docs/) — architecture, auth, parsing, orchestration, onboarding
+- HA: [`custom_components/cable_modem_monitor/docs/`](custom_components/cable_modem_monitor/docs/) — config flow, entities, adapter wiring
+
+**Tests:**
+- Core + Catalog: `pytest` from repo root (discovers both packages)
+- HA integration: `tests/` at repo root
+
 ## Adding Support for New Modem Models
 
 **For users:** Submit a HAR capture via the [Modem Request Guide](docs/MODEM_REQUEST.md). This is the primary onboarding path.
@@ -417,56 +438,38 @@ Maintainers will handle releases following semantic versioning:
 - **Minor (0.1.0)**: New features, backward compatible
 - **Patch (0.0.1)**: Bug fixes, backward compatible
 
-### Automated Release Script
+### Release Script
 
-The project includes an automated release script that handles all version bumping and release creation:
+The project includes a release preparation script that bumps version
+strings and runs quality checks. It does **not** commit, tag, push, or
+create releases — the developer handles all git operations.
 
 ```bash
-# Create a new release (will prompt for push confirmation)
+# Full release prep (runs tests, lints, bumps versions, updates changelog)
 python scripts/release.py 3.5.1
-
-# Test locally without pushing
-python scripts/release.py 3.5.1 --no-push
-
-# Skip git hooks if needed
-python scripts/release.py 3.5.1 --skip-verify
 
 # Skip changelog update (not recommended)
 python scripts/release.py 3.5.1 --skip-changelog
 ```
 
 **What the script does:**
-1. Validates version format (must be X.Y.Z)
+1. Validates version format (X.Y.Z or X.Y.Z-alpha.N / X.Y.Z-beta.N)
 2. Checks that git working directory is clean
-3. Updates version in:
-   - `custom_components/cable_modem_monitor/manifest.json`
+3. Runs full test suite (pytest)
+4. Runs code quality checks (ruff, black, mypy)
+5. Verifies translations/en.json matches strings.json
+6. Updates version in:
+   - `custom_components/cable_modem_monitor/manifest.json` (version + requirement pins)
    - `custom_components/cable_modem_monitor/const.py`
    - `tests/components/test_version_and_startup.py`
-4. Moves `[Unreleased]` section in `CHANGELOG.md` to new version with today's date
-5. Creates a git commit with all version changes
-6. Creates an annotated git tag (v3.5.1)
-7. Pushes commit and tag to remote
-8. Creates a GitHub release with notes from CHANGELOG.md
+   - `packages/cable_modem_monitor_core/pyproject.toml`
+   - `packages/cable_modem_monitor_catalog/pyproject.toml` (version + core dependency pin)
+7. Moves `[Unreleased]` section in `CHANGELOG.md` to new version
+8. Verifies all version files are consistent
+9. Prints changed files and suggested next steps
 
-**VS Code Task:**
-You can also run the release script from VS Code:
-1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
-2. Type "Tasks: Run Task"
-3. Select "🚀 Create Release"
-4. Enter the version when prompted
-
-### Manual Release Process (Legacy)
-
-If you need to create a release manually:
-
-Each release includes:
-- Version bump in `manifest.json` and `const.py`
-- Version update in `tests/components/test_version_and_startup.py`
-- Updated `CHANGELOG.md`
-- Git tag
-- GitHub Release with notes
-
-**Important:** Always update the version test when bumping versions to prevent test failures
+After the script runs, the developer reviews, stages, commits, and
+follows the release flow in `CLAUDE.md`.
 
 ## Code of Conduct
 

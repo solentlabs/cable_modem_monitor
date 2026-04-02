@@ -41,6 +41,7 @@ SERVICE_REQUEST_REFRESH = "request_refresh"
 SERVICE_REQUEST_HEALTH_CHECK = "request_health_check"
 SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
     {
+        vol.Optional("device_id"): cv.string,
         vol.Optional("include_downstream_power", default=True): cv.boolean,
         vol.Optional("include_downstream_snr", default=True): cv.boolean,
         vol.Optional("include_downstream_frequency", default=True): cv.boolean,
@@ -285,14 +286,20 @@ def _format_channel_label(
 
 def _build_status_card_yaml(
     entity_prefix: str,
+    system_info: dict[str, Any],
     *,
     has_icmp: bool,
     has_restart: bool,
 ) -> list[str]:
     """Build YAML for the status entities card.
 
+    Only includes entities for fields the modem actually provides.
+    Channel counts and status are always present; everything else is
+    gated on system_info field presence (matching sensor.py gating).
+
     Args:
         entity_prefix: Entity ID prefix (e.g., "cable_modem").
+        system_info: The system_info dict from modem data.
         has_icmp: Whether ICMP ping latency entity exists.
         has_restart: Whether the restart button exists.
     """
@@ -311,23 +318,34 @@ def _build_status_card_yaml(
             f"      - entity: sensor.{entity_prefix}_http_latency",
             "        name: HTTP",
             "        icon: mdi:speedometer",
-            f"      - entity: sensor.{entity_prefix}_software_version",
-            "        name: Software Version",
-            f"      - entity: sensor.{entity_prefix}_system_uptime",
-            "        name: Uptime",
-            f"      - entity: sensor.{entity_prefix}_last_boot_time",
-            "        name: Last Boot",
-            "        format: date",
+        ]
+    )
+    if "software_version" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_software_version")
+        lines.append("        name: Software Version")
+    if "system_uptime" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_system_uptime")
+        lines.append("        name: Uptime")
+        lines.append(f"      - entity: sensor.{entity_prefix}_last_boot_time")
+        lines.append("        name: Last Boot")
+        lines.append("        format: date")
+    lines.extend(
+        [
             f"      - entity: sensor.{entity_prefix}_ds_channel_count",
             "        name: Downstream Channel Count",
             f"      - entity: sensor.{entity_prefix}_us_channel_count",
             "        name: Upstream Channel Count",
-            f"      - entity: sensor.{entity_prefix}_total_corrected_errors",
-            "        name: Total Corrected Errors",
-            f"      - entity: sensor.{entity_prefix}_total_uncorrected_errors",
-            "        name: Total Uncorrected Errors",
         ]
     )
+    if "total_corrected" in system_info:
+        lines.extend(
+            [
+                f"      - entity: sensor.{entity_prefix}_total_corrected_errors",
+                "        name: Total Corrected Errors",
+                f"      - entity: sensor.{entity_prefix}_total_uncorrected_errors",
+                "        name: Total Uncorrected Errors",
+            ]
+        )
     if has_restart:
         lines.append(f"      - entity: button.{entity_prefix}_restart_modem")
         lines.append("        name: Restart")
@@ -472,7 +490,11 @@ def create_generate_dashboard_handler(
 
     def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:
         """Handle the generate_dashboard service call."""
-        entry = _find_loaded_entry(hass)
+        device_id = call.data.get("device_id")
+        if device_id:
+            entry = _resolve_config_entry_for_device(hass, device_id)
+        else:
+            entry = _find_loaded_entry(hass)
         if entry is None:
             return {"yaml": "# Error: No cable modem configured"}
 
@@ -484,6 +506,7 @@ def create_generate_dashboard_handler(
         entity_prefix = _get_entity_prefix(entry)
         has_icmp = bool(entry.data.get(CONF_SUPPORTS_ICMP, False))
         has_restart = entry.runtime_data.orchestrator.supports_restart
+        system_info = modem_data.get("system_info", {})
 
         opts = {
             "ds_power": call.data.get("include_downstream_power", True),
@@ -512,7 +535,14 @@ def create_generate_dashboard_handler(
         ]
 
         if opts["status"]:
-            yaml_parts.extend(_build_status_card_yaml(entity_prefix, has_icmp=has_icmp, has_restart=has_restart))
+            yaml_parts.extend(
+                _build_status_card_yaml(
+                    entity_prefix,
+                    system_info,
+                    has_icmp=has_icmp,
+                    has_restart=has_restart,
+                )
+            )
 
         # fmt: off
         channel_graphs = [
@@ -537,7 +567,7 @@ def create_generate_dashboard_handler(
                     short_titles,
                 )
 
-        if opts["errors"]:
+        if opts["errors"] and "total_corrected" in system_info:
             yaml_parts.extend(_build_error_graphs_yaml(entity_prefix, titles))
 
         if opts["latency"]:

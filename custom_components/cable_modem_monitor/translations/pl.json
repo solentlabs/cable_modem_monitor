@@ -109,6 +109,10 @@
       "name": "Wygeneruj dashboard",
       "description": "Generuje gotowy do użycia Lovelace YAML dla dashboardu modemu kablowego. Skopiuj wynik i wklej go do karty ręcznej.",
       "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+        },
         "include_status_card": {
           "name": "Karta statusu",
           "description": "Status modemu, czas pracy, liczba kanałów i przycisk restartu."

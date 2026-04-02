@@ -185,20 +185,48 @@ def test_dashboard_titles_long():
 # -----------------------------------------------------------------------
 
 
-def test_build_status_card_yaml_with_icmp_and_restart():
-    """Status card includes ICMP ping and restart button."""
-    lines = _build_status_card_yaml("cable_modem", has_icmp=True, has_restart=True)
+def test_build_status_card_yaml_full():
+    """Status card includes all entities when modem provides all data."""
+    system_info = {
+        "software_version": "1.0",
+        "system_uptime": "12345",
+        "total_corrected": 100,
+        "total_uncorrected": 0,
+    }
+    lines = _build_status_card_yaml(
+        "cable_modem",
+        system_info,
+        has_icmp=True,
+        has_restart=True,
+    )
     yaml = "\n".join(lines)
     assert "sensor.cable_modem_status" in yaml
     assert "sensor.cable_modem_ping_latency" in yaml
+    assert "sensor.cable_modem_software_version" in yaml
+    assert "sensor.cable_modem_system_uptime" in yaml
+    assert "sensor.cable_modem_last_boot_time" in yaml
+    assert "sensor.cable_modem_total_corrected_errors" in yaml
     assert "button.cable_modem_restart_modem" in yaml
 
 
-def test_build_status_card_yaml_no_icmp_no_restart():
-    """Status card omits ICMP and restart when not available."""
-    lines = _build_status_card_yaml("cable_modem", has_icmp=False, has_restart=False)
+def test_build_status_card_yaml_minimal():
+    """Status card omits entities when modem data is sparse."""
+    system_info = {}
+    lines = _build_status_card_yaml(
+        "cable_modem",
+        system_info,
+        has_icmp=False,
+        has_restart=False,
+    )
     yaml = "\n".join(lines)
+    assert "sensor.cable_modem_status" in yaml
+    assert "sensor.cable_modem_http_latency" in yaml
+    assert "ds_channel_count" in yaml
     assert "ping_latency" not in yaml
+    assert "software_version" not in yaml
+    assert "system_uptime" not in yaml
+    assert "last_boot_time" not in yaml
+    assert "total_corrected_errors" not in yaml
     assert "restart_modem" not in yaml
 
 

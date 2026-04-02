@@ -139,11 +139,17 @@ See CLAUDE.md "Async/Blocking I/O" section. Use `hass.async_add_executor_job()`.
 Every source file should have a corresponding test file:
 
 ```
-custom_components/.../core/auth/discovery.py
-    → tests/core/test_auth_discovery.py
+# Core package
+packages/cable_modem_monitor_core/.../auth/form.py
+    → packages/cable_modem_monitor_core/tests/auth/test_form.py
 
-custom_components/.../config_flow.py
-    → tests/components/test_config_flow.py
+# Catalog package
+packages/cable_modem_monitor_catalog/.../registry.py
+    → packages/cable_modem_monitor_catalog/tests/test_registry.py
+
+# HA adapter
+custom_components/cable_modem_monitor/services.py
+    → tests/components/test_services.py
 ```
 
 ---

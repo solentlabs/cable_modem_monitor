@@ -3,15 +3,68 @@
 Ready-to-use examples for monitoring your cable modem in Home Assistant.
 
 ## Table of Contents
-- [Example Dashboard](#example-dashboard)
+- [Dashboard Generator Service](#dashboard-generator-service)
+- [Manual Dashboard Example](#manual-dashboard-example)
 - [Last Boot Time Display Options](#last-boot-time-display-options)
 - [Automation Examples](#automation-examples)
 
 ---
 
-## Example Dashboard
+## Dashboard Generator Service
 
-Create a comprehensive dashboard to monitor your modem health. This example shows all 24 downstream channels (typical for DOCSIS 3.0 modems), upstream channels, and error tracking.
+The easiest way to create a dashboard is the built-in generator service.
+It reads your modem's actual channel data and produces ready-to-paste
+Lovelace YAML — no manual entity counting required.
+
+### How to use
+
+1. Open **Developer Tools > Actions** in Home Assistant
+2. Select **Cable Modem Monitor: Generate Dashboard**
+3. Toggle the sections you want (all enabled by default)
+4. Click **Perform action**
+5. Copy the YAML from the response
+6. Go to your dashboard, click **Add Card > Manual**, paste the YAML
+
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| Status Card | on | Modem status, uptime, channel counts, restart button |
+| Downstream Power | on | Power levels for all downstream channels |
+| Downstream SNR | on | Signal-to-noise ratio for all downstream channels |
+| Downstream Frequency | on | Frequency for all downstream channels |
+| Upstream Power | on | Power levels for all upstream channels |
+| Upstream Frequency | off | Frequency for all upstream channels |
+| Error Graphs | on | Corrected and uncorrected error counts (7-day view) |
+| Latency | on | Ping and HTTP latency (6-hour view) |
+| Graph Hours | 24 | Hours of history shown in channel graphs (1-168) |
+| Short Titles | off | Compact card titles (e.g., "DS Power" vs "Downstream Power Levels") |
+
+The generated YAML is tailored to your modem — correct channel count,
+channel types (QAM, OFDM, ATDMA, OFDMA), and entity prefix.
+
+### Calling from an automation or script
+
+```yaml
+service: cable_modem_monitor.generate_dashboard
+data:
+  include_status_card: true
+  include_downstream_power: true
+  include_downstream_snr: true
+  graph_hours: 48
+  short_titles: true
+response_variable: result
+```
+
+The YAML is in `result.yaml`.
+
+---
+
+## Manual Dashboard Example
+
+If you prefer to build your dashboard by hand, here is a static example
+showing all 24 downstream channels (typical for DOCSIS 3.0 modems),
+upstream channels, and error tracking.
 
 <details>
 <summary><b>Click to expand full dashboard YAML</b></summary>

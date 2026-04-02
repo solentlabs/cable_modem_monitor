@@ -297,7 +297,8 @@ Replace `{type}` with channel type (atdma, ofdma) and `X` with the channel numbe
 Ready-to-use dashboard and automation examples are available in the **[Examples Guide](./docs/EXAMPLES.md)**.
 
 Includes:
-- Complete dashboard YAML for monitoring all channels
+- **Dashboard generator service** — auto-generates Lovelace YAML tailored to your modem's channels
+- Complete manual dashboard YAML for monitoring all channels
 - Automations for error alerts, SNR warnings, and auto-restart
 - Last boot time display format options
 

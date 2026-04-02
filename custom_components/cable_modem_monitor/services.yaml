@@ -1,5 +1,10 @@
 generate_dashboard:
   fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: cable_modem_monitor
     include_status_card:
       default: true
       selector:

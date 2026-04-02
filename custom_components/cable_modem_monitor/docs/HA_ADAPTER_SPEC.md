@@ -458,6 +458,8 @@ Generates Lovelace YAML for a complete modem dashboard based on
 current channel data.
 
 **Input options:**
+- `device_id` (optional) — which modem to generate for. Defaults to
+  first configured modem when omitted.
 - Which graphs to include (DS power, DS SNR, DS frequency, US power,
   US frequency, errors, latency, status card)
 - Graph timespan (hours)
@@ -465,9 +467,10 @@ current channel data.
 - Channel grouping (by direction, by type)
 
 **How it works:**
-1. Reads current channel data from `entry.runtime_data.data_coordinator`
-2. Generates entity references for actual channels
-3. Returns YAML string the user pastes into a manual dashboard card
+1. Resolves target modem from `device_id` or falls back to first entry
+2. Reads current channel data from `entry.runtime_data.data_coordinator`
+3. Generates entity references for actual channels
+4. Returns YAML string the user pastes into a manual dashboard card
 
 ### `request_refresh`
 

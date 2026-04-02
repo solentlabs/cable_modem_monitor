@@ -109,6 +109,10 @@
       "name": "Gerar Dashboard",
       "description": "Gera Lovelace YAML pronto para uso para o dashboard do seu modem a cabo. Copie a saída e cole em um cartão manual.",
       "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+        },
         "include_status_card": {
           "name": "Cartão de Status",
           "description": "Status do modem, tempo de atividade, contagem de canais e botão de reiniciar."

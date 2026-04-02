@@ -109,6 +109,10 @@
       "name": "Generera dashboard",
       "description": "Genererar användningsklar Lovelace YAML för ditt kabelmodemdashboard. Kopiera utdata och klistra in det i ett manuellt kort.",
       "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+        },
         "include_status_card": {
           "name": "Statuskort",
           "description": "Modemstatus, drifttid, kanalantal och omstartsknapp."

@@ -1013,11 +1013,13 @@ modems/arris/sb8200/
 ├── modem.yaml                  # auth: none (HTTP, default variant)
 ├── modem-url-token.yaml        # auth: url_token (login_ prefix, ct_ tokens)
 ├── modem-cookie.yaml           # auth: url_token (no prefix, cookie-only)
-└── tests/
+└── test_data/
     ├── modem.har
     ├── modem.expected.json
+    ├── modem.verified.json              # Present when status: confirmed
     ├── modem-url-token.har
     ├── modem-url-token.expected.json
+    ├── modem-url-token.verified.json    # Per-variant verification
     ├── modem-cookie.har
     └── modem-cookie.expected.json
 ```
@@ -1045,9 +1047,10 @@ Most modems: one `modem.yaml` file. No variant suffix needed.
 modems/motorola/mb7621/
 ├── parser.yaml
 ├── modem.yaml
-└── tests/
+└── test_data/
     ├── modem.har
-    └── modem.expected.json
+    ├── modem.expected.json
+    └── modem.verified.json      # Present when status: confirmed
 ```
 
 ---
