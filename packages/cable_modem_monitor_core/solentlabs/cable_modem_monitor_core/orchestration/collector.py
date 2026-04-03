@@ -324,6 +324,9 @@ class ModemDataCollector:
         if self._modem_config.transport == "hnap":
             return self._load_hnap_resources()
 
+        if self._modem_config.transport == "cbn":
+            return self._load_cbn_resources()
+
         return self._load_http_resources(auth_result)
 
     def _load_http_resources(self, auth_result: AuthResult) -> dict[str, Any]:
@@ -376,6 +379,30 @@ class ModemDataCollector:
             timeout=self._modem_config.timeout,
         )
         return loader.fetch(self._parser_config)
+
+    def _load_cbn_resources(self) -> dict[str, Any]:
+        """Fetch CBN resources via XML POST with fun parameters.
+
+        Logout is NOT done by the loader — the collector handles it
+        via ``_execute_logout_if_needed()`` using ``actions.logout``.
+        """
+        from ..loaders.cbn import CBNLoader
+        from ..models.modem_config.auth import FormCbnAuth
+
+        targets = collect_fetch_targets(self._parser_config)
+
+        auth = self._modem_config.auth
+        assert isinstance(auth, FormCbnAuth)
+
+        loader = CBNLoader(
+            session=self._session,
+            base_url=self._base_url,
+            getter_endpoint=auth.getter_endpoint,
+            session_cookie_name=auth.session_cookie_name,
+            timeout=self._modem_config.timeout,
+            model=self._modem_config.model,
+        )
+        return loader.fetch(targets)
 
     def _classify_hnap_error(self, exc: HNAPLoadError) -> ModemResult:
         """Route an HNAP load failure to the correct signal.

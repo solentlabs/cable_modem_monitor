@@ -11,7 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .actions import ActionsConfig, BehaviorsConfig
-from .auth import HNAP_AUTH_STRATEGIES, HTTP_AUTH_STRATEGIES, AuthConfig
+from .auth import CBN_AUTH_STRATEGIES, HNAP_AUTH_STRATEGIES, HTTP_AUTH_STRATEGIES, AuthConfig
 from .health import HealthConfig
 from .metadata import AttributionConfig, HardwareConfig, ReferencesConfig
 from .session import SessionConfig
@@ -31,7 +31,7 @@ class ModemConfig(BaseModel):
     model: str
     model_aliases: list[str] = Field(default_factory=list)
     brands: list[str] = Field(default_factory=list)
-    transport: Literal["http", "hnap"]
+    transport: Literal["http", "hnap", "cbn"]
     default_host: str
 
     # Auth
@@ -130,6 +130,7 @@ class ModemConfig(BaseModel):
 _VALID_STRATEGIES: dict[str, frozenset[str]] = {
     "hnap": HNAP_AUTH_STRATEGIES,
     "http": HTTP_AUTH_STRATEGIES,
+    "cbn": CBN_AUTH_STRATEGIES,
 }
 
 
@@ -158,7 +159,7 @@ def _check_action_types(config: ModemConfig, errors: list[str]) -> None:
     """Validate action types match the declared transport."""
     if config.actions is None:
         return
-    expected_type = config.transport  # "http" or "hnap"
+    expected_type = config.transport  # "http", "hnap", or "cbn"
     for action_name in ("restart", "logout"):
         action = getattr(config.actions, action_name, None)
         if action is not None and action.type != expected_type:

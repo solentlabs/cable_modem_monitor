@@ -1,0 +1,19 @@
+{
+  "_description": "Scale multiplier on column - Msym/s to ksym/s conversion",
+  "_xml": "<root><upstream_table><upstream><usid>1</usid><srate>5.12</srate></upstream><upstream><usid>2</usid><srate>3.84</srate></upstream></upstream_table></root>",
+  "_resource": "11",
+  "_config": {
+    "format": "xml",
+    "resource": "11",
+    "root_element": "upstream_table",
+    "child_element": "upstream",
+    "columns": [
+      {"source": "usid", "field": "channel_id", "type": "integer"},
+      {"source": "srate", "field": "symbol_rate", "type": "float", "scale": 1000}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "symbol_rate": 5120},
+    {"channel_id": 2, "symbol_rate": 3840}
+  ]
+}

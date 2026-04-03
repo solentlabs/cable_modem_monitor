@@ -43,6 +43,7 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["solentlabs"]
+exclude = ["**/test_data/**"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

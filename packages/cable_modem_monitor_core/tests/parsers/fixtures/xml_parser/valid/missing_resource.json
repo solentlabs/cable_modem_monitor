@@ -1,0 +1,15 @@
+{
+  "_description": "Resource key not in dict - returns empty list",
+  "_xml": null,
+  "_resource": "10",
+  "_config": {
+    "format": "xml",
+    "resource": "10",
+    "root_element": "downstream_table",
+    "child_element": "downstream",
+    "columns": [
+      {"source": "freq", "field": "frequency", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

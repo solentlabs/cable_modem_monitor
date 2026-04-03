@@ -90,11 +90,11 @@ but modem-specific behavior comes from config, not from Core code.
 | Data models | `ModemData`, `ChannelData`, `SystemInfo`, `HealthInfo`, `ModemIdentity` |
 | Config schemas | `ModemConfig`, `AuthConfig`, `PageConfig`, `ParserConfig` |
 | ABCs / base classes | `BaseParser`, `BaseAuthStrategy` |
-| Action executors | `orchestration/actions/` — transport-scoped executors (`http_action`, `hnap_action`) with single `execute_action()` dispatch. `ActionResult` return type. |
-| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing used by auth, loaders, and action executors |
+| Action executors | `orchestration/actions/` — transport-scoped executors (`http_action`, `hnap_action`, `cbn_action`) with single `execute_action()` dispatch. `ActionResult` return type. |
+| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth. |
 | Parser coordinator | `ModemParserCoordinator` — factory + orchestration: parser.yaml → `BaseParser` instances → parser.py chaining → `ModemData` |
-| Auth strategies | `none`, `basic`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `hnap`, `url_token` |
-| Resource loaders | HTTP → `BeautifulSoup` or `dict` (format-dependent), HNAP → JSON |
+| Auth strategies | `none`, `basic`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `hnap`, `url_token`, `form_cbn` |
+| Resource loaders | HTTP → `BeautifulSoup` or `dict` (format-dependent), HNAP → JSON, CBN → `Element` |
 | Orchestrator | Policy engine: signal→policy dispatch, circuit breaker, status derivation |
 | ModemDataCollector | Single collection cycle: auth → load → parse → `ModemData` or signal |
 | HealthMonitor | Health probes on independent cadence → `HealthInfo` |
@@ -209,6 +209,7 @@ locks all axes to fixed values.
 graph TD
     T[transport] --> HNAP["<b>hnap</b><hr/>HNAPLoader → dict"]
     T --> HTTP["<b>http</b><hr/>HTTPLoader → BeautifulSoup | dict"]
+    T --> CBN["<b>cbn</b><hr/>CBNLoader → Element"]
 
     HNAP --> HA["<b>AUTH</b><hr/>• HMAC challenge-response"]
     HA --> HS["<b>SESSION</b><hr/>• uid + PrivateKey cookies<br/>• HNAP_AUTH header"]
@@ -217,23 +218,35 @@ graph TD
     HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• form<br/>• form_nonce<br/>• url_token 🔗<br/>• form_pbkdf2 🔗<br/>• form_sjcl 🔗"]
     HTA --> HTS["<b>SESSION</b><hr/>• stateless<br/>• cookie<br/>• CSRF 🔗<br/>• url_token 🔗"]
     HTS --> HTF["<b>FORMAT</b><hr/>• table<br/>• table_transposed<br/>• javascript<br/>• javascript_json<br/>• html_fields<br/>• json<br/>• xml"]
+
+    CBN --> CA["<b>AUTH</b><hr/>• form_cbn (AES-256-CBC)"]
+    CA --> CS["<b>SESSION</b><hr/>• rotating sessionToken cookie<br/>• stable SID cookie"]
+    CS --> CF["<b>FORMAT</b><hr/>• xml"]
 ```
 
 *🔗 Implies specific session mechanism — see
 [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#auth-session-action-consistency)
 for validation rules.*
 
-Both sides follow the same pipeline order: auth → session → format. The
-difference is constraint: for HNAP, each step has exactly one valid choice.
-For HTTP, each step is configured independently — choosing `basic` auth
-doesn't restrict format to HTML tables, and choosing `json` format doesn't
-require `form_pbkdf2` auth.
+All three transports follow the same pipeline order: auth → session →
+format. The difference is constraint: for HNAP and CBN, each step has
+exactly one valid choice. For HTTP, each step is configured independently
+— choosing `basic` auth doesn't restrict format to HTML tables, and
+choosing `json` format doesn't require `form_pbkdf2` auth.
 
 ### HNAP — Fully Constrained
 
 - The protocol defines everything: auth, session, format
 - Only two values vary per modem: HMAC algorithm and action names
 - One strategy handles all HNAP modems
+
+### CBN (Compal Broadband Networks) — Fully Constrained
+
+- Proprietary XML POST API in Compal Broadband Networks modem firmware
+- Single endpoint (`getter.xml`/`setter.xml`) with `fun=N` parameters
+- AES-256-CBC encrypted auth (`CBN_Encrypt` from `encrypt_cryptoJS.js`)
+- Rotating session token on every response
+- One strategy handles all CBN modems (CH7465MT, CH7466CE, CH7465CE)
 
 ### HTTP — Independent Axes
 
@@ -249,6 +262,7 @@ require `form_pbkdf2` auth.
 |-----------|--------|-----------|--------------|-------------------|
 | `hnap` | HNAPLoader → `dict` | `hnap` only | `hnap` only | `hnap` |
 | `http` | HTTPLoader → BeautifulSoup or dict | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2`, `form_sjcl` | `table`, `table_transposed`, `javascript`, `javascript_json`, `html_fields`, `json`, `xml` | `http` |
+| `cbn` | CBNLoader → `Element` | `form_cbn` | `xml` | `cbn` |
 
 At runtime, the format declared in parser.yaml determines how the response
 is decoded. HTML formats (`table`, `table_transposed`, `javascript`,
@@ -278,8 +292,9 @@ existing entries change.
   valid auth list, update validators.
 - **New transport:** Add a new loader, new `BaseParser` implementation(s),
   a new row in the constraint table, and validator updates. No existing
-  code changes. Future transports (`snmp`, `ftp`, `soap`, etc.) are
-  additive — new transport value, new loader, new constraint row.
+  code changes. `cbn` demonstrates this: new loader, new `xml`
+  parser, new `form_cbn` auth — no changes to HTTP or HNAP code.
+  Future transports (`snmp`, `ftp`, etc.) follow the same pattern.
 
 The constraint table is an allowlist, not a lock. It prevents
 misconfigurations without preventing growth.
@@ -307,6 +322,7 @@ from modem.yaml:
 | `form_pbkdf2` | HTTP | No |
 | `form_sjcl` | HTTP | No |
 | `url_token` | HTTP | No |
+| `form_cbn` | CBN | No |
 
 See [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#auth) for per-strategy
 config fields.
@@ -651,9 +667,9 @@ ModemParserCoordinator.parse(resources)
   assemble → ModemData
 ```
 
-Eight extraction formats in two tiers. Seven general-purpose formats
+Nine extraction formats in two tiers. Eight general-purpose formats
 (`table`, `table_transposed`, `javascript`, `javascript_json`, `hnap`,
-`json`, `xml`) are valid for any section. One section-level format
+`json`, `xml`) are valid for any channel section. One section-level format
 (`html_fields`) is valid only for `system_info` sources. Format selection
 is per-section — a modem's `downstream` can use `table_transposed` while
 its `system_info` uses `html_fields` or `javascript`. `parser.yaml`
@@ -1370,13 +1386,13 @@ The test harness in Core consumes these fixtures. This means:
 | No fallback/auto-detection | If no modem.yaml exists, we can't help. User submits HAR, we add support |
 | `last_boot_time` derived in core | Transparent to consumers — same field whether modem provides it or core calculates from uptime |
 | Dynamic `SystemInfo` fields | Modem-specific fields pass through without core changes. Core only understands structured fields |
-| `AuthResult.auth_context` is typed `AuthContext` | Auth strategies store downstream state in a typed `AuthContext` dataclass with `url_token` and `private_key` fields. Runner reads by attribute based on `modem_config.transport`. Adding a transport means adding a field to `AuthContext`, not a magic string key. |
+| `AuthResult.auth_context` is typed `AuthContext` | Auth strategies store downstream state in a typed `AuthContext` dataclass with `url_token` and `private_key` fields. Runner reads by attribute based on `modem_config.transport`. Adding a transport means adding a field to `AuthContext`, not a magic string key. (`cbn` needs no new field — session token lives in cookies, managed by `requests.Session`.) |
 | Coordinator parser registry | Section type → parser function dispatch via dict, not isinstance chain. Five known section types registered; unimplemented formats are stubs that raise `NotImplementedError` with the missing parser name. Adding a format is one registry entry + parser implementation. |
 | `enrich_metadata` separates inference from config assembly | `generate_config` assembles YAML from known facts. Inferring facts from HAR analysis (default_host from request URLs, DOCSIS version from channel types) is a different concern. `enrich_metadata` provides structured guidance on inferred/missing/conflicting fields — essential for self-service contributors who need to know what's missing when their PR validation fails. |
 | `write_modem_package` for file placement | Pipeline produces configs and golden files in memory. Rather than relying on the LLM to write files with correct names and directory structure, a dedicated tool writes the standard catalog structure. Guarantees file layout matches what the test harness expects. |
-| Transport-scoped action executors with single dispatch | HTTP and HNAP actions have different protocols (form-based vs SOAP). Separate modules (`http_action.py`, `hnap_action.py`) prevent coupling; single `execute_action()` dispatch provides unified interface for collector (logout) and orchestrator (restart). |
+| Transport-scoped action executors with single dispatch | HTTP, HNAP, and CBN actions have different protocols (form-based, SOAP, parameterized XML POST). Separate modules (`http_action.py`, `hnap_action.py`, `cbn_action.py`) prevent coupling; single `execute_action()` dispatch provides unified interface for collector (logout) and orchestrator (restart). |
 | Config fields are parameters, not implementations | `endpoint_pattern` supplies a keyword; core provides form-action extraction as a built-in strategy. Contributors specify *what* to find, core handles *how*. Extensible via `extraction_mode` field if a future modem needs non-form extraction. |
-| HNAP protocol primitives in shared `protocol/` module | HMAC signing and protocol constants are used by auth, loaders, and action executors. Shared `protocol/hnap.py` eliminates duplication while each consumer owns its protocol-specific flow. |
+| Protocol primitives in shared `protocol/` module | `protocol/hnap.py`: HMAC signing and constants used by HNAP auth, loaders, and action executors. `protocol/cbn.py`: AES-256-CBC encryption used by `form_cbn` auth. Shared modules eliminate duplication while each consumer owns its transport-specific flow. |
 
 ---
 

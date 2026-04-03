@@ -1,6 +1,6 @@
 """Auth strategy models for modem.yaml.
 
-Eight strategies as a discriminated union on the 'strategy' field.
+Nine strategies as a discriminated union on the 'strategy' field.
 Per MODEM_YAML_SPEC.md Auth section.
 """
 
@@ -131,6 +131,30 @@ class FormSjclAuth(BaseModel):
     cookie_name: str = ""
 
 
+class FormCbnAuth(BaseModel):
+    """CBN (Compal Broadband Networks) AES-256-CBC encrypted form auth.
+
+    Compal modem firmwares use the CryptoJS library to encrypt the
+    password client-side. The AES key and IV are derived from a
+    rotating session token cookie. The login POST goes to a
+    ``setter.xml`` endpoint with ``fun=N`` parameters (same XML POST
+    pattern used for data fetching and actions).
+
+    Requires the ``cryptography`` package: install Core with the
+    ``[cbn]`` extra.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    strategy: Literal["form_cbn"]
+    login_page: str = "/common_page/login.html"
+    getter_endpoint: str = "/xml/getter.xml"
+    setter_endpoint: str = "/xml/setter.xml"
+    session_cookie_name: str = "sessionToken"
+    sid_cookie_name: str = "SID"
+    username_value: str = "NULL"
+    login_fun: int = 15
+
+
 AuthConfig = Annotated[
     Annotated[NoneAuth, Tag("none")]
     | Annotated[BasicAuth, Tag("basic")]
@@ -139,7 +163,8 @@ AuthConfig = Annotated[
     | Annotated[UrlTokenAuth, Tag("url_token")]
     | Annotated[HnapAuth, Tag("hnap")]
     | Annotated[FormPbkdf2Auth, Tag("form_pbkdf2")]
-    | Annotated[FormSjclAuth, Tag("form_sjcl")],
+    | Annotated[FormSjclAuth, Tag("form_sjcl")]
+    | Annotated[FormCbnAuth, Tag("form_cbn")],
     Discriminator("strategy"),
 ]
 
@@ -156,3 +181,4 @@ HTTP_AUTH_STRATEGIES: frozenset[str] = frozenset(
     }
 )
 HNAP_AUTH_STRATEGIES: frozenset[str] = frozenset({"hnap"})
+CBN_AUTH_STRATEGIES: frozenset[str] = frozenset({"form_cbn"})

@@ -1,0 +1,17 @@
+{
+  "_expected_error": "transport 'http' requires action type 'http'",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "none"},
+    "actions": {
+      "restart": {"type": "cbn", "fun": 8}
+    },
+    "hardware": {"docsis_version": "3.0"},
+    "status": "awaiting_verification",
+    "attribution": {"contributors": [{"github": "test-user", "contribution": "HAR capture"}]},
+    "isps": ["Various"]
+  }
+}

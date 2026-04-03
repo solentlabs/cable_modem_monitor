@@ -1,0 +1,22 @@
+{
+  "_description": "fixed_fields assigns static values to every channel",
+  "_xml": "<root><us_table><us><usid>1</usid><freq>50000000</freq></us><us><usid>2</usid><freq>60000000</freq></us></us_table></root>",
+  "_resource": "11",
+  "_config": {
+    "format": "xml",
+    "resource": "11",
+    "root_element": "us_table",
+    "child_element": "us",
+    "columns": [
+      {"source": "usid", "field": "channel_id", "type": "integer"},
+      {"source": "freq", "field": "frequency", "type": "integer"}
+    ],
+    "fixed_fields": {
+      "lock_status": "locked"
+    }
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 50000000, "lock_status": "locked"},
+    {"channel_id": 2, "frequency": 60000000, "lock_status": "locked"}
+  ]
+}

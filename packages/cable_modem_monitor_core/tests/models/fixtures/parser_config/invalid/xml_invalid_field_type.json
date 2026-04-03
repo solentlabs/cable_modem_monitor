@@ -1,0 +1,14 @@
+{
+  "_expected_error": "invalid field type 'bogus'",
+  "_config": {
+    "downstream": {
+      "format": "xml",
+      "resource": "10",
+      "root_element": "downstream_table",
+      "child_element": "downstream",
+      "columns": [
+        {"source": "freq", "field": "frequency", "type": "bogus"}
+      ]
+    }
+  }
+}

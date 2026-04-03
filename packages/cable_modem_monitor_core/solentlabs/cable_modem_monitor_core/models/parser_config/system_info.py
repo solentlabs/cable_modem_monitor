@@ -137,6 +137,31 @@ class JSONSystemInfoSource(BaseModel):
     fields: list[JSONSystemInfoFieldMapping]
 
 
+class XMLSystemInfoFieldMapping(BaseModel):
+    """A field extracted from an XML element for system_info."""
+
+    model_config = ConfigDict(extra="forbid")
+    source: str
+    field: str
+    type: str
+
+    @model_validator(mode="after")
+    def validate_field_type(self) -> XMLSystemInfoFieldMapping:
+        """Ensure type is a valid FIELD_TYPES value."""
+        _check_field_type(self.type)
+        return self
+
+
+class XMLSystemInfoSource(BaseModel):
+    """XML element source for system_info."""
+
+    model_config = ConfigDict(extra="forbid")
+    format: Literal["xml"]
+    resource: str
+    root_element: str
+    fields: list[XMLSystemInfoFieldMapping]
+
+
 def _get_source_format(data: Any) -> str:
     """Extract format from source data for discrimination."""
     if isinstance(data, dict):
@@ -148,7 +173,8 @@ SystemInfoSource = Annotated[
     Annotated[HTMLFieldsSource, Tag("html_fields")]
     | Annotated[HNAPSystemInfoSource, Tag("hnap")]
     | Annotated[JSSystemInfoSource, Tag("javascript")]
-    | Annotated[JSONSystemInfoSource, Tag("json")],
+    | Annotated[JSONSystemInfoSource, Tag("json")]
+    | Annotated[XMLSystemInfoSource, Tag("xml")],
     Discriminator(_get_source_format),
 ]
 

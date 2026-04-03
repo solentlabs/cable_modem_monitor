@@ -41,6 +41,7 @@ Changelog = "https://github.com/solentlabs/cable_modem_monitor/blob/main/CHANGEL
 [project.optional-dependencies]
 mcp = ["pydantic>=2.0"]
 sjcl = ["cryptography>=41.0"]
+cbn = ["cryptography>=41.0"]
 
 [dependency-groups]
 dev = [

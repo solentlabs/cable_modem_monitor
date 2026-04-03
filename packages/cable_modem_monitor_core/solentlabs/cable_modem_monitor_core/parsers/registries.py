@@ -1,7 +1,7 @@
 """Parser registries — type-to-callable dispatch tables.
 
-Maps parser.yaml section config types to parser callables. Six channel
-format types and four system info source types are registered.
+Maps parser.yaml section config types to parser callables. Seven channel
+format types and five system info source types are registered.
 
 Channel parsers: ``(section, resources) -> list[dict]``
 System info parsers: ``(source, resources) -> dict``
@@ -23,9 +23,11 @@ from ..models.parser_config.system_info import (
     HTMLFieldsSource,
     JSONSystemInfoSource,
     JSSystemInfoSource,
+    XMLSystemInfoSource,
 )
 from ..models.parser_config.table import HTMLTableSection
 from ..models.parser_config.transposed import HTMLTableTransposedSection
+from ..models.parser_config.xml_format import XMLSection
 from .formats.hnap import HNAPParser
 from .formats.hnap_fields import HNAPFieldsParser
 from .formats.html_fields import HTMLFieldsParser
@@ -36,6 +38,8 @@ from .formats.js_json_parser import JSJsonParser
 from .formats.js_system_info import JSSystemInfoParser
 from .formats.json_parser import JSONParser
 from .formats.json_system_info import JSONSystemInfoParser
+from .formats.xml_parser import XMLChannelParser
+from .formats.xml_system_info import XMLSystemInfoParser
 
 # ---------------------------------------------------------------------------
 # Channel parser registry
@@ -157,6 +161,18 @@ def _parse_js_json_channels(
     return channels
 
 
+def _parse_xml_channels(
+    section: XMLSection,
+    resources: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Parse channels from an XML section."""
+    parser = XMLChannelParser(section)
+    channels = parser.parse(resources)
+    if not isinstance(channels, list):
+        return []
+    return channels
+
+
 # Maps section config type -> parser callable(section, resources) -> list[dict]
 CHANNEL_PARSERS: dict[type, Callable[..., list[dict[str, Any]]]] = {
     HTMLTableSection: _parse_html_table_channels,
@@ -165,6 +181,7 @@ CHANNEL_PARSERS: dict[type, Callable[..., list[dict[str, Any]]]] = {
     JSEmbeddedSection: _parse_js_embedded_channels,
     JSJsonSection: _parse_js_json_channels,
     JSONSection: _parse_json_channels,
+    XMLSection: _parse_xml_channels,
 }
 
 
@@ -213,12 +230,23 @@ def _parse_json_sysinfo(
     return result if isinstance(result, dict) else {}
 
 
+def _parse_xml_sysinfo(
+    source: XMLSystemInfoSource,
+    resources: dict[str, Any],
+) -> dict[str, Any]:
+    """Parse system_info from XML element fields."""
+    xml_si = XMLSystemInfoParser(source)
+    result = xml_si.parse(resources)
+    return result if isinstance(result, dict) else {}
+
+
 # Maps source config type -> parser callable(source, resources) -> dict
 SYSINFO_PARSERS: dict[type, Callable[..., dict[str, Any]]] = {
     HTMLFieldsSource: _parse_html_fields_sysinfo,
     HNAPSystemInfoSource: _parse_hnap_sysinfo,
     JSSystemInfoSource: _parse_js_sysinfo,
     JSONSystemInfoSource: _parse_json_sysinfo,
+    XMLSystemInfoSource: _parse_xml_sysinfo,
 }
 
 

@@ -1,7 +1,7 @@
 """Action execution — single dispatch for logout and restart commands.
 
 Dispatches modem-side actions to transport-scoped executors based on
-the action type (HTTP or HNAP).  Both the collector (logout) and
+the action type (HTTP, HNAP, or CBN).  Both the collector (logout) and
 orchestrator (restart) use ``execute_action()`` as the single entry
 point.
 
@@ -14,11 +14,12 @@ import logging
 from typing import TYPE_CHECKING
 
 from .base import ActionResult
+from .cbn_action import execute_cbn_action
 from .hnap_action import execute_hnap_action
 from .http_action import execute_http_action
 
 if TYPE_CHECKING:
-    from ...models.modem_config.actions import HnapAction, HttpAction
+    from ...models.modem_config.actions import CbnAction, HnapAction, HttpAction
     from ...models.modem_config.config import ModemConfig
     from ..collector import ModemDataCollector
 
@@ -28,14 +29,14 @@ _logger = logging.getLogger(__name__)
 def execute_action(
     collector: ModemDataCollector,
     modem_config: ModemConfig,
-    action: HttpAction | HnapAction,
+    action: HttpAction | HnapAction | CbnAction,
     *,
     log_level: int = logging.INFO,
 ) -> ActionResult:
     """Execute an action using the collector's session.
 
     Single dispatch point for all modem-side actions.  Extracts
-    session, base URL, and HNAP credentials from the collector and
+    session, base URL, and transport credentials from the collector and
     dispatches to the appropriate transport-scoped executor.
 
     Args:
@@ -48,7 +49,7 @@ def execute_action(
     Returns:
         ActionResult with success status and details.
     """
-    from ...models.modem_config.actions import HnapAction, HttpAction
+    from ...models.modem_config.actions import CbnAction, HnapAction, HttpAction
 
     model = modem_config.model
 
@@ -78,6 +79,20 @@ def execute_action(
             model=model,
         )
 
+    if isinstance(action, CbnAction):
+        setter_endpoint = getattr(modem_config.auth, "setter_endpoint", "/xml/setter.xml")
+        session_cookie_name = getattr(modem_config.auth, "session_cookie_name", "sessionToken")
+        return execute_cbn_action(
+            collector._session,
+            collector._base_url,
+            action,
+            setter_endpoint=setter_endpoint,
+            session_cookie_name=session_cookie_name,
+            timeout=modem_config.timeout,
+            log_level=log_level,
+            model=model,
+        )
+
     _logger.warning("Unknown action type [%s]: %s", model, type(action).__name__)
     return ActionResult(
         success=False,
@@ -88,6 +103,7 @@ def execute_action(
 __all__ = [
     "ActionResult",
     "execute_action",
+    "execute_cbn_action",
     "execute_hnap_action",
     "execute_http_action",
 ]

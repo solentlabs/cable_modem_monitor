@@ -1,0 +1,16 @@
+{
+  "_expected_error": "transport 'http' requires auth strategy in",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {
+      "strategy": "form_cbn"
+    },
+    "hardware": {"docsis_version": "3.0"},
+    "status": "in_progress",
+    "attribution": {"contributors": [{"github": "test-user", "contribution": "HAR capture"}]},
+    "isps": ["Various"]
+  }
+}

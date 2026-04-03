@@ -156,6 +156,9 @@ def _is_safe_finding(finding: dict[str, str]) -> bool:
     pattern = finding["pattern"]
     match = finding["match"]
 
+    if match.lower() in SAFE_VALUES:
+        return True
+
     if pattern == "public_ip":
         return _is_safe_ip_finding(match)
     if pattern == "mac_address":

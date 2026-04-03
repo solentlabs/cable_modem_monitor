@@ -1,0 +1,18 @@
+{
+  "_description": "Single channel - not a list edge case",
+  "_xml": "<root><upstream_table><upstream><freq>30000000</freq><pow>42.0</pow></upstream></upstream_table></root>",
+  "_resource": "11",
+  "_config": {
+    "format": "xml",
+    "resource": "11",
+    "root_element": "upstream_table",
+    "child_element": "upstream",
+    "columns": [
+      {"source": "freq", "field": "frequency", "type": "integer"},
+      {"source": "pow", "field": "power", "type": "float"}
+    ]
+  },
+  "_expected": [
+    {"frequency": 30000000, "power": 42.0}
+  ]
+}

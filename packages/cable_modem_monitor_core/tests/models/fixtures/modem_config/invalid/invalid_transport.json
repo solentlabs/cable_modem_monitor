@@ -1,5 +1,5 @@
 {
-  "_expected_error": "Input should be 'http' or 'hnap'",
+  "_expected_error": "Input should be 'http', 'hnap' or 'cbn'",
   "_config": {
     "manufacturer": "Solent Labs",
     "model": "T1",

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 from .base import AuthHandler
 from .basic import BasicAuthHandler
+from .cbn import FormCbnAuthHandler
 from .form import FormAuthHandler
 from .pbkdf2 import FormPbkdf2AuthHandler
 from .sjcl import FormSjclAuthHandler
@@ -136,6 +137,43 @@ def _create_form_pbkdf2_auth_handler(modem_config: ModemConfig) -> FormPbkdf2Aut
     )
 
 
+def _create_form_cbn_auth_handler(
+    modem_config: ModemConfig,
+    har_entries: list[dict[str, Any]] | None = None,
+) -> FormCbnAuthHandler:
+    """Build a FormCbnAuthHandler from modem config.
+
+    Extracts CBN-specific parameters: setter/getter endpoints, session
+    cookie name, login fun, and action fun values (logout, restart)
+    from the config. Passes HAR entries for building the getter
+    response lookup.
+    """
+    from ...models.modem_config.actions import CbnAction
+    from ...models.modem_config.auth import FormCbnAuth
+
+    auth = modem_config.auth
+    assert isinstance(auth, FormCbnAuth)
+
+    logout_fun: int | None = None
+    restart_fun: int | None = None
+    if modem_config.actions:
+        if modem_config.actions.logout and isinstance(modem_config.actions.logout, CbnAction):
+            logout_fun = modem_config.actions.logout.fun
+        if modem_config.actions.restart and isinstance(modem_config.actions.restart, CbnAction):
+            restart_fun = modem_config.actions.restart.fun
+
+    return FormCbnAuthHandler(
+        login_page_path=auth.login_page,
+        setter_endpoint=auth.setter_endpoint,
+        getter_endpoint=auth.getter_endpoint,
+        session_cookie_name=auth.session_cookie_name,
+        login_fun=auth.login_fun,
+        logout_fun=logout_fun,
+        restart_fun=restart_fun,
+        har_entries=har_entries,
+    )
+
+
 def create_auth_handler(
     modem_config: ModemConfig | None,
     har_entries: list[dict[str, Any]] | None = None,
@@ -147,8 +185,8 @@ def create_auth_handler(
             Uses ``auth.strategy`` to select the handler and
             ``auth.cookie_name`` for session tracking.
         har_entries: HAR ``log.entries`` list. Required for HNAP auth
-            to build the merged data response. Ignored for other
-            strategies.
+            (merged data response) and CBN auth (getter dispatch).
+            Ignored for other strategies.
 
     Returns:
         Auth handler instance.
@@ -156,6 +194,7 @@ def create_auth_handler(
     from ...models.modem_config.auth import (
         BasicAuth,
         FormAuth,
+        FormCbnAuth,
         FormNonceAuth,
         FormPbkdf2Auth,
         FormSjclAuth,
@@ -183,6 +222,9 @@ def create_auth_handler(
 
     if isinstance(auth, FormSjclAuth):
         return _create_form_sjcl_auth_handler(modem_config)
+
+    if isinstance(auth, FormCbnAuth):
+        return _create_form_cbn_auth_handler(modem_config, har_entries)
 
     if isinstance(auth, UrlTokenAuth):
         # URL token auth GETs the login page with credentials in the URL.

@@ -52,7 +52,8 @@ declaratively.
 ## Two Layers: Transport and Format
 
 **Transport** (modem.yaml) controls *how data is fetched* — the resource
-loader. It identifies the transport protocol (`http` or `hnap`).
+loader. It identifies the transport protocol (`http`, `hnap`, or
+`cbn`).
 
 **Format** (parser.yaml, per-section) controls *how data is extracted* —
 the extraction strategy. Each section (`downstream`, `upstream`,
@@ -65,13 +66,15 @@ parser.yaml format   → decode step + extraction strategy (how to extract, per-
 
 For the `http` transport, format is independent — any format can appear
 with any auth strategy. A modem can mix formats across sections (e.g.,
-`table` for downstream, `javascript` for system_info). For HNAP, the
-transport fully constrains the format (always `hnap`).
+`table` for downstream, `javascript` for system_info). For `hnap` and
+`cbn`, the transport constrains the format (`hnap` and `xml`
+respectively).
 
 | Transport | Valid Formats | Why |
 |-----------|--------------|-----|
 | `hnap` | `hnap` | Protocol-defined: SOAP JSON with delimiters |
-| `http` | `table`, `table_transposed`, `html_fields`, `javascript`, `json` | Format determines decode step; any format supports optional `encoding` property (e.g., `base64` — decoded before format-specific parsing). `xml` is planned but not yet implemented. |
+| `http` | `table`, `table_transposed`, `html_fields`, `javascript`, `json` | Format determines decode step; any format supports optional `encoding` property (e.g., `base64` — decoded before format-specific parsing). |
+| `cbn` | `xml` | XML POST API: parameterized POST with XML responses |
 
 See [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#validation-rules) for the full transport constraint
 table including auth strategies.
@@ -89,6 +92,8 @@ table including auth strategies.
 | **JSON** | | | |
 | `hnap` | `HNAPParser` | Delimiter-separated values in HNAP JSON responses | any section |
 | `json` | `JSONParser` | JSON response structures via field paths | any section |
+| **XML** | | | |
+| `xml` | `XMLParser` | XML element children via tag name navigation | any section |
 
 ### Per-Section Format in Practice
 
@@ -1083,6 +1088,148 @@ and `filter`. Results from all arrays are concatenated.
 
 ---
 
+### XMLParser
+
+Extracts channel data from XML responses. The resource dict value is
+a `defusedxml.ElementTree.Element` (the parsed XML root). The parser
+navigates to a named root element, then iterates its child elements
+to extract channels.
+
+**parser.yaml schema (channel section):**
+
+```yaml
+downstream:
+  format: xml
+  resource: "10"
+  root_element: downstream_table
+  child_element: downstream
+  columns:
+    - source: chid
+      field: channel_id
+      type: integer
+    - source: freq
+      field: frequency_hz
+      type: integer
+    - source: pow
+      field: power_dbmv
+      type: float
+    - source: snr
+      field: snr_db
+      type: float
+    - source: mod
+      field: modulation
+      type: string
+    - source: PreRs
+      field: corrected
+      type: integer
+    - source: PostRs
+      field: uncorrected
+      type: integer
+  channel_type:
+    fixed: qam
+  lock_status:
+    all_of:
+      - IsQamLocked
+      - IsFECLocked
+      - IsMpegLocked
+  filter:
+    frequency_hz:
+      not_equal: "0"
+
+upstream:
+  format: xml
+  resource: "11"
+  root_element: upstream_table
+  child_element: upstream
+  columns:
+    - source: usid
+      field: channel_id
+      type: integer
+    - source: srate
+      field: symbol_rate
+      type: float
+      scale: 1000             # Msym/s → ksym/s
+  channel_type:
+    field: modulation
+    map:
+      "64qam": "qam"
+      "OFDMA": "ofdma"
+  fixed_fields:
+    lock_status: "locked"     # presence in table implies lock
+  filter:
+    frequency:
+      not: 0
+```
+
+| Property | Type | Required | Description |
+|----------|------|:--------:|-------------|
+| `format` | string | yes | `"xml"` |
+| `resource` | string | yes | Key in the resource dict (for `cbn`, this is the `fun` parameter value) |
+| `root_element` | string | yes | Tag name of the root XML element containing channel data (e.g., `"downstream_table"`) |
+| `child_element` | string | yes | Tag name of the repeated child elements representing individual channels (e.g., `"downstream"`) |
+| `columns` | list | yes | Mappings from XML sub-element tag names to canonical field names |
+| `columns[].source` | string | yes | XML child element tag name (e.g., `"freq"`, `"pow"`) |
+| `columns[].field` | string | yes | Canonical field name (from field registry) |
+| `columns[].type` | string | yes | Target type: `integer`, `float`, or `string` |
+| `columns[].scale` | number | no | Multiplier applied after type conversion (e.g., `1000` to convert Msym/s → ksym/s). Whole-number results are cast to int. |
+| `channel_type` | object | no | Fixed or field-derived channel type assignment |
+| `lock_status` | object | no | Derived lock status from multiple boolean XML fields. Contains `all_of`: list of sub-element tag names whose boolean values are ANDed — all must be true for `"locked"`, otherwise `"not_locked"`. |
+| `fixed_fields` | map | no | Static field values assigned to every channel (e.g., `lock_status: "locked"` when presence in the table implies lock). Applied after column extraction and channel_type. |
+| `filter` | map | no | Field-based row filtering (same as HTML table filter) |
+
+**parser.yaml schema (system info source):**
+
+```yaml
+system_info:
+  sources:
+    - format: xml
+      resource: "2"
+      root_element: cm_system_info
+      fields:
+        - source: cm_hardware_version
+          field: hardware_version
+        - source: cm_system_uptime
+          field: system_uptime
+```
+
+| Property | Type | Required | Description |
+|----------|------|:--------:|-------------|
+| `format` | string | yes | `"xml"` |
+| `resource` | string | yes | Key in the resource dict |
+| `root_element` | string | yes | Tag name of the root XML element containing the fields |
+| `fields` | list | yes | Mappings from XML sub-element tags to system_info field names |
+| `fields[].source` | string | yes | XML element tag name |
+| `fields[].field` | string | yes | Canonical field name |
+
+**Extraction algorithm (channels):**
+
+1. Get `Element` from resource dict by `resource` key
+2. Find the root element by tag name (`root_element`). If the
+   parsed root IS the target element, use it directly; otherwise
+   search children.
+3. Iterate child elements matching `child_element` tag name
+4. For each child: read `.text` of sub-elements named by each
+   column's `source` field
+5. Apply type conversion (`integer`, `float`, `string`)
+6. If `scale` is set on a column, multiply the converted value;
+   cast whole-number floats to int
+7. Apply `channel_type` (fixed or field-derived mapping)
+8. If `lock_status.all_of` is set, AND the boolean values of the
+   listed sub-elements — `"locked"` if all true, `"not_locked"`
+   otherwise
+9. Apply `fixed_fields` — static values override/fill fields on
+   every channel
+10. Apply `filter` — exclude channels by field value
+
+**Extraction algorithm (system info):**
+
+1. Get `Element` from resource dict by `resource` key
+2. Find the root element by tag name (`root_element`)
+3. For each field mapping: find sub-element by `source` tag name,
+   read `.text` as the field value
+
+---
+
 ## System Info
 
 System info produces a flat dict instead of a channel list. Unlike
@@ -1232,6 +1379,7 @@ overlap — each source owns distinct fields.
 | `javascript` | HTML page | JS function body → delimited string → offset |
 | `hnap` | HNAP response | Action response key → JSON key |
 | `json` | REST response | Object path → JSON key |
+| `xml` | XML response | Root element → sub-element tag name |
 
 #### `javascript` system info field schema
 

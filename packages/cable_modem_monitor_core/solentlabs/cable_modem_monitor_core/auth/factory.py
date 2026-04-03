@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from .base import BaseAuthManager
 from .basic import BasicAuthManager
 from .form import FormAuthManager
+from .form_cbn import FormCbnAuthManager
 from .form_nonce import FormNonceAuthManager
 from .form_pbkdf2 import FormPbkdf2AuthManager
 from .form_sjcl import FormSjclAuthManager
@@ -40,6 +41,7 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
     from ..models.modem_config.auth import (
         BasicAuth,
         FormAuth,
+        FormCbnAuth,
         FormNonceAuth,
         FormPbkdf2Auth,
         FormSjclAuth,
@@ -73,6 +75,9 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
 
     if isinstance(auth, FormSjclAuth):
         return FormSjclAuthManager(auth)
+
+    if isinstance(auth, FormCbnAuth):
+        return FormCbnAuthManager(auth)
 
     _logger.warning(
         "Unknown auth strategy type: %s, falling back to NoneAuthManager",

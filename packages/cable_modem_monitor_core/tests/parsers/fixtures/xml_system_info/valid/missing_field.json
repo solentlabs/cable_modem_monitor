@@ -1,0 +1,17 @@
+{
+  "_description": "Missing XML element is skipped gracefully",
+  "_xml": "<root><cm_system_info><cm_docsis_mode>DOCSIS 3.1</cm_docsis_mode></cm_system_info></root>",
+  "_resource": "2",
+  "_config": {
+    "format": "xml",
+    "resource": "2",
+    "root_element": "cm_system_info",
+    "fields": [
+      {"source": "cm_docsis_mode", "field": "docsis_mode", "type": "string"},
+      {"source": "cm_nonexistent", "field": "phantom", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "docsis_mode": "DOCSIS 3.1"
+  }
+}

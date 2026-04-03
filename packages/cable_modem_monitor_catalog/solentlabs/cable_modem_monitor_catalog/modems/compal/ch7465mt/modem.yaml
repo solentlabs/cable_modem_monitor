@@ -1,0 +1,60 @@
+manufacturer: Compal
+model: CH7465MT
+model_aliases:
+  - CH7465LG
+brands: []
+transport: cbn
+default_host: "192.168.0.1"
+
+auth:
+  strategy: form_cbn
+
+session:
+  max_concurrent: 1
+
+actions:
+  restart:
+    type: cbn
+    fun: 8
+  logout:
+    type: cbn
+    fun: 16
+
+behaviors:
+  restart:
+    window_seconds: 300
+
+hardware:
+  docsis_version: "3.0"
+  release_date: "2015"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "[PR #129 — CH7465MT HAR captures](https://github.com/solentlabs/cable_modem_monitor/pull/129)"
+  hardware: "[Compal CH7465MT datasheet](https://www.compal-broadband.com)"
+
+attribution:
+  contributors:
+    - github: mtheli
+      contribution: "HAR captures (3x sanitized), v3.13 implementation (PR #129)"
+    - github: kwschulz
+      contribution: "Maintainer — v3.14 CBN transport, parser, catalog entry"
+
+isps:
+  - MTAT
+
+notes: |
+  CBN (Compal Broadband Networks) firmware modem.
+  XML POST API: single getter/setter endpoints, fun=N parameter dispatch.
+  Rotating sessionToken cookie on every response.
+  AES-256-CBC encrypted login (CBN_Encrypt from encrypt_cryptoJS.js).
+  Max 1 concurrent session — explicit logout required.
+  Default credentials: unknown / user-configured password.
+
+references:
+  issues:
+    - "[#77 — [Modem Request] Compal CH7465CE](https://github.com/solentlabs/cable_modem_monitor/issues/77)"
+    - "[#80 — [Modem Request] Compal CH7466CE](https://github.com/solentlabs/cable_modem_monitor/issues/80)"
+  prs:
+    - "[#129 — CH7465MT implementation](https://github.com/solentlabs/cable_modem_monitor/pull/129)"

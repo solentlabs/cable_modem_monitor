@@ -1,0 +1,22 @@
+{
+  "_description": "lock_status derived from AND of multiple boolean XML fields",
+  "_xml": "<root><ds_table><ds><chid>1</chid><IsQamLocked>1</IsQamLocked><IsFECLocked>1</IsFECLocked><IsMpegLocked>1</IsMpegLocked></ds><ds><chid>2</chid><IsQamLocked>1</IsQamLocked><IsFECLocked>0</IsFECLocked><IsMpegLocked>1</IsMpegLocked></ds><ds><chid>3</chid><IsQamLocked>1</IsQamLocked><IsFECLocked>1</IsFECLocked></ds></ds_table></root>",
+  "_resource": "10",
+  "_config": {
+    "format": "xml",
+    "resource": "10",
+    "root_element": "ds_table",
+    "child_element": "ds",
+    "columns": [
+      {"source": "chid", "field": "channel_id", "type": "integer"}
+    ],
+    "lock_status": {
+      "all_of": ["IsQamLocked", "IsFECLocked", "IsMpegLocked"]
+    }
+  },
+  "_expected": [
+    {"channel_id": 1, "lock_status": "locked"},
+    {"channel_id": 2, "lock_status": "not_locked"},
+    {"channel_id": 3, "lock_status": "not_locked"}
+  ]
+}

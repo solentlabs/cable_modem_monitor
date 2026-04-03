@@ -36,8 +36,21 @@ class HnapAction(BaseModel):
     success_value: str = ""
 
 
+class CbnAction(BaseModel):
+    """CBN XML POST parameterized action.
+
+    Actions are POST requests to the setter_endpoint (from auth config)
+    with a ``fun=N`` parameter identifying the action. The rotating
+    session token must be included as the first POST body parameter.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["cbn"]
+    fun: int
+
+
 ActionConfig = Annotated[
-    Annotated[HttpAction, Tag("http")] | Annotated[HnapAction, Tag("hnap")],
+    Annotated[HttpAction, Tag("http")] | Annotated[HnapAction, Tag("hnap")] | Annotated[CbnAction, Tag("cbn")],
     Discriminator("type"),
 ]
 

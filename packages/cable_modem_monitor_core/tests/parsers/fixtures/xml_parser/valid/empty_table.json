@@ -1,0 +1,15 @@
+{
+  "_description": "Empty table - no child elements",
+  "_xml": "<root><downstream_table></downstream_table></root>",
+  "_resource": "10",
+  "_config": {
+    "format": "xml",
+    "resource": "10",
+    "root_element": "downstream_table",
+    "child_element": "downstream",
+    "columns": [
+      {"source": "freq", "field": "frequency", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

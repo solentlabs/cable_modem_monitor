@@ -1,0 +1,22 @@
+{
+  "_description": "Basic downstream extraction - 3 channels from XML",
+  "_xml": "<root><downstream_table><downstream><freq>500000000</freq><pow>5.2</pow><snr>38.1</snr><chid>1</chid></downstream><downstream><freq>506000000</freq><pow>5.5</pow><snr>39.0</snr><chid>2</chid></downstream><downstream><freq>512000000</freq><pow>5.8</pow><snr>39.5</snr><chid>3</chid></downstream></downstream_table></root>",
+  "_resource": "10",
+  "_config": {
+    "format": "xml",
+    "resource": "10",
+    "root_element": "downstream_table",
+    "child_element": "downstream",
+    "columns": [
+      {"source": "freq", "field": "frequency", "type": "integer"},
+      {"source": "pow", "field": "power", "type": "float"},
+      {"source": "snr", "field": "snr", "type": "float"},
+      {"source": "chid", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": [
+    {"frequency": 500000000, "power": 5.2, "snr": 38.1, "channel_id": 1},
+    {"frequency": 506000000, "power": 5.5, "snr": 39.0, "channel_id": 2},
+    {"frequency": 512000000, "power": 5.8, "snr": 39.5, "channel_id": 3}
+  ]
+}

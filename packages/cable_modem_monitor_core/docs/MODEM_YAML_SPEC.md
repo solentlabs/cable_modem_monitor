@@ -42,7 +42,7 @@ model_aliases:                    # optional — config flow search
   - "CommScope SB8200"
 brands:                           # optional — config flow search
   - "Surfboard"
-transport: http                    # http | hnap
+transport: http                    # http | hnap | cbn
 default_host: "192.168.100.1"
 
 # Auth
@@ -107,13 +107,14 @@ references:
 | `model` | string | yes | Model identifier (e.g., "SB8200", "CM1200") |
 | `model_aliases` | list[string] | no | Alternative model names for config flow search (e.g., `["SB8200v2", "CommScope SB8200"]`) |
 | `brands` | list[string] | no | Product branding for config flow search (e.g., `["Surfboard"]`) |
-| `transport` | enum | yes | `http` or `hnap` |
+| `transport` | enum | yes | `http`, `hnap`, or `cbn` |
 | `default_host` | string | yes | Default IP address (e.g., "192.168.100.1") |
 
-`transport` identifies the transport protocol (`http` or `hnap`).
-For `http`, auth, session, and format are configured independently.
-For `hnap`, the protocol constrains all other axes. See
-[Validation Rules](#validation-rules) for details.
+`transport` identifies the transport protocol (`http`, `hnap`, or
+`cbn`). For `http`, auth, session, and format are configured
+independently. For `hnap` and `cbn`, the transport constrains
+auth, format, and action types. See [Validation Rules](#validation-rules)
+for details.
 
 `default_host` is the pre-filled value in the config flow. Users can
 override it during setup. Most cable modems use `192.168.100.1`.
@@ -542,6 +543,86 @@ Evidence: Arris Touchstone gateway firmwares (e.g., TG3442DE) that
 embed the SJCL library in their web interface. Constants are found
 in `base_95x.js` or similar JS files in HAR captures.
 
+### `form_cbn`
+
+CBN (Compal Broadband Networks) AES-256-CBC encrypted form auth.
+Compal modem firmwares use the CryptoJS library to encrypt the
+password client-side. The AES key and IV are derived from a rotating
+session token cookie — each response rotates the token via
+`Set-Cookie`. The login POST goes to a `setter.xml` endpoint with
+`fun=N` parameters (same XML POST pattern used for data fetching).
+
+Requires the ``cryptography`` package. Install Core with the
+``[cbn]`` extra: ``pip install solentlabs-cable-modem-monitor-core[cbn]``.
+
+```yaml
+auth:
+  strategy: form_cbn
+  login_page: "/common_page/login.html"
+  getter_endpoint: "/xml/getter.xml"
+  setter_endpoint: "/xml/setter.xml"
+  session_cookie_name: "sessionToken"
+  sid_cookie_name: "SID"
+  username_value: "NULL"
+  login_fun: 15
+
+session:
+  max_concurrent: 1
+  headers:
+    X-Requested-With: "XMLHttpRequest"
+
+actions:
+  logout:
+    type: cbn
+    fun: 16
+  restart:
+    type: cbn
+    fun: 8
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `login_page` | string | `"/common_page/login.html"` | Page to GET for the initial `sessionToken` cookie |
+| `getter_endpoint` | string | `"/xml/getter.xml"` | URL for XML POST data fetches (`fun=N` parameters) |
+| `setter_endpoint` | string | `"/xml/setter.xml"` | URL for login, logout, and action POSTs |
+| `session_cookie_name` | string | `"sessionToken"` | Cookie that carries the rotating session token. Rotates on every response. |
+| `sid_cookie_name` | string | `"SID"` | Secondary session cookie set after login. Extracted from login response body. Stable for the session lifetime. |
+| `username_value` | string | `"NULL"` | Username sent in the login POST. Compal modems use single-password auth — literal `"NULL"` is the default. |
+| `login_fun` | int | `15` | `fun` parameter value for the login POST to `setter_endpoint` |
+
+**Auth flow:**
+
+1. **GET login page** — receive initial `sessionToken` cookie.
+2. **Derive AES key and IV** — `key = SHA256(sessionToken)` (32 bytes),
+   `iv = MD5(sessionToken)` (16 bytes).
+3. **Encrypt password** — AES-256-CBC with PKCS7 padding. Output is
+   `base64(":" + hex(ciphertext))`. This replicates the `CBN_Encrypt`
+   function from Compal's `encrypt_cryptoJS.js`.
+4. **POST login** — send to `setter_endpoint`:
+   `token=<sessionToken>&fun=<login_fun>&Username=<username_value>&Password=<encrypted>`.
+   **Token must be the first parameter** (modem firmware rejects other
+   orderings).
+5. **Check response** — HTTP status is always 200. Body contains
+   `"successful"` on success or `"idloginincorrect"` on failure.
+   Extract SID from response body via `SID=(\d+)` regex.
+6. **Set SID cookie** — domain must match the modem hostname (not empty
+   domain), otherwise `requests` won't send the cookie for IP addresses.
+
+**Success detection:** Response body must contain `"successful"` AND
+HTTP status must be 200. A 302 redirect to the login page also
+contains `"successful"` in JS template strings — checking both status
+and body prevents false positives.
+
+**Lockout indicators:** Pre-login `getter.xml?fun=1` (GlobalSettings)
+exposes `<LockedOut>` and `<AccessDenied>` fields. When `LockedOut`
+is not `"Disable"`, the modem has temporarily locked the account
+after too many failed attempts.
+
+Evidence: Compal CH7465MT (Magenta AT / UPC / Ziggo / Virgin Media
+"Connect Box"). The `CBN_Encrypt` function is in `encrypt_cryptoJS.js`
+which loads CryptoJS v3.1.2 (`AES.js`, `sha256.js`, `md5.js`).
+Related modems CH7466CE and CH7465CE share the same auth flow.
+
 ---
 
 ## Session
@@ -674,7 +755,7 @@ actions:
 
 | Field | Type | Required | Description |
 |-------|------| :--------: |-------------|
-| `type` | enum | yes | `http` or `hnap` |
+| `type` | enum | yes | `http`, `hnap`, or `cbn` |
 | `method` | string | yes | HTTP method (`GET`, `POST`, etc.). No default — must be explicit. |
 | `endpoint` | string | yes | URL path to send the request to |
 | `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`. If absent, no request body. |
@@ -702,13 +783,39 @@ actions:
 
 | Field | Type | Required | Description |
 |-------|------| :--------: |-------------|
-| `type` | enum | yes | `http` or `hnap` |
+| `type` | enum | yes | `http`, `hnap`, or `cbn` |
 | `action_name` | string | yes | HNAP SOAP action to invoke |
 | `pre_fetch_action` | string | no | Action to call first (extract current config for template vars) |
 | `params` | map | no | SOAP parameters. Values with `${key:default}` are replaced with pre-fetch values. |
 | `response_key` | string | no | Key in the SOAP response to check |
 | `result_key` | string | no | Key within the response to match |
 | `success_value` | string | no | Expected value indicating success |
+
+### Action schema — `type: cbn`
+
+XML POST parameterized request. Used by the `cbn` transport.
+Actions are POST requests to the `setter_endpoint` (from auth config)
+with a `fun=N` parameter identifying the action. The rotating session
+token is included as the first POST body parameter.
+
+```yaml
+actions:
+  restart:
+    type: cbn
+    fun: 8
+  logout:
+    type: cbn
+    fun: 16
+```
+
+| Field | Type | Required | Description |
+|-------|------| :--------: |-------------|
+| `type` | enum | yes | `cbn` |
+| `fun` | int | yes | `fun` parameter value for the setter POST (e.g., `8` for reboot, `16` for logout) |
+
+The executor reads the current `sessionToken` cookie and POSTs
+`token=<sessionToken>&fun=<value>` to `setter_endpoint`. Connection
+errors during restart are treated as success (the modem is rebooting).
 
 ### Logout examples
 
@@ -952,20 +1059,21 @@ references:
 
 ### Transport constraints
 
-The transport identifies the protocol. For HNAP, it constrains all other
-axes. For HTTP, auth, session, and format are configured independently,
-subject to the [auth-session-action consistency](#auth-session-action-consistency)
+The transport identifies the protocol. For HNAP and CBN, the
+transport constrains auth, format, and action types. For HTTP, auth,
+session, and format are configured independently, subject to the
+[auth-session-action consistency](#auth-session-action-consistency)
 rules below.
 
 | Transport | Valid auth strategies | Valid session | Valid formats | Valid action types |
 |-----------|---------------------|--------------|---------------|-------------------|
 | `http` | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2`, `form_sjcl` | stateless, cookie, CSRF, url_token | `table`, `table_transposed`, `html_fields`, `javascript`, `javascript_json`, `json` | `http` |
 | `hnap` | `hnap` | implicit (uid + HNAP_AUTH) | `hnap` | `hnap` |
+| `cbn` | `form_cbn` | cookie (rotating sessionToken + stable SID) | `xml` | `cbn` |
 
 The format field in parser.yaml determines how the response is decoded.
-HTML formats produce `BeautifulSoup`, structured formats produce `dict`.
-See ARCHITECTURE.md Constraint Summary for details.
-(`xml` format is planned but not yet implemented — no XML modems exist.)
+HTML formats produce `BeautifulSoup`, structured formats (`json`, `xml`)
+produce `dict` or `Element`. See ARCHITECTURE.md Constraint Summary.
 
 Violations are rejected at both **build time** (Pydantic validation in
 Catalog's dev-gate) and **load time** (`load_modem_config()` in Core)

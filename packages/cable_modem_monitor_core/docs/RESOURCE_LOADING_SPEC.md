@@ -140,6 +140,66 @@ HNAP firmware uses non-standard status codes for session rejection
 cannot distinguish auth failure from server error. The session-reuse
 context resolves the ambiguity.
 
+### CBN XML POST Loading
+
+The `cbn` transport uses a single HTTP endpoint
+(`getter_endpoint` from auth config, typically `/xml/getter.xml`) for
+all data fetches. Each data source is identified by a `fun=N` POST
+body parameter rather than a URL path (`fun` = function code — the
+firmware's internal dispatch ID, used as-is from the wire format).
+The loader POSTs sequentially because the server rotates the session
+token on every response.
+
+**Fetch cycle:**
+
+1. For each target in the fetch list (derived from parser.yaml
+   `resource` fields):
+   a. Read the current `sessionToken` from `session.cookies`
+   b. POST to `getter_endpoint` with body
+      `token=<sessionToken>&fun=<target.path>` — token **must be the
+      first parameter** (modem firmware rejects other orderings)
+   c. Parse the XML response with `defusedxml.ElementTree.fromstring()`
+   d. Store the root `Element` in the resource dict keyed by `target.path`
+2. Return the resource dict. The loader does **not** send logout —
+   the collector handles logout via `actions.logout` config, consistent
+   with the HTTP and HNAP transports (loader loads, collector manages
+   lifecycle).
+
+**Resource dict contract:**
+
+```python
+{
+    "10": Element,   # downstream_table XML
+    "11": Element,   # upstream_table XML
+    "2":  Element,   # cm_system_info XML
+    "1":  Element,   # GlobalSettings XML
+    "144": Element,  # cmstatus XML
+}
+```
+
+Keys are the `fun` parameter strings (matching parser.yaml `resource`
+fields). Values are `defusedxml.ElementTree.Element` objects
+representing the parsed XML root.
+
+**Token rotation:** The server sets a new `sessionToken` cookie via
+`Set-Cookie` on every response. `requests.Session` handles this
+automatically — the loader reads the cookie before each POST to
+construct the `token` body parameter.
+
+**Logout lifecycle:** Unlike HTTP (no mandatory cleanup) and HNAP
+(session is implicit), `cbn` modems allow only one concurrent
+session. Logout is handled by the collector via `actions.logout`
+config — the same pattern as HTTP and HNAP. The loader is
+responsible only for fetching data; the collector manages session
+lifecycle (authenticate → load → parse → logout). See
+`ORCHESTRATION_SPEC.md` § `_execute_logout_if_needed()`. Logout
+failure is logged but does not fail the collection cycle.
+
+**Error signals:** Same as HTTP — `ConnectionError`, `Timeout`,
+non-200 status codes. Additionally, malformed XML responses are
+logged and the target is skipped (parser receives no entry for that
+fun value).
+
 ### Path Deduplication
 
 Multiple sections in parser.yaml can reference the same URL path.
@@ -179,6 +239,8 @@ The orchestrator builds the fetch list from parser.yaml at startup:
 - **HNAP:** Derives action names from parser.yaml `response_key`
   values (strip `Response` suffix) and batches them in a single
   `GetMultipleHNAPs` request
+- **CBN:** Collects all unique `resource` values (fun parameter
+  strings) from parser.yaml sections and system_info sources
 
 See [PARSING_SPEC.md](PARSING_SPEC.md#fetch-list-derivation) for
 details on how parser.yaml drives the fetch list.
@@ -221,6 +283,7 @@ instantiated:
 |-------------|--------|------------|
 | `http` | HTTPLoader | Format-dependent: `BeautifulSoup` (HTML formats) or `dict` (structured formats) |
 | `hnap` | HNAPLoader | `dict` (JSON) |
+| `cbn` | CBNLoader | `defusedxml.ElementTree.Element` |
 
 Selection happens once at startup (or after config change) and persists
 for the integration's lifetime. The loader is instantiated by the
@@ -357,10 +420,12 @@ Auth Manager ──► Resource Loader ──► Parser
 |-----------|----------------------|-----------------|
 | HTTP | 1 per unique path in parser.yaml (typically 2-4) | 1-5s total (modem-dependent) |
 | HNAP | 1 batched POST (all actions) | 1-2s |
+| CBN | 1 per unique `fun` value in parser.yaml (typically 3-5) | 2-5s total (sequential, no batching) |
 
 HNAP is the most efficient — one request regardless of action count.
 HTTP scales with the number of unique data pages, but most modems
-have 2-4 data pages.
+have 2-4 data pages. CBN is similar to HTTP in request count but
+strictly sequential due to token rotation — no parallel fetching.
 
 ### Per-Resource Timing
 

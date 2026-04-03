@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
-from solentlabs.cable_modem_monitor_core.models.modem_config.actions import HttpAction
+from solentlabs.cable_modem_monitor_core.models.modem_config.actions import CbnAction, HttpAction
 
 from tests.conftest import collect_fixtures, load_fixture
 
@@ -49,7 +49,7 @@ def test_valid_modem_config(fixture_path: Path):
     config = ModemConfig.model_validate(load_fixture(fixture_path))
     assert config.manufacturer
     assert config.model
-    assert config.transport in ("http", "hnap")
+    assert config.transport in ("http", "hnap", "cbn")
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +119,12 @@ FIELD_ACCESS_CASES = [
     ("health_config.json",               "health.http_probe",       False),
     ("health_config.json",               "health.supports_head",    False),
     ("health_config.json",               "health.supports_icmp",    False),
+    ("auth_form_cbn.json",               "auth.strategy",           "form_cbn"),
+    ("auth_form_cbn.json",               "auth.login_fun",          15),
+    ("auth_form_cbn.json",               "auth.getter_endpoint",    "/xml/getter.xml"),
+    ("auth_form_cbn.json",               "auth.setter_endpoint",    "/xml/setter.xml"),
+    ("auth_form_cbn.json",               "auth.session_cookie_name", "sessionToken"),
+    ("auth_form_cbn.json",               "auth.username_value",     "NULL"),
 ]
 # fmt: on
 
@@ -196,3 +202,13 @@ class TestRelationships:
         assert config.actions.logout is not None
         assert isinstance(config.actions.logout, HttpAction)
         assert config.actions.logout.endpoint == "/logout.asp"
+
+    def test_cbn_transport_with_actions(self):
+        """CBN transport with cbn-typed actions."""
+        config = _load("auth_form_cbn.json")
+        assert config.transport == "cbn"
+        assert config.actions is not None
+        assert isinstance(config.actions.logout, CbnAction)
+        assert config.actions.logout.fun == 16
+        assert isinstance(config.actions.restart, CbnAction)
+        assert config.actions.restart.fun == 8

@@ -17,6 +17,7 @@ from .json_format import JSONSection
 from .system_info import SystemInfoSection
 from .table import HTMLTableSection
 from .transposed import HTMLTableTransposedSection
+from .xml_format import XMLSection
 
 
 def _get_section_format(data: Any) -> str:
@@ -32,7 +33,8 @@ ChannelSection = Annotated[
     | Annotated[JSEmbeddedSection, Tag("javascript")]
     | Annotated[JSJsonSection, Tag("javascript_json")]
     | Annotated[HNAPSection, Tag("hnap")]
-    | Annotated[JSONSection, Tag("json")],
+    | Annotated[JSONSection, Tag("json")]
+    | Annotated[XMLSection, Tag("xml")],
     Discriminator(_get_section_format),
 ]
 

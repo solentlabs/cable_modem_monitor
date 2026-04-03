@@ -1,0 +1,36 @@
+{
+  "downstream": {
+    "format": "xml",
+    "resource": "10",
+    "root_element": "downstream_table",
+    "child_element": "downstream",
+    "columns": [
+      {"source": "freq", "field": "frequency", "type": "integer"},
+      {"source": "pow", "field": "power", "type": "float"}
+    ]
+  },
+  "upstream": {
+    "format": "xml",
+    "resource": "11",
+    "root_element": "upstream_table",
+    "child_element": "upstream",
+    "columns": [
+      {"source": "freq", "field": "frequency", "type": "integer"},
+      {"source": "pow", "field": "power", "type": "float"}
+    ]
+  },
+  "system_info": {
+    "sources": [
+      {
+        "format": "xml",
+        "resource": "2",
+        "root_element": "cm_system_info",
+        "fields": [
+          {"source": "cm_docsis_mode", "field": "docsis_mode", "type": "string"},
+          {"source": "cm_hardware_version", "field": "hardware_version", "type": "string"},
+          {"source": "cm_mac_addr", "field": "mac_address", "type": "string"}
+        ]
+      }
+    ]
+  }
+}
