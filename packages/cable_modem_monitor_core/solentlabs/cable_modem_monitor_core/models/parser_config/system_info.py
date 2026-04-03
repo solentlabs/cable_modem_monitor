@@ -137,6 +137,40 @@ class JSONSystemInfoSource(BaseModel):
     fields: list[JSONSystemInfoFieldMapping]
 
 
+class JSVarsFieldMapping(BaseModel):
+    """A field extracted from a JS variable assignment for system_info.
+
+    Maps a JS variable name (``source``) to a system_info field name.
+    Pattern matches: ``var x = 'value'`` or ``x = 'value'``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    source: str
+    field: str
+    type: str
+
+    @model_validator(mode="after")
+    def validate_field_type(self) -> JSVarsFieldMapping:
+        """Ensure type is a valid FIELD_TYPES value."""
+        _check_field_type(self.type)
+        return self
+
+
+class JSVarsSystemInfoSource(BaseModel):
+    """JavaScript variable assignment source for system_info.
+
+    Extracts values from simple JS variable assignments in HTML script
+    tags: ``var x = 'value'`` or ``x = 'value'``. Unlike the
+    ``javascript`` format (which parses ``tagValueList`` delimited
+    strings), this handles standalone named variables.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    format: Literal["javascript_vars"]
+    resource: str
+    fields: list[JSVarsFieldMapping]
+
+
 class XMLSystemInfoFieldMapping(BaseModel):
     """A field extracted from an XML element for system_info."""
 
@@ -173,6 +207,7 @@ SystemInfoSource = Annotated[
     Annotated[HTMLFieldsSource, Tag("html_fields")]
     | Annotated[HNAPSystemInfoSource, Tag("hnap")]
     | Annotated[JSSystemInfoSource, Tag("javascript")]
+    | Annotated[JSVarsSystemInfoSource, Tag("javascript_vars")]
     | Annotated[JSONSystemInfoSource, Tag("json")]
     | Annotated[XMLSystemInfoSource, Tag("xml")],
     Discriminator(_get_source_format),

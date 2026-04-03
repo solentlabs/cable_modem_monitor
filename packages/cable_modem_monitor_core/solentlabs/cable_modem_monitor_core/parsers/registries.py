@@ -1,7 +1,7 @@
 """Parser registries — type-to-callable dispatch tables.
 
 Maps parser.yaml section config types to parser callables. Seven channel
-format types and five system info source types are registered.
+format types and six system info source types are registered.
 
 Channel parsers: ``(section, resources) -> list[dict]``
 System info parsers: ``(source, resources) -> dict``
@@ -23,6 +23,7 @@ from ..models.parser_config.system_info import (
     HTMLFieldsSource,
     JSONSystemInfoSource,
     JSSystemInfoSource,
+    JSVarsSystemInfoSource,
     XMLSystemInfoSource,
 )
 from ..models.parser_config.table import HTMLTableSection
@@ -36,6 +37,7 @@ from .formats.html_table_transposed import HTMLTableTransposedParser
 from .formats.js_embedded import JSEmbeddedParser
 from .formats.js_json_parser import JSJsonParser
 from .formats.js_system_info import JSSystemInfoParser
+from .formats.js_vars import JSVarsParser
 from .formats.json_parser import JSONParser
 from .formats.json_system_info import JSONSystemInfoParser
 from .formats.xml_parser import XMLChannelParser
@@ -220,6 +222,16 @@ def _parse_js_sysinfo(
     return result if isinstance(result, dict) else {}
 
 
+def _parse_js_vars_sysinfo(
+    source: JSVarsSystemInfoSource,
+    resources: dict[str, Any],
+) -> dict[str, Any]:
+    """Parse system_info from JS variable assignments."""
+    js_vars_si = JSVarsParser(source)
+    result = js_vars_si.parse(resources)
+    return result if isinstance(result, dict) else {}
+
+
 def _parse_json_sysinfo(
     source: JSONSystemInfoSource,
     resources: dict[str, Any],
@@ -245,6 +257,7 @@ SYSINFO_PARSERS: dict[type, Callable[..., dict[str, Any]]] = {
     HTMLFieldsSource: _parse_html_fields_sysinfo,
     HNAPSystemInfoSource: _parse_hnap_sysinfo,
     JSSystemInfoSource: _parse_js_sysinfo,
+    JSVarsSystemInfoSource: _parse_js_vars_sysinfo,
     JSONSystemInfoSource: _parse_json_sysinfo,
     XMLSystemInfoSource: _parse_xml_sysinfo,
 }

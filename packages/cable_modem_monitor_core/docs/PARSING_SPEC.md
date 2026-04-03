@@ -89,6 +89,7 @@ table including auth strategies.
 | `html_fields` | `HTMLFieldsParser` | Named fields in HTML via label text or element id | system_info only |
 | **HTML (embedded JS)** | | | |
 | `javascript` | `JSEmbeddedParser` | Delimited strings in JS variables/functions | any section |
+| `javascript_vars` | `JSVarsSystemInfoParser` | Simple `var x = 'value'` assignments in `<script>` tags | system_info only |
 | **JSON** | | | |
 | `hnap` | `HNAPParser` | Delimiter-separated values in HNAP JSON responses | any section |
 | `json` | `JSONParser` | JSON response structures via field paths | any section |
@@ -1344,6 +1345,28 @@ system_info:
               type: string
 ```
 
+**JS variable assignments — multiple pages:**
+
+```yaml
+system_info:
+  sources:
+    - format: javascript_vars
+      resource: "/php/status_about_data.php"
+      fields:
+        - source: js_FWVersion
+          field: software_version
+          type: string
+    - format: javascript_vars
+      resource: "/php/status_status_data.php"
+      fields:
+        - source: js_HWTypeVersion
+          field: hardware_version
+          type: string
+        - source: js_Duration
+          field: system_uptime
+          type: string
+```
+
 **REST — single JSON source:**
 
 ```yaml
@@ -1377,6 +1400,7 @@ overlap — each source owns distinct fields.
 |--------|------------|---------------------|
 | `html_fields` | HTML page | Three selector types (see below) |
 | `javascript` | HTML page | JS function body → delimited string → offset |
+| `javascript_vars` | HTML page | `var x = 'value'` assignment → named variable |
 | `hnap` | HNAP response | Action response key → JSON key |
 | `json` | REST response | Object path → JSON key |
 | `xml` | XML response | Root element → sub-element tag name |
@@ -1418,6 +1442,44 @@ numeric codes instead of human-readable text.
 Without `map`, the raw value passes through as-is — suitable for
 fields that are already human-readable (uptime strings, version
 strings).
+
+#### `javascript_vars` system info
+
+Extracts values from simple JS variable assignments in HTML
+`<script>` tags. Unlike `javascript` (which parses `tagValueList`
+delimited strings), this handles standalone named variables:
+
+```javascript
+var js_FWVersion = '01.05.063.13.EURO.PC20';
+var js_HWTypeVersion = '7';
+```
+
+**parser.yaml schema:**
+
+```yaml
+system_info:
+  sources:
+    - format: javascript_vars
+      resource: "/php/status_about_data.php"
+      fields:
+        - source: js_FWVersion
+          field: software_version
+          type: string
+```
+
+**Field schema:**
+
+| Property | Type | Required | Description |
+|----------|------|:--------:|-------------|
+| `source` | string | yes | JS variable name to match |
+| `field` | string | yes | Output system_info field name |
+| `type` | string | yes | Field type (see Common Concepts) |
+
+The parser matches both `var x = 'value'` and bare `x = 'value'`
+assignments. Only single-quoted string values are supported (the
+dominant pattern in Arris gateway firmware). If the extracted value
+needs reformatting, use a parser.py PostProcessor to transform it
+after extraction.
 
 #### `html_fields` selector types
 

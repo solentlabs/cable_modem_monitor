@@ -7,8 +7,10 @@
 # the separator takes the first value (dBmV). Channel type values
 # (SC-QAM, OFDM, OFDMA) are mapped to canonical names via field map.
 #
-# System info (js_FWVersion) is extracted by parser.py PostProcessor
-# because the variable is a simple assignment, not a tagValueList.
+# System info uses javascript_vars format — simple JS variable
+# assignments (var x = 'value') extracted by Core.  js_Duration needs
+# reformatting ("D: X H: Y M: Z S: W" → "X days Y:Z:W") so parser.py
+# PostProcessor handles that one field.
 
 downstream:
   format: javascript_json
@@ -54,11 +56,6 @@ upstream:
   filter:
     lock_status: "locked"
 
-  # System info: firmware version from status_about_data.php.
-  # The js_FWVersion variable is a simple 'var x = value' assignment,
-  # not a tagValueList — extracted by parser.py PostProcessor.
-  # This dummy source triggers the resource fetch so the PostProcessor
-  # can access it.
   mappings:
     - key: ChannelID
       field: channel_id
@@ -91,6 +88,18 @@ upstream:
   variable: "json_usData"
 system_info:
   sources:
-    - format: html_fields
+    - format: javascript_vars
       resource: "/php/status_about_data.php"
-      fields: []
+      fields:
+        - source: js_FWVersion
+          field: software_version
+          type: string
+    - format: javascript_vars
+      resource: "/php/status_status_data.php"
+      fields:
+        - source: js_HWTypeVersion
+          field: hardware_version
+          type: string
+        - source: js_Duration
+          field: system_uptime
+          type: string
