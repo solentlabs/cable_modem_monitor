@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
-from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems
+from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems, list_variants
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -79,12 +79,16 @@ async def async_migrate(
         )
         return False
 
+    # --- Resolve variant from v1 auth strategy ---
+    v1_auth = old_data.get("auth_strategy", "")
+    variant = await hass.async_add_executor_job(resolve_variant, modem_dir, v1_auth)
+
     # --- Build v2 data (only v2 keys, no leftovers) ---
     new_data: dict[str, Any] = {
         "manufacturer": detected_mfr,
         "model": model,
         "modem_dir": modem_dir,
-        "variant": None,
+        "variant": variant,
         "user_selected_modem": detected_modem or old_data.get("modem_choice", ""),
         "entity_prefix": old_data.get("entity_prefix", "none"),
         "host": old_data.get("host", ""),
@@ -187,6 +191,48 @@ def resolve_modem_dir(manufacturer: str, model: str) -> str | None:
     if len(matches) == 1:
         return _relative_dir(matches[0])
 
+    return None
+
+
+def resolve_variant(modem_dir_relative: str, v1_auth_strategy: str) -> str | None:
+    """Resolve the correct variant name from the v1 auth strategy.
+
+    Walks the variant list for the resolved modem directory and
+    matches the v1 ``auth_strategy`` field to find the correct
+    named variant.
+
+    Single-variant modems always return ``None`` (default).
+    Multi-variant modems return the variant name whose auth strategy
+    matches the v1 entry, falling back to ``None`` if no match.
+
+    Args:
+        modem_dir_relative: Catalog-relative modem directory path
+            (e.g., ``"netgear/cm1200"``).
+        v1_auth_strategy: The ``auth_strategy`` value from the v1
+            config entry (e.g., ``"basic"``, ``"none"``, ``""``).
+
+    Returns:
+        Variant name string (e.g., ``"basic"``), or ``None`` for
+        the default variant.
+    """
+    full_path = CATALOG_PATH / modem_dir_relative
+    variants = list_variants(full_path)
+
+    if len(variants) <= 1:
+        return None
+
+    if not v1_auth_strategy:
+        return None
+
+    for v in variants:
+        if v.auth_strategy == v1_auth_strategy:
+            return v.name
+
+    _LOGGER.warning(
+        "No variant matches v1 auth_strategy %r in %s — using default",
+        v1_auth_strategy,
+        modem_dir_relative,
+    )
     return None
 
 

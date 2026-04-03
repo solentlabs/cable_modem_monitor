@@ -18,7 +18,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from solentlabs.cable_modem_monitor_core.catalog_manager import ModemSummary
+from solentlabs.cable_modem_monitor_core.catalog_manager import (
+    ModemSummary,
+    VariantInfo,
+)
 
 from custom_components.cable_modem_monitor.migrations.v1_to_v2 import (
     V1_STALE_KEYS,
@@ -26,6 +29,7 @@ from custom_components.cable_modem_monitor.migrations.v1_to_v2 import (
     derive_protocol,
     extract_model,
     resolve_modem_dir,
+    resolve_variant,
 )
 
 # =============================================================================
@@ -217,6 +221,71 @@ class TestResolveModemDir:
 
 
 # =============================================================================
+# resolve_variant — match v1 auth_strategy to catalog variant
+# =============================================================================
+#
+# ┌───────────────────┬─────────────────────────────────────────────┬──────────┬──────────────────────────┐
+# │ v1_auth_strategy  │ variants                                    │ expected │ description              │
+# ├───────────────────┼─────────────────────────────────────────────┼──────────┼──────────────────────────┤
+# │ "basic"           │ [none(default), basic(named)]               │ "basic"  │ matches named variant    │
+# │ "none"            │ [none(default), basic(named)]               │ None     │ matches default variant  │
+# │ "form"            │ [none(default), basic(named)]               │ None     │ no match, use default    │
+# │ ""                │ [none(default), basic(named)]               │ None     │ empty strategy           │
+# │ "basic"           │ [none(default)]                             │ None     │ single variant           │
+# │ "form_nonce"      │ [none(default), form_nonce(named)]          │ "fn"     │ matches form_nonce       │
+# └───────────────────┴─────────────────────────────────────────────┴──────────┴──────────────────────────┘
+
+_TWO_VARIANTS = [
+    VariantInfo(name=None, auth_strategy="none", path=_FAKE_CATALOG / "mfr" / "m1" / "modem.yaml"),
+    VariantInfo(name="basic", auth_strategy="basic", path=_FAKE_CATALOG / "mfr" / "m1" / "modem-basic.yaml"),
+]
+
+_SINGLE_VARIANT = [
+    VariantInfo(name=None, auth_strategy="none", path=_FAKE_CATALOG / "mfr" / "m2" / "modem.yaml"),
+]
+
+_FORM_NONCE_VARIANTS = [
+    VariantInfo(name=None, auth_strategy="none", path=_FAKE_CATALOG / "mfr" / "m3" / "modem.yaml"),
+    VariantInfo(name="fn", auth_strategy="form_nonce", path=_FAKE_CATALOG / "mfr" / "m3" / "modem-fn.yaml"),
+]
+
+# fmt: off
+RESOLVE_VARIANT_CASES = [
+    # (v1_auth_strategy, variants,            expected, id)
+    ("basic",            _TWO_VARIANTS,       "basic",  "matches-named-variant"),
+    ("none",             _TWO_VARIANTS,       None,     "matches-default-variant"),
+    ("form",             _TWO_VARIANTS,       None,     "no-match-falls-to-default"),
+    ("",                 _TWO_VARIANTS,       None,     "empty-strategy"),
+    ("basic",            _SINGLE_VARIANT,     None,     "single-variant-ignores-strategy"),
+    ("form_nonce",       _FORM_NONCE_VARIANTS, "fn",    "matches-form-nonce-variant"),
+]
+# fmt: on
+
+
+class TestResolveVariant:
+    """Test variant resolution from v1 auth_strategy."""
+
+    @pytest.mark.parametrize(
+        "v1_auth,variants,expected,desc",
+        RESOLVE_VARIANT_CASES,
+        ids=[c[3] for c in RESOLVE_VARIANT_CASES],
+    )
+    def test_resolve(self, v1_auth, variants, expected, desc):
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.list_variants",
+                return_value=variants,
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.CATALOG_PATH",
+                _FAKE_CATALOG,
+            ),
+        ):
+            result = resolve_variant("mfr/m1", v1_auth)
+        assert result == expected
+
+
+# =============================================================================
 # Full migration data transform — verify v2 shape (generic names)
 # =============================================================================
 
@@ -273,7 +342,7 @@ def _build_v1_entry() -> dict:
     }
 
 
-def _transform_v1_to_v2(v1: dict, modem_dir: str) -> dict:
+def _transform_v1_to_v2(v1: dict, modem_dir: str, variant: str | None = None) -> dict:
     """Apply the v1 → v2 key mapping (pure, no HA dependency).
 
     Mirrors the transform in async_migrate but without async/HA calls.
@@ -286,7 +355,7 @@ def _transform_v1_to_v2(v1: dict, modem_dir: str) -> dict:
         "manufacturer": mfr,
         "model": model,
         "modem_dir": modem_dir,
-        "variant": None,
+        "variant": variant,
         "user_selected_modem": v1["detected_modem"],
         "entity_prefix": v1.get("entity_prefix", "none"),
         "host": v1["host"],
@@ -330,7 +399,6 @@ class TestFullMigrationShape:
         assert v2["supports_icmp"] is True
         assert v2["supports_head"] is False
         assert v2["health_check_interval"] == 30
-        assert v2["variant"] is None
 
     def test_defaults_when_optional_keys_missing(self):
         """Missing optional v1 keys get correct v2 defaults."""
@@ -371,9 +439,15 @@ class TestAsyncMigrate:
 
         hass.async_add_executor_job = _mock_executor
 
-        with patch(
-            "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
-            return_value="vendor/model",
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
+                return_value="vendor/model",
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_variant",
+                return_value="basic",
+            ),
         ):
             result = await async_migrate(hass, entry)
 
@@ -383,6 +457,35 @@ class TestAsyncMigrate:
         assert call_kwargs.kwargs["version"] == 2
         new_data = call_kwargs.kwargs["data"]
         assert set(new_data.keys()) == V2_REQUIRED_KEYS
+        assert new_data["variant"] == "basic"
+
+    async def test_success_single_variant(self):
+        """Single-variant modem migrates with variant=None."""
+        hass = MagicMock()
+        entry = MagicMock()
+        entry.data = _build_v1_entry()
+        entry.entry_id = "test_id"
+
+        async def _mock_executor(func, *args):
+            return func(*args)
+
+        hass.async_add_executor_job = _mock_executor
+
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
+                return_value="vendor/model",
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_variant",
+                return_value=None,
+            ),
+        ):
+            result = await async_migrate(hass, entry)
+
+        assert result is True
+        new_data = hass.config_entries.async_update_entry.call_args.kwargs["data"]
+        assert new_data["variant"] is None
 
     async def test_resolution_failure(self):
         """Failed catalog resolution returns False without updating."""
