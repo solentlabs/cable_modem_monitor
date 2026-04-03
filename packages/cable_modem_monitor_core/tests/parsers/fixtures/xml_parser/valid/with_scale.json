@@ -4,12 +4,16 @@
   "_resource": "11",
   "_config": {
     "format": "xml",
-    "resource": "11",
-    "root_element": "upstream_table",
-    "child_element": "upstream",
-    "columns": [
-      {"source": "usid", "field": "channel_id", "type": "integer"},
-      {"source": "srate", "field": "symbol_rate", "type": "float", "scale": 1000}
+    "tables": [
+      {
+        "resource": "11",
+        "root_element": "upstream_table",
+        "child_element": "upstream",
+        "columns": [
+          {"source": "usid", "field": "channel_id", "type": "integer"},
+          {"source": "srate", "field": "symbol_rate", "type": "float", "scale": 1000}
+        ]
+      }
     ]
   },
   "_expected": [

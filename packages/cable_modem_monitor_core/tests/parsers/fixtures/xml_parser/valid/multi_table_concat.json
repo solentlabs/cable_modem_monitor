@@ -1,0 +1,41 @@
+{
+  "_description": "Multiple tables concatenated - QAM and OFDM from separate resources",
+  "_resources": {
+    "10": "<root><downstream_table><downstream><chid>1</chid><freq>602000000</freq><pow>8.0</pow><IsLocked>1</IsLocked></downstream><downstream><chid>2</chid><freq>610000000</freq><pow>8.5</pow><IsLocked>1</IsLocked></downstream></downstream_table></root>",
+    "9": "<root><downstream_table><downstream><dsid>33</dsid><plcFrequency>300000000</plcFrequency><PLCPower>10.0</PLCPower><ofdmIsLocked>1</ofdmIsLocked></downstream></downstream_table></root>"
+  },
+  "_config": {
+    "format": "xml",
+    "tables": [
+      {
+        "resource": "10",
+        "root_element": "downstream_table",
+        "child_element": "downstream",
+        "columns": [
+          {"source": "chid", "field": "channel_id", "type": "integer"},
+          {"source": "freq", "field": "frequency", "type": "integer"},
+          {"source": "pow", "field": "power", "type": "float"}
+        ],
+        "channel_type": {"fixed": "qam"},
+        "lock_status": {"all_of": ["IsLocked"]}
+      },
+      {
+        "resource": "9",
+        "root_element": "downstream_table",
+        "child_element": "downstream",
+        "columns": [
+          {"source": "dsid", "field": "channel_id", "type": "integer"},
+          {"source": "plcFrequency", "field": "frequency", "type": "integer"},
+          {"source": "PLCPower", "field": "power", "type": "float"}
+        ],
+        "channel_type": {"fixed": "ofdm"},
+        "lock_status": {"all_of": ["ofdmIsLocked"]}
+      }
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 602000000, "power": 8.0, "channel_type": "qam", "lock_status": "locked"},
+    {"channel_id": 2, "frequency": 610000000, "power": 8.5, "channel_type": "qam", "lock_status": "locked"},
+    {"channel_id": 33, "frequency": 300000000, "power": 10.0, "channel_type": "ofdm", "lock_status": "locked"}
+  ]
+}

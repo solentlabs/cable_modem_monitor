@@ -1,13 +1,17 @@
 {
   "downstream": {
     "format": "xml",
-    "resource": "10",
-    "root_element": "downstream_table",
-    "child_element": "downstream",
-    "columns": [
-      {"source": "freq", "field": "frequency", "type": "integer"},
-      {"source": "pow", "field": "power", "type": "float"}
-    ],
-    "filter": {"frequency": {"not": "0"}}
+    "tables": [
+      {
+        "resource": "10",
+        "root_element": "downstream_table",
+        "child_element": "downstream",
+        "columns": [
+          {"source": "freq", "field": "frequency", "type": "integer"},
+          {"source": "pow", "field": "power", "type": "float"}
+        ],
+        "filter": {"frequency": {"not": "0"}}
+      }
+    ]
   }
 }

@@ -4,15 +4,19 @@
   "_resource": "10",
   "_config": {
     "format": "xml",
-    "resource": "10",
-    "root_element": "ds_table",
-    "child_element": "ds",
-    "columns": [
-      {"source": "chid", "field": "channel_id", "type": "integer"}
-    ],
-    "lock_status": {
-      "all_of": ["IsQamLocked", "IsFECLocked", "IsMpegLocked"]
-    }
+    "tables": [
+      {
+        "resource": "10",
+        "root_element": "ds_table",
+        "child_element": "ds",
+        "columns": [
+          {"source": "chid", "field": "channel_id", "type": "integer"}
+        ],
+        "lock_status": {
+          "all_of": ["IsQamLocked", "IsFECLocked", "IsMpegLocked"]
+        }
+      }
+    ]
   },
   "_expected": [
     {"channel_id": 1, "lock_status": "locked"},

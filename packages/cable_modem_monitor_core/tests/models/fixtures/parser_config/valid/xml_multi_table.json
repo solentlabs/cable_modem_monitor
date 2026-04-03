@@ -1,0 +1,29 @@
+{
+  "downstream": {
+    "format": "xml",
+    "tables": [
+      {
+        "resource": "10",
+        "root_element": "downstream_table",
+        "child_element": "downstream",
+        "columns": [
+          {"source": "chid", "field": "channel_id", "type": "integer"},
+          {"source": "freq", "field": "frequency", "type": "integer"}
+        ],
+        "channel_type": {"fixed": "qam"},
+        "lock_status": {"all_of": ["IsLocked"]}
+      },
+      {
+        "resource": "9",
+        "root_element": "downstream_table",
+        "child_element": "downstream",
+        "columns": [
+          {"source": "dsid", "field": "channel_id", "type": "integer"},
+          {"source": "plcFrequency", "field": "frequency", "type": "integer"}
+        ],
+        "channel_type": {"fixed": "ofdm"},
+        "lock_status": {"all_of": ["ofdmIsLocked"]}
+      }
+    ]
+  }
+}

@@ -30,14 +30,21 @@ def _load_fixture(path: Path) -> dict[str, Any]:
     return dict(json.loads(path.read_text()))
 
 
-def _build_resources(
-    xml_str: str | None,
-    resource_key: str,
-) -> dict[str, Any]:
-    """Build a resource dict with parsed XML Element."""
+def _build_resources(data: dict[str, Any]) -> dict[str, Any]:
+    """Build a resource dict with parsed XML Elements.
+
+    Supports two fixture formats:
+    - ``_resources``: dict of resource_key -> XML string (multi-table)
+    - ``_xml`` + ``_resource``: single XML string with key (single-table)
+    """
+    if "_resources" in data:
+        return {
+            key: DefusedET.fromstring(xml_str) for key, xml_str in data["_resources"].items() if xml_str is not None
+        }
+    xml_str = data.get("_xml")
     if xml_str is None:
         return {}
-    return {resource_key: DefusedET.fromstring(xml_str)}
+    return {data["_resource"]: DefusedET.fromstring(xml_str)}
 
 
 @pytest.mark.parametrize(
@@ -49,7 +56,7 @@ def test_extraction(fixture_path: Path) -> None:
     """Parse XML data and verify extracted channels match expected."""
     data = _load_fixture(fixture_path)
     config = XMLSection.model_validate(data["_config"])
-    resources = _build_resources(data["_xml"], data["_resource"])
+    resources = _build_resources(data)
     expected = data["_expected"]
 
     parser = XMLChannelParser(config)
