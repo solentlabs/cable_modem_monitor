@@ -1,0 +1,92 @@
+downstream:
+  format: hnap
+  data_key: MotoConnDownstreamChannel
+  field_delimiter: "^"
+  fields:
+    - index: 1
+      field: lock_status
+      type: lock_status
+    - index: 2
+      field: channel_type
+      type: string
+      map:
+        "OFDM PLC": "ofdm"
+        "QAM256": "qam"
+    - index: 3
+      field: channel_id
+      type: integer
+    - index: 4
+      field: frequency
+      type: frequency
+    - index: 5
+      field: power
+      type: float
+    - index: 6
+      field: snr
+      type: float
+    - index: 7
+      field: corrected
+      type: integer
+    - index: 8
+
+      field: uncorrected
+      type: integer
+  record_delimiter: "|+|"
+  response_key: GetMotoStatusDownstreamChannelInfoResponse
+upstream:
+  format: hnap
+  data_key: MotoConnUpstreamChannel
+  field_delimiter: "^"
+  fields:
+    - index: 1
+      field: lock_status
+      type: lock_status
+    - index: 2
+      field: channel_type
+      type: string
+      map:
+        "OFDMA": "ofdma"
+        "SC-QAM": "qam"
+    - index: 3
+      field: channel_id
+      type: integer
+    - index: 4
+      field: symbol_rate
+      type: integer
+    - index: 5
+      field: frequency
+      type: frequency
+    - index: 6
+
+      field: power
+      type: float
+  record_delimiter: "|+|"
+  response_key: GetMotoStatusUpstreamChannelInfoResponse
+system_info:
+  sources:
+    - format: hnap
+      fields:
+        - field: system_uptime
+          source: MotoConnSystemUpTime
+          type: string
+        - field: network_access
+          source: MotoConnNetworkAccess
+          type: string
+      response_key: GetMotoStatusConnectionInfoResponse
+    - format: hnap
+      fields:
+        - field: software_version
+          source: StatusSoftwareSfVer
+          type: string
+        - field: hardware_version
+          source: StatusSoftwareHdVer
+          type: string
+
+      response_key: GetMotoStatusSoftwareResponse
+aggregate:
+  total_corrected:
+    channels: downstream
+    sum: corrected
+  total_uncorrected:
+    channels: downstream
+    sum: uncorrected

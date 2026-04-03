@@ -143,6 +143,10 @@ def build_model_display_name(summary: ModemSummary) -> str:
     Format: ``{manufacturer} {model}`` with aliases in parentheses
     and ``*`` for unverified.
 
+    Remaining aliases are internal/OEM names and manufacturer rebrands
+    (not distinct products). See ``MODEM_YAML_SPEC.md`` § Aliases vs
+    Separate Entries for the rules.
+
     Examples::
 
         "Arris SB8200"

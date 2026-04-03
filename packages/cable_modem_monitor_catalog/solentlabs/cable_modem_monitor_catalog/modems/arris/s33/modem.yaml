@@ -1,7 +1,5 @@
 manufacturer: Arris
 model: S33
-model_aliases:
-  - S33v2
 brands:
   - Surfboard
 transport: hnap
@@ -56,6 +54,7 @@ notes: |
   Session stored in sessionStorage.getItem('PrivateKey').
   S33 blocks ICMP ping - HTTP-only health checks required.
   System uptime not available (only current time exposed).
+  Compatible: S33v2 (same parser, MD5 HMAC), S33v3 (same parser, SHA256 HMAC).
 references:
   issues:
     - "[#32 — [Modem Request] Arris S33 - Uptime and Frequency Fixes](https://github.com/solentlabs/cable_modem_monitor/issues/32)"

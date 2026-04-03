@@ -1,0 +1,56 @@
+manufacturer: Arris
+model: S33v2
+brands:
+  - Surfboard
+transport: hnap
+default_host: 192.168.100.1
+
+auth:
+  strategy: hnap
+  hmac_algorithm: md5
+
+actions:
+  restart:
+    type: hnap
+    action_name: SetArrisConfigurationInfo
+    params:
+      Action: reboot
+    pre_fetch_action: GetArrisConfigurationInfo
+    response_key: SetArrisConfigurationInfoResponse
+    result_key: SetArrisConfigurationInfoResult
+    success_value: OK
+
+behaviors:
+  restart:
+    window_seconds: 300
+
+hardware:
+  docsis_version: "3.1"
+  chipset: Broadcom BCM3390
+  release_date: "2020"
+
+status: awaiting_verification
+sources:
+  auth_config: "[#117 S33v2 crash](https://github.com/solentlabs/cable_modem_monitor/issues/117)"
+  chipset: "Same platform as S33"
+  hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
+attribution:
+  contributors:
+    - github: mmiller7
+      contribution: "S33v2 HAR capture and issue #117 report"
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
+notes: |
+  S33v2 is a hardware revision of the S33. Both use HMAC-MD5.
+  Same firmware family (TB01.03.*) and HNAP protocol as S33.
+  Parser is identical to S33.
+  Compatible: S33 (same parser, MD5 HMAC).
+  S33v2 blocks ICMP ping - HTTP-only health checks required.
+  System uptime not available (only current time exposed).
+  Known anti-brute-force: LOCKUP (temp lock) and REBOOT (forces restart).
+references:
+  issues:
+    - "[#117 — [Bug]: Arris S33v2 crashing when monitor enabled](https://github.com/solentlabs/cable_modem_monitor/issues/117)"

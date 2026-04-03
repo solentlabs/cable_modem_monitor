@@ -1,0 +1,53 @@
+manufacturer: Motorola
+model: MB8600
+brands: []
+transport: hnap
+default_host: 192.168.100.1
+
+auth:
+  strategy: hnap
+  hmac_algorithm: md5
+
+actions:
+  restart:
+    type: hnap
+    action_name: SetStatusSecuritySettings
+    params:
+      MotoStatusSecXXX: XXX
+      MotoStatusSecurityAction: "1"
+    response_key: SetStatusSecuritySettingsResponse
+    result_key: SetStatusSecuritySettingsResult
+    success_value: OK
+
+behaviors:
+  restart:
+    window_seconds: 300
+
+hardware:
+  docsis_version: "3.1"
+  chipset: Broadcom BCM3390
+  release_date: "2017"
+
+status: awaiting_verification
+sources:
+  auth_config: "[#40 MB8600 newer firmware](https://github.com/solentlabs/cable_modem_monitor/issues/40)"
+  chipset: "Same platform as MB8611"
+  hardware: "[Motorola MB8600 page](https://www.motorola.com/us/mb8600)"
+attribution:
+  contributors:
+    - github: BowlesCR
+      contribution: "MB8600 HAR capture and HNAP testing (Issue #40)"
+isps:
+  - Comcast
+  - Xfinity
+  - Cox
+  - Spectrum
+notes: |
+  Same HNAP protocol as MB8611 — uses GetMoto* action names.
+  Predecessor to the MB8611 (2017 vs 2020 release).
+  Parser is identical to MB8611.
+  Default credentials: admin / motorola
+  Compatible: MB8611 (same parser and HNAP protocol).
+references:
+  issues:
+    - "[#40 — [Modem Request] MB8600 (Newer firmware?)](https://github.com/solentlabs/cable_modem_monitor/issues/40)"

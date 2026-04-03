@@ -84,7 +84,7 @@ firmware variant that a user can select during config flow.
 
 Contains:
 - `manufacturer`, `model` — identity (must match across variants)
-- `model_aliases` — alternative model names for config flow search (e.g., `XB7` for `cgm4981com`)
+- `model_aliases` — internal or rebranded names for search matching, not shown in the config flow UI (e.g., `CGM4140COM` for XB6). See `MODEM_YAML_SPEC.md` § Aliases vs Separate Entries.
 - `brands` — product branding for config flow search (e.g., `Xfinity`, `Surfboard`)
 - `transport` — http, hnap
 - `auth` — single auth strategy config (includes login URLs)
@@ -145,18 +145,13 @@ discovers HAR files, locates the matching golden file, resolves which
    - Found → use it (this is a distinct auth variant)
    - Not found → fall back to `modem.yaml` (this is a compatibility test)
 
-**Two use cases for multiple HARs against one config:**
+**Multiple HARs against one config** validate firmware compatibility —
+same model, different firmware revisions. `modem-{revision}.har`
+validates the same `modem.yaml` against a different firmware build.
 
-- **Firmware compatibility** — same model, different firmware revisions.
-  Two hardware revisions share identical auth and page structure.
-  `modem-{revision}.har` validates the same `modem.yaml` against a
-  different firmware build.
-
-- **Model aliases** — different model numbers, same platform and web UI.
-  A manufacturer reuses the same web interface across several model
-  numbers. `modem-{alias}.har` validates that the shared config works
-  across models. Golden files may differ (different channel counts,
-  firmware strings) but the pipeline and config are identical.
+Different model numbers that share a platform get their own catalog
+directories, not shared HARs. See `MODEM_YAML_SPEC.md` § Aliases vs
+Separate Entries.
 
 **HAR sanitization** happens at capture time. HAR files committed to
 the repo must have PII scrubbed — passwords, MAC addresses, serial

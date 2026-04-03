@@ -241,6 +241,17 @@ def generate_index(output_path: Path | None = None) -> str:
     lines = [
         "# Cable Modem Catalog",
         "",
+        "[![PyPI version](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-catalog)]"
+        "(https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)",
+        "[![Downloads](https://img.shields.io/pypi/dm/solentlabs-cable-modem-monitor-catalog)]"
+        "(https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)",
+        "[![Python](https://img.shields.io/pypi/pyversions/solentlabs-cable-modem-monitor-catalog)]"
+        "(https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)",
+        "[![CI](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)]"
+        "(https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)",
+        "[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]"
+        "(https://opensource.org/licenses/MIT)",
+        "",
         "> **Internal dependency of [Cable Modem Monitor]" "(https://github.com/solentlabs/cable_modem_monitor).**",
         "> Not intended for direct use — install the HA integration via [HACS](https://hacs.xyz/).",
         ">",

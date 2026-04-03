@@ -618,7 +618,7 @@ gaps by searching the web using the manufacturer and model as search terms.
 | `hardware.docsis_version` | Search "{manufacturer} {model} specifications" or FCC filing. Also infer from HAR: if OFDM/OFDMA channels are present in data pages, the modem is DOCSIS 3.1. | Infer from channel data if possible; flag if ambiguous |
 | `hardware.chipset` | Search "{manufacturer} {model} chipset" or "{model} teardown". FCC filings, iFixit teardowns, and DSLReports forums are common sources. | Omit — chipset is optional |
 | `brands` | Search "{model} brand name". Some modems are sold under brand names (e.g., SB8200 → "Surfboard", CGM4981COM → "XB7"). | Omit if no branding found |
-| `model_aliases` | Search "{model} also known as" or check if the model number differs from the marketing name. CommScope/Arris rebrandings are common. | Omit if no aliases found |
+| `model_aliases` | Only for internal/OEM names or manufacturer rebrands — not for distinct products. Search firmware responses for `product` or `model` fields that differ from the marketing name (e.g., OEM model numbers, firmware product codes). If the name is a different product users would purchase and search for, create a separate catalog entry instead. See `MODEM_YAML_SPEC.md` § Aliases vs Separate Entries. | Omit if no aliases found |
 | `isps` | Search "{model} ISP" or "{model} compatible". Also check the GitHub issue — contributors often mention their ISP. | `["Various"]` if unknown |
 | `default_host` | Most cable modems use `192.168.100.1`. Some (Compal, some gateways) use `10.0.0.1` or `192.168.0.1`. Check modem documentation if contributor didn't provide it. | `"192.168.100.1"` |
 

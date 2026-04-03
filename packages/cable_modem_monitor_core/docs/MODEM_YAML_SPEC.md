@@ -38,7 +38,7 @@ directory layout and multi-variant assembly contract.
 # Identity
 manufacturer: "Arris"
 model: "SB8200"
-model_aliases:                    # optional — config flow search
+model_aliases:                    # optional — search matching only (not shown in UI)
   - "CommScope SB8200"
 brands:                           # optional — config flow search
   - "Surfboard"
@@ -105,7 +105,7 @@ references:
 |-------|------| :--------: |-------------|
 | `manufacturer` | string | yes | Manufacturer name (e.g., "Arris", "Netgear", "Motorola") |
 | `model` | string | yes | Model identifier (e.g., "SB8200", "CM1200") |
-| `model_aliases` | list[string] | no | Alternative model names for config flow search (e.g., `["SB8200v2", "CommScope SB8200"]`) |
+| `model_aliases` | list[string] | no | Internal or rebranded names for search matching — not shown in the config flow UI (e.g., `["CGM4140COM"]`). See [Aliases vs Separate Entries](#aliases-vs-separate-entries). |
 | `brands` | list[string] | no | Product branding for config flow search (e.g., `["Surfboard"]`) |
 | `transport` | enum | yes | `http`, `hnap`, or `cbn` |
 | `default_host` | string | yes | Default IP address (e.g., "192.168.100.1") |
@@ -118,6 +118,34 @@ for details.
 
 `default_host` is the pre-filled value in the config flow. Users can
 override it during setup. Most cable modems use `192.168.100.1`.
+
+### Aliases vs Separate Entries
+
+Each model a user can purchase or identify by name gets its own catalog
+directory and `modem.yaml`. The config flow shows each model as a
+first-class entry — users should find their modem by the name on the
+box, not reason about internal compatibility.
+
+**Separate catalog entry** (own directory under `modems/{mfr}/{model}/`):
+
+- Different product a user would purchase by name
+- Different hardware revision of the same product line
+- Different brand selling compatible hardware
+
+Parser and config may be identical to another entry. That is an
+implementation detail. The new entry's `references` section links to
+compatible models. Having a standalone entry enables diagnostics
+collection and golden file validation for that specific model.
+
+**model_aliases** (search aids — not shown in the config flow UI):
+
+- Manufacturer rebrand of the same product (e.g., acquirer name)
+- Internal/OEM model numbers from firmware responses
+- Marketing name variants for the same hardware
+- Firmware platform identifiers embedded in version strings
+
+Aliases help users who search by an alternate name. They do not appear
+in the config flow dropdown — only the primary `model` name is shown.
 
 ---
 

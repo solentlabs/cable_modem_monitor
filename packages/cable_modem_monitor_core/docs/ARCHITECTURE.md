@@ -1181,7 +1181,9 @@ and metadata differ.
 With the parser.yaml + modem-{variant}.yaml split, families share one
 `parser.yaml` (extraction mappings) and each model gets its own variant
 yaml with per-model metadata. `model_aliases` and `brands` in `modem.yaml`
-provide alternative names for config flow search.
+provide search matching for internal or rebranded names (not shown in the
+config flow UI). Distinct products get their own catalog entries — see
+`MODEM_YAML_SPEC.md` § Aliases vs Separate Entries.
 
 ### Evidence: Multi-Variant Modem
 

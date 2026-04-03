@@ -170,21 +170,24 @@ def test_filter_by_manufacturer_no_match():
 # Pure-function helpers — build_model_display_name
 # =====================================================================
 
-# ┌──────────────┬──────────┬────────────┬──────────────────────────┬─────────────────────────────┬────────────────┐
-# │ manufacturer │ model    │ aliases    │ status                   │ expected                    │ description    │
-# ├──────────────┼──────────┼────────────┼──────────────────────────┼─────────────────────────────┼────────────────┤
-# │ "ARRIS"      │ "SB8200" │ []         │ "verified"               │ "Arris SB8200"              │ basic          │
-# │ "Motorola"   │ "MB8611" │ ["MB8600"] │ "verified"               │ "Motorola MB8611 (MB8600)"  │ with_alias     │
-# │ "netgear"    │ "CM1100" │ []         │ "awaiting_verification"  │ "Netgear CM1100 *"          │ unverified     │
-# │ "ARRIS"      │ "S33"    │ ["S33v2"]  │ "awaiting_verification"  │ "Arris S33 (S33v2) *"       │ alias_and_star │
-# └──────────────┴──────────┴────────────┴──────────────────────────┴─────────────────────────────┴────────────────┘
+# ┌──────────────┬──────────┬───────────────┬──────────────────────────┬──────────────────────────────┬────────────────┐
+# │ manufacturer │ model    │ aliases       │ status                   │ expected                     │ description    │
+# ├──────────────┼──────────┼───────────────┼──────────────────────────┼──────────────────────────────┼────────────────┤
+# │ "ARRIS"      │ "SB8200" │ []            │ "verified"               │ "Arris SB8200"               │ basic          │
+# │ "Motorola"   │ "MB8611" │ ["MB8612"]    │ "verified"               │ "Motorola MB8611 (MB8612)"   │ with_alias     │
+# │ "netgear"    │ "CM1100" │ []            │ "awaiting_verification"  │ "Netgear CM1100 *"           │ unverified     │
+# │ "ARRIS"      │ "CM820B" │ ["Zoom 5370"] │ "awaiting_verification"  │ "Arris CM820B (Zoom 5370) *" │ alias_and_star │
+# └──────────────┴──────────┴───────────────┴──────────────────────────┴──────────────────────────────┴────────────────┘
+#
+# Remaining aliases are internal/OEM names — shown in parentheses
+# as search aids. See MODEM_YAML_SPEC.md § Aliases vs Separate Entries.
 #
 # fmt: off
 DISPLAY_NAME_CASES = [
-    ("ARRIS",    "SB8200", [],         "verified",              "Arris SB8200",             "basic"),
-    ("Motorola", "MB8611", ["MB8600"], "verified",              "Motorola MB8611 (MB8600)",  "with_alias"),
-    ("netgear",  "CM1100", [],         "awaiting_verification", "Netgear CM1100 *",          "unverified"),
-    ("ARRIS",    "S33",    ["S33v2"],  "awaiting_verification", "Arris S33 (S33v2) *",       "alias_and_star"),
+    ("ARRIS",    "SB8200", [],             "verified",              "Arris SB8200",                "basic"),
+    ("Motorola", "MB8611", ["MB8612"],     "verified",              "Motorola MB8611 (MB8612)",    "with_alias"),
+    ("netgear",  "CM1100", [],             "awaiting_verification", "Netgear CM1100 *",            "unverified"),
+    ("ARRIS",    "CM820B", ["Zoom 5370"],  "awaiting_verification", "Arris CM820B (Zoom 5370) *",  "alias_and_star"),
 ]
 # fmt: on
 
