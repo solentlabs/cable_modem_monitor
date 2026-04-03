@@ -125,8 +125,8 @@ def test_normalize_channel_type(value: str, expected: str, desc: str) -> None:
 # ┌──────────────────────────┬──────────────────────┬────────────────────────┐
 # │ input                    │ expected             │ description            │
 # ├──────────────────────────┼──────────────────────┼────────────────────────┤
-# │ "FirmwareVersion"        │ "firmware_version"   │ firmware match         │
-# │ "SoftwareVersion"        │ "firmware_version"   │ software alias         │
+# │ "FirmwareVersion"        │ "software_version"   │ firmware match         │
+# │ "SoftwareVersion"        │ "software_version"   │ software alias         │
 # │ "ModelName"              │ "model_name"         │ model match            │
 # │ "SoftwareModelName"      │ "model_name"         │ software model alias   │
 # │ "SystemUptime"           │ "system_uptime"      │ uptime match           │
@@ -143,8 +143,8 @@ def test_normalize_channel_type(value: str, expected: str, desc: str) -> None:
 # fmt: off
 SYSTEM_INFO_KEY_CASES = [
     # (input,                  expected,               description)
-    ("FirmwareVersion",        "firmware_version",      "firmware"),
-    ("SoftwareVersion",        "firmware_version",      "software_alias"),
+    ("FirmwareVersion",        "software_version",      "firmware"),
+    ("SoftwareVersion",        "software_version",      "software_alias"),
     ("ModelName",              "model_name",            "model"),
     ("SoftwareModelName",      "model_name",            "software_model"),
     ("SystemUptime",           "system_uptime",         "system_uptime"),

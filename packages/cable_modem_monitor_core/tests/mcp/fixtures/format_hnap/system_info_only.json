@@ -25,7 +25,7 @@
           "format": "hnap",
           "response_key": "GetDeviceInfoResponse",
           "fields": {
-            "FirmwareVersion": "firmware_version",
+            "FirmwareVersion": "software_version",
             "ModelName": "model_name",
             "SerialNumber": "serial_number"
           }

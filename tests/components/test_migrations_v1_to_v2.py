@@ -25,6 +25,7 @@ from solentlabs.cable_modem_monitor_core.catalog_manager import (
 
 from custom_components.cable_modem_monitor.migrations.v1_to_v2 import (
     V1_STALE_KEYS,
+    ResolvedModem,
     async_migrate,
     derive_protocol,
     extract_model,
@@ -143,26 +144,30 @@ class TestDeriveProtocol:
 # resolve_modem_dir — three-pass algorithm (synthetic catalog)
 # =============================================================================
 #
-# ┌──────────────────┬─────────────┬────────────────────┬───────────────────────────┐
-# │ manufacturer     │ model       │ expected           │ description               │
-# ├──────────────────┼─────────────┼────────────────────┼───────────────────────────┤
-# │ "Solent Labs"    │ "TPS-2000"      │ "solentlabs/tps-2000"  │ pass-1 exact match        │
-# │ "solent labs"    │ "tps-2000"  │ "solentlabs/tps-2000"  │ pass-1 case-insensitive   │
-# │ "Solent Labs"    │ "TPS-2000-Alt"  │ "solentlabs/tps-2000"  │ pass-2 alias match        │
-# │ "Solent Labs"    │ "TPS-3000"      │ "solentlabs/tps-3000"  │ pass-1 second modem       │
-# │ "Wrong Mfr"      │ "TPS-3000"      │ "solentlabs/tps-3000"  │ pass-3 model-only unique  │
-# │ "Unknown"        │ "X999"      │ None               │ no match                  │
-# └──────────────────┴─────────────┴────────────────────┴───────────────────────────┘
+# Expected ResolvedModem values (extracted for line length)
+_R_TPS2000 = ResolvedModem("solentlabs/tps-2000", "Solent Labs", "TPS-2000")
+_R_TPS3000 = ResolvedModem("solentlabs/tps-3000", "Solent Labs", "TPS-3000")
+
+# ┌──────────────────┬─────────────────┬─────────────┬───────────────────────────┐
+# │ manufacturer     │ model           │ expected    │ description               │
+# ├──────────────────┼─────────────────┼─────────────┼───────────────────────────┤
+# │ "Solent Labs"    │ "TPS-2000"      │ _R_TPS2000  │ pass-1 exact match        │
+# │ "solent labs"    │ "tps-2000"      │ _R_TPS2000  │ pass-1 case-insensitive   │
+# │ "Solent Labs"    │ "TPS-2000-Alt"  │ _R_TPS2000  │ pass-2 alias match        │
+# │ "Solent Labs"    │ "TPS-3000"      │ _R_TPS3000  │ pass-1 second modem       │
+# │ "Wrong Mfr"      │ "TPS-3000"      │ _R_TPS3000  │ pass-3 mfr rename         │
+# │ "Unknown"        │ "X999"          │ None        │ no match                  │
+# └──────────────────┴─────────────────┴─────────────┴───────────────────────────┘
 #
 # fmt: off
 RESOLVE_CASES = [
-    # (manufacturer,      model,       expected,              id)
-    ("Solent Labs",       "TPS-2000",      "solentlabs/tps-2000",     "pass-1-exact"),
-    ("solent labs",       "tps-2000",  "solentlabs/tps-2000",     "pass-1-case-insensitive"),
-    ("Solent Labs",       "TPS-2000-Alt",  "solentlabs/tps-2000",     "pass-2-alias"),
-    ("Solent Labs",       "TPS-3000",      "solentlabs/tps-3000",     "pass-1-second-modem"),
-    ("Wrong Mfr",         "TPS-3000",      "solentlabs/tps-3000",     "pass-3-model-only-unique"),
-    ("Unknown",           "X999",      None,                  "no-match"),
+    # (manufacturer,      model,           expected,    id)
+    ("Solent Labs",       "TPS-2000",      _R_TPS2000,  "pass-1-exact"),
+    ("solent labs",       "tps-2000",      _R_TPS2000,  "pass-1-case-insensitive"),
+    ("Solent Labs",       "TPS-2000-Alt",  _R_TPS2000,  "pass-2-alias"),
+    ("Solent Labs",       "TPS-3000",      _R_TPS3000,  "pass-1-second-modem"),
+    ("Wrong Mfr",         "TPS-3000",      _R_TPS3000,  "pass-3-mfr-rename"),
+    ("Unknown",           "X999",          None,        "no-match"),
 ]
 # fmt: on
 
@@ -428,7 +433,7 @@ class TestAsyncMigrate:
     """Test the async_migrate HA wrapper with mocked I/O."""
 
     async def test_success(self):
-        """Successful migration updates entry to v2."""
+        """Successful migration updates entry to v2 with catalog values."""
         hass = MagicMock()
         entry = MagicMock()
         entry.data = _build_v1_entry()
@@ -442,7 +447,7 @@ class TestAsyncMigrate:
         with (
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
-                return_value="vendor/model",
+                return_value=ResolvedModem("vendor/model", "Vendor", "Model"),
             ),
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_variant",
@@ -458,6 +463,41 @@ class TestAsyncMigrate:
         new_data = call_kwargs.kwargs["data"]
         assert set(new_data.keys()) == V2_REQUIRED_KEYS
         assert new_data["variant"] == "basic"
+        assert new_data["manufacturer"] == "Vendor"
+        assert new_data["model"] == "Model"
+
+    async def test_success_uses_catalog_manufacturer(self):
+        """Migration uses canonical catalog manufacturer, not raw v1 value."""
+        hass = MagicMock()
+        entry = MagicMock()
+        v1 = _build_v1_entry()
+        v1["detected_manufacturer"] = "Vendor/OldBrand"
+        v1["detected_modem"] = "Vendor/OldBrand Model"
+        entry.data = v1
+        entry.entry_id = "test_id"
+
+        async def _mock_executor(func, *args):
+            return func(*args)
+
+        hass.async_add_executor_job = _mock_executor
+
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
+                return_value=ResolvedModem("vendor/model", "Vendor", "Model"),
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_variant",
+                return_value=None,
+            ),
+        ):
+            result = await async_migrate(hass, entry)
+
+        assert result is True
+        new_data = hass.config_entries.async_update_entry.call_args.kwargs["data"]
+        # Must be "Vendor" (catalog), not "Vendor/OldBrand" (v1 raw)
+        assert new_data["manufacturer"] == "Vendor"
+        assert new_data["model"] == "Model"
 
     async def test_success_single_variant(self):
         """Single-variant modem migrates with variant=None."""
@@ -474,7 +514,7 @@ class TestAsyncMigrate:
         with (
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
-                return_value="vendor/model",
+                return_value=ResolvedModem("vendor/model", "Vendor", "Model"),
             ),
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_variant",

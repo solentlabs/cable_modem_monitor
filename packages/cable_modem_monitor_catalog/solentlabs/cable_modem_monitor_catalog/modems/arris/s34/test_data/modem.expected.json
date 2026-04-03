@@ -324,7 +324,7 @@
   "system_info": {
     "docsis_status": "Connected",
     "downstream_channel_count": 32,
-    "firmware_version": "AT01.01.010.042324_S3.04.735",
+    "software_version": "AT01.01.010.042324_S3.04.735",
     "model_name": "S34",
     "total_corrected": 1224629969,
     "total_uncorrected": 717,

@@ -72,7 +72,7 @@ system_info:
   sources:
     - format: hnap
       fields:
-        - field: firmware_version
+        - field: software_version
           source: FirmwareVersion
           type: string
         - field: model_name

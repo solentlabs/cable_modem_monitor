@@ -75,7 +75,7 @@ system_info:
       response_key: GetCustomerStatusConnectionInfoResponse
     - format: hnap
       fields:
-        - field: firmware_version
+        - field: software_version
           source: FirmwareVersion
           type: string
 

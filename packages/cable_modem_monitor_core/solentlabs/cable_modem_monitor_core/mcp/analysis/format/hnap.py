@@ -581,7 +581,7 @@ def _map_system_info_key(key: str) -> str | None:
     lower = key.lower()
 
     if "firmwareversion" in lower or "softwareversion" in lower:
-        return "firmware_version"
+        return "software_version"
     if "modelname" in lower or "softwaremodelname" in lower:
         return "model_name"
     if "systemuptime" in lower or "uptime" in lower:

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 from urllib.parse import urlparse
 
 from homeassistant.config_entries import ConfigEntry
@@ -67,8 +67,8 @@ async def async_migrate(
     protocol = derive_protocol(old_data)
 
     # --- Resolve to catalog directory (sync I/O → executor) ---
-    modem_dir = await hass.async_add_executor_job(resolve_modem_dir, detected_mfr, model)
-    if modem_dir is None:
+    resolved = await hass.async_add_executor_job(resolve_modem_dir, detected_mfr, model)
+    if resolved is None:
         _LOGGER.error(
             "Cannot resolve v1 modem to catalog: "
             "manufacturer=%r, model=%r (from detected_modem=%r). "
@@ -81,13 +81,15 @@ async def async_migrate(
 
     # --- Resolve variant from v1 auth strategy ---
     v1_auth = old_data.get("auth_strategy", "")
-    variant = await hass.async_add_executor_job(resolve_variant, modem_dir, v1_auth)
+    variant = await hass.async_add_executor_job(resolve_variant, resolved.modem_dir, v1_auth)
 
     # --- Build v2 data (only v2 keys, no leftovers) ---
+    # Use canonical catalog values, not raw v1 strings, so downstream
+    # exact-match lookups (options flow, diagnostics) succeed.
     new_data: dict[str, Any] = {
-        "manufacturer": detected_mfr,
-        "model": model,
-        "modem_dir": modem_dir,
+        "manufacturer": resolved.manufacturer,
+        "model": resolved.model,
+        "modem_dir": resolved.modem_dir,
         "variant": variant,
         "user_selected_modem": detected_modem or old_data.get("modem_choice", ""),
         "entity_prefix": old_data.get("entity_prefix", "none"),
@@ -107,9 +109,9 @@ async def async_migrate(
     _LOGGER.info(
         "Migrated entry %s to v2: manufacturer=%s, model=%s, modem_dir=%s",
         entry.entry_id,
-        detected_mfr,
-        model,
-        modem_dir,
+        resolved.manufacturer,
+        resolved.model,
+        resolved.modem_dir,
     )
     return True
 
@@ -156,8 +158,19 @@ def derive_protocol(data: dict[str, Any]) -> str:
     return "http"
 
 
-def resolve_modem_dir(manufacturer: str, model: str) -> str | None:
-    """Resolve v1 manufacturer + model to a catalog-relative path.
+class ResolvedModem(NamedTuple):
+    """Result of resolving a v1 modem to its catalog entry.
+
+    Contains canonical catalog values, not the raw v1 strings.
+    """
+
+    modem_dir: str
+    manufacturer: str
+    model: str
+
+
+def resolve_modem_dir(manufacturer: str, model: str) -> ResolvedModem | None:
+    """Resolve v1 manufacturer + model to a catalog entry.
 
     Walks the catalog and tries three match strategies:
 
@@ -166,10 +179,10 @@ def resolve_modem_dir(manufacturer: str, model: str) -> str | None:
         3. Model-only match — if exactly one catalog modem has this
            model name or alias regardless of manufacturer.  Handles
            cases where the manufacturer string changed between
-           versions.
+           versions (e.g., ``"Arris/CommScope"`` → ``"Arris"``).
 
     Returns:
-        Relative path from catalog root (e.g., ``"arris/sb8200"``),
+        ``ResolvedModem`` with canonical catalog values,
         or ``None`` if no match found.
     """
     summaries = list_modems(CATALOG_PATH)
@@ -179,17 +192,18 @@ def resolve_modem_dir(manufacturer: str, model: str) -> str | None:
     # Pass 1: exact manufacturer + model
     for s in summaries:
         if s.manufacturer.lower() == mfr_lower and s.model.lower() == model_lower:
-            return _relative_dir(s.path)
+            return ResolvedModem(_relative_dir(s.path), s.manufacturer, s.model)
 
     # Pass 2: exact manufacturer + model alias
     for s in summaries:
         if s.manufacturer.lower() == mfr_lower and _has_alias(s, model_lower):
-            return _relative_dir(s.path)
+            return ResolvedModem(_relative_dir(s.path), s.manufacturer, s.model)
 
     # Pass 3: model-only (handles manufacturer renames)
-    matches = [s.path for s in summaries if s.model.lower() == model_lower or _has_alias(s, model_lower)]
+    matches = [s for s in summaries if s.model.lower() == model_lower or _has_alias(s, model_lower)]
     if len(matches) == 1:
-        return _relative_dir(matches[0])
+        s = matches[0]
+        return ResolvedModem(_relative_dir(s.path), s.manufacturer, s.model)
 
     return None
 

@@ -918,7 +918,7 @@ system_info:
       response_key: "GetArrisDeviceStatusResponse"
       fields:
         - source: FirmwareVersion
-          field: firmware_version
+          field: software_version
           type: string
 ```
 
@@ -971,7 +971,7 @@ Common HNAP system_info fields:
 |---------------------|-----------------|
 | `*SystemUpTime*` | `system_uptime` |
 | `*ModelName*`, `*SoftwareModelName*` | `model_name` |
-| `*FirmwareVersion*`, `*SoftwareVersion*` | `firmware_version` |
+| `*FirmwareVersion*`, `*SoftwareVersion*` | `software_version` |
 
 ### JSONParser
 
