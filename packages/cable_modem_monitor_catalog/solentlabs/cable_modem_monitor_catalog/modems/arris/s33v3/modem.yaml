@@ -1,0 +1,60 @@
+manufacturer: Arris
+model: S33v3
+brands:
+  - Surfboard
+transport: hnap
+default_host: 192.168.100.1
+
+auth:
+  strategy: hnap
+  hmac_algorithm: sha256
+
+actions:
+  restart:
+    type: hnap
+    action_name: SetArrisConfigurationInfo
+    params:
+      Action: reboot
+    pre_fetch_action: GetArrisConfigurationInfo
+    response_key: SetArrisConfigurationInfoResponse
+    result_key: SetArrisConfigurationInfoResult
+    success_value: OK
+
+behaviors:
+  restart:
+    window_seconds: 300
+
+hardware:
+  docsis_version: "3.1"
+  chipset: Broadcom BCM3390
+  release_date: "2020"
+
+status: awaiting_verification
+sources:
+  auth_config: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
+  chipset: "Same platform as S33/S34"
+  detection_hints: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
+  hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
+  channel_data: "[#98 screenshots by homeautomater](https://github.com/solentlabs/cable_modem_monitor/issues/98) — system_info from jzucker2 HAR, channel data from homeautomater screenshots"
+attribution:
+  contributors:
+    - github: jzucker2
+      contribution: "HAR capture for S33v3 (Issue #98)"
+    - github: homeautomater
+      contribution: "Initial modem request (Issue #98)"
+    - github: starsprung
+      contribution: "Confirmed SHA256 HMAC and S34 compatibility (Issue #98)"
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
+notes: |
+  S33v3 is a hardware revision of the S33 that uses HMAC-SHA256 (same as S34)
+  instead of HMAC-MD5 (used by S33/S33v2). Firmware pattern: AT01.01.* (same
+  as S34, vs S33's TB01.03.*). Parser is identical to S34.
+  S33v3 blocks ICMP ping - HTTP-only health checks required.
+  System uptime not available (only current time exposed).
+references:
+  issues:
+    - "[#98 — [Modem Request] Arris S33v3](https://github.com/solentlabs/cable_modem_monitor/issues/98)"

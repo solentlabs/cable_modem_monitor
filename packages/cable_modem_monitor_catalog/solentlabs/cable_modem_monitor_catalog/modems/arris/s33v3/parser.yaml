@@ -1,0 +1,92 @@
+downstream:
+  format: hnap
+  data_key: CustomerConnDownstreamChannel
+  field_delimiter: "^"
+  fields:
+    - index: 1
+      field: lock_status
+      type: lock_status
+    - index: 2
+      field: channel_type
+      type: string
+      map:
+        "256QAM": "qam"
+        "OFDM PLC": "ofdm"
+    - index: 3
+      field: channel_id
+      type: integer
+    - index: 4
+      field: frequency
+      type: frequency
+    - index: 5
+      field: power
+      type: float
+    - index: 6
+      field: snr
+      type: float
+    - index: 7
+      field: corrected
+      type: integer
+    - index: 8
+      field: uncorrected
+      type: integer
+  filter:
+    channel_id:
+      not: 0
+
+  record_delimiter: "|+|"
+  response_key: GetCustomerStatusDownstreamChannelInfoResponse
+upstream:
+  format: hnap
+  data_key: CustomerConnUpstreamChannel
+  field_delimiter: "^"
+  fields:
+    - index: 1
+      field: lock_status
+      type: lock_status
+    - index: 2
+      field: channel_type
+      type: string
+      map:
+        "OFDMA": "ofdma"
+        "SC-QAM": "qam"
+    - index: 3
+      field: channel_id
+      type: integer
+    - index: 4
+      field: symbol_rate
+      type: frequency
+    - index: 5
+      field: frequency
+      type: frequency
+    - index: 6
+      field: power
+      type: float
+  filter:
+    channel_id:
+      not: 0
+
+  record_delimiter: "|+|"
+  response_key: GetCustomerStatusUpstreamChannelInfoResponse
+system_info:
+  sources:
+    - format: hnap
+      fields:
+        - field: firmware_version
+          source: FirmwareVersion
+          type: string
+        - field: model_name
+          source: StatusSoftwareModelName
+          type: string
+        - field: docsis_status
+          source: InternetConnection
+          type: string
+
+      response_key: GetArrisDeviceStatusResponse
+aggregate:
+  total_corrected:
+    channels: downstream
+    sum: corrected
+  total_uncorrected:
+    channels: downstream
+    sum: uncorrected
