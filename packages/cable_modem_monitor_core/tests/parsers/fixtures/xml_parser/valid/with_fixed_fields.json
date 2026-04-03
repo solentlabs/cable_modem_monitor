@@ -4,16 +4,20 @@
   "_resource": "11",
   "_config": {
     "format": "xml",
-    "resource": "11",
-    "root_element": "us_table",
-    "child_element": "us",
-    "columns": [
-      {"source": "usid", "field": "channel_id", "type": "integer"},
-      {"source": "freq", "field": "frequency", "type": "integer"}
-    ],
-    "fixed_fields": {
-      "lock_status": "locked"
-    }
+    "tables": [
+      {
+        "resource": "11",
+        "root_element": "us_table",
+        "child_element": "us",
+        "columns": [
+          {"source": "usid", "field": "channel_id", "type": "integer"},
+          {"source": "freq", "field": "frequency", "type": "integer"}
+        ],
+        "fixed_fields": {
+          "lock_status": "locked"
+        }
+      }
+    ]
   },
   "_expected": [
     {"channel_id": 1, "frequency": 50000000, "lock_status": "locked"},

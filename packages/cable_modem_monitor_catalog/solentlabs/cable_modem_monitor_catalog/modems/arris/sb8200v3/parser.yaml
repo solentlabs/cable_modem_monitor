@@ -1,0 +1,130 @@
+downstream:
+  format: xml
+  tables:
+    - resource: "10"
+      root_element: downstream_table
+      child_element: downstream
+      columns:
+        - source: chid
+          field: channel_id
+          type: integer
+        - source: freq
+          field: frequency
+          type: frequency
+        - source: pow
+          field: power
+          type: float
+        - source: snr
+          field: snr
+          type: float
+        - source: mod
+          field: modulation
+          type: string
+      channel_type:
+        fixed: "qam"
+      lock_status:
+        all_of:
+          - IsLocked
+      filter:
+        channel_id:
+          not: 0
+    - resource: "9"
+      root_element: downstream_table
+      child_element: downstream
+      columns:
+        - source: dsid
+          field: channel_id
+          type: integer
+        - source: plcFrequency
+          field: frequency
+          type: frequency
+        - source: PLCPower
+          field: power
+          type: float
+        - source: PlcScAvgMer
+          field: snr
+          type: float
+        - source: ofdmModulation
+          field: modulation
+          type: string
+        - source: ofdmCorrected
+          field: corrected
+          type: integer
+        - source: ofdmUncorrectable
+          field: uncorrected
+          type: integer
+      channel_type:
+        fixed: "ofdm"
+      lock_status:
+        all_of:
+          - ofdmIsLocked
+
+upstream:
+  format: xml
+  tables:
+    - resource: "11"
+      root_element: upstream_table
+      child_element: upstream
+      columns:
+        - source: usid
+          field: channel_id
+          type: integer
+        - source: freq
+          field: frequency
+          type: frequency
+        - source: power
+          field: power
+          type: float
+        - source: bandwidth
+          field: channel_width
+          type: integer
+      channel_type:
+        fixed: "qam"
+      lock_status:
+        all_of:
+          - usLocked
+      filter:
+        channel_id:
+          not: 0
+    - resource: "6"
+      root_element: upstream_table
+      child_element: upstream
+      columns:
+        - source: usid
+          field: channel_id
+          type: integer
+        - source: centerFreq
+          field: frequency
+          type: frequency
+        - source: repPower1_6
+          field: power
+          type: float
+        - source: width
+          field: channel_width
+          type: integer
+      channel_type:
+        fixed: "ofdma"
+      lock_status:
+        all_of:
+          - ofdmaLocked
+
+system_info:
+  sources:
+    - format: xml
+      resource: "1"
+      root_element: GlobalSettings
+      fields:
+        - source: SwVersion
+          field: software_version
+          type: string
+        - source: HwModel
+          field: hardware_version
+          type: string
+
+aggregate:
+  total_corrected:
+    channels: downstream.ofdm
+    sum: corrected
+  total_uncorrected:
+    channels: downstream.ofdm
+    sum: uncorrected

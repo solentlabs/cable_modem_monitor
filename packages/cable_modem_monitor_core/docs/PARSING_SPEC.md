@@ -1092,90 +1092,127 @@ and `filter`. Results from all arrays are concatenated.
 ### XMLParser
 
 Extracts channel data from XML responses. The resource dict value is
-a `defusedxml.ElementTree.Element` (the parsed XML root). The parser
-navigates to a named root element, then iterates its child elements
-to extract channels.
+a `defusedxml.ElementTree.Element` (the parsed XML root). Each section
+contains one or more **tables**, each fetching from a different XML
+resource. Results are concatenated in table order.
+
+This supports modems that serve QAM and OFDM channels from separate
+API calls (e.g., DOCSIS 3.1 modems with `fun=10` for DS QAM and
+`fun=9` for DS OFDM).
 
 **parser.yaml schema (channel section):**
 
 ```yaml
 downstream:
   format: xml
-  resource: "10"
-  root_element: downstream_table
-  child_element: downstream
-  columns:
-    - source: chid
-      field: channel_id
-      type: integer
-    - source: freq
-      field: frequency_hz
-      type: integer
-    - source: pow
-      field: power_dbmv
-      type: float
-    - source: snr
-      field: snr_db
-      type: float
-    - source: mod
-      field: modulation
-      type: string
-    - source: PreRs
-      field: corrected
-      type: integer
-    - source: PostRs
-      field: uncorrected
-      type: integer
-  channel_type:
-    fixed: qam
-  lock_status:
-    all_of:
-      - IsQamLocked
-      - IsFECLocked
-      - IsMpegLocked
-  filter:
-    frequency_hz:
-      not_equal: "0"
+  tables:
+    # Table 1: DS QAM channels from fun=10
+    - resource: "10"
+      root_element: downstream_table
+      child_element: downstream
+      columns:
+        - source: chid
+          field: channel_id
+          type: integer
+        - source: freq
+          field: frequency
+          type: frequency
+        - source: pow
+          field: power
+          type: float
+        - source: snr
+          field: snr
+          type: float
+        - source: mod
+          field: modulation
+          type: string
+        - source: PreRs
+          field: corrected
+          type: integer
+        - source: PostRs
+          field: uncorrected
+          type: integer
+      channel_type:
+        field: modulation
+        map:
+          "256qam": "qam"
+          "OFDM": "ofdm"
+      lock_status:
+        all_of:
+          - IsQamLocked
+          - IsFECLocked
+          - IsMpegLocked
+      filter:
+        frequency:
+          not: 0
+    # Table 2: DS OFDM channels from fun=9
+    - resource: "9"
+      root_element: downstream_table
+      child_element: downstream
+      columns:
+        - source: dsid
+          field: channel_id
+          type: integer
+        - source: plcFrequency
+          field: frequency
+          type: frequency
+        - source: PLCPower
+          field: power
+          type: float
+      channel_type:
+        fixed: "ofdm"
+      lock_status:
+        all_of:
+          - ofdmIsLocked
 
 upstream:
   format: xml
-  resource: "11"
-  root_element: upstream_table
-  child_element: upstream
-  columns:
-    - source: usid
-      field: channel_id
-      type: integer
-    - source: srate
-      field: symbol_rate
-      type: float
-      scale: 1000             # Msym/s → ksym/s
-  channel_type:
-    field: modulation
-    map:
-      "64qam": "qam"
-      "OFDMA": "ofdma"
-  fixed_fields:
-    lock_status: "locked"     # presence in table implies lock
-  filter:
-    frequency:
-      not: 0
+  tables:
+    - resource: "11"
+      root_element: upstream_table
+      child_element: upstream
+      columns:
+        - source: usid
+          field: channel_id
+          type: integer
+        - source: srate
+          field: symbol_rate
+          type: float
+          scale: 1000             # Msym/s → ksym/s
+      channel_type:
+        field: modulation
+        map:
+          "64qam": "qam"
+          "OFDMA": "ofdma"
+      fixed_fields:
+        lock_status: "locked"     # presence in table implies lock
+      filter:
+        frequency:
+          not: 0
 ```
+
+**Section-level properties:**
 
 | Property | Type | Required | Description |
 |----------|------|:--------:|-------------|
 | `format` | string | yes | `"xml"` |
-| `resource` | string | yes | Key in the resource dict (for `cbn`, this is the `fun` parameter value) |
-| `root_element` | string | yes | Tag name of the root XML element containing channel data (e.g., `"downstream_table"`) |
-| `child_element` | string | yes | Tag name of the repeated child elements representing individual channels (e.g., `"downstream"`) |
-| `columns` | list | yes | Mappings from XML sub-element tag names to canonical field names |
+| `tables` | list | yes | One or more table definitions (min 1). Results concatenated in order. |
+
+**Table-level properties (each item in `tables`):**
+
+| Property | Type | Required | Description |
+|----------|------|:--------:|-------------|
+| `resource` | string | yes | Key in the resource dict (for `cbn`, the `fun` parameter value) |
+| `root_element` | string | yes | Tag name of the root XML element (e.g., `"downstream_table"`) |
+| `child_element` | string | yes | Tag name of repeated child elements (e.g., `"downstream"`) |
+| `columns` | list | yes | Mappings from XML sub-element tags to canonical field names |
 | `columns[].source` | string | yes | XML child element tag name (e.g., `"freq"`, `"pow"`) |
 | `columns[].field` | string | yes | Canonical field name (from field registry) |
-| `columns[].type` | string | yes | Target type: `integer`, `float`, or `string` |
-| `columns[].scale` | number | no | Multiplier applied after type conversion (e.g., `1000` to convert Msym/s → ksym/s). Whole-number results are cast to int. |
+| `columns[].type` | string | yes | Target type: `integer`, `float`, `string`, `frequency`, `boolean`, `lock_status` |
+| `columns[].scale` | number | no | Multiplier applied after type conversion (e.g., `1000` for Msym/s → ksym/s). Whole-number results cast to int. |
 | `channel_type` | object | no | Fixed or field-derived channel type assignment |
-| `lock_status` | object | no | Derived lock status from multiple boolean XML fields. Contains `all_of`: list of sub-element tag names whose boolean values are ANDed — all must be true for `"locked"`, otherwise `"not_locked"`. |
-| `fixed_fields` | map | no | Static field values assigned to every channel (e.g., `lock_status: "locked"` when presence in the table implies lock). Applied after column extraction and channel_type. |
+| `lock_status` | object | no | `all_of`: list of sub-element tag names whose boolean values are ANDed — all true → `"locked"`, otherwise `"not_locked"` |
+| `fixed_fields` | map | no | Static field values for every channel. Applied after column extraction and channel_type. |
 | `filter` | map | no | Field-based row filtering (same as HTML table filter) |
 
 **parser.yaml schema (system info source):**
@@ -1204,23 +1241,25 @@ system_info:
 
 **Extraction algorithm (channels):**
 
-1. Get `Element` from resource dict by `resource` key
-2. Find the root element by tag name (`root_element`). If the
-   parsed root IS the target element, use it directly; otherwise
-   search children.
-3. Iterate child elements matching `child_element` tag name
-4. For each child: read `.text` of sub-elements named by each
-   column's `source` field
-5. Apply type conversion (`integer`, `float`, `string`)
-6. If `scale` is set on a column, multiply the converted value;
-   cast whole-number floats to int
-7. Apply `channel_type` (fixed or field-derived mapping)
-8. If `lock_status.all_of` is set, AND the boolean values of the
-   listed sub-elements — `"locked"` if all true, `"not_locked"`
-   otherwise
-9. Apply `fixed_fields` — static values override/fill fields on
-   every channel
-10. Apply `filter` — exclude channels by field value
+1. For each table in `tables` (in order):
+   a. Get `Element` from resource dict by table's `resource` key
+   b. Find the root element by tag name (`root_element`). If the
+      parsed root IS the target element, use it directly; otherwise
+      search children.
+   c. Iterate child elements matching `child_element` tag name
+   d. For each child: read `.text` of sub-elements named by each
+      column's `source` field
+   e. Apply type conversion (`integer`, `float`, `string`, etc.)
+   f. If `scale` is set on a column, multiply the converted value;
+      cast whole-number floats to int
+   g. Apply `channel_type` (fixed or field-derived mapping)
+   h. If `lock_status.all_of` is set, AND the boolean values of the
+      listed sub-elements — `"locked"` if all true, `"not_locked"`
+      otherwise
+   i. Apply `fixed_fields` — static values override/fill fields on
+      every channel
+   j. Apply `filter` — exclude channels by field value
+2. Concatenate channels from all tables in order
 
 **Extraction algorithm (system info):**
 

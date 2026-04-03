@@ -1,0 +1,57 @@
+manufacturer: ARRIS
+model: SB8200v3
+model_aliases: []
+brands: []
+transport: cbn
+default_host: "192.168.100.1"
+
+auth:
+  strategy: form_cbn
+
+session:
+  max_concurrent: 1
+
+actions:
+  restart:
+    type: cbn
+    fun: 8
+  logout:
+    type: cbn
+    fun: 16
+
+behaviors:
+  restart:
+    window_seconds: 300
+
+hardware:
+  docsis_version: "3.1"
+  release_date: "2023"
+
+status: in_progress
+
+sources:
+  auth_config: "[#109 — SB8200v3 HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/109)"
+  hardware: "[ARRIS SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/)"
+
+attribution:
+  contributors:
+    - github: petep0p
+      contribution: "HAR capture, firmware identification (AC01 variant)"
+    - github: kwschulz
+      contribution: "Maintainer — v3.14 CBN transport, parser, catalog entry"
+
+isps: []
+
+notes: |
+  AC01 firmware variant of the ARRIS SB8200. Shares CBN/Compal platform
+  with CH7465MT but with DOCSIS 3.1 OFDM/OFDMA support.
+  XML POST API: /xml/getter.xml and /xml/setter.xml, fun=N dispatch.
+  Rotating sessionToken cookie on every response.
+  AES-256-CBC encrypted login (CBN_Encrypt from encrypt_cryptoJS.js).
+  Max 1 concurrent session — explicit logout required.
+  Default credentials: admin / user-configured password.
+
+references:
+  issues:
+    - "[#109 — [Modem Request] ARRIS SB8200v3 (AC01 firmware)](https://github.com/solentlabs/cable_modem_monitor/issues/109)"
+    - "[#81 — SB8200 HTTPS variant (AB01 firmware, separate entry)](https://github.com/solentlabs/cable_modem_monitor/issues/81)"

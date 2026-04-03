@@ -1,78 +1,80 @@
 downstream:
   format: xml
-  resource: "10"
-  root_element: downstream_table
-  child_element: downstream
-  columns:
-    - source: chid
-      field: channel_id
-      type: integer
-    - source: freq
-      field: frequency
-      type: frequency
-    - source: pow
-      field: power
-      type: float
-    - source: snr
-      field: snr
-      type: float
-    - source: mod
-      field: modulation
-      type: string
-    - source: PreRs
-      field: corrected
-      type: integer
-    - source: PostRs
-      field: uncorrected
-      type: integer
-  channel_type:
-    field: modulation
-    map:
-      "256qam": "qam"
-      "64qam": "qam"
-      "OFDM": "ofdm"
-  lock_status:
-    all_of:
-      - IsQamLocked
-      - IsFECLocked
-      - IsMpegLocked
-  filter:
-    frequency:
-      not: 0
+  tables:
+    - resource: "10"
+      root_element: downstream_table
+      child_element: downstream
+      columns:
+        - source: chid
+          field: channel_id
+          type: integer
+        - source: freq
+          field: frequency
+          type: frequency
+        - source: pow
+          field: power
+          type: float
+        - source: snr
+          field: snr
+          type: float
+        - source: mod
+          field: modulation
+          type: string
+        - source: PreRs
+          field: corrected
+          type: integer
+        - source: PostRs
+          field: uncorrected
+          type: integer
+      channel_type:
+        field: modulation
+        map:
+          "256qam": "qam"
+          "64qam": "qam"
+          "OFDM": "ofdm"
+      lock_status:
+        all_of:
+          - IsQamLocked
+          - IsFECLocked
+          - IsMpegLocked
+      filter:
+        frequency:
+          not: 0
 
 upstream:
   format: xml
-  resource: "11"
-  root_element: upstream_table
-  child_element: upstream
-  columns:
-    - source: usid
-      field: channel_id
-      type: integer
-    - source: freq
-      field: frequency
-      type: frequency
-    - source: power
-      field: power
-      type: float
-    - source: srate
-      field: symbol_rate
-      type: float
-      scale: 1000
-    - source: mod
-      field: modulation
-      type: string
-  channel_type:
-    field: modulation
-    map:
-      "64qam": "qam"
-      "16qam": "qam"
-      "OFDMA": "ofdma"
-  fixed_fields:
-    lock_status: "locked"
-  filter:
-    frequency:
-      not: 0
+  tables:
+    - resource: "11"
+      root_element: upstream_table
+      child_element: upstream
+      columns:
+        - source: usid
+          field: channel_id
+          type: integer
+        - source: freq
+          field: frequency
+          type: frequency
+        - source: power
+          field: power
+          type: float
+        - source: srate
+          field: symbol_rate
+          type: float
+          scale: 1000
+        - source: mod
+          field: modulation
+          type: string
+      channel_type:
+        field: modulation
+        map:
+          "64qam": "qam"
+          "16qam": "qam"
+          "OFDMA": "ofdma"
+      fixed_fields:
+        lock_status: "locked"
+      filter:
+        frequency:
+          not: 0
 
 system_info:
   sources:

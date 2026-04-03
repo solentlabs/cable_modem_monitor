@@ -98,6 +98,26 @@ class TestCollectFetchTargets:
         # HNAP system info has no resource path
         assert len(targets) == 0
 
+    def test_xml_multi_table_resources(self) -> None:
+        """XML tables[] produces one target per unique resource."""
+        data = json.loads((FIXTURES_DIR / "xml_multi_table.json").read_text())
+        config = ParserConfig.model_validate(data)
+        targets = collect_fetch_targets(config)
+
+        paths = sorted(t.path for t in targets)
+        assert paths == ["10", "9"]
+        assert all(t.format == "xml" for t in targets)
+
+    def test_xml_single_table_resource(self) -> None:
+        """XML section with one table produces one target."""
+        data = json.loads((FIXTURES_DIR / "xml_downstream.json").read_text())
+        config = ParserConfig.model_validate(data)
+        targets = collect_fetch_targets(config)
+
+        assert len(targets) == 1
+        assert targets[0].path == "10"
+        assert targets[0].format == "xml"
+
     def test_resource_target_is_frozen(self) -> None:
         """ResourceTarget is immutable."""
         target = ResourceTarget(path="/test.html", format="table")

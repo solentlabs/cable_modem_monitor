@@ -68,7 +68,12 @@ def _add_section_target(
     section: object | None,
     seen_paths: dict[str, ResourceTarget],
 ) -> None:
-    """Extract a resource target from a section and add if unique."""
+    """Extract resource target(s) from a section and add if unique.
+
+    Handles both single-resource sections (HTML table, JSON, etc.)
+    and multi-resource sections (XML tables where each table has its
+    own resource).
+    """
     if section is None:
         return
 
@@ -76,14 +81,25 @@ def _add_section_target(
     if fmt == "hnap":
         return
 
+    # Single-resource sections (table, json, javascript, etc.)
     resource: str = getattr(section, "resource", "")
-    if not resource:
+    if resource:
+        if resource not in seen_paths:
+            encoding: str = getattr(section, "encoding", "")
+            seen_paths[resource] = ResourceTarget(
+                path=resource,
+                format=fmt,
+                encoding=encoding,
+            )
         return
 
-    if resource not in seen_paths:
-        encoding: str = getattr(section, "encoding", "")
-        seen_paths[resource] = ResourceTarget(
-            path=resource,
-            format=fmt,
-            encoding=encoding,
-        )
+    # Multi-resource sections (XML tables — each table has its own resource)
+    tables: list[object] | None = getattr(section, "tables", None)
+    if tables:
+        for table in tables:
+            table_resource: str = getattr(table, "resource", "")
+            if table_resource and table_resource not in seen_paths:
+                seen_paths[table_resource] = ResourceTarget(
+                    path=table_resource,
+                    format=fmt,
+                )

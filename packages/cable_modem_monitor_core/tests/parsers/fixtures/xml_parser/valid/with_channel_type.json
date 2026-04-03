@@ -4,14 +4,18 @@
   "_resource": "10",
   "_config": {
     "format": "xml",
-    "resource": "10",
-    "root_element": "downstream_table",
-    "child_element": "downstream",
-    "columns": [
-      {"source": "freq", "field": "frequency", "type": "integer"},
-      {"source": "pow", "field": "power", "type": "float"}
-    ],
-    "channel_type": {"fixed": "qam"}
+    "tables": [
+      {
+        "resource": "10",
+        "root_element": "downstream_table",
+        "child_element": "downstream",
+        "columns": [
+          {"source": "freq", "field": "frequency", "type": "integer"},
+          {"source": "pow", "field": "power", "type": "float"}
+        ],
+        "channel_type": {"fixed": "qam"}
+      }
+    ]
   },
   "_expected": [
     {"frequency": 500000000, "power": 5.2, "channel_type": "qam"}

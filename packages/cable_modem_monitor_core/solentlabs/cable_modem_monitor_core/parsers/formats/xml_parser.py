@@ -6,6 +6,7 @@ tag name, iterates child elements, and extracts field values from
 sub-element text content.
 
 Supports:
+- Multiple tables per section (concatenation from different resources)
 - ``scale`` on column mappings (unit normalization after type conversion)
 - ``channel_type`` (fixed or mapped from another field)
 - ``lock_status`` (AND of multiple boolean XML fields)
@@ -22,7 +23,11 @@ from typing import Any
 from xml.etree.ElementTree import Element
 
 from ...models.parser_config.common import ChannelTypeFixed, ChannelTypeMap
-from ...models.parser_config.xml_format import LockStatusAllOf, XMLSection
+from ...models.parser_config.xml_format import (
+    LockStatusAllOf,
+    XMLSection,
+    XMLTableDefinition,
+)
 from ..filter import passes_filter
 from ..type_conversion import convert_value
 
@@ -30,7 +35,10 @@ _logger = logging.getLogger(__name__)
 
 
 class XMLChannelParser:
-    """Parse channel data from an XML Element.
+    """Parse channel data from XML Elements.
+
+    Iterates over all tables in the section, fetches each table's
+    resource, and concatenates the extracted channels in order.
 
     Args:
         config: Validated ``XMLSection`` from parser.yaml.
@@ -40,73 +48,82 @@ class XMLChannelParser:
         self._config = config
 
     def parse(self, resources: dict[str, Any]) -> list[dict[str, Any]]:
-        """Extract channels from the resource dict.
+        """Extract channels from all tables in the section.
 
         Args:
             resources: Dict keyed by fun parameter string, values are
                 ``Element`` objects from the CBN loader.
 
         Returns:
-            List of channel dicts with canonical field names.
+            List of channel dicts with canonical field names,
+            concatenated from all tables in order.
         """
-        root = resources.get(self._config.resource)
+        channels: list[dict[str, Any]] = []
+        for table in self._config.tables:
+            channels.extend(self._parse_table(table, resources))
+        return channels
+
+    def _parse_table(self, table: XMLTableDefinition, resources: dict[str, Any]) -> list[dict[str, Any]]:
+        """Extract channels from a single table definition."""
+        root = resources.get(table.resource)
         if root is None:
             _logger.debug(
                 "XML resource '%s' not found in resources",
-                self._config.resource,
+                table.resource,
             )
             return []
 
         if not isinstance(root, Element):
             _logger.debug(
                 "XML resource '%s' is not an Element (got %s)",
-                self._config.resource,
+                table.resource,
                 type(root).__name__,
             )
             return []
 
         # Find the named root element
-        container = root.find(self._config.root_element)
+        container = root.find(table.root_element)
         if container is None:
             # Root element might be the document root itself
-            if root.tag == self._config.root_element:
+            if root.tag == table.root_element:
                 container = root
             else:
                 _logger.debug(
                     "XML root element '%s' not found",
-                    self._config.root_element,
+                    table.root_element,
                 )
                 return []
 
         # Iterate child elements, apply filter
         channels: list[dict[str, Any]] = []
-        for child in container.findall(self._config.child_element):
-            channel = self._extract_channel(child)
-            if channel and passes_filter(channel, self._config.filter):
+        for child in container.findall(table.child_element):
+            channel = _extract_channel(child, table)
+            if channel and passes_filter(channel, table.filter):
                 channels.append(channel)
 
         return channels
 
-    def _extract_channel(self, element: Element) -> dict[str, Any]:
-        """Extract field values from a single child element."""
-        channel: dict[str, Any] = {}
 
-        for col in self._config.columns:
-            value = _extract_column(element, col)
-            if value is not None:
-                channel[col.field] = value
+def _extract_channel(element: Element, table: XMLTableDefinition) -> dict[str, Any]:
+    """Extract field values from a single child element."""
+    channel: dict[str, Any] = {}
 
-        _apply_channel_type(channel, self._config.channel_type)
+    for col in table.columns:
+        value = _extract_column(element, col)
+        if value is not None:
+            channel[col.field] = value
 
-        if self._config.lock_status is not None:
-            ls = self._config.lock_status
-            if isinstance(ls, LockStatusAllOf):
-                channel["lock_status"] = _derive_lock_status(element, ls.all_of)
+    _apply_channel_type(channel, table.channel_type)
 
-        for field_name, field_value in self._config.fixed_fields.items():
-            channel[field_name] = field_value
+    if table.lock_status is not None:
+        ls = table.lock_status
+        if isinstance(ls, LockStatusAllOf):
+            channel["lock_status"] = _derive_lock_status(element, ls.all_of)
 
-        return channel
+    for field_name, field_value in table.fixed_fields.items():
+        channel[field_name] = field_value
+
+    return channel
 
 
 def _extract_column(element: Element, col: Any) -> Any:

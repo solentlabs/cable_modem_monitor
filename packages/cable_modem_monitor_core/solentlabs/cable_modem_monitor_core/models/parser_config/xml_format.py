@@ -48,21 +48,18 @@ class LockStatusAllOf(BaseModel):
     all_of: list[str] = Field(min_length=1)
 
 
-class XMLSection(BaseModel):
-    """XML channel section config.
+class XMLTableDefinition(BaseModel):
+    """Single XML table within a channel section.
 
-    Navigates to a root element by tag name, iterates child elements,
-    and extracts fields from sub-element text content.
+    Defines one resource fetch and its column extraction rules.
+    Multiple tables in a section are fetched independently and their
+    channel results concatenated in order.
 
-    ``fixed_fields`` assigns static values to every channel (e.g.,
-    ``lock_status: "locked"`` when presence in the table implies lock).
-
-    ``lock_status`` derives the lock status from multiple boolean XML
-    fields via AND (e.g., IsQamLocked AND IsFECLocked AND IsMpegLocked).
+    Each table has its own resource (``fun`` parameter for CBN),
+    root/child element paths, column mappings, and channel type.
     """
 
     model_config = ConfigDict(extra="forbid")
-    format: Literal["xml"]
     resource: str
     root_element: str
     child_element: str
@@ -71,3 +68,18 @@ class XMLSection(BaseModel):
     lock_status: LockStatusAllOf | None = None
     fixed_fields: dict[str, str] = Field(default_factory=dict)
     filter: dict[str, FilterValue] = Field(default_factory=dict)
+
+
+class XMLSection(BaseModel):
+    """XML channel section config.
+
+    Contains one or more tables, each fetching from a different XML
+    resource. Results are concatenated in order. This supports modems
+    that serve QAM and OFDM channels from separate API calls.
+
+    See PARSING_SPEC.md § XML Tables.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    format: Literal["xml"]
+    tables: list[XMLTableDefinition] = Field(min_length=1)
