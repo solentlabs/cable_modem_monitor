@@ -17,7 +17,7 @@ sources:
 
 attribution:
   contributors:
-    - github: leptitchat
+    - github: https://github.com/leptitchat
       contribution: "Modem request and testing"
 
 isps:

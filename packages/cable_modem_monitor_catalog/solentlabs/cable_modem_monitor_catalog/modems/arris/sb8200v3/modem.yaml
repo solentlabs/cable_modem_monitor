@@ -35,9 +35,9 @@ sources:
 
 attribution:
   contributors:
-    - github: petep0p
+    - github: https://github.com/petep0p
       contribution: "HAR capture, firmware identification (AC01 variant)"
-    - github: kwschulz
+    - github: https://github.com/kwschulz
       contribution: "Maintainer — v3.14 CBN transport, parser, catalog entry"
 
 isps: []

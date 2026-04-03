@@ -30,7 +30,7 @@ sources:
   hardware: "[CM600 Datasheet](https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf)"
 attribution:
   contributors:
-    - github: chairstacker
+    - github: https://github.com/chairstacker
       contribution:
         "[Issue #3](https://github.com/solentlabs/cable_modem_monitor/issues/3)
         diagnostics"

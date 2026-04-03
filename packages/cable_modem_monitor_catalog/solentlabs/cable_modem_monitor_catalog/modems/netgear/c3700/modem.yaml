@@ -29,7 +29,7 @@ sources:
   detection_hints: "Maintainer verified"
 attribution:
   contributors:
-    - github: kwschulz
+    - github: https://github.com/kwschulz
       contribution: "Maintainer verified"
 
 isps:

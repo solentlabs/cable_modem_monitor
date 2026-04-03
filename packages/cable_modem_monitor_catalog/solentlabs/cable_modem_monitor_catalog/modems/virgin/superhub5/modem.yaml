@@ -25,7 +25,7 @@ sources:
   hardware: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
 attribution:
   contributors:
-    - github: Dinth
+    - github: https://github.com/Dinth
       contribution: "Initial Hub 5 support and REST API documentation"
 
 isps:

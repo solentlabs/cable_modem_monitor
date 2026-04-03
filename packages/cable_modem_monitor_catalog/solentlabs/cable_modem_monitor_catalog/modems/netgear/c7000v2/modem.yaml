@@ -29,7 +29,7 @@ sources:
   detection_hints: "[#61 C7000v2](https://github.com/solentlabs/cable_modem_monitor/issues/61)"
 attribution:
   contributors:
-    - github: Anthranilic
+    - github: https://github.com/Anthranilic
       contribution:
         "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61)
         diagnostics"

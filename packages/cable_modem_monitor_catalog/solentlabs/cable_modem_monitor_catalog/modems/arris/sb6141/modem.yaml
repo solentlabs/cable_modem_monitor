@@ -25,9 +25,9 @@ sources:
   detection_hints: "[HA Community thread](https://community.home-assistant.io/)"
 attribution:
   contributors:
-    - github: captain-coredump
+    - github: https://github.com/captain-coredump
       contribution: "Initial fixture and parser"
-    - github: vreihen
+    - github: https://github.com/vreihen
       contribution: "HA Community verification (October 2025)"
 
 isps:

@@ -25,7 +25,7 @@ sources:
   detection_hints: "[PR #22 SB6190 parser](https://github.com/solentlabs/cable_modem_monitor/pull/22)"
 attribution:
   contributors:
-    - github: sfennell
+    - github: https://github.com/sfennell
       contribution:
         "[PR #22](https://github.com/solentlabs/cable_modem_monitor/pull/22)
         verification"

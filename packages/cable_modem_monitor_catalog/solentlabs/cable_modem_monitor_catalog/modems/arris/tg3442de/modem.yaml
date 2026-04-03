@@ -43,7 +43,7 @@ sources:
   chipset: "[TG3442DE Teardown](https://github.com/nox-x/TG3442DE-Teardown)"
 attribution:
   contributors:
-    - github: samuelengelking
+    - github: https://github.com/samuelengelking
       contribution: "HAR capture and initial modem request"
 isps:
   - Vodafone DE

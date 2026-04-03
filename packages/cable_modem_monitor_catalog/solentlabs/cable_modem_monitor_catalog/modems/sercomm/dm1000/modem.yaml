@@ -24,7 +24,7 @@ sources:
 
 attribution:
   contributors:
-    - github: B0ndo2
+    - github: https://github.com/B0ndo2
       contribution: "HAR capture and Python parsing script (Issue #92)"
 
 isps:

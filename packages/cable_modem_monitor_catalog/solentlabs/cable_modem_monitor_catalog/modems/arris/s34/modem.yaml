@@ -37,7 +37,7 @@ sources:
   hardware: "[SURFboard S34 page](https://www.surfboard.com/products/cable-modems/s34/)"
 attribution:
   contributors:
-    - github: rplancha
+    - github: https://github.com/rplancha
       contribution: "Initial implementation and HAR capture (PR #90)"
 isps:
   - Comcast

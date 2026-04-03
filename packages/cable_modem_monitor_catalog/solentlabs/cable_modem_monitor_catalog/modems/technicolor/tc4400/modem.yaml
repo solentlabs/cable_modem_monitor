@@ -27,11 +27,11 @@ sources:
   detection_hints: "[#1 TC-4400 Login](https://github.com/solentlabs/cable_modem_monitor/issues/1)"
 attribution:
   contributors:
-    - github: Mar1usW3
+    - github: https://github.com/Mar1usW3
       contribution:
         "[Issue #1](https://github.com/solentlabs/cable_modem_monitor/issues/1)
         verification"
-    - github: MrHankey777x
+    - github: https://github.com/MrHankey777x
       contribution: "TC4400AM variant confirmation (Issue #94)"
 
 isps:

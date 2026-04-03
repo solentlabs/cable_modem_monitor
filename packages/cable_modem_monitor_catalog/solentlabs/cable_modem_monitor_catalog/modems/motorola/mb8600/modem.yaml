@@ -35,7 +35,7 @@ sources:
   hardware: "[Motorola MB8600 page](https://www.motorola.com/us/mb8600)"
 attribution:
   contributors:
-    - github: BowlesCR
+    - github: https://github.com/BowlesCR
       contribution: "MB8600 HAR capture and HNAP testing (Issue #40)"
 isps:
   - Comcast

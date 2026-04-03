@@ -30,7 +30,7 @@ sources:
   hardware: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
 attribution:
   contributors:
-    - github: MrAct1on
+    - github: https://github.com/MrAct1on
       contribution: "Initial G54 support and HAR capture"
 
 isps:

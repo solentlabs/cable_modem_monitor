@@ -27,7 +27,7 @@ sources:
 
 attribution:
   contributors:
-    - github: PerryFabregas
+    - github: https://github.com/PerryFabregas
       contribution: "HAR capture (Issue #120)"
 
 isps:

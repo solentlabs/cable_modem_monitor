@@ -22,7 +22,7 @@ sources:
 
 attribution:
   contributors:
-    - github: dggrzesiak
+    - github: https://github.com/dggrzesiak
       contribution: "HAR capture"
 
 isps:

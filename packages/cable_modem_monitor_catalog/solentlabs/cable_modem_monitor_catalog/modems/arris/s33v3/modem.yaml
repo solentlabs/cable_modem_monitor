@@ -38,11 +38,11 @@ sources:
   channel_data: "[#98 screenshots by homeautomater](https://github.com/solentlabs/cable_modem_monitor/issues/98) — system_info from jzucker2 HAR, channel data from homeautomater screenshots"
 attribution:
   contributors:
-    - github: jzucker2
+    - github: https://github.com/jzucker2
       contribution: "HAR capture for S33v3 (Issue #98)"
-    - github: homeautomater
+    - github: https://github.com/homeautomater
       contribution: "Initial modem request (Issue #98)"
-    - github: starsprung
+    - github: https://github.com/starsprung
       contribution: "Confirmed SHA256 HMAC and S34 compatibility (Issue #98)"
 isps:
   - Comcast

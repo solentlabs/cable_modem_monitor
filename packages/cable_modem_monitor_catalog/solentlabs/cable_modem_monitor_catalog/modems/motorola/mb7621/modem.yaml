@@ -52,7 +52,7 @@ sources:
 
 attribution:
   contributors:
-    - github: kwschulz
+    - github: https://github.com/kwschulz
       contribution: "Maintainer hardware, initial parser"
 
 isps:

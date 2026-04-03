@@ -24,7 +24,7 @@ sources:
 
 attribution:
   contributors:
-    - github: jeremyhuber
+    - github: https://github.com/jeremyhuber
       contribution: "HAR capture (Issue #89)"
 
 isps:

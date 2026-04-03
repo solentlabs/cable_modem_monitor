@@ -84,7 +84,7 @@ sources:
   chipset: "FCC filing"
 attribution:
   contributors:
-    - github: "contributor123"
+    - github: "https://github.com/kwschulz"
       contribution: "Initial HAR capture and fixtures"
 isps:
   - "Comcast"
@@ -1036,9 +1036,9 @@ support yet.
 ```yaml
 attribution:
   contributors:
-    - github: "contributor123"
+    - github: "https://github.com/kwschulz"
       contribution: "Initial HAR capture and parser"
-    - github: "contributor456"
+    - github: "https://github.com/solentlabs"
       contribution: "HTTPS variant testing"
 ```
 
@@ -1230,7 +1230,7 @@ sources:
   auth_config: "Community forum"
 attribution:
   contributors:
-    - github: "{contributor}"
+    - github: "https://github.com/{contributor}"
       contribution: "Initial implementation"
 isps:
   - "Various"
@@ -1270,7 +1270,7 @@ sources:
   auth_config: "HAR capture"
 attribution:
   contributors:
-    - github: "{contributor}"
+    - github: "https://github.com/{contributor}"
       contribution: "Initial implementation"
 isps:
   - "Various"
@@ -1318,7 +1318,7 @@ sources:
   auth_config: "HAR capture, user testing"
 attribution:
   contributors:
-    - github: "{contributor}"
+    - github: "https://github.com/{contributor}"
       contribution: "HAR capture and testing"
 isps:
   - "{ISP}"
@@ -1345,7 +1345,7 @@ sources:
   auth_config: "HAR capture"
 attribution:
   contributors:
-    - github: "{contributor}"
+    - github: "https://github.com/{contributor}"
       contribution: "REST API analysis"
 isps:
   - "{ISP}"

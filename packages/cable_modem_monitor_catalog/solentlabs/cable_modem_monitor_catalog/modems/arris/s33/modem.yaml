@@ -39,9 +39,9 @@ sources:
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
 attribution:
   contributors:
-    - github: mmiller7
+    - github: https://github.com/mmiller7
       contribution: "S33v2 HAR capture and issue #117 report"
-    - github: gmogoody
+    - github: https://github.com/gmogoody
       contribution: "S33 HAR capture and iterative testing (Issue #32, #87)"
 isps:
   - Comcast

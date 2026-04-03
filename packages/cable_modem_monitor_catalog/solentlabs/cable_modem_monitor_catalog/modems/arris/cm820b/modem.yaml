@@ -23,7 +23,7 @@ sources:
   detection_hints: "[PR #57 CM820B parser](https://github.com/solentlabs/cable_modem_monitor/pull/57)"
 attribution:
   contributors:
-    - github: dimkalinux
+    - github: https://github.com/dimkalinux
       contribution:
         "[PR #57](https://github.com/solentlabs/cable_modem_monitor/pull/57)
         verification"

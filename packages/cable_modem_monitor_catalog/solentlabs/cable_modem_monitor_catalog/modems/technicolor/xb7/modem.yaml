@@ -27,7 +27,7 @@ sources:
   detection_hints: "[#2 Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
 attribution:
   contributors:
-    - github: esand
+    - github: https://github.com/esand
       contribution:
         "[Issue #2](https://github.com/solentlabs/cable_modem_monitor/issues/2)
         verification"

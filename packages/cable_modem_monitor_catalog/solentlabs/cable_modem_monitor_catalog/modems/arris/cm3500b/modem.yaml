@@ -23,7 +23,7 @@ sources:
   release_date: "[ARRIS CM3500 Datasheet](https://vectortechsolutions.com/wp-content/uploads/import/files/1314/231004_cm3500_datasheet.pdf)"
 attribution:
   contributors:
-    - github: ChBi89
+    - github: https://github.com/ChBi89
       contribution: "HAR capture and initial parser (Issue #73)"
 
 isps:

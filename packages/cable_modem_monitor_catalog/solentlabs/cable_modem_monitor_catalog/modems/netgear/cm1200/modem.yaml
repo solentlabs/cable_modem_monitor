@@ -15,7 +15,7 @@ sources:
   detection_hints: "[#63 CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
 attribution:
   contributors:
-    - github: DeFlanko
+    - github: https://github.com/DeFlanko
       contribution:
         "[Issue #63](https://github.com/solentlabs/cable_modem_monitor/issues/63)
         diagnostics"

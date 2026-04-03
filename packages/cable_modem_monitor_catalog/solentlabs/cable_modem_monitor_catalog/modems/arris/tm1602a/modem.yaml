@@ -20,7 +20,7 @@ sources:
 
 attribution:
   contributors:
-    - github: jontires
+    - github: https://github.com/jontires
       contribution: "HAR capture (Issue #112)"
 
 isps:

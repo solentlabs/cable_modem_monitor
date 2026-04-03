@@ -24,7 +24,7 @@ sources:
 
 attribution:
   contributors:
-    - github: Dragon1473
+    - github: https://github.com/Dragon1473
       contribution: "HAR capture and testing (Issue #105)"
 
 isps:

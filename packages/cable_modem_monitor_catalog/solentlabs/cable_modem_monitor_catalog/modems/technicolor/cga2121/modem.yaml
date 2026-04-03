@@ -26,7 +26,7 @@ sources:
   detection_hints: "[#75 Technicolor CGA2121](https://github.com/solentlabs/cable_modem_monitor/issues/75)"
 attribution:
   contributors:
-    - github: sgofferj
+    - github: https://github.com/sgofferj
       contribution: "HAR capture and initial fixture data"
 
 isps:

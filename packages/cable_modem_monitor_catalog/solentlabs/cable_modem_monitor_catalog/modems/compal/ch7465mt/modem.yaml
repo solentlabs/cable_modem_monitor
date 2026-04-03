@@ -36,9 +36,9 @@ sources:
 
 attribution:
   contributors:
-    - github: mtheli
+    - github: https://github.com/mtheli
       contribution: "HAR captures (3x sanitized), v3.13 implementation (PR #129)"
-    - github: kwschulz
+    - github: https://github.com/kwschulz
       contribution: "Maintainer — v3.14 CBN transport, parser, catalog entry"
 
 isps:

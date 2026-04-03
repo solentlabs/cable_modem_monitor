@@ -28,7 +28,7 @@ sources:
 
 attribution:
   contributors:
-    - github: makerwolf
+    - github: https://github.com/makerwolf
       contribution: "HAR capture (Issue #115)"
 
 isps:

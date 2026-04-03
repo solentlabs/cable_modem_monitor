@@ -30,7 +30,7 @@ sources:
   detection_hints: "[#38 Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
 attribution:
   contributors:
-    - github: m4dh4tt3r-88
+    - github: https://github.com/m4dh4tt3r-88
       contribution:
         "[Issue #38](https://github.com/solentlabs/cable_modem_monitor/issues/38)
         diagnostics"

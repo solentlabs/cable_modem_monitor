@@ -38,15 +38,15 @@ sources:
   hardware: "[Motorola MB8611 page](https://www.motorola.com/us/mb8611)"
 attribution:
   contributors:
-    - github: cvonk
+    - github: https://github.com/cvonk
       contribution:
         "HAR captures, debug logs, iterative testing (Issue #6, November
         2025)"
-    - github: dlindnegm
+    - github: https://github.com/dlindnegm
       contribution: "Original HTML page captures (Issue #4, October 2025)"
-    - github: BowlesCR
+    - github: https://github.com/BowlesCR
       contribution: HNAP authentication implementation (Issue #40)
-    - github: kwschulz
+    - github: https://github.com/kwschulz
       contribution: "Maintainer"
 isps:
   - Comcast
