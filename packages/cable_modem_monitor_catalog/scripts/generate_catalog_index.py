@@ -232,9 +232,9 @@ def generate_index(output_path: Path | None = None) -> str:
     # Warn about missing reference data
     gaps = check_reference_gaps(supported)
     if gaps:
-        print("WARNING: Reference data gaps (generic badges will be used):")
+        print("WARNING: Reference data gaps (generic badges will be used):", file=sys.stderr)
         for gap in gaps:
-            print(gap)
+            print(gap, file=sys.stderr)
 
     summary, auth_str = _build_summary(supported)
 
@@ -374,7 +374,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.print:
-        print(generate_index())
+        sys.stdout.write(generate_index())
     else:
         generate_index(args.output)
 

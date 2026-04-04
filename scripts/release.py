@@ -650,6 +650,9 @@ def _run_release(args: argparse.Namespace, repo_root: Path) -> None:
     # Update all version files
     update_all_files(repo_root, version, args.skip_changelog)
 
+    # Regenerate catalog README from modem.yaml files
+    _generate_catalog_index(repo_root)
+
     # Verify version consistency (prevents CI tag/manifest mismatch error)
     _exit_on_failure(verify_version_consistency(repo_root, version))
 
