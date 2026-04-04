@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   diagnostics bridging, and outage duration computation. Split from
   monolithic script into Core (platform-agnostic models + parser) and
   HA layer (adapter-specific patterns + report formatting).
+- **Arris S33v3 system_info enrichment** — Added system uptime and
+  hardware version to S33v3 parser via `GetCustomerStatusSoftware`
+  SOAP action, sourced from jzucker2 HAR capture. (Related to #98)
 
 ### Improved
 

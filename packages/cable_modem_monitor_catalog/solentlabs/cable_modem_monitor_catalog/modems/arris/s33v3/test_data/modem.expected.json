@@ -334,8 +334,10 @@
   "system_info": {
     "docsis_status": "Connected",
     "downstream_channel_count": 33,
+    "hardware_version": "3",
     "software_version": "AT01.01.018.042324_S3.03.735",
     "model_name": "S33v3",
+    "system_uptime": "16 days 05h:23m:42s",
     "total_corrected": 3827979,
     "total_uncorrected": 0,
     "upstream_channel_count": 6

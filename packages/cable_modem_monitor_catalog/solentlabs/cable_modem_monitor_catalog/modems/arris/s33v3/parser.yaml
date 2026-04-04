@@ -81,8 +81,16 @@ system_info:
         - field: docsis_status
           source: InternetConnection
           type: string
-
       response_key: GetArrisDeviceStatusResponse
+    - format: hnap
+      fields:
+        - field: system_uptime
+          source: CustomerConnSystemUpTime
+          type: string
+        - field: hardware_version
+          source: StatusSoftwareHdVer
+          type: string
+      response_key: GetCustomerStatusSoftwareResponse
 aggregate:
   total_corrected:
     channels: downstream

@@ -36,6 +36,7 @@ sources:
   detection_hints: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
   channel_data: "[#98 screenshots by homeautomater](https://github.com/solentlabs/cable_modem_monitor/issues/98) — system_info from jzucker2 HAR, channel data from homeautomater screenshots"
+  system_info_software: "[#98 jzucker2 HAR swinfo.js](https://github.com/solentlabs/cable_modem_monitor/issues/98) — CustomerConnSystemUpTime and StatusSoftwareHdVer from GetCustomerStatusSoftware"
 attribution:
   contributors:
     - github: https://github.com/jzucker2
@@ -52,9 +53,10 @@ isps:
 notes: |
   S33v3 is a hardware revision of the S33 that uses HMAC-SHA256 (same as S34)
   instead of HMAC-MD5 (used by S33/S33v2). Firmware pattern: AT01.01.* (same
-  as S34, vs S33's TB01.03.*). Parser is identical to S34.
+  as S34, vs S33's TB01.03.*).
   S33v3 blocks ICMP ping - HTTP-only health checks required.
-  System uptime not available (only current time exposed).
+  Uptime comes from GetCustomerStatusSoftware (swinfo page), not from
+  GetCustomerStatusConnectionInfo as on S33/S33v2.
 references:
   issues:
     - "[#98 — [Modem Request] Arris S33v3](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
