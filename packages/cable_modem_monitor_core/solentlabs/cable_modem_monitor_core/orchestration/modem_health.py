@@ -1,8 +1,10 @@
 """HealthMonitor — lightweight probes for modem reachability.
 
 Runs ICMP ping and HTTP HEAD/GET probes independently on their own
-cadence. Health checks and data collection are fully decoupled — the
-HealthMonitor has no knowledge of the data collector.
+cadence. The orchestrator notifies the HealthMonitor when data
+collections start and end — the HTTP probe is skipped when a
+collection is active (avoids contention) or recently succeeded
+(redundant).
 
 Probe capabilities (ICMP, HEAD) are declared in modem.yaml and
 confirmed by auto-detection during setup.
@@ -17,6 +19,7 @@ import logging
 import platform
 import re
 import subprocess
+import time
 
 import requests
 
@@ -35,8 +38,9 @@ class HealthMonitor:
     """Lightweight modem health probes.
 
     Runs ICMP and HTTP probes to detect modem reachability between data
-    collection cycles. Fully decoupled from data collection — each
-    ping() call runs all enabled probes independently.
+    collection cycles. The orchestrator signals collection activity via
+    ``record_collection_start()`` / ``record_collection_end()`` so the
+    HTTP probe can be skipped when redundant or contentious.
 
     Args:
         base_url: Modem URL for HTTP probe (e.g., "http://192.168.100.1").
@@ -75,11 +79,41 @@ class HealthMonitor:
         self._latest = HealthInfo(health_status=HealthStatus.UNKNOWN)
         self._previous_status: HealthStatus = HealthStatus.UNKNOWN
 
+        # Collection evidence — orchestrator signals active collections
+        # so the HTTP probe can be skipped when redundant or contentious.
+        self._collection_active: bool = False
+        self._last_collection_success: float | None = None
+        self._last_ping_time: float | None = None
+
+    def record_collection_start(self) -> None:
+        """Signal that a data collection cycle is starting.
+
+        Called by the orchestrator before ``collector.execute()``.
+        While active, ``ping()`` skips the HTTP probe to avoid
+        contention on the modem's web server.
+        """
+        self._collection_active = True
+
+    def record_collection_end(self, success: bool) -> None:
+        """Signal that a data collection cycle has ended.
+
+        Called by the orchestrator after ``collector.execute()``
+        completes (success or failure). A successful collection is
+        recorded so the next ``ping()`` can skip the redundant HTTP
+        probe.
+        """
+        self._collection_active = False
+        if success:
+            self._last_collection_success = time.monotonic()
+
     def ping(self) -> HealthInfo:
         """Run health probes and return results.
 
-        ICMP runs first (if supported), then HTTP (if enabled). Both
-        probes run regardless of each other's result.
+        ICMP runs first (if supported), then HTTP (if enabled). The
+        HTTP probe is skipped when a data collection is active or
+        recently succeeded — the collection already proves HTTP
+        reachability. See ``record_collection_start`` and
+        ``record_collection_end``.
 
         Returns:
             HealthInfo with probe results and derived status.
@@ -89,17 +123,23 @@ class HealthMonitor:
         icmp_ok: bool | None = None
         http_ok: bool | None = None
 
-        # ICMP probe
+        # ICMP probe — always runs (lightweight)
         if self._supports_icmp:
             icmp_ok, icmp_ms = self._probe_icmp()
 
-        # HTTP probe
+        # HTTP probe — skip when collection evidence makes it redundant
         http_bytes: int | None = None
-        if self._http_probe:
+        skip_http = self._http_probe and self._should_skip_http_probe()
+        if self._http_probe and not skip_http:
             http_ok, http_ms, http_bytes = self._probe_http()
 
-        # Derive status
-        health_status = self._derive_status(icmp_ok, http_ok)
+        # For status derivation, treat collection evidence as proof of
+        # HTTP reachability, but don't fabricate measurement values.
+        effective_http_ok = http_ok
+        if skip_http:
+            effective_http_ok = True
+
+        health_status = self._derive_status(icmp_ok, effective_http_ok)
 
         info = HealthInfo(
             health_status=health_status,
@@ -108,7 +148,8 @@ class HealthMonitor:
         )
         self._latest = info
 
-        self._log_result(info, icmp_ok, http_ok, http_bytes)
+        self._log_result(info, icmp_ok, http_ok, http_bytes, skipped_http=skip_http)
+        self._last_ping_time = time.monotonic()
         return info
 
     @property
@@ -118,6 +159,29 @@ class HealthMonitor:
         Returns default HealthInfo(UNKNOWN) if ping() has never been called.
         """
         return self._latest
+
+    # ------------------------------------------------------------------
+    # Internal — collection evidence
+    # ------------------------------------------------------------------
+
+    def _should_skip_http_probe(self) -> bool:
+        """Check if collection activity makes the HTTP probe redundant.
+
+        Returns True when:
+        - A data collection is currently active (avoids contention), or
+        - A collection succeeded since the previous ping() completed
+          (redundant probe — evidence consumed once).
+
+        Never skips before the first ping() completes — consumers need
+        at least one real HTTP measurement to establish a baseline.
+        """
+        if self._last_ping_time is None:
+            return False
+        if self._collection_active:
+            return True
+        if self._last_collection_success is not None:
+            return self._last_collection_success > self._last_ping_time
+        return False
 
     # ------------------------------------------------------------------
     # Internal — probes
@@ -275,6 +339,8 @@ class HealthMonitor:
         icmp_ok: bool | None,
         http_ok: bool | None,
         http_bytes: int | None = None,
+        *,
+        skipped_http: bool = False,
     ) -> None:
         """Log the health check result.
 
@@ -283,7 +349,7 @@ class HealthMonitor:
         - INFO: other status transitions (recovery, first check)
         - DEBUG: routine checks with no status change
         """
-        detail = self._probe_detail(info, icmp_ok, http_ok, http_bytes)
+        detail = self._probe_detail(info, icmp_ok, http_ok, http_bytes, skipped_http=skipped_http)
         status = info.health_status.value
         changed = info.health_status != self._previous_status
         self._previous_status = info.health_status
@@ -304,6 +370,8 @@ class HealthMonitor:
         icmp_ok: bool | None,
         http_ok: bool | None,
         http_bytes: int | None = None,
+        *,
+        skipped_http: bool = False,
     ) -> str:
         """Build human-readable probe detail string for log messages."""
         parts: list[str] = []
@@ -316,7 +384,9 @@ class HealthMonitor:
             else:
                 parts.append("ICMP timeout")
 
-        if http_ok is not None:
+        if skipped_http:
+            parts.append("HTTP skipped (collection active)")
+        elif http_ok is not None:
             if info.http_latency_ms is not None:
                 size = f", {http_bytes} bytes" if http_bytes else ""
                 parts.append(f"HTTP {self._http_method} {info.http_latency_ms:.1f}ms{size}")

@@ -359,18 +359,25 @@ class Orchestrator:
            decrement and return UNREACHABLE
         5. Check auth backoff — if active, decrement and return
            AUTH_FAILED
-        6. Run ModemDataCollector
-        7. If collection failed, apply signal → policy mapping
-        8. On success, derive connection_status from data
-        9. Derive docsis_status from lock_status fields
-        10. Read latest HealthInfo from HealthMonitor (if present)
-        11. Detect state transitions (unreachable → online)
-        12. Return combined result
+        6. Signal HealthMonitor: record_collection_start()
+        7. Run ModemDataCollector
+        8. Signal HealthMonitor: record_collection_end(success)
+        9. If collection failed, apply signal → policy mapping
+        10. On success, derive connection_status from data
+        11. Derive docsis_status from lock_status fields
+        12. Read latest HealthInfo from HealthMonitor (if present)
+        13. Detect state transitions (unreachable → online)
+        14. Return combined result
 
-        The HealthMonitor runs on its own cadence, independent of
-        get_modem_data(). The orchestrator reads the latest health
-        result for the snapshot (step 10) and for backoff decisions
-        (step 3), but does not trigger a new probe.
+        Steps 6 and 8 notify the HealthMonitor of collection activity
+        so it can skip the HTTP probe when a collection is active or
+        recently succeeded (see HealthMonitor § Collection Evidence).
+        The end signal is in a finally block — it always runs.
+
+        The HealthMonitor runs on its own cadence. The orchestrator
+        reads the latest health result for the snapshot (step 12) and
+        for backoff decisions (step 3), but does not trigger a new
+        probe.
 
         The caller decides when to poll (schedule, service call,
         automation). The orchestrator applies the same backoff and
@@ -1059,6 +1066,12 @@ Determines whether the modem is network-reachable without triggering
 a full authentication and parse cycle. All three probes serve the
 same goal — check modem health with the minimum possible impact.
 
+The orchestrator notifies the HealthMonitor when data collections
+start and end. The HTTP probe is skipped when a collection is active
+(avoids contention on the modem's web server) or recently succeeded
+(redundant — the collection already proved HTTP reachability). See
+Collection Evidence below.
+
 ### Probe Strategy
 
 Three probes, ordered lightest to heaviest. Each tests a different
@@ -1226,17 +1239,37 @@ class HealthMonitor:
             timeout: Per-probe timeout in seconds.
         """
 
+    def record_collection_start(self) -> None:
+        """Signal that a data collection cycle is starting.
+
+        Called by the orchestrator before collector.execute().
+        While active, ping() skips the HTTP probe to avoid
+        contention on the modem's web server.
+        """
+
+    def record_collection_end(self, success: bool) -> None:
+        """Signal that a data collection cycle has ended.
+
+        Called by the orchestrator after collector.execute()
+        completes (success or failure). A successful collection
+        is recorded so the next ping() can skip the redundant
+        HTTP probe.
+        """
+
     def ping(self) -> HealthInfo:
         """Run health probes and return results.
 
         Runs enabled probes and returns a combined result:
         1. ICMP ping (if supports_icmp) — network-layer check
-        2. HTTP HEAD or GET (if http_probe is enabled)
-           — application-layer check
+        2. HTTP HEAD or GET (if http_probe is enabled AND no
+           collection evidence suppresses it)
 
-        Both probes run regardless of the other's result — the
-        combination determines the health status (see Status
-        Derivation table).
+        The HTTP probe is skipped when a data collection is active
+        or recently succeeded — the collection already proves HTTP
+        reachability. When skipped, collection evidence substitutes
+        for the HTTP probe in status derivation but http_latency_ms
+        stays None (not measured, not fabricated). See Collection
+        Evidence below.
 
         Returns:
             HealthInfo with probe results and derived status.
@@ -1262,14 +1295,19 @@ class HealthMonitor:
 class HealthInfo:
     """Result of a health probe cycle.
 
-    Only contains actual probe measurements. None means "not measured."
+    Only contains actual probe measurements. The HealthMonitor
+    considers collection evidence internally when deriving
+    health_status, but does not fabricate probe results — None
+    means "not measured."
 
     Attributes:
-        health_status: Derived status from probe combination.
+        health_status: Derived status from probe combination and
+            collection evidence.
         icmp_latency_ms: Round-trip time in milliseconds. None if
             ICMP failed, not supported, or not attempted.
         http_latency_ms: HTTP response time in milliseconds. None if
-            HTTP failed, not attempted, or disabled.
+            HTTP failed, not attempted, or suppressed by collection
+            evidence.
     """
 
     health_status: HealthStatus
@@ -1297,16 +1335,75 @@ configuration. The general rule:
 - **Both fail** → modem is down
 - **N/A** (probe not run) → that layer isn't tested, derive from what's available
 
+### Collection Evidence
+
+A successful data collection is stronger evidence of modem liveness
+than any health probe — it authenticates, fetches pages, and parses
+data. The HealthMonitor uses this to avoid redundant or contentious
+HTTP probes.
+
+**Mechanism:** The orchestrator calls `record_collection_start()`
+before the collector runs and `record_collection_end(success)` in
+a finally block after it completes. The HealthMonitor tracks this
+via two fields:
+
+- `_collection_active` (bool) — True between start and end signals.
+- `_last_collection_success` (monotonic timestamp) — set when a
+  collection succeeds.
+
+**HTTP probe suppression:** `ping()` skips the HTTP probe when:
+
+1. **Collection is active** — the modem is already handling HTTP
+   traffic from the data poll. Running an HTTP health probe would
+   compete for the modem's web server and produce misleadingly slow
+   latency values.
+2. **Collection succeeded since the previous `ping()`** — HTTP
+   reachability was already proven. The evidence is consumed once:
+   the first `ping()` after a successful collection skips HTTP; the
+   next `ping()` runs HTTP normally.
+
+**Baseline guarantee:** The very first `ping()` call never skips
+HTTP, regardless of collection state. Consumers (e.g., HA sensor
+entities) need at least one real HTTP measurement to establish a
+baseline value. Without this, the first health check after startup
+would report `http_latency_ms=None`, which charts as 0.
+
+**Status derivation with evidence:** When the HTTP probe is skipped,
+collection evidence substitutes as `http_ok=True` in the status
+derivation matrix. The status reflects that the modem is HTTP-
+reachable, but `http_latency_ms` stays `None` (not measured).
+
+| ICMP | HTTP probe | Collection evidence | Status |
+|------|-----------|-------------------|--------|
+| pass | skipped | active or recent success | `responsive` |
+| fail | skipped | active or recent success | `icmp_blocked` |
+| N/A | skipped | active or recent success | `responsive` |
+
+**ICMP always runs.** It is lightweight (no web server involvement)
+and provides network-layer visibility regardless of collection
+activity.
+
+**Logging:** When the HTTP probe is skipped, the log detail shows
+`HTTP skipped (collection active)` instead of the usual latency:
+
+```
+Health check [MODEL]: responsive (ICMP 1.5ms, HTTP skipped (collection active))
+```
+
 ### State Ownership
 
-HealthMonitor runs on its own cadence, independent of the data poll.
 The consumer is responsible for scheduling `ping()` calls at the
 configured health check interval. No session, no cookies, no auth.
+The orchestrator notifies the HealthMonitor of collection activity
+via `record_collection_start()` / `record_collection_end()`.
 
 | State | Purpose | Lifetime |
 |-------|---------|----------|
 | Last probe result | `latest` property — read by orchestrator during get_modem_data() | Updated each `ping()` call |
 | HTTP method | HEAD or GET based on supports_head | HealthMonitor lifetime |
+| Collection active | Suppresses HTTP probe during data poll | Between start/end signals |
+| Last collection success | Suppresses HTTP probe after successful poll | Updated on successful collection end |
+| Last ping time | Determines if collection evidence is fresh | Updated at end of each `ping()` call |
 
 ### Consumer Entity Guidance
 
@@ -1341,6 +1438,7 @@ based — the same status at the same level would flood logs every 30s:
 | Transition to responsive (recovery) | INFO | `"Health check [MODEL]: responsive (ICMP 3ms, HTTP GET 110ms)"` |
 | Transition to degraded | WARNING | `"Health check [MODEL]: degraded (ICMP 2ms, HTTP HEAD timeout)"` |
 | Transition to unresponsive | WARNING | `"Health check [MODEL]: unresponsive (ICMP timeout, HTTP HEAD timeout)"` |
+| HTTP skipped (collection evidence) | DEBUG | `"Health check [MODEL]: responsive (ICMP 1.5ms, HTTP skipped (collection active))"` |
 | First check (UNKNOWN → any) | INFO or WARNING | Depending on the target status |
 | Steady-state (no change) | DEBUG | Same format, but only visible with debug logging enabled |
 

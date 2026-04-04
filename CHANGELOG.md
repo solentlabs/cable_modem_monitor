@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Netgear CM3000** — New catalog entry for DOCSIS 3.1 modem with
+  form auth (XSRF_TOKEN cookie). Same tagValueList format as
+  CM2000/CM2050V. (Related to #127)
+- **Core analysis module** — New `analysis` package with log parsing,
+  diagnostics bridging, and outage duration computation. Split from
+  monolithic script into Core (platform-agnostic models + parser) and
+  HA layer (adapter-specific patterns + report formatting).
+
+### Improved
+
+- **Health check HTTP probe suppression** — HTTP health probe is now
+  skipped when a data collection is active (avoids web server
+  contention) or recently succeeded (redundant — collection already
+  proved HTTP reachability). ICMP still runs. Eliminates ~550ms
+  latency blips observed when health checks and data polls fire
+  simultaneously after HA reload.
+
+### Fixed
+
+- **JS line comment stripping** — JS parser now strips `//` line
+  comments before tagValueList extraction. Previously matched
+  commented-out example data instead of live values, causing wrong
+  DOCSIS status and missing uptime on CM1200. (Related to #121)
+- **CM820B error totals and DOCSIS status** — Added aggregate section
+  to CM820B parser.yaml for error totals. Added fallback in
+  `derive_docsis_status()` to check `system_info.docsis_status` when
+  per-channel `lock_status` is absent (2011-era hardware).
+  (Related to #57)
+- **Non-dict JSON response guards** — Added `isinstance(data, dict)`
+  guards at all 8 `resp.json()` call sites across auth managers,
+  HNAP loader, and HNAP action executor. Fixes crash when modems
+  return double-encoded JSON strings. (Related to #86)
+- **Restart button availability** — Button entity now tracks
+  in-progress state dynamically instead of staying disabled after
+  a restart completes.
+
 ## [3.14.0-alpha.9] - 2026-04-03
 
 ### Added

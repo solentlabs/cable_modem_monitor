@@ -323,16 +323,25 @@ class Orchestrator:
         # Log poll context — INFO on first poll, DEBUG on steady-state
         self._log_poll_context()
 
-        # Run collector
-        result = self._collector.execute()
+        # Notify health monitor — avoids redundant HTTP probe during collection
+        if self._health_monitor is not None:
+            self._health_monitor.record_collection_start()
 
-        if not result.success:
+        collection_success = False
+        try:
+            result = self._collector.execute()
+            collection_success = result.success
+
+            if not result.success:
+                self._log_poll_result(result)
+                return self._handle_failure(result)
+
+            self._first_poll_complete = True
             self._log_poll_result(result)
-            return self._handle_failure(result)
-
-        self._first_poll_complete = True
-        self._log_poll_result(result)
-        return self._handle_success(result)
+            return self._handle_success(result)
+        finally:
+            if self._health_monitor is not None:
+                self._health_monitor.record_collection_end(collection_success)
 
     def _handle_failure(self, result: ModemResult) -> ModemSnapshot:
         """Apply signal policy for a failed collection."""

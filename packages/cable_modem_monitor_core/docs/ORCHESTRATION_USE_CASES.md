@@ -998,6 +998,59 @@ yet known to be blocked).
 
 ---
 
+### UC-58: HTTP probe skipped during active collection
+
+**Preconditions:** Health checks and data polling both running.
+Poll and health check fire at overlapping times (e.g., after HA
+reload both coordinators start from the same instant).
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Orchestrator calls `record_collection_start()` | `_collection_active = True` | |
+| 2 | `collector.execute()` begins (auth, fetch, parse) | | Modem web server busy |
+| 3 | Health timer fires → `ping()` | | |
+| 4 | `_should_skip_http_probe()` → True (active) | HTTP probe not called | |
+| 5 | ICMP runs normally | | ICMP latency measured |
+| 6 | Status derived: ICMP pass + evidence → RESPONSIVE | | `http_latency_ms = None` |
+| 7 | Log: `"responsive (ICMP 1.5ms, HTTP skipped (collection active))"` | | |
+| 8 | Collection completes → `record_collection_end(True)` | `_collection_active = False`, `_last_collection_success` set | |
+
+**Assertions:**
+
+- HTTP session.head/get is never called during active collection
+- ICMP probe runs regardless of collection state
+- `http_latency_ms` is None (not measured, not fabricated)
+- `health_status` is RESPONSIVE (collection evidence = http_ok)
+- If ICMP fails during active collection, status is ICMP_BLOCKED
+- No contention on the modem's web server
+
+---
+
+### UC-59: HTTP probe skipped after recent successful collection
+
+**Preconditions:** Data poll completed successfully. Next health
+check fires before another poll starts.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Previous `ping()` completed | `_last_ping_time` set | |
+| 2 | `record_collection_end(True)` | `_last_collection_success` > `_last_ping_time` | |
+| 3 | Health timer fires → `ping()` | | |
+| 4 | `_should_skip_http_probe()` → True (recent success) | HTTP probe not called | |
+| 5 | Status derived with evidence → RESPONSIVE | | `http_latency_ms = None` |
+| 6 | `_last_ping_time` updated at end of `ping()` | Evidence consumed | |
+| 7 | Next `ping()` → `_last_collection_success` < `_last_ping_time` | HTTP probe runs normally | |
+
+**Assertions:**
+
+- Collection evidence is consumed once (first ping after collection)
+- Second ping after collection runs HTTP probe normally
+- Failed collection (`record_collection_end(False)`) does not
+  suppress HTTP probe
+- `http_probe=False` modems are unaffected (HTTP already disabled)
+
+---
+
 ## Diagnostics
 
 ### UC-60: Diagnostics snapshot
