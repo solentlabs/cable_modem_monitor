@@ -58,6 +58,12 @@ structured data (dict).
 - Same key convention as HTML formats — path only
 - Values are `dict` from format-specific decoding (`json.loads()`, `xmltodict.parse()`, or `b64decode()` + `json.loads()`)
 - The value type is always `dict` regardless of the wire format
+- **Type enforcement:** If JSON decoding succeeds but the root value is not a
+  `dict` (e.g., a JSON array, string, or scalar), the loader must treat it as a
+  load error. HTTP loaders wrap non-dict values in `{"_raw": data}`. HNAP loaders
+  raise `HNAPLoadError`. Code that consumes parsed JSON must use
+  `isinstance(data, dict)` before `.get()` calls — modem firmware can return
+  structurally valid JSON with unexpected types
 
 ### HNAP Transport
 

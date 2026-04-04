@@ -136,6 +136,18 @@ def execute_hnap_action(
             details={"status_code": resp.status_code},
         )
 
+    if not isinstance(response_data, dict):
+        _logger.warning(
+            "HNAP action response [%s] is not a JSON object (status %d)",
+            model,
+            resp.status_code,
+        )
+        return ActionResult(
+            success=False,
+            message=f"Response is not a JSON object (status {resp.status_code})",
+            details={"status_code": resp.status_code},
+        )
+
     return _validate_response(response_data, action, log_level=log_level, model=model)
 
 
@@ -190,6 +202,10 @@ def _execute_pre_fetch(
         data = resp.json()
     except (requests.RequestException, ValueError, TypeError) as exc:
         _logger.warning("Action pre-fetch failed [%s]: %s", model, exc)
+        return {}
+
+    if not isinstance(data, dict):
+        _logger.warning("Action pre-fetch [%s]: response is not a JSON object", model)
         return {}
 
     # Unwrap response: {ActionResponse: {...data...}}

@@ -157,13 +157,16 @@ def _request_salts(
     salt_data = {"username": username, "password": salt_trigger}
     try:
         salt_response = session.post(login_url, json=salt_data, timeout=timeout)
-        salt_json: dict[str, str] = salt_response.json()
+        salt_json = salt_response.json()
     except requests.RequestException as e:
         if isinstance(e, requests.ConnectionError | requests.Timeout):
             raise
         return AuthResult(success=False, error=f"Salt request failed: {e}")
     except ValueError:
         return AuthResult(success=False, error="Salt response is not valid JSON")
+
+    if not isinstance(salt_json, dict):
+        return AuthResult(success=False, error="Salt response is not a JSON object")
 
     if not salt_json.get("salt"):
         return AuthResult(success=False, error="No salt in server response")
@@ -193,7 +196,7 @@ def _submit_login(
     # Check for failure indicators
     try:
         result_json = response.json()
-        if result_json.get("error"):
+        if isinstance(result_json, dict) and result_json.get("error"):
             return AuthResult(
                 success=False,
                 error=f"Login rejected: {result_json.get('message', 'unknown error')}",

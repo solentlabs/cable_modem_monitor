@@ -30,6 +30,7 @@ See MODEM_YAML_SPEC.md ``form_sjcl`` strategy.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
@@ -349,11 +350,23 @@ def _post_json(
         return AuthResult(success=False, error=f"POST failed: {e}")
 
     try:
-        data: dict[str, Any] = resp.json()
+        data = resp.json()
     except ValueError:
         return AuthResult(
             success=False,
             error="Response is not valid JSON",
+        )
+
+    # Some firmwares double-encode: the HTTP body is a JSON string
+    # containing a serialised JSON object.  Unwrap one layer.
+    if isinstance(data, str):
+        with contextlib.suppress(ValueError, TypeError):
+            data = json.loads(data)
+
+    if not isinstance(data, dict):
+        return AuthResult(
+            success=False,
+            error=f"Expected JSON object, got {type(data).__name__}",
         )
 
     return resp, data

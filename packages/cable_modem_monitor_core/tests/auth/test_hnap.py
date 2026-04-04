@@ -8,7 +8,7 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from typing import Any, Literal
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -219,6 +219,78 @@ def test_login_failure(
 
     assert result.success is False
     assert error_substring in result.error
+
+
+# ┌────────────────────┬─────────────────────────────────┐
+# │ json_value         │ description                     │
+# ├────────────────────┼─────────────────────────────────┤
+# │ "not a dict"       │ string response                 │
+# │ [1, 2, 3]          │ list response                   │
+# │ 42                 │ integer response                │
+# └────────────────────┴─────────────────────────────────┘
+#
+# fmt: off
+HNAP_NOT_DICT_CASES = [
+    # (json_value,    description)
+    ("not a dict",    "string response"),
+    ([1, 2, 3],       "list response"),
+    (42,              "integer response"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "json_value,desc",
+    HNAP_NOT_DICT_CASES,
+    ids=[c[1] for c in HNAP_NOT_DICT_CASES],
+)
+def test_challenge_response_not_dict(json_value: object, desc: str) -> None:
+    """Reports error when HNAP challenge response JSON is not a dict."""
+    manager = _make_manager()
+    session = requests.Session()
+
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.json.return_value = json_value
+
+    with patch.object(session, "post", return_value=resp):
+        result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+    assert result.success is False
+    assert "json object" in result.error.lower()
+
+
+@pytest.mark.parametrize(
+    "json_value,desc",
+    HNAP_NOT_DICT_CASES,
+    ids=[c[1] for c in HNAP_NOT_DICT_CASES],
+)
+def test_login_response_not_dict(json_value: object, desc: str) -> None:
+    """Reports error when HNAP login response JSON is not a dict."""
+    manager = _make_manager()
+    session = requests.Session()
+
+    challenge_resp = MagicMock()
+    challenge_resp.status_code = 200
+    challenge_resp.json.return_value = {
+        "LoginResponse": {
+            "Challenge": _HNAPHandler.challenge,
+            "PublicKey": _HNAPHandler.public_key,
+            "Cookie": _HNAPHandler.cookie,
+            "LoginResult": "OK",
+        },
+    }
+
+    login_resp = MagicMock()
+    login_resp.status_code = 200
+    login_resp.json.return_value = json_value
+
+    with patch.object(session, "post") as mock_post:
+        mock_post.side_effect = [challenge_resp, login_resp]
+        result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+    assert result.success is False
+    assert "json object" in result.error.lower()
 
 
 def test_connection_refused() -> None:

@@ -11,6 +11,7 @@ import json
 import logging
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 from solentlabs.cable_modem_monitor_core.auth.base import AuthContext
 from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
@@ -390,6 +391,54 @@ class TestExecuteHnapAction:
 
         assert result.success is False
 
+    # ┌────────────────────┬─────────────────────────────────┐
+    # │ json_value         │ description                     │
+    # ├────────────────────┼─────────────────────────────────┤
+    # │ "not a dict"       │ string response                 │
+    # │ [1, 2, 3]          │ list response                   │
+    # │ 42                 │ integer response                │
+    # └────────────────────┴─────────────────────────────────┘
+    #
+    # fmt: off
+    ACTION_NOT_DICT_CASES = [
+        # (json_value,    description)
+        ("not a dict",    "string response"),
+        ([1, 2, 3],       "list response"),
+        (42,              "integer response"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "json_value,desc",
+        ACTION_NOT_DICT_CASES,
+        ids=[c[1] for c in ACTION_NOT_DICT_CASES],
+    )
+    def test_non_dict_json_action_response(self, json_value: object, desc: str) -> None:
+        """Non-dict JSON response returns failure."""
+        session = MagicMock(spec=requests.Session)
+        resp = MagicMock()
+        resp.json.return_value = json_value
+        resp.status_code = 200
+        session.post.return_value = resp
+
+        action = HnapAction(
+            type="hnap",
+            action_name="Reboot",
+            response_key="RebootResponse",
+            result_key="RebootResult",
+            success_value="OK",
+        )
+
+        result = execute_hnap_action(
+            session,
+            "http://192.168.100.1",
+            action,
+            private_key="key",
+        )
+
+        assert result.success is False
+        assert "not a json object" in result.message.lower()
+
 
 class TestHnapPreFetch:
     """HNAP pre-fetch action for parameter interpolation."""
@@ -480,6 +529,72 @@ class TestHnapPreFetch:
         # Action still attempted — pre-fetch failure is not fatal
         assert result.success is True
         assert session.post.call_count == 2
+
+    # ┌────────────────────┬─────────────────────────────────┐
+    # │ json_value         │ description                     │
+    # ├────────────────────┼─────────────────────────────────┤
+    # │ "not a dict"       │ string response                 │
+    # │ [1, 2, 3]          │ list response                   │
+    # │ 42                 │ integer response                │
+    # └────────────────────┴─────────────────────────────────┘
+    #
+    # fmt: off
+    PRE_FETCH_NOT_DICT_CASES = [
+        # (json_value,    description)
+        ("not a dict",    "string response"),
+        ([1, 2, 3],       "list response"),
+        (42,              "integer response"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "json_value,desc",
+        PRE_FETCH_NOT_DICT_CASES,
+        ids=[c[1] for c in PRE_FETCH_NOT_DICT_CASES],
+    )
+    def test_pre_fetch_non_dict_json_uses_defaults(
+        self,
+        json_value: object,
+        desc: str,
+    ) -> None:
+        """When pre-fetch returns non-dict JSON, ${var:default} uses defaults."""
+        session = MagicMock(spec=requests.Session)
+
+        # Pre-fetch returns non-dict JSON
+        pre_resp = MagicMock()
+        pre_resp.json.return_value = json_value
+
+        # Main action succeeds (connection lost = restart success)
+        session.post.side_effect = [
+            pre_resp,
+            requests.ConnectionError("reset"),
+        ]
+
+        action = HnapAction(
+            type="hnap",
+            action_name="SetArrisConfigurationInfo",
+            pre_fetch_action="GetArrisConfigurationInfo",
+            params={
+                "Action": "reboot",
+                "SetEEEEnable": "${ethSWEthEEE:0}",
+                "LED_Status": "${LedStatus:1}",
+            },
+        )
+
+        result = execute_hnap_action(
+            session,
+            "http://192.168.100.1",
+            action,
+            private_key="key",
+        )
+
+        # Pre-fetch degraded to {} — defaults used
+        assert result.success is True
+        main_call = session.post.call_args_list[1]
+        body = json.loads(main_call[1]["data"])
+        params = body["SetArrisConfigurationInfo"]
+        assert params["SetEEEEnable"] == "0"  # default
+        assert params["LED_Status"] == "1"  # default
 
 
 # ------------------------------------------------------------------
