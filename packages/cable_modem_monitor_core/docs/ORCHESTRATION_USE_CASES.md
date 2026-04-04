@@ -5,11 +5,13 @@ documents preconditions, a step-by-step sequence, and assertions that
 map directly to test cases. Grouped by concern area.
 
 **Relationship to other specs:**
+
 - `ORCHESTRATION_SPEC.md` — interface contracts (method signatures, types)
 - `RUNTIME_POLLING_SPEC.md` — behavioral rules (signal policy, design rules)
 - This spec — end-to-end scenarios (what happens when...)
 
 **Conventions:**
+
 - `UC-XX` IDs are stable — tests reference them for traceability
 - "Consumer" means any caller (HA coordinator, CLI, exporter)
 - Time values are illustrative, not prescriptive
@@ -39,6 +41,7 @@ map directly to test cases. Grouped by concern area.
 | 12 | Return `ModemSnapshot` | last_status=ONLINE | |
 
 **Assertions:**
+
 - `snapshot.connection_status == ONLINE`
 - `snapshot.docsis_status == OPERATIONAL`
 - `snapshot.modem_data` has 24 DS and 4 US channels
@@ -62,6 +65,7 @@ map directly to test cases. Grouped by concern area.
 | 5 | Return `ModemSnapshot(ONLINE)` | | |
 
 **Assertions:**
+
 - No login attempt was made (verify via auth manager call count)
 - `snapshot.connection_status == ONLINE`
 - `diagnostics().session_is_valid == True`
@@ -79,6 +83,7 @@ map directly to test cases. Grouped by concern area.
 | 3 | Return `ModemSnapshot` | | |
 
 **Assertions:**
+
 - The orchestrator applies the same backoff and circuit breaker
   checks regardless of whether the call is scheduled or on-demand
 - Consumer decides scheduling — orchestrator doesn't know or care
@@ -104,6 +109,7 @@ intentional — backoff and lockout protection apply equally to both.
 | 6 | Derive connection_status=NO_SIGNAL | | |
 
 **Assertions:**
+
 - `snapshot.connection_status == NO_SIGNAL`
 - `snapshot.modem_data` is present (not None)
 - `snapshot.modem_data["downstream"] == []`
@@ -126,6 +132,7 @@ intentional — backoff and lockout protection apply equally to both.
 | 6 | Derive connection_status=NO_SIGNAL | | |
 
 **Assertions:**
+
 - `snapshot.connection_status == NO_SIGNAL`
 - WARNING log emitted suggesting parser verification
 - Still returns success (not a failure, just ambiguous)
@@ -145,6 +152,7 @@ intentional — backoff and lockout protection apply equally to both.
 | 4 | Collector returns `ModemResult(success=True)` | | |
 
 **Assertions:**
+
 - Logout action was executed after successful parse
 - Session is released (modem's web UI is accessible to user)
 - `session_is_valid` may be False after logout (strategy-dependent)
@@ -166,6 +174,7 @@ intentional — backoff and lockout protection apply equally to both.
 | `lock_status` field absent on channels | Any | `UNKNOWN` |
 
 **Assertions:**
+
 - Each row is a distinct test case
 - UNKNOWN prevents false "Not Locked" for modems without lock_status data
 - All-locked + no-upstream is PARTIAL_LOCK (upstream matters for OPERATIONAL)
@@ -188,6 +197,7 @@ intentional — backoff and lockout protection apply equally to both.
 | 6 | Return `ModemSnapshot(AUTH_FAILED)` | | |
 
 **Assertions:**
+
 - `snapshot.connection_status == AUTH_FAILED`
 - `diagnostics().auth_failure_streak == 1`
 - `diagnostics().circuit_breaker_open == False`
@@ -207,6 +217,7 @@ intentional — backoff and lockout protection apply equally to both.
 | 4 | Return `ModemSnapshot(ONLINE)` | | |
 
 **Assertions:**
+
 - `diagnostics().auth_failure_streak == 0`
 - Streak resets on any successful collection, regardless of prior count
 - Circuit breaker stays closed
@@ -227,6 +238,7 @@ intentional — backoff and lockout protection apply equally to both.
 | 6 | Return `ModemSnapshot(AUTH_FAILED)` | | |
 
 **Assertions:**
+
 - `snapshot.connection_status == AUTH_FAILED`
 - `diagnostics().auth_failure_streak` incremented
 - Next 3 polls will be suppressed (see UC-13)
@@ -246,6 +258,7 @@ intentional — backoff and lockout protection apply equally to both.
 | N+4 | 0 | Run collection normally | 0 |
 
 **Assertions:**
+
 - Each backoff poll returns `ModemSnapshot(AUTH_FAILED)` without
   running the collector
 - Backoff decrements by 1 per poll regardless of outcome
@@ -267,6 +280,7 @@ intentional — backoff and lockout protection apply equally to both.
 | 5 | Return `ModemSnapshot(AUTH_FAILED)` | | |
 
 **Assertions:**
+
 - `diagnostics().circuit_breaker_open == True`
 - `diagnostics().auth_failure_streak == 6`
 - ERROR log: "Auth circuit breaker OPEN — 6 consecutive auth failures..."
@@ -284,6 +298,7 @@ intentional — backoff and lockout protection apply equally to both.
 | 3 | Return `ModemSnapshot(AUTH_FAILED)` | | |
 
 **Assertions:**
+
 - Collector.execute() was NOT called
 - No HTTP traffic to the modem
 - ERROR log: "Circuit breaker is OPEN — polling stopped..."
@@ -307,6 +322,7 @@ via HA reauth flow.
 | 7 | Collector: fresh login with new credentials | | |
 
 **Assertions:**
+
 - `diagnostics().auth_failure_streak == 0`
 - `diagnostics().circuit_breaker_open == False`
 - `diagnostics().session_is_valid == False` (after reset, before next poll)
@@ -330,6 +346,7 @@ Session may be stale, or strategy doesn't grant data access.
 | 7 | Return `ModemSnapshot(AUTH_FAILED)` | | |
 
 **Assertions:**
+
 - Session is cleared so next poll starts with fresh login
 - Auth failure streak is incremented (LOAD_AUTH is auth-related)
 - If persistent, will escalate to circuit breaker (same as wrong credentials)
@@ -350,6 +367,7 @@ Session may be stale, or strategy doesn't grant data access.
 | 5 | Return `ModemSnapshot(ONLINE)` | | |
 
 **Assertions:**
+
 - Fresh login resolves the stale session
 - Streak resets to 0
 - Single LOAD_AUTH → fresh login → success is the expected self-healing path
@@ -373,6 +391,7 @@ PARSE_ERROR.
 | 6 | Orchestrator: clear session, streak++ | | |
 
 **Assertions:**
+
 - Signal is LOAD_AUTH (not PARSE_ERROR) — correct root cause classification
 - Login page detection checks for `<input type="password">` or similar
 - Session is cleared for fresh login on next poll
@@ -401,6 +420,7 @@ modem's web UI. Session is still valid in memory.
 | N+K+9+ | Circuit open, no collection | 6 | AUTH_FAILED |
 
 **Assertions:**
+
 - Session reuse delays the failure until the session naturally expires
 - Circuit breaker trips after ~2 lockout cycles (threshold 6)
 - User sees escalating log messages with streak count (1/6, 2/6, ... 6/6)
@@ -424,6 +444,7 @@ has expired the session (firmware timeout or max-session limit).
 | 6 | Return `ModemSnapshot(AUTH_FAILED)` | | |
 
 **Assertions:**
+
 - Signal is LOAD_AUTH (not LOAD_ERROR) — session context determines routing
 - Session is cleared so next poll starts with fresh login (→ UC-18)
 - Auth failure streak is incremented
@@ -451,6 +472,7 @@ a firmware issue or temporary overload.
 | 5 | Return `ModemSnapshot(UNREACHABLE)` | | |
 
 **Assertions:**
+
 - Signal is LOAD_ERROR (not LOAD_AUTH) — fresh session rules out stale session
 - Session is NOT cleared — avoid unnecessary re-login that could trigger lockout
 - Auth failure streak NOT incremented
@@ -473,6 +495,7 @@ a firmware issue or temporary overload.
 | 5 | Return `ModemSnapshot(UNREACHABLE)` | | |
 
 **Assertions:**
+
 - `snapshot.connection_status == UNREACHABLE`
 - Auth failure streak is NOT incremented (connectivity is not auth)
 - Connectivity backoff applied: `min(2^(streak-1), 6)` polls skipped before retry
@@ -492,6 +515,7 @@ a firmware issue or temporary overload.
 | 4 | Return `ModemSnapshot(UNREACHABLE)` | | |
 
 **Assertions:**
+
 - Same policy as connection refused — connectivity backoff, no auth streak
 - Modem's per-request timeout from modem.yaml applies
 
@@ -509,6 +533,7 @@ a firmware issue or temporary overload.
 | 4 | Return `ModemSnapshot(UNREACHABLE)` | | |
 
 **Assertions:**
+
 - `snapshot.connection_status == UNREACHABLE`
 - Auth failure streak NOT incremented (server error, not auth)
 - All-or-nothing: if any page returns 5xx, entire poll fails
@@ -527,6 +552,7 @@ a firmware issue or temporary overload.
 | 4 | Return `ModemSnapshot(PARSER_ISSUE)` | | |
 
 **Assertions:**
+
 - `snapshot.connection_status == PARSER_ISSUE`
 - Distinct from UNREACHABLE — the modem responded, but data is unparseable
 - Auth streak NOT incremented
@@ -549,6 +575,7 @@ Modem has come back online.
 | 5 | Log INFO status transition for diagnostics | | |
 
 **Assertions:**
+
 - Transition is logged: "Status transition [MODEL]: unreachable → online"
 - If stale session rejected (3a): next poll does fresh login, self-corrects (UC-18)
 - No proactive session clear — LOAD_AUTH handles it naturally
@@ -569,6 +596,7 @@ Modem has come back online.
 | 6 | Collector returns `ModemResult(signal=CONNECTIVITY)` | | |
 
 **Assertions:**
+
 - Partial data is never returned — if any page fails, entire poll fails
 - Log identifies which page failed, error type, HTTP status
 - Previous ModemSnapshot persists on consumer's sensors until next success
@@ -596,6 +624,7 @@ Modem has come back online.
 | 11 | Return `RestartResult(success=True, COMPLETE, 150s)` | is_restarting=False | |
 
 **Assertions:**
+
 - `result.success == True`
 - `result.phase_reached == COMPLETE`
 - `result.elapsed_seconds > 0`
@@ -618,6 +647,7 @@ Modem has come back online.
 | 6 | Return `RestartResult(success=False, WAITING_RESPONSE, 45s)` | is_restarting=False | |
 
 **Assertions:**
+
 - `result.success == False`
 - `result.phase_reached == WAITING_RESPONSE` (or wherever cancel was detected)
 - Return happens within one probe_interval of cancel being set
@@ -636,6 +666,7 @@ Modem has come back online.
 | 3 | Return `RestartResult(success=False, error="...")` | | |
 
 **Assertions:**
+
 - No second restart command sent to modem
 - `result.success == False`
 - `result.error` indicates restart already in progress
@@ -654,6 +685,7 @@ Modem has come back online.
 | 3 | Return `ModemSnapshot(UNREACHABLE)` | | |
 
 **Assertions:**
+
 - Collector.execute() NOT called (no HTTP traffic to rebooting modem)
 - Auth failure streak NOT incremented
 - No backoff applied
@@ -671,6 +703,7 @@ Modem has come back online.
 | 2 | Orchestrator: no restart action → raise | | |
 
 **Assertions:**
+
 - `RestartNotSupportedError` raised
 - `is_restarting` never set to True
 - Platform adapter should prevent this by checking config before exposing restart
@@ -691,6 +724,7 @@ User presses restart button.
 | 5 | If auth fails: restart fails with clear error | | |
 
 **Assertions:**
+
 - Circuit breaker is not consulted during restart
 - Restart uses its own fresh auth session
 - Auth failure during restart does NOT increment the orchestrator's streak
@@ -711,6 +745,7 @@ User presses restart button.
 | 4 | Return `RestartResult(success=False, WAITING_RESPONSE, 120s)` | is_restarting=False | |
 
 **Assertions:**
+
 - `result.success == False`
 - `result.phase_reached == WAITING_RESPONSE`
 - Total time ~= response_timeout
@@ -732,6 +767,7 @@ stabilize (keep changing, DOCSIS registration never completes).
 | 5 | Return `RestartResult(success=False, CHANNEL_SYNC, 420s)` | is_restarting=False | |
 
 **Assertions:**
+
 - `result.phase_reached == CHANNEL_SYNC` (not WAITING_RESPONSE)
 - Total time ~= response_timeout + channel_stabilization_timeout
 - WARNING log: "Channel stabilization timeout..."
@@ -750,6 +786,7 @@ stabilize (keep changing, DOCSIS registration never completes).
 | 3 | Return `RestartResult(success=True, COMPLETE, 90s)` | | |
 
 **Assertions:**
+
 - No channel stabilization polling occurs
 - Result is COMPLETE immediately after response detection
 - Total time ~= time until first response
@@ -770,6 +807,7 @@ No restart command sent. Normal polling discovers the outage.
 | N+4 | Fresh login → success | ONLINE |
 
 **Assertions:**
+
 - No RestartMonitor involved — normal polling handles recovery
 - UNREACHABLE → ONLINE transition logged
 - Stale session self-corrects via LOAD_AUTH → clear → fresh login
@@ -793,16 +831,17 @@ No LOAD_AUTH step needed. Both paths are valid.
 
 **Preconditions:** Both ICMP and HTTP HEAD enabled.
 
-| Step | Action | Observable |
-|------|--------|------------|
-| 1 | Consumer calls `ping()` | |
-| 2 | HM: ICMP ping → success (4ms) | |
-| 3 | HM: HTTP HEAD → success (12ms) | |
-| 4 | HM: derive status → RESPONSIVE | |
-| 5 | HM: store as .latest | |
-| 6 | Return `HealthInfo(RESPONSIVE, icmp_latency_ms=4, http_latency_ms=12)` | |
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `ping()` | | |
+| 2 | HM: ICMP ping → success (4ms) | | |
+| 3 | HM: HTTP HEAD → success (12ms) | | |
+| 4 | HM: derive status → RESPONSIVE | | |
+| 5 | HM: store as .latest | | |
+| 6 | Return `HealthInfo(RESPONSIVE, icmp_latency_ms=4, http_latency_ms=12)` | | |
 
 **Assertions:**
+
 - Both probes run regardless of each other's result
 - Order: ICMP first (lightest), then HTTP HEAD
 - INFO log: "Health check: responsive (icmp 4ms, HTTP 12ms)"
@@ -813,14 +852,15 @@ No LOAD_AUTH step needed. Both paths are valid.
 
 **Preconditions:** Data collection and health checks both running.
 
-| Step | Action | Observable |
-|------|--------|------------|
-| 1 | Data poll completes successfully | ONLINE |
-| 2 | Health timer fires (independent cadence) | |
-| 3 | HM: run ICMP + HTTP HEAD probes | |
-| 4 | Return `HealthInfo(RESPONSIVE, icmp_latency_ms=4, http_latency_ms=12)` | |
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Data poll completes successfully | | ONLINE |
+| 2 | Health timer fires (independent cadence) | | |
+| 3 | HM: run ICMP + HTTP HEAD probes | | |
+| 4 | Return `HealthInfo(RESPONSIVE, icmp_latency_ms=4, http_latency_ms=12)` | | |
 
 **Assertions:**
+
 - Health checks and data collection run independently on their own cadences
 - Health probes always run their full set (ICMP + HTTP HEAD) regardless of collection state
 - No coupling between the two pipelines — neither suppresses the other
@@ -833,14 +873,15 @@ No LOAD_AUTH step needed. Both paths are valid.
 **Preconditions:** Data polling disabled or collector missed a cycle.
 Health checks still running on their own cadence.
 
-| Step | Action | Observable |
-|------|--------|------------|
-| 1 | No data collection runs (disabled or failed) | |
-| 2 | Health timer fires | |
-| 3 | HM: run ICMP + HTTP HEAD probes | |
-| 4 | Return `HealthInfo(...)` | |
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | No data collection runs (disabled or failed) | | |
+| 2 | Health timer fires | | |
+| 3 | HM: run ICMP + HTTP HEAD probes | | |
+| 4 | Return `HealthInfo(...)` | | |
 
 **Assertions:**
+
 - Health probes run regardless of whether data collection is active
 - No dependency on collection state — health is fully independent
 - Provides reachability data even when data polling is disabled (UC-74)
@@ -863,6 +904,7 @@ Modem goes down 2 minutes after last data poll.
 | 10:00 | Data poll → UNREACHABLE | UNRESPONSIVE | UNREACHABLE |
 
 **Assertions:**
+
 - Health detects the outage at 2:30 (7.5 minutes before data poll)
 - Consumer updates health sensors immediately on health callback
 - Data status remains ONLINE until next data poll (stale but not wrong — it was
@@ -876,14 +918,15 @@ Modem goes down 2 minutes after last data poll.
 **Preconditions:** Network blocks ICMP. `supports_icmp=True` (not
 yet known to be blocked).
 
-| Step | Action | Observable |
-|------|--------|------------|
-| 1 | Consumer calls `ping()` | |
-| 2 | HM: ICMP → fail (blocked) | |
-| 3 | HM: HTTP HEAD → success | |
-| 4 | Return `HealthInfo(ICMP_BLOCKED)` | |
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `ping()` | | |
+| 2 | HM: ICMP → fail (blocked) | | |
+| 3 | HM: HTTP HEAD → success | | |
+| 4 | Return `HealthInfo(ICMP_BLOCKED)` | | |
 
 **Assertions:**
+
 - `health_status == ICMP_BLOCKED`
 - Modem IS responsive (HTTP works) — ICMP failure is network, not modem
 - Consumer may choose to disable ICMP after seeing persistent ICMP_BLOCKED
@@ -894,14 +937,15 @@ yet known to be blocked).
 
 **Preconditions:** Modem's web server is hung but network stack responds.
 
-| Step | Action | Observable |
-|------|--------|------------|
-| 1 | Consumer calls `ping()` | |
-| 2 | HM: ICMP → success | |
-| 3 | HM: HTTP HEAD → timeout | |
-| 4 | Return `HealthInfo(DEGRADED)` | |
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `ping()` | | |
+| 2 | HM: ICMP → success | | |
+| 3 | HM: HTTP HEAD → timeout | | |
+| 4 | Return `HealthInfo(DEGRADED)` | | |
 
 **Assertions:**
+
 - `health_status == DEGRADED`
 - Modem is network-reachable but web UI is unresponsive
 - WARNING log: "Health check: degraded (ping OK, HTTP timeout)"
@@ -912,13 +956,14 @@ yet known to be blocked).
 
 **Preconditions:** `supports_icmp=False`, `supports_head=False`.
 
-| Step | Action | Observable |
-|------|--------|------------|
-| 1 | Consumer calls `ping()` | |
-| 2 | HM: no probes to run | |
-| 3 | Return `HealthInfo(UNKNOWN)` | |
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `ping()` | | |
+| 2 | HM: no probes to run | | |
+| 3 | Return `HealthInfo(UNKNOWN)` | | |
 
 **Assertions:**
+
 - `health_status == UNKNOWN`
 - No network traffic generated
 - Consumer should not schedule health checks if no probes are enabled
@@ -930,7 +975,7 @@ yet known to be blocked).
 **Preconditions:** Restart in progress. Health thread/timer continues.
 
 | Time | Health check | Restart monitor |
-|------|-------------|----------------|
+| ------ | -------------- | ----------------- |
 | 0:00 | | Restart command sent |
 | 0:10 | | Phase 1 probe #1 (fail) |
 | 0:15 | ping() → unresponsive | |
@@ -939,11 +984,17 @@ yet known to be blocked).
 | 0:45 | ping() → responsive | |
 
 **Assertions:**
+
 - Health checks continue independently during restart
 - Health thread and RestartMonitor may both call ping() — this is fine
   (stateless probes, atomic `_latest` update under GIL)
 - Health sensors update in real-time during restart recovery
 - No coordination needed between health timer and restart monitor
+- The consumer's health recovery listener (UC-84 step 6a) will fire when
+  health transitions to RESPONSIVE during restart — the resulting immediate
+  poll is harmlessly swallowed by the `_is_restarting` guard (UC-43).
+  The consumer's explicit post-restart refresh (after `restart()` returns)
+  is the actual recovery poll, not the health-triggered one.
 
 ---
 
@@ -953,12 +1004,13 @@ yet known to be blocked).
 
 **Preconditions:** Several polls have run.
 
-| Step | Action | Observable |
-|------|--------|------------|
-| 1 | Consumer calls `diagnostics()` | |
-| 2 | Return `OrchestratorDiagnostics(...)` | |
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `diagnostics()` | | |
+| 2 | Return `OrchestratorDiagnostics(...)` | | |
 
 **Assertions:**
+
 - Returns `OrchestratorDiagnostics` with all fields populated (see
   [ORCHESTRATION_SPEC.md](ORCHESTRATION_SPEC.md#data-models) § Data Models
   for field definitions)
@@ -994,6 +1046,7 @@ sequenceDiagram
 ```
 
 **Assertions:**
+
 - All Core components created before first poll
 - First poll runs before UI is ready (consumer gets initial data to display)
 - Health monitor only created if at least one probe works (see UC-76)
@@ -1021,6 +1074,7 @@ sequenceDiagram
 ```
 
 **Assertions:**
+
 - If restart is running, cancel_event stops it promptly
 - Consumer cancels all polling timers
 - Orchestrator and components garbage collected normally — no threads to join
@@ -1053,6 +1107,7 @@ sequenceDiagram
 ```
 
 **Assertions:**
+
 - Restart action disabled while running (prevents double-trigger)
 - `restart()` runs in a thread (doesn't block consumer's event loop)
 - cancel_event stored so teardown can interrupt if needed
@@ -1080,6 +1135,7 @@ sequenceDiagram
 ```
 
 **Assertions:**
+
 - Refresh triggers both health probe and data collection
 - If health monitor exists, probe runs first (fresh health data for the snapshot)
 - Consumer should throttle rapid refreshes (e.g., debounce or cooldown)
@@ -1110,6 +1166,7 @@ health check interval at 30s. Initial poll completed during setup.
 | 8 | UI updated with fresh data | | |
 
 **Assertions:**
+
 - No scheduled data polls after setup
 - Health probes continue on their own cadence
 - Manual refresh triggers full data collection
@@ -1132,6 +1189,7 @@ checks disabled. Initial poll completed during setup.
 | 5 | UI updated | | |
 
 **Assertions:**
+
 - No scheduled polls or health probes after setup
 - Manual refresh triggers data collection
 - ModemSnapshot includes most recent HealthInfo (from initial probe or last manual trigger)
@@ -1152,6 +1210,7 @@ checks disabled. Initial poll completed during setup.
 | 3b | Skip health monitor | No health timer | No health indicators |
 
 **Assertions:**
+
 - Health monitor only created when at least one probe works
 - Probe support flags stored for subsequent startups
 - When no probes work, health_monitor is None
@@ -1172,6 +1231,7 @@ health: 30s).
 | 4 | Polling resumes with new intervals | Both schedulers updated | |
 
 **Assertions:**
+
 - Data poll interval: min 30s, max 86400s, or disabled
 - Health check interval: min 10s, max 86400s, or disabled
 - Both intervals independently configurable
@@ -1218,6 +1278,7 @@ sequenceDiagram
 | 7 | Channel data: available again | | Fresh readings |
 
 **Assertions:**
+
 - Status is always derivable — reports accurate state throughout restart
 - Health probes run independently — report probe results throughout
 - Channel data unavailable when modem_data is None (gap in time series)
@@ -1239,6 +1300,7 @@ sequenceDiagram
 | 5 | Status shows "Operational" (not "Unreachable") | | |
 
 **Assertions:**
+
 - First poll always runs during setup regardless of polling mode
 - UI has real data from the start (no transient "Unreachable" state)
 - "Disabled" means "no scheduled polls after setup", not "never poll"
@@ -1278,6 +1340,7 @@ sequenceDiagram
 | 7 | Consumer rebuilds from current data | | Fresh UI for new channels |
 
 **Assertions:**
+
 - Channel count fields always reflect current data (not tied to per-channel identity)
 - Consumer provides a reset mechanism for channel identity changes
 - New channels get new identifiers (different channel IDs)
@@ -1339,6 +1402,7 @@ sequenceDiagram
 | 10 | Next poll: fresh login with new credentials | | ONLINE |
 
 **Assertions:**
+
 - Circuit breaker opens after AUTH_FAILURE_THRESHOLD (6) consecutive failures
 - Consumer surfaces credential error and provides reauth mechanism
 - Reauth validates new credentials before accepting
@@ -1364,6 +1428,7 @@ Collector created with default `legacy_ssl=False`.
 | 4 | Return ModemResult(success=True) | | |
 
 **Assertions:**
+
 - Session created via `create_session()`, not bare `requests.Session()`
 - `session.verify == False` — self-signed cert accepted
 - No `LegacySSLAdapter` mounted (modern TLS is fine)
@@ -1384,6 +1449,7 @@ with `legacy_ssl=True`.
 | 4 | Return ModemResult(success=True) | | |
 
 **Assertions:**
+
 - Session created via `create_session(legacy_ssl=True)`
 - `LegacySSLAdapter` mounted on `https://`
 - `session.verify == False`
@@ -1409,6 +1475,7 @@ bare IP with no protocol prefix.
 | 8 | Config entry persists `protocol=https, legacy_ssl=False` | | |
 
 **Assertions:**
+
 - Retry only happens when protocol was auto-detected (not user-specified)
 - Retry only happens on AUTH_FAILED or LOAD_AUTH — not CONNECTIVITY or PARSE_ERROR
 - If HTTPS also fails auth, try HTTPS + legacy SSL before giving up
@@ -1420,18 +1487,18 @@ bare IP with no protocol prefix.
 
 **Alternative path — HTTPS needs legacy SSL:**
 
-| Step | Action | Observable |
-|------|--------|------------|
-| 5a | HTTPS retry → SSLError or AUTH_FAILED | |
-| 5b | HTTPS + legacy SSL retry → auth succeeds | protocol=https, legacy_ssl=True |
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 5a | HTTPS retry → SSLError or AUTH_FAILED | | |
+| 5b | HTTPS + legacy SSL retry → auth succeeds | | protocol=https, legacy_ssl=True |
 
 **Alternative path — all protocols fail:**
 
-| Step | Action | Observable |
-|------|--------|------------|
-| 5a | HTTPS retry → AUTH_FAILED | |
-| 5b | HTTPS + legacy SSL → AUTH_FAILED | |
-| 5c | Surface error to user | "Login failed" with original error |
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 5a | HTTPS retry → AUTH_FAILED | | |
+| 5b | HTTPS + legacy SSL → AUTH_FAILED | | |
+| 5c | Surface error to user | | "Login failed" with original error |
 
 ---
 
@@ -1465,8 +1532,9 @@ sequenceDiagram
     C->>HM: ping()
     HM-->>C: HealthInfo(RESPONSIVE, icmp=8ms, http=104ms)
     Note over C: Health sensors update immediately
-
-    C->>O: get_modem_data() [manual or scheduled]
+    C->>C: Health recovery listener: UNRESPONSIVE→RESPONSIVE
+    C->>O: get_modem_data() [immediate, health-recovery-triggered]
+    O->>O: Health is RESPONSIVE + backoff active → clear connectivity backoff
     O-->>C: ModemSnapshot(ONLINE, modem_data={24 DS, 4 US})
     C->>C: Deferred listener: modem_data present
     C->>C: Create data-dependent entities (channels, system, LAN)
@@ -1480,14 +1548,16 @@ sequenceDiagram
 | 2 | First get_modem_data() | connect timeout | ModemSnapshot(UNREACHABLE, modem_data=None) |
 | 3 | Consumer creates always-available entities | | Status: "Unreachable", Health: "Unresponsive" |
 | 4 | Consumer registers deferred entity listener | | Data-dependent entities pending |
-| 5 | Subsequent polls: modem still down | | Listener fires, modem_data=None, no-op |
-| 6 | Health detects modem responsive | | Health: "Responsive" (ICMP + HTTP OK) |
-| 7 | Next data poll succeeds | UNREACHABLE to ONLINE | ModemSnapshot with channel data |
+| 5 | Subsequent polls: modem still down | connectivity backoff grows | Listener fires, modem_data=None, no-op |
+| 6 | Health detects modem responsive | UNRESPONSIVE→RESPONSIVE | Health: "Responsive" (ICMP + HTTP OK) |
+| 6a | Health recovery listener fires | schedules immediate poll | Recovery latency bounded by health interval, not scan interval |
+| 7 | Immediate poll: orchestrator clears backoff | UNREACHABLE to ONLINE | Health RESPONSIVE + backoff active → reset_connectivity() |
 | 8 | Deferred listener: creates data entities | | Channel, system, LAN sensors appear |
 | 9 | Listener unsubscribes | | One-shot complete |
 | 10 | Normal polling resumes | | All entities updating normally |
 
 **Assertions:**
+
 - Status sensor always available during outage (shows "Unreachable")
 - Health sensors always available (show probe results independently)
 - Data-dependent entities created on first successful poll, not at startup
@@ -1496,3 +1566,8 @@ sequenceDiagram
 - If consumer unloads before modem recovers, listener is cleaned up
 - Transition logged: "Status transition: unreachable to online"
 - Equivalent to UC-34 at orchestrator level, but consumer handles entity lifecycle
+- Health recovery listener bounds recovery latency to the health check interval
+  (not the scan interval) — orchestrator clears connectivity backoff when health
+  proves the modem is reachable before the next scheduled poll
+- Connectivity backoff accumulated during outage is cleared in a single step
+  (reset_connectivity), not decremented poll-by-poll

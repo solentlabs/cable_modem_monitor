@@ -143,11 +143,6 @@ class RestartModemButton(_ButtonBase):
         self._attr_unique_id = f"{entry.entry_id}_restart_button"
         self._attr_icon = "mdi:restart"
 
-    @functools.cached_property
-    def available(self) -> bool:
-        """Unavailable while a restart is already in progress."""
-        return not self._entry.runtime_data.orchestrator.is_restarting
-
     async def async_press(self) -> None:
         """Handle the button press — restart modem and monitor recovery."""
         runtime = self._entry.runtime_data
@@ -165,10 +160,17 @@ class RestartModemButton(_ButtonBase):
         cancel_event = threading.Event()
         runtime.cancel_event = cancel_event
 
+        # Show button as unavailable during restart
+        self._attr_available = False
+        self.async_write_ha_state()
+
         try:
             result: RestartResult = await self.hass.async_add_executor_job(orchestrator.restart, cancel_event)
         finally:
             runtime.cancel_event = None
+            # Restore button availability
+            self._attr_available = True
+            self.async_write_ha_state()
 
         # Notify user of outcome
         if result.success:
