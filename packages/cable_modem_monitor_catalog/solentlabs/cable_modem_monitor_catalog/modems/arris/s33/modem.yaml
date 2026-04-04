@@ -53,7 +53,7 @@ notes: |
   JavaScript reveals identical protocol structure to MB8611.
   Session stored in sessionStorage.getItem('PrivateKey').
   S33 blocks ICMP ping - HTTP-only health checks required.
-  System uptime not available (only current time exposed).
+  Modem UI swaps CustomerConnSystemUpTime display with clock time (JS bug); HNAP API returns real uptime.
   Compatible: S33v2 (same parser, MD5 HMAC), S33v3 (same parser, SHA256 HMAC).
 references:
   issues:

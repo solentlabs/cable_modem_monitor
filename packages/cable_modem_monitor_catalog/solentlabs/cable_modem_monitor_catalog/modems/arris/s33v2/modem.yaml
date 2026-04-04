@@ -49,7 +49,7 @@ notes: |
   Parser is identical to S33.
   Compatible: S33 (same parser, MD5 HMAC).
   S33v2 blocks ICMP ping - HTTP-only health checks required.
-  System uptime not available (only current time exposed).
+  Modem UI swaps CustomerConnSystemUpTime display with clock time (JS bug); HNAP API returns real uptime.
   Known anti-brute-force: LOCKUP (temp lock) and REBOOT (forces restart).
 references:
   issues:
