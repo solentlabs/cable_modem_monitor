@@ -186,6 +186,12 @@ class HnapAuthManager(BaseAuthManager):
                 error=(f"HNAP challenge response is not valid JSON " f"(status {response.status_code})"),
             )
 
+        if not isinstance(data, dict):
+            return AuthResult(
+                success=False,
+                error=f"HNAP challenge response is not a JSON object (status {response.status_code})",
+            )
+
         login_response = data.get("LoginResponse", {})
         challenge = login_response.get("Challenge")
         public_key = login_response.get("PublicKey")
@@ -286,6 +292,12 @@ class HnapAuthManager(BaseAuthManager):
             return AuthResult(
                 success=False,
                 error=(f"HNAP login response is not valid JSON " f"(status {response.status_code})"),
+            )
+
+        if not isinstance(data, dict):
+            return AuthResult(
+                success=False,
+                error=f"HNAP login response is not a JSON object (status {response.status_code})",
             )
 
         # Store diagnostics (phase 2)

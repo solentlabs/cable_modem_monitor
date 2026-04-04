@@ -132,6 +132,11 @@ class HNAPLoader:
                 f"HNAP response is not valid JSON: {e}",
             ) from e
 
+        if not isinstance(data, dict):
+            raise HNAPLoadError(
+                f"HNAP response is not a JSON object (got {type(data).__name__})",
+            )
+
         # Unwrap GetMultipleHNAPsResponse if present
         hnap_response = data.get("GetMultipleHNAPsResponse", data)
 

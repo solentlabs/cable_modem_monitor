@@ -6,7 +6,7 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -296,6 +296,49 @@ class TestErrors:
         config = _make_parser_config()
 
         with pytest.raises(HNAPLoadError, match="request failed"):
+            loader.fetch(config)
+
+    # ┌────────────────────┬─────────────────────────────────┐
+    # │ json_value         │ description                     │
+    # ├────────────────────┼─────────────────────────────────┤
+    # │ "not a dict"       │ string response                 │
+    # │ [1, 2, 3]          │ list response                   │
+    # │ 42                 │ integer response                │
+    # └────────────────────┴─────────────────────────────────┘
+    #
+    # fmt: off
+    LOAD_NOT_DICT_CASES = [
+        # (json_value,    description)
+        ("not a dict",    "string response"),
+        ([1, 2, 3],       "list response"),
+        (42,              "integer response"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "json_value,desc",
+        LOAD_NOT_DICT_CASES,
+        ids=[c[1] for c in LOAD_NOT_DICT_CASES],
+    )
+    def test_non_dict_json_raises_load_error(self, json_value: object, desc: str) -> None:
+        """Non-dict JSON response raises HNAPLoadError."""
+        session = requests.Session()
+        loader = HNAPLoader(
+            session=session,
+            base_url="http://127.0.0.1:1",
+            private_key="key",
+        )
+        config = _make_parser_config()
+
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.content = b"[]"
+        resp.json.return_value = json_value
+
+        with (
+            patch.object(session, "post", return_value=resp),
+            pytest.raises(HNAPLoadError, match="not a JSON object"),
+        ):
             loader.fetch(config)
 
 

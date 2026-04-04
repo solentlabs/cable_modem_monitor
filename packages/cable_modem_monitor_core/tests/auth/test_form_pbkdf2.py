@@ -230,6 +230,97 @@ class TestFormPbkdf2AuthManager:
             assert result.success is False
             assert "salt" in result.error.lower()
 
+    # ┌────────────────────┬─────────────────────────────────┐
+    # │ json_value         │ description                     │
+    # ├────────────────────┼─────────────────────────────────┤
+    # │ "not a dict"       │ string response                 │
+    # │ [1, 2, 3]          │ list response                   │
+    # │ 42                 │ integer response                │
+    # └────────────────────┴─────────────────────────────────┘
+    #
+    # fmt: off
+    SALT_NOT_DICT_CASES = [
+        # (json_value,    description)
+        ("not a dict",    "string response"),
+        ([1, 2, 3],       "list response"),
+        (42,              "integer response"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "json_value,desc",
+        SALT_NOT_DICT_CASES,
+        ids=[c[1] for c in SALT_NOT_DICT_CASES],
+    )
+    def test_salt_response_not_dict(
+        self,
+        session: requests.Session,
+        json_value: object,
+        desc: str,
+    ) -> None:
+        """Reports error when salt response JSON is not a dict."""
+        config = self._make_config()
+        manager = FormPbkdf2AuthManager(config)
+        manager.configure_session(session, {})
+
+        with patch.object(session, "post") as mock_post:
+            resp = MagicMock()
+            resp.json.return_value = json_value
+            mock_post.return_value = resp
+
+            result = manager.authenticate(session, "http://192.168.100.1", "admin", "password")
+            assert result.success is False
+            assert "json object" in result.error.lower() or "salt" in result.error.lower()
+
+    # ┌────────────────────┬─────────────────────────────────┐
+    # │ json_value         │ description                     │
+    # ├────────────────────┼─────────────────────────────────┤
+    # │ "ok"               │ string response                 │
+    # │ ["error"]          │ list response                   │
+    # │ 42                 │ integer response                │
+    # └────────────────────┴─────────────────────────────────┘
+    #
+    # fmt: off
+    LOGIN_NOT_DICT_CASES = [
+        # (json_value,  description)
+        ("ok",          "string response"),
+        (["error"],     "list response"),
+        (42,            "integer response"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "json_value,desc",
+        LOGIN_NOT_DICT_CASES,
+        ids=[c[1] for c in LOGIN_NOT_DICT_CASES],
+    )
+    def test_login_response_not_dict(
+        self,
+        session: requests.Session,
+        json_value: object,
+        desc: str,
+    ) -> None:
+        """Does not crash when login response JSON is not a dict.
+
+        Non-dict login JSON has no ``error`` field to check, so the
+        code should fall through to the HTTP status code check.
+        With a 200 status, that means success.
+        """
+        config = self._make_config(double_hash=False)
+        manager = FormPbkdf2AuthManager(config)
+        manager.configure_session(session, {})
+
+        with patch.object(session, "post") as mock_post:
+            salt_resp = MagicMock()
+            salt_resp.json.return_value = {"salt": "s"}
+            login_resp = MagicMock()
+            login_resp.status_code = 200
+            login_resp.json.return_value = json_value
+            mock_post.side_effect = [salt_resp, login_resp]
+
+            result = manager.authenticate(session, "http://192.168.100.1", "admin", "password")
+            assert result.success is True
+
     def test_login_401_failure(self, session: requests.Session) -> None:
         """Reports error when login returns 401."""
         config = self._make_config(double_hash=False)

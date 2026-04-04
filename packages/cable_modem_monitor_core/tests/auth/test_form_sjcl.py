@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -264,6 +265,76 @@ class TestFormSjclAuthManager:
 
         assert result.success is False
         assert "json" in result.error.lower()
+
+    def test_double_encoded_json_response(self, session: requests.Session) -> None:
+        """Handles double-encoded JSON where resp.json() returns a string."""
+        config = _make_config(session_validation_endpoint="")
+        manager = FormSjclAuthManager(config)
+
+        page_resp = MagicMock()
+        page_resp.text = _login_page_html()
+
+        login_resp = MagicMock()
+        login_resp.status_code = 200
+        # Modem returns a JSON string containing a serialised JSON object.
+        inner = json.dumps({"p_status": "AdminMatch", "encryptData": _TEST_ENCRYPTED_NONCE})
+        login_resp.json.return_value = inner
+
+        with (
+            patch.object(session, "get", return_value=page_resp),
+            patch.object(session, "post", return_value=login_resp),
+        ):
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is True
+        assert session.headers.get("csrfNonce") == _TEST_CSRF_NONCE
+
+    # ┌────────────────────┬─────────────────────────────────┐
+    # │ json_value         │ description                     │
+    # ├────────────────────┼─────────────────────────────────┤
+    # │ "not a dict"       │ string response                 │
+    # │ [1, 2, 3]          │ list response                   │
+    # │ 42                 │ integer response                │
+    # └────────────────────┴─────────────────────────────────┘
+    #
+    # fmt: off
+    JSON_NOT_DICT_CASES = [
+        # (json_value,    description)
+        ("not a dict",    "string response"),
+        ([1, 2, 3],       "list response"),
+        (42,              "integer response"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "json_value,desc",
+        JSON_NOT_DICT_CASES,
+        ids=[c[1] for c in JSON_NOT_DICT_CASES],
+    )
+    def test_json_response_not_dict(
+        self,
+        session: requests.Session,
+        json_value: object,
+        desc: str,
+    ) -> None:
+        """Reports error when JSON response is a non-dict type."""
+        config = _make_config()
+        manager = FormSjclAuthManager(config)
+
+        page_resp = MagicMock()
+        page_resp.text = _login_page_html()
+
+        login_resp = MagicMock()
+        login_resp.json.return_value = json_value
+
+        with (
+            patch.object(session, "get", return_value=page_resp),
+            patch.object(session, "post", return_value=login_resp),
+        ):
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is False
+        assert "expected json object" in result.error.lower()
 
     def test_nonce_decryption_failure(self, session: requests.Session) -> None:
         """Reports error when response decryption fails."""
