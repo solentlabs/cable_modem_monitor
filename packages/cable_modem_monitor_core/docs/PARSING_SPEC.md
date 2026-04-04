@@ -778,10 +778,13 @@ upstream:
 **Extraction algorithm:**
 1. Find `<script>` tag containing the function name
 2. Extract function body via regex
-3. Find `tagValueList` variable assignment
-4. Split by delimiter
-5. First value is channel count
-6. For each channel: read `fields_per_channel` consecutive values,
+3. Strip comments — both block (`/* ... */`) and line (`// ...`)
+   comments are removed so that commented-out example assignments
+   do not shadow the real `tagValueList`
+4. Find `tagValueList` variable assignment
+5. Split by delimiter
+6. First value is channel count
+7. For each channel: read `fields_per_channel` consecutive values,
    map by offset
 
 Multiple functions in the same section (e.g., QAM + OFDM downstream)

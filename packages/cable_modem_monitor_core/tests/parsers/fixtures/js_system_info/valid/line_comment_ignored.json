@@ -1,0 +1,23 @@
+{
+  "_description": "Line-commented tagValueList is ignored — real values extracted (mirrors Netgear DocsisStatus.htm pattern)",
+  "_html": "<html><body><script>function InitTagValue() {\n  //var tagValueList = 'stale0|stale1|stale2|stale3|stale4|stale5|stale6|stale7|stale8|stale9|--- --- -- --:--:-- ----|0|0|0'\n  var tagValueList = 'val0|val1|val2|Operational|val4|val5|val6|val7|val8|val9|Wed Jan 15 2025 14:30:00|0|0|0|5 days 03:22:15'\n}</script></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "format": "javascript",
+    "resource": "/status.html",
+    "functions": [
+      {
+        "name": "InitTagValue",
+        "delimiter": "|",
+        "fields": [
+          {"offset": 3, "field": "docsis_status", "type": "string"},
+          {"offset": 14, "field": "system_uptime", "type": "string"}
+        ]
+      }
+    ]
+  },
+  "_expected": {
+    "docsis_status": "Operational",
+    "system_uptime": "5 days 03:22:15"
+  }
+}

@@ -33,6 +33,20 @@ _TAG_VALUE_RE = re.compile(
     r"var\s+tagValueList\s*=\s*[\"']([^\"']*)[\"']",
 )
 
+# Regex to strip ``//``-style line comments. Matches ``//`` followed by
+# everything up to end-of-line. Applied after block-comment removal so
+# that commented-out example ``tagValueList`` lines don't shadow real ones.
+_LINE_COMMENT_RE = re.compile(r"//[^\n]*")
+
+# Regex to strip ``/* ... */`` block comments (including multi-line).
+_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
+
+
+def _strip_js_comments(text: str) -> str:
+    """Strip both block and line comments from JavaScript source text."""
+    text = _BLOCK_COMMENT_RE.sub("", text)
+    return _LINE_COMMENT_RE.sub("", text)
+
 
 @functools.cache
 def _get_func_body_re(func_name: str) -> re.Pattern[str]:
@@ -197,8 +211,7 @@ def _extract_tag_value_list(soup: BeautifulSoup, func_name: str) -> str | None:
             continue
 
         func_body = func_match.group(1)
-        # Strip block comments to avoid matching commented-out code
-        func_body_clean = re.sub(r"/\*.*?\*/", "", func_body, flags=re.DOTALL)
+        func_body_clean = _strip_js_comments(func_body)
 
         tag_match = _TAG_VALUE_RE.search(func_body_clean)
         if tag_match:
@@ -217,7 +230,8 @@ def _extract_top_level_tag_value_list(soup: BeautifulSoup) -> str | None:
         text = script.string
         if not text:
             continue
-        tag_match = _TAG_VALUE_RE.search(text)
+        clean = _strip_js_comments(text)
+        tag_match = _TAG_VALUE_RE.search(clean)
         if tag_match:
             return tag_match.group(1)
     return None

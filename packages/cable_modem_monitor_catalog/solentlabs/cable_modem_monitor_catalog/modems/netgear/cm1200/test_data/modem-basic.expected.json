@@ -353,8 +353,9 @@
     }
   ],
   "system_info": {
-    "docsis_status": "Not Synchronized",
+    "docsis_status": "Operational",
     "downstream_channel_count": 32,
+    "system_uptime": "13 days 06:59:07",
     "upstream_channel_count": 3
   },
   "upstream": [
