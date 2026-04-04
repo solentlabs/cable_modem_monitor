@@ -1,0 +1,29 @@
+{
+  "default": true,
+
+  // Line length — disabled because spec tables, URLs, and code blocks
+  // regularly exceed any reasonable limit.
+  "MD013": false,
+
+  // Ordered list item prefix — disabled because we use "1. 2. 3."
+  // (incremental) not "1. 1. 1." (all-ones).  Both are valid markdown
+  // but the linter defaults to all-ones.
+  "MD029": false,
+
+  // Duplicate headings — allowed when they are in different sections
+  // (e.g., every use case has "Assertions").
+  "MD024": {
+    "siblings_only": true
+  },
+
+  // Raw HTML — allow layout elements used in README badges, images,
+  // and spec callouts.
+  "MD033": {
+    "allowed_elements": ["img", "p", "br", "em", "a", "div", "span"]
+  },
+
+  // Table column style — disabled because the rule misdetects separator
+  // rows (|------|) as "compact" style, then flags every padded data
+  // row.  Revisit when markdownlint fixes separator-row handling.
+  "MD060": false
+}

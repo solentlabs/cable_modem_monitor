@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     RestartResult,
 )
@@ -137,23 +138,10 @@ async def test_update_button_press_no_health(
 # -----------------------------------------------------------------------
 
 
-def test_restart_button_unavailable_during_restart(
-    mock_orchestrator: MagicMock,
+def test_restart_button_available_by_default(
     mock_runtime_data: CableModemRuntimeData,
 ):
-    """Restart button is unavailable while restart in progress."""
-    mock_orchestrator.is_restarting = True
-    entry = _make_entry(mock_runtime_data)
-    button = RestartModemButton(entry)
-    assert button.available is False
-
-
-def test_restart_button_available_normally(
-    mock_orchestrator: MagicMock,
-    mock_runtime_data: CableModemRuntimeData,
-):
-    """Restart button available when not restarting."""
-    mock_orchestrator.is_restarting = False
+    """Restart button available when created (default state)."""
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     assert button.available is True
@@ -167,6 +155,7 @@ async def test_restart_button_press_success(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
+    button.async_write_ha_state = MagicMock()
     button.hass.async_add_executor_job = AsyncMock(
         return_value=RestartResult(
             success=True,
@@ -199,6 +188,7 @@ async def test_restart_button_press_failure(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
+    button.async_write_ha_state = MagicMock()
     button.hass.async_add_executor_job = AsyncMock(
         return_value=RestartResult(
             success=False,
@@ -230,6 +220,64 @@ async def test_restart_button_skips_if_already_restarting(
     await button.async_press()
 
     button.hass.async_add_executor_job.assert_not_awaited()
+
+
+async def test_restart_button_unavailable_during_restart(
+    mock_data_coordinator: MagicMock,
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """Button shows unavailable in HA during restart, available after."""
+    entry = _make_entry(mock_runtime_data)
+    button = RestartModemButton(entry)
+    button.hass = MagicMock()
+    button.async_write_ha_state = MagicMock()
+    button.hass.services.async_call = AsyncMock()
+    mock_data_coordinator.async_request_refresh = AsyncMock()
+
+    # Capture _attr_available at the moment restart() runs
+    available_during_restart: list[bool] = []
+
+    async def _capture_state(*args, **kwargs):
+        available_during_restart.append(button._attr_available)
+        return RestartResult(
+            success=True,
+            phase_reached=RestartPhase.COMPLETE,
+            elapsed_seconds=60.0,
+        )
+
+    button.hass.async_add_executor_job = AsyncMock(side_effect=_capture_state)
+
+    await button.async_press()
+
+    # During restart: unavailable
+    assert available_during_restart == [False]
+    # After restart: available again
+    assert button._attr_available is True
+    # State pushed to HA twice (before + after)
+    assert button.async_write_ha_state.call_count == 2
+
+
+async def test_restart_button_available_restored_on_exception(
+    mock_data_coordinator: MagicMock,
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """Button restores availability even when restart raises."""
+    entry = _make_entry(mock_runtime_data)
+    button = RestartModemButton(entry)
+    button.hass = MagicMock()
+    button.async_write_ha_state = MagicMock()
+    button.hass.services.async_call = AsyncMock()
+    mock_data_coordinator.async_request_refresh = AsyncMock()
+    button.hass.async_add_executor_job = AsyncMock(
+        side_effect=ConnectionError("modem unreachable"),
+    )
+
+    with pytest.raises(ConnectionError):
+        await button.async_press()
+
+    # finally block restores availability
+    assert button._attr_available is True
+    assert button.async_write_ha_state.call_count == 2
 
 
 # -----------------------------------------------------------------------
