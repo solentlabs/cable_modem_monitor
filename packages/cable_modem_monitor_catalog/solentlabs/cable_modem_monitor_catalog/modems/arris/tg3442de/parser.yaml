@@ -103,3 +103,12 @@ system_info:
         - source: js_Duration
           field: system_uptime
           type: string
+    - format: javascript_vars
+      resource: "/php/overview_data.php"
+      fields:
+        - source: js_isCmOperational
+          field: cm_status
+          type: string
+        - source: js_hostNums
+          field: connected_devices
+          type: string

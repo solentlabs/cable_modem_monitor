@@ -44,7 +44,7 @@ sources:
 attribution:
   contributors:
     - github: https://github.com/samuelengelking
-      contribution: "HAR capture and initial modem request"
+      contribution: "HAR captures and initial modem request"
 isps:
   - Vodafone DE
 notes: |
