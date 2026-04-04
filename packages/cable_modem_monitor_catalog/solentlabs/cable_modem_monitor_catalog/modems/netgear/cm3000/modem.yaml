@@ -1,0 +1,41 @@
+manufacturer: Netgear
+model: CM3000
+brands:
+  - Nighthawk
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: form
+  action: "/goform/Login"
+  login_page: "/"
+  username_field: loginName
+  password_field: loginPassword
+  cookie_name: "XSRF_TOKEN"
+
+hardware:
+  docsis_version: "3.1"
+
+status: in_progress
+
+sources:
+  auth_config: "[#127 Netgear CM3000](https://github.com/solentlabs/cable_modem_monitor/issues/127)"
+
+attribution:
+  contributors:
+    - github: https://github.com/thatosxguy
+      contribution: "HAR capture (Issue #127)"
+
+isps: []
+
+notes: |
+  Nighthawk Multi-Gig DOCSIS 3.1 cable modem with 2.5Gbps Ethernet.
+  32 SC-QAM + 2 OFDM downstream, 8 ATDMA + 2 OFDMA upstream.
+  Same tagValueList format as CM2000/CM2050V/CM1200.
+  XSRF_TOKEN cookie set on first GET, sent with all subsequent requests.
+  Login page at /, POST to /goform/Login with loginName/loginPassword.
+  md5.js loaded on login page but password sent plaintext.
+
+references:
+  issues:
+    - "[#127 — [Modem Request] Netgear CM3000](https://github.com/solentlabs/cable_modem_monitor/issues/127)"
