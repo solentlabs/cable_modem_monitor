@@ -300,33 +300,42 @@ class TestZeroChannels:
 # ==================================================================
 
 
-# ┌──────────────────────────────┬────────┬──────────────────┐
-# │ DS lock_status values        │ US cnt │ Expected         │
-# ├──────────────────────────────┼────────┼──────────────────┤
-# │ All "locked"                 │ > 0    │ OPERATIONAL      │
-# │ All "locked"                 │ 0      │ PARTIAL_LOCK     │
-# │ Some "locked", some not      │ > 0    │ PARTIAL_LOCK     │
-# │ None "locked"                │ > 0    │ NOT_LOCKED       │
-# │ No DS channels               │ any    │ NOT_LOCKED       │
-# │ lock_status field absent     │ > 0    │ UNKNOWN          │
-# └──────────────────────────────┴────────┴──────────────────┘
+# ┌──────────────────────────────┬────────┬──────────────────┬─────────────────────┐
+# │ DS lock_status values        │ US cnt │ Expected         │ system_info override │
+# ├──────────────────────────────┼────────┼──────────────────┼─────────────────────┤
+# │ All "locked"                 │ > 0    │ OPERATIONAL      │ —                   │
+# │ All "locked"                 │ 0      │ PARTIAL_LOCK     │ —                   │
+# │ Some "locked", some not      │ > 0    │ PARTIAL_LOCK     │ —                   │
+# │ None "locked"                │ > 0    │ NOT_LOCKED       │ —                   │
+# │ No DS channels               │ any    │ NOT_LOCKED       │ —                   │
+# │ lock_status absent           │ > 0    │ UNKNOWN          │ —                   │
+# │ lock_status absent           │ > 0    │ OPERATIONAL      │ docsis_status       │
+# │ lock_status absent           │ > 0    │ OPERATIONAL      │ cm_status           │
+# │ lock_status absent           │ > 0    │ UNKNOWN          │ non-operational     │
+# └──────────────────────────────┴────────┴──────────────────┴─────────────────────┘
 #
 # fmt: off
 DOCSIS_STATUS_CASES = [
-    # (ds_channels,                      us_count, expected,               description)
-    ([{"lock_status": "locked"}] * 4,    2,        DocsisStatus.OPERATIONAL,  "all locked + upstream"),
-    ([{"lock_status": "locked"}] * 4,    0,        DocsisStatus.PARTIAL_LOCK, "all locked + no upstream"),
+    # (ds_channels,                      us_count, expected,               description,                system_info)
+    ([{"lock_status": "locked"}] * 4,    2,        DocsisStatus.OPERATIONAL,  "all locked + upstream",    None),
+    ([{"lock_status": "locked"}] * 4,    0,        DocsisStatus.PARTIAL_LOCK, "all locked + no upstream", None),
     ([{"lock_status": "locked"},
-      {"lock_status": "not_locked"}],    2,        DocsisStatus.PARTIAL_LOCK, "some locked"),
-    ([{"lock_status": "not_locked"}] * 3, 2,       DocsisStatus.NOT_LOCKED,   "none locked"),
-    ([],                                 2,        DocsisStatus.NOT_LOCKED,   "no DS channels"),
-    ([{"frequency": 600}] * 3,          2,        DocsisStatus.UNKNOWN,      "no lock_status field"),
+      {"lock_status": "not_locked"}],    2,        DocsisStatus.PARTIAL_LOCK, "some locked",              None),
+    ([{"lock_status": "not_locked"}] * 3, 2,       DocsisStatus.NOT_LOCKED,   "none locked",              None),
+    ([],                                 2,        DocsisStatus.NOT_LOCKED,   "no DS channels",           None),
+    ([{"frequency": 600}] * 3,          2,        DocsisStatus.UNKNOWN,      "no lock_status field",     None),
+    ([{"frequency": 600}] * 3,          2,        DocsisStatus.OPERATIONAL,  "fallback: docsis_status",
+     {"docsis_status": "OPERATIONAL"}),
+    ([{"frequency": 600}] * 3,          2,        DocsisStatus.OPERATIONAL,  "fallback: cm_status",
+     {"cm_status": "Operational"}),
+    ([{"frequency": 600}] * 3,          2,        DocsisStatus.UNKNOWN,      "fallback: non-operational",
+     {"docsis_status": "Not Synchronized"}),
 ]
 # fmt: on
 
 
 @pytest.mark.parametrize(
-    "ds_channels,us_count,expected,desc",
+    "ds_channels,us_count,expected,desc,system_info_override",
     DOCSIS_STATUS_CASES,
     ids=[c[3] for c in DOCSIS_STATUS_CASES],
 )
@@ -335,13 +344,14 @@ def test_docsis_status_derivation(
     us_count: int,
     expected: DocsisStatus,
     desc: str,
+    system_info_override: dict[str, Any] | None,
 ) -> None:
     """UC-07: DOCSIS status from lock_status fields."""
     upstream = [{"channel_id": i} for i in range(us_count)]
     data = _make_modem_data(
         downstream=ds_channels,
         upstream=upstream,
-        system_info={"firmware": "1.0"},
+        system_info=system_info_override or {"firmware": "1.0"},
     )
     collector = _mock_collector(_ok_result(data))
     orch = _make_orchestrator(collector=collector)

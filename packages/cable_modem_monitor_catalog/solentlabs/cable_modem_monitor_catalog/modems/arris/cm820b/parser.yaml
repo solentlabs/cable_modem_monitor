@@ -96,3 +96,11 @@ system_info:
           label: "System"
           pattern: "MODEL:\\s*(.+)"
           type: string
+
+aggregate:
+  total_corrected:
+    channels: downstream
+    sum: corrected
+  total_uncorrected:
+    channels: downstream
+    sum: uncorrected

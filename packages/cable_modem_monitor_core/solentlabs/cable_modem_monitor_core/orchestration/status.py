@@ -63,7 +63,7 @@ def derive_docsis_status(modem_data: dict[str, Any]) -> DocsisStatus:
     # Check if lock_status field exists on any channel
     has_lock_status = any("lock_status" in ch for ch in downstream)
     if not has_lock_status:
-        return DocsisStatus.UNKNOWN
+        return _fallback_from_system_info(modem_data)
 
     locked_count = sum(1 for ch in downstream if ch.get("lock_status") == "locked")
 
@@ -74,3 +74,16 @@ def derive_docsis_status(modem_data: dict[str, Any]) -> DocsisStatus:
         return DocsisStatus.OPERATIONAL
 
     return DocsisStatus.PARTIAL_LOCK
+
+
+def _fallback_from_system_info(modem_data: dict[str, Any]) -> DocsisStatus:
+    """Fall back to system_info when channels lack lock_status.
+
+    Checks system_info.docsis_status then system_info.cm_status for a
+    case-insensitive "operational" value.  Returns UNKNOWN otherwise.
+    """
+    system_info = modem_data.get("system_info", {})
+    reported = system_info.get("docsis_status") or system_info.get("cm_status") or ""
+    if reported.strip().lower() == "operational":
+        return DocsisStatus.OPERATIONAL
+    return DocsisStatus.UNKNOWN
