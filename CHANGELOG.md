@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.9] - 2026-04-03
+
+### Added
+
+- **CBN transport** — New transport for Compal-based modems using
+  encrypted XML APIs with PBKDF2/AES-CBC auth. (Related to #129)
+- **Compal CH7465MT** — New catalog entry for Vodafone Station
+  (Ziggo NL). CBN transport, DOCSIS 3.0. (Related to #129)
+- **Arris S33v3** — New catalog entry. Uses SHA256 HMAC (not MD5 like
+  S33/S33v2), compatible with S34 parser. (Related to #98)
+- **Arris SB8200v3** — New catalog entry using CBN transport with
+  XML multi-resource sections for DOCSIS 3.1 QAM+OFDM channels.
+  (Related to #109)
+- **XML `tables[]` for multi-resource sections** — XML parser now
+  supports multiple table definitions per section (matching HTML/JSON
+  pattern), enabling DOCSIS 3.1 modems with separate QAM/OFDM API
+  endpoints.
+- **`javascript_vars` system_info format** — New Core format handler
+  for extracting system_info from simple JS variable assignments
+  (`var x = 'value'`). Used by TG3442DE and future Arris Touchstone
+  modems.
+- **TG3442DE: `cm_status` and `connected_devices`** — New system_info
+  fields from `overview_data.php`. DOCSIS online/offline status and
+  connected device count. Test data rebuilt from contributor HAR
+  capture. (Related to #86)
+
+### Fixed
+
+- **Migration manufacturer normalization** — v1 manufacturer strings
+  (e.g., "Arris/CommScope") now normalize to catalog values ("Arris")
+  during migration, fixing options flow lookup failures.
+- **Migration variant resolution** — v1 `auth_strategy` field now
+  correctly maps to v2 variant (e.g., `form_nonce` → SB6190
+  `form-nonce` variant). (Related to #121)
+- **`software_version` field name** — All Arris HNAP parser configs
+  corrected from `firmware_version` to the canonical `software_version`
+  field name.
+
+### Changed
+
+- **S33v2 and MB8600 split into standalone catalog entries** — Each
+  model now has its own directory, parser, and golden file instead of
+  being aliases.
+- **Contributor attribution uses full GitHub profile URLs** across the
+  entire catalog.
+
+## [3.14.0-alpha.8] - 2026-04-02
+
+### Added
+
+- **Dynamic system_info sensors** — HA now creates sensors
+  dynamically from parser-reported system_info fields (software
+  version, hardware version, uptime, etc.) instead of a fixed set.
+- **Health auto-recovery** — Connectivity backoff counter auto-clears
+  when health probes detect recovery, reducing unnecessary wait time
+  after transient network issues.
+- **Pyright pre-commit hook** — Catches Pylance-visible type errors
+  that mypy misses (`object` vs `Any`, submodule access).
+- **MCP pipeline regression test** — Wired into the CI
+  `test-packages` job for continuous validation.
+- **CSS class selector** — `html_fields` format now supports CSS class
+  selectors for field extraction, in addition to label/id selectors.
+
+### Fixed
+
+- **Config flow HTTPS retry** — Auth signal is now preserved when the
+  HTTPS retry path fails, preventing silent loss of auth error context.
+- **Sensor latency flicker** — Latency values are cached to prevent
+  display flicker when a health probe fails intermittently.
+- **Catalog→Core dependency pin** — Exact-pinned for uv pre-release
+  compatibility.
+- **Config flow test coverage** — Fixed test gaps and PII hook
+  placement.
+- **Log levels and namespaces** — Polished startup milestones, debug
+  vs info boundaries, and namespace consistency across Core and HA.
+
+### Changed
+
+- **Fleet YAML key ordering normalized** across all catalog entries.
+- **Golden file normalization** — Consistent formatting across all
+  modem expected output files.
+- **Scripts directory audit** — Removed dead files, fixed stale doc
+  references.
+- **Spec consistency audit** — Fixed links, terminology, and gaps
+  across architecture and orchestration specs.
+
 ## [3.14.0-alpha.7] - 2026-04-01
 
 ### Fixed
