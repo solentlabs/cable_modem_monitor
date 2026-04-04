@@ -1,7 +1,7 @@
 """Tests for HealthMonitor — lightweight modem probes.
 
 Covers ICMP + HTTP probes, probe configurations, status derivation,
-and logging. Health checks are fully decoupled from data collection.
+logging, and collection evidence (HTTP probe suppression).
 
 Use case coverage:
 - UC-50: Normal health check — both probes
@@ -10,6 +10,7 @@ Use case coverage:
 - UC-55: Degraded — HTTP fails, ICMP succeeds
 - UC-56: Both probes disabled
 - UC-57: Health during restart — independent
+- Collection evidence: HTTP probe skipped during/after data collection
 """
 
 from __future__ import annotations
@@ -584,3 +585,206 @@ class TestHealthLogging:
             monitor.ping()
 
         assert "Health check [T100]: unresponsive" in caplog.text
+
+
+# ------------------------------------------------------------------
+# Collection evidence — HTTP probe suppression
+#
+# See ORCHESTRATION_SPEC.md § HealthMonitor / Collection Evidence.
+# The orchestrator signals collection start/end; the health monitor
+# skips the HTTP probe when a collection is active or recently
+# succeeded. ICMP always runs.
+# ------------------------------------------------------------------
+
+# Status derivation matrix with collection evidence.
+#
+# ┌─────────────────────┬──────────┬──────────────┬────────────┬──────────────────┐
+# │ evidence_state      │ icmp     │ status       │ http_calls │ description      │
+# ├─────────────────────┼──────────┼──────────────┼────────────┼──────────────────┤
+# │ active              │ pass     │ RESPONSIVE   │ 0          │ active_icmp_pass │
+# │ active              │ fail     │ ICMP_BLOCKED │ 0          │ active_icmp_fail │
+# │ active              │ disabled │ RESPONSIVE   │ 0          │ active_no_icmp   │
+# │ recent_success      │ pass     │ RESPONSIVE   │ 0          │ recent_icmp_pass │
+# │ recent_success      │ fail     │ ICMP_BLOCKED │ 0          │ recent_icmp_fail │
+# │ failed_collection   │ pass     │ RESPONSIVE   │ 1          │ failed_icmp_pass │
+# │ no_evidence         │ pass     │ RESPONSIVE   │ 1          │ none_icmp_pass   │
+# └─────────────────────┴──────────┴──────────────┴────────────┴──────────────────┘
+#
+# fmt: off
+EVIDENCE_CASES = [
+    ("active",            "pass",     HealthStatus.RESPONSIVE,   0, "active_icmp_pass"),
+    ("active",            "fail",     HealthStatus.ICMP_BLOCKED, 0, "active_icmp_fail"),
+    ("active",            "disabled", HealthStatus.RESPONSIVE,   0, "active_no_icmp"),
+    ("recent_success",    "pass",     HealthStatus.RESPONSIVE,   0, "recent_icmp_pass"),
+    ("recent_success",    "fail",     HealthStatus.ICMP_BLOCKED, 0, "recent_icmp_fail"),
+    ("failed_collection", "pass",     HealthStatus.RESPONSIVE,   1, "failed_icmp_pass"),
+    ("no_evidence",       "pass",     HealthStatus.RESPONSIVE,   1, "none_icmp_pass"),
+]
+# fmt: on
+
+
+def _setup_evidence(
+    monitor: HealthMonitor,
+    session: MagicMock,
+    state: str,
+) -> None:
+    """Apply collection evidence state to the monitor.
+
+    All states that expect HTTP suppression require a prior ping()
+    to establish a baseline — the first ping never skips HTTP so
+    consumers get at least one real measurement.
+    """
+    if state == "active":
+        session.head.return_value = _mock_http_response()
+        monitor.ping()  # establish baseline
+        session.head.reset_mock()
+        monitor.record_collection_start()
+    elif state == "recent_success":
+        session.head.return_value = _mock_http_response()
+        monitor.ping()  # establish baseline
+        session.head.reset_mock()
+        monitor.record_collection_start()
+        monitor.record_collection_end(success=True)
+    elif state == "failed_collection":
+        monitor.record_collection_start()
+        monitor.record_collection_end(success=False)
+    # no_evidence: nothing to do
+
+
+@pytest.mark.parametrize(
+    "evidence_state, icmp, expected_status, http_calls, _desc",
+    EVIDENCE_CASES,
+    ids=[c[4] for c in EVIDENCE_CASES],
+)
+@patch(f"{_MODULE}.subprocess.run")
+def test_collection_evidence_matrix(
+    mock_run: MagicMock,
+    evidence_state: str,
+    icmp: str,
+    expected_status: HealthStatus,
+    http_calls: int,
+    _desc: str,
+) -> None:
+    """Verify HTTP probe suppression and status derivation with collection evidence."""
+    # ICMP setup
+    if icmp == "disabled":
+        monitor, session = _make_monitor(supports_icmp=False)
+    elif icmp == "pass":
+        mock_run.return_value = _mock_ping_success(1.5)
+        monitor, session = _make_monitor()
+    else:
+        mock_run.return_value = _mock_ping_failure()
+        monitor, session = _make_monitor()
+
+    # Evidence setup
+    _setup_evidence(monitor, session, evidence_state)
+
+    # HTTP response for cases where the probe should run
+    if http_calls > 0:
+        session.head.return_value = _mock_http_response()
+
+    info = monitor.ping()
+
+    assert info.health_status == expected_status
+    assert session.head.call_count == http_calls
+    if http_calls == 0:
+        assert info.http_latency_ms is None
+    else:
+        assert info.http_latency_ms is not None
+
+
+# ------------------------------------------------------------------
+# Collection evidence — behavioral tests (multi-step, stay inline)
+# ------------------------------------------------------------------
+
+
+class TestCollectionEvidenceBehavior:
+    """Multi-step behavioral tests for collection evidence lifecycle."""
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_evidence_consumed_once(self, mock_run: MagicMock) -> None:
+        """First ping after collection skips HTTP; second ping runs it."""
+        mock_run.return_value = _mock_ping_success()
+
+        monitor, session = _make_monitor()
+
+        # Baseline ping — establishes _last_ping_time
+        session.head.return_value = _mock_http_response()
+        monitor.ping()
+        session.head.reset_mock()
+
+        # Successful collection
+        monitor.record_collection_start()
+        monitor.record_collection_end(success=True)
+
+        # First ping after collection — evidence fresh, HTTP skipped
+        monitor.ping()
+        assert session.head.call_count == 0
+
+        # Second ping — evidence consumed, HTTP runs
+        session.head.return_value = _mock_http_response()
+        monitor.ping()
+        assert session.head.call_count == 1
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_collection_end_clears_active_flag(self, mock_run: MagicMock) -> None:
+        """record_collection_end(False) clears active flag; HTTP runs normally."""
+        mock_run.return_value = _mock_ping_success()
+
+        monitor, session = _make_monitor()
+        monitor.record_collection_start()
+        monitor.record_collection_end(success=False)
+
+        session.head.return_value = _mock_http_response()
+        info = monitor.ping()
+
+        session.head.assert_called_once()
+        assert info.http_latency_ms is not None
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_http_disabled_ignores_evidence(self, mock_run: MagicMock) -> None:
+        """http_probe=False — evidence has no effect on already-disabled probe."""
+        mock_run.return_value = _mock_ping_success()
+
+        monitor, session = _make_monitor(http_probe=False)
+        monitor.record_collection_start()
+        info = monitor.ping()
+
+        assert info.health_status == HealthStatus.RESPONSIVE
+        assert info.http_latency_ms is None
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_first_ping_never_skips_http(self, mock_run: MagicMock) -> None:
+        """First ping always runs HTTP — consumers need a real baseline."""
+        mock_run.return_value = _mock_ping_success()
+
+        monitor, session = _make_monitor()
+        monitor.record_collection_start()
+
+        session.head.return_value = _mock_http_response()
+        info = monitor.ping()
+
+        session.head.assert_called_once()
+        assert info.http_latency_ms is not None
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_logs_http_skipped(
+        self,
+        mock_run: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Log detail shows 'HTTP skipped' when collection suppresses probe."""
+        mock_run.return_value = _mock_ping_success(1.5)
+
+        monitor, session = _make_monitor()
+
+        # Baseline ping
+        session.head.return_value = _mock_http_response()
+        monitor.ping()
+
+        monitor.record_collection_start()
+
+        with caplog.at_level("DEBUG"):
+            monitor.ping()
+
+        assert "HTTP skipped (collection active)" in caplog.text

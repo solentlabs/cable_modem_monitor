@@ -79,7 +79,7 @@ class RestartMonitor:
     ) -> RestartResult:
         """Run restart recovery sequence.
 
-        1. Clear collector session and health evidence
+        1. Clear collector session
         2. Wait for modem to respond (phase 1)
         3. Wait for channel stabilization (phase 2, if enabled)
 
