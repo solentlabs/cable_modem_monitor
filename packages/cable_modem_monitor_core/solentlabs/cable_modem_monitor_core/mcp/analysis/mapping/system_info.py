@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..format.types import DetectedLabelPair, PageAnalysis
+from ..types import FleetPatterns
 from .types import (
     SystemInfoDetail,
     SystemInfoFieldDetail,
@@ -88,60 +89,101 @@ _JSON_SYSINFO_MAP: dict[str, tuple[str, int]] = {
 def detect_system_info(
     pages: list[PageAnalysis],
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> SystemInfoDetail | None:
     """Detect system_info sources across all analyzed pages.
 
     Scans label-value pairs, JS functions, and JSON data for system info
-    fields. Returns a multi-source SystemInfoDetail or None if nothing
-    found.
+    fields. When ``fleet`` is provided, fleet-derived label mappings
+    augment Core's hardcoded baseline.
+
+    Returns a multi-source SystemInfoDetail or None if nothing found.
     """
+    label_map, id_map, json_map = _build_merged_maps(fleet)
     sources: list[SystemInfoSourceDetail] = []
 
     for page in pages:
-        # html_fields: label-value pairs
-        if page.label_pairs:
-            fields = _match_label_pairs(page.label_pairs)
-            if fields:
-                sources.append(
-                    SystemInfoSourceDetail(
-                        format="html_fields",
-                        resource=page.resource,
-                        fields=fields,
-                    )
-                )
-
-        # javascript: non-directional JS functions may contain system
-        # info labels. Directional functions (ds/us in name) belong to
-        # channel sections and are skipped here.
-        for js_func in page.js_functions:
-            if _is_directional_js(js_func.name):
-                continue
-            fields = _match_js_system_info(js_func.values)
-            if fields:
-                sources.append(
-                    SystemInfoSourceDetail(
-                        format="javascript",
-                        resource=page.resource,
-                        fields=fields,
-                    )
-                )
-
-        # json: JSON data with system info keys
-        if page.json_data is not None:
-            fields = _match_json_system_info(page.json_data)
-            if fields:
-                sources.append(
-                    SystemInfoSourceDetail(
-                        format="json",
-                        resource=page.resource,
-                        fields=fields,
-                    )
-                )
+        _detect_page_system_info(page, label_map, id_map, json_map, sources)
 
     if not sources:
         return None
 
     return SystemInfoDetail(sources=sources)
+
+
+def _build_merged_maps(
+    fleet: FleetPatterns | None,
+) -> tuple[
+    dict[str, tuple[str, int]],
+    dict[str, tuple[str, int]],
+    dict[str, tuple[str, int]],
+]:
+    """Build merged label, ID, and JSON key maps from baseline + fleet."""
+    label_map = dict(_LABEL_FIELD_MAP)
+    id_map = dict(_ID_FIELD_MAP)
+    json_map = dict(_JSON_SYSINFO_MAP)
+
+    if fleet:
+        for src, tgt in (
+            (fleet.system_info_labels, label_map),
+            (fleet.system_info_ids, id_map),
+            (fleet.system_info_json_keys, json_map),
+        ):
+            for key, mapping in src.items():
+                if key not in tgt:
+                    tgt[key] = mapping
+
+    return label_map, id_map, json_map
+
+
+def _detect_page_system_info(
+    page: PageAnalysis,
+    label_map: dict[str, tuple[str, int]],
+    id_map: dict[str, tuple[str, int]],
+    json_map: dict[str, tuple[str, int]],
+    sources: list[SystemInfoSourceDetail],
+) -> None:
+    """Detect system_info sources from a single page."""
+    # html_fields: label-value pairs
+    if page.label_pairs:
+        fields = _match_label_pairs(page.label_pairs, label_map, id_map)
+        if fields:
+            sources.append(
+                SystemInfoSourceDetail(
+                    format="html_fields",
+                    resource=page.resource,
+                    fields=fields,
+                )
+            )
+
+    # javascript: non-directional JS functions may contain system
+    # info labels. Directional functions (ds/us in name) belong to
+    # channel sections and are skipped here.
+    for js_func in page.js_functions:
+        if _is_directional_js(js_func.name):
+            continue
+        fields = _match_js_system_info(js_func.values)
+        if fields:
+            sources.append(
+                SystemInfoSourceDetail(
+                    format="javascript",
+                    resource=page.resource,
+                    fields=fields,
+                )
+            )
+
+    # json: JSON data with system info keys
+    if page.json_data is not None:
+        fields = _match_json_system_info(page.json_data, json_map)
+        if fields:
+            sources.append(
+                SystemInfoSourceDetail(
+                    format="json",
+                    resource=page.resource,
+                    fields=fields,
+                )
+            )
 
 
 # -----------------------------------------------------------------------
@@ -151,13 +193,15 @@ def detect_system_info(
 
 def _match_label_pairs(
     pairs: list[DetectedLabelPair],
+    label_map: dict[str, tuple[str, int]],
+    id_map: dict[str, tuple[str, int]],
 ) -> list[SystemInfoFieldDetail]:
     """Match detected label-value pairs to system info fields."""
     fields: list[SystemInfoFieldDetail] = []
     seen_fields: set[str] = set()
 
     for pair in pairs:
-        field_name, _tier = _match_label(pair.label, pair.selector_type)
+        field_name, _tier = _match_label(pair.label, pair.selector_type, label_map, id_map)
         if not field_name or field_name in seen_fields:
             continue
 
@@ -174,24 +218,40 @@ def _match_label_pairs(
     return fields
 
 
-def _match_label(label: str, selector_type: str) -> tuple[str, int]:
+def _match_label(
+    label: str,
+    selector_type: str,
+    label_map: dict[str, tuple[str, int]] | None = None,
+    id_map: dict[str, tuple[str, int]] | None = None,
+) -> tuple[str, int]:
     """Match a label or id to a system info field name.
 
-    Returns (field_name, tier) or ("", 0).
+    Args:
+        label: Raw label text from the page.
+        selector_type: ``"id"`` or ``"label"`` / ``"css_pattern"``.
+        label_map: Label lookup map. Defaults to ``_LABEL_FIELD_MAP``.
+        id_map: ID lookup map. Defaults to ``_ID_FIELD_MAP``.
+
+    Returns:
+        ``(field_name, tier)`` or ``("", 0)``.
     """
+    if label_map is None:
+        label_map = _LABEL_FIELD_MAP
+    if id_map is None:
+        id_map = _ID_FIELD_MAP
+
     normalized = label.strip().lower().rstrip(":")
 
     if selector_type == "id":
-        # Try id-based mapping first
-        if normalized in _ID_FIELD_MAP:
-            return _ID_FIELD_MAP[normalized]
+        if normalized in id_map:
+            return id_map[normalized]
         # Fall through to label-based
         normalized_no_caps = normalized.replace("_", " ")
-        if normalized_no_caps in _LABEL_FIELD_MAP:
-            return _LABEL_FIELD_MAP[normalized_no_caps]
+        if normalized_no_caps in label_map:
+            return label_map[normalized_no_caps]
     else:
-        if normalized in _LABEL_FIELD_MAP:
-            return _LABEL_FIELD_MAP[normalized]
+        if normalized in label_map:
+            return label_map[normalized]
 
     return "", 0
 
@@ -257,18 +317,23 @@ def _match_js_system_info(
 
 def _match_json_system_info(
     data: dict[str, Any],
+    json_map: dict[str, tuple[str, int]] | None = None,
 ) -> list[SystemInfoFieldDetail]:
     """Match JSON keys to system info fields."""
+    if json_map is None:
+        json_map = _JSON_SYSINFO_MAP
+
     fields: list[SystemInfoFieldDetail] = []
     seen: set[str] = set()
 
-    _walk_json_for_sysinfo(data, fields, seen, "")
+    _walk_json_for_sysinfo(data, json_map, fields, seen, "")
 
     return fields
 
 
 def _walk_json_for_sysinfo(
     data: dict[str, Any],
+    json_map: dict[str, tuple[str, int]],
     fields: list[SystemInfoFieldDetail],
     seen: set[str],
     prefix: str,
@@ -277,8 +342,8 @@ def _walk_json_for_sysinfo(
     for key, value in data.items():
         normalized = key.strip().lower()
 
-        if normalized in _JSON_SYSINFO_MAP:
-            field_name, _tier = _JSON_SYSINFO_MAP[normalized]
+        if normalized in json_map:
+            field_name, _tier = json_map[normalized]
             if field_name not in seen and isinstance(value, str | int | float):
                 seen.add(field_name)
                 source_key = f"{prefix}.{key}" if prefix else key
@@ -293,4 +358,4 @@ def _walk_json_for_sysinfo(
         # Recurse into nested dicts (but not lists)
         if isinstance(value, dict):
             child_prefix = f"{prefix}.{key}" if prefix else key
-            _walk_json_for_sysinfo(value, fields, seen, child_prefix)
+            _walk_json_for_sysinfo(value, json_map, fields, seen, child_prefix)

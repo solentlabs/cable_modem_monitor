@@ -33,6 +33,7 @@ from solentlabs.cable_modem_monitor_core.mcp.analysis.format.table_analysis impo
     is_transposed,
 )
 from solentlabs.cable_modem_monitor_core.mcp.analysis.format.types import DetectedTable
+from solentlabs.cable_modem_monitor_core.mcp.analysis.types import FleetPatterns
 
 from tests.conftest import collect_fixtures, load_fixture  # type: ignore[attr-defined]
 
@@ -250,6 +251,56 @@ def test_table_direction(preceding: str, title: str, table_id: str, first_header
         table_index=0,
     )
     assert detect_table_direction(table) == expected
+
+
+# =====================================================================
+# Fleet-augmented direction detection
+# =====================================================================
+
+
+# fmt: off
+FLEET_DIRECTION_CASES = [
+    # (title_row_text,              fleet_selector,                fleet_direction, expected)
+    ("Signal Stats (Codewords)",    "signal stats (codewords)",    "downstream",    "downstream"),
+    ("Custom Error Table",          "custom error table",          "downstream",    "downstream"),
+    ("My Upstream Stats",           "my upstream stats",           "upstream",      "upstream"),
+    ("Unknown Table Title",         "other table",                 "downstream",    "unknown"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "title,fleet_sel,fleet_dir,expected",
+    FLEET_DIRECTION_CASES,
+    ids=[c[0][:30] for c in FLEET_DIRECTION_CASES],
+)
+def test_table_direction_with_fleet(title: str, fleet_sel: str, fleet_dir: str, expected: str) -> None:
+    """Fleet selector_directions resolve otherwise-unknown tables."""
+    table = DetectedTable(
+        table_id="",
+        css_class="",
+        headers=["Channel ID", "Errors"],
+        rows=[["1", "500"]],
+        preceding_text="",
+        title_row_text=title,
+        table_index=0,
+    )
+    fleet = FleetPatterns(selector_directions={fleet_sel: fleet_dir})
+    assert detect_table_direction(table, fleet=fleet) == expected
+
+
+def test_table_direction_fleet_none_fallback() -> None:
+    """fleet=None falls back to baseline detection (no crash)."""
+    table = DetectedTable(
+        table_id="",
+        css_class="",
+        headers=["Downstream", "Frequency"],
+        rows=[["1", "507000000"]],
+        preceding_text="",
+        title_row_text="",
+        table_index=0,
+    )
+    assert detect_table_direction(table, fleet=None) == "downstream"
 
 
 # =====================================================================

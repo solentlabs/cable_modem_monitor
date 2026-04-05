@@ -1,4 +1,4 @@
-"""Phase 2/4 result types and pipeline-wide gap detection.
+"""Pipeline-wide types: gap detection and fleet enrichment.
 
 Auth and action types used by auth.http, auth.hnap, actions.http,
 actions.hnap, and the phase dispatchers.
@@ -6,6 +6,10 @@ actions.hnap, and the phase dispatchers.
 ``CoreGap`` is the shared type used across all phases when the pipeline
 encounters a pattern that Core does not yet support. Gaps halt the
 intake process and provide wire evidence for a development effort.
+
+``FleetPatterns`` is the extension point for catalog-level enrichment.
+Core defines the shape; Catalog populates it by scanning the fleet's
+``parser.yaml`` files.
 
 Phase 5 types live in ``format/types.py``.
 Phase 6 types live in ``mapping/types.py``.
@@ -15,6 +19,52 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+
+# -----------------------------------------------------------------------
+# Fleet enrichment extension point
+# -----------------------------------------------------------------------
+
+
+@dataclass
+class FleetPatterns:
+    """Extension point for catalog-level fleet enrichment.
+
+    Core defines this contract. Catalog populates it by scanning all
+    ``parser.yaml`` files in the modem fleet. Core's analyzer accepts
+    it optionally — without it, baseline hardcoded maps apply. With it,
+    fleet-derived patterns augment detection.
+
+    Attributes:
+        selector_directions: Normalized selector/title text mapped to
+            ``"downstream"`` or ``"upstream"``. Built from the fleet's
+            ``downstream.selector.match`` and ``upstream.selector.match``
+            values.
+        system_info_labels: Normalized label text mapped to
+            ``(canonical_field, tier)``. Built from all
+            ``system_info.sources[].fields[].label`` entries across
+            the fleet.
+        system_info_ids: Normalized element IDs mapped to
+            ``(canonical_field, tier)``. Built from CSS ``id``-based
+            selectors in the fleet's system_info sources.
+        system_info_json_keys: Normalized JSON keys mapped to
+            ``(canonical_field, tier)``. Built from ``key`` fields in
+            JSON-format system_info sources across the fleet.
+        delimiters: Record/value delimiters observed in the fleet's
+            HNAP and JavaScript parser configs.
+        channel_type_values: Modulation/channel type strings observed
+            in the fleet's ``channel_type.map`` values.
+        aggregate_fields: ``(source_field, aggregate_name)`` pairs
+            observed in the fleet's ``aggregate`` sections.
+    """
+
+    selector_directions: dict[str, str] = field(default_factory=dict)
+    system_info_labels: dict[str, tuple[str, int]] = field(default_factory=dict)
+    system_info_ids: dict[str, tuple[str, int]] = field(default_factory=dict)
+    system_info_json_keys: dict[str, tuple[str, int]] = field(default_factory=dict)
+    delimiters: set[str] = field(default_factory=set)
+    channel_type_values: set[str] = field(default_factory=set)
+    aggregate_fields: list[tuple[str, str]] = field(default_factory=list)
+
 
 # -----------------------------------------------------------------------
 # Pipeline-wide: Core gap detection

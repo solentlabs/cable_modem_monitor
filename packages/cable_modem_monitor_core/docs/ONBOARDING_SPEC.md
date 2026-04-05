@@ -37,6 +37,7 @@ review, commit authorization).
 | [Decision Tree](#decision-tree) | 7-phase detection: transport, auth, session, format, fields |
 | [parser.py Decision](#parserpy-decision) | When code post-processing is needed vs config-only |
 | [Package Ownership](#package-ownership) | What goes in Core vs Catalog |
+| [Catalog Extension](#catalog-extension-fleet-augmented-analysis) | Fleet scanner, enrichment, trial parser |
 | [Test Harness (Core)](#test-harness-core) | HAR replay, golden files, test discovery |
 | [MCP Tools](#mcp-tools) | Tool contracts: validate_har, analyze_har, enrich_metadata, generate_config, write_modem_package, etc. |
 | [Validation and Testing](#validation-and-testing) | Static validation and end-to-end test flow |
@@ -786,6 +787,50 @@ Core's harness at its modem directories — no test logic in Catalog.
 has no knowledge of specific modems. The test harness accepts a modem
 directory path and discovers the files it needs.
 
+### Catalog Extension: Fleet-Augmented Analysis
+
+Core's ``analyze_har`` works from first principles — hardcoded keyword
+patterns, field registries, and direction heuristics. The Catalog
+extends this with fleet-derived patterns learned from the 35+ existing
+``parser.yaml`` files.
+
+**Architecture:** Core defines the contract (``FleetPatterns``
+dataclass). Catalog populates it by scanning the fleet. Core's
+analyzer accepts it as an optional parameter and merges fleet patterns
+into its baseline detection.
+
+```text
+Core defines:
+  FleetPatterns (analysis/types.py)
+    selector_directions: dict[str, str]     # selector text → direction
+    system_info_labels: dict[str, tuple]    # label text → (field, tier)
+
+  analyze_har(har_path, fleet=None) → AnalysisResult
+
+Catalog provides:
+  fleet_scanner.scan_fleet(CATALOG_PATH) → FleetPatterns
+  trial_parser.trial_parse(har_path, parser_yaml) → TrialResult
+```
+
+**What fleet patterns augment:**
+
+| Phase | Baseline (Core) | Fleet augmentation (Catalog) |
+|-------|-----------------|------------------------------|
+| Table direction | Keyword matching ("downstream", "upstream") | Selector text from proven configs ("Signal Status (Codewords)" → downstream) |
+| System info labels | 17 hardcoded label→field mappings | 20+ labels learned from fleet ("firmware name" → firmware_name) |
+
+**Merge rules:** Fleet patterns augment, not override. Core's baseline
+maps apply first. Fleet adds entries only for labels/selectors that
+Core's baseline does not cover. This means a new modem gets the
+benefit of every previous modem's config without any manual registry
+maintenance.
+
+**Trial parser:** After analysis, the trial parser feeds HAR response
+bodies through Core's ``ModemParserCoordinator`` with a candidate
+``parser.yaml`` to validate that selectors find the right tables and
+field mappings extract non-empty values. This catches configuration
+errors before committing.
+
 ---
 
 ## Test Harness (Core)
@@ -968,7 +1013,7 @@ The core analysis tool. Runs Phases 1–6 of the decision tree:
 transport detection, auth strategy detection, session detection, action
 detection, format detection, and field mapping extraction.
 
-**Input:** HAR file path + optional overrides (known transport, default host)
+**Input:** HAR file path + optional ``fleet`` (``FleetPatterns`` from Catalog scanner)
 **Output:** Structured analysis result:
 
 ```json

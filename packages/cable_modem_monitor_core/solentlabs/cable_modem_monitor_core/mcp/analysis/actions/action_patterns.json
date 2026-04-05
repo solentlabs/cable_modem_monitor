@@ -8,6 +8,7 @@
   "restart_url_patterns": [
     "/reboot",
     "/restart",
+    "/reset\\.htm",
     "/goform/.*[Ss]ecurity",
     "/goform/.*[Rr]eboot",
     "/goform/RouterStatus",

@@ -13,6 +13,7 @@ from typing import Any
 
 from ....har import merge_hnap_har_responses
 from ...validation.har_utils import WARNING_PREFIX
+from ..types import FleetPatterns
 
 # HNAP response keys that indicate downstream/upstream channel data.
 _DS_PATTERNS = re.compile(r"downstream|dschannel", re.IGNORECASE)
@@ -41,10 +42,22 @@ _INTEGER_PATTERN = re.compile(r"^\d+$")
 _LOCK_PATTERN = re.compile(r"^(Locked|Not Locked|Unlocked)$", re.IGNORECASE)
 
 
+def _augment_from_fleet(fleet: FleetPatterns | None) -> None:
+    """Merge fleet-derived delimiters and channel types into module sets."""
+    if not fleet:
+        return
+    for d in fleet.delimiters:
+        if d not in _CANDIDATE_RECORD_DELIMITERS:
+            _CANDIDATE_RECORD_DELIMITERS.append(d)
+    _CHANNEL_TYPE_MAP_VALUES.update(fleet.channel_type_values)
+
+
 def detect_hnap_sections(
     entries: list[dict[str, Any]],
     warnings: list[str],
     hard_stops: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> dict[str, Any]:
     """Detect HNAP format and field mappings from HAR entries.
 
@@ -52,14 +65,19 @@ def detect_hnap_sections(
     data, detects record/field delimiters, infers positional field
     mappings, and identifies system_info sources.
 
+    When ``fleet`` is provided, fleet-derived delimiters and channel
+    type values augment the baseline detection sets.
+
     Args:
         entries: HAR ``log.entries`` list.
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
+        fleet: Optional fleet patterns for augmented detection.
 
     Returns:
         Sections dict with downstream, upstream, and system_info keys.
     """
+    _augment_from_fleet(fleet)
     hnap_responses = _collect_hnap_responses(entries)
     if not hnap_responses:
         warnings.append(
