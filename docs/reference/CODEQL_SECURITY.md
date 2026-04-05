@@ -87,6 +87,7 @@ Test fixtures simulate HNAP protocol authentication which mandates
 ## Suppressing False Positives
 
 **In code:**
+
 ```python
 # Justification comment explaining why this is safe
 potentially_flagged_code()  # nosec B501

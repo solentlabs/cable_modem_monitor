@@ -12,6 +12,7 @@ Core, it should.
 **Minimum HA version:** 2024.12 (for `entry.runtime_data` support).
 
 **Related specs:**
+
 - `ENTITY_MODEL_SPEC.md` — what entities to create
 - `CONFIG_FLOW_SPEC.md` — setup wizard and options flow
 - `ORCHESTRATION_SPEC.md` — Core's interface contracts
@@ -68,6 +69,7 @@ type CableModemConfigEntry = ConfigEntry[CableModemRuntimeData]
 ```
 
 **Access pattern:**
+
 ```python
 # In sensor.py, button.py, diagnostics.py
 async def async_setup_entry(
@@ -90,7 +92,7 @@ typed, auto-cleaned, and scoped to the entry.
 `async_setup_entry` creates all components and wires them together.
 This is the full construction sequence — no factory functions.
 
-```
+```text
 async_setup_entry(hass, entry)
  │
  ├─ 1. Resolve modem config from catalog
@@ -153,7 +155,7 @@ scheduled polls after setup, not "never poll."
 
 `async_unload_entry` cancels all activity and cleans up.
 
-```
+```text
 async_unload_entry(hass, entry)
  │
  ├─ 1. Cancel restart if in progress
@@ -251,6 +253,7 @@ from the poll data. The sensor platform handles this by:
    is unloaded before the modem comes online
 
 This guarantees that:
+
 - Status and health sensors are always visible during outages
 - Data sensors appear as soon as the modem becomes reachable
 - No duplicate entities — the listener is one-shot
@@ -334,7 +337,7 @@ Configurable via the options flow. Setting to 0 or "Disabled" sets
 The restart button runs `orchestrator.restart()` on an executor thread
 with cooperative cancellation.
 
-```
+```text
 User presses "Restart Modem"
  │
  ├─ 1. Check orchestrator.is_restarting → reject if True
@@ -356,6 +359,7 @@ User presses "Restart Modem"
 ```
 
 **During restart:**
+
 - `orchestrator.is_restarting == True`
 - Data polls return `ModemSnapshot(UNREACHABLE, modem_data=None)`
 - Status sensor shows "Unreachable" (always available)
@@ -381,7 +385,7 @@ detailed scenarios.
 When Core's auth circuit breaker opens (6 consecutive auth failures),
 the adapter triggers HA's native reauthentication flow.
 
-```
+```text
 Circuit breaker opens
  │
  ├─ 1. get_modem_data() returns AUTH_FAILED with circuit_breaker_open
@@ -421,6 +425,7 @@ The `diagnostics.py` module implements HA's diagnostics download.
 Combines Core's `OrchestratorDiagnostics` with HA-side context.
 
 **From Core (`orchestrator.diagnostics()`):**
+
 - `auth_failure_streak` — consecutive auth failures (0 = healthy)
 - `circuit_breaker_open` — whether polling is stopped
 - `session_is_valid` — auth manager session state
@@ -428,6 +433,7 @@ Combines Core's `OrchestratorDiagnostics` with HA-side context.
 - `last_poll_timestamp` — monotonic time of last poll
 
 **From HA (adapter-side):**
+
 - PII review checklist
 - Sanitized recent logs from both the HA adapter
   (`custom_components.cable_modem_monitor`) and Core package
@@ -439,6 +445,7 @@ Combines Core's `OrchestratorDiagnostics` with HA-side context.
 - Generic auth diagnostics (per-strategy, not HNAP-specific)
 
 **Sanitization:**
+
 - Credentials, private IPs, MAC addresses, serial numbers scrubbed
 - Uses `har_capture` library for HTML/content sanitization
 - PII checklist warns user to verify before sharing
@@ -459,6 +466,7 @@ Generates Lovelace YAML for a complete modem dashboard based on
 current channel data.
 
 **Input options:**
+
 - `device_id` (optional) — which modem to generate for. Defaults to
   first configured modem when omitted.
 - Which graphs to include (DS power, DS SNR, DS frequency, US power,
@@ -468,6 +476,7 @@ current channel data.
 - Channel grouping (by direction, by type)
 
 **How it works:**
+
 1. Resolves target modem from `device_id` or falls back to first entry
 2. Reads current channel data from `entry.runtime_data.data_coordinator`
 3. Generates entity references for actual channels
@@ -484,6 +493,7 @@ fails → trigger modem check").
 device is specified.
 
 **Behavior:**
+
 1. Resolve device_id to config entry
 2. Call `orchestrator.reset_connectivity()` to clear backoff
 3. Refresh health coordinator (if health monitoring is enabled)
@@ -493,6 +503,7 @@ Same logic as the "Update Modem Data" button — both use the shared
 `async_request_modem_refresh()` helper to stay DRY.
 
 **Automation example:**
+
 ```yaml
 automation:
   trigger:
@@ -515,11 +526,13 @@ Triggers an immediate health check (ICMP + HTTP probes).
 device is specified.
 
 **Behavior:**
+
 1. Resolve device_id to config entry
 2. If health monitoring is enabled, refresh health coordinator
 3. If health monitoring is disabled, log a warning and return
 
 **Automation example:**
+
 ```yaml
 automation:
   trigger:
@@ -565,7 +578,7 @@ no manual registration needed.  Migrations must be sequential
 `async_migrate_entry` walks the chain from the stored version to the
 current version, applying each handler in sequence:
 
-```
+```text
 stored v1 → v1_to_v2.async_migrate() → v2_to_v3.async_migrate() → current v3
 ```
 

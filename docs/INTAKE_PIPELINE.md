@@ -23,7 +23,7 @@ Contributors don't need AI tooling. The MCP server is a maintainer tool. Manual 
 
 ## Pipeline Overview
 
-```
+```text
 HAR file
     │
     ▼

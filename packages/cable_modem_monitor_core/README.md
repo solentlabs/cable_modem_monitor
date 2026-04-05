@@ -24,7 +24,7 @@ This package is installed automatically as a dependency of the
 [Cable Modem Monitor](https://github.com/solentlabs/cable_modem_monitor)
 Home Assistant integration.
 
-```
+```bash
 pip install solentlabs-cable-modem-monitor-core
 ```
 

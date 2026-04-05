@@ -25,6 +25,7 @@ git status  # Should be clean
 ```
 
 The release script will:
+
 - Validate version format and clean working directory
 - Run tests and code quality checks (pytest, ruff, black, mypy)
 - Verify translations are in sync
@@ -81,10 +82,11 @@ git push origin v3.14.0
 ### 5. Verify Release
 
 The tag push triggers `.github/workflows/release.yml` which:
+
 - Creates a GitHub Release
 - Attaches release notes from the tag message
 
-Verify at: https://github.com/solentlabs/cable_modem_monitor/releases
+Verify at: <https://github.com/solentlabs/cable_modem_monitor/releases>
 
 ## Version Numbering
 

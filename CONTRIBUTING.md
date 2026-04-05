@@ -29,119 +29,25 @@ Your HAR capture becomes the test fixture that lets us develop and verify the pa
 
 ---
 
-## Development Workflow
+## Development Environment
 
-You can develop using either a **local Python environment** (fastest) or a **VS Code Dev Container** (guaranteed consistency).
+See the **[Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for
+complete environment setup. It covers Local Python, Dev Container, and
+WSL2 paths in a single document. Come back here once you can run
+`make validate`.
 
-> **Windows Users:** Native Windows development is not supported. Please use [WSL2](./docs/setup/WSL2_SETUP.md) for development on Windows.
+> **Windows users:** WSL2 is required. The Getting Started Guide covers this.
 
-> **📖 See [Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for comprehensive setup instructions, decision tree, and troubleshooting.
-
-### Docker Development (Recommended)
-
-Docker provides an isolated, consistent development environment with Home Assistant pre-installed.
-
-#### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running
-- [VS Code](https://code.visualstudio.com/) (optional, for Dev Container support)
-
-#### Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/solentlabs/cable_modem_monitor.git
-cd cable_modem_monitor
-
-# Start Home Assistant with the integration
-make docker-start
-
-# View logs
-make docker-logs
-
-# Access Home Assistant at http://localhost:8123
-```
-
-#### VS Code Dev Container (Optional)
-
-For the best development experience, use VS Code with Dev Containers:
-
-**1. Install the Dev Containers extension** (choose any method):
-
-- **From VS Code**: Open Extensions (`Ctrl+Shift+X`), search "Dev Containers", click Install
-- **Quick Install**: Press `Ctrl+P`, paste: `ext install ms-vscode-remote.remote-containers`
-- **Command Line**: `code --install-extension ms-vscode-remote.remote-containers`
-- **From Marketplace**: Visit https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers
-
-**2. Verify installation**: You should see a "Remote Explorer" icon in the sidebar and "Dev Containers:" commands when pressing `F1`
-
-**3. Open the project** in VS Code and reopen in container:
-- Open the project: `code /path/to/cable_modem_monitor`
-- Press `F1` → "Dev Containers: Reopen in Container"
-- Wait for the container to build (2-3 minutes first time)
-
-See [Getting Started Guide](./docs/setup/GETTING_STARTED.md) or [VS Code Dev Container Guide](./docs/setup/DEVCONTAINER.md) for detailed instructions and troubleshooting.
-
-#### Docker Commands
-
-```bash
-# Using Make (recommended)
-make docker-start      # Start the environment
-make docker-stop       # Stop the environment
-make docker-restart    # Restart after code changes
-make docker-logs       # View logs
-make docker-status     # Check status
-make docker-shell      # Open a shell in the container
-make docker-clean      # Remove all data
-
-```
-
-#### Docker Development Workflow
-
-1. **Start the environment**: `make docker-start`
-2. **Make code changes** in your editor
-3. **Restart to load changes**: `make docker-restart`
-4. **Test in Home Assistant**: http://localhost:8123
-5. **Run tests**: Open a shell with `make docker-shell`, then run `pytest`
-
-### Local Development (Advanced)
-
-For developers who prefer working directly with Python without Docker:
-
-#### 1. Set Up Your Environment
-
-First, clone the repository and install the development dependencies. This will give you all the tools you need for testing, linting, and code formatting.
-
-```bash
-git clone https://github.com/solentlabs/cable_modem_monitor.git
-cd cable_modem_monitor
-
-# Option 1: Use the automated setup script (recommended)
-./scripts/setup.sh
-
-# Option 2: Manual installation
-pip install -r requirements-dev.txt  # Comprehensive dev dependencies (includes types, linters, pre-commit)
-pre-commit install                   # Install pre-commit hooks (runs on each commit)
-pre-commit install --hook-type pre-push  # Install pre-push hooks (runs full validation before push)
-```
-
-**Having environment issues?** See [Getting Started Guide](./docs/setup/GETTING_STARTED.md) for:
-- Comprehensive troubleshooting
-- Environment comparison and decision tree
-- Platform-specific notes
-- Switching between environments
-
-**Testing fresh developer experience?** Run `python scripts/dev/fresh_start.py` to reset VS Code state.
-
-### 2. Write Your Code
+### Write Your Code
 
 Make your code changes or additions on a new branch.
 
-### 3. Format and Lint
+### Format and Lint
 
 Before committing, ensure your code is well-formatted and passes all quality checks.
 
 **Recommended Workflow:**
+
 ```bash
 # Option 1: Smart commit helper (formats, checks, and commits)
 ./scripts/dev/commit.sh "your commit message"
@@ -155,6 +61,7 @@ git commit -m "your message"
 ```
 
 **Quick commands (using Make):**
+
 ```bash
 # Run all code quality checks
 make check         # Full checks (recommended before push)
@@ -172,61 +79,49 @@ make format
 make lint-all
 ```
 
-**Manual commands:**
+### What Runs Automatically
+
+`setup.sh` installs all hooks. Here's what they do:
+
+**On commit** (pre-commit):
+
+- Code formatting (Black) and linting (Ruff) with auto-fix
+- Type checking (mypy, pyright) on Core/Catalog packages
+- File checks: trailing whitespace, YAML/JSON validation, large files
+- Custom: commit email privacy, changelog reminder, PII in test fixtures
+
+**On commit message** (commit-msg):
+
+- Conventional commit format validation
+
+**On push** (pre-push):
+
+- Full project lint (`ruff check .`)
+- Full test suite (`pytest`)
+- This takes 1-2 minutes — it's intentional, not stuck
+
+If a hook fails, read the error output — it usually explains what to fix.
+Run `make format` to auto-fix most formatting issues.
+
 ```bash
-# Auto-format your code with Black
-black custom_components/ packages/
-
-# Check for linting issues with Ruff
-ruff check .
-
-# Auto-fix linting issues
-ruff check --fix .
-
-# Type checking with mypy
-mypy . --config-file=mypy.ini
-
-# Or use the comprehensive lint script
-bash scripts/dev/lint.sh
-```
-
-**Automated Quality Checks:**
-
-The repository includes **pre-push hooks** that automatically run full project validation before pushing to GitHub. This prevents CI failures by catching issues locally.
-
-```bash
-# Install pre-push hooks (one-time setup)
-pre-commit install --hook-type pre-push
-
-# The pre-push hook runs automatically and checks:
-# - Full project linting (ruff check .)
-# - Full test suite (pytest)
-
-# To skip the hook in emergencies (not recommended):
-git push --no-verify
-```
-
-**Pre-commit hooks (runs on each commit):**
-```bash
-# Install pre-commit hooks (runs automatically on commit)
-pip install pre-commit
-pre-commit install
-
-# Run manually on all files
+# Run all hooks manually on all files
 pre-commit run --all-files
-
-# Note: Pre-commit only checks staged files. Pre-push checks the full project.
 ```
 
-### 4. Run Tests
-
-Make sure all tests pass before submitting your changes.
+### Run Tests
 
 ```bash
-pytest tests/ -v
+make test    # Runs all three test suites (HA, Core, Catalog)
 ```
 
-### 5. Test on Local HA (Optional)
+For a specific package:
+
+```bash
+pytest tests/ -v                                                      # HA only
+cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..  # Core only
+```
+
+### Test on Local HA (Optional)
 
 You can test your changes on a local Home Assistant instance via Docker:
 
@@ -272,10 +167,12 @@ Core and Catalog are published to PyPI as standalone packages. The HA
 adapter declares them as dependencies in `manifest.json`.
 
 **Specs** (authoritative design docs):
+
 - Core: [`packages/cable_modem_monitor_core/docs/`](packages/cable_modem_monitor_core/docs/) — architecture, auth, parsing, orchestration, onboarding
 - HA: [`custom_components/cable_modem_monitor/docs/`](custom_components/cable_modem_monitor/docs/) — config flow, entities, adapter wiring
 
 **Tests:**
+
 - Core + Catalog: `pytest` from repo root (discovers both packages)
 - HA integration: `tests/` at repo root
 
@@ -297,65 +194,21 @@ Modem configurations live in the catalog package (`packages/cable_modem_monitor_
 
 ### Linting
 
-The project uses multiple linting tools for code quality:
-
-**Ruff** (Primary linter - fast and comprehensive):
-```bash
-# Check for issues (runs on entire project)
-ruff check .
-
-# Auto-fix issues
-ruff check --fix .
-```
-
-**mypy** (Type checking):
-```bash
-mypy . --config-file=mypy.ini
-```
-
-**Black** (Code formatting):
-```bash
-# Format code
-black custom_components/ packages/
-
-# Check formatting (CI mode)
-black --check custom_components/ packages/
-```
-
-**Comprehensive linting:**
-```bash
-# Run all checks at once
-make check
-
-# Or use the lint script
-bash scripts/dev/lint.sh
-```
-
-See `docs/SECURITY_LINTING.md` for security-specific linting tools (Bandit, Semgrep).
-See `docs/reference/LINTING.md` for comprehensive linting documentation.
+Run `make check` for all code quality checks, or `make quick-check` for
+a faster pass. See [Linting Guide](docs/reference/LINTING.md) for
+individual tool commands and configuration.
 
 ## Testing Guide
 
-**Quick commands:**
-```bash
-# Run HA integration tests
-pytest tests/ -v
-
-# Run Core package tests
-cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
-
-# Quick test during development
-./scripts/dev/quick_test.sh
-
-# Full test suite with linting
-./scripts/dev/run_tests_local.sh
-```
+`make test` runs all three test suites (HA integration, Core, Catalog).
+See [Run Tests](#run-tests) above for per-package commands.
 
 ## Submitting Changes
 
 ### Pull Request Process
 
 1. **Fork the repository** and create a feature branch
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -365,6 +218,7 @@ cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
 3. **Add/update tests** for your changes
 
 4. **Run the test suite**
+
    ```bash
    pytest tests/ -v
    cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
@@ -373,11 +227,13 @@ cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
 5. **Update documentation** if needed (README.md, CHANGELOG.md)
 
 6. **Commit your changes** with clear commit messages
+
    ```bash
    git commit -m "Add support for Arris TG1682G modem"
    ```
 
 7. **Push to your fork** and create a pull request
+
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -395,6 +251,7 @@ cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
 **Important**: Developers should NEVER auto-close user-reported issues via PR keywords like "Fixes #123" or "Closes #456".
 
 **Auto-close is ONLY appropriate for:**
+
 - ✅ Developer-only improvements (code refactoring, test improvements)
 - ✅ Quality of life enhancements for developers
 - ✅ Documentation-only updates
@@ -402,6 +259,7 @@ cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
 - ✅ Development tooling updates
 
 **User validation REQUIRED for:**
+
 - ❌ Bug fixes affecting user experience
 - ❌ New modem support or parser changes
 - ❌ Authentication or connection handling
@@ -409,6 +267,7 @@ cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
 - ❌ Performance or reliability improvements
 
 **How to link issues without auto-closing:**
+
 ```markdown
 # ❌ DO NOT use these keywords (they auto-close):
 Fixes #123
@@ -423,12 +282,14 @@ See #123 (awaiting user validation)
 ```
 
 **Why this matters:**
+
 - Users need to test and validate fixes in their environment
 - What works in tests may not work with all modem firmware versions
 - User feedback helps catch edge cases and regressions
 - Maintainers manually close issues after user confirmation
 
 **After the PR is merged:**
+
 1. Comment on the issue linking to the release
 2. Request user testing and validation
 3. Wait for user confirmation
@@ -438,7 +299,7 @@ See #123 (awaiting user validation)
 
 Use clear, descriptive commit messages:
 
-```
+```text
 Add support for Arris TG1682G modem
 
 - Added HTML parser for Arris status page format
@@ -449,44 +310,9 @@ Add support for Arris TG1682G modem
 
 ## Release Process
 
-Maintainers will handle releases following semantic versioning:
-
-- **Major (1.0.0)**: Breaking changes
-- **Minor (0.1.0)**: New features, backward compatible
-- **Patch (0.0.1)**: Bug fixes, backward compatible
-
-### Release Script
-
-The project includes a release preparation script that bumps version
-strings and runs quality checks. It does **not** commit, tag, push, or
-create releases — the developer handles all git operations.
-
-```bash
-# Full release prep (runs tests, lints, bumps versions, updates changelog)
-python scripts/release.py 3.5.1
-
-# Skip changelog update (not recommended)
-python scripts/release.py 3.5.1 --skip-changelog
-```
-
-**What the script does:**
-1. Validates version format (X.Y.Z or X.Y.Z-alpha.N / X.Y.Z-beta.N)
-2. Checks that git working directory is clean
-3. Runs full test suite (pytest)
-4. Runs code quality checks (ruff, black, mypy)
-5. Verifies translations/en.json matches strings.json
-6. Updates version in:
-   - `custom_components/cable_modem_monitor/manifest.json` (version + requirement pins)
-   - `custom_components/cable_modem_monitor/const.py`
-   - `tests/components/test_version_and_startup.py`
-   - `packages/cable_modem_monitor_core/pyproject.toml`
-   - `packages/cable_modem_monitor_catalog/pyproject.toml` (version + core dependency pin)
-7. Moves `[Unreleased]` section in `CHANGELOG.md` to new version
-8. Verifies all version files are consistent
-9. Prints changed files and suggested next steps
-
-After the script runs, the developer reviews, stages, commits, and
-follows the release flow in `CLAUDE.md`.
+Maintainers handle releases following semantic versioning. See
+[Release Process](docs/reference/RELEASING.md) for the full workflow
+including the `release.py` script and step-by-step instructions.
 
 ## Code of Conduct
 
@@ -523,6 +349,7 @@ Users who provide modem captures for new parser development are acknowledged in:
 When we reference external implementations to understand modem protocols or authentication:
 
 1. **Document the source** in the parser docstring:
+
    ```python
    """
    Motorola MB8611 parser for Cable Modem Monitor.

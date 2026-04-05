@@ -23,7 +23,7 @@ Languages are selected based on [Home Assistant user demographics](https://analy
 
 ## File Structure
 
-```
+```text
 custom_components/cable_modem_monitor/translations/
 ├── en.json              # Source of truth (English)
 ├── de.json              # German
@@ -70,6 +70,7 @@ If you find an error in a translation:
 ### What NOT to Translate
 
 Keep these terms unchanged:
+
 - Cable Modem Monitor
 - Home Assistant
 - DOCSIS

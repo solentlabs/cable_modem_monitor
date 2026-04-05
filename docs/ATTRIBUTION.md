@@ -37,20 +37,23 @@ Open source projects that informed our parser implementations:
 ### Polling Interval Research
 
 **SNMP Polling Best Practices**
+
 - **Source:** Obkio Network Monitoring Blog
-- **URL:** https://obkio.com/blog/snmp-polling/
+- **URL:** <https://obkio.com/blog/snmp-polling/>
 - **Contribution:** Industry standards for network device polling intervals (5-10 minutes standard)
 - **Applied:** Default scan interval configuration (300 seconds)
 
 **API Polling Best Practices**
+
 - **Source:** Merge.dev Engineering Blog
-- **URL:** https://www.merge.dev/blog/api-polling-best-practices
+- **URL:** <https://www.merge.dev/blog/api-polling-best-practices>
 - **Contribution:** Guidance on preventing server overload (> 1 second polling can overload)
 - **Applied:** Minimum scan interval validation (60 seconds)
 
 **Network Device Polling Guidelines**
+
 - **Source:** Broadcom DX NetOps Community
-- **URL:** https://community.broadcom.com/communities/community-home/digestviewer/viewthread?MID=824934
+- **URL:** <https://community.broadcom.com/communities/community-home/digestviewer/viewthread?MID=824934>
 - **Contribution:** Recommendations for client device polling (not lower than 5 minutes)
 - **Applied:** Health recommendations in UI and documentation
 
@@ -61,23 +64,27 @@ Open source projects that informed our parser implementations:
 This integration relies on the following open source libraries:
 
 ### Python Libraries
-- **BeautifulSoup4** (https://www.crummy.com/software/BeautifulSoup/) - HTML parsing
-- **Home Assistant Core** (https://github.com/home-assistant/core) - Integration framework
+
+- **BeautifulSoup4** (<https://www.crummy.com/software/BeautifulSoup/>) - HTML parsing
+- **Home Assistant Core** (<https://github.com/home-assistant/core>) - Integration framework
 
 ### Development & Testing
-- **pytest** (https://pytest.org/) - Testing framework
+
+- **pytest** (<https://pytest.org/>) - Testing framework
 - **pytest-homeassistant-custom-component** - HA testing utilities
-- **ruff** (https://github.com/astral-sh/ruff) - Code linting
+- **ruff** (<https://github.com/astral-sh/ruff>) - Code linting
 
 ---
 
 ## Community Contributions
 
 ### Hardware Testing & Samples
+
 - **@captain-coredump** - Confirmed ARRIS SB6141 compatibility, provided HTML samples and testing feedback ([Community Forum](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant))
 - **@esand** - Provided Technicolor XB7 HTML samples and detailed modem information (Issue #2)
 
 ### User Contributions
+
 - Users who report modem compatibility issues
 - Contributors who provide HTML samples for new modem support
 - Community members who test pre-release versions
@@ -101,13 +108,15 @@ This integration relies on the following open source libraries:
 ### For This Project
 
 When using or referencing this project:
+
 - **Attribution:** Cable Modem Monitor by kwschulz
-- **Repository:** https://github.com/solentlabs/cable_modem_monitor
+- **Repository:** <https://github.com/solentlabs/cable_modem_monitor>
 - **License:** MIT License (see LICENSE file)
 
 ### Our Commitment
 
 We commit to:
+
 - ✅ Properly attribute external research and code
 - ✅ Credit community contributors
 - ✅ Acknowledge dependencies
@@ -117,6 +126,7 @@ We commit to:
 ### If We Missed Something
 
 If we've used your work without proper attribution:
+
 1. We sincerely apologize - it was unintentional
 2. Please open an issue or contact us
 3. We'll add proper attribution immediately
@@ -128,16 +138,19 @@ Open source thrives on mutual respect and acknowledgment. We're committed to doi
 ## How to Get Credit
 
 ### Contributing Code
+
 - Pull requests with merged code are automatically credited in release notes
 - Your GitHub profile is linked in commit history
 - Significant contributions acknowledged in this file
 
 ### Contributing Research/Ideas
+
 - Open an issue describing your contribution
 - We'll add you to the acknowledgments section
 - Credit will be included in relevant documentation
 
 ### Providing Modem Support
+
 - Users who provide HTML samples for new modem support are credited in:
   - Release notes when support is added
   - Comments in the code for that modem
@@ -148,8 +161,9 @@ Open source thrives on mutual respect and acknowledgment. We're committed to doi
 ## Contact
 
 Questions about attribution or credits?
-- **GitHub Issues:** https://github.com/solentlabs/cable_modem_monitor/issues
-- **GitHub Discussions:** https://github.com/solentlabs/cable_modem_monitor/discussions
+
+- **GitHub Issues:** <https://github.com/solentlabs/cable_modem_monitor/issues>
+- **GitHub Discussions:** <https://github.com/solentlabs/cable_modem_monitor/discussions>
 
 ---
 

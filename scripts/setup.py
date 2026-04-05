@@ -230,9 +230,9 @@ def main():  # noqa: C901
     required_major, required_minor = get_required_python_version()
 
     if current_major == required_major and current_minor >= required_minor:
-        print_success(f"Python {current_major}.{current_minor} found (requirement: {required_major}.{required_minor}+)")
+        print_success(f"Python {current_major}.{current_minor} found (requirement: {required_major}.{required_minor})")
     else:
-        print_error(f"Python {current_major}.{current_minor} found, but {required_major}.{required_minor}+ required")
+        print_error(f"Python {current_major}.{current_minor} found, but {required_major}.{required_minor} required")
         print_python_install_instructions(required_major, required_minor)
         sys.exit(1)
     print("")

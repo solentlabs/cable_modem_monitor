@@ -24,6 +24,7 @@ The parsing system absorbs this variety through three distinct roles:
 declaratively.
 
 **Design principles:**
+
 - At least one of parser.yaml or parser.py is required — every modem package must have one
 - parser.yaml is the primary expression mode — code is the escape hatch
 - When parser.yaml is present, it drives the fetch list — the orchestrator reads it to know what resources to load
@@ -59,7 +60,7 @@ loader. It identifies the transport protocol (`http`, `hnap`, or
 the extraction strategy. Each section (`downstream`, `upstream`,
 `system_info`) declares its own format independently.
 
-```
+```text
 modem.yaml transport → resource loader (how to fetch)
 parser.yaml format   → decode step + extraction strategy (how to extract, per-section)
 ```
@@ -213,7 +214,7 @@ values from parser.yaml sections (downstream, upstream, system_info
 sources). These are URL paths. The loader fetches each unique path
 once and builds the resource dict.
 
-```
+```text
 parser.yaml                          fetch list
 ─────────────────────────            ──────────────
 downstream:                          unique paths:
@@ -518,6 +519,7 @@ table and are the most reliable self-identifying feature across all
 known modem HTML structures.
 
 Examples of good `header_text` selectors:
+
 - `"SNR"` — matches `"SNR (dB)"` header, unique to downstream tables
 - `"Symb. Rate"` — matches `"Symb. Rate (Ksym/sec)"`, unique to upstream
 - `"Channel Width"` — unique to OFDM tables
@@ -776,6 +778,7 @@ upstream:
 | `functions[].fields[].map` | dict | no | Value mapping (exact match, applied before type conversion) |
 
 **Extraction algorithm:**
+
 1. Find `<script>` tag containing the function name
 2. Extract function body via regex
 3. Strip comments — both block (`/* ... */`) and line (`// ...`)
@@ -1085,6 +1088,7 @@ Each array entry has its own `array_path`, `fields`, `channel_type`,
 and `filter`. Results from all arrays are concatenated.
 
 **Extraction algorithm:**
+
 1. Get resource dict entry by path
 2. Navigate to array(s) using dot-notation path
 3. For each object in each array, map keys to canonical fields
@@ -1688,7 +1692,7 @@ a subclass of `BaseParser` or `ModemParserCoordinator`. The coordinator
 invokes parser.py hooks after the `BaseParser` extraction step,
 passing both the extraction output and the raw resources.
 
-```
+```text
 ModemParserCoordinator
   ├── creates BaseParser instances from parser.yaml (factory)
   │     ├── HTMLTableParser
@@ -1744,6 +1748,7 @@ class PostProcessor:
 ```
 
 Each hook receives two arguments:
+
 - The `BaseParser` extraction output for that section (channel list or
   system_info dict). May be empty if parser.yaml has no mapping for
   this section.
@@ -1807,7 +1812,7 @@ The same structure as `BaseParser` extraction output:
 
 The `ModemParserCoordinator` processes each section independently:
 
-```
+```text
 For each section (downstream, upstream, system_info):
   parser.yaml has mapping for this section?
     └─ Yes → BaseParser extracts per table:
@@ -1821,6 +1826,7 @@ For each section (downstream, upstream, system_info):
 ```
 
 A modem can freely mix:
+
 - **100% parser.yaml** — all sections declarative, no parser.py
 - **parser.yaml + parser.py enrichment** — BaseParser extracts base
   data, parser.py adds/transforms fields using raw resources

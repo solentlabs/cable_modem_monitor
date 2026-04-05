@@ -4,6 +4,7 @@ Each supported modem has a directory under `modems/{manufacturer}/{model}/`
 inside the `solentlabs-cable-modem-monitor-catalog` package.
 
 **Design principles:**
+
 - Single source of truth — all modem-specific files in one location
 - Self-contained — everything needed to test a modem is in its directory
 - Drop-in — add a directory, no registration or changes elsewhere
@@ -12,7 +13,7 @@ inside the `solentlabs-cable-modem-monitor-catalog` package.
 
 ## Directory Structure
 
-```
+```text
 modems/
 └── {manufacturer}/
     └── {model}/
@@ -69,6 +70,7 @@ post-processes sections that need code. When extraction is too complex
 for declarative config, parser.py alone is valid (see Examples).
 
 **Rules:**
+
 - Define per-section hooks (`parse_downstream`, `parse_system_info`),
   not a modem-level method — the coordinator owns the pipeline
 - When a pattern recurs across 3+ modems, it graduates to a parser.yaml
@@ -83,6 +85,7 @@ Everything about the modem except parsing. Each file represents one
 firmware variant that a user can select during config flow.
 
 Contains:
+
 - `manufacturer`, `model` — identity (must match across variants)
 - `model_aliases` — internal or rebranded names for search matching, not shown in the config flow UI (e.g., `CGM4140COM` for XB6). See `MODEM_YAML_SPEC.md` § Aliases vs Separate Entries.
 - `brands` — product branding for config flow search (e.g., `Xfinity`, `Surfboard`)
@@ -158,6 +161,7 @@ the repo must have PII scrubbed — passwords, MAC addresses, serial
 numbers, IP addresses.
 
 **Golden file lifecycle:**
+
 1. Contributor submits HAR capture via `har-capture`
 2. Skill/MCP generates modem.yaml, parser.yaml, and parser.py if needed
 3. First pipeline run against `HARMockServer` produces `ModemData` output
@@ -222,13 +226,14 @@ example.
 
 The loader assembles a complete modem config from two sources:
 
-```
+```text
 modem.yaml       +  parser.yaml  →  complete config (single-variant)
 modem-noauth.yaml + parser.yaml  →  complete config (variant 1)
 modem-basic.yaml  +  parser.yaml  →  complete config (variant 2)
 ```
 
 **Assembly rules:**
+
 1. Each `modem*.yaml` is a near-complete config (everything except parsing)
 2. `parser.yaml` provides the extraction mappings (and implicitly, capabilities)
 3. The assembled result must pass the full Pydantic schema
@@ -284,7 +289,8 @@ variant changes response structure, the golden file test catches it.
 ## Examples
 
 **Single variant, parser.yaml + parser.py**
-```
+
+```text
 modems/{manufacturer}/{model}/
 ├── parser.yaml           # declarative extraction config
 ├── parser.py             # post-processor for quirks
@@ -295,7 +301,8 @@ modems/{manufacturer}/{model}/
 ```
 
 **Multi-variant, shared transport**
-```
+
+```text
 modems/{manufacturer}/{model}/
 ├── parser.yaml           # shared extraction config
 ├── parser.py             # shared post-processor
@@ -312,7 +319,8 @@ modems/{manufacturer}/{model}/
 ```
 
 **HNAP, single variant, 100% parser.yaml**
-```
+
+```text
 modems/{manufacturer}/{model}/
 ├── parser.yaml           # HNAP delimiters, field mappings
 ├── modem.yaml            # transport: hnap, auth, metadata
@@ -324,7 +332,8 @@ modems/{manufacturer}/{model}/
 ```
 
 **Multi-variant, 100% parser.py**
-```
+
+```text
 modems/{manufacturer}/{model}/
 ├── parser.py             # extraction too complex for declarative config
 ├── modem-{variant}.yaml  # variant 1

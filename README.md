@@ -30,6 +30,7 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 > **🤖 AI-Assisted Development**: This project uses AI-assisted development (Claude) to accelerate implementation while maintaining human oversight for architecture and community decisions.
 
 ## Quick Links
+
 - [**Installation Guide**](#installation)
 - [**Supported Modems**](#supported-modems)
 - [**Troubleshooting Guide**](./docs/TROUBLESHOOTING.md)
@@ -40,46 +41,18 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 ## Development
 
-**📖 See the [Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for development environment setup.
+**New contributor?** Start with the [Getting Started Guide](./docs/setup/GETTING_STARTED.md) -- it covers environment setup, running tests, and your first commit in a single document.
 
-**Architecture (v3.14):** Two pip packages in `packages/`:
-- **Core** ([`solentlabs-cable-modem-monitor-core`](https://pypi.org/project/solentlabs-cable-modem-monitor-core/)) — platform-agnostic engine (auth, parsing, testing, MCP tools)
-- **Catalog** ([`solentlabs-cable-modem-monitor-catalog`](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)) — modem configs, parsers, test fixtures
+**Returning contributor?** See the [Contributing Guide](./CONTRIBUTING.md) for workflow, code style, and PR guidelines.
 
-Quick start:
-```bash
-git clone https://github.com/solentlabs/cable_modem_monitor.git
-cd cable_modem_monitor
-./scripts/setup.sh    # Local Python setup
-# OR open in VS Code and click "Reopen in Container" for Dev Container
-```
-
-### Testing Feature Branches
-
-To install a feature branch on a live HA instance via HACS:
-
-```yaml
-# Developer Tools > Actions
-action: update.install
-data:
-  version: "feature/v3.14.0"   # branch name, tag, or commit SHA
-target:
-  entity_id: update.cable_modem_monitor_update
-```
-
-HA will download the branch from GitHub and auto-install any PyPI
-dependencies from `manifest.json` on restart.
-
-> **Important:** After installing a branch, HACS may show "Update
-> available" because it compares the branch name against the latest
-> release tag. **Ignore that badge** — clicking it will revert you
-> to the stable release.
+**Architecture (v3.14):** Two pip packages in `packages/` (Core + Catalog) plus a thin HA adapter in `custom_components/`. See [CONTRIBUTING.md](./CONTRIBUTING.md#project-architecture) for details.
 
 ---
 
 ## At a Glance
 
 **What it monitors:**
+
 - 📊 **Signal Quality**: Power levels, SNR, frequency for every channel
 - ⚠️ **Error Tracking**: Corrected & uncorrected errors per channel
 - 🔌 **Connection Health**: Status, uptime, and last boot time
@@ -87,6 +60,7 @@ dependencies from `manifest.json` on restart.
 - 📈 **Trends**: Full historical data for analysis and graphing
 
 **What it does:**
+
 - 🔄 **Remote Control**: Restart your modem from Home Assistant
 - 🤖 **Automation Ready**: Trigger actions on signal degradation or errors
 - 🔐 **Privacy First**: All local processing, automatic PII sanitization
@@ -122,6 +96,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
 ## Features
 
 ### Monitoring & Data Collection
+
 - **Easy Setup**: Configure via Home Assistant UI - no YAML editing required
 - **Comprehensive Channel Monitoring**: Tracks all downstream and upstream channels
 - **Per-Channel Metrics**:
@@ -139,6 +114,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
   - Circuit breaker pattern for reliability
 
 ### Control & Automation
+
 - **Modem Control**: Restart your modem directly from Home Assistant
 - **Automation-Friendly**: Last boot time sensor with timestamp device class for reboot detection
 - **Consistent Entity Naming**: All entities use `cable_modem_` prefix for predictability
@@ -146,6 +122,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
 - **Dashboard Ready**: Create graphs and alerts based on signal quality
 
 ### Developer Friendly
+
 - **Extensible**: Plugin architecture makes adding new modem models easy
 - **Well Tested**: 2,400+ test cases with comprehensive coverage
 - **Type Safe**: Full type hints and mypy validation
@@ -161,8 +138,6 @@ This integration supports modems from ARRIS, Compal, Motorola, Netgear, Technico
 **Modem not listed?** Use [har-capture](https://github.com/solentlabs/har-capture) to record your modem's web interface, then [request support](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml). See the [Modem Request Guide](./docs/MODEM_REQUEST.md) for the full walkthrough.
 
 **Modem listed as ⏳ Awaiting?** [Report it working](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_verification.yml) to help verify support.
-
-
 
 ## Installation
 
@@ -213,6 +188,7 @@ After setup, configure via **Settings → Devices & Services → Cable Modem Mon
 All sensors use the `cable_modem_` prefix for consistent entity naming and easy identification.
 
 **Entity Naming Pattern:**
+
 - System sensors: `sensor.cable_modem_{metric}` (e.g., `sensor.cable_modem_status`)
 - Channel sensors: `sensor.cable_modem_{direction}_{type}_ch_{number}_{metric}`
   - Example: `sensor.cable_modem_ds_qam_ch_1_power` (downstream QAM channel 1 power)
@@ -220,6 +196,7 @@ All sensors use the `cable_modem_` prefix for consistent entity naming and easy 
   - DOCSIS 3.1 modems also have OFDM/OFDMA channels: `sensor.cable_modem_ds_ofdm_ch_1_power`
 
 ### Modem Status
+
 - `sensor.cable_modem_status`: Unified pass/fail status combining connection, health, and DOCSIS lock state
   - **Operational**: All good - data parsed, DOCSIS locked, reachable
   - **ICMP Blocked**: HTTP works but ping fails (check parser `supports_icmp` setting)
@@ -229,6 +206,7 @@ All sensors use the `cable_modem_` prefix for consistent entity naming and easy 
   - **Unresponsive**: Can't reach modem via HTTP
 
 ### System Information
+
 - `sensor.cable_modem_software_version`: Modem firmware/software version
 - `sensor.cable_modem_system_uptime`: How long the modem has been running
 - `sensor.cable_modem_last_boot_time`: When the modem last rebooted (timestamp device class)
@@ -236,15 +214,19 @@ All sensors use the `cable_modem_` prefix for consistent entity naming and easy 
 - `sensor.cable_modem_us_channel_count`: Number of active upstream channels
 
 ### Latency Monitoring
+
 - `sensor.cable_modem_ping_latency`: Ping response time in milliseconds
 - `sensor.cable_modem_http_latency`: HTTP response time in milliseconds
 
 ### Summary Sensors
+
 - `sensor.cable_modem_total_corrected_errors`: Total corrected errors across all downstream channels
 - `sensor.cable_modem_total_uncorrected_errors`: Total uncorrected errors across all downstream channels
 
 ### Per-Channel Downstream Sensors (for each channel)
+
 Replace `{type}` with channel type (qam, ofdm) and `X` with the channel number:
+
 - `sensor.cable_modem_ds_{type}_ch_X_power`: Power level in dBmV
 - `sensor.cable_modem_ds_{type}_ch_X_snr`: Signal-to-Noise Ratio in dB
 - `sensor.cable_modem_ds_{type}_ch_X_frequency`: Channel frequency in Hz
@@ -252,36 +234,44 @@ Replace `{type}` with channel type (qam, ofdm) and `X` with the channel number:
 - `sensor.cable_modem_ds_{type}_ch_X_uncorrected`: Uncorrected errors
 
 ### Per-Channel Upstream Sensors (for each channel)
+
 Replace `{type}` with channel type (atdma, ofdma) and `X` with the channel number:
+
 - `sensor.cable_modem_us_{type}_ch_X_power`: Transmit power level in dBmV
 - `sensor.cable_modem_us_{type}_ch_X_frequency`: Channel frequency in Hz
 
 ### Controls
+
 - `button.cable_modem_restart_modem`: Restart your cable modem remotely
 
 ### Services
+
 - `cable_modem_monitor.clear_history`: Clear old historical data (keeps specified number of days)
 - `cable_modem_monitor.cleanup_entities`: Remove orphaned entities from registry (useful after upgrades)
 
 ## Understanding the Values
 
 ### Downstream Power (dBmV)
+
 - **Ideal range**: -7 to +7 dBmV
 - **Acceptable**: -15 to +15 dBmV
 - **Poor**: Below -15 or above +15 dBmV
 
 ### Signal-to-Noise Ratio (dB)
+
 - **Excellent**: Above 40 dB
 - **Good**: 33-40 dB
 - **Acceptable**: 25-33 dB
 - **Poor**: Below 25 dB
 
 ### Upstream Power (dBmV)
+
 - **Ideal range**: 35-50 dBmV
 - **Acceptable**: 30-55 dBmV
 - **Poor**: Below 30 or above 55 dBmV
 
 ### Corrected vs Uncorrected Errors
+
 - **Corrected errors**: Normal in small amounts; modem can fix these
 - **Uncorrected errors**: Indicate data loss; any sustained increase is concerning
 - **Monitor trends**: Sudden increases may indicate line issues
@@ -291,6 +281,7 @@ Replace `{type}` with channel type (atdma, ofdma) and `X` with the channel numbe
 Ready-to-use dashboard and automation examples are available in the **[Examples Guide](./docs/EXAMPLES.md)**.
 
 Includes:
+
 - **Dashboard generator service** — auto-generates Lovelace YAML tailored to your modem's channels
 - Complete manual dashboard YAML for monitoring all channels
 - Automations for error alerts, SNR warnings, and auto-restart
@@ -303,6 +294,7 @@ Includes:
 ## Contributing
 
 Contributions are welcome! If you have:
+
 - Support for additional modem models
 - Bug fixes
 - Feature improvements
@@ -312,6 +304,7 @@ Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add
 ## Privacy & Security
 
 ### Privacy Protection
+
 - **100% Local**: All data stays on your Home Assistant instance - no cloud services
 - **Read-Only**: Only reads data from your modem (never modifies configuration)
 - **PII Sanitization**: Automatic removal of sensitive data from diagnostics
@@ -321,6 +314,7 @@ Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add
 - **Secure Credentials**: Stored in Home Assistant's encrypted storage
 
 ### Security Features
+
 - **CodeQL Scanning**: Automated security analysis on every commit
   - 100+ standard security queries (OWASP Top 10, CWE coverage)
   - 6 custom security queries specific to cable modem integration:
@@ -334,6 +328,7 @@ Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add
 - **Vulnerability Reporting**: See [SECURITY.md](./SECURITY.md) for responsible disclosure
 
 ### Authentication Support
+
 - HTTP Basic Authentication
 - Form-based authentication
 - HNAP/SOAP authentication
@@ -351,16 +346,20 @@ MIT License - see LICENSE file for details
 ## Resources
 
 ### Project Documentation
+
 - [Changelog](./CHANGELOG.md) - Version history and release notes
 - [Contributing Guide](./CONTRIBUTING.md) - How to contribute code or add modem support
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Examples](./docs/EXAMPLES.md) - Dashboard and automation YAML
 - [Modem Request Guide](./docs/MODEM_REQUEST.md) - Help add support for your modem
+
 ### External Resources
+
 - [Home Assistant Releases](https://github.com/home-assistant/core/releases)
 - [HACS Brand Repository](https://github.com/home-assistant/brands/tree/master/custom_integrations/cable_modem_monitor)
 
 ### Related Solent Labs Projects
+
 - [har-capture](https://github.com/solentlabs/har-capture) - Zero-dependency Python library for sanitizing HAR files. Used by this integration to safely capture diagnostic data from cable modems without exposing passwords or network credentials.
 
 ## Legal & Safety

@@ -5,16 +5,19 @@ This guide explains how to test CodeQL queries both in VS Code and from the comm
 ## Overview
 
 CodeQL tests are **separate** from Python/pytest tests:
+
 - **Python tests** (440 tests): Run via pytest, show in VS Code Testing tab
 - **CodeQL tests**: Run via CodeQL CLI, show in CodeQL extension sidebar
 
 ## Setup
 
 ### Required
+
 - ✅ CodeQL CLI installed at `codeql/codeql`
 - ✅ Helper script `scripts/dev/test-codeql.sh` for command-line testing
 
 ### Optional (for advanced query development)
+
 - CodeQL VS Code extension (`github.vscode-codeql`)
   - **When to install**: Only if you're actively developing/debugging CodeQL queries
   - **Not needed for**: Just running tests or basic project development
@@ -24,6 +27,7 @@ CodeQL tests are **separate** from Python/pytest tests:
 The VS Code extension is listed in `.vscode/extensions.json` as a recommendation but is **optional**.
 
 **Note on CodeQL CLI installations:**
+
 - The project has a local CLI at `./codeql/codeql` for command-line testing (`bash scripts/dev/test-codeql.sh`)
 - The VS Code extension downloads and manages its own separate CLI installation (typically in `~/.config/Code/User/globalStorage/github.vscode-codeql`)
 - This is intentional - they serve different purposes and don't conflict
@@ -66,11 +70,13 @@ This is the fastest way to verify everything works before committing.
 ## Where Tests Appear
 
 ### Python Tests (440 tests)
+
 - **Location**: Testing tab (beaker icon) in VS Code
 - **Run via**: Python Test Explorer
 - **Framework**: pytest
 
 ### CodeQL Tests (2 tests)
+
 - **Location**: CodeQL sidebar OR command line only
 - **Run via**: CodeQL extension or `./test-codeql.sh`
 - **Framework**: CodeQL test framework
@@ -92,16 +98,19 @@ This exclusion is intentional and correct!
 ## Development Workflow
 
 ### When Working on Python Code
+
 1. Write code
 2. Run Python tests via Testing tab or `pytest`
 3. Verify in VS Code Testing tab (beaker icon)
 
 ### When Working on CodeQL Queries
+
 1. Write/modify `.ql` files in `cable-modem-monitor-ql/`
 2. Run `bash scripts/dev/test-codeql.sh` to verify
 3. Alternatively, use CodeQL extension's "Run Tests" feature
 
 ### Before Committing
+
 ```bash
 # Test Python code
 pytest
@@ -115,6 +124,7 @@ bash scripts/dev/test-codeql.sh
 You asked about the container - here's the breakdown:
 
 ### Working in the Workspace (What you're doing now)
+
 - ✅ Faster, no container overhead
 - ✅ Python tests work perfectly (440 tests)
 - ✅ CodeQL tests work via command line (`./test-codeql.sh`)
@@ -122,6 +132,7 @@ You asked about the container - here's the breakdown:
 - **Recommendation**: This is fine! Stay in the workspace.
 
 ### Working in the Container
+
 - Container provides consistent Python environment
 - CodeQL CLI would need to be installed in the container too
 - No significant advantage for CodeQL testing
@@ -130,18 +141,23 @@ You asked about the container - here's the breakdown:
 ## Troubleshooting
 
 ### "CodeQL CLI not found"
+
 The VS Code extension needs to find the CLI. Check:
+
 ```json
 // .vscode/settings.json should have:
 "codeQL.cli.executablePath": "${workspaceFolder}/codeql/codeql"
 ```
 
 ### "CodeQL tests don't appear in Testing tab"
+
 This is **expected**! CodeQL tests only appear in:
+
 - CodeQL extension sidebar (if you set up a database)
 - Command line output from `./test-codeql.sh`
 
 ### "I want to see CodeQL results in VS Code"
+
 1. Open CodeQL sidebar (left panel)
 2. You can run queries and tests from there
 3. Results appear in the CodeQL Results panel
@@ -149,11 +165,13 @@ This is **expected**! CodeQL tests only appear in:
 ## Summary
 
 **For your current question:**
+
 - ✅ **440 Python tests in Testing tab** = Correct, these are pytest tests
 - ✅ **No CodeQL tests in Testing tab** = Expected, CodeQL doesn't use pytest
 - ✅ **CodeQL extension installed** = Good, you can use it from the sidebar
 - ✅ **Stay in workspace** = No need to launch container for CodeQL testing
 
 **Best practice:**
+
 - Use `./test-codeql.sh` before committing to verify CodeQL queries
 - The CI/CD pipeline will also run CodeQL in GitHub Actions

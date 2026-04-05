@@ -71,14 +71,15 @@ during implementation, not just at review time.
 
 All runtime log messages that relate to a specific modem must include
 the `[MODEL]` tag. The tag goes at the end of the subject phrase,
-before the separator (`:` or ` —`) that introduces details:
+before the separator (`:` or `—`) that introduces details:
 
-```
+```text
 {Subject} [MODEL]: {details}
 {Subject} [MODEL] — {details}
 ```
 
 Examples:
+
 ```python
 _logger.info("Parse complete [%s]: %d DS, %d US", model, ds, us)
 _logger.debug("Fetched /path [%s]: 200 (1234 bytes)", model)
@@ -174,6 +175,7 @@ errors that can't be expressed as fixture content).
 Verify every item before saying "done":
 
 **Code quality**
+
 - [ ] All classes and public functions have docstrings
 - [ ] No duplicated logic
 - [ ] No forward references
@@ -184,6 +186,7 @@ Verify every item before saying "done":
 - [ ] `mypy packages/*/solentlabs/ packages/*/tests/ --config-file=mypy.ini` passes
 
 **Tests**
+
 - [ ] Schema/validation tests use JSON fixtures (not inline dicts)
 - [ ] Tests parametrized over fixture files
 - [ ] Behavioral tests inline (not in fixtures)
@@ -191,11 +194,13 @@ Verify every item before saying "done":
 - [ ] Coverage >= 80%
 
 **Specs**
+
 - [ ] Code matches specs
 - [ ] Spec gaps flagged and discussed
 - [ ] Spec updates committed if needed
 
 **Continuity**
+
 - [ ] Journal entry via `/insights-journal`
 
 ### Handoff prompt for next step
@@ -203,7 +208,7 @@ Verify every item before saying "done":
 Use this template to start a new session for the next step.
 Fill in the bracketed values from the implementation plan.
 
-```
+```markdown
 Continue the v3.14 implementation. We are on Step [N].
 
 Read these first:

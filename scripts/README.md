@@ -4,7 +4,7 @@ This directory contains various scripts for development and maintenance of the C
 
 ## Prerequisites
 
-- **Python**: 3.11 or higher
+- **Python**: 3.12 (pinned to 3.12.x in `pyproject.toml`)
 - **Git**: For version control operations
 - **Bash**: For shell scripts (Linux/macOS/WSL)
 - **Optional**: GNU Make for convenient command shortcuts
@@ -22,6 +22,7 @@ make clean         # Clean up test artifacts
 ## Directory Structure
 
 ### `dev/` - Development Scripts
+
 Scripts used during development and testing:
 
 | Script | Purpose | Exit Codes |
@@ -33,12 +34,14 @@ Scripts used during development and testing:
 | `test-codeql.sh` | Run CodeQL query tests (requires CodeQL CLI) | 0: Pass, 1: Fail |
 | `fresh_start.py` | Reset VS Code state to test new developer experience (cross-platform) | 0: Success |
 | `validate.py` | Cross-platform validation (auto-installs tools) | 0: Pass, 1: Fail |
+| `../verify-setup.sh` | Checks Docker, Python, venv, pre-commit — fixes what it can | 0: All OK |
 
 ## Usage
 
 ### Development Workflow
 
 **First-time setup:**
+
 ```bash
 # Run full test suite (creates venv, installs deps, runs tests)
 bash scripts/dev/run_tests_local.sh
@@ -47,6 +50,7 @@ make test
 ```
 
 **During development (rapid iteration):**
+
 ```bash
 # Quick test without setup overhead
 bash scripts/dev/quick_test.sh
@@ -55,6 +59,7 @@ make test-quick
 ```
 
 **Without virtual environment:**
+
 ```bash
 # Installs dependencies globally/user-space
 bash scripts/dev/test_simple.sh
@@ -63,6 +68,7 @@ make test-simple
 ```
 
 **Cleanup:**
+
 ```bash
 # Remove test artifacts and cache files
 python3 scripts/dev/cleanup_test_artifacts.py
@@ -71,6 +77,7 @@ make clean
 ```
 
 **CodeQL Security Query Testing:**
+
 ```bash
 # Test custom CodeQL security queries
 bash scripts/dev/test-codeql.sh
@@ -93,6 +100,7 @@ code .
 ### Pre-commit Hooks
 
 Setup automatic code quality checks:
+
 ```bash
 # Install pre-commit
 pip install pre-commit

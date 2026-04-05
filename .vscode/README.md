@@ -22,6 +22,7 @@ This directory contains VS Code settings for the Cable Modem Monitor project.
 Press `Ctrl+Shift+P` → **"Tasks: Run Task"**
 
 ### Setup & Environment
+
 | Task | Purpose |
 |------|---------|
 | ⚙️ Setup Local Python Environment | Create .venv and install dependencies |
@@ -30,6 +31,7 @@ Press `Ctrl+Shift+P` → **"Tasks: Run Task"**
 | 🔌 Check Extension Conflicts | Verify extension setup |
 
 ### Validation & Testing
+
 | Task | Purpose |
 |------|---------|
 | 🚀 Quick Validation (Pre-commit) | Fast check: lint + format + quick tests |
@@ -63,6 +65,7 @@ Press `Ctrl+Shift+P` → **"Tasks: Run Task"**
 | HA: Clean All Data (Reset) | Nuclear option - removes all HA data and config |
 
 ### Development Tools
+
 | Task | Purpose |
 |------|---------|
 | 📹 Capture Modem Traffic | Start traffic capture for debugging |
@@ -72,11 +75,13 @@ Press `Ctrl+Shift+P` → **"Tasks: Run Task"**
 ## Extensions
 
 **Recommended** (auto-suggested on open):
+
 - Python, Pylance, Black formatter, Ruff
 - CodeQL, GitLens, YAML, Markdown
 - Remote Containers (Dev Container support)
 
 **Unwanted** (conflict with project setup):
+
 - Pylint, Flake8, isort, autopep8 (replaced by Ruff/Black)
 - Python Test Adapter (conflicts with native testing)
 

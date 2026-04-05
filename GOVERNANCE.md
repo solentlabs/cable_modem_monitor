@@ -13,6 +13,7 @@ Cable Modem Monitor is a community-driven open-source project that provides Home
 **Current Maintainer:** @kwschulz
 
 **Responsibilities:**
+
 - Review and merge pull requests
 - Triage and respond to issues
 - Make final decisions on project direction and feature acceptance
@@ -21,6 +22,7 @@ Cable Modem Monitor is a community-driven open-source project that provides Home
 - Maintain project infrastructure (CI/CD, documentation, etc.)
 
 **Decision Making:**
+
 - The maintainer has final decision authority on all aspects of the project
 - Major changes should be discussed in issues before implementation
 - Community feedback is valued and considered in decisions
@@ -30,11 +32,13 @@ Cable Modem Monitor is a community-driven open-source project that provides Home
 Anyone who contributes to the project through code, documentation, testing, or issue reporting.
 
 **How to Become a Contributor:**
+
 1. Read the [Contributing Guide](CONTRIBUTING.md)
 2. Review the [Code of Conduct](CODE_OF_CONDUCT.md)
 3. Submit a pull request or open an issue
 
 **Contributor Expectations:**
+
 - Follow the project's coding standards and guidelines
 - Write tests for new features and bug fixes
 - Update documentation as needed
@@ -56,7 +60,7 @@ Users of the integration who may report issues, suggest features, or help others
 
 ### 2. Pull Request Workflow
 
-```
+```text
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes with tests
@@ -144,16 +148,19 @@ New features are evaluated based on:
 ## Communication Channels
 
 ### GitHub Issues
+
 - Bug reports
 - Feature requests
 - Technical discussions
 
 ### GitHub Discussions
+
 - General questions
 - Community support
 - Ideas and proposals
 
 ### Pull Requests
+
 - Code review
 - Implementation discussion
 - Technical decisions
