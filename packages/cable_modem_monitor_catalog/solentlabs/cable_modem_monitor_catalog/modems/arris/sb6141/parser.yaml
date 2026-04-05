@@ -38,7 +38,7 @@ downstream:
           type: integer
 
       selector:
-        match: "Signal Stats (Codewords)"
+        match: "Signal Status (Codewords)"
         type: header_text
 upstream:
   format: table_transposed
@@ -60,3 +60,32 @@ upstream:
   selector:
     match: "Upstream"
     type: header_text
+
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/indexData.htm"
+      fields:
+        - label: "System Up Time"
+          field: system_uptime
+          type: string
+
+    - format: html_fields
+      resource: "/cmHelpData.htm"
+      fields:
+        - css: "td"
+          pattern: "Hardware Version:\\s*([^<\\n]+)"
+          field: hardware_version
+          type: string
+        - css: "td"
+          pattern: "Firmware Name:\\s*([^<\\n]+)"
+          field: software_version
+          type: string
+
+aggregate:
+  total_corrected:
+    channels: downstream
+    sum: corrected
+  total_uncorrected:
+    channels: downstream
+    sum: uncorrected

@@ -16,10 +16,18 @@ hardware:
   end_of_life: "2019"
 
   release_date: "2011"
+actions:
+  restart:
+    type: http
+    method: GET
+    endpoint: "/reset.htm"
+    params:
+      reset_modem: "Restart Cable Modem"
+
 status: awaiting_verification
 
 sources:
-  auth_config: "Synthetic HAR — no login required"
+  auth_config: "Real hardware captures (HW 7.0 + HW 8.0, April 2026) — no login required"
 
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6141"
   detection_hints: "[HA Community thread](https://community.home-assistant.io/)"
@@ -29,6 +37,8 @@ attribution:
       contribution: "Initial fixture and parser"
     - github: https://github.com/vreihen
       contribution: "HA Community verification (October 2025)"
+    - github: https://github.com/kwschulz
+      contribution: "Real hardware captures HW 7.0 + HW 8.0 (April 2026)"
 
 isps:
   - Comcast
@@ -40,8 +50,9 @@ notes: |
   DOCSIS 3.0 8x4 cable modem (released 2011, EOL 2019). Broadcom BCM3380.
   No authentication required — status page is publicly accessible.
   Transposed table layout (rows = metrics, columns = channels).
-  Companion "Signal Stats (Codewords)" table provides error counts.
-  No system_info available (no uptime or version endpoints exposed).
+  Companion "Signal Status (Codewords)" table provides error counts.
+  system_info from cmHelpData.htm (firmware, HW version) and indexData.htm (uptime).
+  HW 7.0 and HW 8.0 confirmed on firmware SB_KOMODO-1.0.7.3-SCM02-NOSH.
 references:
   prs:
     - "[PR #57 — Added support for Arris CM820B modem.](https://github.com/solentlabs/cable_modem_monitor/pull/57)"

@@ -75,6 +75,11 @@
   ],
   "system_info": {
     "downstream_channel_count": 8,
+    "hardware_version": "7.0",
+    "software_version": "SB_KOMODO-1.0.7.3-SCM02-NOSH",
+    "system_uptime": "0 days 0h:9m:47s",
+    "total_corrected": 5414,
+    "total_uncorrected": 6959,
     "upstream_channel_count": 4
   },
   "upstream": [
