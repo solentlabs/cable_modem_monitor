@@ -1,0 +1,4 @@
+2025-04-01 10:00:05.100 WARNING solentlabs.cable_modem_monitor_core.connectivity — Connection failure [T100] — unreachable (streak: 1, backoff: 1 polls)
+2025-04-01 10:05:05.200 WARNING solentlabs.cable_modem_monitor_core.connectivity — Connection failure [T100] — unreachable (streak: 2, backoff: 2 polls)
+2025-04-01 10:10:05.300 INFO solentlabs.cable_modem_monitor_core.connectivity — Health recovery detected [T100] — clearing connectivity backoff
+2025-04-01 10:10:05.400 INFO solentlabs.cable_modem_monitor_core.orchestration — Status transition [T100]: offline -> online

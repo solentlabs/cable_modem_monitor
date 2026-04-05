@@ -1,0 +1,10 @@
+2025-04-01 10:00:00.100 INFO custom_components.cable_modem_monitor — Cable Modem Monitor v3.14.0-alpha.9 starting [T100]
+2025-04-01 10:00:00.200 INFO custom_components.cable_modem_monitor — Initialized [T100] — polling every 5m
+2025-04-01 10:00:00.300 INFO custom_components.cable_modem_monitor — Health monitoring started [T100] — every 30s
+2025-04-01 10:00:00.400 INFO custom_components.cable_modem_monitor — First poll complete [T100] — no data
+2025-04-01 10:00:00.500 INFO custom_components.cable_modem_monitor — Deferred data sensors created [T100] — 24 entities
+2025-04-01 10:00:30.100 DEBUG solentlabs.cable_modem_monitor_core.health — Health check [T100]: responsive (ICMP 1.2ms, HTTP GET 45.6ms, 1234 bytes)
+2025-04-01 10:05:01.100 INFO solentlabs.cable_modem_monitor_core.parsers — Parse complete [T100]: 32 DS, 8 US
+2025-04-01 10:05:03.200 INFO custom_components.cable_modem_monitor — Finished fetching modem data in 2.1 seconds (success: True)
+2025-04-01 10:10:01.100 INFO solentlabs.cable_modem_monitor_core.parsers — Parse complete [T100]: 32 DS, 8 US
+2025-04-01 10:10:02.500 INFO custom_components.cable_modem_monitor — Finished fetching modem data in 1.4 seconds (success: True)

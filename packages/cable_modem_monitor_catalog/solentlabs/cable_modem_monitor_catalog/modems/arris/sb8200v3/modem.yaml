@@ -27,7 +27,7 @@ hardware:
   docsis_version: "3.1"
   release_date: "2023"
 
-status: in_progress
+status: awaiting_verification
 
 sources:
   auth_config: "[#109 — SB8200v3 HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/109)"
@@ -40,7 +40,11 @@ attribution:
     - github: https://github.com/kwschulz
       contribution: "Maintainer — v3.14 CBN transport, parser, catalog entry"
 
-isps: []
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
 
 notes: |
   AC01 firmware variant of the ARRIS SB8200. Shares CBN/Compal platform

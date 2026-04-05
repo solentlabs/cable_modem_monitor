@@ -25,15 +25,15 @@ FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "analysis"
 # ┌────────────────────────┬───────┬────────┬─────────┬──────────┬──────────────┐
 # │ fixture                │ polls │ health │ backoffs│ ha_recov │ model        │
 # ├────────────────────────┼───────┼────────┼─────────┼──────────┼──────────────┤
-# │ ha_full_session.log    │ 2     │ 1      │ 0       │ 0        │ T100         │
+# │ ha_full_session.txt    │ 2     │ 1      │ 0       │ 0        │ T100         │
 # │ ha_recovery_session    │ 1     │ 4      │ 1       │ 1        │ T100         │
 # └────────────────────────┴───────┴────────┴─────────┴──────────┴──────────────┘
 #
 # fmt: off
 PARSE_CASES = [
     # (fixture,                     polls, health, backoffs, ha_recoveries, model)
-    ("ha_full_session.log",         2,     1,      0,        0,             "T100"),
-    ("ha_recovery_session.log",     1,     4,      1,        1,             "T100"),
+    ("ha_full_session.txt",         2,     1,      0,        0,             "T100"),
+    ("ha_recovery_session.txt",     1,     4,      1,        1,             "T100"),
 ]
 # fmt: on
 
@@ -71,7 +71,7 @@ class TestHAMetadata:
     """HA lifecycle fields parsed from startup/config lines."""
 
     def test_startup_fields(self) -> None:
-        lines = (FIXTURES_DIR / "ha_full_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_full_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
 
         assert result.version == "v3.14.0-alpha.9"
@@ -80,13 +80,13 @@ class TestHAMetadata:
         assert result.health_interval_s == 30
 
     def test_first_poll_no_data(self) -> None:
-        lines = (FIXTURES_DIR / "ha_full_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_full_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
 
         assert result.first_poll_no_data is True
 
     def test_deferred_entity_count(self) -> None:
-        lines = (FIXTURES_DIR / "ha_full_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_full_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
 
         assert result.deferred_entity_count == 24
@@ -96,14 +96,14 @@ class TestPollDurationEnrichment:
     """fetch_complete lines enrich Core poll events with duration."""
 
     def test_duration_filled_from_fetch_complete(self) -> None:
-        lines = (FIXTURES_DIR / "ha_full_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_full_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
 
         assert result.core.polls[0].duration_s == pytest.approx(2.1)
         assert result.core.polls[1].duration_s == pytest.approx(1.4)
 
     def test_recovery_session_poll_duration(self) -> None:
-        lines = (FIXTURES_DIR / "ha_recovery_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_recovery_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
 
         assert len(result.core.polls) == 1
@@ -114,14 +114,14 @@ class TestRecoveryMerge:
     """Core and HA recovery events are both captured."""
 
     def test_core_backoff_cleared(self) -> None:
-        lines = (FIXTURES_DIR / "ha_recovery_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_recovery_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
 
         assert len(result.core.recoveries) == 1
         assert result.core.recoveries[0].transition == "backoff_cleared"
 
     def test_ha_health_recovery(self) -> None:
-        lines = (FIXTURES_DIR / "ha_recovery_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_recovery_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
 
         assert len(result.ha_recoveries) == 1
@@ -137,7 +137,7 @@ class TestFormatReport:
     """Report formatting produces expected sections."""
 
     def test_report_contains_sections(self) -> None:
-        lines = (FIXTURES_DIR / "ha_full_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_full_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
         report = format_report(result)
 
@@ -147,14 +147,14 @@ class TestFormatReport:
         assert "VERDICT" in report
 
     def test_report_shows_model(self) -> None:
-        lines = (FIXTURES_DIR / "ha_full_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_full_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
         report = format_report(result)
 
         assert "T100" in report
 
     def test_recovery_section_present(self) -> None:
-        lines = (FIXTURES_DIR / "ha_recovery_session.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "ha_recovery_session.txt").read_text().splitlines()
         result = parse_ha_logs(lines)
         report = format_report(result)
 

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.10] - 2026-04-04
+
 ### Added
 
 - **Netgear CM3000** — New catalog entry for DOCSIS 3.1 modem with
@@ -40,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `derive_docsis_status()` to check `system_info.docsis_status` when
   per-channel `lock_status` is absent (2011-era hardware).
   (Related to #57)
+- **S33/S33v2 uptime note** — Corrected modem.yaml notes that claimed
+  "System uptime not available." HAR evidence confirms the HNAP API
+  returns real uptime in `CustomerConnSystemUpTime`; the modem's
+  JavaScript swaps the display to show clock time (browser UI bug).
 - **Non-dict JSON response guards** — Added `isinstance(data, dict)`
   guards at all 8 `resp.json()` call sites across auth managers,
   HNAP loader, and HNAP action executor. Fixes crash when modems

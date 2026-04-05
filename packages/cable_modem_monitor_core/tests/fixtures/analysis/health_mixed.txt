@@ -1,0 +1,4 @@
+2025-04-01 10:00:30.100 DEBUG solentlabs.cable_modem_monitor_core.health — Health check [T100]: responsive (ICMP 1.2ms, HTTP GET 45.6ms, 1234 bytes)
+2025-04-01 10:01:00.200 WARNING solentlabs.cable_modem_monitor_core.health — Health check [T100]: unresponsive
+2025-04-01 10:01:30.300 WARNING solentlabs.cable_modem_monitor_core.health — Health check [T100]: degraded
+2025-04-01 10:02:00.400 DEBUG solentlabs.cable_modem_monitor_core.health — Health check [T100]: responsive (ICMP 2.0ms, HTTP GET 55.0ms, 1234 bytes)

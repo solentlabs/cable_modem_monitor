@@ -1,0 +1,2 @@
+2025-04-01 10:00:00.000 INFO homeassistant.core — This is an unrelated log line
+2025-04-01 10:00:01.000 DEBUG custom_components.cable_modem_monitor — HA-only line, not core
