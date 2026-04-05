@@ -79,11 +79,11 @@ def derive_docsis_status(modem_data: dict[str, Any]) -> DocsisStatus:
 def _fallback_from_system_info(modem_data: dict[str, Any]) -> DocsisStatus:
     """Fall back to system_info when channels lack lock_status.
 
-    Checks system_info.docsis_status then system_info.cm_status for a
-    case-insensitive "operational" value.  Returns UNKNOWN otherwise.
+    Checks system_info.docsis_status for a case-insensitive "operational"
+    value.  Returns UNKNOWN otherwise.
     """
     system_info = modem_data.get("system_info", {})
-    reported = system_info.get("docsis_status") or system_info.get("cm_status") or ""
+    reported = system_info.get("docsis_status") or ""
     if reported.strip().lower() == "operational":
         return DocsisStatus.OPERATIONAL
     return DocsisStatus.UNKNOWN

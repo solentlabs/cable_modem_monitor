@@ -104,7 +104,7 @@ system_info:
         - field: system_uptime
           label: "System Up Time"
           type: string
-        - field: network_access
+        - field: docsis_status
           label: "Network Access"
           type: string
         - field: board_temperature

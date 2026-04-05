@@ -605,7 +605,7 @@ def _map_system_info_key(key: str) -> str | None:
     if "systemuptime" in lower or "uptime" in lower:
         return "system_uptime"
     if "networkaccess" in lower:
-        return "network_access"
+        return "docsis_status"
     if "macaddress" in lower:
         return "mac_address"
     if "serialnumber" in lower:
@@ -613,7 +613,7 @@ def _map_system_info_key(key: str) -> str | None:
     if "systemtime" in lower or "cursystemtime" in lower:
         return "system_time"
     if "internetconnection" in lower:
-        return "internet_connection"
+        return "docsis_status"
 
     return None
 

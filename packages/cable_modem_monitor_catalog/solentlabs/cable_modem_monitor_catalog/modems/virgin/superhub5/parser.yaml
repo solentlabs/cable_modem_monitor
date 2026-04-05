@@ -97,6 +97,6 @@ system_info:
           type: string
           path: "cablemodem"
         - key: "status"
-          field: network_access
+          field: docsis_status
           type: string
           path: "cablemodem"

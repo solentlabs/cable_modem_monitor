@@ -6,11 +6,11 @@
     "resource": "/status.html",
     "fields": [
       {"label": "System Uptime", "field": "system_uptime", "type": "string"},
-      {"label": "Cable Modem Status", "field": "network_access", "type": "string"}
+      {"label": "Cable Modem Status", "field": "docsis_status", "type": "string"}
     ]
   },
   "_expected": {
     "system_uptime": "27 d: 13 h: 39 m",
-    "network_access": "Operational"
+    "docsis_status": "Operational"
   }
 }

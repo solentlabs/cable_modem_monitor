@@ -5,7 +5,7 @@
         "format": "hnap",
         "response_key": "GetConnectionInfoResponse",
         "fields": [
-          {"source": "NetworkAccess", "field": "network_access", "type": "string"}
+          {"source": "NetworkAccess", "field": "docsis_status", "type": "string"}
         ]
       }
     ]

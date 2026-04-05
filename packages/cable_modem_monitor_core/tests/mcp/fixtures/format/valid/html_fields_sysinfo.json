@@ -17,5 +17,5 @@
     }
   },
   "_expected_format": "html_fields",
-  "_expected_system_info_fields": ["system_uptime", "software_version", "hardware_version", "network_access"]
+  "_expected_system_info_fields": ["system_uptime", "software_version", "hardware_version", "docsis_status"]
 }

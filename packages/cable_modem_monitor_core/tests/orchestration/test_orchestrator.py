@@ -300,19 +300,19 @@ class TestZeroChannels:
 # ==================================================================
 
 
-# ┌──────────────────────────────┬────────┬──────────────────┬─────────────────────┐
+# ┌──────────────────────────────┬────────┬──────────────────┬──────────────────────┐
 # │ DS lock_status values        │ US cnt │ Expected         │ system_info override │
-# ├──────────────────────────────┼────────┼──────────────────┼─────────────────────┤
-# │ All "locked"                 │ > 0    │ OPERATIONAL      │ —                   │
-# │ All "locked"                 │ 0      │ PARTIAL_LOCK     │ —                   │
-# │ Some "locked", some not      │ > 0    │ PARTIAL_LOCK     │ —                   │
-# │ None "locked"                │ > 0    │ NOT_LOCKED       │ —                   │
-# │ No DS channels               │ any    │ NOT_LOCKED       │ —                   │
-# │ lock_status absent           │ > 0    │ UNKNOWN          │ —                   │
-# │ lock_status absent           │ > 0    │ OPERATIONAL      │ docsis_status       │
-# │ lock_status absent           │ > 0    │ OPERATIONAL      │ cm_status           │
-# │ lock_status absent           │ > 0    │ UNKNOWN          │ non-operational     │
-# └──────────────────────────────┴────────┴──────────────────┴─────────────────────┘
+# ├──────────────────────────────┼────────┼──────────────────┼──────────────────────┤
+# │ All "locked"                 │ > 0    │ OPERATIONAL      │ —                    │
+# │ All "locked"                 │ 0      │ PARTIAL_LOCK     │ —                    │
+# │ Some "locked", some not      │ > 0    │ PARTIAL_LOCK     │ —                    │
+# │ None "locked"                │ > 0    │ NOT_LOCKED       │ —                    │
+# │ No DS channels               │ any    │ NOT_LOCKED       │ —                    │
+# │ lock_status absent           │ > 0    │ UNKNOWN          │ —                    │
+# │ lock_status absent           │ > 0    │ OPERATIONAL      │ docsis_status        │
+# │ lock_status absent           │ > 0    │ OPERATIONAL      │ docsis_status (lc)   │
+# │ lock_status absent           │ > 0    │ UNKNOWN          │ non-operational      │
+# └──────────────────────────────┴────────┴──────────────────┴──────────────────────┘
 #
 # fmt: off
 DOCSIS_STATUS_CASES = [
@@ -326,8 +326,8 @@ DOCSIS_STATUS_CASES = [
     ([{"frequency": 600}] * 3,          2,        DocsisStatus.UNKNOWN,      "no lock_status field",     None),
     ([{"frequency": 600}] * 3,          2,        DocsisStatus.OPERATIONAL,  "fallback: docsis_status",
      {"docsis_status": "OPERATIONAL"}),
-    ([{"frequency": 600}] * 3,          2,        DocsisStatus.OPERATIONAL,  "fallback: cm_status",
-     {"cm_status": "Operational"}),
+    ([{"frequency": 600}] * 3,          2,        DocsisStatus.OPERATIONAL,  "fallback: docsis_status case insensitive",
+     {"docsis_status": "Operational"}),
     ([{"frequency": 600}] * 3,          2,        DocsisStatus.UNKNOWN,      "fallback: non-operational",
      {"docsis_status": "Not Synchronized"}),
 ]

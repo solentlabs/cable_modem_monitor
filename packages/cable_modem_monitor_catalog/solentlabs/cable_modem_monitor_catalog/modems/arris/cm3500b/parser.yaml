@@ -135,7 +135,7 @@ system_info:
         - field: system_uptime
           label: "System Uptime"
           type: string
-        - field: cm_status
+        - field: docsis_status
           label: "CM Status"
           type: string
         - field: current_time

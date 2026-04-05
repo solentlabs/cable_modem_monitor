@@ -453,7 +453,7 @@
     "board_temperature": "-99.0 degrees Celsius",
     "downstream_channel_count": 32,
     "hardware_version": "TC4400 Rev:2.0.0",
-    "network_access": "Allowed",
+    "docsis_status": "Allowed",
     "software_version": "70.13.41-180903",
     "standard_specification_compliant": "Docsis 3.1",
     "system_uptime": "4 days 00h:16m:45s",

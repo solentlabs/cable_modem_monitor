@@ -268,7 +268,7 @@
   "system_info": {
     "downstream_channel_count": 24,
     "hardware_version": "5.01",
-    "network_access": "Allowed",
+    "docsis_status": "Allowed",
     "provisioning_status": "Modem Mode",
     "software_version": "CH7465MT-AT-NCIP-6.15.32p3TM-GA-NOSH",
     "system_uptime": "0day(s)0h:16m:36s",

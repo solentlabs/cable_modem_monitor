@@ -14,12 +14,12 @@
     "fields": [
       {"key": "upTime", "field": "system_uptime", "type": "string", "path": "device"},
       {"key": "docsisVersion", "field": "docsis_version", "type": "string", "path": "device"},
-      {"key": "status", "field": "network_access", "type": "string", "path": "device"}
+      {"key": "status", "field": "docsis_status", "type": "string", "path": "device"}
     ]
   },
   "_expected": {
     "system_uptime": "50221",
     "docsis_version": "3.1",
-    "network_access": "Online"
+    "docsis_status": "Online"
   }
 }

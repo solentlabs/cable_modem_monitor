@@ -351,7 +351,7 @@
     }
   ],
   "system_info": {
-    "cm_status": "Good",
+    "docsis_status": "Good",
     "current_time": "Fri Nov 28 14:29:17 2025",
     "downstream_channel_count": 32,
     "ds_partial_service": "No",

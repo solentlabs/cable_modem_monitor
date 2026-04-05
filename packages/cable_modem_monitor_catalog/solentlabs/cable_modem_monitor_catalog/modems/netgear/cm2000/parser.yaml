@@ -189,7 +189,7 @@ system_info:
                 "0": "No"
                 "1": "Yes"
             - offset: 7
-              field: cm_status
+              field: docsis_status
               type: string
               map:
                 "0": "Bad"

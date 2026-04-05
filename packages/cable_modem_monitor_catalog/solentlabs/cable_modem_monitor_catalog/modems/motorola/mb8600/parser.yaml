@@ -69,7 +69,7 @@ system_info:
         - field: system_uptime
           source: MotoConnSystemUpTime
           type: string
-        - field: network_access
+        - field: docsis_status
           source: MotoConnNetworkAccess
           type: string
       response_key: GetMotoStatusConnectionInfoResponse

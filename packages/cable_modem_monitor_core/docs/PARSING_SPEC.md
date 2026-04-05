@@ -1296,7 +1296,7 @@ system_info:
       response_key: "GetCustomerStatusConnectionInfoResponse"
       fields:
         - source: "CustomerConnNetworkAccess"
-          field: network_access
+          field: docsis_status
           type: string
 
     - format: hnap
@@ -1343,7 +1343,7 @@ system_info:
       resource: "/MotoConnection.asp"
       fields:
         - label: "Cable Modem Status"
-          field: network_access
+          field: docsis_status
           type: string
 ```
 
@@ -1429,7 +1429,7 @@ system_info:
           field: docsis_version
           type: string
         - source: "status"
-          field: network_access
+          field: docsis_status
           type: string
 ```
 
@@ -1888,7 +1888,7 @@ without modifying Core or the `BaseParser` implementations.
         "hardware_version": str,
         "software_version": str,
         "model_name": str,
-        "network_access": str,         # "Allowed" | "Denied"
+        "docsis_status": str,          # "Operational" | "Not Synchronized"
 
         # Modem-specific fields pass through
         # e.g., "boot_status", "security_status", "docsis_version"

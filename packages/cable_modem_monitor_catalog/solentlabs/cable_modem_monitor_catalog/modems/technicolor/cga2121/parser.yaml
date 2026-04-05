@@ -84,5 +84,5 @@ system_info:
           type: string
         - attribute: "class"
           css: "table:has(caption[data-i18n='ds_prov_about']) tr:nth-child(2) td:nth-child(5)"
-          field: registration_status
+          field: docsis_status
           type: string

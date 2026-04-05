@@ -174,7 +174,7 @@
   "system_info": {
     "downstream_channel_count": 17,
     "hardware_version": "5.0",
-    "network_access": "Allowed",
+    "docsis_status": "Allowed",
     "software_version": "8600-19.3.15",
     "system_uptime": "12 days 08h:42m:15s",
     "total_corrected": 524817979,

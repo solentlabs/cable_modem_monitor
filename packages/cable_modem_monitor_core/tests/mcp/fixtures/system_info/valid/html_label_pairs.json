@@ -10,6 +10,6 @@
       {"label": "Cable Modem Status", "value": "Online", "selector_type": "label", "selector_value": "Cable Modem Status", "element_id": ""}
     ]
   },
-  "_expected_fields": ["system_uptime", "software_version", "hardware_version", "network_access"],
+  "_expected_fields": ["system_uptime", "software_version", "hardware_version", "docsis_status"],
   "_expected_format": "html_fields"
 }

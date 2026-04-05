@@ -443,7 +443,7 @@ names/positions to canonical output fields.
 | `system_uptime` | string | yes |
 | `software_version` | string | yes |
 | `hardware_version` | string | yes |
-| `network_access` | string | sometimes |
+| `docsis_status` | string | sometimes |
 
 **System info (Tier 2 registered — see FIELD_REGISTRY):**
 

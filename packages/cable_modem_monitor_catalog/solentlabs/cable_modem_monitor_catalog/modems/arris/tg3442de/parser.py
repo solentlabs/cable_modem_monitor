@@ -4,7 +4,7 @@ The ``javascript_vars`` format extracts all system_info fields from JS
 variable assignments.  This PostProcessor reformats
 ``system_uptime`` from the Arris duration format
 (``D: 39 H: 06 M: 24 S: 26``) to the canonical form
-(``39 days 06:24:26``) and maps ``cm_status`` from ``"1"``/``"0"``
+(``39 days 06:24:26``) and maps ``docsis_status`` from ``"1"``/``"0"``
 to ``"online"``/``"offline"``.
 """
 
@@ -21,18 +21,18 @@ from typing import Any
 _DURATION_RE = re.compile(r"D:\s*(\d+)\s+H:\s*(\d+)\s+M:\s*(\d+)\s+S:\s*(\d+)")
 
 # Firmware labels: PAGE_OVERVIEW_DOCSIS = "DOCSIS Online" / "DOCSIS Offline"
-_CM_STATUS_MAP = {"1": "online", "0": "offline"}
+_DOCSIS_STATUS_MAP = {"1": "online", "0": "offline"}
 
 
 class PostProcessor:
-    """Reformat system_uptime and map cm_status."""
+    """Reformat system_uptime and map docsis_status."""
 
     def parse_system_info(
         self,
         system_info: dict[str, Any],
         resources: dict[str, Any],
     ) -> dict[str, Any]:
-        """Reformat system_uptime and map cm_status if present."""
+        """Reformat system_uptime and map docsis_status if present."""
         raw = system_info.get("system_uptime")
         if isinstance(raw, str):
             m = _DURATION_RE.search(raw)
@@ -40,8 +40,8 @@ class PostProcessor:
                 days, hours, minutes, seconds = m.groups()
                 system_info["system_uptime"] = f"{days} days {hours}:{minutes}:{seconds}"
 
-        cm = system_info.get("cm_status")
-        if isinstance(cm, str) and cm in _CM_STATUS_MAP:
-            system_info["cm_status"] = _CM_STATUS_MAP[cm]
+        cm = system_info.get("docsis_status")
+        if isinstance(cm, str) and cm in _DOCSIS_STATUS_MAP:
+            system_info["docsis_status"] = _DOCSIS_STATUS_MAP[cm]
 
         return system_info
