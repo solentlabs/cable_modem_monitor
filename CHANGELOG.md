@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Form auth false-positive on server errors** — `_check_success`
+  fallback accepted any non-401 response as auth success when no
+  explicit criteria were configured (13 modems). Now rejects all
+  HTTP status >= 400. Also fixed three `requests.Response` truthiness
+  checks that masked error status codes as 0 in logs.
+
 ### Improved
 
 - **HACS zip release asset** — HACS now downloads a 124 KB zip of only

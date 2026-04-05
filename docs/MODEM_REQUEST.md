@@ -74,13 +74,13 @@ Use [har-capture](https://github.com/solentlabs/har-capture) to record the compl
 pip install "har-capture[full]"
 
 # Capture from your modem (default cable modem IP)
-har-capture get 192.168.100.1
+har-capture 192.168.100.1
 
 # Or specify a different IP
-har-capture get 192.168.0.1
+har-capture 192.168.0.1
 
 # If your modem uses HTTP Basic Auth
-har-capture get 192.168.100.1 -u admin -p yourpassword
+har-capture 192.168.100.1 -u admin -p yourpassword
 ```
 
 See the [har-capture documentation](https://github.com/solentlabs/har-capture) for more options.

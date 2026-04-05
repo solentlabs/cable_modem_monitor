@@ -599,11 +599,10 @@ The result is a relative path from the catalog root (e.g.,
 `"arris/sb8200"`).  All config entry path construction uses
 `modem_dir` — never manufacturer/model strings directly.
 
-**Graceful failure:** If catalog lookup fails (modem removed,
-manufacturer renamed beyond recognition, or fallback-mode entries),
-migration logs a warning with the original values and returns
-`False`.  HA marks the entry as failed — the user reconfigures
-through the setup wizard.
+**Graceful failure:** If catalog lookup fails (modem removed or
+manufacturer renamed beyond recognition), migration logs a warning
+with the original values and returns `False`.  HA marks the entry as
+failed — the user reconfigures through the setup wizard.
 
 **v1 keys removed:** `parser_name`, `detected_manufacturer`,
 `detected_modem`, `modem_choice`, `working_url`,

@@ -154,17 +154,11 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
 
 This integration supports modems from ARRIS, Compal, Motorola, Netgear, Technicolor, and Virgin Media. Compatibility varies based on firmware versions and ISP customizations.
 
-> **[View the Supported Modems List](./packages/cable_modem_monitor_catalog/README.md)** - Complete list with DOCSIS versions, ISP compatibility, verification status, and model timelines.
-
-### Fallback Mode
-If your modem isn't listed, you can still install the integration! It will enter **Fallback Mode** which:
-- Allows installation to succeed
-- Enables the "Capture HTML" diagnostics button
-- Lets you provide HTML samples to help add support for your modem
+> **[View the Supported Modems List](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)** - Complete list with DOCSIS versions, ISP compatibility, verification status, and model timelines.
 
 ## Help Expand Modem Support
 
-**Modem not listed?** [Request support](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml) — see the [Modem Request Guide](./docs/MODEM_REQUEST.md) for details.
+**Modem not listed?** Use [har-capture](https://github.com/solentlabs/har-capture) to record your modem's web interface, then [request support](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml). See the [Modem Request Guide](./docs/MODEM_REQUEST.md) for the full walkthrough.
 
 **Modem listed as ⏳ Awaiting?** [Report it working](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_verification.yml) to help verify support.
 

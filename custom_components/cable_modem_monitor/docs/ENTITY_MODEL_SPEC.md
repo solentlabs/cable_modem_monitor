@@ -85,7 +85,7 @@ implicit from parser.yaml mappings (see
 If parser.yaml maps `system_info.software_version`, the Software
 Version sensor exists. If parser.yaml has a `downstream` section,
 downstream channel sensors and channel counts exist. No data in
-parser output → no entity created. Not created in fallback mode.
+parser output → no entity created.
 
 ### Health Sensors
 
@@ -347,19 +347,15 @@ two modems, HA auto-suffixes entity_ids (`_2`, `_3`, etc.). Recommend
 | Normal operation | available | available | available |
 | Coordinator update failed | unavailable | unavailable | available |
 | Modem unreachable | unavailable | available¹ | available |
-| Modem unreachable at startup | deferred³ | available¹ | available |
+| Modem unreachable at startup | deferred² | available¹ | available |
 | Parse error | unavailable | available¹ | available |
-| Fallback mode (unknown modem) | not created² | available | available |
 | Field not parsed by this modem | never created | n/a | n/a |
 
 ¹ Health sensors remain available when the modem is unreachable or
 produces parse errors — they report the failure state itself (latency
 = None, status = Unresponsive/Parser Error).
 
-² In fallback mode, only Status, Modem Info, and health sensors are
-created. No channel sensors, no system sensors.
-
-³ When the modem is unreachable at HA startup, data-dependent entities
+² When the modem is unreachable at HA startup, data-dependent entities
 (channels, system metrics, LAN stats) are deferred until the first
 successful poll. Status, Info, and Health sensors are created
 immediately and remain available during the outage. See

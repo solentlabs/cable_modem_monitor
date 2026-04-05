@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: 📊 Check Supported Modems First
-    url: https://github.com/solentlabs/cable_modem_monitor/tree/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems
-    about: See if your modem is listed before opening an issue
+    url: https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/
+    about: See if your modem is already supported before opening an issue
   - name: Question or Support
     url: https://github.com/solentlabs/cable_modem_monitor/discussions
     about: Ask questions or get help from the community
