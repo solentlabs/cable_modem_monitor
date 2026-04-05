@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Improved
+
+- **HACS zip release asset** — HACS now downloads a 124 KB zip of only
+  the integration files instead of the full 3.4 MB source archive.
+  Added `zip_release: true` to `hacs.json` and zip packaging step to
+  the release workflow. Spec docs are excluded from the HACS package.
+- **Debug logging** — Added `loggers` field to `manifest.json` so HA
+  captures Core and Catalog log output when users enable debug logging
+  for the integration.
+
 ## [3.14.0-alpha.10] - 2026-04-04
 
 ### Added

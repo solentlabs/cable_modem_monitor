@@ -93,6 +93,13 @@ jobs:
         run: |
           pytest -v --tb=short
 
+      - name: Package integration for HACS
+        run: |
+          cd custom_components/cable_modem_monitor
+          # Exclude docs/ (dev specs, not needed at runtime) and
+          # __pycache__/ (created by the pytest step above).
+          zip -r ../../cable_modem_monitor.zip . -x 'docs/*' '*__pycache__*'
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -102,6 +109,7 @@ jobs:
           prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
           generate_release_notes: true
           token: ${{ secrets.GITHUB_TOKEN }}
+          files: cable_modem_monitor.zip
 
       - name: Notify success
         if: success()

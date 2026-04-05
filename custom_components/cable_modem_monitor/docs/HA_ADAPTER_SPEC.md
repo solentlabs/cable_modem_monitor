@@ -37,6 +37,7 @@ Core, it should.
 | [Services](#services) | `generate_dashboard`, `request_refresh`, `request_health_check` |
 | [Config Entry Migration](#config-entry-migration) | Version-keyed migration with auto-discovery |
 | [Testing](#testing) | No modem-specific names, dynamic catalog discovery |
+| [Distribution](#distribution) | HACS zip, PyPI packages, version pinning, release tiers |
 
 ---
 
@@ -666,3 +667,85 @@ All modem-specific logic lives in Core and Catalog. The adapter
 imports from `solentlabs.cable_modem_monitor_core` and
 `solentlabs.cable_modem_monitor_catalog` — never from modem config
 files or parser code directly.
+
+---
+
+## Distribution
+
+Three packages, three delivery mechanisms. Lock-step versioning —
+all three always share the same version number.
+
+### What ships where
+
+| Package | Delivery | Contains |
+|---------|----------|----------|
+| HACS zip (`cable_modem_monitor.zip`) | GitHub release asset | HA adapter: config flow, coordinator, sensors, buttons, services, translations, icons |
+| Core (`solentlabs-cable-modem-monitor-core`) | PyPI wheel | Auth, parsers, orchestration, loaders, protocol, MCP tools |
+| Catalog (`solentlabs-cable-modem-monitor-catalog`) | PyPI wheel | modem.yaml, parser.yaml for each supported modem |
+
+The HACS zip contains only runtime files — `docs/` is excluded from
+the zip build. Spec files stay in the repo for contributors but don't
+ship to users.
+
+### HACS configuration
+
+`hacs.json` uses `zip_release: true` with `filename:
+"cable_modem_monitor.zip"`. HACS downloads the zip asset from the
+GitHub release instead of the full source archive.
+
+### Manifest loggers
+
+`manifest.json` declares `loggers` for both PyPI packages:
+
+```json
+"loggers": [
+    "solentlabs.cable_modem_monitor_core",
+    "solentlabs.cable_modem_monitor_catalog"
+]
+```
+
+This tells HA to include Core and Catalog log output when a user
+enables debug logging for the integration. Without this field, only
+the `custom_components.cable_modem_monitor` logger is captured.
+
+### Install flow
+
+1. HACS downloads `cable_modem_monitor.zip` from the GitHub release
+2. HACS extracts it into `custom_components/cable_modem_monitor/`
+3. HA reads `manifest.json` → sees `requirements` pins
+4. HA pip-installs Core and Catalog from PyPI (exact `==` pins)
+5. Integration loads
+
+### Version pinning
+
+`manifest.json` pins both PyPI packages with exact `==` specifiers.
+This is deliberate — HA only checks whether the installed version
+satisfies the specifier. It never queries PyPI for newer versions
+within a range. A `>=` pin would leave users permanently on the
+version installed at first setup. The `==` pin forces HA to upgrade
+when the manifest changes.
+
+All three packages are released in lock-step. `scripts/release.py`
+bumps all version files atomically. Independent versioning is not
+supported — even a catalog-only change (new modem config) triggers a
+full release, because the user needs a HACS update (new manifest pin)
+to receive the new catalog version.
+
+### Release tiers
+
+| Tag pattern | PyPI (publish.yml) | GitHub release (release.yml) | HACS visibility |
+|-------------|-------------------|----------------------------|-----------------|
+| `v*-alpha.*` | Core + Catalog published | Skipped — no release | Not visible. Side-load via branch tracking. |
+| `v*-beta.*` | Core + Catalog published | Prerelease + zip asset | Users with "Show beta versions" enabled |
+| `v*.*.*` (stable) | Core + Catalog published | Release + zip asset | All users |
+
+PyPI publishing happens for all tiers. The GitHub release (and thus
+HACS visibility) is what varies by tier.
+
+### Rollback safety
+
+HACS reads `hacs.json` from the default branch to determine download
+strategy. With `zip_release: true`, HACS expects a zip asset on every
+release — including older ones a user might roll back to. Prior
+stable releases must have a `cable_modem_monitor.zip` asset uploaded
+before `zip_release: true` reaches the default branch.
