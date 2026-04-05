@@ -1,0 +1,12 @@
+2025-04-01 10:00:00.100 INFO custom_components.cable_modem_monitor — Cable Modem Monitor v3.14.0-alpha.9 starting [T100]
+2025-04-01 10:00:00.200 INFO custom_components.cable_modem_monitor — Initialized [T100] — polling every 5m
+2025-04-01 10:00:30.100 DEBUG solentlabs.cable_modem_monitor_core.health — Health check [T100]: responsive (ICMP 1.0ms, HTTP GET 40.0ms, 1234 bytes)
+2025-04-01 10:01:00.200 WARNING solentlabs.cable_modem_monitor_core.health — Health check [T100]: unresponsive
+2025-04-01 10:01:30.300 WARNING solentlabs.cable_modem_monitor_core.health — Health check [T100]: unresponsive
+2025-04-01 10:01:30.400 WARNING solentlabs.cable_modem_monitor_core.connectivity — Connection failure [T100] — unreachable (streak: 1, backoff: 1 polls)
+2025-04-01 10:02:00.500 DEBUG solentlabs.cable_modem_monitor_core.health — Health check [T100]: responsive (ICMP 2.0ms, HTTP GET 50.0ms, 1234 bytes)
+2025-04-01 10:02:00.600 INFO solentlabs.cable_modem_monitor_core.connectivity — Health recovery detected [T100] — clearing connectivity backoff
+2025-04-01 10:02:00.700 INFO custom_components.cable_modem_monitor — Health recovery [T100] — scheduling immediate poll
+2025-04-01 10:02:00.800 INFO solentlabs.cable_modem_monitor_core.orchestration — Status transition [T100]: offline -> online
+2025-04-01 10:02:02.100 INFO solentlabs.cable_modem_monitor_core.parsers — Parse complete [T100]: 32 DS, 8 US
+2025-04-01 10:02:03.500 INFO custom_components.cable_modem_monitor — Finished fetching modem data in 1.4 seconds (success: True)

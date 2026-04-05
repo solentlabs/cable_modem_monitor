@@ -31,23 +31,23 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures" / "analysis"
 # ┌──────────────────────┬───────┬────────┬─────────┬────────────┬─────────────┐
 # │ fixture              │ polls │ health │ backoffs│ recoveries │ transitions │
 # ├──────────────────────┼───────┼────────┼─────────┼────────────┼─────────────┤
-# │ poll_success.log     │ 2     │ 0      │ 0       │ 0          │ 0           │
-# │ poll_failure.log     │ 1     │ 0      │ 0       │ 0          │ 0           │
+# │ poll_success.txt     │ 2     │ 0      │ 0       │ 0          │ 0           │
+# │ poll_failure.txt     │ 1     │ 0      │ 0       │ 0          │ 0           │
 # │ health_responsive    │ 0     │ 3      │ 0       │ 0          │ 0           │
-# │ health_mixed.log     │ 0     │ 4      │ 0       │ 0          │ 0           │
-# │ connectivity.log     │ 0     │ 0      │ 2       │ 1          │ 1           │
-# │ empty.log            │ 0     │ 0      │ 0       │ 0          │ 0           │
+# │ health_mixed.txt     │ 0     │ 4      │ 0       │ 0          │ 0           │
+# │ connectivity.txt     │ 0     │ 0      │ 2       │ 1          │ 1           │
+# │ empty.txt            │ 0     │ 0      │ 0       │ 0          │ 0           │
 # └──────────────────────┴───────┴────────┴─────────┴────────────┴─────────────┘
 #
 # fmt: off
 PARSE_CASES = [
     # (fixture,                polls, health, backoffs, recoveries, transitions)
-    ("poll_success.log",       2,     0,      0,        0,          0),
-    ("poll_failure.log",       1,     0,      0,        0,          0),
-    ("health_responsive.log",  0,     3,      0,        0,          0),
-    ("health_mixed.log",       0,     4,      0,        0,          0),
-    ("connectivity.log",       0,     0,      2,        1,          1),
-    ("empty.log",              0,     0,      0,        0,          0),
+    ("poll_success.txt",       2,     0,      0,        0,          0),
+    ("poll_failure.txt",       1,     0,      0,        0,          0),
+    ("health_responsive.txt",  0,     3,      0,        0,          0),
+    ("health_mixed.txt",       0,     4,      0,        0,          0),
+    ("connectivity.txt",       0,     0,      2,        1,          1),
+    ("empty.txt",              0,     0,      0,        0,          0),
 ]
 # fmt: on
 
@@ -85,7 +85,7 @@ class TestPollFields:
     """Verify field values on parsed poll events."""
 
     def test_successful_poll_channels(self) -> None:
-        lines = (FIXTURES_DIR / "poll_success.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "poll_success.txt").read_text().splitlines()
         result = parse_core_logs(lines)
         poll = result.polls[0]
 
@@ -96,7 +96,7 @@ class TestPollFields:
         assert poll.duration_s == 0.0
 
     def test_failed_poll_defaults(self) -> None:
-        lines = (FIXTURES_DIR / "poll_failure.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "poll_failure.txt").read_text().splitlines()
         result = parse_core_logs(lines)
         poll = result.polls[0]
 
@@ -109,7 +109,7 @@ class TestHealthFields:
     """Verify field values on parsed health events."""
 
     def test_responsive_latencies(self) -> None:
-        lines = (FIXTURES_DIR / "health_responsive.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "health_responsive.txt").read_text().splitlines()
         result = parse_core_logs(lines)
         h = result.health_checks[0]
 
@@ -118,7 +118,7 @@ class TestHealthFields:
         assert h.http_ms == pytest.approx(45.6)
 
     def test_unresponsive_zero_latencies(self) -> None:
-        lines = (FIXTURES_DIR / "health_mixed.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "health_mixed.txt").read_text().splitlines()
         result = parse_core_logs(lines)
         unresp = [h for h in result.health_checks if h.status == "unresponsive"]
 
@@ -127,7 +127,7 @@ class TestHealthFields:
         assert unresp[0].http_ms == 0.0
 
     def test_degraded_status(self) -> None:
-        lines = (FIXTURES_DIR / "health_mixed.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "health_mixed.txt").read_text().splitlines()
         result = parse_core_logs(lines)
         degraded = [h for h in result.health_checks if h.status == "degraded"]
 
@@ -138,7 +138,7 @@ class TestConnectivityFields:
     """Verify backoff, recovery, and transition field values."""
 
     def test_backoff_streak(self) -> None:
-        lines = (FIXTURES_DIR / "connectivity.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "connectivity.txt").read_text().splitlines()
         result = parse_core_logs(lines)
 
         assert result.backoffs[0].streak == 1
@@ -147,14 +147,14 @@ class TestConnectivityFields:
         assert result.backoffs[1].backoff == 2
 
     def test_recovery_transition(self) -> None:
-        lines = (FIXTURES_DIR / "connectivity.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "connectivity.txt").read_text().splitlines()
         result = parse_core_logs(lines)
 
         assert result.recoveries[0].transition == "backoff_cleared"
         assert result.recoveries[0].model == "T100"
 
     def test_status_transition_text(self) -> None:
-        lines = (FIXTURES_DIR / "connectivity.log").read_text().splitlines()
+        lines = (FIXTURES_DIR / "connectivity.txt").read_text().splitlines()
         result = parse_core_logs(lines)
 
         ts, desc = result.transitions[0]

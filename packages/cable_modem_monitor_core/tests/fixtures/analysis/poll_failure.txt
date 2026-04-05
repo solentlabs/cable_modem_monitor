@@ -1,0 +1,2 @@
+2025-04-01 10:00:01.100 DEBUG solentlabs.cable_modem_monitor_core.orchestration — Poll [T100] — auth: basic, endpoint: /status, session: new
+2025-04-01 10:00:02.200 ERROR solentlabs.cable_modem_monitor_core.auth — Connection failed during auth [T100]: ConnectTimeout: host unreachable

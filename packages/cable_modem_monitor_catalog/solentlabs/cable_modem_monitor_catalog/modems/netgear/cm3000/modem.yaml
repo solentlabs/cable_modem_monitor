@@ -16,7 +16,7 @@ auth:
 hardware:
   docsis_version: "3.1"
 
-status: in_progress
+status: awaiting_verification
 
 sources:
   auth_config: "[#127 Netgear CM3000](https://github.com/solentlabs/cable_modem_monitor/issues/127)"
@@ -26,7 +26,11 @@ attribution:
     - github: https://github.com/thatosxguy
       contribution: "HAR capture (Issue #127)"
 
-isps: []
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
 
 notes: |
   Nighthawk Multi-Gig DOCSIS 3.1 cable modem with 2.5Gbps Ethernet.

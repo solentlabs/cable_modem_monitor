@@ -1,0 +1,4 @@
+2025-04-01 10:00:01.123 DEBUG solentlabs.cable_modem_monitor_core.orchestration — Poll [T100] — auth: basic, endpoint: /status, session: new
+2025-04-01 10:00:02.456 INFO solentlabs.cable_modem_monitor_core.parsers — Parse complete [T100]: 32 DS, 8 US
+2025-04-01 10:05:01.789 DEBUG solentlabs.cable_modem_monitor_core.orchestration — Poll [T100] — auth: basic, endpoint: /status, session: reuse
+2025-04-01 10:05:03.012 INFO solentlabs.cable_modem_monitor_core.parsers — Parse complete [T100]: 32 DS, 8 US
