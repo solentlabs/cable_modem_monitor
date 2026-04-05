@@ -1386,7 +1386,7 @@ activity.
 **Logging:** When the HTTP probe is skipped, the log detail shows
 `HTTP skipped (collection active)` instead of the usual latency:
 
-```
+```text
 Health check [MODEL]: responsive (ICMP 1.5ms, HTTP skipped (collection active))
 ```
 

@@ -34,6 +34,7 @@ pre-commit run --all-files
 Primary linter - fast, comprehensive. Config in `pyproject.toml`.
 
 **Enabled rules:**
+
 - **E/W** - PEP 8 style
 - **F** - Pyflakes (unused imports, undefined names)
 - **C90** - Complexity (max 10)
@@ -45,6 +46,7 @@ Primary linter - fast, comprehensive. Config in `pyproject.toml`.
 - **N** - Naming conventions
 
 **Ignored rules:**
+
 - `B008` - Function calls in defaults (common in HA)
 - `B904` - Bare `raise` for re-raising
 - `SIM108` - Forced ternary
@@ -153,6 +155,7 @@ pre-commit run --all-files
 ## VS Code Integration
 
 Settings in `.vscode/settings.json`:
+
 - Ruff enabled, auto-fix on save
 - Black format on save
 - mypy type checking

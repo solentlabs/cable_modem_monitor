@@ -62,6 +62,7 @@ to connect to this address instead of a real modem.
 ## Test Credentials
 
 All auth-enabled servers accept:
+
 - **Username**: `admin`
 - **Password**: `pw`
 

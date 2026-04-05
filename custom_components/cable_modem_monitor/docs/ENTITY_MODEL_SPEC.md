@@ -193,6 +193,7 @@ for the derivation rules that produce the three input values.
 ## Channel Identity
 
 Channels are keyed by `(channel_type, channel_id)`:
+
 - **Downstream types:** `qam`, `ofdm`
 - **Upstream types:** `atdma`, `ofdma`
 
@@ -364,6 +365,7 @@ HA_ADAPTER_SPEC § Deferred Entity Creation.
 ### Sensor Availability Logic
 
 `ModemSensorBase.available` returns `True` when:
+
 - `coordinator.last_update_success` is `True`, AND
 - modem status is in a reportable state (see `connection_status`
   values in the Status Sensor table above)
@@ -380,7 +382,7 @@ whether the health check ran (`ping_success is not None`,
 
 All unique_ids are prefixed with `{entry_id}_cable_modem_`:
 
-```
+```text
 {entry_id}_cable_modem_{suffix}
 ```
 
@@ -388,19 +390,22 @@ All unique_ids are prefixed with `{entry_id}_cable_modem_`:
 `_software_version`, `_total_corrected`).
 
 **Channel sensors:**
-```
+
+```text
 {entry_id}_cable_modem_{ds|us}_{channel_type}_ch_{channel_id}_{field}
 ```
 
 Example: `abc123_cable_modem_ds_ofdm_ch_159_power`
 
 **LAN sensors:**
-```
+
+```text
 {entry_id}_cable_modem_lan_{interface}_{metric}
 ```
 
 **Buttons:**
-```
+
+```text
 {entry_id}_{button_name}
 ```
 

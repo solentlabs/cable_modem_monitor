@@ -5,6 +5,7 @@ the user from "I want to monitor my modem" to a working integration entry
 with authenticated polling.
 
 **Design principles:**
+
 - Progressive disclosure — each step narrows the next
 - Dropdown-first — manufacturer then model, no search index needed at ~25 modems
 - Validate once — a single connectivity + auth + parse check at the end
@@ -13,7 +14,7 @@ with authenticated polling.
 
 ## Steps
 
-```
+```text
 ┌─────────────────────────────────────────────────┐
 │ Step 1a: Select manufacturer                    │
 │   [Technicolor           ▼]                     │
@@ -99,7 +100,7 @@ modems).
 **Display format:** `{manufacturer} {model}` with DOCSIS version and
 verification status. Aliases shown in parentheses.
 
-```
+```text
 Arris SB8200                    DOCSIS 3.1
 Arris SB8200 (Surfboard)        DOCSIS 3.1
 Technicolor CGM4981COM (XB7)    DOCSIS 3.1
@@ -130,12 +131,13 @@ auth type, ISPs, and variant description for display.
 **Display format:** User-friendly description of each variant, not
 internal auth strategy names.
 
-```
+```text
 No Authentication (Spectrum LA firmware)
 URL Token (Comcast, Cox firmware)
 ```
 
 The variant description comes from fields in `modem-{variant}.yaml`:
+
 - `auth.strategy` → mapped to user-facing label
 - `isps` → shown as context ("used by Comcast, Cox")
 - `notes` → optional description shown as help text
@@ -201,7 +203,7 @@ Runs in an executor thread to avoid blocking the HA event loop.
 
 **Implementation — Core API call sequence:**
 
-```
+```text
 config_flow_helpers.validate_connection(hass, host, user, pass, modem_dir, variant)
  │
  ├─ parse_host_input(host)                    [lib/host_validation]
@@ -309,6 +311,7 @@ restart without reconfiguration.
 
 **Variant resolution at startup:** The loader resolves the
 `manufacturer/model/variant` tuple to a config file:
+
 - `variant: "url-token"` → loads `modem-url-token.yaml`
 - `variant: null` → loads `modem.yaml`
 
@@ -328,12 +331,14 @@ Users can reconfigure via Settings → Integrations → Cable Modem Monitor →
 Configure.
 
 **What can change:**
+
 - Host, username, password (without re-selecting modem)
 - Data poll interval (30s–86400s, or disabled for manual-only)
 - Health check interval (10s–86400s, or disabled)
 - Full reconfiguration (restart from Step 1)
 
 **What cannot change without reconfiguration:**
+
 - Manufacturer, model, variant — these determine the parser and auth
   config. Changing them means starting over.
 

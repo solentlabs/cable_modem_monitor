@@ -3,7 +3,9 @@
 ## Running Tests Locally
 
 ### Pre-commit Hooks
+
 All tests run automatically via pre-commit hooks before each commit:
+
 ```bash
 # Install pre-commit hooks (one-time setup)
 pip install pre-commit
@@ -14,6 +16,7 @@ pre-commit run --all-files
 ```
 
 ### Code Quality Checks
+
 ```bash
 # Run Black (code formatting)
 .venv/bin/black .
@@ -55,6 +58,7 @@ To catch CodeQL issues before pushing:
    - Add justification comment with keywords: "self-signed", "private LAN", "cable modem"
    - Add `# nosec` marker on the same line
    - Example:
+
      ```python
      # Security justification: Cable modems use self-signed certificates on private LAN
      response = requests.get(url, verify=False)  # nosec: cable modem self-signed cert
@@ -104,6 +108,7 @@ unzip codeql-linux64.zip && rm codeql-linux64.zip
 ## Pre-push Checklist
 
 Before pushing code:
+
 - [ ] All pre-commit hooks pass
 - [ ] Tests pass locally
 - [ ] New code has appropriate security justifications

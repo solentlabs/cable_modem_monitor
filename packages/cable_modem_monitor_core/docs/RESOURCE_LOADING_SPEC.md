@@ -9,6 +9,7 @@ The fetch list is derived from parser.yaml — the orchestrator collects
 `resource` paths (HTML/REST) or `response_key` values (HNAP) at startup.
 
 **Design principles:**
+
 - Loaders are transport-specific — they know *how* to fetch, not *what* to extract
 - The resource dict is the contract between loader and parser
 - Loaders signal errors (status codes, timeouts); the orchestrator decides retry policy
@@ -397,7 +398,7 @@ review before the modem can ship.
 
 ## Interaction with Other Components
 
-```
+```text
 Auth Manager ──► Resource Loader ──► Parser
    │                  │                 │
    │ provides:        │ provides:       │ receives:
@@ -453,7 +454,7 @@ units as needed.
 
 Each fetch is logged at DEBUG with its elapsed time:
 
-```
+```text
 DEBUG "Resource loaded: /status.html (800ms, 12.2KB)"
 DEBUG "Resource loaded: /info.html (1200ms, 8.0KB)"
 ```

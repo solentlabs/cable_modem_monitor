@@ -90,7 +90,7 @@ Common causes:
 
 **What You'll See in Logs:**
 
-```
+```text
 WARNING: Health check [MB7621]: degraded (ICMP 2ms, HTTP HEAD timeout)
 ```
 
@@ -160,7 +160,7 @@ WARNING: Health check [MB7621]: degraded (ICMP 2ms, HTTP HEAD timeout)
 
 Combo modem/router devices (like Netgear C3700, C7000, Arris TG series) have **two network interfaces** in one box:
 
-```
+```text
 [Cable ISP] <-> [Cable Modem Chip] <-> [Router Chip] <-> [Your Devices]
                 192.168.100.1          192.168.0.1
 ```
@@ -250,7 +250,7 @@ All log lines include a `[MODEL]` tag for multi-modem disambiguation.
 
 At default log levels, a healthy modem produces one INFO line per poll:
 
-```
+```text
 Parse complete [MB7621]: 24 DS, 4 US channels
 ```
 
@@ -258,7 +258,7 @@ This is the integration's heartbeat. Auth, resource loading, and session details
 
 **Failures are always visible:**
 
-```
+```text
 WARNING: Poll failed [MB7621] — signal: connectivity, error: Connection timed out
 WARNING: Health check [MB7621]: degraded (ICMP 2ms, HTTP HEAD timeout)
 ERROR: Circuit breaker OPEN [MB7621] — polling stopped. Reconfigure credentials to resume.

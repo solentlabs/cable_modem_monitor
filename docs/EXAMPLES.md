@@ -3,6 +3,7 @@
 Ready-to-use examples for monitoring your cable modem in Home Assistant.
 
 ## Table of Contents
+
 - [Dashboard Generator Service](#dashboard-generator-service)
 - [Manual Dashboard Example](#manual-dashboard-example)
 - [Last Boot Time Display Options](#last-boot-time-display-options)
@@ -250,34 +251,43 @@ cards:
 The `sensor.cable_modem_last_boot_time` is a timestamp sensor. You can customize how it displays:
 
 **Relative time (recommended)** - Compact and informative:
+
 ```yaml
 - entity: sensor.cable_modem_last_boot_time
   format: relative
 ```
+
 *Shows: "29 days ago"*
 
 **Date only** - Just the date:
+
 ```yaml
 - entity: sensor.cable_modem_last_boot_time
   format: date
 ```
+
 *Shows: "2025-09-25"*
 
 **Time only** - Just the time:
+
 ```yaml
 - entity: sensor.cable_modem_last_boot_time
   format: time
 ```
+
 *Shows: "00:38:00"*
 
 **Full datetime (fits in UI)** - Date and time:
+
 ```yaml
 - entity: sensor.cable_modem_last_boot_time
   format: datetime
 ```
+
 *Shows: "2025-09-25 00:38:00"*
 
 **Custom template** - For more control (may be too long for some UIs):
+
 ```yaml
 type: markdown
 content: >
@@ -286,6 +296,7 @@ content: >
     | timestamp_custom('%Y-%m-%d %H:%M')
   }}
 ```
+
 *Shows: "Last Reboot: 2025-09-25 00:38"*
 
 ---

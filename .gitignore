@@ -22,6 +22,9 @@ __pycache__/
 .claude/
 .aider*
 
+# Node (npx markdownlint-cli2)
+node_modules/
+
 # -----------------------------
 # Logs and temporary files
 *.log

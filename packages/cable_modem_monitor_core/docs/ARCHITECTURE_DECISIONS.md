@@ -368,6 +368,7 @@ test harness.
 ### How to add a modem
 
 Add a directory under `modems/{manufacturer}/{model}/` with:
+
 - `modem.yaml` — identity, auth, session, hardware, metadata
 - `parser.yaml` — declarative extraction config
 - `parser.py` — optional post-processor (only if needed)

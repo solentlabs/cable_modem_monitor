@@ -45,7 +45,7 @@ def validate_non_empty(value: str, name: str) -> None:
 - **Clear module boundaries** - Don't mix I/O, parsing, and business logic
 - **Layered architecture** - UI → Service → Data layers don't skip levels
 
-```
+```text
 # Project layers (don't skip levels)
 ┌─────────────────────────────────────┐
 │  Home Assistant Integration Layer   │  ← config_flow.py, sensor.py
@@ -65,6 +65,7 @@ def validate_non_empty(value: str, name: str) -> None:
 - **D - Dependency Inversion** - Depend on abstractions, not concretions
 
 Most relevant to this project:
+
 - **SRP**: Parsers only parse, auth strategies only authenticate
 - **OCP**: New modems added via new parser files, not modifying existing code
 - **DIP**: Core code depends on `ModemParser` ABC, not concrete parsers
@@ -138,7 +139,7 @@ See CLAUDE.md "Async/Blocking I/O" section. Use `hass.async_add_executor_job()`.
 
 Every source file should have a corresponding test file:
 
-```
+```text
 # Core package
 packages/cable_modem_monitor_core/.../auth/form.py
     → packages/cable_modem_monitor_core/tests/auth/test_form.py
@@ -301,6 +302,7 @@ raise AuthenticationError(f"Failed to authenticate with {host}") from error
 ## Quick Checklist
 
 ### Source File Review
+
 - [ ] Module docstring present
 - [ ] Public functions/classes have docstrings
 - [ ] Type hints on all signatures
@@ -310,6 +312,7 @@ raise AuthenticationError(f"Failed to authenticate with {host}") from error
 - [ ] Test file exists
 
 ### Test File Review
+
 - [ ] Module docstring with TEST DATA TABLES section
 - [ ] Tables at TOP with ASCII box-drawing
 - [ ] `# fmt: off/on` guards around tables
