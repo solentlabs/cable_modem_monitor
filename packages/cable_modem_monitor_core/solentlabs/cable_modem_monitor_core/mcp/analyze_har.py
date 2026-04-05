@@ -23,7 +23,7 @@ from .analysis.auth import AuthDetail, detect_auth
 from .analysis.format import detect_sections
 from .analysis.session import SessionDetail, detect_session
 from .analysis.transport import TransportResult, detect_transport
-from .analysis.types import CoreGap
+from .analysis.types import CoreGap, FleetPatterns
 
 
 @dataclass
@@ -56,7 +56,10 @@ class AnalysisResult:
         return result
 
 
-def analyze_har(har_path: str | Path) -> AnalysisResult:
+def analyze_har(
+    har_path: str | Path,
+    fleet: FleetPatterns | None = None,
+) -> AnalysisResult:
     """Run HAR analysis Phases 1-6.
 
     Loads the HAR file, then runs transport detection, auth strategy
@@ -65,6 +68,10 @@ def analyze_har(har_path: str | Path) -> AnalysisResult:
 
     Args:
         har_path: Path to a validated ``.har`` file.
+        fleet: Optional fleet patterns from the Catalog scanner.
+            When provided, fleet-derived patterns augment Core's
+            baseline detection for table direction and system_info
+            label resolution.
 
     Returns:
         AnalysisResult with detected transport, auth, session, actions,
@@ -94,7 +101,7 @@ def analyze_har(har_path: str | Path) -> AnalysisResult:
     actions_result = detect_actions(entries, transport_result.transport, warnings, core_gaps)
 
     # Phase 5-6: Format detection and field mapping
-    sections = detect_sections(entries, transport_result.transport, warnings, hard_stops)
+    sections = detect_sections(entries, transport_result.transport, warnings, hard_stops, fleet=fleet)
 
     return AnalysisResult(
         transport=transport_result,

@@ -19,6 +19,7 @@ from solentlabs.cable_modem_monitor_core.mcp.analysis.mapping.system_info import
     _match_label,
     detect_system_info,
 )
+from solentlabs.cable_modem_monitor_core.mcp.analysis.types import FleetPatterns
 
 from tests.conftest import collect_fixtures, load_fixture
 
@@ -366,3 +367,104 @@ class TestIdBasedLabelMatching:
         """Unrecognized id returns empty."""
         field, _tier = _match_label("unknownId", "id")
         assert field == ""
+
+
+# =====================================================================
+# Fleet-augmented system info detection
+# =====================================================================
+
+
+class TestFleetAugmentedDetection:
+    """Verify fleet patterns augment system_info detection."""
+
+    def test_fleet_label_adds_new_field(self) -> None:
+        """Fleet label mapping detects a field Core's baseline misses."""
+        # "board temperature" is not in Core's _LABEL_FIELD_MAP
+        page = PageAnalysis(
+            resource="/status.html",
+            content_type="text/html",
+            tables=[],
+            js_functions=[],
+            label_pairs=[
+                DetectedLabelPair(
+                    label="Board Temperature",
+                    value="42C",
+                    selector_type="label",
+                    selector_value="Board Temperature",
+                    element_id="",
+                ),
+            ],
+            json_data=None,
+        )
+        # Without fleet — not detected
+        result_base = detect_system_info([page], [])
+        base_fields = set()
+        if result_base:
+            for src in result_base.sources:
+                for f in src.fields:
+                    base_fields.add(f.field)
+
+        # With fleet — detected
+        fleet = FleetPatterns(
+            system_info_labels={"board temperature": ("board_temperature", 1)},
+        )
+        result_fleet = detect_system_info([page], [], fleet=fleet)
+        assert result_fleet is not None
+        fleet_fields = set()
+        for src in result_fleet.sources:
+            for f in src.fields:
+                fleet_fields.add(f.field)
+        assert "board_temperature" in fleet_fields
+        assert "board_temperature" not in base_fields
+
+    def test_fleet_does_not_override_baseline(self) -> None:
+        """Fleet labels don't override Core's baseline mappings."""
+        page = PageAnalysis(
+            resource="/status.html",
+            content_type="text/html",
+            tables=[],
+            js_functions=[],
+            label_pairs=[
+                DetectedLabelPair(
+                    label="System Up Time",
+                    value="5 days",
+                    selector_type="label",
+                    selector_value="System Up Time",
+                    element_id="",
+                ),
+            ],
+            json_data=None,
+        )
+        # Fleet tries to remap "system up time" to a different field
+        fleet = FleetPatterns(
+            system_info_labels={"system up time": ("wrong_field", 1)},
+        )
+        result = detect_system_info([page], [], fleet=fleet)
+        assert result is not None
+        fields = {f.field for src in result.sources for f in src.fields}
+        # Baseline wins — "system_uptime", not "wrong_field"
+        assert "system_uptime" in fields
+        assert "wrong_field" not in fields
+
+    def test_fleet_none_behaves_like_baseline(self) -> None:
+        """fleet=None produces same result as no fleet."""
+        page = PageAnalysis(
+            resource="/status.html",
+            content_type="text/html",
+            tables=[],
+            js_functions=[],
+            label_pairs=[
+                DetectedLabelPair(
+                    label="Uptime",
+                    value="3 days",
+                    selector_type="label",
+                    selector_value="Uptime",
+                    element_id="",
+                ),
+            ],
+            json_data=None,
+        )
+        result = detect_system_info([page], [], fleet=None)
+        assert result is not None
+        fields = {f.field for src in result.sources for f in src.fields}
+        assert "system_uptime" in fields

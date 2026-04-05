@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..analysis.types import FleetPatterns
 from .mappings import mapping_to_channel, mapping_to_column, mapping_to_json_channel, mapping_to_row
 from .system_info import transform_system_info
 
@@ -18,6 +19,8 @@ from .system_info import transform_system_info
 def build_parser_dict(
     sections: dict[str, Any],
     metadata: dict[str, Any] | None = None,
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> dict[str, Any] | None:
     """Transform analysis sections into parser.yaml dict.
 
@@ -28,6 +31,8 @@ def build_parser_dict(
             sums over channel data, e.g. ``{"total_corrected":
             {"sum": "corrected", "channels": "downstream.qam"}}``) are
             included in the parser.yaml output.
+        fleet: Optional fleet patterns. When provided,
+            ``aggregate_fields`` augments auto-generation.
     """
     result: dict[str, Any] = {}
 
@@ -46,7 +51,7 @@ def build_parser_dict(
     if metadata and metadata.get("aggregate"):
         result["aggregate"] = metadata["aggregate"]
     else:
-        aggregate = _build_aggregate(sections)
+        aggregate = _build_aggregate(sections, fleet=fleet)
         if aggregate:
             result["aggregate"] = aggregate
 
@@ -224,11 +229,16 @@ _AGGREGATE_FIELDS: list[tuple[str, str]] = [
 ]
 
 
-def _build_aggregate(sections: dict[str, Any]) -> dict[str, Any] | None:
+def _build_aggregate(
+    sections: dict[str, Any],
+    *,
+    fleet: FleetPatterns | None = None,
+) -> dict[str, Any] | None:
     """Auto-generate aggregate section from downstream field mappings.
 
-    Scans downstream mappings for corrected/uncorrected fields and
-    generates sum declarations scoped to "downstream".
+    Scans downstream mappings for eligible fields and generates sum
+    declarations scoped to "downstream". When ``fleet`` is provided,
+    fleet-derived aggregate patterns augment the baseline.
 
     Returns None if no eligible fields found.
     """
@@ -238,8 +248,16 @@ def _build_aggregate(sections: dict[str, Any]) -> dict[str, Any] | None:
 
     ds_fields = {m.get("field") for m in ds.get("mappings", [])}
 
+    # Merge fleet aggregate patterns with baseline
+    patterns = list(_AGGREGATE_FIELDS)
+    if fleet and fleet.aggregate_fields:
+        seen = {(s, a) for s, a in patterns}
+        for pair in fleet.aggregate_fields:
+            if pair not in seen:
+                patterns.append(pair)
+
     aggregate: dict[str, Any] = {}
-    for source_field, agg_name in _AGGREGATE_FIELDS:
+    for source_field, agg_name in patterns:
         if source_field in ds_fields:
             aggregate[agg_name] = {"sum": source_field, "channels": "downstream"}
 

@@ -30,6 +30,12 @@ _LABEL_VALUE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Inline "Label: Value<BR>" pattern — some modems embed system info
+# as BR-delimited text inside a single <TD> cell (e.g., SB6141 cmHelpData.htm).
+_BR_LABEL_VALUE_PATTERN = re.compile(
+    r"([A-Z][A-Za-z ]+?)\s*:\s*([^\n<]+?)\s*<[Bb][Rr]\s*/?>",
+)
+
 _ID_VALUE_PATTERN = re.compile(
     r'<[^>]+id\s*=\s*["\']([^"\']+)["\'][^>]*>([^<]*)</[^>]+>',
     re.IGNORECASE,
@@ -65,9 +71,10 @@ def _is_data_table(table: Tag) -> bool:
     1. At least 2 direct rows — title/decoration tables typically have
        a single row. Channel data tables always have a header row plus
        one or more data rows.
-    2. No direct cells containing nested tables — if any of the table's
-       own cells are wrappers, the table is a layout container, not a
-       data table.
+    2. Not primarily a layout wrapper — if many cells contain nested
+       tables, the table is a layout container. A single cosmetic
+       nested table (e.g., an explanatory note inside a Power Level
+       cell) does not disqualify the table.
 
     Consistent with ``parsers.table_selector`` wrapper-cell filtering.
     """
@@ -76,13 +83,22 @@ def _is_data_table(table: Tag) -> bool:
     if len(direct_rows) < 2:
         return False
 
-    # If any direct cell contains a nested table, this is a layout wrapper
+    # Count cells with nested tables vs total cells.  A layout wrapper
+    # has most cells containing sub-tables.  A data table may have one
+    # cosmetic nested table (e.g., explanatory text in a <small> helper).
+    total_cells = 0
+    nested_cells = 0
     for row in direct_rows:
         for cell in row.find_all(["td", "th"], recursive=False):
+            total_cells += 1
             if cell.find("table") is not None:
-                return False
+                nested_cells += 1
 
-    return True
+    if total_cells == 0:
+        return False
+
+    # Reject if more than 25% of cells contain nested tables
+    return not (nested_cells > 0 and nested_cells / total_cells > 0.25)
 
 
 def _extract_rows(table: Tag) -> list[list[str]]:
@@ -311,6 +327,22 @@ def detect_label_pairs(body: str) -> list[DetectedLabelPair]:
                     selector_type="id",
                     selector_value=elem_id,
                     element_id=elem_id,
+                )
+            )
+
+    # Strategy 3: Inline "Label: Value<BR>" inside a single cell
+    for match in _BR_LABEL_VALUE_PATTERN.finditer(body):
+        label = match.group(1).strip()
+        value = match.group(2).strip()
+        if label and value and label.lower() not in seen_labels:
+            seen_labels.add(label.lower())
+            pairs.append(
+                DetectedLabelPair(
+                    label=label,
+                    value=value,
+                    selector_type="css_pattern",
+                    selector_value=label,
+                    element_id="",
                 )
             )
 

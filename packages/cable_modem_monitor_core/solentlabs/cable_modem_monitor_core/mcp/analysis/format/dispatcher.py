@@ -14,6 +14,7 @@ from typing import Any
 from ...validation.har_utils import WARNING_PREFIX
 from ..mapping import extract_section_mappings
 from ..mapping.system_info import detect_system_info
+from ..types import FleetPatterns
 from .hnap import detect_hnap_sections
 from .http import (
     analyze_page,
@@ -34,6 +35,8 @@ def detect_sections(
     transport: str,
     warnings: list[str],
     hard_stops: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> dict[str, Any]:
     """Run Phases 5-6: format detection, field mapping, section assembly.
 
@@ -42,21 +45,24 @@ def detect_sections(
         transport: Detected transport ("http" or "hnap").
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
+        fleet: Optional fleet patterns for augmented detection.
 
     Returns:
         Sections dict with downstream, upstream, and system_info keys.
         Each section uses format-agnostic ``mappings``.
     """
     if transport == "hnap":
-        return detect_hnap_sections(entries, warnings, hard_stops)
+        return detect_hnap_sections(entries, warnings, hard_stops, fleet=fleet)
 
-    return _detect_http_sections(entries, warnings, hard_stops)
+    return _detect_http_sections(entries, warnings, hard_stops, fleet=fleet)
 
 
 def _detect_http_sections(
     entries: list[dict[str, Any]],
     warnings: list[str],
     hard_stops: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> dict[str, Any]:
     """Detect HTTP format sections from data pages.
 
@@ -76,10 +82,10 @@ def _detect_http_sections(
 
     # Phase 5-6: Assemble channel sections from table/JS/JSON pages
     sections: dict[str, Any] = {}
-    _assemble_channel_sections(page_analyses, sections, warnings)
+    _assemble_channel_sections(page_analyses, sections, warnings, fleet=fleet)
 
     # Phase 6: Detect system_info sources
-    system_info = detect_system_info(page_analyses, warnings)
+    system_info = detect_system_info(page_analyses, warnings, fleet=fleet)
     if system_info:
         sections["system_info"] = system_info.to_dict()
 
@@ -90,6 +96,8 @@ def _assemble_channel_sections(
     pages: list[PageAnalysis],
     sections: dict[str, Any],
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> None:
     """Assemble downstream and upstream sections from page analyses."""
     for page in pages:
@@ -100,7 +108,7 @@ def _assemble_channel_sections(
         elif fmt == "javascript":
             _assemble_js_sections(page, sections, warnings)
         elif fmt in ("table", "table_transposed"):
-            _assemble_table_sections(page, fmt, sections, warnings)
+            _assemble_table_sections(page, fmt, sections, warnings, fleet=fleet)
 
 
 def _assemble_table_sections(
@@ -108,6 +116,8 @@ def _assemble_table_sections(
     fmt: str,
     sections: dict[str, Any],
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> None:
     """Assemble channel sections from HTML table pages."""
     for table in page.tables:
@@ -116,7 +126,7 @@ def _assemble_table_sections(
         if not is_channel_table(table):
             continue
 
-        direction = detect_table_direction(table)
+        direction = detect_table_direction(table, fleet=fleet)
         if direction == "unknown":
             warnings.append(
                 f"{WARNING_PREFIX} Cannot determine direction for table "

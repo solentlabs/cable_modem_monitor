@@ -11,6 +11,7 @@ Per docs/ONBOARDING_SPEC.md Phase 5.
 from __future__ import annotations
 
 from ..mapping.registry_loader import get_channel_field_labels
+from ..types import FleetPatterns
 from .types import DetectedTable
 
 # -----------------------------------------------------------------------
@@ -87,49 +88,109 @@ def is_transposed(table: DetectedTable) -> bool:
 # -----------------------------------------------------------------------
 
 
-def detect_table_direction(table: DetectedTable) -> str:
+def detect_table_direction(
+    table: DetectedTable,
+    *,
+    fleet: FleetPatterns | None = None,
+) -> str:
     """Detect whether a table is downstream or upstream.
 
-    Four-strategy cascade:
-    1. Title row (th colspan) containing keyword
-    2. Preceding heading/text containing keyword
-    3. First cell in first row containing keyword
-    4. DOCSIS abbreviation prefixes in header text (``_ds_`` / ``_us_``)
+    Strategy cascade:
+    1. Text-based keyword matching (title, heading, headers, id)
+    2. DOCSIS abbreviation prefixes in header text (``_ds_`` / ``_us_``)
+    3. Codewords/error-stats tables (implicitly downstream)
+    4. Fleet pattern matching (selector text seen in existing fleet)
 
     Returns "downstream", "upstream", or "unknown".
     """
-    # Strategy 1: title row
-    if table.title_row_text:
-        direction = _keyword_match(table.title_row_text)
+    direction = _direction_from_text(table)
+    if direction:
+        return direction
+
+    direction = _keyword_match_header_prefix(table.headers)
+    if direction:
+        return direction
+
+    if _is_codewords_table(table):
+        return "downstream"
+
+    if fleet and fleet.selector_directions:
+        direction = _direction_from_fleet(table, fleet.selector_directions)
         if direction:
             return direction
 
-    # Strategy 2: preceding heading
-    if table.preceding_text:
-        direction = _keyword_match(table.preceding_text)
-        if direction:
-            return direction
+    return "unknown"
 
-    # Secondary: table id attribute
+
+def _direction_from_fleet(
+    table: DetectedTable,
+    selector_directions: dict[str, str],
+) -> str:
+    """Match direction from fleet-derived selector patterns.
+
+    Checks title row text and preceding text against proven
+    selector→direction mappings from the existing modem fleet.
+    """
+    for text in (table.title_row_text, table.preceding_text):
+        if text:
+            normalized = text.strip().lower()
+            if normalized in selector_directions:
+                return selector_directions[normalized]
+    return ""
+
+
+def _direction_from_text(table: DetectedTable) -> str:
+    """Match downstream/upstream from table text fields.
+
+    Tries title row, preceding heading, table id, and first header
+    in that order.
+    """
+    for text in (table.title_row_text, table.preceding_text):
+        if text:
+            direction = _keyword_match(text)
+            if direction:
+                return direction
+
     if table.table_id:
         direction = _keyword_match_id(table.table_id)
         if direction:
             return direction
 
-    # Strategy 3: first cell of first row
     if table.headers:
-        direction = _keyword_match(table.headers[0])
-        if direction:
-            return direction
+        return _keyword_match(table.headers[0])
 
-    # Strategy 4: DOCSIS abbreviation prefixes in any header
-    # Handles i18n keys like ``ds_link_ds_ch_id`` and ``ds_link_us_ch_id``
-    # where ``_ds_`` / ``_us_`` encode downstream/upstream.
-    direction = _keyword_match_header_prefix(table.headers)
-    if direction:
-        return direction
+    return ""
 
-    return "unknown"
+
+_CODEWORD_KEYWORDS: frozenset[str] = frozenset({"codeword", "codewords", "errored", "unerrored"})
+
+
+def _is_codewords_table(table: DetectedTable) -> bool:
+    """Check if a table is a codewords/error-stats table.
+
+    Looks for codeword-related keywords in the title row, headers,
+    and first-column labels (transposed tables).
+    """
+    # Check title row
+    if table.title_row_text:
+        lower = table.title_row_text.lower()
+        if any(kw in lower for kw in _CODEWORD_KEYWORDS):
+            return True
+
+    # Check headers
+    for header in table.headers:
+        lower = header.lower()
+        if any(kw in lower for kw in _CODEWORD_KEYWORDS):
+            return True
+
+    # Check first column (transposed tables use row labels)
+    for row in table.rows:
+        if row:
+            lower = row[0].lower()
+            if any(kw in lower for kw in _CODEWORD_KEYWORDS):
+                return True
+
+    return False
 
 
 def _keyword_match(text: str) -> str:
