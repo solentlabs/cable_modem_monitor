@@ -59,8 +59,7 @@ repos:
         exclude: ^\.github/workflows/
       - id: check-json
         exclude: (devcontainer\.json|\.vscode/(settings|extensions)\.json)$
-      - id: check-added-large-files
-        args: ["--maxkb=2500"]
+      - id: check-added-large-files # default: 500KB; HAR files are in LFS
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: mixed-line-ending

@@ -26,6 +26,7 @@ found" errors.
 ```bash
 git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
+git lfs install       # Required for HAR test fixtures
 ./scripts/setup.sh    # Installs dependencies in .venv
 code .                # Opens in VS Code - that's it!
 ```
@@ -35,6 +36,7 @@ code .                # Opens in VS Code - that's it!
 ```bash
 git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
+git lfs install       # Required for HAR test fixtures
 code .                # Opens in VS Code
 # Click "Reopen in Container" when prompted (wait 2-3 min first time)
 ```
@@ -120,6 +122,7 @@ GitHub Actions tests on:
 ### All Platforms
 
 - **Git** for cloning the repository
+- **[Git LFS](https://git-lfs.com/)** for large test fixtures (HAR captures)
 - **Make** (optional, but recommended for convenience commands)
 
 ### Local Python Path
@@ -160,6 +163,7 @@ memory tuning, VS Code Remote-WSL): see [WSL2 Reference](WSL2_SETUP.md).
    ```bash
    git clone https://github.com/solentlabs/cable_modem_monitor.git
    cd cable_modem_monitor
+   git lfs install
    ```
 
 2. **Run the setup script:**
@@ -196,6 +200,7 @@ memory tuning, VS Code Remote-WSL): see [WSL2 Reference](WSL2_SETUP.md).
    ```bash
    git clone https://github.com/solentlabs/cable_modem_monitor.git
    cd cable_modem_monitor
+   git lfs install
    ```
 
 2. **Open in VS Code:**
@@ -479,6 +484,17 @@ pre-commit install --install-hooks
 3. **Rebuild container:**
    `F1` -> "Dev Containers: Rebuild Container"
 
+### "HAR files are empty or tests fail with JSON decode errors"
+
+HAR test fixtures are stored with Git LFS. If they appear as small text
+files (~130 bytes starting with `version https://git-lfs.`), LFS hasn't
+fetched the actual content:
+
+```bash
+git lfs install   # Enable LFS (once per machine)
+git lfs pull      # Download all LFS files
+```
+
 ### "Which environment should I use?"
 
 - **Speed matters most?** -> Local Python
@@ -535,6 +551,7 @@ All development happens inside WSL2. See [WSL2 Reference](WSL2_SETUP.md).
 |------|---------|
 | **Setup** | |
 | Clone repo | `git clone https://github.com/solentlabs/cable_modem_monitor.git` |
+| Enable Git LFS | `git lfs install` (once per machine, after clone) |
 | Setup local Python | `./scripts/setup.sh` |
 | Open in VS Code | `code .` |
 | Reopen in container | `F1` -> "Dev Containers: Reopen in Container" |

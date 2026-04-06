@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \
+    git-lfs \
     make \
     wget \
     unzip \

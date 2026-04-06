@@ -31,6 +31,10 @@ Your HAR capture becomes the test fixture that lets us develop and verify the pa
 
 ## Development Environment
 
+This project uses **Git LFS** for large test fixtures (HAR captures).
+Install it before cloning — see the
+[Getting Started Guide](./docs/setup/GETTING_STARTED.md) for details.
+
 See the **[Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for
 complete environment setup. It covers Local Python, Dev Container, and
 WSL2 paths in a single document. Come back here once you can run
