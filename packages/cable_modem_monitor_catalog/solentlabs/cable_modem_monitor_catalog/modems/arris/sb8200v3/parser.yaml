@@ -120,11 +120,3 @@ system_info:
         - source: HwModel
           field: hardware_version
           type: string
-
-aggregate:
-  total_corrected:
-    channels: downstream.ofdm
-    sum: corrected
-  total_uncorrected:
-    channels: downstream.ofdm
-    sum: uncorrected

@@ -2122,6 +2122,17 @@ that doesn't → declare the aggregate to compute them.
 `downstream.qam` but the modem has only OFDM channels), the aggregate
 field is omitted from `system_info`. It is not set to zero.
 
+**DOCSIS version scoping:** DOCSIS 3.0 modems use `channels: downstream`
+(all channels are QAM). DOCSIS 3.1 modems use `channels: downstream.qam`
+so that `total_corrected`/`total_uncorrected` carry the same semantic
+meaning across the fleet — QAM FEC codeword totals. OFDM LDPC codewords
+are not aggregated: they operate at a vastly different scale (hundreds of
+millions vs single digits) and represent a fundamentally different error
+correction mechanism. OFDM error health is better expressed as error
+*rates* (see connection quality sensors, #110), not raw totals. Modems
+whose only error counters are OFDM (e.g., SB8200v3 XML API) omit the
+aggregate section entirely.
+
 **Execution:** The coordinator runs aggregate computation after all
 sections are extracted and parser.py hooks have run. Results are
 merged into `system_info` alongside channel counts, before the

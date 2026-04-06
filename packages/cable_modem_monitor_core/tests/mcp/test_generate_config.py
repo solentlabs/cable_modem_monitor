@@ -227,6 +227,18 @@ class TestAggregateGeneration:
         assert parser["aggregate"]["total_corrected"] == {"sum": "corrected", "channels": "downstream"}
         assert parser["aggregate"]["total_uncorrected"] == {"sum": "uncorrected", "channels": "downstream"}
 
+    def test_aggregate_docsis_31_scopes_to_ofdm(self) -> None:
+        """DOCSIS 3.1 scopes aggregates to downstream.qam, not downstream."""
+        fixture = load_fixture(VALID_DIR / "table_form_auth.json")
+        metadata = dict(fixture["_metadata"])
+        metadata["hardware"] = {"docsis_version": "3.1", "chipset": "Broadcom BCM3390"}
+        result = generate_config(fixture["_analysis"], metadata)
+        assert result.parser_yaml is not None
+        parser = yaml.safe_load(result.parser_yaml)
+        assert "aggregate" in parser
+        assert parser["aggregate"]["total_corrected"] == {"sum": "corrected", "channels": "downstream.qam"}
+        assert parser["aggregate"]["total_uncorrected"] == {"sum": "uncorrected", "channels": "downstream.qam"}
+
     def test_no_aggregate_without_corrected(self) -> None:
         """No aggregate when downstream lacks corrected/uncorrected fields."""
         fixture = load_fixture(VALID_DIR / "form_auth_with_defaults.json")

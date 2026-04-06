@@ -93,8 +93,8 @@ system_info:
       response_key: GetCustomerStatusSoftwareResponse
 aggregate:
   total_corrected:
-    channels: downstream
+    channels: downstream.qam
     sum: corrected
   total_uncorrected:
-    channels: downstream
+    channels: downstream.qam
     sum: uncorrected

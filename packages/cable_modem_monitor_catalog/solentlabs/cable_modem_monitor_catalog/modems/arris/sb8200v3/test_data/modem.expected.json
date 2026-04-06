@@ -63,8 +63,6 @@
     "downstream_channel_count": 6,
     "hardware_version": "SB8200v3",
     "software_version": "AC01.02.003_072823_8200.03.07.735.CT",
-    "total_corrected": 22221,
-    "total_uncorrected": 110,
     "upstream_channel_count": 5
   },
   "upstream": [

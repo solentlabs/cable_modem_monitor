@@ -172,13 +172,13 @@
     }
   ],
   "system_info": {
+    "docsis_status": "Allowed",
     "downstream_channel_count": 17,
     "hardware_version": "5.0",
-    "docsis_status": "Allowed",
     "software_version": "8600-19.3.15",
     "system_uptime": "12 days 08h:42m:15s",
-    "total_corrected": 524817979,
-    "total_uncorrected": 18420,
+    "total_corrected": 347,
+    "total_uncorrected": 0,
     "upstream_channel_count": 3
   },
   "upstream": [

@@ -332,13 +332,13 @@
     }
   ],
   "system_info": {
+    "docsis_status": "Allowed",
     "downstream_channel_count": 33,
     "hardware_version": "7.0",
-    "docsis_status": "Allowed",
     "software_version": "8611-19.2.18",
     "system_uptime": "47 days 21h:15m:38s",
-    "total_corrected": 936483401,
-    "total_uncorrected": 23115,
+    "total_corrected": 1006,
+    "total_uncorrected": 0,
     "upstream_channel_count": 4
   },
   "upstream": [

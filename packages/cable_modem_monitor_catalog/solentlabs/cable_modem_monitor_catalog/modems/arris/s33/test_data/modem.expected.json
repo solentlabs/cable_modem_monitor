@@ -93,11 +93,11 @@
   ],
   "system_info": {
     "downstream_channel_count": 9,
-    "software_version": "TB01.03.002.12_092020_198.S3",
     "model_name": "S33",
+    "software_version": "TB01.03.002.12_092020_198.S3",
     "system_uptime": "3 days 05h:22m:10s",
-    "total_corrected": 245940,
-    "total_uncorrected": 7,
+    "total_corrected": 49,
+    "total_uncorrected": 0,
     "upstream_channel_count": 4
   },
   "upstream": [

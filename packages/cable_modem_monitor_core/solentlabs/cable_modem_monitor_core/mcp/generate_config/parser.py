@@ -51,7 +51,8 @@ def build_parser_dict(
     if metadata and metadata.get("aggregate"):
         result["aggregate"] = metadata["aggregate"]
     else:
-        aggregate = _build_aggregate(sections, fleet=fleet)
+        docsis_version = _extract_docsis_version(metadata)
+        aggregate = _build_aggregate(sections, fleet=fleet, docsis_version=docsis_version)
         if aggregate:
             result["aggregate"] = aggregate
 
@@ -229,16 +230,32 @@ _AGGREGATE_FIELDS: list[tuple[str, str]] = [
 ]
 
 
+def _extract_docsis_version(metadata: dict[str, Any] | None) -> str:
+    """Extract DOCSIS version from metadata, defaulting to 3.0."""
+    if not metadata:
+        return "3.0"
+    hw = metadata.get("hardware")
+    if isinstance(hw, dict):
+        version = hw.get("docsis_version", "3.0")
+        return str(version)
+    return "3.0"
+
+
 def _build_aggregate(
     sections: dict[str, Any],
     *,
     fleet: FleetPatterns | None = None,
+    docsis_version: str = "3.0",
 ) -> dict[str, Any] | None:
     """Auto-generate aggregate section from downstream field mappings.
 
     Scans downstream mappings for eligible fields and generates sum
-    declarations scoped to "downstream". When ``fleet`` is provided,
-    fleet-derived aggregate patterns augment the baseline.
+    declarations. DOCSIS 3.1 modems scope to ``downstream.qam`` so
+    totals reflect QAM FEC codewords only — OFDM LDPC codewords are
+    a different metric at a different scale and are not aggregated.
+    DOCSIS 3.0 modems scope to ``downstream`` (all QAM, same
+    semantics). When ``fleet`` is provided, fleet-derived aggregate
+    patterns augment the baseline.
 
     Returns None if no eligible fields found.
     """
@@ -256,9 +273,13 @@ def _build_aggregate(
             if pair not in seen:
                 patterns.append(pair)
 
+    # DOCSIS 3.1 scopes to QAM only — OFDM LDPC codewords are a
+    # different metric at a vastly different scale and must not be mixed.
+    channels = "downstream.qam" if docsis_version == "3.1" else "downstream"
+
     aggregate: dict[str, Any] = {}
     for source_field, agg_name in patterns:
         if source_field in ds_fields:
-            aggregate[agg_name] = {"sum": source_field, "channels": "downstream"}
+            aggregate[agg_name] = {"sum": source_field, "channels": channels}
 
     return aggregate if aggregate else None

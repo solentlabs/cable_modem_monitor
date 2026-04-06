@@ -85,8 +85,8 @@ system_info:
       response_key: GetMotoStatusSoftwareResponse
 aggregate:
   total_corrected:
-    channels: downstream
+    channels: downstream.qam
     sum: corrected
   total_uncorrected:
-    channels: downstream
+    channels: downstream.qam
     sum: uncorrected
