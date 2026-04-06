@@ -120,7 +120,7 @@ def generate_timeline(modems: list[dict]) -> list[str]:
     d30 = [m for m in dated if str(m.get("docsis", "")).startswith("3.0")]
     d31 = [m for m in dated if str(m.get("docsis", "")).startswith("3.1")]
 
-    lines = ["```"]
+    lines = ["```text"]
 
     def render(m: dict, is_last: bool) -> str:
         release = m["release_year"]
@@ -264,6 +264,7 @@ def generate_index(output_path: Path | None = None) -> str:
         "Auto-generated index of the v3.14 modem catalog.",
         "",
         "**Data Sources:**",
+        "",
         "- `modem.yaml` — Single source of truth (manufacturer, model, hardware, ISPs, status)",
         "",
         f"**Supported Modems:** {len(supported)}{summary}",
@@ -274,7 +275,7 @@ def generate_index(output_path: Path | None = None) -> str:
         "",
         "Each modem has a self-contained directory in the catalog package:",
         "",
-        "```",
+        "```text",
         "packages/cable_modem_monitor_catalog/.../modems/",
         "└── {manufacturer}/",
         "    └── {model}/",

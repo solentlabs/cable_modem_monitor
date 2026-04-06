@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.11] - 2026-04-05
+
 ### Fixed
 
 - **Form auth false-positive on server errors** — `_check_success`
@@ -14,16 +16,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   explicit criteria were configured (13 modems). Now rejects all
   HTTP status >= 400. Also fixed three `requests.Response` truthiness
   checks that masked error status codes as 0 in logs.
+- **DOCSIS 3.1 aggregate scoping** — 6 DOCSIS 3.1 modems (S33, S33v2,
+  S33v3, S34, MB8600, MB8611) mixed QAM FEC and OFDM LDPC codewords
+  in `total_corrected`/`total_uncorrected`. Scoped to QAM-only
+  (`downstream.qam`) so totals carry the same semantic across the
+  fleet. Removed SB8200v3 aggregate (no QAM error counters).
+- **DOCSIS status field normalized** — 9 modems using inconsistent
+  field names (`network_access`, `cm_status`, `registration_status`)
+  normalized to canonical `docsis_status`.
+- **CM1100 HAR** — added missing redirect target exposed by auth fix.
+- **Health skip logging** — distinguished "collection active" from
+  "recent collection" in skip messages.
 
-### Improved
+### Added
 
 - **HACS zip release asset** — HACS now downloads a 124 KB zip of only
   the integration files instead of the full 3.4 MB source archive.
-  Added `zip_release: true` to `hacs.json` and zip packaging step to
-  the release workflow. Spec docs are excluded from the HACS package.
-- **Debug logging** — Added `loggers` field to `manifest.json` so HA
-  captures Core and Catalog log output when users enable debug logging
-  for the integration.
+  Added `loggers` field to `manifest.json` for debug logging.
+- **Fleet-augmented MCP intake** — Catalog extension point scans 35
+  parser.yaml files for 7 pattern categories (selectors, labels, IDs,
+  JSON keys, delimiters, channel types, aggregates) and feeds them
+  back into Core analysis and config generation.
+- **Arris SB6141** — upgraded from synthetic to real-hardware catalog
+  entry with system_info, codeword aggregates, and restart action.
+- **MCP generator DOCSIS-version-aware** — auto-generates
+  `downstream.qam` scope for DOCSIS 3.1, `downstream` for 3.0.
+
+### Improved
+
+- **Documentation restructure** — consolidated 6 overlapping setup
+  docs into hub-and-spoke tree. Fixed 459 markdownlint violations.
+  Reduced total doc lines by 26%.
+- **Issue templates** — rewritten for HAR-only workflow with incognito
+  capture warning. Removed stale Fallback Mode references from specs.
 
 ## [3.14.0-alpha.10] - 2026-04-04
 

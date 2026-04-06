@@ -11,6 +11,7 @@ unknown entries with generic gray badges as a fallback.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from urllib.parse import quote
 
@@ -147,7 +148,9 @@ def generate_provider_reference() -> list[str]:
         code_cell = f'<span id="{anchor}"></span>{color_entry["abbrev"]}'
         approval_url = entry.get("approval_url", "")
         approval_cell = f"[Official list]({approval_url})" if approval_url else "—"
-        lines.append(
-            f"| {code_cell} | {entry['name']} | {entry['region']} | {approval_cell} | {entry.get('notes', '')} |"
-        )
+        notes = entry.get("notes", "")
+        # Wrap bare "Source: URL" as markdown autolinks
+        if "Source: http" in notes:
+            notes = re.sub(r"Source: (https?://\S+)", r"Source: <\1>", notes)
+        lines.append(f"| {code_cell} | {entry['name']} | {entry['region']} | {approval_cell} | {notes} |")
     return lines
