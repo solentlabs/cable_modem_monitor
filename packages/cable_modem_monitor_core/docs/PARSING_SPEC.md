@@ -2155,15 +2155,35 @@ computed:
 
 | Field | Type | Required | Description |
 |-------|------| :--------: |-------------|
-| `operation` | literal | yes | Named operation. Currently only `percent_used`. |
+| `operation` | literal | yes | Named operation: `percent_used` or `combined_status`. |
 | `inputs` | dict | yes | Maps operation parameter names to system_info field names |
-| `precision` | integer | no | Decimal places for numeric results (default 1) |
+| `precision` | integer | no | Decimal places for numeric results (default 1, `percent_used` only) |
 
-**Operations:** Only `percent_used` is supported. Expects inputs
-`total` and `free`. Computes `(total - free) / total * 100`. Skipped
-when either input is missing, non-numeric, or total is zero. Values
-with trailing units (e.g., `"524288 kB"`) are parsed by stripping the
-suffix. New operations define their own expected input keys.
+### Operations
+
+**`percent_used`** — Expects inputs `total` and `free`. Computes
+`(total - free) / total * 100`. Skipped when either input is missing,
+non-numeric, or total is zero. Values with trailing units (e.g.,
+`"524288 kB"`) are parsed by stripping the suffix. Returns float.
+
+**`combined_status`** — Synthesizes a single status from multiple
+status fields. Expects N inputs, each mapping to a system_info field.
+Returns `"Operational"` when all inputs are present and their values
+match a known-positive DOCSIS status (case-insensitive: `complete`,
+`allowed`, `ok`, `operational`). Returns `None` if any input is
+missing. Returns the first non-positive value as-is when at least one
+input does not match (preserves the raw value for diagnostics).
+
+```yaml
+computed:
+  docsis_status:
+    operation: combined_status
+    inputs:
+      ds: downstream_status
+      us: upstream_status
+```
+
+New operations define their own expected input keys.
 
 **Why not parser.py hooks?** Hooks work but don't scale — every modem
 with memory fields would need its own parser.py. Declarative computed

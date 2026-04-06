@@ -113,3 +113,10 @@ system_info:
         - field: model_name
           label: "Model"
           type: string
+
+computed:
+  docsis_status:
+    operation: combined_status
+    inputs:
+      ds: downstream_status
+      us: upstream_status

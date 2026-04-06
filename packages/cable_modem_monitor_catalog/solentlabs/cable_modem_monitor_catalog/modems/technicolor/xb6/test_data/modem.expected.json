@@ -354,6 +354,7 @@
     }
   ],
   "system_info": {
+    "docsis_status": "Operational",
     "downstream_channel_count": 32,
     "downstream_status": "Complete",
     "hardware_version": "2.2",

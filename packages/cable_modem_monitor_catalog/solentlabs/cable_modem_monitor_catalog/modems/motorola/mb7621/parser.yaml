@@ -76,6 +76,9 @@ system_info:
     - format: html_fields
       resource: "/MotoConnection.asp"
       fields:
+        - field: docsis_status
+          label: "Network Access"
+          type: string
         - field: system_uptime
           label: "System Up Time"
           type: string

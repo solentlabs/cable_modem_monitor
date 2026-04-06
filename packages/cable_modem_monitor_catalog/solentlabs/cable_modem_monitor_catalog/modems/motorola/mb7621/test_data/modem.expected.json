@@ -266,6 +266,7 @@
     }
   ],
   "system_info": {
+    "docsis_status": "Allowed",
     "downstream_channel_count": 24,
     "hardware_version": "V1.0",
     "software_version": "7621-5.7.1.5",

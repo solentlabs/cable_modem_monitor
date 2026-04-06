@@ -1,0 +1,37 @@
+{
+  "_description": "Computed combined_status returns nothing when an input field is missing",
+  "_html": {
+    "/status.html": "<table><tr><td>DS Status</td><td>Complete</td></tr></table>"
+  },
+  "_parser_config": {
+    "system_info": {
+      "sources": [
+        {
+          "format": "html_fields",
+          "resource": "/status.html",
+          "fields": [
+            {"label": "DS Status", "field": "downstream_status", "type": "string"}
+          ]
+        }
+      ]
+    },
+    "computed": {
+      "docsis_status": {
+        "operation": "combined_status",
+        "inputs": {
+          "ds": "downstream_status",
+          "us": "upstream_status"
+        }
+      }
+    }
+  },
+  "_expected": {
+    "downstream": [],
+    "upstream": [],
+    "system_info": {
+      "downstream_status": "Complete",
+      "downstream_channel_count": 0,
+      "upstream_channel_count": 0
+    }
+  }
+}

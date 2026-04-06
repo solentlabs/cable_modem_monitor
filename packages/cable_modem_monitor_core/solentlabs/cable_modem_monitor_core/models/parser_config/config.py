@@ -77,7 +77,7 @@ class ComputedField(BaseModel):
     """
 
     model_config = ConfigDict(extra="forbid")
-    operation: Literal["percent_used"]
+    operation: Literal["percent_used", "combined_status"]
     inputs: dict[str, str]
     precision: int = 1
 

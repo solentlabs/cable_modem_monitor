@@ -274,7 +274,7 @@ def _parse_numeric(value: str) -> float | None:
 def _apply_computed(
     system_info: dict[str, Any],
     computed_def: Any,
-) -> float | None:
+) -> float | str | None:
     """Dispatch a computed field operation.
 
     Resolves input field names from ``computed_def.inputs`` against
@@ -282,6 +282,8 @@ def _apply_computed(
     """
     if computed_def.operation == "percent_used":
         return _compute_percent_used(system_info, computed_def.inputs, computed_def.precision)
+    if computed_def.operation == "combined_status":
+        return _compute_combined_status(system_info, computed_def.inputs)
     return None  # pragma: no cover — Literal type prevents reaching here
 
 
@@ -314,6 +316,42 @@ def _compute_percent_used(
         return None
 
     return round((total - free) / total * 100, precision)
+
+
+# Values that indicate a DOCSIS provisioning step completed successfully.
+# Case-insensitive. These are the known-positive values across the modem
+# fleet: XB6/XB7 report "Complete", TC4400/MB7621 report "Allowed",
+# HNAP modems report "Operational".
+_OPERATIONAL_VALUES = frozenset({"complete", "allowed", "ok", "operational"})
+
+
+def _compute_combined_status(
+    system_info: dict[str, Any],
+    inputs: dict[str, str],
+) -> str | None:
+    """Synthesize a single status from multiple status fields.
+
+    Returns ``"Operational"`` when all input fields are present and
+    their values match a known-positive DOCSIS provisioning status.
+    Returns ``None`` if any input field is missing.  Returns the first
+    non-positive value as-is when at least one input is not positive
+    (preserves the actual reported status for diagnostics).
+    """
+    if not inputs:
+        return None
+
+    values: list[str] = []
+    for field_name in inputs.values():
+        raw = system_info.get(field_name)
+        if raw is None:
+            return None
+        values.append(str(raw))
+
+    non_positive = [v for v in values if v.strip().lower() not in _OPERATIONAL_VALUES]
+    if non_positive:
+        return non_positive[0]
+
+    return "Operational"
 
 
 def filter_restart_window(
