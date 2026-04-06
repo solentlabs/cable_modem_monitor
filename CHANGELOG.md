@@ -50,6 +50,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Issue templates** — rewritten for HAR-only workflow with incognito
   capture warning. Removed stale Fallback Mode references from specs.
 
+### Reverted
+
+- **`zip_release` in hacs.json** — broke branch-based installs for
+  alpha testers. HACS expects a zip asset on a GitHub release, but
+  branch refs have no release. Reverted to source archive download.
+  Will re-enable at stable release.
+
 ## [3.14.0-alpha.10] - 2026-04-04
 
 ### Added

@@ -701,9 +701,14 @@ ship to users.
 
 ### HACS configuration
 
-`hacs.json` uses `zip_release: true` with `filename:
-"cable_modem_monitor.zip"`. HACS downloads the zip asset from the
-GitHub release instead of the full source archive.
+`hacs.json` uses the default source archive download (no
+`zip_release`). Branch-based installs (alpha testing via
+`update.install` with `version: feature/v3.14.0`) require HACS to
+download the source archive directly from GitHub — `zip_release: true`
+breaks this path because HACS expects a zip asset on a GitHub release
+that doesn't exist for branch refs. The `zip_release` optimization
+(124 KB zip vs 3.4 MB source) will be re-enabled at stable release
+when branch installs are no longer needed.
 
 ### Manifest loggers
 
@@ -722,8 +727,8 @@ the `custom_components.cable_modem_monitor` logger is captured.
 
 ### Install flow
 
-1. HACS downloads `cable_modem_monitor.zip` from the GitHub release
-2. HACS extracts it into `custom_components/cable_modem_monitor/`
+1. HACS downloads the source archive from GitHub
+2. HACS extracts `custom_components/cable_modem_monitor/` into place
 3. HA reads `manifest.json` → sees `requirements` pins
 4. HA pip-installs Core and Catalog from PyPI (exact `==` pins)
 5. Integration loads
@@ -757,7 +762,8 @@ HACS visibility) is what varies by tier.
 ### Rollback safety
 
 HACS reads `hacs.json` from the default branch to determine download
-strategy. With `zip_release: true`, HACS expects a zip asset on every
-release — including older ones a user might roll back to. Prior
-stable releases must have a `cable_modem_monitor.zip` asset uploaded
-before `zip_release: true` reaches the default branch.
+strategy. When `zip_release` is eventually re-enabled for stable
+release, HACS will expect a zip asset on every release — including
+older ones a user might roll back to. Prior stable releases must have
+a `cable_modem_monitor.zip` asset uploaded before `zip_release: true`
+reaches the default branch. See P-merge in the alpha roadmap.

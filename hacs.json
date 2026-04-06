@@ -1,8 +1,6 @@
 {
   "name": "Cable Modem Monitor",
   "content_in_root": false,
-  "zip_release": true,
-  "filename": "cable_modem_monitor.zip",
   "render_readme": true,
   "homeassistant": "2024.12.0"
 }
