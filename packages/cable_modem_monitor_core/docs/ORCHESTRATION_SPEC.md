@@ -174,8 +174,8 @@ class CollectorSignal(Enum):
 | Signal | Orchestrator Policy |
 |--------|-------------------|
 | `OK` | Reset auth streak, derive statuses, return `ModemSnapshot` (see § Connection Status Derivation) |
-| `AUTH_FAILED` | Abort, report `auth_failed`, no retry |
-| `AUTH_LOCKOUT` | Suppress login for 3 polls, report `auth_failed` |
+| `AUTH_FAILED` | Trip circuit breaker immediately, report `auth_failed` |
+| `AUTH_LOCKOUT` | Trip circuit breaker immediately, report `auth_failed` |
 | `CONNECTIVITY` | Abort, report `unreachable`, apply connectivity backoff |
 | `LOAD_ERROR` | Abort, report `unreachable` |
 | `LOAD_AUTH` | Clear session, report `auth_failed`, no retry |
@@ -355,11 +355,10 @@ class Orchestrator:
         3. Health recovery check — if connectivity backoff is active
            and HealthMonitor reports RESPONSIVE, clear the backoff
            (modem is proven reachable, no reason to keep skipping)
-        4. Check connectivity backoff — if still active after step 3,
-           decrement and return UNREACHABLE
-        5. Check auth backoff — if active, decrement and return
-           AUTH_FAILED
-        6. Signal HealthMonitor: record_collection_start()
+        4. Check connectivity backoff — decrement counter. If still > 0
+           after decrement, return UNREACHABLE. If counter reached 0,
+           backoff is cleared and collection proceeds.
+        5. Signal HealthMonitor: record_collection_start()
         7. Run ModemDataCollector
         8. Signal HealthMonitor: record_collection_end(success)
         9. If collection failed, apply signal → policy mapping
@@ -752,15 +751,17 @@ def get_modem_data(self) -> ModemSnapshot:
     if self._circuit_open:
         return ModemSnapshot(connection_status=ConnectionStatus.AUTH_FAILED, ...)
 
-    # Connectivity backoff — skip poll if modem was recently unreachable
+    # Health recovery — clear connectivity backoff if proven reachable
+    if (self._health_monitor and self._connectivity_backoff > 0
+            and self._health_monitor.latest.health_status == RESPONSIVE):
+        self._policy.reset_connectivity()
+
+    # Connectivity backoff — decrement; skip only while counter > 0
     if self._connectivity_backoff > 0:
         self._connectivity_backoff -= 1
-        return ModemSnapshot(connection_status=ConnectionStatus.UNREACHABLE, ...)
-
-    # Auth backoff check — decrement and skip if active
-    if self._backoff_remaining > 0:
-        self._backoff_remaining -= 1
-        return ModemSnapshot(connection_status=ConnectionStatus.AUTH_FAILED, ...)
+        if self._connectivity_backoff > 0:
+            return ModemSnapshot(connection_status=ConnectionStatus.UNREACHABLE, ...)
+        # Counter reached 0 — backoff cleared, proceed to collect
 
     result = self._collector.execute()
 
@@ -844,15 +845,12 @@ def _apply_signal_policy(self, result: ModemResult) -> ConnectionStatus:
     match result.signal:
         case CollectorSignal.AUTH_FAILED:
             self._auth_failure_streak += 1
-            if self._auth_failure_streak >= self.AUTH_FAILURE_THRESHOLD:
-                self._circuit_open = True
+            self._circuit_open = True  # immediate — credentials rejected
             return ConnectionStatus.AUTH_FAILED
 
         case CollectorSignal.AUTH_LOCKOUT:
             self._auth_failure_streak += 1
-            self._backoff_remaining = 3
-            if self._auth_failure_streak >= self.AUTH_FAILURE_THRESHOLD:
-                self._circuit_open = True
+            self._circuit_open = True  # immediate — firmware anti-brute-force
             return ConnectionStatus.AUTH_FAILED
 
         case CollectorSignal.CONNECTIVITY:
@@ -884,72 +882,52 @@ def _apply_signal_policy(self, result: ModemResult) -> ConnectionStatus:
 
 ### Auth Circuit Breaker
 
-Prevents indefinite login attempts when credentials are persistently
-wrong. Without this, wrong credentials cause an AUTH_FAILED →
-AUTH_LOCKOUT → backoff → AUTH_FAILED cycle that never stops — on HNAP
-modems with `REBOOT` anti-brute-force, this causes repeated device
-restarts.
+Prevents login attempts with known-bad credentials. Without this,
+wrong credentials cause repeated login failures — on HNAP modems
+with `REBOOT` anti-brute-force, even a single extra attempt can
+cause a device restart.
 
-The circuit breaker follows the standard pattern (closed → open):
+The circuit breaker has two trip modes:
 
-- **Closed** (normal): polling runs, auth works. `_auth_failure_streak`
-  resets to 0 on any successful collection.
-- **Open** (tripped): `_auth_failure_streak` reached
-  `AUTH_FAILURE_THRESHOLD` (default: 6). Polling stops entirely.
-  The client (HA) triggers a reauth flow — the user must
-  re-enter credentials to resume.
+- **Immediate** (AUTH_FAILED, AUTH_LOCKOUT): The modem explicitly
+  rejected credentials. Retrying with the same password is pointless.
+  Circuit trips on the first occurrence. One attempt, stop.
+- **Threshold** (LOAD_AUTH): Session issue, not credential rejection.
+  Data page returned 401/403 after successful login. Self-corrects
+  when session is refreshed (UC-18). Circuit trips only after
+  `AUTH_FAILURE_THRESHOLD` (default: 6) consecutive failures.
+
+The streak counter resets to 0 on any successful collection.
 
 ```python
-AUTH_FAILURE_THRESHOLD: int = 6  # ~2 lockout cycles on HNAP modems
+AUTH_FAILURE_THRESHOLD: int = 6  # applies to LOAD_AUTH only
 ```
-
-The streak counter includes AUTH_FAILED, AUTH_LOCKOUT, and LOAD_AUTH
-— all auth-related failures. Only a successful collection resets it.
-
-**Why 6?** On HNAP modems, the lockout cycle is roughly: 2 AUTH_FAILED
-→ AUTH_LOCKOUT → 3-poll backoff → repeat. Threshold 6 allows ~2 full
-cycles before tripping, giving transient failures room to self-resolve
-while stopping persistent failures before a third lockout.
 
 #### Use Cases
 
-**Password changed after months of success:**
+**Password changed after months of success (UC-87):**
 The modem works fine, then the user changes the password on the
 modem's web UI (or ISP firmware resets it). Session reuse continues
 until the session expires. Then:
 
 ```text
 Poll N:   session expired → Auth Manager re-authenticates → wrong password
-          → AUTH_FAILED (streak: 1)
-Poll N+1: AUTH_FAILED (streak: 2)
-Poll N+2: modem triggers LOCKUP → AUTH_LOCKOUT (streak: 3), backoff 3
-Poll N+3: backoff (skipped)
-Poll N+4: backoff (skipped)
-Poll N+5: backoff (skipped)
-Poll N+6: AUTH_FAILED (streak: 4)
-Poll N+7: AUTH_FAILED (streak: 5)
-Poll N+8: AUTH_LOCKOUT (streak: 6) → circuit OPEN, polling stops
+          → AUTH_FAILED → circuit OPEN, polling stops
+Poll N+1: circuit blocks — no collection
 ```
 
 **Root cause detection via logs:**
 
 ```text
-INFO  Poll N:   "Auth failed — wrong credentials or strategy mismatch (streak: 1/6)"
-INFO  Poll N+1: "Auth failed — wrong credentials or strategy mismatch (streak: 2/6)"
-WARN  Poll N+2: "Auth lockout — firmware anti-brute-force triggered, suppressing login for 3 polls (streak: 3/6)"
-INFO  Poll N+3: "Backoff active (2 remaining), skipping collection"
-INFO  Poll N+4: "Backoff active (1 remaining), skipping collection"
-INFO  Poll N+5: "Backoff cleared, resuming"
-INFO  Poll N+6: "Auth failed — wrong credentials or strategy mismatch (streak: 4/6)"
-INFO  Poll N+7: "Auth failed — wrong credentials or strategy mismatch (streak: 5/6)"
-ERROR Poll N+8: "Auth circuit breaker OPEN — 6 consecutive auth failures. Polling stopped. Reconfigure credentials to resume."
+INFO  Poll N: "Auth failed — wrong credentials or strategy mismatch (streak: 1)"
+ERROR Poll N: "Auth circuit breaker OPEN — credentials rejected. Polling stopped. Reconfigure credentials to resume."
 ```
 
 **Firmware changes auth mechanism:**
 Same pattern as password change. The auth strategy in modem.yaml no
-longer matches the modem's actual mechanism. AUTH_FAILED persists,
-circuit breaker trips. User sees error, opens a GitHub issue or
-reconfigures.
+longer matches the modem's actual mechanism. AUTH_FAILED on first
+attempt, circuit trips immediately. User sees error, opens a GitHub
+issue or reconfigures.
 
 **Transient auth failure:**
 Modem is busy, temporarily rejects a login.

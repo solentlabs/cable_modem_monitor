@@ -240,12 +240,12 @@ class TestSessionReuse:
 class TestOnDemandRefresh:
     """UC-03: On-demand refresh uses same API."""
 
-    def test_backoff_applies_to_manual_calls(self) -> None:
-        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_LOCKOUT))
+    def test_circuit_blocks_manual_calls(self) -> None:
+        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_FAILED))
         orch = _make_orchestrator(collector=collector)
 
-        orch.get_modem_data()  # triggers lockout + backoff=3
-        snapshot = orch.get_modem_data()  # manual call — still suppressed
+        orch.get_modem_data()  # AUTH_FAILED → circuit open
+        snapshot = orch.get_modem_data()  # manual call — circuit blocks
 
         assert snapshot.connection_status == ConnectionStatus.AUTH_FAILED
         assert collector.execute.call_count == 1
@@ -367,9 +367,9 @@ def test_docsis_status_derivation(
 
 
 class TestAuthFailure:
-    """UC-10: Wrong credentials — single failure."""
+    """UC-10/UC-87: Wrong credentials — circuit trips immediately."""
 
-    def test_single_auth_failure(self) -> None:
+    def test_single_auth_failure_trips_circuit(self) -> None:
         collector = _mock_collector(_fail_result(CollectorSignal.AUTH_FAILED, "wrong password"))
         orch = _make_orchestrator(collector=collector)
 
@@ -377,23 +377,23 @@ class TestAuthFailure:
 
         assert snapshot.connection_status == ConnectionStatus.AUTH_FAILED
         assert orch.diagnostics().auth_failure_streak == 1
-        assert orch.diagnostics().circuit_breaker_open is False
+        assert orch.diagnostics().circuit_breaker_open is True
         assert snapshot.modem_data is None
 
 
 class TestStreakReset:
-    """UC-11: Transient auth failure — streak resets on success."""
+    """UC-11: LOAD_AUTH self-corrects — streak resets on success."""
 
     def test_success_resets_streak(self) -> None:
         collector = _mock_collector(
             [
-                _fail_result(CollectorSignal.AUTH_FAILED),
+                _fail_result(CollectorSignal.LOAD_AUTH),
                 _ok_result(),
             ]
         )
         orch = _make_orchestrator(collector=collector)
 
-        orch.get_modem_data()  # streak → 1
+        orch.get_modem_data()  # LOAD_AUTH: streak → 1 (session issue, not credential rejection)
         assert orch.diagnostics().auth_failure_streak == 1
 
         orch.get_modem_data()  # success → streak → 0
@@ -402,9 +402,9 @@ class TestStreakReset:
 
 
 class TestLockout:
-    """UC-12: Firmware lockout — AUTH_LOCKOUT with backoff."""
+    """UC-12: Firmware lockout — AUTH_LOCKOUT trips circuit immediately."""
 
-    def test_lockout_sets_backoff(self) -> None:
+    def test_lockout_trips_circuit(self) -> None:
         collector = _mock_collector(_fail_result(CollectorSignal.AUTH_LOCKOUT))
         orch = _make_orchestrator(collector=collector)
 
@@ -412,97 +412,83 @@ class TestLockout:
 
         assert snapshot.connection_status == ConnectionStatus.AUTH_FAILED
         assert orch.diagnostics().auth_failure_streak == 1
+        assert orch.diagnostics().circuit_breaker_open is True
+        assert collector.execute.call_count == 1
 
-
-class TestBackoffExpiry:
-    """UC-13: Backoff expiry — polling resumes after 3 polls."""
-
-    def test_backoff_decrements_and_resumes(self) -> None:
-        results = [
-            _fail_result(CollectorSignal.AUTH_LOCKOUT),  # poll 0: lockout, backoff=3
-            # polls 1-3: suppressed (no execute call)
-            # poll 4: collection resumes
-            _ok_result(),
-        ]
-        collector = _mock_collector(results)
+    def test_lockout_stops_polling(self) -> None:
+        """AUTH_LOCKOUT → circuit open → no further collection."""
+        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_LOCKOUT))
         orch = _make_orchestrator(collector=collector)
 
-        # Poll 0: lockout
-        s0 = orch.get_modem_data()
-        assert s0.connection_status == ConnectionStatus.AUTH_FAILED
+        orch.get_modem_data()  # lockout → circuit open
+        collector.execute.reset_mock()
 
-        # Polls 1-3: backoff active, collector NOT called
-        for _ in range(3):
-            s = orch.get_modem_data()
-            assert s.connection_status == ConnectionStatus.AUTH_FAILED
+        snapshot = orch.get_modem_data()  # circuit blocks collection
 
-        assert collector.execute.call_count == 1  # only poll 0
-
-        # Poll 4: backoff expired, collection runs
-        s4 = orch.get_modem_data()
-        assert s4.connection_status == ConnectionStatus.ONLINE
-        assert collector.execute.call_count == 2
+        assert snapshot.connection_status == ConnectionStatus.AUTH_FAILED
+        collector.execute.assert_not_called()
 
 
 class TestCircuitBreaker:
-    """UC-14/15: Circuit breaker trip and blocking."""
+    """UC-14/15/87: Circuit breaker trip and blocking."""
 
-    def test_circuit_trips_at_threshold(self) -> None:
-        """UC-14: 6 consecutive failures → circuit open."""
-        results = [_fail_result(CollectorSignal.AUTH_FAILED) for _ in range(6)]
-        collector = _mock_collector(results)
+    def test_auth_failed_trips_immediately(self) -> None:
+        """UC-87: First AUTH_FAILED → circuit open. One attempt, stop."""
+        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_FAILED))
         orch = _make_orchestrator(collector=collector)
 
-        for _ in range(6):
-            orch.get_modem_data()
+        orch.get_modem_data()
 
         assert orch.diagnostics().circuit_breaker_open is True
-        assert orch.diagnostics().auth_failure_streak == 6
+        assert orch.diagnostics().auth_failure_streak == 1
+        assert collector.execute.call_count == 1
 
     def test_circuit_blocks_polling(self) -> None:
         """UC-15: Open circuit → no collection."""
-        results = [_fail_result(CollectorSignal.AUTH_FAILED) for _ in range(6)]
-        collector = _mock_collector(results)
+        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_FAILED))
         orch = _make_orchestrator(collector=collector)
 
-        for _ in range(6):
-            orch.get_modem_data()
-
-        # Circuit is open — next poll should NOT call collector
+        orch.get_modem_data()  # AUTH_FAILED → circuit open
         collector.execute.reset_mock()
+
         snapshot = orch.get_modem_data()
 
         assert snapshot.connection_status == ConnectionStatus.AUTH_FAILED
         collector.execute.assert_not_called()
 
-    def test_lockout_counts_toward_threshold(self) -> None:
-        """AUTH_LOCKOUT increments streak and contributes to threshold."""
-        # 5 AUTH_FAILED + 1 AUTH_LOCKOUT = 6 → circuit opens
-        # But AUTH_LOCKOUT also sets backoff=3, so polls 6-8 are suppressed
-        results = [_fail_result(CollectorSignal.AUTH_FAILED)] * 5 + [
-            _fail_result(CollectorSignal.AUTH_LOCKOUT),
-        ]
+    def test_lockout_trips_immediately(self) -> None:
+        """AUTH_LOCKOUT trips circuit on first occurrence."""
+        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_LOCKOUT))
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+
+        assert orch.diagnostics().circuit_breaker_open is True
+        assert orch.diagnostics().auth_failure_streak == 1
+
+    def test_load_auth_uses_threshold(self) -> None:
+        """LOAD_AUTH is a session issue — circuit trips at threshold, not immediately."""
+        results = [_fail_result(CollectorSignal.LOAD_AUTH) for _ in range(5)]
         collector = _mock_collector(results)
         orch = _make_orchestrator(collector=collector)
 
-        for _ in range(6):
+        for _ in range(5):
             orch.get_modem_data()
 
-        assert orch.diagnostics().circuit_breaker_open is True
-        assert orch.diagnostics().auth_failure_streak == 6
+        assert orch.diagnostics().circuit_breaker_open is False
+        assert orch.diagnostics().auth_failure_streak == 5
 
 
 class TestResetAuth:
     """UC-16: Credential reconfiguration — reset_auth()."""
 
     def test_reset_clears_all_state(self) -> None:
-        results = [_fail_result(CollectorSignal.AUTH_FAILED) for _ in range(6)] + [_ok_result()]
+        results = [_fail_result(CollectorSignal.AUTH_FAILED), _ok_result()]
         collector = _mock_collector(results)
         orch = _make_orchestrator(collector=collector)
 
-        # Trip the circuit
-        for _ in range(6):
-            orch.get_modem_data()
+        # Trip the circuit (immediate on AUTH_FAILED)
+        orch.get_modem_data()
         assert orch.diagnostics().circuit_breaker_open is True
 
         # Reset
@@ -560,37 +546,23 @@ class TestLoadAuth:
 
 
 class TestPasswordChanged:
-    """UC-20: Password changed after months of success."""
+    """UC-87: Password changed — circuit trips on first AUTH_FAILED."""
 
-    def test_escalation_sequence(self) -> None:
-        """AUTH_FAILED → AUTH_LOCKOUT → backoff → circuit open."""
-        results = [
-            _fail_result(CollectorSignal.AUTH_FAILED),  # streak 1
-            _fail_result(CollectorSignal.AUTH_FAILED),  # streak 2
-            _fail_result(CollectorSignal.AUTH_LOCKOUT),  # streak 3, backoff=3
-            # 3 backoff polls (no execute call)
-            _fail_result(CollectorSignal.AUTH_FAILED),  # streak 4
-            _fail_result(CollectorSignal.AUTH_FAILED),  # streak 5
-            _fail_result(CollectorSignal.AUTH_LOCKOUT),  # streak 6 → circuit
-        ]
-        collector = _mock_collector(results)
+    def test_immediate_stop(self) -> None:
+        """AUTH_FAILED → circuit open. One attempt, no escalation."""
+        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_FAILED))
         orch = _make_orchestrator(collector=collector)
 
-        # Polls 1-3
-        for _ in range(3):
-            orch.get_modem_data()
-        assert orch.diagnostics().auth_failure_streak == 3
+        orch.get_modem_data()  # wrong password → circuit trips
 
-        # Polls 4-6: backoff
-        for _ in range(3):
-            orch.get_modem_data()
-        assert collector.execute.call_count == 3  # no new execute calls
-
-        # Polls 7-9
-        for _ in range(3):
-            orch.get_modem_data()
         assert orch.diagnostics().circuit_breaker_open is True
-        assert orch.diagnostics().auth_failure_streak == 6
+        assert orch.diagnostics().auth_failure_streak == 1
+        assert collector.execute.call_count == 1
+
+        # Subsequent polls are blocked — no more login attempts
+        collector.execute.reset_mock()
+        orch.get_modem_data()
+        collector.execute.assert_not_called()
 
 
 # ==================================================================
@@ -662,12 +634,12 @@ class TestConnectivityFailures:
         assert orch.diagnostics().auth_failure_streak == 0
         assert orch.diagnostics().connectivity_streak == 1
 
-    def test_connectivity_backoff_skips_next_poll(self) -> None:
-        """First connectivity failure sets backoff=1, skipping next poll."""
+    def test_connectivity_backoff_retries_on_clear(self) -> None:
+        """First connectivity failure sets backoff=1; next poll clears and retries."""
         collector = _mock_collector(
             [
                 _fail_result(CollectorSignal.CONNECTIVITY),
-                _ok_result(),  # used after backoff clears
+                _ok_result(),  # used when backoff clears
             ]
         )
         orch = _make_orchestrator(collector=collector)
@@ -675,16 +647,12 @@ class TestConnectivityFailures:
         orch.get_modem_data()  # CONNECTIVITY, backoff=1
         assert orch.diagnostics().connectivity_backoff_remaining == 1
 
-        s2 = orch.get_modem_data()  # backoff active → skip
-        assert s2.connection_status == ConnectionStatus.UNREACHABLE
-        assert collector.execute.call_count == 1  # skipped
-
-        s3 = orch.get_modem_data()  # backoff cleared → retry
-        assert s3.connection_status == ConnectionStatus.ONLINE
+        s2 = orch.get_modem_data()  # backoff clears (1→0) → retry succeeds
+        assert s2.connection_status == ConnectionStatus.ONLINE
         assert collector.execute.call_count == 2
 
     def test_connectivity_backoff_exponential(self) -> None:
-        """Backoff grows: 1, 2, 4, capped at max."""
+        """Backoff grows: 1, 2, 4 with exponential pattern."""
         collector = _mock_collector()
         collector.execute.return_value = _fail_result(CollectorSignal.CONNECTIVITY)
         orch = _make_orchestrator(collector=collector)
@@ -693,20 +661,14 @@ class TestConnectivityFailures:
         orch.get_modem_data()
         assert orch.diagnostics().connectivity_backoff_remaining == 1
 
-        # Skip 1 poll (backoff clears)
-        orch.get_modem_data()
-
-        # Failure 2: backoff=2
+        # Backoff=1 clears immediately → Failure 2: backoff=2
         orch.get_modem_data()
         assert orch.diagnostics().connectivity_backoff_remaining == 2
         assert orch.diagnostics().connectivity_streak == 2
 
-        # Skip 2 polls
-        orch.get_modem_data()
-        orch.get_modem_data()
-
-        # Failure 3: backoff=4
-        orch.get_modem_data()
+        # Skip 1 poll (2→1), then clears → Failure 3: backoff=4
+        orch.get_modem_data()  # skip
+        orch.get_modem_data()  # clears → execute → fail
         assert orch.diagnostics().connectivity_backoff_remaining == 4
         assert orch.diagnostics().connectivity_streak == 3
 
@@ -716,17 +678,14 @@ class TestConnectivityFailures:
         collector.execute.return_value = _fail_result(CollectorSignal.CONNECTIVITY)
         orch = _make_orchestrator(collector=collector)
 
-        # Drive streak high enough that 2^(streak-1) > 6
-        # streak=4: 2^3=8, capped at 6
-        for _ in range(4):
-            orch.get_modem_data()  # execute → CONNECTIVITY
-            # Drain the backoff
-            while orch.diagnostics().connectivity_backoff_remaining > 0:
-                orch.get_modem_data()
+        # Drive to streak=4 where 2^(4-1)=8, capped at 6.
+        # With backoff=N, N-1 polls are skipped before the next execute.
+        # streak=1(bo=1) → clears → streak=2(bo=2) → skip 1 → clears →
+        # streak=3(bo=4) → skip 3 → clears → streak=4(bo=6, capped)
+        for _ in range(8):
+            orch.get_modem_data()
 
-        # Streak 4: 2^3=8, capped at 6
         assert orch.diagnostics().connectivity_streak == 4
-        orch.get_modem_data()
         assert orch.diagnostics().connectivity_backoff_remaining == 6
 
     def test_success_resets_connectivity(self) -> None:
@@ -734,18 +693,16 @@ class TestConnectivityFailures:
         collector = _mock_collector(
             [
                 _fail_result(CollectorSignal.CONNECTIVITY),
-                _fail_result(CollectorSignal.CONNECTIVITY),  # after backoff
-                _ok_result(),  # after backoff
+                _fail_result(CollectorSignal.CONNECTIVITY),  # backoff=1 clears → execute
+                _ok_result(),  # backoff=2: skip 1, then clears → execute
             ]
         )
         orch = _make_orchestrator(collector=collector)
 
         orch.get_modem_data()  # streak=1, backoff=1
-        orch.get_modem_data()  # skip (backoff)
-        orch.get_modem_data()  # streak=2, backoff=2
-        orch.get_modem_data()  # skip (backoff)
-        orch.get_modem_data()  # skip (backoff)
-        orch.get_modem_data()  # success → clears connectivity
+        orch.get_modem_data()  # backoff clears → streak=2, backoff=2
+        orch.get_modem_data()  # skip (2→1)
+        orch.get_modem_data()  # backoff clears → success
 
         assert orch.diagnostics().connectivity_streak == 0
         assert orch.diagnostics().connectivity_backoff_remaining == 0
@@ -797,9 +754,8 @@ class TestConnectivityFailures:
         # Build up connectivity backoff
         collector.execute.return_value = _fail_result(CollectorSignal.CONNECTIVITY)
         orch.get_modem_data()  # streak=1, backoff=1
-        orch.get_modem_data()  # skip (backoff)
 
-        # Modem comes back with auth error — reachable, but auth wrong
+        # Modem comes back with auth error — backoff=1 clears, execute runs
         collector.execute.return_value = _fail_result(CollectorSignal.AUTH_FAILED)
         orch.get_modem_data()
 
@@ -842,10 +798,9 @@ class TestStatusTransition:
         orch = _make_orchestrator(collector=collector)
 
         orch.get_modem_data()  # UNREACHABLE, backoff=1
-        orch.get_modem_data()  # backoff skip (still UNREACHABLE)
 
         with caplog.at_level(logging.INFO):
-            orch.get_modem_data()  # backoff cleared, execute → ONLINE
+            orch.get_modem_data()  # backoff clears → ONLINE
 
         assert "Status transition [T100]: unreachable" in caplog.text
         assert "online" in caplog.text
@@ -961,10 +916,9 @@ class TestRestart:
         collector = _mock_collector()
         orch = _make_orchestrator(collector=collector, config=config)
 
-        # Trip circuit breaker via 6 consecutive auth failures
+        # Trip circuit breaker via AUTH_FAILED (immediate)
         collector.execute.return_value = _fail_result(CollectorSignal.AUTH_FAILED, "wrong password")
-        for _ in range(6):
-            orch.get_modem_data()
+        orch.get_modem_data()
 
         assert orch.diagnostics().circuit_breaker_open is True
 
@@ -1024,11 +978,7 @@ class TestUnplannedRestart:
         snap = orch.get_modem_data()
         assert snap.connection_status == ConnectionStatus.UNREACHABLE
 
-        # Poll 3: Connectivity backoff active — skipped
-        snap = orch.get_modem_data()
-        assert snap.connection_status == ConnectionStatus.UNREACHABLE
-
-        # Poll 4: Backoff cleared, modem back but stale session — LOAD_AUTH
+        # Poll 3: Backoff clears, modem back but stale session — LOAD_AUTH
         collector.execute.return_value = _fail_result(CollectorSignal.LOAD_AUTH, "401 on data page")
         snap = orch.get_modem_data()
         assert snap.connection_status == ConnectionStatus.AUTH_FAILED
@@ -1037,7 +987,7 @@ class TestUnplannedRestart:
         # Connectivity cleared because modem responded
         assert orch.diagnostics().connectivity_streak == 0
 
-        # Poll 5: Fresh login succeeds — ONLINE
+        # Poll 4: Fresh login succeeds — ONLINE
         collector.execute.return_value = _ok_result()
         snap = orch.get_modem_data()
         assert snap.connection_status == ConnectionStatus.ONLINE
@@ -1113,7 +1063,7 @@ class TestDiagnostics:
 
     def test_diagnostics_after_failure(self) -> None:
         """Diagnostics track auth failure streak."""
-        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_FAILED))
+        collector = _mock_collector(_fail_result(CollectorSignal.LOAD_AUTH))
         orch = _make_orchestrator(collector=collector)
         orch.get_modem_data()
         m = orch.diagnostics()
@@ -1133,16 +1083,14 @@ class TestDiagnostics:
 
     def test_diagnostics_available_with_circuit_open(self) -> None:
         """Diagnostics work even when circuit breaker is open."""
-        results = [_fail_result(CollectorSignal.AUTH_FAILED) for _ in range(6)]
-        collector = _mock_collector(results)
+        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_FAILED))
         orch = _make_orchestrator(collector=collector)
 
-        for _ in range(6):
-            orch.get_modem_data()
+        orch.get_modem_data()  # AUTH_FAILED → circuit open
 
         m = orch.diagnostics()
         assert m.circuit_breaker_open is True
-        assert m.auth_failure_streak == 6
+        assert m.auth_failure_streak == 1
 
 
 # ==================================================================
@@ -1407,21 +1355,34 @@ class TestHealthRecoveryClearsBackoff:
         desc: str,
     ) -> None:
         """Backoff is cleared only when health monitor reports RESPONSIVE."""
-        # Build collector: first call fails (triggers backoff), second succeeds
+        from solentlabs.cable_modem_monitor_core.orchestration.models import HealthInfo
+        from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+        # Build collector: two failures to reach backoff=2, then success
         collector = _mock_collector(
             [
+                _fail_result(CollectorSignal.CONNECTIVITY),
                 _fail_result(CollectorSignal.CONNECTIVITY),
                 _ok_result(),
             ]
         )
-        health_monitor = _make_health_monitor(health_status) if has_monitor else None
+        # Start unresponsive so health doesn't interfere while building backoff
+        health_monitor = _make_health_monitor("unresponsive") if has_monitor else None
         orch = _make_orchestrator(collector=collector, health_monitor=health_monitor)
 
-        # Poll 1: CONNECTIVITY failure → streak=1, backoff=1
+        # Poll 1: CONNECTIVITY → streak=1, backoff=1
         orch.get_modem_data()
-        assert orch.diagnostics().connectivity_backoff_remaining == 1
+        # Poll 2: backoff=1 clears → CONNECTIVITY → streak=2, backoff=2
+        orch.get_modem_data()
+        assert orch.diagnostics().connectivity_backoff_remaining == 2
 
-        # Poll 2: backoff should be checked — health recovery may clear it
+        # Switch to the parameterised health status for the test poll
+        if health_monitor is not None:
+            health_monitor.latest = HealthInfo(
+                health_status=HealthStatus(health_status),
+            )
+
+        # Poll 3: health recovery may clear backoff before the check
         snapshot = orch.get_modem_data()
 
         if expect_clear:
@@ -1429,11 +1390,11 @@ class TestHealthRecoveryClearsBackoff:
             assert snapshot.connection_status == ConnectionStatus.ONLINE
             assert orch.diagnostics().connectivity_streak == 0
             assert orch.diagnostics().connectivity_backoff_remaining == 0
-            assert collector.execute.call_count == 2
+            assert collector.execute.call_count == 3
         else:
-            # Backoff was not cleared → poll skipped
+            # Backoff was not cleared → poll skipped (2→1)
             assert snapshot.connection_status == ConnectionStatus.UNREACHABLE
-            assert collector.execute.call_count == 1
+            assert collector.execute.call_count == 2
 
     def test_health_responsive_no_backoff_is_noop(self) -> None:
         """RESPONSIVE health with no active backoff does not affect normal flow."""
@@ -1450,19 +1411,28 @@ class TestHealthRecoveryClearsBackoff:
 
     def test_health_recovery_logged(self, caplog: pytest.LogCaptureFixture) -> None:
         """Health-triggered backoff clear is logged at INFO level."""
+        from solentlabs.cable_modem_monitor_core.orchestration.models import HealthInfo
+        from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
         collector = _mock_collector(
             [
+                _fail_result(CollectorSignal.CONNECTIVITY),
                 _fail_result(CollectorSignal.CONNECTIVITY),
                 _ok_result(),
             ]
         )
-        health_monitor = _make_health_monitor("responsive")
+        # Start unresponsive while building backoff
+        health_monitor = _make_health_monitor("unresponsive")
         orch = _make_orchestrator(collector=collector, health_monitor=health_monitor)
 
-        orch.get_modem_data()  # triggers backoff
+        orch.get_modem_data()  # streak=1, backoff=1
+        orch.get_modem_data()  # backoff clears → streak=2, backoff=2
+
+        # Switch to responsive for the recovery poll
+        health_monitor.latest = HealthInfo(health_status=HealthStatus.RESPONSIVE)
 
         with caplog.at_level(logging.INFO):
-            orch.get_modem_data()  # health recovery clears backoff
+            orch.get_modem_data()  # health recovery clears backoff=2
 
         assert any("Health recovery" in r.message for r in caplog.records)
 
@@ -1473,14 +1443,12 @@ class TestHealthRecoveryClearsBackoff:
         health_monitor = _make_health_monitor("unresponsive")
         orch = _make_orchestrator(collector=collector, health_monitor=health_monitor)
 
-        # Build up streak 1-3, draining backoff after each
-        for _ in range(3):
-            orch.get_modem_data()  # execute → CONNECTIVITY
-            while orch.diagnostics().connectivity_backoff_remaining > 0:
-                orch.get_modem_data()
+        # Drive to streak=4, backoff=6 (capped from 8):
+        # streak=1(bo=1) → clears → streak=2(bo=2) → skip 1 → clears →
+        # streak=3(bo=4) → skip 3 → clears → streak=4(bo=6)
+        for _ in range(8):
+            orch.get_modem_data()
 
-        # Streak=3, backoff fully drained. Next execute → streak=4, backoff=6
-        orch.get_modem_data()
         assert orch.diagnostics().connectivity_backoff_remaining == 6
         assert orch.diagnostics().connectivity_streak == 4
 

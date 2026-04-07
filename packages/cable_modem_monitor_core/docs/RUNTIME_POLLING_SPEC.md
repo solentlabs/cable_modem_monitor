@@ -154,8 +154,10 @@ for the HA implementation's cascade rules.
 ```text
 Each poll:
  1. Orchestrator: circuit breaker open? → return auth_failed.
- 2. Orchestrator: connectivity backoff active? → decrement, return unreachable.
- 3. Orchestrator: login backoff active? → decrement, return auth_failed.
+ 2. Health recovery: if health monitor reports RESPONSIVE and
+    connectivity backoff > 0, clear backoff and streak.
+ 3. Orchestrator: connectivity backoff active? → decrement. If still
+    > 0 after decrement, return unreachable. If cleared to 0, proceed.
  4. Orchestrator invokes ModemDataCollector:
     a. Auth Manager: session valid? → reuse. Expired? → login.
     b. Resource Loader: fetch all pages using authenticated session.
@@ -164,7 +166,8 @@ Each poll:
     d. Auth Manager: logout if single-session modem.
  5. Orchestrator: check ModemDataCollector result.
     Success → reset auth failure streak, reset connectivity state, derive status.
-    Auth failure → increment streak, check circuit breaker threshold.
+    Auth failure (AUTH_FAILED/AUTH_LOCKOUT) → trip circuit breaker immediately.
+    Auth failure (LOAD_AUTH) → increment streak, trip at threshold.
     Connectivity failure → increment connectivity streak, set exponential backoff.
     Other failure → apply signal policy.
 ```
@@ -408,8 +411,8 @@ Every signal a protocol layer can emit and the orchestrator's policy:
 | Signal | Source | Orchestrator Policy | Status |
 |--------|--------|-------------------|--------|
 | `AuthResult.SUCCESS` | Auth Manager | Proceed to loading | `online` (if parse succeeds) |
-| `AuthResult.FAILURE` | Auth Manager | Abort poll, increment auth streak | `auth_failed` |
-| `LoginLockoutError` | Auth Manager | Suppress login for 3 polls, increment auth streak | `auth_failed` |
+| `AuthResult.FAILURE` | Auth Manager | Trip circuit breaker immediately | `auth_failed` |
+| `LoginLockoutError` | Auth Manager | Trip circuit breaker immediately | `auth_failed` |
 | `ConnectionError` on auth | Auth Manager (propagated) | Abort poll, connectivity backoff | `unreachable` |
 | `Timeout` on auth | Auth Manager (propagated) | Abort poll, connectivity backoff | `unreachable` |
 | Any page `Timeout` / `ConnectionError` | Resource Loader | Abort poll (all-or-nothing), connectivity backoff | `unreachable` |
@@ -428,11 +431,14 @@ Every signal a protocol layer can emit and the orchestrator's policy:
 
 2. **Exponential backoff on connectivity failures.** When the modem is
    unreachable, connectivity backoff avoids wasting polls on timeouts.
-   Backoff grows as `min(2^(streak-1), 6)` — skip 1, 2, 4, up to 6
-   polls. Any successful poll or non-connectivity failure (auth error,
-   parse error) resets the connectivity state. User-initiated refresh
-   (Update Modem Data button) calls `reset_connectivity()` to bypass
-   backoff and attempt immediately. Connectivity failures never count
+   The backoff counter is set to `min(2^(streak-1), 6)` and decremented
+   each poll cycle. The poll proceeds when the counter reaches 0
+   (so counter=N skips N-1 polls): first failure retries immediately,
+   then skip 1, 3, up to 5 polls. Any successful poll or non-
+   connectivity failure (auth error, parse error) resets the
+   connectivity state. User-initiated refresh (Update Modem Data
+   button) calls `reset_connectivity()` to bypass backoff and attempt
+   immediately. Connectivity failures never count
    toward the auth circuit breaker.
 
 3. **No within-poll retries.** Every failure mode waits for the next

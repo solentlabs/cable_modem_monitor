@@ -22,17 +22,21 @@ _logger = logging.getLogger(__name__)
 
 
 class SignalPolicy:
-    """Auth failure tracking, backoff, and circuit breaker.
+    """Auth failure tracking and circuit breaker.
 
-    Owns the auth_failure_streak counter, backoff_remaining counter,
-    and circuit_open flag. Also tracks connectivity failures with
-    exponential backoff — connectivity timeouts don't count toward
-    the auth circuit breaker.
+    Owns the auth_failure_streak counter and circuit_open flag. Also
+    tracks connectivity failures with exponential backoff —
+    connectivity timeouts don't count toward the auth circuit breaker.
+
+    Circuit breaker trip modes:
+    - AUTH_FAILED / AUTH_LOCKOUT: trip immediately (credentials rejected).
+    - LOAD_AUTH: trip at threshold (session issue, may self-correct).
 
     Args:
         collector: ModemDataCollector for session clearing on LOAD_AUTH.
-        auth_failure_threshold: Consecutive auth failures before tripping
-            the circuit breaker.
+        auth_failure_threshold: Consecutive LOAD_AUTH failures before
+            tripping the circuit breaker. AUTH_FAILED and AUTH_LOCKOUT
+            trip immediately regardless of this value.
         max_connectivity_backoff: Maximum polls to skip during
             connectivity backoff. Backoff grows as
             min(2^(streak-1), max).
@@ -52,7 +56,6 @@ class SignalPolicy:
 
         self._auth_failure_streak: int = 0
         self._circuit_open: bool = False
-        self._backoff_remaining: int = 0
 
         # Connectivity backoff — separate from auth
         self._connectivity_streak: int = 0
@@ -62,11 +65,6 @@ class SignalPolicy:
     def circuit_open(self) -> bool:
         """Whether the circuit breaker is open (polling stopped)."""
         return self._circuit_open
-
-    @property
-    def backoff_remaining(self) -> int:
-        """Number of polls remaining in the backoff window."""
-        return self._backoff_remaining
 
     @property
     def auth_failure_streak(self) -> int:
@@ -99,29 +97,10 @@ class SignalPolicy:
                 self._model,
                 self._connectivity_backoff,
             )
-        else:
-            _logger.info("Connectivity backoff cleared [%s], retrying", self._model)
-        return True
+            return True
 
-    def check_backoff(self) -> bool:
-        """Check and decrement the backoff counter.
-
-        Returns True if backoff is active (caller should skip collection).
-        Returns False if backoff is cleared or was not active.
-        """
-        if self._backoff_remaining <= 0:
-            return False
-
-        self._backoff_remaining -= 1
-        if self._backoff_remaining > 0:
-            _logger.info(
-                "Backoff active [%s] (%d remaining), skipping collection",
-                self._model,
-                self._backoff_remaining,
-            )
-        else:
-            _logger.info("Backoff cleared [%s], resuming", self._model)
-        return True
+        _logger.info("Connectivity backoff cleared [%s], retrying", self._model)
+        return False
 
     def apply(self, result: ModemResult) -> ConnectionStatus:
         """Map a collector failure signal to connection status.
@@ -146,20 +125,17 @@ class SignalPolicy:
         if signal == CollectorSignal.AUTH_FAILED:
             self._auth_failure_streak += 1
             self._log_auth_failure()
-            self._maybe_trip_circuit_breaker()
+            self._trip_circuit_breaker()
             return ConnectionStatus.AUTH_FAILED
 
         if signal == CollectorSignal.AUTH_LOCKOUT:
             self._auth_failure_streak += 1
-            self._backoff_remaining = 3
             _logger.warning(
-                "Auth lockout [%s] — firmware anti-brute-force triggered, "
-                "suppressing login for 3 polls (streak: %d/%d)",
+                "Auth lockout [%s] — firmware anti-brute-force triggered, " "stopping immediately (streak: %d)",
                 self._model,
                 self._auth_failure_streak,
-                self._threshold,
             )
-            self._maybe_trip_circuit_breaker()
+            self._trip_circuit_breaker()
             return ConnectionStatus.AUTH_FAILED
 
         if signal == CollectorSignal.LOAD_AUTH:
@@ -208,7 +184,6 @@ class SignalPolicy:
         """
         self._auth_failure_streak = 0
         self._circuit_open = False
-        self._backoff_remaining = 0
         self._connectivity_streak = 0
         self._connectivity_backoff = 0
 
@@ -230,14 +205,29 @@ class SignalPolicy:
     def _log_auth_failure(self) -> None:
         """Log auth failure with streak context."""
         _logger.info(
-            "Auth failed [%s] — wrong credentials or strategy mismatch " "(streak: %d/%d)",
+            "Auth failed [%s] — wrong credentials or strategy mismatch (streak: %d)",
             self._model,
             self._auth_failure_streak,
-            self._threshold,
+        )
+
+    def _trip_circuit_breaker(self) -> None:
+        """Trip the circuit breaker immediately.
+
+        Used for AUTH_FAILED and AUTH_LOCKOUT — credentials are known
+        bad, retrying is pointless and risks modem anti-brute-force.
+        """
+        self._circuit_open = True
+        _logger.error(
+            "Auth circuit breaker OPEN [%s] — credentials rejected. "
+            "Polling stopped. Reconfigure credentials to resume.",
+            self._model,
         )
 
     def _maybe_trip_circuit_breaker(self) -> None:
-        """Trip the circuit breaker if threshold reached."""
+        """Trip the circuit breaker if threshold reached.
+
+        Used for LOAD_AUTH — session issues that may self-correct.
+        """
         if self._auth_failure_streak >= self._threshold:
             self._circuit_open = True
             _logger.error(

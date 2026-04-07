@@ -224,7 +224,7 @@ intentional — backoff and lockout protection apply equally to both.
 
 ---
 
-### UC-12: Firmware lockout — AUTH_LOCKOUT with backoff
+### UC-12: Firmware lockout — AUTH_LOCKOUT trips circuit
 
 **Preconditions:** HNAP modem. Auth manager receives `LoginResult: "LOCKUP"`.
 
@@ -233,57 +233,63 @@ intentional — backoff and lockout protection apply equally to both.
 | 1 | Consumer calls `get_modem_data()` | | |
 | 2 | Collector: auth raises `LoginLockoutError` | | |
 | 3 | Collector catches, returns `ModemResult(signal=AUTH_LOCKOUT)` | | |
-| 4 | Orchestrator: streak incremented | streak++ | |
-| 5 | Orchestrator: backoff=3 | backoff=3 | |
-| 6 | Return `ModemSnapshot(AUTH_FAILED)` | | |
-
-**Assertions:**
-
-- `snapshot.connection_status == AUTH_FAILED`
-- `diagnostics().auth_failure_streak` incremented
-- Next 3 polls will be suppressed (see UC-13)
-- WARNING log: "Auth lockout — firmware anti-brute-force triggered..."
-
----
-
-### UC-13: Backoff expiry — polling resumes
-
-**Preconditions:** UC-12 just occurred. backoff=3.
-
-| Poll | Backoff before | Action | Backoff after |
-|------|---------------|--------|--------------|
-| N+1 | 3 | Decrement, skip collection, return AUTH_FAILED | 2 |
-| N+2 | 2 | Decrement, skip collection, return AUTH_FAILED | 1 |
-| N+3 | 1 | Decrement, skip collection, return AUTH_FAILED | 0 |
-| N+4 | 0 | Run collection normally | 0 |
-
-**Assertions:**
-
-- Each backoff poll returns `ModemSnapshot(AUTH_FAILED)` without
-  running the collector
-- Backoff decrements by 1 per poll regardless of outcome
-- At backoff=0, collection resumes
-- INFO log each suppressed poll: "Backoff active (N remaining)..."
-
----
-
-### UC-14: Circuit breaker trip — 6 consecutive failures
-
-**Preconditions:** streak=5, one more auth failure will trip the breaker.
-
-| Step | Action | State change | Observable |
-|------|--------|-------------|------------|
-| 1 | Consumer calls `get_modem_data()` | | |
-| 2 | Collector: AUTH_FAILED or AUTH_LOCKOUT | | |
-| 3 | Orchestrator: streak 5→6 | | |
-| 4 | Orchestrator: 6 >= threshold → circuit OPEN | circuit=True | |
+| 4 | Orchestrator: streak incremented, circuit trips | circuit=True | |
 | 5 | Return `ModemSnapshot(AUTH_FAILED)` | | |
 
 **Assertions:**
 
+- `snapshot.connection_status == AUTH_FAILED`
 - `diagnostics().circuit_breaker_open == True`
-- `diagnostics().auth_failure_streak == 6`
-- ERROR log: "Auth circuit breaker OPEN — 6 consecutive auth failures..."
+- No further login attempts — polling blocked until reset_auth()
+- WARNING log: "Auth lockout — firmware anti-brute-force triggered,
+  stopping immediately"
+
+---
+
+### UC-13: LOAD_AUTH backoff — session issues self-correct
+
+**Preconditions:** Data page returned 401/403. Session issue, not
+credential rejection. LOAD_AUTH uses the threshold-based circuit
+breaker (default: 6) because session issues typically self-correct
+after session refresh (UC-18).
+
+| Poll | Streak | Action | Circuit |
+|------|--------|--------|---------|
+| N | 1 | LOAD_AUTH — session cleared, streak++ | closed |
+| N+1 | 0 | Fresh login → success → streak reset | closed |
+
+If LOAD_AUTH persists (6 consecutive):
+
+| Poll | Streak | Action | Circuit |
+|------|--------|--------|---------|
+| N through N+5 | 1→6 | LOAD_AUTH each poll, session cleared | closed→open |
+
+**Assertions:**
+
+- Circuit stays closed while streak < threshold (6)
+- Self-corrects after session refresh in typical cases
+- Persistent LOAD_AUTH (6×) trips circuit as a safety net
+- Distinct from AUTH_FAILED/AUTH_LOCKOUT which trip immediately
+
+---
+
+### UC-14: Circuit breaker trip — credential rejection
+
+**Preconditions:** Modem reachable. Credentials are wrong.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `get_modem_data()` | | |
+| 2 | Collector: AUTH_FAILED | | |
+| 3 | Orchestrator: streak 0→1, circuit trips | circuit=True | |
+| 4 | Return `ModemSnapshot(AUTH_FAILED)` | | |
+
+**Assertions:**
+
+- `diagnostics().circuit_breaker_open == True`
+- `diagnostics().auth_failure_streak == 1`
+- Exactly one login attempt against the modem
+- ERROR log: "Auth circuit breaker OPEN — credentials rejected..."
 
 ---
 
@@ -404,17 +410,22 @@ PARSE_ERROR.
 **Preconditions:** Modem working for months. User changes password on
 modem's web UI. Session is still valid in memory.
 
+> **Note:** This UC documents the *current* behavior (circuit breaker
+> at streak=6). See UC-86 for the target behavior — AUTH_FAILED means
+> credentials are known bad, so retrying with the same credentials is
+> pointless and risks triggering modem anti-brute-force lockouts.
+
 | Poll | What happens | Streak | Status |
 |------|-------------|--------|--------|
 | N | Session valid → reuse → load → parse → OK | 0 | ONLINE |
 | ... | (months of normal operation) | 0 | ONLINE |
 | N+K | Session expires → re-auth → wrong password | 1 | AUTH_FAILED |
 | N+K+1 | AUTH_FAILED | 2 | AUTH_FAILED |
-| N+K+2 | LOCKUP → AUTH_LOCKOUT, backoff=3 | 3 | AUTH_FAILED |
-| N+K+3 | Backoff (2 remaining) | 3 | AUTH_FAILED |
-| N+K+4 | Backoff (1 remaining) | 3 | AUTH_FAILED |
-| N+K+5 | Backoff (0 remaining) | 3 | AUTH_FAILED |
-| N+K+6 | AUTH_FAILED | 4 | AUTH_FAILED |
+| N+K+2 | LOCKUP → AUTH_LOCKOUT, backoff=4 | 3 | AUTH_FAILED |
+| N+K+3 | Backoff (3 remaining) | 3 | AUTH_FAILED |
+| N+K+4 | Backoff (2 remaining) | 3 | AUTH_FAILED |
+| N+K+5 | Backoff (1 remaining) | 3 | AUTH_FAILED |
+| N+K+6 | Backoff cleared → AUTH_FAILED | 4 | AUTH_FAILED |
 | N+K+7 | AUTH_FAILED | 5 | AUTH_FAILED |
 | N+K+8 | AUTH_LOCKOUT, streak=6 → circuit OPEN | 6 | AUTH_FAILED |
 | N+K+9+ | Circuit open, no collection | 6 | AUTH_FAILED |
@@ -1624,3 +1635,82 @@ sequenceDiagram
   proves the modem is reachable before the next scheduled poll
 - Connectivity backoff accumulated during outage is cleared in a single step
   (reset_connectivity), not decremented poll-by-poll
+
+---
+
+## Credential Failure — Immediate Stop
+
+These use cases establish the principle: **bad credentials mean stop
+immediately.** Retrying with known-bad credentials is pointless and
+risks triggering modem anti-brute-force lockouts (firmware reboot on
+HNAP devices). The system should attempt authentication once. If it
+fails, stop polling and surface the error to the user.
+
+### UC-86: Setup — bad credentials rejected by config flow
+
+**Preconditions:** User adding the integration for the first time.
+Enters incorrect password in the config flow.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | User enters host, username, password | | |
+| 2 | Config flow calls `validate_connection()` | | |
+| 3 | Auth attempt → modem rejects credentials | | |
+| 4 | Config flow shows `invalid_auth` error | No entry created | "Login failed" in UI |
+| 5 | User corrects password and resubmits | | |
+
+**Assertions:**
+
+- Exactly one auth attempt against the modem
+- No config entry is created — no polling loop starts
+- Integration is not loaded into HA
+- User can retry immediately with corrected credentials
+- No streak, no backoff, no circuit breaker — config flow is stateless
+
+**Key principle:** The config flow is the gate. Bad credentials never
+reach the orchestrator.
+
+---
+
+### UC-87: Runtime — stored credentials invalidated
+
+**Preconditions:** Integration running normally for weeks/months. User
+changes the modem's password via modem web UI. Stored credentials in
+HA are now wrong. Current session in memory may still be valid.
+
+| Poll | What happens | Streak | Status |
+|------|-------------|--------|--------|
+| N | Session still valid → reuse → OK | 0 | ONLINE |
+| N+K | Session expires → re-auth → wrong password | 1 | AUTH_FAILED |
+| N+K+1 | Circuit trips immediately → trigger reauth | 1 | AUTH_FAILED |
+
+**Target behavior:**
+
+- First AUTH_FAILED → circuit breaker trips (threshold=1 for
+  credential failures)
+- Polling stops immediately — no further login attempts
+- HA triggers reauth flow (UC-81) — user sees notification to
+  re-enter credentials
+- After successful reauth → back to normal (UC-16)
+- Zero risk of triggering modem anti-brute-force lockout
+
+**Why not retry?** AUTH_FAILED means the modem explicitly rejected the
+credentials. Unlike CONNECTIVITY (network glitch) or LOAD_AUTH (stale
+session), there is no transient condition that would make the same
+password work on the next attempt. Retrying with known-bad credentials:
+
+1. Wastes polls against a modem that will always reject them
+2. Risks triggering firmware anti-brute-force (AUTH_LOCKOUT, or worse,
+   automatic reboot on HNAP devices)
+3. Delays the reauth notification to the user
+
+**Distinguishing AUTH_FAILED from LOAD_AUTH:** LOAD_AUTH (401/403 on a
+data page after successful login) is a session issue, not a credential
+issue. LOAD_AUTH clears the session and the next poll re-authenticates
+fresh — this is self-correcting (UC-18). AUTH_FAILED is the modem
+rejecting the login itself.
+
+> **Status:** UC-20 documents the current behavior (threshold=6).
+> UC-87 is the target. Implementation requires lowering the circuit
+> breaker threshold for AUTH_FAILED signals specifically, while
+> preserving tolerance for LOAD_AUTH self-correction.

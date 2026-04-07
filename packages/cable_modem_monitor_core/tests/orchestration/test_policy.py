@@ -71,6 +71,6 @@ class TestParseErrorDoesNotAffectStreak:
         policy.apply(result)
         assert policy.auth_failure_streak == 0
 
-    def test_backoff_property_exposed(self, policy: SignalPolicy) -> None:
-        """backoff_remaining property is accessible."""
-        assert policy.backoff_remaining == 0
+    def test_circuit_breaker_default(self, policy: SignalPolicy) -> None:
+        """Circuit breaker starts closed."""
+        assert policy.circuit_open is False

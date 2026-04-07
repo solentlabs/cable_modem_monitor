@@ -315,14 +315,6 @@ class Orchestrator:
                 error="Connectivity backoff active",
             )
 
-        # Backoff
-        if self._policy.check_backoff():
-            return self._make_snapshot(
-                ConnectionStatus.AUTH_FAILED,
-                DocsisStatus.UNKNOWN,
-                error="Login backoff active",
-            )
-
         # Log poll context — INFO on first poll, DEBUG on steady-state
         self._log_poll_context()
 
