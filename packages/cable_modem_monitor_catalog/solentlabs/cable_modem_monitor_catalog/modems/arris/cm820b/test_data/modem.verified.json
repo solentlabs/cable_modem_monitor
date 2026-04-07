@@ -1,0 +1,141 @@
+{
+  "verified_at": "2026-04-07",
+  "version": "3.14.0-alpha.12",
+  "config_entry": {
+    "title": "ARRIS CM820B (192.168.100.1)",
+    "host": "192.168.100.1",
+    "manufacturer": "ARRIS",
+    "model": "CM820B",
+    "variant": null,
+    "protocol": "http",
+    "legacy_ssl": false,
+    "has_credentials": false,
+    "supports_icmp": false,
+    "supports_head": false
+  },
+  "core_diagnostics": {
+    "poll_duration": 1.11,
+    "auth_failure_streak": 0,
+    "circuit_breaker_open": false,
+    "session_is_valid": true
+  },
+  "modem_data": {
+    "connection_status": "online",
+    "docsis_status": "operational",
+    "collector_signal": "ok",
+    "downstream_channel_count": 8,
+    "upstream_channel_count": 4,
+    "total_corrected_errors": 7060266671,
+    "total_uncorrected_errors": 2863348,
+    "software_version": "9.1.103S5R",
+    "system_uptime": "55 d:  2 h: 25  m",
+    "health_status": "responsive",
+    "icmp_latency_ms": null,
+    "http_latency_ms": 8.151,
+    "error": ""
+  },
+  "downstream_channels": [
+    {
+      "channel_id": 73,
+      "channel_type": "qam",
+      "frequency": 178000000,
+      "power": 2.54,
+      "snr": 35.25,
+      "corrected": 1969144407,
+      "uncorrected": 109875
+    },
+    {
+      "channel_id": 74,
+      "channel_type": "qam",
+      "frequency": 186000000,
+      "power": 3.01,
+      "snr": 35.97,
+      "corrected": 1444777200,
+      "uncorrected": 401786
+    },
+    {
+      "channel_id": 75,
+      "channel_type": "qam",
+      "frequency": 194000000,
+      "power": 2.98,
+      "snr": 35.42,
+      "corrected": 215208525,
+      "uncorrected": 458183
+    },
+    {
+      "channel_id": 76,
+      "channel_type": "qam",
+      "frequency": 202000000,
+      "power": 4.36,
+      "snr": 35.42,
+      "corrected": 259093824,
+      "uncorrected": 848150
+    },
+    {
+      "channel_id": 77,
+      "channel_type": "qam",
+      "frequency": 210000000,
+      "power": 3.75,
+      "snr": 37.09,
+      "corrected": 394437893,
+      "uncorrected": 607532
+    },
+    {
+      "channel_id": 78,
+      "channel_type": "qam",
+      "frequency": 218000000,
+      "power": 4.5,
+      "snr": 36.61,
+      "corrected": 46567339,
+      "uncorrected": 76132
+    },
+    {
+      "channel_id": 79,
+      "channel_type": "qam",
+      "frequency": 226000000,
+      "power": 5.09,
+      "snr": 36.61,
+      "corrected": 2186104118,
+      "uncorrected": 98857
+    },
+    {
+      "channel_id": 80,
+      "channel_type": "qam",
+      "frequency": 234000000,
+      "power": 4.42,
+      "snr": 36.84,
+      "corrected": 544933365,
+      "uncorrected": 262833
+    }
+  ],
+  "upstream_channels": [
+    {
+      "channel_id": 6,
+      "channel_type": "atdma",
+      "frequency": 47000000,
+      "power": 45.0,
+      "symbol_rate": 5120
+    },
+    {
+      "channel_id": 8,
+      "channel_type": "atdma",
+      "frequency": 61000000,
+      "power": 46.5,
+      "symbol_rate": 5120
+    },
+    {
+      "channel_id": 7,
+      "channel_type": "atdma",
+      "frequency": 54000000,
+      "power": 45.0,
+      "symbol_rate": 5120
+    },
+    {
+      "channel_id": 5,
+      "channel_type": "atdma",
+      "frequency": 40000000,
+      "power": 44.5,
+      "symbol_rate": 5120
+    }
+  ]
+}

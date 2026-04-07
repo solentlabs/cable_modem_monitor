@@ -9,12 +9,15 @@ default_host: "192.168.100.1"
 auth:
   strategy: none
 
+health:
+  supports_head: false
+
 hardware:
   docsis_version: "3.0"
   chipset: "Intel Puma 5"
   release_date: "2011"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config: "Synthetic HAR — no login required"
