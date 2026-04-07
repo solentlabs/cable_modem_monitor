@@ -397,6 +397,18 @@ def main():  # noqa: C901
     try:
         run_command("git lfs version", quiet=True)
         print_success("Git LFS is installed")
+
+        # Configure LFS diff driver so HAR diffs show actual content
+        # instead of opaque LFS pointer changes (oid/size)
+        try:
+            current_textconv = run_command("git config diff.lfs.textconv", quiet=True)
+        except Exception:
+            current_textconv = ""
+        if current_textconv != "cat":
+            run_command("git config diff.lfs.textconv cat", quiet=True)
+            print_success("Git LFS diff driver configured (HAR diffs show content)")
+        else:
+            print_success("Git LFS diff driver already configured")
     except Exception:
         print_warning("Git LFS not installed — HAR test fixtures won't download")
         print("  Install: https://git-lfs.com/")

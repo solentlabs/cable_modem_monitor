@@ -1,0 +1,357 @@
+{
+  "config_entry": {
+    "has_credentials": true,
+    "host": "192.168.100.1",
+    "legacy_ssl": false,
+    "manufacturer": "Motorola",
+    "model": "MB8600",
+    "protocol": "https",
+    "supports_head": true,
+    "supports_icmp": false,
+    "title": "Motorola MB8600 (192.168.100.1)",
+    "variant": null
+  },
+  "core_diagnostics": {
+    "auth_failure_streak": 0,
+    "circuit_breaker_open": false,
+    "poll_duration": 6.71,
+    "session_is_valid": true
+  },
+  "downstream_channels": [
+    {
+      "channel_id": 29,
+      "channel_type": "qam",
+      "corrected": 111360,
+      "frequency": 729000000,
+      "power": -2.1,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 1,
+      "channel_type": "qam",
+      "corrected": 22521,
+      "frequency": 561000000,
+      "power": -2.2,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 2,
+      "channel_type": "qam",
+      "corrected": 23967,
+      "frequency": 567000000,
+      "power": -2.1,
+      "snr": 39.9,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 3,
+      "channel_type": "qam",
+      "corrected": 26963,
+      "frequency": 573000000,
+      "power": -2.1,
+      "snr": 39.8,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 4,
+      "channel_type": "qam",
+      "corrected": 34274,
+      "frequency": 579000000,
+      "power": -2.2,
+      "snr": 39.8,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 5,
+      "channel_type": "qam",
+      "corrected": 43182,
+      "frequency": 585000000,
+      "power": -2.3,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 6,
+      "channel_type": "qam",
+      "corrected": 40887,
+      "frequency": 591000000,
+      "power": -2.3,
+      "snr": 39.5,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 7,
+      "channel_type": "qam",
+      "corrected": 42729,
+      "frequency": 597000000,
+      "power": -2.4,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 8,
+      "channel_type": "qam",
+      "corrected": 43430,
+      "frequency": 603000000,
+      "power": -2.3,
+      "snr": 39.8,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 10,
+      "channel_type": "qam",
+      "corrected": 47024,
+      "frequency": 615000000,
+      "power": -2.3,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 11,
+      "channel_type": "qam",
+      "corrected": 45011,
+      "frequency": 621000000,
+      "power": -2.1,
+      "snr": 39.9,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 12,
+      "channel_type": "qam",
+      "corrected": 53815,
+      "frequency": 627000000,
+      "power": -2.1,
+      "snr": 39.8,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 13,
+      "channel_type": "qam",
+      "corrected": 70815,
+      "frequency": 633000000,
+      "power": -2.1,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 14,
+      "channel_type": "qam",
+      "corrected": 65143,
+      "frequency": 639000000,
+      "power": -2.0,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 15,
+      "channel_type": "qam",
+      "corrected": 78961,
+      "frequency": 645000000,
+      "power": -2.1,
+      "snr": 39.5,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 16,
+      "channel_type": "qam",
+      "corrected": 62623,
+      "frequency": 651000000,
+      "power": -2.0,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 17,
+      "channel_type": "qam",
+      "corrected": 69933,
+      "frequency": 657000000,
+      "power": -2.2,
+      "snr": 39.5,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 18,
+      "channel_type": "qam",
+      "corrected": 72804,
+      "frequency": 663000000,
+      "power": -2.2,
+      "snr": 39.6,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 19,
+      "channel_type": "qam",
+      "corrected": 68214,
+      "frequency": 669000000,
+      "power": -2.3,
+      "snr": 39.6,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 20,
+      "channel_type": "qam",
+      "corrected": 75266,
+      "frequency": 675000000,
+      "power": -2.3,
+      "snr": 38.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 21,
+      "channel_type": "qam",
+      "corrected": 61206,
+      "frequency": 681000000,
+      "power": -2.1,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 22,
+      "channel_type": "qam",
+      "corrected": 89398,
+      "frequency": 687000000,
+      "power": -2.2,
+      "snr": 39.6,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 23,
+      "channel_type": "qam",
+      "corrected": 77269,
+      "frequency": 693000000,
+      "power": -1.9,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 24,
+      "channel_type": "qam",
+      "corrected": 86627,
+      "frequency": 699000000,
+      "power": -1.9,
+      "snr": 39.8,
+      "uncorrected": 3698
+    },
+    {
+      "channel_id": 25,
+      "channel_type": "qam",
+      "corrected": 1211420,
+      "frequency": 705000000,
+      "power": -1.7,
+      "snr": 39.8,
+      "uncorrected": 3672843
+    },
+    {
+      "channel_id": 26,
+      "channel_type": "qam",
+      "corrected": 1234624,
+      "frequency": 711000000,
+      "power": -1.9,
+      "snr": 39.7,
+      "uncorrected": 4076848
+    },
+    {
+      "channel_id": 27,
+      "channel_type": "qam",
+      "corrected": 92052,
+      "frequency": 717000000,
+      "power": -1.8,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 28,
+      "channel_type": "qam",
+      "corrected": 93463,
+      "frequency": 723000000,
+      "power": -2.0,
+      "snr": 39.7,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 30,
+      "channel_type": "qam",
+      "corrected": 104283,
+      "frequency": 735000000,
+      "power": -2.2,
+      "snr": 39.5,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 31,
+      "channel_type": "qam",
+      "corrected": 113095,
+      "frequency": 741000000,
+      "power": -2.3,
+      "snr": 39.5,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 32,
+      "channel_type": "qam",
+      "corrected": 143691,
+      "frequency": 747000000,
+      "power": -2.3,
+      "snr": 39.5,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 33,
+      "channel_type": "ofdm",
+      "corrected": 1814501812,
+      "frequency": 795000000,
+      "power": -2.4,
+      "snr": 39.7,
+      "uncorrected": 51469
+    }
+  ],
+  "modem_data": {
+    "collector_signal": "ok",
+    "connection_status": "online",
+    "docsis_status": "operational",
+    "downstream_channel_count": 32,
+    "error": "",
+    "health_status": "responsive",
+    "http_latency_ms": 243.118,
+    "icmp_latency_ms": null,
+    "software_version": "8600-19.3.15",
+    "system_uptime": "28 days 09h:39m:22s",
+    "total_corrected": 4406050,
+    "total_uncorrected": 7753389,
+    "upstream_channel_count": 4
+  },
+  "upstream_channels": [
+    {
+      "channel_id": 1,
+      "channel_type": "qam",
+      "frequency": 26700000,
+      "power": 44.5,
+      "symbol_rate": 5120
+    },
+    {
+      "channel_id": 2,
+      "channel_type": "qam",
+      "frequency": 20300000,
+      "power": 44.0,
+      "symbol_rate": 5120
+    },
+    {
+      "channel_id": 3,
+      "channel_type": "qam",
+      "frequency": 15500000,
+      "power": 43.0,
+      "symbol_rate": 2560
+    },
+    {
+      "channel_id": 24,
+      "channel_type": "ofdma",
+      "frequency": 26500000,
+      "power": 44.2,
+      "symbol_rate": 11000
+    }
+  ],
+  "verified_at": "2026-04-07",
+  "version": "3.14.0-alpha.11"
+}

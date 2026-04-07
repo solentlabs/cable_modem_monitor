@@ -28,15 +28,18 @@ hardware:
   chipset: Broadcom BCM3390
   release_date: "2017"
 
-status: awaiting_verification
+status: confirmed
 sources:
   auth_config: "[#40 MB8600 newer firmware](https://github.com/solentlabs/cable_modem_monitor/issues/40)"
   chipset: "Same platform as MB8611"
   hardware: "[Motorola MB8600 page](https://www.motorola.com/us/mb8600)"
+  verification: "User diagnostics capture on v3.14.0-alpha.11 (2026-04-07, Issue #40)"
 attribution:
   contributors:
     - github: https://github.com/BowlesCR
-      contribution: "MB8600 HAR capture and HNAP testing (Issue #40)"
+      contribution: "MB8600 HAR capture and HNAP auth reverse-engineering (Issue #40)"
+    - github: https://github.com/RoGreat
+      contribution: "Independent verification and diagnostics capture (Issue #40)"
 isps:
   - Comcast
   - Xfinity
