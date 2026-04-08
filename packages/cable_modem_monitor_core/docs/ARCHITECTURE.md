@@ -216,7 +216,7 @@ graph TD
     HA --> HS["<b>SESSION</b><hr/>• uid + PrivateKey cookies<br/>• HNAP_AUTH header"]
     HS --> HF["<b>FORMAT</b><hr/>• hnap (JSON + delimiters)"]
 
-    HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• form<br/>• form_nonce<br/>• url_token 🔗<br/>• form_pbkdf2 🔗<br/>• form_sjcl 🔗"]
+    HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• form / form_nonce<br/>• form_pbkdf2 🔗<br/>• form_sjcl 🔗<br/>• url_token 🔗"]
     HTA --> HTS["<b>SESSION</b><hr/>• stateless<br/>• cookie<br/>• CSRF 🔗<br/>• url_token 🔗"]
     HTS --> HTF["<b>FORMAT</b><hr/>• table<br/>• table_transposed<br/>• javascript<br/>• javascript_json<br/>• html_fields<br/>• json<br/>• xml"]
 
@@ -519,18 +519,27 @@ credentials before submission.
 
 ```text
 1. GET login page (login_page)
-   → Parse JS variables: myIv (hex), mySalt, currentSessionId
-2. Derive AES key: PBKDF2(password, mySalt, iterations, key_len)
+   → Parse JS variables: myIv (hex), mySalt (hex), currentSessionId
+
+2. Derive AES key:
+   PBKDF2-HMAC-SHA256(password.utf8, hex_decode(mySalt), iterations, key_len)
+   Note: SJCL's sjclPbkdf2() hex-decodes the salt via
+   sjcl.codec.hex.toBits(salt) before calling sjcl.misc.pbkdf2().
+   The IV is also hex-decoded: iv_bytes = hex_decode(myIv).
+
 3. Encrypt credentials:
-   plaintext = {"Password": "<pw>", "Nonce": "<sessionId>"}
-   ciphertext = AES-CCM(key, iv, plaintext, aad=encrypt_aad)
+   plaintext = JSON.serialize({"Password": "<pw>", "Nonce": "<sessionId>"})
+   ciphertext = AES-CCM(key, iv_bytes, plaintext.utf8, aad=encrypt_aad.utf8)
+
 4. POST login (login_endpoint):
-   {"EncryptData": "<hex>", "Name": "<user>", "AuthData": "<encrypt_aad>"}
-   → Response: {"p_status": "Match", "encryptData": "<hex>", ...}
+   {"EncryptData": hex(ciphertext), "Name": "<user>", "AuthData": "<encrypt_aad>"}
+   → Response: {"p_status": "AdminMatch"|"Match", "encryptData": "<hex>"}
    → Sets session cookie (auth.cookie_name)
+
 5. Decrypt response:
-   AES-CCM decrypt encryptData with aad=decrypt_aad → CSRF nonce
+   AES-CCM decrypt hex_decode(encryptData) with aad=decrypt_aad.utf8 → CSRF nonce
    → Set csrf_header on session for subsequent requests
+
 6. POST session validation (session_validation_endpoint, optional):
    Empty JSON POST with csrf_header → finalizes session
 ```

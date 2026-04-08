@@ -135,7 +135,7 @@ class FormSjclAuthHandler(FormAuthHandler):
             key = hashlib.pbkdf2_hmac(
                 "sha256",
                 self._TEST_PASSWORD.encode("utf-8"),
-                self._TEST_SALT.encode("utf-8"),
+                bytes.fromhex(self._TEST_SALT),
                 self._pbkdf2_iterations,
                 dklen=self._pbkdf2_key_length // 8,
             )

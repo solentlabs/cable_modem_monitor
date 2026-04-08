@@ -288,18 +288,28 @@ def _fetch_page_vars(
 
 def _derive_key(
     password: str,
-    salt: str,
+    salt_hex: str,
     iterations: int,
     key_length_bits: int,
 ) -> bytes:
     """Derive an AES key using PBKDF2-HMAC-SHA256.
 
-    Returns raw key bytes (not hex).
+    Args:
+        password: Plaintext password (UTF-8 encoded for PBKDF2).
+        salt_hex: Salt as a hex string from the login page's
+            ``mySalt`` JS variable.  Hex-decoded to binary bytes
+            to match SJCL's ``sjcl.codec.hex.toBits(salt)``
+            before calling ``sjcl.misc.pbkdf2()``.
+        iterations: PBKDF2 iteration count.
+        key_length_bits: Desired key length in bits.
+
+    Returns:
+        Raw key bytes (not hex).
     """
     return hashlib.pbkdf2_hmac(
         "sha256",
         password.encode("utf-8"),
-        salt.encode("utf-8"),
+        bytes.fromhex(salt_hex),
         iterations,
         dklen=key_length_bits // 8,
     )

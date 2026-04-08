@@ -27,7 +27,7 @@ _TEST_SALT = "1122334455667788"
 _TEST_IV = "aabbccddeeff0011"
 _TEST_SESSION_ID = "test_session_id"
 _TEST_CSRF_NONCE = "test_csrf_nonce_12345"
-_TEST_ENCRYPTED_NONCE = "cbd2ef8ec63fc993cbcd49052f671e994329237485185d24b13ae145ef11f07d2d5ab3ecd7"
+_TEST_ENCRYPTED_NONCE = "1fae830db97a54e264865836515ada26cce31be46ee7f7588205f728d0f9a0163d737ac4aa"
 
 
 def _make_config(**overrides: Any) -> FormSjclAuth:
@@ -67,21 +67,27 @@ class TestDeriveKey:
     """PBKDF2 key derivation utility."""
 
     def test_basic_derivation(self) -> None:
-        """Derives raw bytes from password and salt."""
-        result = _derive_key("password", "salt", 1000, 128)
+        """Derives raw bytes from password and hex-encoded salt."""
+        result = _derive_key("password", _TEST_SALT, 1000, 128)
         assert len(result) == 16  # 128 bits = 16 bytes
         assert isinstance(result, bytes)
 
     def test_deterministic(self) -> None:
         """Same inputs produce same output."""
-        a = _derive_key("password", "salt", 1000, 128)
-        b = _derive_key("password", "salt", 1000, 128)
+        a = _derive_key("password", _TEST_SALT, 1000, 128)
+        b = _derive_key("password", _TEST_SALT, 1000, 128)
         assert a == b
 
     def test_matches_hashlib(self) -> None:
-        """Matches hashlib.pbkdf2_hmac directly."""
-        expected = hashlib.pbkdf2_hmac("sha256", b"pass", b"salt", 1000, dklen=16)
-        result = _derive_key("pass", "salt", 1000, 128)
+        """Matches hashlib.pbkdf2_hmac with hex-decoded salt."""
+        expected = hashlib.pbkdf2_hmac(
+            "sha256",
+            b"pass",
+            bytes.fromhex(_TEST_SALT),
+            1000,
+            dklen=16,
+        )
+        result = _derive_key("pass", _TEST_SALT, 1000, 128)
         assert result == expected
 
 

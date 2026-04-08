@@ -538,29 +538,38 @@ actions:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `login_page` | string | `"/"` | Page to GET for per-session IV, salt, and session ID (parsed from JS variables `myIv`, `mySalt`, `currentSessionId`) |
+| `login_page` | string | `"/"` | Page to GET for per-session IV, salt, and session ID (parsed from JS variables `myIv` (hex), `mySalt` (hex), `currentSessionId`) |
 | `login_endpoint` | string | required | URL for the encrypted credential POST |
 | `session_validation_endpoint` | string | `""` | URL for the post-login session validation POST. If empty, session validation is skipped. |
 | `pbkdf2_iterations` | int | required | PBKDF2 iteration count for key derivation |
 | `pbkdf2_key_length` | int | required | Derived key length in bits (128 for AES-128) |
 | `ccm_tag_length` | int | `16` | AES-CCM authentication tag length in bytes |
-| `encrypt_aad` | string | `"loginPassword"` | AAD (Additional Authenticated Data) for encrypting the login payload |
-| `decrypt_aad` | string | `"nonce"` | AAD for decrypting the server's nonce response |
+| `encrypt_aad` | string | `"loginPassword"` | AAD (Additional Authenticated Data, UTF-8 encoded) for encrypting the login payload |
+| `decrypt_aad` | string | `"nonce"` | AAD (UTF-8 encoded) for decrypting the server's nonce response |
 | `csrf_header` | string | `""` | Header name for the CSRF nonce extracted from the decrypted login response. If empty, nonce decryption is skipped. |
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 
-**Auth flow:**
+**Auth flow (encoding boundaries):**
 
-1. **GET login page** — extract `myIv`, `mySalt`, `currentSessionId`
-   from JS variable assignments in the response.
-2. **Derive key** — `PBKDF2(password, mySalt, iterations, key_length)`.
-3. **Encrypt** — AES-CCM encrypt `{"Password": "<pw>", "Nonce": "<sessionId>"}`
-   with the derived key, IV from `myIv`, and AAD from `encrypt_aad`.
-4. **POST login** — send `{"EncryptData": "<hex>", "Name": "<user>",
-   "AuthData": "<encrypt_aad>"}`. Server responds with
-   `{"p_status": "AdminMatch", "encryptData": "<hex>"}`.
-5. **Decrypt nonce** — AES-CCM decrypt the response `encryptData`
-   with AAD from `decrypt_aad` to extract the CSRF nonce.
+All hex values from JS variables are hex-decoded to binary bytes
+before cryptographic operations. This matches SJCL's
+`sjcl.codec.hex.toBits()` wrapper. String values (password, AAD)
+are UTF-8 encoded.
+
+1. **GET login page** — extract `myIv` (hex), `mySalt` (hex),
+   `currentSessionId` from JS variable assignments in the response.
+2. **Derive key** —
+   `PBKDF2-HMAC-SHA256(password.utf8, hex_decode(mySalt), iterations, key_length)`.
+3. **Encrypt** — AES-CCM encrypt
+   `JSON({"Password": "<pw>", "Nonce": "<sessionId>"}).utf8`
+   with the derived key, `hex_decode(myIv)`, and AAD
+   `encrypt_aad.utf8`.
+4. **POST login** — send
+   `{"EncryptData": hex(ciphertext), "Name": "<user>", "AuthData": "<encrypt_aad>"}`.
+   Server responds with
+   `{"p_status": "AdminMatch"|"Match", "encryptData": "<hex>"}`.
+5. **Decrypt nonce** — AES-CCM decrypt `hex_decode(encryptData)`
+   with AAD `decrypt_aad.utf8` to extract the CSRF nonce.
 6. **POST session validation** — if `session_validation_endpoint` is
    configured, POST with the `csrf_header` to finalize the session.
 

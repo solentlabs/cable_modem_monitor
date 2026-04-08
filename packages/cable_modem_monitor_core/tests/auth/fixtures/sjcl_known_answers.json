@@ -1,0 +1,25 @@
+{
+  "_description": "SJCL AES-CCM known-answer vectors derived from sjclCrypto.js behavior. The salt is hex-decoded to binary (sjcl.codec.hex.toBits) before PBKDF2, NOT UTF-8 encoded. These vectors anchor our Python implementation against the real SJCL protocol.",
+  "vectors": [
+    {
+      "description": "Standard TG3442DE parameters (7-byte IV, 8-byte salt)",
+      "password": "pw",
+      "salt_hex": "1122334455667788",
+      "iv_hex": "aabbccddeeff00",
+      "iterations": 1000,
+      "key_length_bits": 128,
+      "ccm_tag_length": 16,
+      "expected_key_hex": "8cc36bba89547bf15fed0b23de009f28",
+      "encrypt_aad": "loginPassword",
+      "decrypt_aad": "nonce",
+      "plaintext": "{\"Password\":\"pw\",\"Nonce\":\"mock_session_123\"}",
+      "expected_ciphertext_hex": "2083be52a7186717120030d4e330a3beff2246213affb8bb524cf04667fdb9220c15a8ee7f4af2ab0ee2e419a3bbd5954004284cf7d368ff8a4071c6",
+      "nonce_plaintext": "mock_csrf_nonce",
+      "expected_nonce_ciphertext_hex": "36ce8d588b08630a063b7c81af23b1922ec744a8515b62a0232c6c9cf91f2e"
+    }
+  ],
+  "regression_guard": {
+    "_description": "The WRONG key produced by salt.encode('utf-8') instead of bytes.fromhex(salt). Tests MUST verify the derived key does NOT equal this value.",
+    "wrong_key_hex": "0423b3053cdee80488816d98c9d49085"
+  }
+}

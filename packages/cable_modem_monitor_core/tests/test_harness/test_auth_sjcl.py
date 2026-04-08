@@ -156,7 +156,7 @@ class TestHandleLoginPost:
         key = hashlib.pbkdf2_hmac(
             "sha256",
             FormSjclAuthHandler._TEST_PASSWORD.encode("utf-8"),
-            FormSjclAuthHandler._TEST_SALT.encode("utf-8"),
+            bytes.fromhex(FormSjclAuthHandler._TEST_SALT),
             1000,
             dklen=128 // 8,
         )
