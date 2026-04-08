@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.13] - 2026-04-08
+
+### Added
+
+- **CM1100 catalog entry** — Netgear CM1100 with form auth hidden
+  field discovery. Related to #104.
+- **DM1000 enhancements** — `password_field` list, per-array JSON
+  resources, OFDM channel support. Related to #92.
+- **MCP form discovery** — `login_page` emission, discoverable
+  `hidden_fields` filtering, `form_selector` detection (P23).
+- **SJCL known-answer tests** — fixture-driven crypto tests anchored
+  to `sjclCrypto.js` reference values, plus end-to-end integration
+  test running `FormSjclAuthManager` against `HARMockServer`.
+
+### Fixed
+
+- **SJCL PBKDF2 salt encoding** — `_derive_key()` was UTF-8 encoding
+  the salt instead of hex-decoding it, producing a different AES key
+  than the modem expects. The bug was invisible in tests because the
+  mock server had the same encoding error. Related to #86.
+- **Deferred entity initial state** — guarantee initial state for
+  deferred entities (UC-84).
+- **Diagnostics error totals** — use Core canonical names in HA
+  diagnostics.
+- **Backoff off-by-one** — immediate circuit trip on credential
+  rejection.
+- **Stale probe flags** — drop stale `supports_icmp`/`supports_head`
+  flags from v1→v2 config entry migration. Related to PR #57.
+
+### Changed
+
+- **MB8600 confirmed** — from user diagnostics. Related to #40.
+- **CM820B confirmed** — from alpha.12 diagnostics. Related to PR #57.
+- **MCP accuracy tracking** — replaced regression diff counts with
+  field-level accuracy tracking.
+- **Spec encoding boundaries** — ARCHITECTURE.md and MODEM_YAML_SPEC.md
+  now explicitly document hex-decode/UTF-8 encoding at each step of
+  the SJCL crypto chain.
+
 ## [3.14.0-alpha.12] - 2026-04-06
 
 ### Added
