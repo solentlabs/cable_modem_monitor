@@ -14,7 +14,8 @@
         "action": "/goform/login",
         "username_field": "loginUsername",
         "password_field": "loginPassword",
-        "encoding": "base64"
+        "encoding": "base64",
+        "login_page": "/login.html"
       },
       "confidence": "high"
     },

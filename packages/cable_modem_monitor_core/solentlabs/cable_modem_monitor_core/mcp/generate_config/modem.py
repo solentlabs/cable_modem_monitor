@@ -192,6 +192,8 @@ _AUTH_DEFAULTS: list[tuple[str, object]] = [
 # Keys to remove when their value is empty/falsy
 _AUTH_REMOVE_IF_EMPTY: list[str] = [
     "hidden_fields",
+    "login_page",
+    "form_selector",
     "success",
 ]
 

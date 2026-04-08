@@ -1,0 +1,53 @@
+{
+  "_description": "Form auth with login page containing multiple forms: form_selector emitted to target the login form",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://host/",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {
+          "mimeType": "text/html",
+          "text": "<form id=\"search\" action=\"/search\"><input name=\"q\" value=\"\"></form><form id=\"loginForm\" action=\"/goform/login\"><input type=\"hidden\" name=\"webToken\" value=\"csrf123\"><input type=\"text\" name=\"loginUsername\"><input type=\"password\" name=\"loginPassword\"></form>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {"name": "loginUsername", "value": "admin"},
+            {"name": "loginPassword", "value": "secret"},
+            {"name": "webToken", "value": "csrf123"}
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 0, "text": ""}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "action": "/goform/login",
+    "username_field": "loginUsername",
+    "password_field": "loginPassword",
+    "login_page": "/",
+    "hidden_fields": {},
+    "form_selector": "form#loginForm"
+  }
+}

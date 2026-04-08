@@ -31,6 +31,8 @@
     "username_field": "loginUsername",
     "password_field": "loginPassword",
     "encoding": "base64",
+    "login_page": "",
+    "form_selector": "",
     "success": {"redirect": "/home.asp"}
   }
 }

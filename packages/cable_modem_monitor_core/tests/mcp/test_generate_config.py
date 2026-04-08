@@ -220,22 +220,25 @@ class TestAuthDefaultStripping:
     """Verify empty/default auth fields are stripped from modem.yaml."""
 
     def test_form_auth_defaults_stripped(self) -> None:
-        """method: POST, hidden_fields: {}, success: {}, encoding: plain are stripped."""
+        """Default/empty auth fields are stripped from generated YAML."""
         fixture = load_fixture(VALID_DIR / "form_auth_with_defaults.json")
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         modem = yaml.safe_load(result.modem_yaml)
         auth = modem["auth"]
         assert "method" not in auth
         assert "hidden_fields" not in auth
+        assert "login_page" not in auth
+        assert "form_selector" not in auth
         assert "success" not in auth
         assert "encoding" not in auth
 
-    def test_non_default_encoding_kept(self) -> None:
-        """encoding: base64 is NOT stripped (it's not the default)."""
+    def test_non_default_values_kept(self) -> None:
+        """Non-default auth fields (encoding, login_page) are preserved."""
         fixture = load_fixture(VALID_DIR / "table_form_auth.json")
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         modem = yaml.safe_load(result.modem_yaml)
         assert modem["auth"]["encoding"] == "base64"
+        assert modem["auth"]["login_page"] == "/login.html"
 
 
 # ---------------------------------------------------------------------------

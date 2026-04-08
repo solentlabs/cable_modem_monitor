@@ -12,7 +12,7 @@ from __future__ import annotations
 import base64
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, NamedTuple
 
 from ...validation.har_utils import (
     HARD_STOP_PREFIX,
@@ -587,12 +587,23 @@ def _extract_form_nonce(signals: _HttpAuthSignals) -> AuthDetail:
 
 
 def _extract_form(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> AuthDetail:
-    """Extract standard form auth fields."""
+    """Extract standard form auth fields.
+
+    When a login page GET precedes the form POST in the HAR, emits
+    ``login_page`` so the runtime pre-fetches it for cookies and
+    hidden-field discovery. Hidden fields that the runtime would
+    discover are filtered out — only overrides remain. A
+    ``form_selector`` is emitted when the login page has multiple
+    ``<form>`` elements.
+    """
+    from .form_discovery import detect_form_selector, extract_hidden_fields
+
     entry = signals.form_post_entry
     assert entry is not None  # guaranteed by caller
     req = entry["request"]
     resp = entry["response"]
     url = req.get("url", "")
+    post_path = path_from_url(url)
     status = resp.get("status", 0)
     post_data = req.get("postData", {})
 
@@ -600,9 +611,26 @@ def _extract_form(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> A
     params = parse_form_params(post_data)
     username_field, password_field, hidden_fields = classify_form_fields(params)
 
+    # Detect login page from HAR (GET before POST with matching action)
+    login_page_info = _find_login_page(entries, entry)
+    login_page = login_page_info.path
+    login_page_html = login_page_info.html
+
     # Detect encoding: check POST value, then fall back to login page JS
-    login_page_html = _find_login_page_html(entries, entry)
     encoding = detect_encoding(params, password_field, login_page_html)
+
+    # When login_page found, the runtime discovers hidden fields from the
+    # HTML form automatically. Filter hidden_fields to only keep overrides
+    # (fields not discoverable, or with values different from the HTML).
+    form_selector = ""
+    if login_page_html:
+        form_selector = detect_form_selector(login_page_html, post_path)
+        discoverable = extract_hidden_fields(login_page_html, form_selector)
+        hidden_fields = {
+            name: value
+            for name, value in hidden_fields.items()
+            if name not in discoverable or discoverable[name] != value
+        }
 
     # Detect success indicator
     success: dict[str, str] = {}
@@ -619,12 +647,14 @@ def _extract_form(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> A
     return AuthDetail(
         strategy="form",
         fields={
-            "action": path_from_url(url),
+            "action": post_path,
             "method": "POST",
             "username_field": username_field,
             "password_field": password_field,
             "encoding": encoding,
             "hidden_fields": hidden_fields,
+            "login_page": login_page,
+            "form_selector": form_selector,
             "success": success,
         },
         confidence="high",
@@ -745,14 +775,25 @@ def _has_js_base64_encoding(html: str) -> bool:
     return bool(_JS_BTOA_PATTERN.search(html))
 
 
-def _find_login_page_html(
+class _LoginPageInfo(NamedTuple):
+    """Login page path and HTML body discovered from the HAR."""
+
+    path: str
+    html: str
+
+
+def _find_login_page(
     entries: list[dict[str, Any]],
     form_post_entry: dict[str, Any],
-) -> str:
-    """Find the login page HTML that served the login form.
+) -> _LoginPageInfo:
+    """Find the login page that served the login form.
 
     Scans entries before the form POST for a GET response containing
     an HTML form whose action matches the POST URL.
+
+    Returns:
+        ``_LoginPageInfo`` with path and HTML. Both are empty strings
+        when no matching login page is found.
     """
     post_url = form_post_entry["request"].get("url", "")
     post_path = path_from_url(post_url)
@@ -772,9 +813,10 @@ def _find_login_page_html(
             continue
         # Check if this page contains a form posting to the login URL
         if post_path in text:
-            return text
+            page_path = path_from_url(req.get("url", ""))
+            return _LoginPageInfo(path=page_path, html=text)
 
-    return ""
+    return _LoginPageInfo(path="", html="")
 
 
 def _has_challenge_cookie_retry(entries: list[dict[str, Any]], challenge_entry: dict[str, Any]) -> bool:
