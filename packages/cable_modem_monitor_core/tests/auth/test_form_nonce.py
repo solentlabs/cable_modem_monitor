@@ -32,7 +32,9 @@ class TestFormNonceAuthManager:
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
-            assert result.response_url == "/cgi-bin/status"
+            # response_url intentionally empty — nonce auth response body
+            # is the text prefix, not page content at the redirect target
+            assert result.response_url == ""
 
     def test_error_prefix_response(self, session: requests.Session) -> None:
         """Parses error prefix and reports failure."""

@@ -19,6 +19,8 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: "Intel Puma 6"
+  end_of_life: "2023"
+  release_date: "2016"
 
 status: awaiting_verification
 
@@ -30,9 +32,9 @@ sources:
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6190"
 attribution:
   contributors:
-    - github: HenryGeorge1978
+    - github: https://github.com/HenryGeorge1978
       contribution: "Auth-variant HAR capture and testing"
-    - github: Winesnob
+    - github: https://github.com/Winesnob
       contribution: "Initial auth-variant report"
 
 isps:
@@ -44,7 +46,17 @@ notes: |
   Client generates 8-digit random nonce, POSTs username/password/nonce
   as separate form fields. Response is text-prefixed (Url:/Error:).
   Session maintained via "credential" cookie (path: /cgi-bin/).
+  Quirk — Intel Puma 6 chipset: individual channels can report tens of
+  millions of corrected/uncorrectable codewords while neighbors show
+  hundreds. Two channels dominate any aggregate, making totals
+  misleading. Aggregate intentionally omitted; per-channel data is
+  available.
+  Logout: POST /cgi-bin/logout requires nonce (not expressible in
+  current HttpAction model). Session expiry handled by LOAD_AUTH
+  recovery — one failed poll per cycle, then self-heals.
 references:
   issues:
     - "[#83 — [Bug]: SB6190 parser error](https://github.com/solentlabs/cable_modem_monitor/issues/83)"
     - "[#93 — Arris SB6190](https://github.com/solentlabs/cable_modem_monitor/issues/93)"
+  prs:
+    - "[PR #22 — Adding support for Arris SB6190](https://github.com/solentlabs/cable_modem_monitor/pull/22)"

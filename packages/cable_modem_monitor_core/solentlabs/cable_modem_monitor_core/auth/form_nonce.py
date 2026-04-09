@@ -96,19 +96,21 @@ class FormNonceAuthManager(BaseAuthManager):
                 error=f"Login rejected: {error_msg}",
             )
 
-        response_url = ""
+        redirect_hint = ""
         if text.startswith(config.success_prefix):
-            response_url = text[len(config.success_prefix) :].strip()
+            redirect_hint = text[len(config.success_prefix) :].strip()
 
         _logger.log(
             log_level,
             "Nonce login succeeded: status=%d, redirect=%s",
             response.status_code,
-            response_url,
+            redirect_hint,
         )
 
+        # Do not populate response_url — the response body is the text
+        # prefix ("Url:/path"), not the content of the redirect target.
+        # The loader would incorrectly reuse this body as page content.
         return AuthResult(
             success=True,
             response=response,
-            response_url=response_url,
         )
