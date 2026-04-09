@@ -165,3 +165,31 @@ system_info:
             - offset: 14
               field: system_uptime
               type: string
+    # /RouterStatus.htm exposes hardware and firmware version via a
+    # separate InitTagValue function. Same JS comment pattern as
+    # DocsisStatus.htm (real data on one line, example data in a
+    # /* */ block). Matches C3700, CM2000, CM3000 extraction pattern.
+    - format: javascript
+      resource: "/RouterStatus.htm"
+      functions:
+        - name: "InitTagValue"
+          delimiter: "|"
+          fields:
+            - offset: 0
+              field: hardware_version
+              type: string
+            - offset: 1
+              field: software_version
+              type: string
+
+# DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
+# at a vastly different scale (billions vs thousands) and represent a
+# different error correction mechanism — they are not aggregated.
+# See PARSING_SPEC.md § Aggregate Scoping.
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream.qam
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream.qam

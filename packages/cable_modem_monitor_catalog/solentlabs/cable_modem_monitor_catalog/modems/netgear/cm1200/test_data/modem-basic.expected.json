@@ -355,7 +355,11 @@
   "system_info": {
     "docsis_status": "Operational",
     "downstream_channel_count": 32,
+    "hardware_version": "1.01",
+    "software_version": "V3.02.01",
     "system_uptime": "13 days 06:59:07",
+    "total_corrected": 156700,
+    "total_uncorrected": 107568,
     "upstream_channel_count": 3
   },
   "upstream": [
