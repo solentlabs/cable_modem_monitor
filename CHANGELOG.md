@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.14] - 2026-04-09
+
+### Added
+
+- **SB6183 catalog entry** — Arris SB6183 no-auth modem with transposed
+  table parsing. Related to #95.
+- **Hub 5 catalog entry** — Virgin Media SuperHub 5 (VMDG660) with
+  REST API JSON parsing, no auth required. Related to #82.
+- **CODA56 re-intake** — Hitron CODA56 rebuilt with JSON body sniffing,
+  `system_info` array_path support, and spec split. Related to #89.
+- **Uptime normalization** — `scale` support on all system_info formats
+  (seconds, duration strings, tick counts) across the fleet.
+- **Provisioned speed sensors** — `child_aggregates` for downstream/
+  upstream provisioned speed, `scale` on `system_info`, fleet-wide
+  rollout.
+- **YAML-driven `docsis_status` normalization** — StrEnum pass-through
+  with configurable value mapping in parser YAML.
+
+### Fixed
+
+- **TG3442DE SJCL login** — missing `csrfNonce` header and wrong
+  plaintext format broke authentication. Related to #86.
+- **SB6190 `form_nonce` auth** — response reuse bug where auth manager
+  consumed the response body twice; config completeness fixes.
+  Related to #83, #93.
+- **TM1602A parser enrichment** — added `docsis_status`, upstream
+  modulation, and metadata cleanup. Related to #112.
+- **CM1200 field mappings** — added missing field mappings and
+  verification artifact. Related to #121.
+- **Fleet-wide aggregate sweep** — `lock_status` filter corrections
+  and firmware quirk documentation across catalog.
+
+### Changed
+
+- **DM1000 HAR expanded** — full JSON data endpoints captured.
+- **Auth strategy specs extracted** — SJCL, PBKDF2, and CBN auth
+  strategies documented in dedicated spec files.
+- **Pre-commit hook** — new hook to catch gitignored path references.
+- **Pre-commit config** — consolidated duplicate `pre-commit-hooks`
+  repo blocks.
+
 ## [3.14.0-alpha.13] - 2026-04-08
 
 ### Added
@@ -1391,7 +1432,7 @@ This release provides extensive diagnostic information to help understand why th
   - VS Code pytest settings now ignore CodeQL and venv directories
   - Fixes issue where CodeQL `.py` fixtures were incorrectly detected as Python tests
 - **Git Ignore Configuration** - Better development artifact handling
-  - Ignores local CodeQL CLI installation directory (`/codeql/`)
+  - Ignores local CodeQL CLI installation directory
   - Separates local development artifacts from GitHub workflow artifacts
   - Clarified comments distinguishing local vs CI/CD CodeQL resources
 

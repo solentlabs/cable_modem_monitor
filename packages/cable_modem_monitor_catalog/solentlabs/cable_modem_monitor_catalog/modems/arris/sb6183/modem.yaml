@@ -13,7 +13,7 @@ hardware:
   chipset: Broadcom BCM33843D
   release_date: "2014"
 
-status: in_progress
+status: awaiting_verification
 
 sources:
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Motorola_SURFboard_SB6183)"
