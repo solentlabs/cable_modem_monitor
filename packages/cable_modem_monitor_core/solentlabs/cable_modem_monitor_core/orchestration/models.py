@@ -15,7 +15,6 @@ from typing import Any
 from .signals import (
     CollectorSignal,
     ConnectionStatus,
-    DocsisStatus,
     HealthStatus,
     RestartPhase,
 )
@@ -154,7 +153,7 @@ class ModemSnapshot:
     """
 
     connection_status: ConnectionStatus
-    docsis_status: DocsisStatus
+    docsis_status: str
     modem_data: dict[str, Any] | None = None
     health_info: HealthInfo | None = None
     collector_signal: CollectorSignal = CollectorSignal.OK

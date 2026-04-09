@@ -309,9 +309,9 @@ class TestZeroChannels:
 # │ None "locked"                │ > 0    │ NOT_LOCKED       │ —                    │
 # │ No DS channels               │ any    │ NOT_LOCKED       │ —                    │
 # │ lock_status absent           │ > 0    │ UNKNOWN          │ —                    │
-# │ lock_status absent           │ > 0    │ OPERATIONAL      │ docsis_status        │
-# │ lock_status absent           │ > 0    │ OPERATIONAL      │ docsis_status (lc)   │
-# │ lock_status absent           │ > 0    │ UNKNOWN          │ non-operational      │
+# │ lock_status absent           │ > 0    │ raw string       │ docsis_status        │
+# │ lock_status absent           │ > 0    │ raw string       │ docsis_status (lc)   │
+# │ lock_status absent           │ > 0    │ raw string       │ non-operational      │
 # └──────────────────────────────┴────────┴──────────────────┴──────────────────────┘
 #
 # fmt: off
@@ -324,11 +324,11 @@ DOCSIS_STATUS_CASES = [
     ([{"lock_status": "not_locked"}] * 3, 2,       DocsisStatus.NOT_LOCKED,   "none locked",              None),
     ([],                                 2,        DocsisStatus.NOT_LOCKED,   "no DS channels",           None),
     ([{"frequency": 600}] * 3,          2,        DocsisStatus.UNKNOWN,      "no lock_status field",     None),
-    ([{"frequency": 600}] * 3,          2,        DocsisStatus.OPERATIONAL,  "fallback: docsis_status",
+    ([{"frequency": 600}] * 3,          2,        "OPERATIONAL",             "fallback: docsis_status",
      {"docsis_status": "OPERATIONAL"}),
-    ([{"frequency": 600}] * 3,          2,        DocsisStatus.OPERATIONAL,  "fallback: docsis_status case insensitive",
+    ([{"frequency": 600}] * 3,          2,        "Operational",             "fallback: docsis_status case insensitive",
      {"docsis_status": "Operational"}),
-    ([{"frequency": 600}] * 3,          2,        DocsisStatus.UNKNOWN,      "fallback: non-operational",
+    ([{"frequency": 600}] * 3,          2,        "Not Synchronized",        "fallback: non-operational",
      {"docsis_status": "Not Synchronized"}),
 ]
 # fmt: on
@@ -342,7 +342,7 @@ DOCSIS_STATUS_CASES = [
 def test_docsis_status_derivation(
     ds_channels: list[dict[str, Any]],
     us_count: int,
-    expected: DocsisStatus,
+    expected: str,
     desc: str,
     system_info_override: dict[str, Any] | None,
 ) -> None:

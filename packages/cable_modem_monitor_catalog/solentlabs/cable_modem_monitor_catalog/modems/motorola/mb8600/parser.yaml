@@ -72,6 +72,8 @@ system_info:
         - field: docsis_status
           source: MotoConnNetworkAccess
           type: string
+          map:
+            "Allowed": "Operational"
       response_key: GetMotoStatusConnectionInfoResponse
     - format: hnap
       fields:

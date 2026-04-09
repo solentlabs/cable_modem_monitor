@@ -137,6 +137,8 @@ system_info:
           field: docsis_status
           type: string
           path: "data"
+          map:
+            "OPERATIONAL": "Operational"
         - key: ModelName
           field: model_name
           type: string

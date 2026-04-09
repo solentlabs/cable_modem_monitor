@@ -103,7 +103,7 @@
     }
   ],
   "system_info": {
-    "docsis_status": "operational",
+    "docsis_status": "Operational",
     "docsis_version": "3.1",
     "downstream_channel_count": 9,
     "system_uptime": "1471890",

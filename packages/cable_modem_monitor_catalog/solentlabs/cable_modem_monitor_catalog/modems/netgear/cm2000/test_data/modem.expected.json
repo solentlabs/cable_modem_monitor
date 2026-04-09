@@ -352,7 +352,7 @@
   ],
   "system_info": {
     "current_time": "Fri Nov 28 14:29:17 2025",
-    "docsis_status": "Good",
+    "docsis_status": "Operational",
     "downstream_channel_count": 32,
     "ds_partial_service": "No",
     "ds_power_status": "Warning",

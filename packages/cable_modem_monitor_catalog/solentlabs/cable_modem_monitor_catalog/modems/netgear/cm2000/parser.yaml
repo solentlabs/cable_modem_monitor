@@ -193,7 +193,7 @@ system_info:
               type: string
               map:
                 "0": "Bad"
-                "1": "Good"
+                "1": "Operational"
     - format: javascript
       resource: "/index.htm"
       functions:

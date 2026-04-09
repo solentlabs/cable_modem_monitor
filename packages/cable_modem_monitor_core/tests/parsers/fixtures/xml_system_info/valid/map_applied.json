@@ -1,0 +1,18 @@
+{
+  "_description": "Map on system_info field normalizes raw value",
+  "_xml": "<root><cm_info><cm_network_access>Allowed</cm_network_access><cm_mac_addr>AA:BB:CC:DD:EE:FF</cm_mac_addr></cm_info></root>",
+  "_resource": "2",
+  "_config": {
+    "format": "xml",
+    "resource": "2",
+    "root_element": "cm_info",
+    "fields": [
+      {"source": "cm_network_access", "field": "docsis_status", "type": "string", "map": {"Allowed": "Operational"}},
+      {"source": "cm_mac_addr", "field": "mac_address", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "docsis_status": "Operational",
+    "mac_address": "AA:BB:CC:DD:EE:FF"
+  }
+}

@@ -172,7 +172,7 @@
     }
   ],
   "system_info": {
-    "docsis_status": "Allowed",
+    "docsis_status": "Operational",
     "downstream_channel_count": 17,
     "hardware_version": "5.0",
     "software_version": "8600-19.3.15",

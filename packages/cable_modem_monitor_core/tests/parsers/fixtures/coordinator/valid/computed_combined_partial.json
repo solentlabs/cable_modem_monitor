@@ -10,8 +10,8 @@
           "format": "html_fields",
           "resource": "/status.html",
           "fields": [
-            {"label": "DS Status", "field": "downstream_status", "type": "string"},
-            {"label": "US Status", "field": "upstream_status", "type": "string"}
+            {"label": "DS Status", "field": "downstream_status", "type": "string", "map": {"Complete": "Operational"}},
+            {"label": "US Status", "field": "upstream_status", "type": "string", "map": {"Complete": "Operational"}}
           ]
         }
       ]
@@ -30,7 +30,7 @@
     "downstream": [],
     "upstream": [],
     "system_info": {
-      "downstream_status": "Complete",
+      "downstream_status": "Operational",
       "upstream_status": "Ranging",
       "docsis_status": "Ranging",
       "downstream_channel_count": 0,

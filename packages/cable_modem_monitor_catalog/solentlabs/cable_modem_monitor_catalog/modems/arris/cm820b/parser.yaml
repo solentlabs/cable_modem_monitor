@@ -72,6 +72,8 @@ system_info:
         - field: docsis_status
           label: "CM Status"
           type: string
+          map:
+            "OPERATIONAL": "Operational"
         - field: system_uptime
           label: "System Uptime"
           type: string

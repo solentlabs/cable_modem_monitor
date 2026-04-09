@@ -10,7 +10,7 @@ derivation rules.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, StrEnum
 
 
 class CollectorSignal(Enum):
@@ -44,8 +44,15 @@ class ConnectionStatus(Enum):
     NO_SIGNAL = "no_signal"
 
 
-class DocsisStatus(Enum):
-    """DOCSIS lock status derived from downstream channels."""
+class DocsisStatus(StrEnum):
+    """Well-known DOCSIS status values.
+
+    ``derive_docsis_status`` returns ``str`` — either one of these
+    constants or a raw modem-reported string that passed through the
+    YAML map without matching.  StrEnum members compare equal to their
+    string values, so ``docsis == DocsisStatus.NOT_LOCKED`` works
+    whether *docsis* is an enum member or a plain ``"not_locked"``.
+    """
 
     OPERATIONAL = "operational"
     PARTIAL_LOCK = "partial_lock"

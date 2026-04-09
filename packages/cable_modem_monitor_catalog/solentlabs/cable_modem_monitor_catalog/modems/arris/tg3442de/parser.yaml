@@ -109,6 +109,9 @@ system_info:
         - source: js_isCmOperational
           field: docsis_status
           type: string
+          map:
+            "1": "Operational"
+            "0": "offline"
         - source: js_hostNums
           field: connected_devices
           type: string

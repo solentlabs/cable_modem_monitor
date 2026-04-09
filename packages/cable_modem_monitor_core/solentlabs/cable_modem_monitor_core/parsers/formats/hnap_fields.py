@@ -13,6 +13,7 @@ from typing import Any
 
 from ...models.parser_config.system_info import HNAPSystemInfoSource
 from ..base import BaseParser
+from ..type_conversion import convert_value
 
 _logger = logging.getLogger(__name__)
 
@@ -57,6 +58,8 @@ class HNAPFieldsParser(BaseParser):
         for field_mapping in self._config.fields:
             value = action_response.get(field_mapping.source, "")
             if value:
-                result[field_mapping.field] = str(value)
+                converted = convert_value(value, field_mapping.type, map_config=field_mapping.map)
+                if converted is not None:
+                    result[field_mapping.field] = str(converted)
 
         return result

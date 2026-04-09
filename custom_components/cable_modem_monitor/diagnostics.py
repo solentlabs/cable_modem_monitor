@@ -337,7 +337,7 @@ def _build_diagnostics_dict(
             health_info = snapshot.health_info
         diagnostics["modem_data"] = {
             "connection_status": snapshot.connection_status.value,
-            "docsis_status": snapshot.docsis_status.value,
+            "docsis_status": snapshot.docsis_status,
             "collector_signal": snapshot.collector_signal.value,
             "downstream_channel_count": system_info.get("downstream_channel_count", 0),
             "upstream_channel_count": system_info.get("upstream_channel_count", 0),

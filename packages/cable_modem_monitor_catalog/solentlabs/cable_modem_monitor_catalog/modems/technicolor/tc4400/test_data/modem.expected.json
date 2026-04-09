@@ -423,7 +423,7 @@
   ],
   "system_info": {
     "board_temperature": "-99.0 degrees Celsius",
-    "docsis_status": "Allowed",
+    "docsis_status": "Operational",
     "downstream_channel_count": 30,
     "hardware_version": "TC4400 Rev:2.0.0",
     "software_version": "70.13.41-180903",

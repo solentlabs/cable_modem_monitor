@@ -133,13 +133,14 @@ normalization):
 | Some DS `lock_status == "locked"` | `partial_lock` |
 | No DS channels locked | `not_locked` |
 | No DS channels | `not_locked` |
-| No `lock_status` + system_info reports "operational" | `operational` |
-| No `lock_status` + no operational system_info        | `unknown`     |
+| No `lock_status` + system_info present | raw `system_info.docsis_status` string |
+| No `lock_status` + no system_info      | `unknown`                              |
 
 When downstream channels lack `lock_status`, the derivation falls back
-to `system_info.docsis_status` (case-insensitive). Only an explicit
-"operational" value promotes the status; all other values (or missing
-fields) remain `unknown` to prevent false reports.
+to `system_info.docsis_status` and returns the raw string.  Modem-
+specific values are normalized to `"Operational"` via YAML `map`
+entries in parser.yaml (see PARSING_SPEC.md § Canonical Values).
+Only a missing or empty field produces `"unknown"`.
 
 The platform adapter composes `connection_status`, `docsis_status`,
 and `health_status` (from the health pipeline) into a display state

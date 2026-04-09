@@ -81,6 +81,8 @@ system_info:
         - field: docsis_status
           source: InternetConnection
           type: string
+          map:
+            "Connected": "Operational"
 
       response_key: GetArrisDeviceStatusResponse
 aggregate:

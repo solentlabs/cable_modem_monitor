@@ -20,6 +20,7 @@ from typing import Any
 
 from ...models.parser_config.system_info import JSVarsSystemInfoSource
 from ..base import BaseParser
+from ..type_conversion import convert_value
 
 _logger = logging.getLogger(__name__)
 
@@ -51,8 +52,8 @@ class JSVarsParser(BaseParser):
             _logger.warning("Resource '%s' not found", self._config.resource)
             return {}
 
-        # Build lookup: JS variable name -> output field name
-        var_to_field = {f.source: f.field for f in self._config.fields}
+        # Build lookup: JS variable name -> field mapping
+        var_to_mapping = {f.source: f for f in self._config.fields}
 
         result: dict[str, str] = {}
         for script in soup.find_all("script"):
@@ -61,7 +62,10 @@ class JSVarsParser(BaseParser):
                 continue
             for match in _JS_VAR_RE.finditer(text):
                 var_name = match.group(1)
-                if var_name in var_to_field:
-                    result[var_to_field[var_name]] = match.group(2)
+                field_def = var_to_mapping.get(var_name)
+                if field_def is not None:
+                    converted = convert_value(match.group(2), field_def.type, map_config=field_def.map)
+                    if converted is not None:
+                        result[field_def.field] = str(converted)
 
         return result

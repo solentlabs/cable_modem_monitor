@@ -1,0 +1,16 @@
+{
+  "_description": "Map on html_fields system_info field normalizes raw value",
+  "_html": "<html><body><table><tr><td>Network Access</td><td>Allowed</td></tr><tr><td>System Uptime</td><td>1 day 02:00:00</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/status.html",
+    "fields": [
+      {"label": "Network Access", "field": "docsis_status", "type": "string", "map": {"Allowed": "Operational"}},
+      {"label": "System Uptime", "field": "system_uptime", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "docsis_status": "Operational",
+    "system_uptime": "1 day 02:00:00"
+  }
+}

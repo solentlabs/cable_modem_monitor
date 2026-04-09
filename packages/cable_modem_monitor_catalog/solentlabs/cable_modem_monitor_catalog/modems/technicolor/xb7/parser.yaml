@@ -104,9 +104,13 @@ system_info:
         - field: downstream_status
           label: "Acquire Downstream Channel"
           type: string
+          map:
+            "Complete": "Operational"
         - field: upstream_status
           label: "Upstream Ranging"
           type: string
+          map:
+            "Complete": "Operational"
         - field: hardware_version
           label: "HW Version"
           type: string

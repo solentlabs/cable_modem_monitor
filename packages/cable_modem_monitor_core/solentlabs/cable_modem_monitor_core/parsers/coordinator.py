@@ -318,11 +318,10 @@ def _compute_percent_used(
     return round((total - free) / total * 100, precision)
 
 
-# Values that indicate a DOCSIS provisioning step completed successfully.
-# Case-insensitive. These are the known-positive values across the modem
-# fleet: XB6/XB7 report "Complete", TC4400/MB7621 report "Allowed",
-# HNAP modems report "Operational".
-_OPERATIONAL_VALUES = frozenset({"complete", "allowed", "ok", "operational"})
+# Canonical operational value. Modem-specific raw values (e.g. "Complete",
+# "Allowed", "Good") are normalized to "Operational" via YAML ``map``
+# entries on each modem's parser.yaml system_info fields.
+_OPERATIONAL_VALUES = frozenset({"operational"})
 
 
 def _compute_combined_status(

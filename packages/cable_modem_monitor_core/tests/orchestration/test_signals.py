@@ -36,12 +36,17 @@ class TestConnectionStatus:
 
 
 class TestDocsisStatus:
-    """DocsisStatus enum values."""
+    """DocsisStatus StrEnum values."""
 
     def test_all_statuses_present(self) -> None:
         expected = {"operational", "partial_lock", "not_locked", "unknown"}
         actual = {s.value for s in DocsisStatus}
         assert actual == expected
+
+    def test_members_are_strings(self) -> None:
+        """StrEnum members compare equal to their string values."""
+        assert DocsisStatus.OPERATIONAL == "operational"
+        assert isinstance(DocsisStatus.OPERATIONAL, str)
 
 
 class TestHealthStatus:

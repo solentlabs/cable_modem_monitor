@@ -24,6 +24,7 @@ class HTMLFieldMapping(BaseModel):
     css: str = ""
     pattern: str = ""
     attribute: str = ""
+    map: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_has_locator(self) -> HTMLFieldMapping:
@@ -55,6 +56,7 @@ class HNAPFieldMapping(BaseModel):
     source: str
     field: str
     type: str
+    map: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> HNAPFieldMapping:
@@ -119,6 +121,7 @@ class JSONSystemInfoFieldMapping(BaseModel):
     field: str
     type: str
     path: str = ""
+    map: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> JSONSystemInfoFieldMapping:
@@ -148,6 +151,7 @@ class JSVarsFieldMapping(BaseModel):
     source: str
     field: str
     type: str
+    map: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> JSVarsFieldMapping:
@@ -178,6 +182,7 @@ class XMLSystemInfoFieldMapping(BaseModel):
     source: str
     field: str
     type: str
+    map: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> XMLSystemInfoFieldMapping:

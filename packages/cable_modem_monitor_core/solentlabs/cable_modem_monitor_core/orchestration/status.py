@@ -43,16 +43,17 @@ def derive_connection_status(modem_data: dict[str, Any]) -> ConnectionStatus:
     return ConnectionStatus.NO_SIGNAL
 
 
-def derive_docsis_status(modem_data: dict[str, Any]) -> DocsisStatus:
+def derive_docsis_status(modem_data: dict[str, Any]) -> str:
     """Derive DOCSIS status from downstream channel lock_status fields.
 
+    Returns a ``DOCSIS_*`` constant for the well-known lock-based
+    states (``operational``, ``partial_lock``, ``not_locked``).  When
+    channels lack ``lock_status``, falls back to the raw
+    ``system_info.docsis_status`` string so modem-reported diagnostics
+    (e.g. ``"Ranging"``) pass through instead of being collapsed to
+    ``"unknown"``.
+
     See RUNTIME_POLLING_SPEC.md Status Derivation and UC-07.
-
-    Args:
-        modem_data: Dict with downstream and upstream channel lists.
-
-    Returns:
-        DocsisStatus based on lock_status field analysis.
     """
     downstream = modem_data.get("downstream", [])
     upstream = modem_data.get("upstream", [])
@@ -76,14 +77,14 @@ def derive_docsis_status(modem_data: dict[str, Any]) -> DocsisStatus:
     return DocsisStatus.PARTIAL_LOCK
 
 
-def _fallback_from_system_info(modem_data: dict[str, Any]) -> DocsisStatus:
+def _fallback_from_system_info(modem_data: dict[str, Any]) -> str:
     """Fall back to system_info when channels lack lock_status.
 
-    Checks system_info.docsis_status for a case-insensitive "operational"
-    value.  Returns UNKNOWN otherwise.
+    Returns the raw ``system_info.docsis_status`` string so modem-
+    reported diagnostics pass through.  Returns ``"unknown"`` only
+    when the field is absent or empty.
     """
     system_info = modem_data.get("system_info", {})
     reported = system_info.get("docsis_status") or ""
-    if reported.strip().lower() == "operational":
-        return DocsisStatus.OPERATIONAL
-    return DocsisStatus.UNKNOWN
+    value = reported.strip()
+    return value if value else DocsisStatus.UNKNOWN

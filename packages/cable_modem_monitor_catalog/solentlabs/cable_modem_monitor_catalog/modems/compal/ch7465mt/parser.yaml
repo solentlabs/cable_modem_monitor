@@ -98,6 +98,8 @@ system_info:
         - source: cm_network_access
           field: docsis_status
           type: string
+          map:
+            "Allowed": "Operational"
     - format: xml
       resource: "144"
       root_element: cmstatus

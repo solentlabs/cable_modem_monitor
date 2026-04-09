@@ -332,7 +332,7 @@
     }
   ],
   "system_info": {
-    "docsis_status": "Allowed",
+    "docsis_status": "Operational",
     "downstream_channel_count": 33,
     "hardware_version": "7.0",
     "software_version": "8611-19.2.18",

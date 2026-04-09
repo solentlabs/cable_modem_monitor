@@ -1037,6 +1037,9 @@ HNAP system_info sources use flat key-value responses (no delimiters).
 Each source maps response keys to canonical field names. Multiple
 sources can contribute fields — last-write-wins on conflicts.
 
+Each field mapping accepts `source`, `field`, `type`, and an optional
+`map` (dict, exact-match value mapping applied before type conversion).
+
 Common HNAP system_info fields:
 
 | Response key pattern | Canonical field |
@@ -1336,6 +1339,7 @@ system_info:
 | `fields` | list | yes | Mappings from XML sub-element tags to system_info field names |
 | `fields[].source` | string | yes | XML element tag name |
 | `fields[].field` | string | yes | Canonical field name |
+| `fields[].map` | dict | no | Value mapping (exact match, applied before type conversion) |
 
 **Extraction algorithm (channels):**
 
@@ -1531,6 +1535,26 @@ the resulting dicts. If two sources extract the same field name, the
 later source wins (last-write-wins). In practice, fields should not
 overlap — each source owns distinct fields.
 
+### Canonical values
+
+Some system_info fields have a canonical value that downstream
+consumers (the orchestrator, HA entities) depend on.  Use the `map`
+property on the field definition to normalize modem-specific raw
+values to the canonical form.
+
+| Field | Canonical value | Raw examples | Purpose |
+|-------|----------------|--------------|---------|
+| `docsis_status` | `"Operational"` | `"Allowed"`, `"Connected"`, `"Good"`, `"success"`, `"online"` | Orchestrator falls back to this string when channels lack `lock_status`. Non-`"Operational"` values pass through as raw diagnostic strings. |
+
+```yaml
+# Example: normalize modem-specific docsis_status to canonical value
+- field: docsis_status
+  label: "Network Access"
+  type: string
+  map:
+    "Allowed": "Operational"
+```
+
 ### Formats for system info
 
 | Format | Source type | How fields are found |
@@ -1611,6 +1635,7 @@ system_info:
 | `source` | string | yes | JS variable name to match |
 | `field` | string | yes | Output system_info field name |
 | `type` | string | yes | Field type (see Common Concepts) |
+| `map` | dict | no | Value mapping (exact match, applied before type conversion) |
 
 The parser matches both `var x = 'value'` and bare `x = 'value'`
 assignments. Only single-quoted string values are supported (the
@@ -1639,6 +1664,7 @@ All three selector types support these optional fields:
 |-------|------|---------|
 | `attribute` | string | Extract an HTML attribute value instead of text content. When omitted, `get_text()` is used. |
 | `pattern` | string | Regex applied to the extracted value (text or attribute). A single capture group returns `group(1)`; no capture group returns the full match. No match → field is skipped. |
+| `map` | dict | Value mapping (exact match, applied before type conversion). E.g., `{"Allowed": "Operational"}`. |
 
 **`attribute` and multi-valued HTML attributes:** BeautifulSoup returns
 some HTML attributes (notably `class`) as lists. The parser joins
@@ -2270,10 +2296,14 @@ non-numeric, or total is zero. Values with trailing units (e.g.,
 **`combined_status`** — Synthesizes a single status from multiple
 status fields. Expects N inputs, each mapping to a system_info field.
 Returns `"Operational"` when all inputs are present and their values
-match a known-positive DOCSIS status (case-insensitive: `complete`,
-`allowed`, `ok`, `operational`). Returns `None` if any input is
-missing. Returns the first non-positive value as-is when at least one
-input does not match (preserves the raw value for diagnostics).
+equal `"Operational"` (case-insensitive). Returns `None` if any input
+is missing. Returns the first non-positive value as-is when at least
+one input does not match (preserves the raw value for diagnostics).
+
+Modem-specific raw values (e.g. `"Complete"`, `"Allowed"`) are
+normalized to `"Operational"` via `map` entries on the input field
+definitions in parser.yaml — the coordinator only recognizes the
+canonical value.
 
 ```yaml
 computed:

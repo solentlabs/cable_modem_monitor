@@ -265,7 +265,7 @@
   ],
   "system_info": {
     "current_time": "Fri 2025-12-19 02:01:25",
-    "docsis_status": "OPERATIONAL",
+    "docsis_status": "Operational",
     "downstream_channel_count": 26,
     "hardware_version": "CM3500B",
     "system_uptime": "0 d:  7 h: 40 m",

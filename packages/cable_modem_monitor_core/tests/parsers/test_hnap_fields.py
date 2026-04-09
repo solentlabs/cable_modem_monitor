@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+import pytest
 from solentlabs.cable_modem_monitor_core.models.parser_config.system_info import (
     HNAPFieldMapping,
     HNAPSystemInfoSource,
@@ -11,7 +14,7 @@ from solentlabs.cable_modem_monitor_core.parsers.formats.hnap_fields import HNAP
 
 def _make_source(
     response_key: str = "GetDeviceStatusResponse",
-    fields: list[dict[str, str]] | None = None,
+    fields: list[dict[str, Any]] | None = None,
 ) -> HNAPSystemInfoSource:
     """Build a minimal HNAPSystemInfoSource config."""
     if fields is None:
@@ -83,6 +86,67 @@ class TestBasicExtraction:
         result = parser.parse(resources)
 
         assert result == {"software_version": "1.0.2.3"}
+
+
+_MAP_CASES = [
+    pytest.param(
+        {"Connected": "Operational"},
+        "Connected",
+        "Operational",
+        id="mapped-value-transforms",
+    ),
+    pytest.param(
+        {"Connected": "Operational"},
+        "Ranging",
+        "Ranging",
+        id="unmapped-value-passes-through",
+    ),
+    pytest.param(
+        {"Allowed": "Operational", "Denied": "Not Operational"},
+        "Allowed",
+        "Operational",
+        id="multi-entry-map-first-match",
+    ),
+    pytest.param(
+        None,
+        "Connected",
+        "Connected",
+        id="no-map-passes-through",
+    ),
+]
+
+
+class TestMapApplied:
+    """Test that map entries on fields normalize values."""
+
+    @pytest.mark.parametrize(("map_config", "raw_value", "expected"), _MAP_CASES)
+    def test_map_behaviour(
+        self,
+        map_config: dict[str, str] | None,
+        raw_value: str,
+        expected: str,
+    ) -> None:
+        """Map on a field definition transforms (or passes through) the value."""
+        field_def: dict[str, Any] = {
+            "source": "InternetConnection",
+            "field": "docsis_status",
+            "type": "string",
+        }
+        if map_config is not None:
+            field_def["map"] = map_config
+        source = _make_source(fields=[field_def])
+        parser = HNAPFieldsParser(source)
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {
+                    "InternetConnection": raw_value,
+                },
+            },
+        }
+
+        result = parser.parse(resources)
+
+        assert result == {"docsis_status": expected}
 
 
 class TestMissingData:

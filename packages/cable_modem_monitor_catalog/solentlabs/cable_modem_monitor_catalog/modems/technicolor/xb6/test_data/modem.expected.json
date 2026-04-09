@@ -356,7 +356,7 @@
   "system_info": {
     "docsis_status": "Operational",
     "downstream_channel_count": 32,
-    "downstream_status": "Complete",
+    "downstream_status": "Operational",
     "hardware_version": "2.2",
     "mac_address": "XX:XX:XX:XX:XX:XX",
     "model_name": "CGM4140COM",
@@ -366,7 +366,7 @@
     "total_corrected": 1675,
     "total_uncorrected": 1095,
     "upstream_channel_count": 5,
-    "upstream_status": "Complete"
+    "upstream_status": "Operational"
   },
   "upstream": [
     {

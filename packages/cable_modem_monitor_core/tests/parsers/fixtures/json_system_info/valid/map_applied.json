@@ -1,0 +1,22 @@
+{
+  "_description": "Map on system_info field normalizes raw value",
+  "_json": {
+    "modem": {
+      "status": "operational",
+      "upTime": 3600
+    }
+  },
+  "_resource": "/api/state",
+  "_config": {
+    "format": "json",
+    "resource": "/api/state",
+    "fields": [
+      {"key": "status", "field": "docsis_status", "type": "string", "path": "modem", "map": {"operational": "Operational"}},
+      {"key": "upTime", "field": "system_uptime", "type": "string", "path": "modem"}
+    ]
+  },
+  "_expected": {
+    "docsis_status": "Operational",
+    "system_uptime": "3600"
+  }
+}

@@ -79,6 +79,8 @@ system_info:
         - field: docsis_status
           label: "Network Access"
           type: string
+          map:
+            "Allowed": "Operational"
         - field: system_uptime
           label: "System Up Time"
           type: string

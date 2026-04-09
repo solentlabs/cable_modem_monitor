@@ -41,6 +41,7 @@ _D = DocsisStatus
 # │ AUTH_FAILED          │ DEGRADED        │ PARTIAL_LOCK     │ Auth Failed    │ P3 beats P4 + P8     │
 # │ ONLINE               │ UNKNOWN         │ OPERATIONAL      │ Operational    │ UNKNOWN = no data    │
 # │ NO_SIGNAL            │ DEGRADED        │ NOT_LOCKED       │ Degraded       │ P4 beats P6 + P7     │
+# │ ONLINE               │ RESPONSIVE      │ "custom_status"  │ Custom Status  │ unknown passthrough  │
 # └──────────────────────┴─────────────────┴──────────────────┴────────────────┴──────────────────────┘
 #
 # fmt: off
@@ -61,6 +62,7 @@ STATUS_CASCADE_CASES = [
     (_C.AUTH_FAILED,      _H.DEGRADED,       _D.PARTIAL_LOCK,   "Auth Failed",    "p3_beats_p4_and_p8"),
     (_C.ONLINE,           _H.UNKNOWN,        _D.OPERATIONAL,    "Operational",    "unknown_health_operational"),
     (_C.NO_SIGNAL,        _H.DEGRADED,       _D.NOT_LOCKED,     "Degraded",       "p4_beats_p6_and_p7"),
+    (_C.ONLINE,           _H.RESPONSIVE,     "custom_status",   "Custom Status",  "unknown_docsis_passthrough"),
 ]
 # fmt: on
 
@@ -73,7 +75,7 @@ STATUS_CASCADE_CASES = [
 def test_compute_display_status(
     connection: ConnectionStatus,
     health: HealthStatus | None,
-    docsis: DocsisStatus,
+    docsis: str,
     expected: str,
     _desc: str,
 ) -> None:

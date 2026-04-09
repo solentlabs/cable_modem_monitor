@@ -138,6 +138,8 @@ system_info:
         - field: docsis_status
           label: "CM Status"
           type: string
+          map:
+            "OPERATIONAL": "Operational"
         - field: current_time
           label: "Time and Date"
           type: string

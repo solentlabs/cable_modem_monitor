@@ -288,7 +288,7 @@
     }
   ],
   "system_info": {
-    "docsis_status": "online",
+    "docsis_status": "Operational",
     "connected_devices": "13",
     "downstream_channel_count": 32,
     "hardware_version": "7",

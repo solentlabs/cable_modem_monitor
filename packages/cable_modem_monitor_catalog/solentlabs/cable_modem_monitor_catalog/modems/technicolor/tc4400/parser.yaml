@@ -120,6 +120,8 @@ system_info:
         - field: docsis_status
           label: "Network Access"
           type: string
+          map:
+            "Allowed": "Operational"
         - field: board_temperature
           label: "Board Temperature"
           type: string

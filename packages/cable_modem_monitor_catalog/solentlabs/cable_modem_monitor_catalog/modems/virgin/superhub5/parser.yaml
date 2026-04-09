@@ -100,6 +100,8 @@ system_info:
           field: docsis_status
           type: string
           path: "cablemodem"
+          map:
+            "operational": "Operational"
 
 # DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
 # at a vastly different scale and are not aggregated.

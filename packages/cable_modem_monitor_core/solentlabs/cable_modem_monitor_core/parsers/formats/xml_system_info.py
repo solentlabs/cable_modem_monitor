@@ -72,7 +72,7 @@ class XMLSystemInfoParser:
             sub = container.find(field_map.source)
             if sub is None or sub.text is None:
                 continue
-            value = convert_value(sub.text.strip(), field_map.type)
+            value = convert_value(sub.text.strip(), field_map.type, map_config=field_map.map)
             if value is not None:
                 result[field_map.field] = value
 

@@ -85,10 +85,16 @@ def _index_channels(
 # ------------------------------------------------------------------
 
 
+_DOCSIS_DISPLAY: dict[str, str] = {
+    DocsisStatus.NOT_LOCKED: "Not Locked",
+    DocsisStatus.PARTIAL_LOCK: "Partial Lock",
+}
+
+
 def _compute_display_status(
     connection: ConnectionStatus,
     health: HealthStatus | None,
-    docsis: DocsisStatus,
+    docsis: str,
 ) -> str:
     """Apply the 10-level priority cascade to derive display state.
 
@@ -111,13 +117,14 @@ def _compute_display_status(
         return "Parser Error"
     if connection == ConnectionStatus.NO_SIGNAL:
         return "No Signal"
-    if docsis == DocsisStatus.NOT_LOCKED:
-        return "Not Locked"
-    if docsis == DocsisStatus.PARTIAL_LOCK:
-        return "Partial Lock"
+    docsis_label = _DOCSIS_DISPLAY.get(docsis)
+    if docsis_label:
+        return docsis_label
     if effective_health == HealthStatus.ICMP_BLOCKED:
         return "ICMP Blocked"
-    return "Operational"
+    if docsis in (DocsisStatus.OPERATIONAL, DocsisStatus.UNKNOWN):
+        return "Operational"
+    return docsis.replace("_", " ").title()
 
 
 _DIAGNOSIS_MAP: dict[HealthStatus, str] = {
@@ -384,7 +391,7 @@ class ModemStatusSensor(ModemSensorBase):
         return {
             "connection_status": snapshot.connection_status.value,
             "health_status": (health_status.value if health_status else "unknown"),
-            "docsis_status": snapshot.docsis_status.value,
+            "docsis_status": snapshot.docsis_status,
             "diagnosis": _derive_diagnosis(health_status),
         }
 

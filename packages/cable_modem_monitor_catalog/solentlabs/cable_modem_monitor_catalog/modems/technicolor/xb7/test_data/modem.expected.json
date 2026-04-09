@@ -378,7 +378,7 @@
   "system_info": {
     "docsis_status": "Operational",
     "downstream_channel_count": 34,
-    "downstream_status": "Complete",
+    "downstream_status": "Operational",
     "hardware_version": "2.0",
     "mac_address": "aa:bb:cc:dd:ee:ff",
     "model_name": "CGM4331COM",
@@ -386,7 +386,7 @@
     "software_version": "Prod_23.2_231009 & Prod_23.2_231009",
     "system_uptime": "21 days 15h: 20m: 33s",
     "upstream_channel_count": 5,
-    "upstream_status": "Complete"
+    "upstream_status": "Operational"
   },
   "upstream": [
     {
