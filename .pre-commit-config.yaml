@@ -129,6 +129,14 @@ repos:
         stages: [manual]
         always_run: true
 
+      - id: check-local-path-refs
+        name: Check for local-only path references
+        entry: scripts/dev/check-local-path-refs.sh
+        language: script
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: check-fixture-pii
         name: Check fixtures for PII
         entry: scripts/dev/run-python.sh packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py
