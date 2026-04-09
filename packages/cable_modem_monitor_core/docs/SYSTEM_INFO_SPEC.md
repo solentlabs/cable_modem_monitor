@@ -410,6 +410,84 @@ System info fields are open-ended — modems expose different fields.
 The parser extracts whatever is declared in parser.yaml. Fields not
 declared are not extracted (implicit capabilities).
 
+### `xml` system info
+
+XML system_info sources extract fields from named sub-elements of a
+root element. Used by CBN (Compal Broadband Networks) modems that
+return XML responses keyed by `fun` parameter.
+
+**Source schema:**
+
+| Property | Type | Required | Description |
+|----------|------|:--------:|-------------|
+| `format` | string | yes | `xml` |
+| `resource` | string | yes | Resource key (e.g., `"144"` for `fun=144`) |
+| `root_element` | string | yes | XML element to navigate to before field extraction |
+| `fields` | list | yes | Field mappings (see below) |
+| `child_aggregates` | list | no | Aggregate values from repeated child elements (see below) |
+
+**Field schema:**
+
+| Property | Type | Required | Description |
+|----------|------|:--------:|-------------|
+| `source` | string | yes | XML sub-element tag name |
+| `field` | string | yes | Output system_info field name |
+| `type` | string | yes | Field type (see Common Concepts) |
+| `format` | string | no | Input format for types that require it |
+| `map` | dict | no | Value mapping (exact match) |
+| `scale` | number | no | Multiplier applied after type conversion (numeric types only) |
+
+#### child_aggregates
+
+Iterates repeated child elements, filters by field values, and
+computes the `max` of a numeric sub-element. Produces a single
+system_info field per entry. Used for DOCSIS service flow extraction
+(e.g., max provisioned speed per direction from `<serviceflow>`
+elements).
+
+| Property | Type | Required | Description |
+|----------|------|:--------:|-------------|
+| `child_element` | string | yes | Tag name of the repeated child element |
+| `filter` | dict | yes | Key-value pairs that must all match (sub-element tag → text value) |
+| `max` | string | yes | Sub-element tag name whose value is maximized |
+| `field` | string | yes | Output system_info field name |
+| `type` | string | yes | Field type for the aggregated value |
+| `scale` | number | no | Multiplier applied after type conversion |
+
+```yaml
+# Extract max provisioned speed per direction from DOCSIS service flows
+- format: xml
+  resource: "144"
+  root_element: cmstatus
+  fields:
+    - source: provisioning_st
+      field: provisioning_status
+      type: string
+  child_aggregates:
+    - child_element: serviceflow
+      filter: { direction: "2" }
+      max: pMaxTrafficRate
+      field: provisioned_speed_down
+      type: float
+      scale: 0.000001
+    - child_element: serviceflow
+      filter: { direction: "1" }
+      max: pMaxTrafficRate
+      field: provisioned_speed_up
+      type: float
+      scale: 0.000001
+```
+
+### Common field property: `scale`
+
+All system_info field mapping models support an optional `scale`
+property. When present, the numeric result of type conversion is
+multiplied by `scale`. Whole-number float results are cast to int.
+
+This is the same mechanism used by channel column mappings. Common
+use: converting raw bps to Mbit/s (`scale: 0.000001`) or raw kHz to
+Hz (`scale: 1000`).
+
 ---
 
 ## System Info Field Tiers
@@ -431,6 +509,10 @@ totals. Elevation criteria:
 - Multiple modems expose it
 - Benefits from unit parsing or state_class
 - Users would expect it as a first-class entity
+
+Currently Tier 2: software_version, system_uptime, channel counts,
+error totals, provisioned_speed_down/up (Mbit/s, DATA_RATE),
+provisioned_burst_down/up (B, DATA_SIZE).
 
 **Tier 3 — Pass-through:** All remaining fields. Each gets a generic
 `SystemInfoFieldSensor` (icon: `mdi:information-outline`, value as-is).

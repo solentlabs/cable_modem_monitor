@@ -74,6 +74,22 @@ registered_fields:
       type: float
       unit: "°C"
       description: "Modem internal temperature"
+    provisioned_speed_down:
+      type: float
+      unit: "Mbit/s"
+      description: "ISP-provisioned downstream speed (max service flow rate)"
+    provisioned_speed_up:
+      type: float
+      unit: "Mbit/s"
+      description: "ISP-provisioned upstream speed (max service flow rate)"
+    provisioned_burst_down:
+      type: integer
+      unit: "B"
+      description: "ISP-provisioned downstream max traffic burst"
+    provisioned_burst_up:
+      type: integer
+      unit: "B"
+      description: "ISP-provisioned upstream max traffic burst"
 ```
 
 ### Graduation Criteria
@@ -91,8 +107,7 @@ Modem-specific pass-throughs with no registry entry. These follow
 the naming rules below and flow to downstream attributes unchanged.
 No validation beyond format.
 
-Examples: `t3_timeouts`, `t4_timeouts`, `security_type`,
-`provisioned_speed_down`, `provisioned_speed_up`.
+Examples: `t3_timeouts`, `t4_timeouts`, `security_type`.
 
 ---
 

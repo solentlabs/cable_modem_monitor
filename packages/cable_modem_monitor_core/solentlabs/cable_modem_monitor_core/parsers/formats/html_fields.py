@@ -59,6 +59,7 @@ class HTMLFieldsParser(BaseParser):
                     field_cfg.type,
                     map_config=field_cfg.map,
                     input_format=field_cfg.format,
+                    scale=field_cfg.scale,
                 )
                 if converted is not None:
                     result[field_cfg.field] = str(converted)

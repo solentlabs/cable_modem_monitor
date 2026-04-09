@@ -63,6 +63,7 @@ class HNAPFieldsParser(BaseParser):
                     field_mapping.type,
                     map_config=field_mapping.map,
                     input_format=field_mapping.format,
+                    scale=field_mapping.scale,
                 )
                 if converted is not None:
                     result[field_mapping.field] = str(converted)

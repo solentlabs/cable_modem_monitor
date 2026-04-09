@@ -108,6 +108,29 @@ system_info:
         - source: provisioning_st
           field: provisioning_status
           type: string
+      child_aggregates:
+        - child_element: serviceflow
+          filter: { direction: "2" }
+          max: pMaxTrafficRate
+          field: provisioned_speed_down
+          type: float
+          scale: 0.000001
+        - child_element: serviceflow
+          filter: { direction: "1" }
+          max: pMaxTrafficRate
+          field: provisioned_speed_up
+          type: float
+          scale: 0.000001
+        - child_element: serviceflow
+          filter: { direction: "2" }
+          max: pMaxTrafficBurst
+          field: provisioned_burst_down
+          type: integer
+        - child_element: serviceflow
+          filter: { direction: "1" }
+          max: pMaxTrafficBurst
+          field: provisioned_burst_up
+          type: integer
 
 aggregate:
   total_corrected:

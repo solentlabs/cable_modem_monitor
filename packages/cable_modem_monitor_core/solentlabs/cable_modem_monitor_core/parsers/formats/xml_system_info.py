@@ -12,7 +12,7 @@ import logging
 from typing import Any
 from xml.etree.ElementTree import Element
 
-from ...models.parser_config.system_info import XMLSystemInfoSource
+from ...models.parser_config.system_info import XMLChildAggregate, XMLSystemInfoSource
 from ..type_conversion import convert_value
 
 _logger = logging.getLogger(__name__)
@@ -77,8 +77,40 @@ class XMLSystemInfoParser:
                 field_map.type,
                 map_config=field_map.map,
                 input_format=field_map.format,
+                scale=field_map.scale,
             )
             if value is not None:
                 result[field_map.field] = value
 
+        # Extract child element aggregates
+        for agg in self._config.child_aggregates:
+            value = _child_aggregate_max(container, agg)
+            if value is not None:
+                result[agg.field] = value
+
         return result
+
+
+def _child_aggregate_max(container: Element, agg: XMLChildAggregate) -> Any:
+    """Compute max of a sub-element value across filtered child elements.
+
+    Iterates all ``agg.child_element`` children of ``container``,
+    keeps those matching ``agg.filter`` key-value pairs, and returns
+    the max of ``agg.max`` sub-element values after type conversion.
+    """
+    best: int | float | None = None
+
+    for child in container.findall(agg.child_element):
+        # Apply filter: all key-value pairs must match
+        if not all(child.findtext(key, "").strip() == value for key, value in agg.filter.items()):
+            continue
+
+        raw = child.findtext(agg.max, "")
+        if not raw or not raw.strip():
+            continue
+
+        converted = convert_value(raw.strip(), agg.type, scale=agg.scale)
+        if converted is not None and isinstance(converted, int | float) and (best is None or converted > best):
+            best = converted
+
+    return best

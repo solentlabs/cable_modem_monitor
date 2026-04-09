@@ -77,6 +77,7 @@ class JSSystemInfoParser(BaseParser):
                     field_def.type,
                     map_config=field_def.map,
                     input_format=field_def.format,
+                    scale=field_def.scale,
                 )
                 if converted is not None:
                     result[field_def.field] = str(converted)

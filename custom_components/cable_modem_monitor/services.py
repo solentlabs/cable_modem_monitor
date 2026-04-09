@@ -305,6 +305,30 @@ def _build_hardware_diag_entities(
     return lines
 
 
+def _build_provisioned_speed_entities(
+    entity_prefix: str,
+    system_info: dict[str, Any],
+) -> list[str]:
+    """Build YAML entities for provisioned speed/burst fields.
+
+    Only some modems expose these fields. Returns empty list when absent.
+    """
+    lines: list[str] = []
+    if "provisioned_speed_down" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_provisioned_speed_down")
+        lines.append("        name: Provisioned Speed Down")
+    if "provisioned_speed_up" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_provisioned_speed_up")
+        lines.append("        name: Provisioned Speed Up")
+    if "provisioned_burst_down" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_provisioned_burst_down")
+        lines.append("        name: Provisioned Burst Down")
+    if "provisioned_burst_up" in system_info:
+        lines.append(f"      - entity: sensor.{entity_prefix}_provisioned_burst_up")
+        lines.append("        name: Provisioned Burst Up")
+    return lines
+
+
 def _build_status_card_yaml(
     entity_prefix: str,
     system_info: dict[str, Any],
@@ -370,6 +394,7 @@ def _build_status_card_yaml(
                 "        name: Total Uncorrected Errors",
             ]
         )
+    lines.extend(_build_provisioned_speed_entities(entity_prefix, system_info))
     lines.extend(_build_hardware_diag_entities(entity_prefix, system_info))
     if has_restart:
         lines.append(f"      - entity: button.{entity_prefix}_restart_modem")

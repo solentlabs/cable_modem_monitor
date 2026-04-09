@@ -198,6 +198,15 @@ _CONSUMED_SYSTEM_INFO_FIELDS = frozenset({
 })
 # fmt: on
 
+# Units and device classes for dynamic system_info fields.
+# Fields not listed here display as unitless strings.
+_SYSTEM_INFO_FIELD_UNITS: dict[str, tuple[str, SensorDeviceClass | None, SensorStateClass | None]] = {
+    "provisioned_speed_down": ("Mbit/s", SensorDeviceClass.DATA_RATE, SensorStateClass.MEASUREMENT),
+    "provisioned_speed_up": ("Mbit/s", SensorDeviceClass.DATA_RATE, SensorStateClass.MEASUREMENT),
+    "provisioned_burst_down": ("B", SensorDeviceClass.DATA_SIZE, SensorStateClass.MEASUREMENT),
+    "provisioned_burst_up": ("B", SensorDeviceClass.DATA_SIZE, SensorStateClass.MEASUREMENT),
+}
+
 # Abbreviations uppercased in humanized field names.
 _SYSINFO_ABBREVIATIONS = frozenset(
     {
@@ -615,6 +624,11 @@ class SystemInfoFieldSensor(_SystemInfoSensor):
         self._attr_name = _humanize_field_name(field)
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_{field}"
         self._attr_icon = "mdi:information-outline"
+        unit_meta = _SYSTEM_INFO_FIELD_UNITS.get(field)
+        if unit_meta is not None:
+            self._attr_native_unit_of_measurement = unit_meta[0]
+            self._attr_device_class = unit_meta[1]
+            self._attr_state_class = unit_meta[2]
 
     @functools.cached_property
     def native_value(self) -> str | int | float | None:

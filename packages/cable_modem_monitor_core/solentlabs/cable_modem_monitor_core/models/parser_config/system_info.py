@@ -26,6 +26,7 @@ class HTMLFieldMapping(BaseModel):
     pattern: str = ""
     attribute: str = ""
     map: dict[str, str] | None = None
+    scale: int | float | None = None
 
     @model_validator(mode="after")
     def validate_has_locator(self) -> HTMLFieldMapping:
@@ -59,6 +60,7 @@ class HNAPFieldMapping(BaseModel):
     type: str
     format: str = ""
     map: dict[str, str] | None = None
+    scale: int | float | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> HNAPFieldMapping:
@@ -85,6 +87,7 @@ class JSSystemInfoFieldMapping(BaseModel):
     type: str
     format: str = ""
     map: dict[str, str] | None = None
+    scale: int | float | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> JSSystemInfoFieldMapping:
@@ -126,6 +129,7 @@ class JSONSystemInfoFieldMapping(BaseModel):
     format: str = ""
     path: str = ""
     map: dict[str, str] | None = None
+    scale: int | float | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> JSONSystemInfoFieldMapping:
@@ -165,6 +169,7 @@ class JSVarsFieldMapping(BaseModel):
     type: str
     format: str = ""
     map: dict[str, str] | None = None
+    scale: int | float | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> JSVarsFieldMapping:
@@ -197,9 +202,36 @@ class XMLSystemInfoFieldMapping(BaseModel):
     type: str
     format: str = ""
     map: dict[str, str] | None = None
+    scale: int | float | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> XMLSystemInfoFieldMapping:
+        """Ensure type is a valid FIELD_TYPES value."""
+        _check_field_type(self.type)
+        return self
+
+
+class XMLChildAggregate(BaseModel):
+    """Aggregate a value from repeated XML child elements.
+
+    Iterates ``child_element`` entries under the root, filters by
+    ``filter`` key-value pairs, and takes the ``max`` of the named
+    sub-element. Produces a single system_info field.
+
+    Used for DOCSIS service flow extraction (e.g., max provisioned
+    speed per direction from ``<serviceflow>`` elements).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    child_element: str
+    filter: dict[str, str]
+    max: str
+    field: str
+    type: str
+    scale: int | float | None = None
+
+    @model_validator(mode="after")
+    def validate_field_type(self) -> XMLChildAggregate:
         """Ensure type is a valid FIELD_TYPES value."""
         _check_field_type(self.type)
         return self
@@ -213,6 +245,7 @@ class XMLSystemInfoSource(BaseModel):
     resource: str
     root_element: str
     fields: list[XMLSystemInfoFieldMapping]
+    child_aggregates: list[XMLChildAggregate] = []
 
 
 def _get_source_format(data: Any) -> str:
