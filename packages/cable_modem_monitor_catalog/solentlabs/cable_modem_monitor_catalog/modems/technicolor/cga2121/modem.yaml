@@ -9,6 +9,8 @@ auth:
   username_field: username_login
   password_field: password_login
   cookie_name: "sec"
+  hidden_fields:
+    language_selector: "en"
 
   success:
     redirect: "/basicUX.html"

@@ -211,12 +211,29 @@ overlap — each source owns distinct fields.
 
 ---
 
+## The `map` transform
+
+The `map` property on a field definition normalizes modem-specific raw
+values to a canonical or human-readable form. It applies to any field
+type — system_info, channel fields, and status indicators.
+
+**Unmapped values always pass through unchanged.** When a raw value has
+no matching key in the `map` dict, it flows downstream as-is. This is
+by design — `map` normalizes the values you know about (the "happy
+path") while preserving unexpected values as raw diagnostic strings.
+Modem firmware can return values not seen in HAR captures (error
+states, degraded modes, localized text). Silently dropping them would
+hide diagnostic information. Passing them through keeps them visible.
+
+Without `map`, the raw value passes through as-is — suitable for
+fields that are already human-readable (uptime strings, version
+strings).
+
 ## Canonical values
 
 Some system_info fields have a canonical value that downstream
-consumers (the orchestrator, HA entities) depend on.  Use the `map`
-property on the field definition to normalize modem-specific raw
-values to the canonical form.
+consumers (the orchestrator, HA entities) depend on.  Use `map`
+to normalize modem-specific raw values to the canonical form.
 
 | Field | Canonical value | Raw examples | Purpose |
 |-------|----------------|--------------|---------|
@@ -258,8 +275,7 @@ offsets to system_info field names. The field schema is:
 
 The `map` attribute is the same as on channel field mappings — it
 transforms raw values to human-readable strings at extraction time.
-This is useful for status indicator functions where the modem returns
-numeric codes instead of human-readable text.
+Unmapped values pass through unchanged (see [The `map` transform](#the-map-transform) above).
 
 ```yaml
 # Status indicators with value mapping
@@ -277,10 +293,6 @@ numeric codes instead of human-readable text.
             "1": "Warning"
             "2": "Critical"
 ```
-
-Without `map`, the raw value passes through as-is — suitable for
-fields that are already human-readable (uptime strings, version
-strings).
 
 ### `javascript_vars` system info
 
