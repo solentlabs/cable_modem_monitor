@@ -2224,6 +2224,16 @@ correction mechanism. OFDM error health is better expressed as error
 whose only error counters are OFDM (e.g., SB8200v3 XML API) omit the
 aggregate section entirely.
 
+**Stale counters from channel reassignment:** DOCSIS 3.1 allows the
+CMTS to reassign channel profiles dynamically. A channel slot that was
+OFDM can be reassigned to SC-QAM (or vice versa). When this happens,
+some modems retain the FEC codeword counters from the previous
+assignment. An unlocked SC-QAM channel may carry billions of stale
+LDPC codewords from its OFDM era, polluting QAM aggregates if not
+filtered. The `lock_status` filter is the correct mitigation:
+unlocked channels have unreliable historical data regardless of their
+current type assignment.
+
 **Execution:** The coordinator runs aggregate computation after all
 sections are extracted and parser.py hooks have run. Results are
 merged into `system_info` alongside channel counts, before the

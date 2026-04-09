@@ -380,6 +380,8 @@
     "hardware_version": "7",
     "software_version": "AB01.02.053.05_051921_193.0A.NSH",
     "system_uptime": "50 days 11h:15m:21s.00",
+    "total_corrected": 1392710,
+    "total_uncorrected": 2637000,
     "upstream_channel_count": 5
   },
   "upstream": [

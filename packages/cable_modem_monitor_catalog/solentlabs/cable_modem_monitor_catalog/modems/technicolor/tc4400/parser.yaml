@@ -1,3 +1,12 @@
+# Lock status filter is required on this modem. The TC4400 reports
+# channel slots that are currently SC-QAM but were previously OFDM.
+# In DOCSIS 3.1 the CMTS can reassign channel profiles dynamically.
+# When a slot transitions from OFDM to SC-QAM, the modem retains
+# stale LDPC codeword counters from the OFDM era — corrected counts
+# in the billions on a channel labeled SC-QAM. Filtering on
+# lock_status excludes these ghost channels (typically "Not Locked"
+# with 0 Hz frequency or "Unknown" modulation) so their stale
+# counters don't pollute QAM aggregates.
 downstream:
   format: table
   resource: "/cmconnectionstatus.html"
@@ -6,6 +15,8 @@ downstream:
         match: "Downstream Channel Status"
         type: header_text
       row_start: 2
+      filter:
+        lock_status: "locked"
       columns:
         - index: 1
           field: channel_id
@@ -57,6 +68,8 @@ upstream:
         match: "Upstream Channel Status"
         type: header_text
       row_start: 2
+      filter:
+        lock_status: "locked"
       columns:
         - index: 1
           field: channel_id
@@ -110,3 +123,13 @@ system_info:
         - field: board_temperature
           label: "Board Temperature"
           type: string
+
+# DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
+# at a vastly different scale and are not aggregated.
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream.qam
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream.qam

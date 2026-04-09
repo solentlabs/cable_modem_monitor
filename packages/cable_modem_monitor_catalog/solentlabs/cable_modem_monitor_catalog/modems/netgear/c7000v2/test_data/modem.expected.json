@@ -269,6 +269,8 @@
     "downstream_channel_count": 24,
     "hardware_version": "2.01",
     "software_version": "V1.03.08",
+    "total_corrected": 126039,
+    "total_uncorrected": 2980,
     "upstream_channel_count": 5
   },
   "upstream": [

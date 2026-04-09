@@ -249,6 +249,8 @@
     "model": "TM1602A",
     "software_version": "9.1.303U11.SIP.PC20.TW",
     "system_uptime": "27 d: 13 h: 39  m",
+    "total_corrected": 870,
+    "total_uncorrected": 2508,
     "upstream_channel_count": 2
   },
   "upstream": [

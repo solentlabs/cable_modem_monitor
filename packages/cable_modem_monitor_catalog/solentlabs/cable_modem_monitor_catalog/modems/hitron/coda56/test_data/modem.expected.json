@@ -316,6 +316,8 @@
     "hardware_version": "1A",
     "software_version": "7.3.5.3.2b1",
     "system_uptime": "479h:40m:38s",
+    "total_corrected": 76,
+    "total_uncorrected": 0,
     "upstream_channel_count": 6
   },
   "upstream": [

@@ -394,20 +394,6 @@
     },
     {
       "bonding_status": "Bonded",
-      "channel_id": 46,
-      "channel_type": "qam",
-      "corrected": 1063235177,
-      "frequency": 0,
-      "lock_status": "not_locked",
-      "modulation": "QAM256",
-      "power": 0.0,
-      "snr": 30.7,
-      "uncorrected": 1290782670,
-      "unerrored_codewords": 724415723,
-      "width": 0
-    },
-    {
-      "bonding_status": "Bonded",
       "channel_id": 47,
       "channel_type": "qam",
       "corrected": 3562121,
@@ -433,30 +419,18 @@
       "uncorrected": 152,
       "unerrored_codewords": 2863823963,
       "width": 6000000
-    },
-    {
-      "bonding_status": "Partial Service",
-      "channel_id": 49,
-      "channel_type": "qam",
-      "corrected": 43830086,
-      "frequency": 735000000,
-      "lock_status": "not_locked",
-      "modulation": "Unknown",
-      "power": -8.9,
-      "snr": 0.0,
-      "uncorrected": 36881658,
-      "unerrored_codewords": 761200647,
-      "width": 6000000
     }
   ],
   "system_info": {
     "board_temperature": "-99.0 degrees Celsius",
-    "downstream_channel_count": 32,
-    "hardware_version": "TC4400 Rev:2.0.0",
     "docsis_status": "Allowed",
+    "downstream_channel_count": 30,
+    "hardware_version": "TC4400 Rev:2.0.0",
     "software_version": "70.13.41-180903",
     "standard_specification_compliant": "Docsis 3.1",
     "system_uptime": "4 days 00h:16m:45s",
+    "total_corrected": 4507002,
+    "total_uncorrected": 3689922,
     "upstream_channel_count": 4
   },
   "upstream": [

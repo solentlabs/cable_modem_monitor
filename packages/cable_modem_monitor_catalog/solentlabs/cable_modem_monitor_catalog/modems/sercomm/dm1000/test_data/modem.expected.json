@@ -344,6 +344,8 @@
     "hardware_version": "1.0",
     "model": "DM1000",
     "software_version": "1.21.04.025",
+    "total_corrected": 6,
+    "total_uncorrected": 0,
     "upstream_channel_count": 5,
     "vendor": "Sercomm Corporation"
   },

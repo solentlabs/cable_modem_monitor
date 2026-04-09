@@ -90,3 +90,12 @@ system_info:
           label: "System"
           pattern: "MODEL:\\s*(.+)"
           type: string
+
+# Aggregate downstream error totals across all channels.
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream

@@ -363,6 +363,8 @@
     "serial_number": "***SERIAL***",
     "software_version": "Prod_23.2_231009 & Prod_23.2_231009",
     "system_uptime": "0 days 20h: 5m: 44s",
+    "total_corrected": 1675,
+    "total_uncorrected": 1095,
     "upstream_channel_count": 5,
     "upstream_status": "Complete"
   },

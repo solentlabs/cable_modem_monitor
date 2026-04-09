@@ -67,3 +67,8 @@ upstream:
           unit: dBmV
       filter:
         lock_status: "locked"
+# Aggregate intentionally omitted. Intel Puma 6 chipset produces
+# anomalous error counts on individual channels (88M+ corrected
+# vs hundreds on neighbors). Two channels dominate 99.99% of any
+# aggregate, making the total misleading. Per-channel data is
+# still available.

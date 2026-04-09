@@ -66,6 +66,11 @@ notes: |
   - No credentials: Assumes HTTP variant, fetches without auth
   - With credentials: Uses URL Token Session auth
   - HTTPS auth fails (non-401): Falls back to unauthenticated fetch
+  Quirk — BCM3390 error count duplication: OFDM channels 159 and 160
+  report identical corrected (4,001,234,064) and uncorrected (327,213)
+  counts despite different frequencies (300 MHz, 950 MHz). Same pattern
+  as XB7 (also BCM3390). Does not affect aggregates since both are OFDM
+  and excluded by the downstream.qam scope.
 references:
   issues:
     - "[#42 — Arris SB8200](https://github.com/solentlabs/cable_modem_monitor/issues/42)"

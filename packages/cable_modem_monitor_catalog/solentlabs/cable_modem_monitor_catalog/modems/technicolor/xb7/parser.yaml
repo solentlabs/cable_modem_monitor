@@ -120,3 +120,8 @@ computed:
     inputs:
       ds: downstream_status
       us: upstream_status
+# DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
+# at a vastly different scale and are not aggregated.
+# Aggregate intentionally omitted. Firmware duplicates OFDM error
+# data onto QAM channel IDs (see modem.yaml quirks), making QAM
+# totals unreliable. Per-channel data is still available.

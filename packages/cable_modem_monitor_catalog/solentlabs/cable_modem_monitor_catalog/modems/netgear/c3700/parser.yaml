@@ -84,3 +84,12 @@ system_info:
             - offset: 1
               field: software_version
               type: string
+
+# Aggregate downstream error totals across all channels.
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream

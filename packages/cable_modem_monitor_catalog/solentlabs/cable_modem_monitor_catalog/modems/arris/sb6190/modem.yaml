@@ -49,6 +49,11 @@ notes: |
 
   Parser based on SB6141 code; fixture provenance unknown.
   URL format differs from SB6141: uses .html extension vs .asp
+  Quirk — Intel Puma 6 chipset: individual channels can report tens of
+  millions of corrected/uncorrectable codewords while neighbors show
+  hundreds. Two channels dominate any aggregate, making totals
+  misleading. Aggregate intentionally omitted; per-channel data is
+  available. Well-documented chipset issue across the industry.
 references:
   issues:
     - "[#83 — [Bug]: SB6190 parser error](https://github.com/solentlabs/cable_modem_monitor/issues/83)"

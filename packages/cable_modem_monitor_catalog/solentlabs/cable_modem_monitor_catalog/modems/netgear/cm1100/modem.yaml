@@ -38,7 +38,14 @@ notes: |
   format as CM1200. 32 SC-QAM + OFDM downstream, ATDMA + OFDMA
   upstream. Login form includes webToken CSRF field (dynamic, discovered
   at runtime via login_page). md5.js loaded but password sent plaintext
-  in captured HAR.
+  in captured HAR. Downstream table has 10 columns (includes Unerrored
+  Codewords between SNR and Correctable).
+  Quirk: channel 19 (QAM256, locked, 537 MHz) reports 4,196,002,703
+  correctable codewords while every other QAM channel has single-digit
+  counts. The 10-column mapping is verified correct against HTML headers.
+  Likely firmware counter corruption or an OFDM channel the firmware
+  misclassifies as QAM256. This dominates total_corrected. Needs a
+  second CM1100 user's data to confirm per-unit vs per-model.
 
 references:
   issues:

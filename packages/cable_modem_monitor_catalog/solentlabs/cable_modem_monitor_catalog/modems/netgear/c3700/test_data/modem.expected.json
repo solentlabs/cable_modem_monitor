@@ -93,6 +93,8 @@
     "downstream_channel_count": 8,
     "hardware_version": "C279T00-01",
     "software_version": "V2.02.18",
+    "total_corrected": 1443,
+    "total_uncorrected": 1783,
     "upstream_channel_count": 1
   },
   "upstream": [
