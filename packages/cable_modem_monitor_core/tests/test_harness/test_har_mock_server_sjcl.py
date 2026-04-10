@@ -58,7 +58,7 @@ _SJCL_AUTH_CONFIG: dict[str, Any] = {
         "strategy": "form_sjcl",
         "login_page": "/",
         "login_endpoint": "/api/login",
-        "session_validation_endpoint": "",
+        "session_validation_endpoint": "/php/ajaxSet_Session.php",
         "pbkdf2_iterations": 1000,
         "pbkdf2_key_length": 128,
         "ccm_tag_length": 16,

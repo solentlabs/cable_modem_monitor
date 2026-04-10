@@ -65,7 +65,8 @@ Step-by-step with explicit encoding at every boundary:
    Set csrf_header on session for subsequent requests
 
 6. POST session validation (session_validation_endpoint, optional):
-   Empty JSON POST with csrf_header -> finalizes session
+   Empty POST (no body) with csrf_header -> finalizes session
+   Accepts HTTP 200 as success regardless of response body
 ```
 
 ## Firmware Assumptions

@@ -169,7 +169,7 @@ class FormSjclAuthManager(BaseAuthManager):
         # Step 6: Session validation (optional)
         if config.session_validation_endpoint:
             validation_url = f"{base_url}{config.session_validation_endpoint}"
-            val_result = post_json(session, validation_url, {}, timeout)
+            val_result = _validate_session(session, validation_url, timeout)
             if isinstance(val_result, AuthResult):
                 return val_result
 
@@ -337,3 +337,33 @@ def _submit_login(
             response_url=endpoint,
         )
     return response, body
+
+
+def _validate_session(
+    session: requests.Session,
+    url: str,
+    timeout: int,
+) -> None | AuthResult:
+    """POST an empty session validation request.
+
+    The browser sends an empty POST (no JSON body) with the
+    csrfNonce header already on the session.  The modem returns
+    200 to confirm.
+
+    Returns ``None`` on success, ``AuthResult`` on failure.
+    """
+    try:
+        resp = session.post(url, timeout=timeout)
+    except requests.RequestException as e:
+        if isinstance(e, requests.ConnectionError | requests.Timeout):
+            raise
+        return AuthResult(
+            success=False,
+            error=f"Session validation POST failed: {e}",
+        )
+    if resp.status_code != 200:
+        return AuthResult(
+            success=False,
+            error=(f"Session validation failed " f"(status {resp.status_code})"),
+        )
+    return None

@@ -42,6 +42,8 @@ class FormSjclAuthHandler(FormAuthHandler):
         logout_path: Logout endpoint path (empty if no logout).
         restart_path: Restart endpoint path (empty if no restart).
         restart_method: HTTP method for restart.
+        session_validation_endpoint: POST endpoint for session finalization
+            (empty if no validation step).
     """
 
     _TEST_PASSWORD = "pw"
@@ -63,6 +65,7 @@ class FormSjclAuthHandler(FormAuthHandler):
         logout_path: str = "",
         restart_path: str = "",
         restart_method: str = "POST",
+        session_validation_endpoint: str = "",
     ) -> None:
         super().__init__(
             login_path=login_endpoint,
@@ -77,6 +80,9 @@ class FormSjclAuthHandler(FormAuthHandler):
         self._ccm_tag_length = ccm_tag_length
         self._decrypt_aad = decrypt_aad
         self._csrf_header = csrf_header
+        self._session_validation_path = (
+            normalize_path(session_validation_endpoint) if session_validation_endpoint else ""
+        )
 
     def is_login_request(self, method: str, path: str) -> bool:
         """SJCL login is two-phase: GET login page then POST credentials."""
@@ -105,6 +111,18 @@ class FormSjclAuthHandler(FormAuthHandler):
         self._authenticated = True
         _logger.debug("Mock server: SJCL login accepted at %s", path)
         return self._login_success_response()
+
+    def get_route_override(
+        self,
+        method: str,
+        path: str,
+        body: bytes,
+        headers: dict[str, str],
+    ) -> RouteEntry | None:
+        """Return 200 empty body for session validation endpoint."""
+        if self._session_validation_path and method == "POST" and normalize_path(path) == self._session_validation_path:
+            return RouteEntry(status=200, headers=[], body="")
+        return None
 
     def _login_page_response(self) -> RouteEntry:
         """Generate login page HTML with JS crypto variables."""

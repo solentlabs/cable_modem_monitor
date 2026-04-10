@@ -107,6 +107,7 @@ def _create_form_sjcl_auth_handler(modem_config: ModemConfig) -> FormSjclAuthHan
         logout_path=action_cfg.logout_path,
         restart_path=action_cfg.restart_path,
         restart_method=action_cfg.restart_method,
+        session_validation_endpoint=auth.session_validation_endpoint,
     )
 
 

@@ -177,7 +177,6 @@ class TestFormSjclAuthManager:
 
         session_resp = MagicMock()
         session_resp.status_code = 200
-        session_resp.json.return_value = {"LoginStatus": "yes"}
 
         with patch.object(session, "get", return_value=page_resp), patch.object(session, "post") as mock_post:
             mock_post.side_effect = [login_resp, session_resp]
@@ -187,6 +186,9 @@ class TestFormSjclAuthManager:
         assert result.success is True
         assert session.headers.get("csrfNonce") == _TEST_CSRF_NONCE
         assert mock_post.call_count == 2
+        # Session validation POST sends empty body (no json= kwarg).
+        session_call = mock_post.call_args_list[1]
+        assert "json" not in session_call.kwargs
 
     def test_login_rejected(self, session: requests.Session) -> None:
         """Reports error when p_status is not AdminMatch."""
@@ -225,6 +227,95 @@ class TestFormSjclAuthManager:
 
         assert result.success is False
         assert "myIv" in result.error
+
+    # ┌──────────────────┬───────────────────────────────────────┐
+    # │ iv               │ expected error substring               │
+    # ├──────────────────┼───────────────────────────────────────┤
+    # │ "zzzz"           │ "not valid hex"                       │
+    # │ "aabb"           │ "2 bytes" (below 7-byte minimum)      │
+    # └──────────────────┴───────────────────────────────────────┘
+    #
+    # fmt: off
+    IV_ERROR_CASES = [
+        # (iv_value,  expected_substr, description)
+        ("zzzz",      "not valid hex",  "non-hex IV"),
+        ("aabb",      "2 bytes",        "IV too short"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "iv_value,expected_substr,desc",
+        IV_ERROR_CASES,
+        ids=[c[2] for c in IV_ERROR_CASES],
+    )
+    def test_iv_validation_error(
+        self,
+        session: requests.Session,
+        iv_value: str,
+        expected_substr: str,
+        desc: str,
+    ) -> None:
+        """Reports error when login page IV fails validation."""
+        config = _make_config()
+        manager = FormSjclAuthManager(config)
+
+        page_resp = MagicMock()
+        page_resp.text = _login_page_html(iv=iv_value)
+
+        with patch.object(session, "get", return_value=page_resp):
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is False
+        assert expected_substr in result.error
+
+    def test_cryptography_import_missing(self, session: requests.Session) -> None:
+        """Reports error when cryptography package is not installed."""
+        config = _make_config()
+        manager = FormSjclAuthManager(config)
+
+        with patch.dict(
+            "sys.modules",
+            {"cryptography.hazmat.primitives.ciphers.aead": None},
+        ):
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is False
+        assert "cryptography" in result.error
+
+    def test_page_fetch_request_error(self, session: requests.Session) -> None:
+        """Non-connectivity RequestException on page fetch returns AuthResult."""
+        config = _make_config()
+        manager = FormSjclAuthManager(config)
+
+        with patch.object(session, "get", side_effect=requests.TooManyRedirects("loop")):
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is False
+        assert "Login page fetch failed" in result.error
+
+    def test_encrypt_data_not_hex(self, session: requests.Session) -> None:
+        """Reports error when encryptData in login response is not valid hex."""
+        config = _make_config(session_validation_endpoint="")
+        manager = FormSjclAuthManager(config)
+
+        page_resp = MagicMock()
+        page_resp.text = _login_page_html()
+
+        login_resp = MagicMock()
+        login_resp.status_code = 200
+        login_resp.json.return_value = {
+            "p_status": "AdminMatch",
+            "encryptData": "not-valid-hex!",
+        }
+
+        with (
+            patch.object(session, "get", return_value=page_resp),
+            patch.object(session, "post", return_value=login_resp),
+        ):
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is False
+        assert "not valid hex" in result.error
 
     def test_page_fetch_connection_error_propagates(self, session: requests.Session) -> None:
         """ConnectionError on login page fetch propagates for collector."""
@@ -392,6 +483,101 @@ class TestFormSjclAuthManager:
         assert result.success is True
         assert session.headers.get("csrfNonce") == _TEST_CSRF_NONCE
 
+    def test_session_validation_empty_body(self, session: requests.Session) -> None:
+        """Succeeds when session validation returns 200 with empty body."""
+        config = _make_config()
+        manager = FormSjclAuthManager(config)
+
+        page_resp = MagicMock()
+        page_resp.text = _login_page_html()
+
+        login_resp = MagicMock()
+        login_resp.status_code = 200
+        login_resp.json.return_value = {
+            "p_status": "AdminMatch",
+            "encryptData": _TEST_ENCRYPTED_NONCE,
+        }
+
+        session_resp = MagicMock()
+        session_resp.status_code = 200
+
+        with patch.object(session, "get", return_value=page_resp), patch.object(session, "post") as mock_post:
+            mock_post.side_effect = [login_resp, session_resp]
+
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is True
+
+    def test_session_validation_non_200(self, session: requests.Session) -> None:
+        """Reports error when session validation returns non-200 status."""
+        config = _make_config()
+        manager = FormSjclAuthManager(config)
+
+        page_resp = MagicMock()
+        page_resp.text = _login_page_html()
+
+        login_resp = MagicMock()
+        login_resp.status_code = 200
+        login_resp.json.return_value = {
+            "p_status": "AdminMatch",
+            "encryptData": _TEST_ENCRYPTED_NONCE,
+        }
+
+        session_resp = MagicMock()
+        session_resp.status_code = 403
+
+        with patch.object(session, "get", return_value=page_resp), patch.object(session, "post") as mock_post:
+            mock_post.side_effect = [login_resp, session_resp]
+
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is False
+        assert "403" in result.error
+
+    def test_session_validation_connection_error(self, session: requests.Session) -> None:
+        """ConnectionError on session validation propagates for collector."""
+        config = _make_config()
+        manager = FormSjclAuthManager(config)
+
+        page_resp = MagicMock()
+        page_resp.text = _login_page_html()
+
+        login_resp = MagicMock()
+        login_resp.status_code = 200
+        login_resp.json.return_value = {
+            "p_status": "AdminMatch",
+            "encryptData": _TEST_ENCRYPTED_NONCE,
+        }
+
+        with patch.object(session, "get", return_value=page_resp), patch.object(session, "post") as mock_post:
+            mock_post.side_effect = [login_resp, requests.ConnectionError("lost")]
+
+            with pytest.raises(requests.ConnectionError):
+                manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+    def test_session_validation_request_error(self, session: requests.Session) -> None:
+        """Non-connectivity RequestException on session validation returns AuthResult."""
+        config = _make_config()
+        manager = FormSjclAuthManager(config)
+
+        page_resp = MagicMock()
+        page_resp.text = _login_page_html()
+
+        login_resp = MagicMock()
+        login_resp.status_code = 200
+        login_resp.json.return_value = {
+            "p_status": "AdminMatch",
+            "encryptData": _TEST_ENCRYPTED_NONCE,
+        }
+
+        with patch.object(session, "get", return_value=page_resp), patch.object(session, "post") as mock_post:
+            mock_post.side_effect = [login_resp, requests.TooManyRedirects("too many")]
+
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is False
+        assert "Session validation POST failed" in result.error
+
     def test_no_csrf_header(self, session: requests.Session) -> None:
         """Succeeds without decrypting nonce when csrf_header is empty."""
         config = _make_config(csrf_header="")
@@ -409,7 +595,6 @@ class TestFormSjclAuthManager:
 
         session_resp = MagicMock()
         session_resp.status_code = 200
-        session_resp.json.return_value = {"LoginStatus": "yes"}
 
         with patch.object(session, "get", return_value=page_resp), patch.object(session, "post") as mock_post:
             mock_post.side_effect = [login_resp, session_resp]
