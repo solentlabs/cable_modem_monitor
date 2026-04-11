@@ -73,6 +73,8 @@ class FormNonceAuth(BaseModel):
     cookie_name: str = ""
     success_prefix: str = "Url:"
     error_prefix: str = "Error:"
+    credential_encoding: Literal["plain", "b64_packed"] = "plain"
+    credential_field: str = ""
 
 
 class UrlTokenAuth(BaseModel):

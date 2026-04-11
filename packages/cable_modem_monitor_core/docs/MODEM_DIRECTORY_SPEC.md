@@ -141,16 +141,25 @@ Each `{name}.har` pairs with `{name}.expected.json`. The test harness
 discovers HAR files, locates the matching golden file, resolves which
 `modem*.yaml` applies, and runs the full pipeline against the `HARMockServer`.
 
-**Config resolution for HAR files:**
+**Config resolution for HAR files** (most specific wins):
 
-1. `modem.har` → always uses `modem.yaml`
-2. `modem-{name}.har` → look for `modem-{name}.yaml`
-   - Found → use it (this is a distinct auth variant)
-   - Not found → fall back to `modem.yaml` (this is a compatibility test)
+1. **Exact match:** `modem-form-nonce-b64.yaml`
+2. **Stem walk:** strip trailing `-segment` and retry →
+   `modem-form-nonce.yaml`, then `modem-form.yaml`, etc.
+3. **Fallback:** `modem.yaml`
 
-**Multiple HARs against one config** validate firmware compatibility —
-same model, different firmware revisions. `modem-{revision}.har`
-validates the same `modem.yaml` against a different firmware build.
+Stem walking supports **test variants** — multiple HARs that share
+one config but exercise different firmware behaviour detected at
+runtime. For example, `modem-form-nonce-b64.har` tests a firmware
+that base64-encodes credentials, but the auth config is identical
+to `modem-form-nonce.yaml` because the encoding is auto-detected
+from the login page.
+
+**Distinction:** A `modem-{name}.yaml` file means a distinct
+**config variant** (different auth strategy, different fields).
+A `modem-{name}.har` without a matching YAML means a **test
+variant** (same config, different firmware behaviour). Stem walking
+connects test variants to their config.
 
 Different model numbers that share a platform get their own catalog
 directories, not shared HARs. See `MODEM_YAML_SPEC.md` § Aliases vs
@@ -328,6 +337,26 @@ modems/{manufacturer}/{model}/
     ├── modem-{variant}.har
     └── modem-{variant}.expected.json
 ```
+
+**Config variant + test variant (e.g., SB6190)**
+
+```text
+modems/arris/sb6190/
+├── parser.yaml
+├── modem.yaml                  # auth: none (older firmware)
+├── modem-form-nonce.yaml       # auth: form_nonce (newer firmware)
+└── test_data/
+    ├── modem.har                       # no-auth firmware
+    ├── modem.expected.json
+    ├── modem-form-nonce.har            # form_nonce, plain encoding
+    ├── modem-form-nonce.expected.json
+    ├── modem-form-nonce-b64.har        # form_nonce, b64 encoding (test variant)
+    └── modem-form-nonce-b64.expected.json
+```
+
+`modem-form-nonce-b64.har` has no matching YAML — stem walking
+resolves it to `modem-form-nonce.yaml`. Same auth config, different
+firmware encoding detected at runtime.
 
 **HNAP, single variant, 100% parser.yaml**
 

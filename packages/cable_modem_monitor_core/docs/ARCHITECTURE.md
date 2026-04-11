@@ -354,21 +354,30 @@ config fields.
   Auth **execution** routinely interacts with login pages to complete the
   handshake. The distinction: config decides *what* to do, runtime
   interaction is *how* the configured strategy executes.
-- **Login page pre-fetch pattern:** Four strategies pre-fetch a login
-  page and extract session-specific state from the response. Each
-  strategy extracts different data, but the principle is shared: if
-  the strategy fetches a page, it reads what it needs from the response.
+- **Login page pre-fetch pattern:** Several strategies pre-fetch a
+  login page and extract session-specific state from the response.
+  Each strategy extracts different data, but the principle is shared:
+  if the strategy fetches a page, it reads what it needs from the
+  response.
 
-  | Strategy | Extracts from login page |
-  |----------|--------------------------|
-  | `form` | `<input type="hidden">` fields (CSRF tokens, mode flags) |
-  | `form_sjcl` | JS crypto variables (`myIv`, `mySalt`, `currentSessionId`) |
-  | `form_cbn` | Session token cookie |
-  | `url_token` | Auth token from response body |
+  | Strategy | Extracts from login page | When |
+  |----------|--------------------------|------|
+  | `form` | `<input type="hidden">` fields (CSRF tokens, mode flags) | Every auth attempt |
+  | `form_nonce` | Form structure (credential encoding: plain vs b64-packed) | Setup time only (config flow / test harness) |
+  | `form_sjcl` | JS crypto variables (`myIv`, `mySalt`, `currentSessionId`) | Every auth attempt |
+  | `form_cbn` | Session token cookie | Every auth attempt |
+  | `url_token` | Auth token from response body | Every auth attempt |
 
   For `form`, discovered hidden fields are merged with `hidden_fields`
   (static overrides from YAML) and credentials. See MODEM_YAML_SPEC.md
   for the merge order.
+
+  For `form_nonce`, credential encoding is detected once at setup
+  time — the HA config flow pre-fetches the login page during
+  validation and stores the result in the config entry. The test
+  harness detects from HAR entries. At runtime, the auth manager
+  reads `credential_encoding` from the config — no pre-fetch occurs
+  during polling. See MODEM_YAML_SPEC.md for detection logic.
 - Multi-variant modems use separate `modem-{variant}.yaml` files — one per
   firmware variant, each with a single `auth` block. The config flow presents
   variants as user choices during setup. Protocol (HTTP vs HTTPS) is detected

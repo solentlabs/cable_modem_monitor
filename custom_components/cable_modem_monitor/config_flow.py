@@ -44,6 +44,8 @@ from .config_flow_helpers import (
     validate_connection,
 )
 from .const import (
+    CONF_CREDENTIAL_ENCODING,
+    CONF_CREDENTIAL_FIELD,
     CONF_ENTITY_PREFIX,
     CONF_HEALTH_CHECK_INTERVAL,
     CONF_LEGACY_SSL,
@@ -469,6 +471,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             CONF_LEGACY_SSL: validation.get("legacy_ssl", False),
             CONF_SUPPORTS_ICMP: validation["supports_icmp"],
             CONF_SUPPORTS_HEAD: validation["supports_head"],
+            CONF_CREDENTIAL_ENCODING: validation.get("credential_encoding", "plain"),
+            CONF_CREDENTIAL_FIELD: validation.get("credential_field", ""),
             # Polling defaults
             CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
             CONF_HEALTH_CHECK_INTERVAL: DEFAULT_HEALTH_CHECK_INTERVAL,
@@ -556,6 +560,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                 CONF_LEGACY_SSL: result.get("legacy_ssl", False),
                 CONF_SUPPORTS_ICMP: result["supports_icmp"],
                 CONF_SUPPORTS_HEAD: result["supports_head"],
+                CONF_CREDENTIAL_ENCODING: result.get("credential_encoding", "plain"),
+                CONF_CREDENTIAL_FIELD: result.get("credential_field", ""),
             }
             self.hass.config_entries.async_update_entry(entry, data=updated)
             await self.hass.config_entries.async_reload(entry.entry_id)
@@ -726,6 +732,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             CONF_LEGACY_SSL: validation.get("legacy_ssl", False),
             CONF_SUPPORTS_ICMP: validation["supports_icmp"],
             CONF_SUPPORTS_HEAD: validation["supports_head"],
+            CONF_CREDENTIAL_ENCODING: validation.get("credential_encoding", "plain"),
+            CONF_CREDENTIAL_FIELD: validation.get("credential_field", ""),
         }
 
         mfr = entry.data[CONF_MANUFACTURER]

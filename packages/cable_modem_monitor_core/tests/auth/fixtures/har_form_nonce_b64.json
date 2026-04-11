@@ -1,0 +1,39 @@
+{
+  "_description": "Form nonce auth: b64-packed credentials detected from login page form structure",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/cgi-bin/adv_pwd_cgi"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {
+          "text": "<html><head><title>Login</title></head><body><form id=\"login_form\" method=\"post\" action=\"##\"><input type=\"text\" id=\"username\" size=\"32\"><input type=\"password\" id=\"password\" size=\"32\"><input name=\"arguments\" id=\"arguments\" value=\"\" type=\"hidden\"><input name=\"ar_nonce\" id=\"ar_nonce\" type=\"hidden\"><input type=\"button\" id=\"login\" value=\"Apply\"></form></body></html>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/cgi-bin/adv_pwd_cgi"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {"name": "Set-Cookie", "value": "credential=mock-token; Path=/"}
+        ],
+        "content": {"text": "Url:/cgi-bin/status"}
+      }
+    }
+  ],
+  "_modem_config": {
+    "auth": {
+      "strategy": "form_nonce",
+      "action": "/cgi-bin/adv_pwd_cgi",
+      "nonce_field": "ar_nonce",
+      "cookie_name": "credential"
+    }
+  }
+}

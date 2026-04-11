@@ -85,6 +85,34 @@ def normalize_path(path: str) -> str:
     return path
 
 
+def extract_har_response_text(
+    entries: list[dict[str, Any]],
+    method: str,
+    path: str,
+) -> str:
+    """Find the first HAR entry matching *method* and *path*, return its body text.
+
+    Args:
+        entries: HAR ``log.entries`` list.
+        method: HTTP method to match (e.g. ``"GET"``).
+        path: URL path to match (normalized before comparison).
+
+    Returns:
+        Response body text, or empty string if no match.
+    """
+    norm = normalize_path(path)
+    method_upper = method.upper()
+    for entry in entries:
+        req = entry.get("request", {})
+        if req.get("method", "").upper() != method_upper:
+            continue
+        entry_path = normalize_path(urlparse(req.get("url", "")).path)
+        if entry_path == norm:
+            text: str = entry.get("response", {}).get("content", {}).get("text", "")
+            return text
+    return ""
+
+
 def _extract_headers(response: dict[str, Any]) -> list[tuple[str, str]]:
     """Extract response headers from a HAR response dict.
 

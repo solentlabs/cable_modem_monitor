@@ -13,6 +13,7 @@ from .base import AuthHandler
 from .basic import BasicAuthHandler
 from .cbn import FormCbnAuthHandler
 from .form import FormAuthHandler
+from .form_nonce import FormNonceAuthHandler
 from .pbkdf2 import FormPbkdf2AuthHandler
 from .sjcl import FormSjclAuthHandler
 
@@ -76,6 +77,40 @@ def _create_form_auth_handler(modem_config: ModemConfig) -> FormAuthHandler:
     action_cfg = _extract_action_config(modem_config)
     return FormAuthHandler(
         login_path=login_path,
+        cookie_name=action_cfg.cookie_name,
+        logout_path=action_cfg.logout_path,
+        restart_path=action_cfg.restart_path,
+        restart_method=action_cfg.restart_method,
+    )
+
+
+def _create_form_nonce_auth_handler(
+    modem_config: ModemConfig,
+    har_entries: list[dict[str, Any]] | None = None,
+) -> FormNonceAuthHandler:
+    """Build a FormNonceAuthHandler from modem config.
+
+    Extracts login page HTML from the HAR entries (GET to the action
+    URL) so the mock server can serve it for the auth manager's
+    login page pre-fetch.
+    """
+    from ...models.modem_config.auth import FormNonceAuth
+    from ..routes import extract_har_response_text
+
+    auth = modem_config.auth
+    assert isinstance(auth, FormNonceAuth)
+
+    login_path = auth.action
+    action_cfg = _extract_action_config(modem_config)
+
+    # Extract login page HTML from HAR entries.
+    login_page_html = ""
+    if har_entries:
+        login_page_html = extract_har_response_text(har_entries, "GET", login_path)
+
+    return FormNonceAuthHandler(
+        login_path=login_path,
+        login_page_html=login_page_html,
         cookie_name=action_cfg.cookie_name,
         logout_path=action_cfg.logout_path,
         restart_path=action_cfg.restart_path,
@@ -204,13 +239,10 @@ def create_auth_handler(
         UrlTokenAuth,
     )
 
-    if modem_config is None or modem_config.auth is None:
+    if modem_config is None or modem_config.auth is None or isinstance(modem_config.auth, NoneAuth):
         return AuthHandler()
 
     auth = modem_config.auth
-
-    if isinstance(auth, NoneAuth):
-        return AuthHandler()
 
     if isinstance(auth, BasicAuth):
         return BasicAuthHandler(
@@ -218,8 +250,11 @@ def create_auth_handler(
             cookie_name=auth.cookie_name,
         )
 
-    if isinstance(auth, FormAuth | FormNonceAuth):
+    if isinstance(auth, FormAuth):
         return _create_form_auth_handler(modem_config)
+
+    if isinstance(auth, FormNonceAuth):
+        return _create_form_nonce_auth_handler(modem_config, har_entries)
 
     if isinstance(auth, FormPbkdf2Auth):
         return _create_form_pbkdf2_auth_handler(modem_config)

@@ -47,6 +47,8 @@ from solentlabs.cable_modem_monitor_core.test_harness.runner import (
 )
 
 from .const import (
+    CONF_CREDENTIAL_ENCODING,
+    CONF_CREDENTIAL_FIELD,
     CONF_ENTITY_PREFIX,
     CONF_HEALTH_CHECK_INTERVAL,
     CONF_LEGACY_SSL,
@@ -337,6 +339,36 @@ async def _async_update_listener(
 # ------------------------------------------------------------------
 
 
+def _apply_credential_encoding(
+    modem_config: Any,
+    data: Mapping[str, Any],
+) -> None:
+    """Inject stored credential encoding into a form_nonce config.
+
+    The HA config flow detects credential encoding at setup time and
+    stores it in the config entry.  This function applies the stored
+    value to the loaded modem config so the auth manager uses the
+    correct encoding.  No-op for non-form_nonce strategies.
+
+    Args:
+        modem_config: Loaded ``ModemConfig`` instance.
+        data: Config entry data dict.
+    """
+    from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
+        FormNonceAuth,
+    )
+
+    if not isinstance(modem_config.auth, FormNonceAuth):
+        return
+
+    raw_encoding = data.get(CONF_CREDENTIAL_ENCODING, "plain")
+    if raw_encoding == "b64_packed":
+        modem_config.auth.credential_encoding = "b64_packed"
+        modem_config.auth.credential_field = data.get(CONF_CREDENTIAL_FIELD, "")
+    else:
+        modem_config.auth.credential_encoding = "plain"
+
+
 def _create_core_components(
     data: Mapping[str, Any],
 ) -> tuple[Orchestrator, HealthMonitor | None, ModemIdentity]:
@@ -360,6 +392,9 @@ def _create_core_components(
     modem_config = load_modem_config(modem_yaml)
     parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
     post_processor = load_post_processor(parser_py) if parser_py.exists() else None
+
+    # Step 1a: Inject credential encoding from config entry (form_nonce only)
+    _apply_credential_encoding(modem_config, data)
 
     # Step 2: Extract ModemIdentity
     hw = modem_config.hardware

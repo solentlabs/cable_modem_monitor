@@ -5,6 +5,7 @@ Subpackage structure:
 - basic.py — BasicAuthHandler (HTTP Basic)
 - cbn.py — FormCbnAuthHandler (CBN AES-256-CBC crypto protocol)
 - form.py — FormAuthHandler (cookie/IP session gating)
+- form_nonce.py — FormNonceAuthHandler (serves login page for encoding detection)
 - sjcl.py — FormSjclAuthHandler (AES-CCM crypto protocol)
 - hnap.py — HnapAuthHandler (HMAC challenge-response protocol)
 - factory.py — create_auth_handler dispatch
@@ -15,6 +16,7 @@ from .basic import BasicAuthHandler
 from .cbn import FormCbnAuthHandler
 from .factory import create_auth_handler
 from .form import FormAuthHandler
+from .form_nonce import FormNonceAuthHandler
 from .hnap import HnapAuthHandler
 from .pbkdf2 import FormPbkdf2AuthHandler
 from .sjcl import FormSjclAuthHandler
@@ -24,6 +26,7 @@ __all__ = [
     "BasicAuthHandler",
     "FormAuthHandler",
     "FormCbnAuthHandler",
+    "FormNonceAuthHandler",
     "FormPbkdf2AuthHandler",
     "FormSjclAuthHandler",
     "HnapAuthHandler",

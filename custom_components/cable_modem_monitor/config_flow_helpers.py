@@ -276,6 +276,77 @@ def _try_collect(
     return collector.execute()
 
 
+def _detect_and_inject_form_nonce_encoding(
+    base_url: str,
+    modem_config: ModemConfig,
+    *,
+    legacy_ssl: bool = False,
+) -> tuple[str, str]:
+    """Detect form_nonce credential encoding and inject into config.
+
+    For form_nonce auth, pre-fetches the login page (GET to the
+    ``action`` URL) and inspects the form structure to determine
+    whether credentials should be sent as plain form fields or
+    base64-packed into a hidden field. Sets the result on the
+    modem config so the collector uses the correct encoding.
+
+    No-op for non-form_nonce auth strategies — returns defaults.
+
+    Falls back to ``("plain", "")`` on any error.
+
+    Args:
+        base_url: Full URL including protocol.
+        modem_config: Modem config (auth may be any strategy).
+        legacy_ssl: Whether to use legacy SSL ciphers.
+
+    Returns:
+        Tuple of ``(encoding, credential_field)``.
+    """
+    from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
+        FormNonceAuth,
+    )
+
+    if not isinstance(modem_config.auth, FormNonceAuth):
+        return ("plain", "")
+
+    from solentlabs.cable_modem_monitor_core.auth.form_nonce import (
+        _analyze_login_form,
+    )
+    from solentlabs.cable_modem_monitor_core.connectivity import create_session
+
+    auth = modem_config.auth
+    login_url = f"{base_url}{auth.action}"
+
+    try:
+        session = create_session(legacy_ssl=legacy_ssl)
+        response = session.get(login_url, timeout=10)
+    except Exception:
+        _LOGGER.debug(
+            "Login page pre-fetch failed during validation, using plain encoding",
+            exc_info=True,
+        )
+        return ("plain", "")
+
+    detection = _analyze_login_form(
+        response.text,
+        auth.username_field,
+        auth.nonce_field,
+    )
+
+    if detection.encoding != "plain":
+        _LOGGER.info(
+            "Credential encoding detected: %s (field=%r)",
+            detection.encoding,
+            detection.credential_field,
+        )
+
+    # Inject into config so the collector uses the correct encoding
+    auth.credential_encoding = detection.encoding
+    auth.credential_field = detection.credential_field
+
+    return (detection.encoding, detection.credential_field)
+
+
 def _run_validation(
     host: str,
     protocol: str | None,
@@ -334,6 +405,11 @@ def _run_validation(
     modem_config = load_modem_config(modem_yaml)
     parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
     post_processor = load_post_processor(parser_py) if parser_py.exists() else None
+
+    # -- Step 2a: Detect form_nonce credential encoding ----------------------
+    credential_encoding, credential_field = _detect_and_inject_form_nonce_encoding(
+        base_url, modem_config, legacy_ssl=legacy_ssl
+    )
 
     # -- Step 3: Test data collection -----------------------------------------
     result = _try_collect(
@@ -405,6 +481,8 @@ def _run_validation(
         "legacy_ssl": legacy_ssl,
         "supports_icmp": supports_icmp,
         "supports_head": supports_head,
+        "credential_encoding": credential_encoding,
+        "credential_field": credential_field,
     }
 
 

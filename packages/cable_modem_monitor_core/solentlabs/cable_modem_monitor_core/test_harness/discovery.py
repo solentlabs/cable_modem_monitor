@@ -161,19 +161,35 @@ def _build_test_case(
 def _resolve_modem_config(stem: str, modem_dir: Path) -> Path | None:
     """Resolve the modem config path for a HAR file stem.
 
-    Resolution rules (MODEM_DIRECTORY_SPEC.md):
-    - ``modem`` -> ``modem.yaml``
-    - ``modem-{name}`` -> ``modem-{name}.yaml`` if exists, else ``modem.yaml``
+    Resolution order (most specific wins):
+
+    1. Exact match: ``modem-form-nonce-b64.yaml``
+    2. Stem walk: strip trailing ``-segment`` and retry
+       (``modem-form-nonce.yaml``, etc.)
+    3. Fallback: ``modem.yaml``
+
+    Stem walking supports test variants that share a config — e.g.,
+    ``modem-form-nonce-b64.har`` reuses ``modem-form-nonce.yaml``
+    when the only difference is firmware behaviour detected at
+    runtime, not YAML configuration.
 
     Returns:
         Path to the resolved config, or ``None`` if no config found.
     """
-    # Try exact match first: modem-{name}.yaml or modem.yaml
+    # Tier 1: exact match (modem-{name}.yaml or modem.yaml)
     exact = modem_dir / f"{stem}.yaml"
     if exact.is_file():
         return exact
 
-    # Fallback to modem.yaml for variant HARs
+    # Tier 2: walk up stem segments (strip last -segment each round)
+    current = stem
+    while "-" in current:
+        current = current.rsplit("-", 1)[0]
+        candidate = modem_dir / f"{current}.yaml"
+        if candidate.is_file():
+            return candidate
+
+    # Tier 3: fallback to modem.yaml
     default = modem_dir / "modem.yaml"
     if default.is_file():
         return default

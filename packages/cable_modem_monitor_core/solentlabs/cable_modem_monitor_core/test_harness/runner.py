@@ -253,6 +253,42 @@ def _load_test_case(
     return entries, expected, modem_config, parser_config, post_processor
 
 
+def _detect_form_nonce_encoding(
+    modem_config: Any,
+    base_url: str,
+) -> None:
+    """Pre-fetch the login page from the mock server and set encoding.
+
+    Mirrors the config flow detection path: GETs the login page,
+    analyzes the form structure, and sets ``credential_encoding``
+    and ``credential_field`` on the config.  This exercises the
+    mock server's ``FormNonceAuthHandler`` GET route — the same
+    pattern the HA config flow uses against a real modem.
+
+    No-op for non-form_nonce auth strategies.
+    """
+    from ..auth.form_nonce import _analyze_login_form
+    from ..models.modem_config.auth import FormNonceAuth
+
+    if not isinstance(modem_config.auth, FormNonceAuth):
+        return
+
+    auth = modem_config.auth
+    login_url = f"{base_url}{auth.action}"
+
+    response = requests.get(login_url, timeout=5)
+    if not response.text:
+        return
+
+    detection = _analyze_login_form(
+        response.text,
+        auth.username_field,
+        auth.nonce_field,
+    )
+    auth.credential_encoding = detection.encoding
+    auth.credential_field = detection.credential_field
+
+
 def _run_pipeline(
     *,
     entries: list[dict[str, Any]],
@@ -276,6 +312,10 @@ def _run_pipeline(
     """
     with HARMockServer(entries, modem_config=modem_config) as server:
         base_url = server.base_url
+
+        # Detect encoding via mock server GET (mirrors config flow)
+        _detect_form_nonce_encoding(modem_config, base_url)
+
         session = requests.Session()
 
         # Configure session
@@ -381,6 +421,9 @@ def _run_orchestrated(
         RuntimeError: If collection failed or status is not ONLINE.
     """
     with HARMockServer(entries, modem_config=modem_config) as server:
+        # Detect encoding via mock server GET (mirrors config flow)
+        _detect_form_nonce_encoding(modem_config, server.base_url)
+
         collector = ModemDataCollector(
             modem_config=modem_config,
             parser_config=parser_config,

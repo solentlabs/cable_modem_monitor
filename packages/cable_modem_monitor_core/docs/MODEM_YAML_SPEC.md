@@ -341,6 +341,8 @@ auth:
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `success_prefix` | string | `"Url:"` | Response body prefix indicating successful login |
 | `error_prefix` | string | `"Error:"` | Response body prefix indicating failed login |
+| `credential_encoding` | enum | `"plain"` | `"plain"` or `"b64_packed"`. Not set in modem.yaml — detected at setup time and stored in HA config entry. |
+| `credential_field` | string | `""` | Hidden field name for packed credentials (e.g., `"arguments"`). Empty for plain encoding. Not set in modem.yaml. |
 
 **Success detection:** Matches the response body text against
 `success_prefix` (default `"Url:"`) and `error_prefix` (default
@@ -350,12 +352,39 @@ starts with `success_prefix`, the login succeeded and the text
 after the prefix is the redirect path. Both are configurable per
 modem.
 
-Evidence: observed in modem firmware where the login page JavaScript
-generates a random numeric nonce client-side, serializes credentials
-as plain form fields alongside the nonce, and evaluates the response
-by text prefix. The CGI endpoint may also accept base64-encoded
-credentials via an AJAX code path, but the plain form field format
-is the canonical implementation.
+#### Login page pre-fetch and encoding detection
+
+The credential encoding is detected at **setup time** (HA config
+flow or test harness) by pre-fetching the login page (GET to the
+`action` URL) and inspecting the form structure:
+
+- **Plain encoding** — the form has `<input name="{username_field}">`
+  and `<input name="{password_field}">`. Credentials are sent as
+  separate form fields: `username=X&password=Y&nonce=Z`.
+- **Base64-packed encoding** — the form has no named credential
+  inputs but contains a hidden field (e.g., `<input name="arguments"
+  type="hidden">`) with an empty value. Credentials are packed as
+  `base64(encodeURIComponent("username=X:password=Y"))` into that
+  field: `arguments=<base64>&nonce=Z`.
+
+The detected encoding is stored in the HA config entry as
+`credential_encoding` (`"plain"` or `"b64_packed"`) and
+`credential_field` (the hidden field name, empty for plain). At
+runtime, the auth manager reads these from the `FormNonceAuth`
+config — no pre-fetch or detection occurs during polling.
+
+Detection falls back to plain encoding on any parse failure
+(backward compatible). No YAML config field is needed — the
+encoding is per-installation (firmware-dependent), not per-modem.
+
+The test harness detects encoding from HAR entries at test
+execution time, using the same `_analyze_login_form()` function.
+
+Evidence: observed in Arris SB6190 firmware 9.1.103AA65L (plain
+form fields) and 9.1.103AA72 (base64-packed `arguments` field).
+Both firmware variants share identical modem.yaml config — same
+endpoint, same field names, same cookie, same response parsing.
+The only difference is the login page form structure.
 
 ### `url_token`
 

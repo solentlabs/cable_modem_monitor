@@ -24,6 +24,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_CREDENTIAL_ENCODING,
     CONF_LEGACY_SSL,
     CONF_MANUFACTURER,
     CONF_MODEL,
@@ -310,6 +311,7 @@ def _build_diagnostics_dict(
             "has_credentials": bool(entry.data.get("username") and entry.data.get("password")),
             "supports_icmp": entry.data.get(CONF_SUPPORTS_ICMP, False),
             "supports_head": entry.data.get(CONF_SUPPORTS_HEAD, False),
+            "credential_encoding": entry.data.get(CONF_CREDENTIAL_ENCODING, "plain"),
         },
         "core_diagnostics": core_diag.to_dict(),
         "data_coordinator": {

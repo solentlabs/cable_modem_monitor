@@ -37,6 +37,15 @@ _MODEM_DEFAULTS: dict[str, Any] = {
 }
 
 
+def load_html_fixture(name: str) -> str:
+    """Load an HTML fixture file and return its text content.
+
+    Args:
+        name: Fixture filename (e.g. ``"login_form_plain.html"``).
+    """
+    return (FIXTURES_DIR / name).read_text()
+
+
 def load_auth_fixture(
     name: str,
 ) -> tuple[list[dict[str, Any]], Any]:

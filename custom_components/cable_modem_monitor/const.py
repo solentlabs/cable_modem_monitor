@@ -24,6 +24,8 @@ CONF_PROTOCOL = "protocol"
 CONF_LEGACY_SSL = "legacy_ssl"
 CONF_SUPPORTS_ICMP = "supports_icmp"
 CONF_SUPPORTS_HEAD = "supports_head"
+CONF_CREDENTIAL_ENCODING = "credential_encoding"
+CONF_CREDENTIAL_FIELD = "credential_field"
 
 # Polling configuration (options flow)
 CONF_SCAN_INTERVAL = "scan_interval"
