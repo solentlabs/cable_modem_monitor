@@ -314,7 +314,7 @@ class TestVariantPath:
     """Verify _run_validation loads modem-{variant}.yaml when variant is set."""
 
     @patch(f"{_MODULE}.detect_probes")
-    @patch(f"{_MODULE}.ModemDataCollector")
+    @patch(f"{_MODULE}.create_collector")
     @patch(f"{_MODULE}.load_post_processor")
     @patch(f"{_MODULE}.load_parser_config")
     @patch(f"{_MODULE}.load_modem_config")
@@ -437,7 +437,7 @@ class TestProtocolRetry:
     """UC-85: Protocol fallback when auth fails on auto-detected HTTP."""
 
     @patch(f"{_MODULE}.detect_probes")
-    @patch(f"{_MODULE}.ModemDataCollector")
+    @patch(f"{_MODULE}.create_collector")
     @patch(f"{_MODULE}.load_post_processor")
     @patch(f"{_MODULE}.load_parser_config")
     @patch(f"{_MODULE}.load_modem_config")
@@ -513,7 +513,7 @@ class TestProtocolRetryCollectorArgs:
     """Verify the collector is created with correct args on each retry."""
 
     @patch(f"{_MODULE}.detect_probes")
-    @patch(f"{_MODULE}.ModemDataCollector")
+    @patch(f"{_MODULE}.create_collector")
     @patch(f"{_MODULE}.load_post_processor")
     @patch(f"{_MODULE}.load_parser_config")
     @patch(f"{_MODULE}.load_modem_config")
@@ -557,7 +557,7 @@ class TestProtocolRetryCollectorArgs:
         assert second_call.kwargs["legacy_ssl"] is False
 
     @patch(f"{_MODULE}.detect_probes")
-    @patch(f"{_MODULE}.ModemDataCollector")
+    @patch(f"{_MODULE}.create_collector")
     @patch(f"{_MODULE}.load_post_processor")
     @patch(f"{_MODULE}.load_parser_config")
     @patch(f"{_MODULE}.load_modem_config")
@@ -596,7 +596,7 @@ class TestProtocolRetryCollectorArgs:
         assert third_call.kwargs["legacy_ssl"] is True
 
     @patch(f"{_MODULE}.detect_probes")
-    @patch(f"{_MODULE}.ModemDataCollector")
+    @patch(f"{_MODULE}.create_collector")
     @patch(f"{_MODULE}.load_post_processor")
     @patch(f"{_MODULE}.load_parser_config")
     @patch(f"{_MODULE}.load_modem_config")
@@ -638,7 +638,7 @@ class TestProtocolRetryNotTriggered:
     """Verify retry does NOT happen for non-auth failures."""
 
     @patch(f"{_MODULE}.detect_probes")
-    @patch(f"{_MODULE}.ModemDataCollector")
+    @patch(f"{_MODULE}.create_collector")
     @patch(f"{_MODULE}.load_post_processor")
     @patch(f"{_MODULE}.load_parser_config")
     @patch(f"{_MODULE}.load_modem_config")

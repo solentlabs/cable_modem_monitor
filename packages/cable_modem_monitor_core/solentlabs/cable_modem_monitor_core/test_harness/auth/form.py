@@ -8,9 +8,13 @@ cookie-based and IP-based sessions).
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, Any
 
 from ..routes import RouteEntry, normalize_path
-from .base import AuthHandler
+from .base import AuthHandler, extract_action_config
+
+if TYPE_CHECKING:
+    from ...models.modem_config import ModemConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -119,3 +123,20 @@ class FormAuthHandler(AuthHandler):
         self._authenticated = False
         _logger.debug("Mock server: restart accepted — session cleared")
         return RouteEntry(status=200, headers=[], body="OK")
+
+
+def create_handler(
+    modem_config: ModemConfig,
+    har_entries: list[dict[str, Any]] | None = None,  # noqa: ARG001
+) -> FormAuthHandler:
+    """Entry point for dynamic auth handler dispatch."""
+    auth = modem_config.auth
+    login_path = getattr(auth, "action", "") or getattr(auth, "login_endpoint", "")
+    action_cfg = extract_action_config(modem_config)
+    return FormAuthHandler(
+        login_path=login_path,
+        cookie_name=action_cfg.cookie_name,
+        logout_path=action_cfg.logout_path,
+        restart_path=action_cfg.restart_path,
+        restart_method=action_cfg.restart_method,
+    )

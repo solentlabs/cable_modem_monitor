@@ -210,3 +210,8 @@ def _discover_hidden_fields(html: str, form_selector: str) -> dict[str, str]:
         _logger.debug("Discovered %d hidden field(s) from login form", len(fields))
 
     return fields
+
+
+def create_manager(config: FormAuth) -> FormAuthManager:
+    """Entry point for dynamic auth factory dispatch."""
+    return FormAuthManager(config)

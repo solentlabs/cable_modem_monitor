@@ -19,11 +19,14 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from ..routes import RouteEntry, normalize_path
 from .form import FormAuthHandler
+
+if TYPE_CHECKING:
+    from ...models.modem_config import ModemConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -306,3 +309,34 @@ def _build_getter_responses(
         sorted(responses.keys()),
     )
     return responses
+
+
+def create_handler(
+    modem_config: ModemConfig,
+    har_entries: list[dict[str, Any]] | None = None,
+) -> FormCbnAuthHandler:
+    """Entry point for dynamic auth handler dispatch."""
+    from ...models.modem_config.actions import CbnAction
+    from ...models.modem_config.auth import FormCbnAuth
+
+    auth = modem_config.auth
+    assert isinstance(auth, FormCbnAuth)
+
+    logout_fun: int | None = None
+    restart_fun: int | None = None
+    if modem_config.actions:
+        if modem_config.actions.logout and isinstance(modem_config.actions.logout, CbnAction):
+            logout_fun = modem_config.actions.logout.fun
+        if modem_config.actions.restart and isinstance(modem_config.actions.restart, CbnAction):
+            restart_fun = modem_config.actions.restart.fun
+
+    return FormCbnAuthHandler(
+        login_page_path=auth.login_page,
+        setter_endpoint=auth.setter_endpoint,
+        getter_endpoint=auth.getter_endpoint,
+        session_cookie_name=auth.session_cookie_name,
+        login_fun=auth.login_fun,
+        logout_fun=logout_fun,
+        restart_fun=restart_fun,
+        har_entries=har_entries,
+    )

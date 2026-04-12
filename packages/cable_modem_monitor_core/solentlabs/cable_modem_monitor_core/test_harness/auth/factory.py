@@ -1,213 +1,30 @@
-"""Auth handler factory — dispatches on modem.yaml ``auth.strategy``.
+"""Auth handler factory — dynamic dispatch on ``auth.strategy``.
 
-Contains the ``create_auth_handler`` public function and private
-helpers for constructing specific handler types from config.
+Resolves the declared strategy literal from modem.yaml to the
+corresponding handler module via ``importlib``.  Each handler module
+provides a ``create_handler(modem_config, har_entries)`` entry point.
+
+**Validation coverage:** The catalog fleet test
+(``test_modems.py``) auto-discovers every modem with a HAR fixture
+and runs ``run_modem_test_orchestrated``, which exercises this
+factory for each modem's auth strategy. A missing or misnamed
+handler module fails the fleet test at CI time.
 """
 
 from __future__ import annotations
 
+import importlib
 import logging
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, Any
 
 from .base import AuthHandler
-from .basic import BasicAuthHandler
-from .cbn import FormCbnAuthHandler
-from .form import FormAuthHandler
-from .form_nonce import FormNonceAuthHandler
-from .pbkdf2 import FormPbkdf2AuthHandler
-from .sjcl import FormSjclAuthHandler
 
 if TYPE_CHECKING:
     from ...models.modem_config import ModemConfig
 
 _logger = logging.getLogger(__name__)
 
-
-class _ActionConfig(NamedTuple):
-    """Shared action fields extracted from modem config.
-
-    Simple data carrier for the cookie name, logout path, restart
-    path, and restart method that both form-based factory functions
-    need.
-    """
-
-    cookie_name: str
-    logout_path: str
-    restart_path: str
-    restart_method: str
-
-
-def _extract_action_config(modem_config: ModemConfig) -> _ActionConfig:
-    """Extract shared action fields from modem config.
-
-    Reads session cookie name and action endpoints (logout, restart)
-    from the config. Used by both ``_create_form_auth_handler`` and
-    ``_create_form_sjcl_auth_handler`` to avoid duplicating the same
-    extraction logic.
-    """
-    from ...models.modem_config.actions import HttpAction
-
-    cookie_name = getattr(modem_config.auth, "cookie_name", "")
-    logout_path = ""
-    restart_path = ""
-    restart_method = "POST"
-    if modem_config.actions:
-        if modem_config.actions.logout and isinstance(modem_config.actions.logout, HttpAction):
-            logout_path = modem_config.actions.logout.endpoint
-        if modem_config.actions.restart and isinstance(modem_config.actions.restart, HttpAction):
-            restart_path = modem_config.actions.restart.endpoint
-            restart_method = modem_config.actions.restart.method
-    return _ActionConfig(
-        cookie_name=cookie_name,
-        logout_path=logout_path,
-        restart_path=restart_path,
-        restart_method=restart_method,
-    )
-
-
-def _create_form_auth_handler(modem_config: ModemConfig) -> FormAuthHandler:
-    """Build a FormAuthHandler from modem config.
-
-    Extracts login path, session cookie, logout endpoint, and restart
-    endpoint from the config. Called by ``create_auth_handler`` for
-    form-based auth strategies.
-    """
-    auth = modem_config.auth
-    login_path = getattr(auth, "action", "") or getattr(auth, "login_endpoint", "")
-    action_cfg = _extract_action_config(modem_config)
-    return FormAuthHandler(
-        login_path=login_path,
-        cookie_name=action_cfg.cookie_name,
-        logout_path=action_cfg.logout_path,
-        restart_path=action_cfg.restart_path,
-        restart_method=action_cfg.restart_method,
-    )
-
-
-def _create_form_nonce_auth_handler(
-    modem_config: ModemConfig,
-    har_entries: list[dict[str, Any]] | None = None,
-) -> FormNonceAuthHandler:
-    """Build a FormNonceAuthHandler from modem config.
-
-    Extracts login page HTML from the HAR entries (GET to the action
-    URL) so the mock server can serve it for the auth manager's
-    login page pre-fetch.
-    """
-    from ...models.modem_config.auth import FormNonceAuth
-    from ..routes import extract_har_response_text
-
-    auth = modem_config.auth
-    assert isinstance(auth, FormNonceAuth)
-
-    login_path = auth.action
-    action_cfg = _extract_action_config(modem_config)
-
-    # Extract login page HTML from HAR entries.
-    login_page_html = ""
-    if har_entries:
-        login_page_html = extract_har_response_text(har_entries, "GET", login_path)
-
-    return FormNonceAuthHandler(
-        login_path=login_path,
-        login_page_html=login_page_html,
-        cookie_name=action_cfg.cookie_name,
-        logout_path=action_cfg.logout_path,
-        restart_path=action_cfg.restart_path,
-        restart_method=action_cfg.restart_method,
-    )
-
-
-def _create_form_sjcl_auth_handler(modem_config: ModemConfig) -> FormSjclAuthHandler:
-    """Build a FormSjclAuthHandler from modem config.
-
-    Extracts SJCL crypto parameters, login endpoints, session cookie,
-    and action endpoints from the config.
-    """
-    from ...models.modem_config.auth import FormSjclAuth
-
-    auth = modem_config.auth
-    assert isinstance(auth, FormSjclAuth)
-
-    action_cfg = _extract_action_config(modem_config)
-    return FormSjclAuthHandler(
-        login_page_path=auth.login_page,
-        login_endpoint=auth.login_endpoint,
-        pbkdf2_iterations=auth.pbkdf2_iterations,
-        pbkdf2_key_length=auth.pbkdf2_key_length,
-        ccm_tag_length=auth.ccm_tag_length,
-        decrypt_aad=auth.decrypt_aad,
-        csrf_header=auth.csrf_header,
-        cookie_name=action_cfg.cookie_name,
-        logout_path=action_cfg.logout_path,
-        restart_path=action_cfg.restart_path,
-        restart_method=action_cfg.restart_method,
-        session_validation_endpoint=auth.session_validation_endpoint,
-    )
-
-
-def _create_form_pbkdf2_auth_handler(modem_config: ModemConfig) -> FormPbkdf2AuthHandler:
-    """Build a FormPbkdf2AuthHandler from modem config.
-
-    Extracts PBKDF2 parameters, salt trigger, login endpoint, CSRF
-    config, session cookie, and action endpoints from the config.
-    """
-    from ...models.modem_config.auth import FormPbkdf2Auth
-
-    auth = modem_config.auth
-    assert isinstance(auth, FormPbkdf2Auth)
-
-    action_cfg = _extract_action_config(modem_config)
-    return FormPbkdf2AuthHandler(
-        login_endpoint=auth.login_endpoint,
-        salt_trigger=auth.salt_trigger,
-        pbkdf2_iterations=auth.pbkdf2_iterations,
-        pbkdf2_key_length=auth.pbkdf2_key_length,
-        double_hash=auth.double_hash,
-        csrf_init_endpoint=auth.csrf_init_endpoint,
-        csrf_header=auth.csrf_header,
-        cookie_name=action_cfg.cookie_name,
-        logout_path=action_cfg.logout_path,
-        restart_path=action_cfg.restart_path,
-        restart_method=action_cfg.restart_method,
-    )
-
-
-def _create_form_cbn_auth_handler(
-    modem_config: ModemConfig,
-    har_entries: list[dict[str, Any]] | None = None,
-) -> FormCbnAuthHandler:
-    """Build a FormCbnAuthHandler from modem config.
-
-    Extracts CBN-specific parameters: setter/getter endpoints, session
-    cookie name, login fun, and action fun values (logout, restart)
-    from the config. Passes HAR entries for building the getter
-    response lookup.
-    """
-    from ...models.modem_config.actions import CbnAction
-    from ...models.modem_config.auth import FormCbnAuth
-
-    auth = modem_config.auth
-    assert isinstance(auth, FormCbnAuth)
-
-    logout_fun: int | None = None
-    restart_fun: int | None = None
-    if modem_config.actions:
-        if modem_config.actions.logout and isinstance(modem_config.actions.logout, CbnAction):
-            logout_fun = modem_config.actions.logout.fun
-        if modem_config.actions.restart and isinstance(modem_config.actions.restart, CbnAction):
-            restart_fun = modem_config.actions.restart.fun
-
-    return FormCbnAuthHandler(
-        login_page_path=auth.login_page,
-        setter_endpoint=auth.setter_endpoint,
-        getter_endpoint=auth.getter_endpoint,
-        session_cookie_name=auth.session_cookie_name,
-        login_fun=auth.login_fun,
-        logout_fun=logout_fun,
-        restart_fun=restart_fun,
-        har_entries=har_entries,
-    )
+_HANDLER_PACKAGE = "solentlabs.cable_modem_monitor_core.test_harness.auth"
 
 
 def create_auth_handler(
@@ -216,10 +33,13 @@ def create_auth_handler(
 ) -> AuthHandler:
     """Create the appropriate auth handler from modem config.
 
+    Dynamically imports the handler module matching the strategy
+    literal (e.g., ``"form_nonce"`` → ``test_harness.auth.form_nonce``)
+    and calls its ``create_handler()`` entry point.
+
     Args:
         modem_config: Validated ``ModemConfig`` instance (or None for no auth).
-            Uses ``auth.strategy`` to select the handler and
-            ``auth.cookie_name`` for session tracking.
+            Uses ``auth.strategy`` to select the handler.
         har_entries: HAR ``log.entries`` list. Required for HNAP auth
             (merged data response) and CBN auth (getter dispatch).
             Ignored for other strategies.
@@ -227,58 +47,18 @@ def create_auth_handler(
     Returns:
         Auth handler instance.
     """
-    from ...models.modem_config.auth import (
-        BasicAuth,
-        FormAuth,
-        FormCbnAuth,
-        FormNonceAuth,
-        FormPbkdf2Auth,
-        FormSjclAuth,
-        HnapAuth,
-        NoneAuth,
-        UrlTokenAuth,
-    )
-
-    if modem_config is None or modem_config.auth is None or isinstance(modem_config.auth, NoneAuth):
+    if modem_config is None or modem_config.auth is None:
         return AuthHandler()
 
-    auth = modem_config.auth
+    strategy = modem_config.auth.strategy
 
-    if isinstance(auth, BasicAuth):
-        return BasicAuthHandler(
-            challenge_cookie=auth.challenge_cookie,
-            cookie_name=auth.cookie_name,
+    try:
+        module = importlib.import_module(f".{strategy}", package=_HANDLER_PACKAGE)
+    except ModuleNotFoundError:
+        _logger.warning(
+            "No auth handler module for strategy '%s', using no-auth",
+            strategy,
         )
-
-    if isinstance(auth, FormAuth):
-        return _create_form_auth_handler(modem_config)
-
-    if isinstance(auth, FormNonceAuth):
-        return _create_form_nonce_auth_handler(modem_config, har_entries)
-
-    if isinstance(auth, FormPbkdf2Auth):
-        return _create_form_pbkdf2_auth_handler(modem_config)
-
-    if isinstance(auth, FormSjclAuth):
-        return _create_form_sjcl_auth_handler(modem_config)
-
-    if isinstance(auth, FormCbnAuth):
-        return _create_form_cbn_auth_handler(modem_config, har_entries)
-
-    if isinstance(auth, UrlTokenAuth):
-        # URL token auth GETs the login page with credentials in the URL.
-        # The HAR route table already contains the login page response
-        # (with success indicator text and Set-Cookie header), so no
-        # auth gating is needed — all requests pass through.
         return AuthHandler()
 
-    if isinstance(auth, HnapAuth):
-        from .hnap import HnapAuthHandler
-
-        return HnapAuthHandler(
-            hmac_algorithm=auth.hmac_algorithm,
-            har_entries=har_entries or [],
-        )
-
-    _logger.warning("Unsupported auth strategy '%s' in mock server, using no-auth", type(auth).__name__)
-    return AuthHandler()
+    return module.create_handler(modem_config, har_entries)  # type: ignore[no-any-return]

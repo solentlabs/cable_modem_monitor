@@ -283,6 +283,47 @@ exception directly.
 
 ---
 
+## Component Factory
+
+`orchestration.factory` owns the YAML-to-running-components path.
+Consumers supply *what* (loaded configs, credentials, protocol
+settings), Core handles *how* (credential encoding, collector
+creation, health monitor assembly, identity extraction).
+
+```python
+def apply_credential_encoding(
+    modem_config, credential_encoding="plain", credential_field="",
+) -> None:
+    """Inject form_nonce encoding. No-op for other strategies."""
+
+def create_collector(
+    modem_config, parser_config, post_processor,
+    base_url, username="", password="", *, legacy_ssl=False,
+) -> ModemDataCollector:
+    """Single-shot collector for config flow validation."""
+
+def create_orchestrator(
+    modem_config, parser_config, post_processor,
+    base_url, username="", password="", *, legacy_ssl=False,
+    supports_icmp=True, supports_head=True, http_probe=True,
+    model="",
+) -> tuple[Orchestrator, HealthMonitor | None, ModemIdentity]:
+    """Full orchestration graph for runtime polling."""
+```
+
+**Consumers:**
+
+- **HA adapter:** Loads configs from catalog (HA-specific path),
+  resolves health probe defaults vs config entry overrides, calls
+  `create_orchestrator()`. Config loading stays in the adapter;
+  assembly delegates to Core.
+- **Config flow:** Calls `create_collector()` for single-shot
+  validation during setup.
+- **Test harness:** Calls `create_orchestrator()` with
+  `supports_icmp=False, http_probe=False` (no real modem to probe).
+
+---
+
 ## Orchestrator
 
 Policy engine. Coordinates ModemDataCollector, HealthMonitor, and

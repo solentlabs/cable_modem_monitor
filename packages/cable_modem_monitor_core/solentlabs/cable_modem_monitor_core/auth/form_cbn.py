@@ -157,3 +157,8 @@ class FormCbnAuthManager(BaseAuthManager):
             response=login_response,
             response_url=config.setter_endpoint,
         )
+
+
+def create_manager(config: FormCbnAuth) -> FormCbnAuthManager:
+    """Entry point for dynamic auth factory dispatch."""
+    return FormCbnAuthManager(config)

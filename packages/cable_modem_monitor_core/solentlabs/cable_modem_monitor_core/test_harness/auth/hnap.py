@@ -13,11 +13,14 @@ import hashlib
 import hmac as hmac_mod
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ...har import merge_hnap_har_responses
 from ..routes import RouteEntry, normalize_path
 from .base import AuthHandler
+
+if TYPE_CHECKING:
+    from ...models.modem_config import ModemConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -292,3 +295,19 @@ class HnapAuthHandler(AuthHandler):
             .hexdigest()
             .upper()
         )
+
+
+def create_handler(
+    modem_config: ModemConfig,
+    har_entries: list[dict[str, Any]] | None = None,
+) -> HnapAuthHandler:
+    """Entry point for dynamic auth handler dispatch."""
+    from ...models.modem_config.auth import HnapAuth
+
+    auth = modem_config.auth
+    assert isinstance(auth, HnapAuth)
+
+    return HnapAuthHandler(
+        hmac_algorithm=auth.hmac_algorithm,
+        har_entries=har_entries or [],
+    )

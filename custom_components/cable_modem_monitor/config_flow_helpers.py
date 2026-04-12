@@ -32,7 +32,10 @@ from solentlabs.cable_modem_monitor_core.connectivity import (
     test_icmp,
 )
 from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
-from solentlabs.cable_modem_monitor_core.orchestration import ModemDataCollector
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
+    get_strategy_display_labels,
+)
+from solentlabs.cable_modem_monitor_core.orchestration import create_collector
 from solentlabs.cable_modem_monitor_core.orchestration.models import ModemResult
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     CollectorSignal,
@@ -50,19 +53,10 @@ _LOGGER = logging.getLogger(f"{__package__}.config_flow")
 
 
 # ---------------------------------------------------------------------------
-# Auth strategy display labels
+# Auth strategy display labels — derived from auth model ClassVars
 # ---------------------------------------------------------------------------
 
-AUTH_STRATEGY_LABELS: dict[str, str] = {
-    "none": "No Authentication",
-    "basic": "Basic Authentication",
-    "form": "Form Login",
-    "form_nonce": "Form Login (Nonce)",
-    "form_pbkdf2": "Form Login (PBKDF2)",
-    "form_sjcl": "Form Login (SJCL)",
-    "url_token": "URL Token",
-    "hnap": "HNAP",
-}
+AUTH_STRATEGY_LABELS: dict[str, str] = get_strategy_display_labels()
 
 
 def format_variant_label(variant: VariantInfo) -> str:
@@ -264,7 +258,7 @@ def _try_collect(
     Returns:
         ``ModemResult`` from the collector.
     """
-    collector = ModemDataCollector(
+    collector = create_collector(
         modem_config=modem_config,
         parser_config=parser_config,
         post_processor=post_processor,

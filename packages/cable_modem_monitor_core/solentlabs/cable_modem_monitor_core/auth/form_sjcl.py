@@ -367,3 +367,8 @@ def _validate_session(
             error=(f"Session validation failed " f"(status {resp.status_code})"),
         )
     return None
+
+
+def create_manager(config: FormSjclAuth) -> FormSjclAuthManager:
+    """Entry point for dynamic auth factory dispatch."""
+    return FormSjclAuthManager(config)

@@ -11,7 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .actions import ActionsConfig, BehaviorsConfig
-from .auth import CBN_AUTH_STRATEGIES, HNAP_AUTH_STRATEGIES, HTTP_AUTH_STRATEGIES, AuthConfig
+from .auth import AuthConfig, get_transport_strategy_sets
 from .health import HealthConfig
 from .metadata import AttributionConfig, HardwareConfig, ReferencesConfig
 from .session import SessionConfig
@@ -127,11 +127,7 @@ class ModemConfig(BaseModel):
 # Transport constraint helpers (after ModemConfig — no forward references)
 # ---------------------------------------------------------------------------
 
-_VALID_STRATEGIES: dict[str, frozenset[str]] = {
-    "hnap": HNAP_AUTH_STRATEGIES,
-    "http": HTTP_AUTH_STRATEGIES,
-    "cbn": CBN_AUTH_STRATEGIES,
-}
+_VALID_STRATEGIES: dict[str, frozenset[str]] = get_transport_strategy_sets()
 
 
 def _check_auth_strategy(config: ModemConfig, errors: list[str]) -> None:

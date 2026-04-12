@@ -43,28 +43,30 @@ Strategy changes are validated across all modems automatically.
 
 ### Transport is a protocol identifier, not a constraint funnel
 
-**Decision:** The `transport` field in modem.yaml identifies the transport
-protocol. Two values: `http` and `hnap`. For `http`, auth, session, and
+**Decision:** The `transport` field in modem.yaml identifies the wire
+protocol: `http`, `hnap`, or `cbn`. For `http`, auth, session, and
 format are configured independently (qualified — some auth/session
 pairings are linked; see MODEM_YAML_SPEC.md auth-session-action
-consistency rules). For `hnap`, the protocol constrains everything.
+consistency rules). For `hnap` and `cbn`, the protocol constrains
+everything.
 
-**Rationale:** All 33 non-HNAP modems use HTTP requests regardless of
+**Rationale:** The majority of modems use HTTP requests regardless of
 whether the response is HTML, JSON, or XML. The difference between an
 HTML table scraper and a JSON API modem is response format, not transport.
 Keeping transport separate from format means each does one thing:
 transport selects the loader, format (in parser.yaml) selects the decode
 step and extraction strategy. Auth strategies are orthogonal to both —
-any auth can appear with any format over HTTP. HNAP is genuinely a
-different protocol (SOAP POST + HMAC signing), so it warrants its own
-transport value where the protocol constrains auth, session, and format.
+any auth can appear with any format over HTTP. HNAP and CBN are
+genuinely different protocols (HNAP: SOAP POST + HMAC signing; CBN:
+XML POST + AES-256-CBC), so each warrants its own transport value
+where the protocol constrains auth, session, and format.
 
-Evidence: across all 32 modem directories, no auth strategy is structurally
-tied to a response format. Basic auth modems serve HTML tables today, but
-nothing prevents a basic-auth modem from serving JSON. The pairings
-observed in the current population are coincidental, not architectural.
-See the HAR corpus analysis (local reference data) for the full modem inventory and
-stress test results.
+Evidence: across the HTTP modem population, no auth strategy is
+structurally tied to a response format. Basic auth modems serve HTML
+tables today, but nothing prevents a basic-auth modem from serving
+JSON. The pairings observed are coincidental, not architectural.
+See the HAR corpus analysis (local reference data) for the full
+modem inventory and stress test results.
 
 **Constrains:** Format strategies must be compatible with the value type
 they receive. HTML formats expect `BeautifulSoup`, structured formats
@@ -89,14 +91,14 @@ declares restart capability (a modem command, not parsed data).
 
 ## Auth Architecture
 
-### Seven discrete strategies, not composable primitives
+### Discrete strategies, not composable primitives
 
-**Decision:** Auth is a discriminated union of seven self-contained
-strategy types: `none`, `basic`, `form`, `form_nonce`, `url_token`,
-`hnap`, `form_pbkdf2`. Each strategy has a per-strategy dataclass and
-a single audited implementation. The alternative — a toolkit of
-composable primitives (encoding, CSRF, nonce generation) that you mix
-and match per-modem — was rejected.
+**Decision:** Auth is a discriminated union of self-contained strategy
+types (`none`, `basic`, `form`, `form_nonce`, `url_token`, `hnap`,
+`form_pbkdf2`, `form_sjcl`, `form_cbn`). Each strategy has a
+per-strategy dataclass and a single audited implementation. The
+alternative — a toolkit of composable primitives (encoding, CSRF,
+nonce generation) that you mix and match per-modem — was rejected.
 
 **Rationale:** The boundary between "separate strategy" and "config
 flag" is structural behavior — how the auth protocol works. `form_nonce`
@@ -107,10 +109,15 @@ Meanwhile, base64 encoding, CSRF tokens, dynamic endpoints, and
 AJAX-style login are all config flags on `form` — same
 POST-evaluate-redirect flow.
 
-**Constrains:** Adding a new auth strategy requires a new dataclass,
-a new `BaseAuthStrategy` subclass, a new factory registration, and a
-new `auth.strategy` string. No existing strategy code is touched.
-No per-modem auth hooks — all variation is modem.yaml config.
+**Constrains:** Adding a new auth strategy requires a new dataclass
+(with `display_name` and `transport` ClassVars), a new
+`BaseAuthManager` subclass with a `create_manager()` entry point,
+and a new entry in the `AuthConfig` union. The factory dynamically
+imports the manager module by strategy literal — no factory code
+changes, no isinstance chains, no manual registry updates. Display
+labels and transport validation sets derive from the ClassVars
+automatically. No per-modem auth hooks — all variation is modem.yaml
+config.
 
 ### No per-modem auth hooks
 
@@ -119,7 +126,7 @@ is expressed through modem.yaml configuration.
 
 **Rationale:** Auth touches credentials. One audited implementation per
 strategy, not per-modem overrides that could mishandle passwords or
-leak tokens. The variation across 31 modems is wide but shallow —
+leak tokens. The variation across the modem fleet is wide but shallow —
 different values (field names, encoding, cookie names), not different
 behaviors. If a modem needs a genuinely new auth flow, that's a new
 Core strategy.
@@ -384,9 +391,32 @@ configs and tests are untouched.
 
 ### How to add an auth strategy
 
-Add a dataclass, a `BaseAuthStrategy` subclass, and a factory
-registration in Core. Add the strategy string to the valid auth list.
-Update validators. No existing strategy code is touched.
+1. **`models/modem_config/auth.py`** — three co-located additions:
+   - Define the model class inheriting from `AuthStrategyBase` with
+     `display_name` and `transport` ClassVars.
+   - Add an `Annotated[NewAuth, Tag("strategy_name")]` member to the
+     `AuthConfig` union.
+   - Add the class to the `_AUTH_MODELS` registry list (immediately
+     below the union).
+2. **`auth/{strategy}.py`** — new manager module with a
+   `create_manager(config)` entry point.
+3. **`test_harness/auth/{strategy}.py`** — new handler module with a
+   `create_handler(modem_config, har_entries)` entry point.
+
+Three files, all additive. No factory code changes — the factory
+dynamically imports the manager module by strategy literal. Display
+labels and transport validation sets derive from the model ClassVars.
+No existing strategy code is touched.
+
+**If you forget a step:** missing union member → modem.yaml fails to
+parse at config load time. Missing `_AUTH_MODELS` entry → display
+label and transport validation missing, caught by fleet test. Neither
+failure is silent.
+
+**Strategy selection is config-driven** — declared in modem.yaml,
+never guessed at runtime. The dynamic import resolves a declared
+strategy to its implementation; it does not discover which strategy
+to use.
 
 **If the strategy pre-fetches a login page, use the response.** Four
 of nine strategies pre-fetch a page as part of the auth handshake

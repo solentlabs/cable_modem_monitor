@@ -10,9 +10,8 @@ The parsing system absorbs this variety through three distinct roles:
 - **`BaseParser` (ABC)** — the extraction interface. Seven format-specific
   implementations (`HTMLTableParser`, `HTMLTableTransposedParser`,
   `HTMLFieldsParser`, `JSEmbeddedParser`, `HNAPParser`, and
-  `StructuredParser` (ABC) → `JSONParser`),
+  `StructuredParser` (ABC) → `JSONParser`, `XMLParser`),
   each parameterized by parser.yaml section config.
-  (`XMLParser` is planned but not yet implemented — no XML modems exist.)
 - **`ModemParserCoordinator`** — factory and orchestrator. Reads
   parser.yaml, creates `BaseParser` instances per section, runs them,
   chains parser.py post-processing, assembles `ModemData`.

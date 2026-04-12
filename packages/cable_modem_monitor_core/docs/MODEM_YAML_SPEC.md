@@ -18,7 +18,7 @@ directory layout and multi-variant assembly contract.
 |---------|----------------|
 | [Schema Overview](#schema-overview) | Complete YAML skeleton with annotations |
 | [Identity](#identity) | manufacturer, model, transport, default_host, aliases |
-| [Auth](#auth) | 7 strategy types with full config examples |
+| [Auth](#auth) | 9 strategy types with full config examples |
 | [Session](#session) | Cookie, single-session, SPA patterns |
 | [Actions](#actions) | Restart and logout — http and hnap types |
 | [Hardware](#hardware) | DOCSIS version, chipset |

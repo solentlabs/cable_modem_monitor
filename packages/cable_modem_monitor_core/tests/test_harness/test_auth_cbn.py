@@ -12,7 +12,7 @@ import hashlib
 import re
 from typing import Any
 
-from solentlabs.cable_modem_monitor_core.test_harness.auth.cbn import (
+from solentlabs.cable_modem_monitor_core.test_harness.auth.form_cbn import (
     FormCbnAuthHandler,
 )
 

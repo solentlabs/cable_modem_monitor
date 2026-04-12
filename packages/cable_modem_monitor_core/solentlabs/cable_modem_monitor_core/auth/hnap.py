@@ -317,3 +317,8 @@ class HnapAuthManager(BaseAuthManager):
             success=True,
             auth_context=AuthContext(private_key=private_key),
         )
+
+
+def create_manager(config: HnapAuth) -> HnapAuthManager:
+    """Entry point for dynamic auth factory dispatch."""
+    return HnapAuthManager(config)

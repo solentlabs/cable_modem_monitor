@@ -10,8 +10,13 @@ captures and sends on subsequent requests.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 from ..routes import RouteEntry
 from .base import AuthHandler
+
+if TYPE_CHECKING:
+    from ...models.modem_config import ModemConfig
 
 
 class BasicAuthHandler(AuthHandler):
@@ -51,3 +56,18 @@ class BasicAuthHandler(AuthHandler):
         """Check for valid Basic auth header."""
         auth_header = headers.get("authorization", "")
         return auth_header.lower().startswith("basic ")
+
+
+def create_handler(
+    modem_config: ModemConfig,
+    har_entries: list[dict[str, Any]] | None = None,  # noqa: ARG001
+) -> BasicAuthHandler:
+    """Entry point for dynamic auth handler dispatch."""
+    from ...models.modem_config.auth import BasicAuth
+
+    auth = modem_config.auth
+    assert isinstance(auth, BasicAuth)
+    return BasicAuthHandler(
+        challenge_cookie=auth.challenge_cookie,
+        cookie_name=auth.cookie_name,
+    )

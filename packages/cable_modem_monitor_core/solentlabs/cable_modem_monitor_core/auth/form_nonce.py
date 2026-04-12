@@ -267,3 +267,8 @@ def _pack_b64_credentials(
     part1 = urllib.parse.quote(f"{username_field}={username}", safe=_JS_URI_SAFE)
     part2 = urllib.parse.quote(f"{password_field}={password}", safe=_JS_URI_SAFE)
     return base64.b64encode(f"{part1}:{part2}".encode()).decode("ascii")
+
+
+def create_manager(config: FormNonceAuth) -> FormNonceAuthManager:
+    """Entry point for dynamic auth factory dispatch."""
+    return FormNonceAuthManager(config)

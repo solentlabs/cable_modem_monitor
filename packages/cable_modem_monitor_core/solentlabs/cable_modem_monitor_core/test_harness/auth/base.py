@@ -3,11 +3,58 @@
 Provides the ``AuthHandler`` base class used by all auth strategies.
 When used directly, all requests are considered authenticated (no-auth
 mode for ``auth: none`` modems).
+
+Also provides the shared ``ActionConfig`` helper used by form-based
+handler modules to extract logout/restart endpoints from modem config.
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, NamedTuple
+
 from ..routes import RouteEntry
+
+if TYPE_CHECKING:
+    from ...models.modem_config import ModemConfig
+
+
+class ActionConfig(NamedTuple):
+    """Shared action fields extracted from modem config.
+
+    Simple data carrier for the cookie name, logout path, restart
+    path, and restart method that form-based handler modules need.
+    """
+
+    cookie_name: str
+    logout_path: str
+    restart_path: str
+    restart_method: str
+
+
+def extract_action_config(modem_config: ModemConfig) -> ActionConfig:
+    """Extract shared action fields from modem config.
+
+    Reads session cookie name and action endpoints (logout, restart)
+    from the config.
+    """
+    from ...models.modem_config.actions import HttpAction
+
+    cookie_name = getattr(modem_config.auth, "cookie_name", "")
+    logout_path = ""
+    restart_path = ""
+    restart_method = "POST"
+    if modem_config.actions:
+        if modem_config.actions.logout and isinstance(modem_config.actions.logout, HttpAction):
+            logout_path = modem_config.actions.logout.endpoint
+        if modem_config.actions.restart and isinstance(modem_config.actions.restart, HttpAction):
+            restart_path = modem_config.actions.restart.endpoint
+            restart_method = modem_config.actions.restart.method
+    return ActionConfig(
+        cookie_name=cookie_name,
+        logout_path=logout_path,
+        restart_path=restart_path,
+        restart_method=restart_method,
+    )
 
 
 class AuthHandler:

@@ -8,9 +8,14 @@ response that the real auth manager can decrypt.
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, Any
 
 from ..routes import RouteEntry, normalize_path
+from .base import extract_action_config
 from .form import FormAuthHandler
+
+if TYPE_CHECKING:
+    from ...models.modem_config import ModemConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -173,3 +178,30 @@ class FormSjclAuthHandler(FormAuthHandler):
             response_headers.append(("Set-Cookie", f"{self._cookie_name}={self._SESSION_TOKEN}; Path=/"))
 
         return RouteEntry(status=200, headers=response_headers, body=body)
+
+
+def create_handler(
+    modem_config: ModemConfig,
+    har_entries: list[dict[str, Any]] | None = None,  # noqa: ARG001
+) -> FormSjclAuthHandler:
+    """Entry point for dynamic auth handler dispatch."""
+    from ...models.modem_config.auth import FormSjclAuth
+
+    auth = modem_config.auth
+    assert isinstance(auth, FormSjclAuth)
+
+    action_cfg = extract_action_config(modem_config)
+    return FormSjclAuthHandler(
+        login_page_path=auth.login_page,
+        login_endpoint=auth.login_endpoint,
+        pbkdf2_iterations=auth.pbkdf2_iterations,
+        pbkdf2_key_length=auth.pbkdf2_key_length,
+        ccm_tag_length=auth.ccm_tag_length,
+        decrypt_aad=auth.decrypt_aad,
+        csrf_header=auth.csrf_header,
+        cookie_name=action_cfg.cookie_name,
+        logout_path=action_cfg.logout_path,
+        restart_path=action_cfg.restart_path,
+        restart_method=action_cfg.restart_method,
+        session_validation_endpoint=auth.session_validation_endpoint,
+    )

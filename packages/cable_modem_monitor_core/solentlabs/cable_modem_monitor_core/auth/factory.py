@@ -1,36 +1,44 @@
-"""Auth manager factory.
+"""Auth manager factory — dynamic dispatch on ``auth.strategy``.
 
-Selects the correct auth manager class from modem config.
+Resolves the declared strategy literal from modem.yaml to the
+corresponding manager module via ``importlib``.  Each manager module
+provides a ``create_manager(config)`` entry point.
+
+Strategy *selection* is config-driven (declared in modem.yaml, never
+guessed at runtime).  This factory resolves a declared strategy to
+its implementation — it does not discover which strategy to use.
+
+**Validation coverage:** The catalog fleet test
+(``test_modems.py``) auto-discovers every modem with a HAR fixture
+and runs it through ``run_modem_test_orchestrated``, which exercises
+both this factory (via ``ModemDataCollector``) and the test harness
+handler factory. A missing or misnamed module for any strategy used
+by a catalog modem fails the fleet test at CI time.
 """
 
 from __future__ import annotations
 
+import importlib
 import logging
 from typing import TYPE_CHECKING
 
 from .base import BaseAuthManager
-from .basic import BasicAuthManager
-from .form import FormAuthManager
-from .form_cbn import FormCbnAuthManager
-from .form_nonce import FormNonceAuthManager
-from .form_pbkdf2 import FormPbkdf2AuthManager
-from .form_sjcl import FormSjclAuthManager
-from .hnap import HnapAuthManager
 from .none import NoneAuthManager
-from .url_token import UrlTokenAuthManager
 
 if TYPE_CHECKING:
     from ..models.modem_config import ModemConfig
 
 _logger = logging.getLogger(__name__)
 
+_AUTH_PACKAGE = "solentlabs.cable_modem_monitor_core.auth"
+
 
 def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
     """Create the appropriate auth manager from modem config.
 
-    Uses the ``auth.strategy`` discriminator to select the manager
-    class. Each manager receives only its own ``*Auth`` config — session
-    state (cookies, tokens) is handled by the runner after auth completes.
+    Dynamically imports the manager module matching the strategy
+    literal (e.g., ``"form_nonce"`` → ``auth.form_nonce``) and
+    calls its ``create_manager()`` entry point.
 
     Args:
         config: Validated ``ModemConfig`` instance.
@@ -38,49 +46,20 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
     Returns:
         Auth manager ready for ``authenticate()``.
     """
-    from ..models.modem_config.auth import (
-        BasicAuth,
-        FormAuth,
-        FormCbnAuth,
-        FormNonceAuth,
-        FormPbkdf2Auth,
-        FormSjclAuth,
-        HnapAuth,
-        NoneAuth,
-        UrlTokenAuth,
-    )
-
     auth = config.auth
 
-    if auth is None or isinstance(auth, NoneAuth):
+    if auth is None:
         return NoneAuthManager()
 
-    if isinstance(auth, BasicAuth):
-        return BasicAuthManager(auth)
+    strategy = auth.strategy
 
-    if isinstance(auth, FormAuth):
-        return FormAuthManager(auth)
+    try:
+        module = importlib.import_module(f".{strategy}", package=_AUTH_PACKAGE)
+    except ModuleNotFoundError:
+        _logger.warning(
+            "No auth module for strategy '%s', falling back to NoneAuthManager",
+            strategy,
+        )
+        return NoneAuthManager()
 
-    if isinstance(auth, FormNonceAuth):
-        return FormNonceAuthManager(auth)
-
-    if isinstance(auth, UrlTokenAuth):
-        return UrlTokenAuthManager(auth)
-
-    if isinstance(auth, HnapAuth):
-        return HnapAuthManager(auth)
-
-    if isinstance(auth, FormPbkdf2Auth):
-        return FormPbkdf2AuthManager(auth)
-
-    if isinstance(auth, FormSjclAuth):
-        return FormSjclAuthManager(auth)
-
-    if isinstance(auth, FormCbnAuth):
-        return FormCbnAuthManager(auth)
-
-    _logger.warning(
-        "Unknown auth strategy type: %s, falling back to NoneAuthManager",
-        type(auth).__name__,
-    )
-    return NoneAuthManager()
+    return module.create_manager(auth)  # type: ignore[no-any-return]

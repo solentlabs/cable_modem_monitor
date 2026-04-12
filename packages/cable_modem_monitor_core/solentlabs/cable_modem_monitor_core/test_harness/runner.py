@@ -38,8 +38,7 @@ from ..har import load_har_json
 from ..loaders.fetch_list import collect_fetch_targets
 from ..loaders.hnap import HNAPLoader
 from ..loaders.http import HTTPResourceLoader
-from ..orchestration.collector import ModemDataCollector
-from ..orchestration.orchestrator import Orchestrator
+from ..orchestration.factory import create_orchestrator
 from ..orchestration.signals import ConnectionStatus
 from ..parsers.coordinator import ModemParserCoordinator, filter_restart_window
 from .discovery import ModemTestCase
@@ -424,18 +423,15 @@ def _run_orchestrated(
         # Detect encoding via mock server GET (mirrors config flow)
         _detect_form_nonce_encoding(modem_config, server.base_url)
 
-        collector = ModemDataCollector(
+        orchestrator, _, _ = create_orchestrator(
             modem_config=modem_config,
             parser_config=parser_config,
             post_processor=post_processor,
             base_url=server.base_url,
             username="admin",
             password="pw",
-        )
-        orchestrator = Orchestrator(
-            collector=collector,
-            health_monitor=None,
-            modem_config=modem_config,
+            supports_icmp=False,
+            http_probe=False,
         )
         snapshot = orchestrator.get_modem_data()
 

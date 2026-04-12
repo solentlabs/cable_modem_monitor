@@ -1,25 +1,28 @@
 """Mock auth handlers — driven by modem.yaml config.
 
 Subpackage structure:
-- base.py — AuthHandler (no-auth base)
+- base.py — AuthHandler (no-auth base) + shared ActionConfig helper
 - basic.py — BasicAuthHandler (HTTP Basic)
-- cbn.py — FormCbnAuthHandler (CBN AES-256-CBC crypto protocol)
 - form.py — FormAuthHandler (cookie/IP session gating)
+- form_cbn.py — FormCbnAuthHandler (CBN AES-256-CBC crypto protocol)
 - form_nonce.py — FormNonceAuthHandler (serves login page for encoding detection)
-- sjcl.py — FormSjclAuthHandler (AES-CCM crypto protocol)
+- form_pbkdf2.py — FormPbkdf2AuthHandler (PBKDF2 challenge-response)
+- form_sjcl.py — FormSjclAuthHandler (AES-CCM crypto protocol)
 - hnap.py — HnapAuthHandler (HMAC challenge-response protocol)
 - factory.py — create_auth_handler dispatch
+
+Module names match ``auth.strategy`` literals for dynamic import.
 """
 
 from .base import AuthHandler
 from .basic import BasicAuthHandler
-from .cbn import FormCbnAuthHandler
 from .factory import create_auth_handler
 from .form import FormAuthHandler
+from .form_cbn import FormCbnAuthHandler
 from .form_nonce import FormNonceAuthHandler
+from .form_pbkdf2 import FormPbkdf2AuthHandler
+from .form_sjcl import FormSjclAuthHandler
 from .hnap import HnapAuthHandler
-from .pbkdf2 import FormPbkdf2AuthHandler
-from .sjcl import FormSjclAuthHandler
 
 __all__ = [
     "AuthHandler",

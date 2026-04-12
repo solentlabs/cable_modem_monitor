@@ -14,9 +14,14 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from typing import TYPE_CHECKING, Any
 
 from ..routes import RouteEntry, normalize_path
+from .base import extract_action_config
 from .form import FormAuthHandler
+
+if TYPE_CHECKING:
+    from ...models.modem_config import ModemConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -199,3 +204,29 @@ def _derive_key(password: str, salt: str, iterations: int, key_length_bits: int)
         dklen=key_length_bits // 8,
     )
     return dk.hex()
+
+
+def create_handler(
+    modem_config: ModemConfig,
+    har_entries: list[dict[str, Any]] | None = None,  # noqa: ARG001
+) -> FormPbkdf2AuthHandler:
+    """Entry point for dynamic auth handler dispatch."""
+    from ...models.modem_config.auth import FormPbkdf2Auth
+
+    auth = modem_config.auth
+    assert isinstance(auth, FormPbkdf2Auth)
+
+    action_cfg = extract_action_config(modem_config)
+    return FormPbkdf2AuthHandler(
+        login_endpoint=auth.login_endpoint,
+        salt_trigger=auth.salt_trigger,
+        pbkdf2_iterations=auth.pbkdf2_iterations,
+        pbkdf2_key_length=auth.pbkdf2_key_length,
+        double_hash=auth.double_hash,
+        csrf_init_endpoint=auth.csrf_init_endpoint,
+        csrf_header=auth.csrf_header,
+        cookie_name=action_cfg.cookie_name,
+        logout_path=action_cfg.logout_path,
+        restart_path=action_cfg.restart_path,
+        restart_method=action_cfg.restart_method,
+    )

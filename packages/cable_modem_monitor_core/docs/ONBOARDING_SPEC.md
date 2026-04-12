@@ -768,6 +768,38 @@ Examine the data for placeholder/invalid rows:
 | HNAP channels with channel_id 0 | `filter: { channel_id: { not: 0 } }` |
 | Rows with all-zero values | `filter: { frequency: { not: 0 } }` |
 
+### Post-Analysis: JS Endpoint Discovery
+
+After Phase 6, the pipeline scans all JavaScript content in the HAR
+for server endpoint references (AJAX calls, fetch targets) and diffs
+them against the captured request URLs. Endpoints referenced in JS
+but absent from HAR requests are surfaced as advisory warnings.
+
+**Why:** Browser captures only record requests that fire during the
+session. Modem firmware JS may reference endpoints that only fire
+under specific conditions (stale session state, keepalive timers,
+conditional UI paths). These endpoints can be critical to the auth
+or session flow but invisible in the HAR.
+
+**What it scans:**
+
+- Response bodies of `.js` file entries
+- Inline `<script>` blocks in HTML pages
+
+**What it matches:**
+
+- `$.ajax()`, `$.post()`, `$.get()` (jQuery)
+- `fetch()` (Fetch API)
+- `.open()` (XMLHttpRequest)
+- `createServerRecord()` (Arris firmware)
+
+Only static URL string literals are matched. Variable references
+(`$.ajax({url: varName})`) are ignored to avoid false positives.
+
+**Output:** Advisory warnings (not hard stops). The maintainer
+investigates whether the uncaptured endpoint is relevant to the
+modem's auth, session, or data flow.
+
 ### Phase 7: Metadata Enrichment
 
 Hardware metadata, branding, and ISP information are not present in the
@@ -1361,9 +1393,9 @@ This is necessary because the pipeline under test performs real auth
 **Stateless fallback:** For `auth: none` modems, the server simply
 maps URL paths to responses with no session tracking.
 
-**Auth coverage:** All seven auth strategies have dedicated mock handlers
-including full PBKDF2 multi-round challenge-response and SJCL AES-CCM
-crypto validation.
+**Auth coverage:** All nine auth strategies have dedicated mock handlers
+including full PBKDF2 multi-round challenge-response, SJCL AES-CCM
+crypto validation, and CBN AES-256-CBC encrypted login.
 
 ### Golden File Comparison
 
@@ -1761,3 +1793,7 @@ downstream:
 
 7. **The tools target the current spec.** All generated configs conform
    to [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md) and [PARSING_SPEC.md](PARSING_SPEC.md) schemas.
+
+8. **JS endpoint discovery is regex-based.** Only static URL string
+   literals in AJAX/fetch calls are detected. Dynamically constructed
+   URLs (`baseUrl + path`, template literals) are not detected.

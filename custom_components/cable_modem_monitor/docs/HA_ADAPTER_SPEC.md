@@ -89,63 +89,63 @@ typed, auto-cleaned, and scoped to the entry.
 
 ## Startup
 
-`async_setup_entry` creates all components and wires them together.
-This is the full construction sequence — no factory functions.
+`async_setup_entry` loads configs and delegates component assembly to
+the Core factory. Config loading stays in the adapter (catalog path
+is HA-specific); assembly logic lives in Core.
 
 ```text
 async_setup_entry(hass, entry)
  │
- ├─ 1. Resolve modem config from catalog
+ ├─ 1. Load configs from catalog
  │     catalog_path / manufacturer / model / modem[-variant].yaml
  │     → modem_config, parser_config, post_processor
  │     (runs in executor — file I/O)
  │
- ├─ 2. Extract ModemIdentity from loaded config
- │     (5 fields, stored on RuntimeData)
+ ├─ 1a. Inject credential encoding (Core concern)
+ │      apply_credential_encoding(modem_config, ...)
  │
- ├─ 3. Create ModemDataCollector
- │     ModemDataCollector(modem_config, parser_config,
- │         post_processor, base_url, username, password,
- │         legacy_ssl=entry.data[CONF_LEGACY_SSL])
+ ├─ 2. Resolve health probe defaults
+ │     modem.yaml health config → defaults
+ │     config entry data → overrides
  │
- ├─ 4. Create HealthMonitor (conditional)
- │     Read modem.yaml health config for defaults
- │     if supports_icmp or http_probe:
- │         HealthMonitor(base_url, supports_icmp,
- │             supports_head, http_probe, legacy_ssl)
- │     else: None
+ ├─ 3. Create orchestration graph via Core factory
+ │     create_orchestrator(modem_config, parser_config,
+ │         post_processor, base_url, username, password, ...)
+ │     → (orchestrator, health_monitor, modem_identity)
  │
- ├─ 5. Create Orchestrator
- │     Orchestrator(collector, health_monitor, modem_config)
- │
- ├─ 6. Create data DataUpdateCoordinator
+ ├─ 4. Create data DataUpdateCoordinator
  │     update_method wraps orchestrator.get_modem_data()
  │     update_interval from config (or None if disabled)
  │
- ├─ 7. Create health DataUpdateCoordinator (if health_monitor)
+ ├─ 5. Create health DataUpdateCoordinator (if health_monitor)
  │     update_method wraps health_monitor.ping()
  │     update_interval from config (or None if disabled)
  │
- ├─ 8. Run first poll
+ ├─ 5a. Attach health recovery listener (if health_monitor)
+ │      On health RESPONSIVE after non-responsive, triggers
+ │      immediate data poll via coordinator.async_request_refresh()
+ │
+ ├─ 6. Run first poll
  │     coordinator.async_config_entry_first_refresh()
  │     (always runs, even if polling is disabled)
  │
- ├─ 9. Store RuntimeData on entry
+ ├─ 7. Store RuntimeData on entry
  │     entry.runtime_data = CableModemRuntimeData(...)
  │
- ├─ 10. Forward platform setup (sensor, button)
+ ├─ 8. Forward platform setup (sensor, button)
  │
- ├─ 11. Update device registry
+ ├─ 9. Update device registry
  │
- └─ 12. Register services (if first entry)
+ └─ 10. Register services (if first entry)
          generate_dashboard
 ```
 
-**Steps 1-5 involve sync I/O** — all must run in executor via
-`hass.async_add_executor_job()`. Steps 3-5 are pure construction
-(no I/O) but depend on step 1's output.
+**Steps 1-3 involve sync I/O** — all must run in executor via
+`hass.async_add_executor_job()`. Step 3 delegates to the Core
+factory which creates the collector, health monitor, orchestrator,
+and identity internally.
 
-**Step 8 always runs.** Even when polling is disabled, the first poll
+**Step 6 always runs.** Even when polling is disabled, the first poll
 runs during setup so entities have real data. "Disabled" means no
 scheduled polls after setup, not "never poll."
 

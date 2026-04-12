@@ -228,3 +228,8 @@ def _derive_key(
         dklen=key_length_bits // 8,
     )
     return dk.hex()
+
+
+def create_manager(config: FormPbkdf2Auth) -> FormPbkdf2AuthManager:
+    """Entry point for dynamic auth factory dispatch."""
+    return FormPbkdf2AuthManager(config)

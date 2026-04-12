@@ -14,6 +14,7 @@ from __future__ import annotations
 from .actions import ActionResult, execute_action, execute_hnap_action, execute_http_action
 from .channel_stability import ChannelStabilityMonitor
 from .collector import LoginLockoutError, ModemDataCollector
+from .factory import apply_credential_encoding, create_collector, create_orchestrator
 from .models import (
     HealthInfo,
     ModemResult,
@@ -39,6 +40,9 @@ from .status import derive_connection_status, enrich_docsis_status
 __all__ = [
     "ChannelStabilityMonitor",
     "CollectorSignal",
+    "apply_credential_encoding",
+    "create_collector",
+    "create_orchestrator",
     "ConnectionStatus",
     "DocsisStatus",
     "HealthInfo",

@@ -89,7 +89,7 @@ but modem-specific behavior comes from config, not from Core code.
 |----------------|------|
 | Data models | `ModemData`, `ChannelData`, `SystemInfo`, `HealthInfo`, `ModemIdentity` |
 | Config schemas | `ModemConfig`, `AuthConfig`, `PageConfig`, `ParserConfig` |
-| ABCs / base classes | `BaseParser`, `BaseAuthStrategy` |
+| ABCs / base classes | `BaseParser`, `BaseAuthManager`, `AuthStrategyBase` (model ClassVars) |
 | Action executors | `orchestration/actions/` — transport-scoped executors (`http_action`, `hnap_action`, `cbn_action`) with single `execute_action()` dispatch. `ActionResult` return type. |
 | Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth. |
 | Auth shared helpers | `auth/response` — JSON response parsing (double-decode, type check, diagnostics) shared by `form_sjcl`, `form_pbkdf2`, `hnap`. |
@@ -170,26 +170,25 @@ for parser development.
 
 ```python
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.config_loader import (
+    load_modem_config,
+    load_parser_config,
+)
 from solentlabs.cable_modem_monitor_core.orchestration import (
-    HealthMonitor,
-    ModemDataCollector,
-    Orchestrator,
+    create_orchestrator,
 )
 
 # Load configs from catalog
 modem_config = load_modem_config(CATALOG_PATH / "arris" / "sb8200" / "modem.yaml")
 parser_config = load_parser_config(CATALOG_PATH / "arris" / "sb8200" / "parser.yaml")
 
-# Create components
-collector = ModemDataCollector(
+# For form_nonce modems: apply_credential_encoding(modem_config, ...) here
+
+# Create orchestration graph via Core factory
+orchestrator, health_monitor, identity = create_orchestrator(
     modem_config, parser_config, post_processor=None,
     base_url="http://192.168.100.1", username="admin", password="...",
 )
-health_monitor = HealthMonitor(
-    base_url="http://192.168.100.1",
-    supports_icmp=True, supports_head=True, legacy_ssl=False,
-)
-orchestrator = Orchestrator(collector, health_monitor, modem_config)
 
 # Poll
 snapshot = orchestrator.get_modem_data()
@@ -200,11 +199,11 @@ snapshot = orchestrator.get_modem_data()
 ## Transport and Format
 
 The `transport` field in modem.yaml is the first config decision — it
-identifies the wire protocol (`http` or `hnap`) and determines whether
-the remaining axes are free or locked. For `http`, auth, session, and
-format are configured independently (qualified — some auth/session
-pairings are linked, marked with 🔗 below). For `hnap`, the protocol
-locks all axes to fixed values.
+identifies the wire protocol (`http`, `hnap`, or `cbn`) and determines
+whether the remaining axes are free or locked. For `http`, auth,
+session, and format are configured independently (qualified — some
+auth/session pairings are linked, marked with 🔗 below). For `hnap`
+and `cbn`, the protocol locks all axes to fixed values.
 
 ```mermaid
 graph TD
@@ -254,8 +253,8 @@ choosing `json` format doesn't require `form_pbkdf2` auth.
 - Auth, session, and format are configured independently
   (some auth strategies imply specific session mechanisms — see 🔗 above)
 - This is where all the complexity (and variety) lives
-- 33 modems: from simple unauthenticated HTML table scraping to
-  PBKDF2 challenge-response with JSON APIs
+- The majority of the fleet: from simple unauthenticated HTML table
+  scraping to PBKDF2 challenge-response with JSON APIs
 
 ### Constraint Summary
 
@@ -288,14 +287,16 @@ existing entries change.
 - **New format for `http`:** Add the `BaseParser` implementation, add the
   format string to the valid formats list, update validators. Existing
   modem configs and tests are untouched.
-- **New auth strategy for `http`:** Add the dataclass, the auth strategy
-  class, and the factory registration. Add the strategy string to the
-  valid auth list, update validators.
+- **New auth strategy for `http`:** Add the model (with `display_name`
+  and `transport` ClassVars), the manager module (with `create_manager()`
+  entry point), and a test handler module. Add to the `AuthConfig` union
+  and `_AUTH_MODELS` list. The factory dynamically loads the manager by
+  strategy literal — no factory code changes. Display labels and
+  transport validation derive from ClassVars automatically.
 - **New transport:** Add a new loader, new `BaseParser` implementation(s),
   a new row in the constraint table, and validator updates. No existing
   code changes. `cbn` demonstrates this: new loader, new `xml`
   parser, new `form_cbn` auth — no changes to HTTP or HNAP code.
-  Future transports (`snmp`, `ftp`, etc.) follow the same pattern.
 
 The constraint table is an allowlist, not a lock. It prevents
 misconfigurations without preventing growth.
@@ -775,7 +776,7 @@ requests. HNAP auth also produces a `private_key` for request signing.
 **Output:** `resources` dict — `{url_path: content}`
 **Component:** `HTTPResourceLoader` or `HNAPLoader`
 
-Two transport paths, selected by `modem.yaml.transport`:
+Three transport paths, selected by `modem.yaml.transport`:
 
 **HTTP transport** (`HTTPResourceLoader`):
 
@@ -791,6 +792,13 @@ Two transport paths, selected by `modem.yaml.transport`:
 - Sends a single batched SOAP POST to `/HNAP1/`
 - Signs request with HMAC (MD5 or SHA256) using the private key from auth
 - Returns `{"hnap_response": {merged_action_responses}}`
+
+**CBN transport** (`CBNLoader`):
+
+- POSTs to `getter.xml` endpoint with `fun=N` parameters
+- Each `fun` value returns a different XML data page
+- Session token rotates on every response via `Set-Cookie`
+- Returns `{endpoint_path: Element}` (parsed XML elements)
 
 ### Stage 3: Parsing
 

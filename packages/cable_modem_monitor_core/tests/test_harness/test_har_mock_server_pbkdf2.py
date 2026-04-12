@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 import requests
-from solentlabs.cable_modem_monitor_core.test_harness.auth.pbkdf2 import (
+from solentlabs.cable_modem_monitor_core.test_harness.auth.form_pbkdf2 import (
     FormPbkdf2AuthHandler,
 )
 from solentlabs.cable_modem_monitor_core.test_harness.server import HARMockServer

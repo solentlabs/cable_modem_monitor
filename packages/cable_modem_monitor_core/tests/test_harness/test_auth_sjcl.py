@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from solentlabs.cable_modem_monitor_core.test_harness.auth.sjcl import (
+from solentlabs.cable_modem_monitor_core.test_harness.auth.form_sjcl import (
     FormSjclAuthHandler,
 )
 

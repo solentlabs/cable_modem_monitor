@@ -9,6 +9,7 @@ import logging
 
 import requests
 
+from ..models.modem_config.auth import NoneAuth
 from .base import AuthResult, BaseAuthManager
 
 
@@ -31,3 +32,8 @@ class NoneAuthManager(BaseAuthManager):
     ) -> AuthResult:
         """No-op — always succeeds."""
         return AuthResult(success=True)
+
+
+def create_manager(config: NoneAuth) -> NoneAuthManager:  # noqa: ARG001
+    """Entry point for dynamic auth factory dispatch."""
+    return NoneAuthManager()

@@ -33,8 +33,9 @@ from solentlabs.cable_modem_monitor_core.config_loader import (
 )
 from solentlabs.cable_modem_monitor_core.orchestration import (
     HealthMonitor,
-    ModemDataCollector,
     Orchestrator,
+    apply_credential_encoding,
+    create_orchestrator,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     HealthInfo,
@@ -339,36 +340,6 @@ async def _async_update_listener(
 # ------------------------------------------------------------------
 
 
-def _apply_credential_encoding(
-    modem_config: Any,
-    data: Mapping[str, Any],
-) -> None:
-    """Inject stored credential encoding into a form_nonce config.
-
-    The HA config flow detects credential encoding at setup time and
-    stores it in the config entry.  This function applies the stored
-    value to the loaded modem config so the auth manager uses the
-    correct encoding.  No-op for non-form_nonce strategies.
-
-    Args:
-        modem_config: Loaded ``ModemConfig`` instance.
-        data: Config entry data dict.
-    """
-    from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
-        FormNonceAuth,
-    )
-
-    if not isinstance(modem_config.auth, FormNonceAuth):
-        return
-
-    raw_encoding = data.get(CONF_CREDENTIAL_ENCODING, "plain")
-    if raw_encoding == "b64_packed":
-        modem_config.auth.credential_encoding = "b64_packed"
-        modem_config.auth.credential_field = data.get(CONF_CREDENTIAL_FIELD, "")
-    else:
-        modem_config.auth.credential_encoding = "plain"
-
-
 def _create_core_components(
     data: Mapping[str, Any],
 ) -> tuple[Orchestrator, HealthMonitor | None, ModemIdentity]:
@@ -378,10 +349,13 @@ def _create_core_components(
     executor thread because config loading reads YAML files from the
     catalog package.
 
+    Config loading stays here (catalog path is HA-specific).  Assembly
+    delegates to the Core factory.
+
     Args:
         data: Config entry data (user selections + validation results).
     """
-    # Step 1: Resolve modem config from catalog
+    # Step 1: Load configs from catalog
     modem_dir = CATALOG_PATH / data[CONF_MODEM_DIR]
     variant = data.get(CONF_VARIANT)
 
@@ -393,25 +367,25 @@ def _create_core_components(
     parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
     post_processor = load_post_processor(parser_py) if parser_py.exists() else None
 
-    # Step 1a: Inject credential encoding from config entry (form_nonce only)
-    _apply_credential_encoding(modem_config, data)
-
-    # Step 2: Extract ModemIdentity
-    hw = modem_config.hardware
-    modem_identity = ModemIdentity(
-        manufacturer=modem_config.manufacturer,
-        model=modem_config.model,
-        docsis_version=hw.docsis_version if hw else None,
-        release_date=hw.release_date if hw else None,
-        status=modem_config.status,
+    # Step 1a: Inject credential encoding (Core concern)
+    apply_credential_encoding(
+        modem_config,
+        credential_encoding=data.get(CONF_CREDENTIAL_ENCODING, "plain"),
+        credential_field=data.get(CONF_CREDENTIAL_FIELD, ""),
     )
 
-    # Step 3: Create ModemDataCollector
+    # Steps 2-5: Delegate assembly to Core factory
     protocol = data.get(CONF_PROTOCOL, "http")
     host = data[CONF_HOST]
     base_url = f"{protocol}://{host}"
 
-    collector = ModemDataCollector(
+    # Resolve health probe defaults from modem.yaml, apply config entry overrides
+    health_cfg = modem_config.health
+    http_probe = health_cfg.http_probe if health_cfg else True
+    default_icmp = health_cfg.supports_icmp if health_cfg else True
+    default_head = health_cfg.supports_head if health_cfg else True
+
+    return create_orchestrator(
         modem_config=modem_config,
         parser_config=parser_config,
         post_processor=post_processor,
@@ -419,36 +393,11 @@ def _create_core_components(
         username=data.get(CONF_USERNAME, ""),
         password=data.get(CONF_PASSWORD, ""),
         legacy_ssl=data.get(CONF_LEGACY_SSL, False),
+        supports_icmp=data.get(CONF_SUPPORTS_ICMP, default_icmp),
+        supports_head=data.get(CONF_SUPPORTS_HEAD, default_head),
+        http_probe=http_probe,
+        model=modem_config.model,
     )
-
-    # Step 4: Create HealthMonitor (conditional)
-    # modem.yaml health config provides defaults, config entry overrides
-    health_cfg = modem_config.health
-    http_probe = health_cfg.http_probe if health_cfg else True
-    default_icmp = health_cfg.supports_icmp if health_cfg else True
-    default_head = health_cfg.supports_head if health_cfg else True
-    supports_icmp = data.get(CONF_SUPPORTS_ICMP, default_icmp)
-    supports_head = data.get(CONF_SUPPORTS_HEAD, default_head)
-
-    health_monitor: HealthMonitor | None = None
-    if supports_icmp or http_probe:
-        health_monitor = HealthMonitor(
-            base_url=base_url,
-            model=modem_config.model,
-            supports_icmp=supports_icmp,
-            supports_head=supports_head,
-            http_probe=http_probe,
-            legacy_ssl=data.get(CONF_LEGACY_SSL, False),
-        )
-
-    # Step 5: Create Orchestrator
-    orchestrator = Orchestrator(
-        collector=collector,
-        health_monitor=health_monitor,
-        modem_config=modem_config,
-    )
-
-    return orchestrator, health_monitor, modem_identity
 
 
 # ------------------------------------------------------------------

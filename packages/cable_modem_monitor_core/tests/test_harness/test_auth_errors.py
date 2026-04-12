@@ -21,11 +21,11 @@ from solentlabs.cable_modem_monitor_core.test_harness.auth.factory import (
 from solentlabs.cable_modem_monitor_core.test_harness.auth.form import (
     FormAuthHandler,
 )
+from solentlabs.cable_modem_monitor_core.test_harness.auth.form_sjcl import (
+    FormSjclAuthHandler,
+)
 from solentlabs.cable_modem_monitor_core.test_harness.auth.hnap import (
     HnapAuthHandler,
-)
-from solentlabs.cable_modem_monitor_core.test_harness.auth.sjcl import (
-    FormSjclAuthHandler,
 )
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"

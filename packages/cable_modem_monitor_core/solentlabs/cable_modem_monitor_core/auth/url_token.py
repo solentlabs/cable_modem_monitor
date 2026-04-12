@@ -237,3 +237,8 @@ class UrlTokenAuthManager(BaseAuthManager):
                 return cookie_val
 
         return ""
+
+
+def create_manager(config: UrlTokenAuth) -> UrlTokenAuthManager:
+    """Entry point for dynamic auth factory dispatch."""
+    return UrlTokenAuthManager(config)

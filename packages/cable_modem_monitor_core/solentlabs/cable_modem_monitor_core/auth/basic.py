@@ -78,3 +78,8 @@ class BasicAuthManager(BaseAuthManager):
                 )
 
         return AuthResult(success=True)
+
+
+def create_manager(config: BasicAuth) -> BasicAuthManager:
+    """Entry point for dynamic auth factory dispatch."""
+    return BasicAuthManager(config)

@@ -22,7 +22,7 @@ import requests
 from solentlabs.cable_modem_monitor_core.auth.form_sjcl import (
     FormSjclAuthManager,
 )
-from solentlabs.cable_modem_monitor_core.test_harness.auth.sjcl import (
+from solentlabs.cable_modem_monitor_core.test_harness.auth.form_sjcl import (
     FormSjclAuthHandler,
 )
 from solentlabs.cable_modem_monitor_core.test_harness.server import HARMockServer

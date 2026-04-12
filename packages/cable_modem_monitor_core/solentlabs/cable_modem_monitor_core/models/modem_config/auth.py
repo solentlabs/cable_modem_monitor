@@ -1,30 +1,52 @@
 """Auth strategy models for modem.yaml.
 
 Nine strategies as a discriminated union on the 'strategy' field.
-Per MODEM_YAML_SPEC.md Auth section.
+Each model carries ``display_name`` and ``transport`` ClassVars so
+display labels, transport validation sets, and factory dispatch can
+derive from the models themselves.
+
+Per MODEM_YAML_SPEC.md Auth section and ARCHITECTURE_DECISIONS.md
+constraint model.
 """
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, ClassVar, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, field_validator
 
 
-class NoneAuth(BaseModel):
+class AuthStrategyBase(BaseModel):
+    """Base for all auth strategy models.
+
+    Carries self-describing ClassVars so display labels, transport
+    validation sets, and factory dispatch can derive from the models.
+    """
+
+    display_name: ClassVar[str]
+    transport: ClassVar[str]
+
+
+class NoneAuth(AuthStrategyBase):
     """No authentication required."""
 
     model_config = ConfigDict(extra="forbid")
     strategy: Literal["none"]
 
+    display_name: ClassVar[str] = "No Authentication"
+    transport: ClassVar[str] = "http"
 
-class BasicAuth(BaseModel):
+
+class BasicAuth(AuthStrategyBase):
     """HTTP Basic Authentication."""
 
     model_config = ConfigDict(extra="forbid")
     strategy: Literal["basic"]
     challenge_cookie: bool = False
     cookie_name: str = ""
+
+    display_name: ClassVar[str] = "Basic Authentication"
+    transport: ClassVar[str] = "http"
 
 
 class FormSuccess(BaseModel):
@@ -35,7 +57,7 @@ class FormSuccess(BaseModel):
     indicator: str = ""
 
 
-class FormAuth(BaseModel):
+class FormAuth(AuthStrategyBase):
     """HTML form POST login."""
 
     model_config = ConfigDict(extra="forbid")
@@ -51,6 +73,9 @@ class FormAuth(BaseModel):
     form_selector: str = ""
     success: FormSuccess | None = None
 
+    display_name: ClassVar[str] = "Form Login"
+    transport: ClassVar[str] = "http"
+
     @field_validator("password_field", mode="before")
     @classmethod
     def _normalize_password_field(cls, v: str | list[str]) -> list[str]:
@@ -60,7 +85,7 @@ class FormAuth(BaseModel):
         return v
 
 
-class FormNonceAuth(BaseModel):
+class FormNonceAuth(AuthStrategyBase):
     """Form POST with client-generated nonce."""
 
     model_config = ConfigDict(extra="forbid")
@@ -76,8 +101,11 @@ class FormNonceAuth(BaseModel):
     credential_encoding: Literal["plain", "b64_packed"] = "plain"
     credential_field: str = ""
 
+    display_name: ClassVar[str] = "Form Login (Nonce)"
+    transport: ClassVar[str] = "http"
 
-class UrlTokenAuth(BaseModel):
+
+class UrlTokenAuth(AuthStrategyBase):
     """Credentials encoded in URL query string."""
 
     model_config = ConfigDict(extra="forbid")
@@ -90,16 +118,22 @@ class UrlTokenAuth(BaseModel):
     cookie_name: str = ""
     token_prefix: str = ""
 
+    display_name: ClassVar[str] = "URL Token"
+    transport: ClassVar[str] = "http"
 
-class HnapAuth(BaseModel):
+
+class HnapAuth(AuthStrategyBase):
     """HNAP HMAC challenge-response authentication."""
 
     model_config = ConfigDict(extra="forbid")
     strategy: Literal["hnap"]
     hmac_algorithm: Literal["md5", "sha256"]
 
+    display_name: ClassVar[str] = "HNAP"
+    transport: ClassVar[str] = "hnap"
 
-class FormPbkdf2Auth(BaseModel):
+
+class FormPbkdf2Auth(AuthStrategyBase):
     """Multi-round-trip PBKDF2 challenge-response auth."""
 
     model_config = ConfigDict(extra="forbid")
@@ -113,8 +147,11 @@ class FormPbkdf2Auth(BaseModel):
     csrf_header: str = ""
     cookie_name: str = ""
 
+    display_name: ClassVar[str] = "Form Login (PBKDF2)"
+    transport: ClassVar[str] = "http"
 
-class FormSjclAuth(BaseModel):
+
+class FormSjclAuth(AuthStrategyBase):
     """SJCL (Stanford JavaScript Crypto Library) AES-CCM encrypted form auth.
 
     Some modem firmwares use the SJCL JavaScript library to encrypt
@@ -140,8 +177,11 @@ class FormSjclAuth(BaseModel):
     csrf_header: str = ""
     cookie_name: str = ""
 
+    display_name: ClassVar[str] = "Form Login (SJCL)"
+    transport: ClassVar[str] = "http"
 
-class FormCbnAuth(BaseModel):
+
+class FormCbnAuth(AuthStrategyBase):
     """CBN (Compal Broadband Networks) AES-256-CBC encrypted form auth.
 
     Compal modem firmwares use the CryptoJS library to encrypt the
@@ -164,6 +204,9 @@ class FormCbnAuth(BaseModel):
     username_value: str = "NULL"
     login_fun: int = 15
 
+    display_name: ClassVar[str] = "Form Login (CBN)"
+    transport: ClassVar[str] = "cbn"
+
 
 AuthConfig = Annotated[
     Annotated[NoneAuth, Tag("none")]
@@ -178,17 +221,49 @@ AuthConfig = Annotated[
     Discriminator("strategy"),
 ]
 
-# Auth strategies valid per transport
-HTTP_AUTH_STRATEGIES: frozenset[str] = frozenset(
-    {
-        "none",
-        "basic",
-        "form",
-        "form_nonce",
-        "url_token",
-        "form_pbkdf2",
-        "form_sjcl",
-    }
-)
-HNAP_AUTH_STRATEGIES: frozenset[str] = frozenset({"hnap"})
-CBN_AUTH_STRATEGIES: frozenset[str] = frozenset({"form_cbn"})
+# ---------------------------------------------------------------------------
+# Registry — co-located with the AuthConfig union.  Adding a new
+# strategy requires adding the model class here AND to the union above.
+# ---------------------------------------------------------------------------
+
+_AUTH_MODELS: list[type[AuthStrategyBase]] = [
+    NoneAuth,
+    BasicAuth,
+    FormAuth,
+    FormNonceAuth,
+    UrlTokenAuth,
+    HnapAuth,
+    FormPbkdf2Auth,
+    FormSjclAuth,
+    FormCbnAuth,
+]
+
+
+def get_strategy_display_labels() -> dict[str, str]:
+    """Return ``{strategy_literal: display_name}`` for all auth models.
+
+    Used by config flow to build human-readable variant dropdown labels.
+    Replaces the hand-maintained ``AUTH_STRATEGY_LABELS`` dict.
+    """
+    return {get_args(m.model_fields["strategy"].annotation)[0]: m.display_name for m in _AUTH_MODELS}
+
+
+def get_transport_strategy_sets() -> dict[str, frozenset[str]]:
+    """Return ``{transport: frozenset(strategies)}`` derived from ClassVars.
+
+    Formalises the transport → auth constraint table from
+    ARCHITECTURE.md.  Used by ``ModemConfig`` validation to ensure
+    the declared auth strategy is valid for the declared transport.
+    """
+    groups: dict[str, set[str]] = {}
+    for m in _AUTH_MODELS:
+        strategy = get_args(m.model_fields["strategy"].annotation)[0]
+        groups.setdefault(m.transport, set()).add(strategy)
+    return {k: frozenset(v) for k, v in groups.items()}
+
+
+# Backward-compatible module-level names consumed by config.py validation.
+_transport_sets = get_transport_strategy_sets()
+HTTP_AUTH_STRATEGIES: frozenset[str] = _transport_sets["http"]
+HNAP_AUTH_STRATEGIES: frozenset[str] = _transport_sets["hnap"]
+CBN_AUTH_STRATEGIES: frozenset[str] = _transport_sets["cbn"]
