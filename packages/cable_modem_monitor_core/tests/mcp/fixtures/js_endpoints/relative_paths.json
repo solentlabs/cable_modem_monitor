@@ -1,0 +1,22 @@
+{
+  "_description": "JS uses relative path traversal (../../../) — should normalize and detect as uncaptured",
+  "_expected_warnings": ["ajaxSet_Session.php"],
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.0.1/skins/vod/js/base.js",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/javascript"}],
+        "content": {
+          "size": 150,
+          "mimeType": "application/javascript",
+          "text": "function sendActiveNotification() {\n  $.ajax({\n    type: \"POST\",\n    url: \"../../../php/ajaxSet_Session.php\",\n    dataType: \"json\"\n  });\n}"
+        }
+      }
+    }
+  ]
+}

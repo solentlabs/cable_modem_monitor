@@ -22,6 +22,7 @@ from ..har import load_har_json
 from .analysis.actions import ActionsDetail, detect_actions
 from .analysis.auth import AuthDetail, detect_auth
 from .analysis.format import detect_sections
+from .analysis.js_endpoints import detect_uncaptured_endpoints
 from .analysis.session import SessionDetail, detect_session
 from .analysis.transport import TransportResult, detect_transport
 from .analysis.types import CoreGap, FleetPatterns
@@ -103,6 +104,9 @@ def analyze_har(
 
     # Phase 5-6: Format detection and field mapping
     sections = detect_sections(entries, transport_result.transport, warnings, hard_stops, fleet=fleet)
+
+    # Post-analysis: JS endpoint discovery
+    detect_uncaptured_endpoints(entries, warnings)
 
     return AnalysisResult(
         transport=transport_result,

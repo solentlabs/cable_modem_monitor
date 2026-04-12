@@ -1,0 +1,62 @@
+{
+  "_description": "All JS-referenced endpoints also appear as HAR requests — no warnings expected",
+  "_expected_warnings": [],
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.0.1/",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "content": {
+          "size": 100,
+          "mimeType": "text/html",
+          "text": "<html><head><script>\n$.ajax({type:\"POST\", url:\"php/login.php\", dataType:\"json\"});\n</script></head><body></body></html>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.0.1/app.js",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/javascript"}],
+        "content": {
+          "size": 100,
+          "mimeType": "application/javascript",
+          "text": "function logout() {\n  $.post(\"php/logout.php\");\n}"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.0.1/php/login.php",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "content": {"size": 5, "mimeType": "application/json", "text": "\"ok\""}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.0.1/php/logout.php",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "content": {"size": 5, "mimeType": "text/html", "text": "done"}
+      }
+    }
+  ]
+}

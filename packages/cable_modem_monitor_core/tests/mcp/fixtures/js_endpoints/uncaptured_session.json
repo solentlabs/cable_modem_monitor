@@ -1,0 +1,70 @@
+{
+  "_description": "JS references ajaxSet_Session.php but no HAR request captures it",
+  "_expected_warnings": ["ajaxSet_Session.php"],
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.0.1/",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "content": {
+          "size": 200,
+          "mimeType": "text/html",
+          "text": "<html><head><script>\nif(!nonActiveSession) {\n  $.ajax({\n    type: \"POST\",\n    url: \"php/ajaxSet_Session.php\",\n    dataType: \"json\",\n    async: false\n  });\n}\n</script></head><body></body></html>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.0.1/base_95x.js",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/javascript"}],
+        "content": {
+          "size": 300,
+          "mimeType": "application/javascript",
+          "text": "function login(name, password) {\n  createServerRecord(\"php/ajaxSet_Password.php\", loginData, null, 0, cb, false);\n}\nfunction logout() {\n  createServerRecord(\"php/logout.php\", null, null, 0, null, false);\n}\nfunction sendActiveNotification() {\n  $.ajax({type:\"POST\", url:\"../../../php/ajaxSet_Session.php\", dataType:\"json\"});\n}"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.0.1/php/ajaxSet_Password.php",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "content": {
+          "size": 30,
+          "mimeType": "application/json",
+          "text": "{\"p_status\": \"AdminMatch\"}"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.0.1/php/logout.php",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "content": {
+          "size": 10,
+          "mimeType": "text/html",
+          "text": "logged out"
+        }
+      }
+    }
+  ]
+}
