@@ -40,7 +40,7 @@ attribution:
 isps:
   - Koodo
 notes: |
-  DOCSIS 3.1 cable modem. Base64-encoded JSON API via /setup.cgi?todo= endpoints.
+  DOCSIS 3.1 cable modem. JSON API via /setup.cgi?todo= endpoints.
   IP-based session tracking (no cookies, no auth headers after login).
   Content-Type: applation/json (typo in firmware). Upstream frequencies in MHz
   (not Hz). Inactive channels: modulation=QAM_NONE, rep_power=-inf.

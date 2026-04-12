@@ -5,6 +5,8 @@ Pure data transformation. No HTTP, no auth, no network.
 
 from __future__ import annotations
 
+import base64
+import contextlib
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlparse
@@ -108,7 +110,11 @@ def extract_har_response_text(
             continue
         entry_path = normalize_path(urlparse(req.get("url", "")).path)
         if entry_path == norm:
-            text: str = entry.get("response", {}).get("content", {}).get("text", "")
+            content = entry.get("response", {}).get("content", {})
+            text: str = str(content.get("text", ""))
+            if content.get("encoding") == "base64" and text:
+                with contextlib.suppress(Exception):
+                    text = base64.b64decode(text).decode("utf-8", errors="replace")
             return text
     return ""
 
@@ -129,6 +135,15 @@ def _extract_headers(response: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 def _extract_body(response: dict[str, Any]) -> str:
-    """Extract response body text from a HAR response dict."""
+    """Extract response body text from a HAR response dict.
+
+    Decodes ``content.encoding: "base64"`` per the HAR 1.2 spec —
+    the encoding field describes how the HAR recorder stored the
+    body in the JSON file, not how the modem transmitted it.
+    """
     content = response.get("content", {})
-    return str(content.get("text", ""))
+    text = str(content.get("text", ""))
+    if content.get("encoding") == "base64" and text:
+        with contextlib.suppress(Exception):
+            text = base64.b64decode(text).decode("utf-8", errors="replace")
+    return text

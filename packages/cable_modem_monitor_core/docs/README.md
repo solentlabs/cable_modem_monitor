@@ -23,6 +23,7 @@
 | [FIELD_REGISTRY.md](FIELD_REGISTRY.md) | Three-tier field naming authority |
 | [VERIFICATION_STATUS.md](VERIFICATION_STATUS.md) | Parser status enum and verification lifecycle |
 | [ONBOARDING_SPEC.md](ONBOARDING_SPEC.md) | MCP-driven modem onboarding workflow |
+| [SNMP_RESEARCH.md](SNMP_RESEARCH.md) | SNMP on cable modems — research findings, deferred |
 
 ## HA Integration Specs
 
