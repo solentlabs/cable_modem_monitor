@@ -13,19 +13,26 @@ inside the `solentlabs-cable-modem-monitor-catalog` package.
 
 ## Directory Structure
 
+To support scaling to hundreds of modems, the catalog uses a
+**Manufacturer-based Hierarchy**. This allows for "Lazy Loading"
+during the Home Assistant config flow — only fetching the models
+for a selected manufacturer rather than scanning the entire tree at
+startup.
+
 ```text
 modems/
 └── {manufacturer}/
+    ├── (metadata.json)             # Optional manufacturer-wide metadata
     └── {model}/
-        ├── parser.yaml             # Declarative extraction config (at least one of parser.yaml/parser.py required)
-        ├── parser.py               # Code override hooks (at least one of parser.yaml/parser.py required)
-        ├── modem.yaml              # REQUIRED: identity, auth, metadata (single-variant)
-        ├── modem-{variant}.yaml    # OPTIONAL: per-variant identity, auth, metadata (multi-variant)
-        └── test_data/              # REQUIRED: HAR captures + expected output golden files
+        ├── parser.yaml             # Declarative extraction config
+        ├── parser.py               # Code override hooks
+        ├── modem.yaml              # REQUIRED: identity, auth, metadata
+        ├── modem-{variant}.yaml    # OPTIONAL: per-variant identity, auth, metadata
+        └── test_data/              # REQUIRED: HAR captures + expected output
             ├── modem.har                  # Primary capture
-            ├── modem.expected.json        # Expected ModemData output for primary capture
+            ├── modem.expected.json        # Expected ModemData output
             ├── modem-{variant}.har        # OPTIONAL: variant captures
-            └── modem-{variant}.expected.json  # Expected output for variant capture
+            └── modem-{variant}.expected.json  # Expected output for variant
 ```
 
 ---

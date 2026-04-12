@@ -237,7 +237,14 @@ to normalize modem-specific raw values to the canonical form.
 
 | Field | Canonical value | Raw examples | Purpose |
 |-------|----------------|--------------|---------|
-| `docsis_status` | `"Operational"` | `"Allowed"`, `"Connected"`, `"Good"`, `"success"`, `"online"` | Canonical success value. When the parser provides this field, the orchestrator uses it as-is. When absent, the orchestrator enriches `system_info` from channel `lock_status` (see RUNTIME_POLLING_SPEC § Status Derivation). Non-`"Operational"` values pass through as raw diagnostic strings. |
+| `docsis_status` | `"Operational"` | `"Allowed"`, `"Connected"`, `"Good"`, `"success"`, `"online"` | Canonical success value. When the parser provides this field, the orchestrator uses it as-is. When absent, the orchestrator enriches `system_info` from channel `lock_status` (see RUNTIME_POLLING_SPEC § Status Derivation). |
+
+**Diagnostic Pass-Through:** Values that represent in-progress or error
+states (e.g., `"Ranging"`, `"Scanning"`, `"Locked"`, `"In Progress"`,
+`"Access Denied"`) should **not** be mapped to `"Operational"`. They
+must flow through as raw diagnostic strings. This allows the HA
+Status sensor to show "Operational" when all is well, but preserve the
+specific modem-reported state during outages or startup.
 
 ```yaml
 # Example: normalize modem-specific docsis_status to canonical value

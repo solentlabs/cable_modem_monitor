@@ -200,6 +200,10 @@ validation fails, report the gap and do not proceed.
 - HAR file parses as valid JSON
 - `log.entries` array is non-empty
 - Entries have `request` and `response` objects
+- **Sanitization check:** HAR contains the "Sanitized by har-capture"
+  marker. If missing, emit a warning and require manual verification
+  of PII removal (MACs, IPs, Serial Numbers, Passwords) before
+  committing to `test_data/`.
 
 ### Step 2: Auth flow validation
 

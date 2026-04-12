@@ -21,6 +21,7 @@ help:
 	@echo "  make check        - Run all code quality checks (lint, format, type)"
 	@echo "  make quick-check  - Quick checks (lint + format, skip type-check)"
 	@echo "  make validate-host - Cross-platform validation (auto-installs tools)"
+	@echo "  make validate-ci   - Full CI-like validation (lint + tests)"
 	@echo ""
 	@echo "Docker Development:"
 	@echo "  make docker-start   - Start Home Assistant dev environment"
@@ -99,6 +100,10 @@ validate:
 	@$(MAKE) quick-check
 	@$(MAKE) test-quick
 	@echo "✅ Validation passed! Safe to commit."
+
+# Full CI validation (thorough) - requires venv
+validate-ci: check test
+	@echo "✅ Full CI validation passed!"
 
 # Cross-platform validation (auto-installs tools, works without venv)
 validate-host:

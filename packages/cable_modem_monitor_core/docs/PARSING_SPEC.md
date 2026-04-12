@@ -466,7 +466,19 @@ values, filter channels, or fully replace the extraction output.
    Infrastructure like HNAP builders, session tokens, and cookies flow
    through the orchestrator, not through the parser.
 
-4. **Graduate recurring patterns.** When the same hook appears in
+4. **Sandbox Rules (Enforcement):** parser.py must be a "Pure Parser." To
+   ensure stability and security, it is subject to the following
+   constraints:
+   - **Allowed Imports:** Only `math`, `re`, `json`, `datetime`, `bs4`,
+     and `typing` are permitted.
+   - **No I/O:** No filesystem (`os`, `pathlib`), network (`requests`,
+     `urllib`), or process (`subprocess`) calls allowed.
+   - **No Side Effects:** Hooks must not modify the `resources` dict or
+     global state.
+   - **Validation:** The `validate_modem_package` tool and CI suite
+     enforce these rules via static analysis of the `parser.py` AST.
+
+5. **Graduate recurring patterns.** When the same hook appears in
    3+ modems, it becomes a parser.yaml config field and the hooks
    are deleted. parser.py is for genuine one-offs.
 

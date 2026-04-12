@@ -177,14 +177,14 @@ adapter declares them as dependencies in `manifest.json`.
 
 **Tests:**
 
-- Core + Catalog: `pytest` from repo root (discovers both packages)
-- HA integration: `tests/` at repo root
+- Core + Catalog: `pytest` in each package's `tests/` directory (not from repo root)
+- HA integration: `pytest` at repo root (`tests/`)
 
 ## Adding Support for New Modem Models
 
 **For users:** Submit a HAR capture via the [Modem Request Guide](docs/MODEM_REQUEST.md). This is the primary onboarding path.
 
-**For developers:** New modems are onboarded through the MCP intake pipeline. The pipeline validates HAR captures, detects auth strategy, generates modem/parser configs, and produces golden files. See [Intake Pipeline](docs/INTAKE_PIPELINE.md) for an overview, or [ONBOARDING_SPEC.md](packages/cable_modem_monitor_core/docs/ONBOARDING_SPEC.md) for the full specification.
+**For developers:** New modems are onboarded through the MCP intake pipeline. The pipeline validates HAR captures, detects auth strategy, generates modem/parser configs, and produces golden files. See [Intake Pipeline](packages/cable_modem_monitor_catalog/docs/INTAKE_PIPELINE.md) for an overview, or [ONBOARDING_SPEC.md](packages/cable_modem_monitor_core/docs/ONBOARDING_SPEC.md) for the full specification.
 
 Modem configurations live in the catalog package (`packages/cable_modem_monitor_catalog/`). Each modem has a `modem.yaml`, `parser.yaml`, and `test_data/` directory with a HAR capture and golden file.
 
