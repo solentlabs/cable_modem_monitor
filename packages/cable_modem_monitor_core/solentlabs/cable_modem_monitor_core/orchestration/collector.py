@@ -360,6 +360,10 @@ class ModemDataCollector:
                 if cookie_name:
                     url_token = self._session.cookies.get(cookie_name, "") or ""
 
+        query_params: dict[str, str] = {}
+        if self._modem_config.session and self._modem_config.session.query_params:
+            query_params = dict(self._modem_config.session.query_params)
+
         loader = HTTPResourceLoader(
             session=self._session,
             base_url=self._base_url,
@@ -368,6 +372,7 @@ class ModemDataCollector:
             token_prefix=token_prefix,
             detect_login_pages=self._detect_login_pages,
             model=self._modem_config.model,
+            query_params=query_params,
         )
 
         # On session reuse, don't pass auth_result — there's no

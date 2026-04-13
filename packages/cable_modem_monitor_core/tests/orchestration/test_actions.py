@@ -628,6 +628,7 @@ class TestExecuteAction:
             timeout=10,
             log_level=logging.INFO,
             model=modem_config.model,
+            query_params=None,
         )
 
     def test_hnap_action_dispatches(self) -> None:

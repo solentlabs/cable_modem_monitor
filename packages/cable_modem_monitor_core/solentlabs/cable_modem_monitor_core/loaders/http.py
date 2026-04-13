@@ -62,6 +62,7 @@ class HTTPResourceLoader:
         token_prefix: str = "",
         detect_login_pages: bool = False,
         model: str = "",
+        query_params: dict[str, str] | None = None,
     ) -> None:
         self._session = session
         self._base_url = base_url.rstrip("/")
@@ -70,6 +71,7 @@ class HTTPResourceLoader:
         self._token_prefix = token_prefix
         self._detect_login_pages = detect_login_pages
         self._model = model
+        self._query_params = query_params or {}
         self.resource_fetches: list[tuple[str, float, int, int, str]] = []
 
     def fetch(
@@ -200,11 +202,16 @@ class HTTPResourceLoader:
     def _build_url(self, path: str) -> str:
         """Build the full URL for a resource path.
 
-        Appends URL token if configured (for ``url_token`` auth).
+        Appends URL token if configured (for ``url_token`` auth),
+        then any session-level query parameters from modem.yaml.
         """
         url = f"{self._base_url}{path}"
         if self._url_token and self._token_prefix:
             url = f"{url}?{self._token_prefix}{self._url_token}"
+        if self._query_params:
+            sep = "&" if "?" in url else "?"
+            qs = "&".join(f"{k}={v}" for k, v in self._query_params.items())
+            url = f"{url}{sep}{qs}"
         return url
 
 

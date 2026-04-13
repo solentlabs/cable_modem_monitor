@@ -367,6 +367,42 @@ class TestHTTPResourceLoader:
             with pytest.raises(ResourceLoadError, match="401"):
                 loader.fetch(targets)
 
+    def test_query_params_appended(self) -> None:
+        """Session query_params are appended to fetch URLs."""
+        entries = _build_entries({"/status.html": ("text/html", "<html>Data</html>")})
+
+        with HARMockServer(entries) as server:
+            session = requests.Session()
+            loader = HTTPResourceLoader(
+                session,
+                server.base_url,
+                timeout=10,
+                query_params={"_n": "12345"},
+            )
+            targets = [ResourceTarget(path="/status.html", format="table")]
+            resources = loader.fetch(targets)
+
+        assert "/status.html" in resources
+
+    def test_query_params_with_url_token(self) -> None:
+        """Query params combine with URL token in the request URL."""
+        entries = _build_entries({"/status.html": ("text/html", "<html>Data</html>")})
+
+        with HARMockServer(entries) as server:
+            session = requests.Session()
+            loader = HTTPResourceLoader(
+                session,
+                server.base_url,
+                timeout=10,
+                url_token="abc123",
+                token_prefix="ct_",
+                query_params={"_n": "99999"},
+            )
+            targets = [ResourceTarget(path="/status.html", format="table")]
+            resources = loader.fetch(targets)
+
+        assert "/status.html" in resources
+
     def test_resource_fetches_recorded(self) -> None:
         """Per-resource timing tuples are populated after fetch."""
         entries = _build_entries(

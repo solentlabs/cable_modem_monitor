@@ -24,6 +24,11 @@ session:
   headers:
     X-Requested-With: "XMLHttpRequest"
     csrfNonce: "undefined"
+  # Arris firmware's base.js adds _n=<random> to every AJAX request
+  # via $.ajaxPrefilter. Server returns 400 without it. Value is a
+  # client-side cache-buster — server checks presence, not content.
+  query_params:
+    _n: "12345"
 
   max_concurrent: 1
 actions:

@@ -731,6 +731,7 @@ session:
 |-------|------|---------|-------------|
 | `max_concurrent` | int | `0` | Max concurrent sessions. `0` = unlimited. `1` = single-session modem. |
 | `headers` | map | `{}` | Static headers added to all requests for this session (e.g., `X-Requested-With: XMLHttpRequest` for SPA-style modems). Dynamic headers (CSRF tokens, HNAP signatures, auth tokens) are managed by auth strategies — each strategy defines its own fields for token acquisition and header injection. |
+| `query_params` | map | `{}` | Static query parameters appended to all data-fetch URLs (e.g., `_n: "12345"` for Arris firmware that requires a cache-buster nonce on AJAX requests). Not used for auth-managed tokens — those go through `auth.token_prefix`. |
 
 ### Stateless
 

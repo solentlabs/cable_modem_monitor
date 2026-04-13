@@ -38,6 +38,7 @@ def execute_http_action(
     *,
     log_level: int = logging.INFO,
     model: str = "",
+    query_params: dict[str, str] | None = None,
 ) -> ActionResult:
     """Execute an HTTP action (logout or restart).
 
@@ -59,6 +60,8 @@ def execute_http_action(
         log_level: Log level for action messages. Use ``logging.DEBUG``
             for routine operations (logout) to reduce noise.
         model: Modem model name for log context.
+        query_params: Session-level query parameters from modem.yaml
+            (e.g., ``{"_n": "12345"}``). Appended to action URLs.
 
     Returns:
         ActionResult with success status and details.
@@ -79,6 +82,10 @@ def execute_http_action(
 
     # Phase 3: Main request
     url = f"{stripped_base}{endpoint}"
+    if query_params:
+        sep = "&" if "?" in url else "?"
+        qs = "&".join(f"{k}={v}" for k, v in query_params.items())
+        url = f"{url}{sep}{qs}"
     headers = dict(action.headers) if action.headers else None
     data = dict(action.params) if action.params else None
 

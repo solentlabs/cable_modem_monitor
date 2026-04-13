@@ -54,6 +54,9 @@ def execute_action(
     model = modem_config.model
 
     if isinstance(action, HttpAction):
+        query_params: dict[str, str] = {}
+        if modem_config.session and modem_config.session.query_params:
+            query_params = dict(modem_config.session.query_params)
         return execute_http_action(
             collector._session,
             collector._base_url,
@@ -61,6 +64,7 @@ def execute_action(
             timeout=modem_config.timeout,
             log_level=log_level,
             model=model,
+            query_params=query_params or None,
         )
 
     if isinstance(action, HnapAction):
