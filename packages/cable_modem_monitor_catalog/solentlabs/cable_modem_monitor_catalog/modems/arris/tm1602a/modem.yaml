@@ -10,16 +10,17 @@ hardware:
   docsis_version: "3.0"
   chipset: Intel Puma 6
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config: "HAR capture (#112) — no login required"
   chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Arris_TM1602A)"
+  verification: "User diagnostics capture on v3.14.0-alpha.14 (2026-04-13, Issue #112)"
 
 attribution:
   contributors:
     - github: https://github.com/jontires
-      contribution: "HAR capture (Issue #112)"
+      contribution: "HAR capture and verification (Issue #112)"
 
 isps:
   - Spectrum
