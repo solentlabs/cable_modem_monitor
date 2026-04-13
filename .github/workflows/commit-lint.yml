@@ -68,7 +68,7 @@ jobs:
 
       - name: Comment on PR (if validation fails)
         if: failure()
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const message = `## ❌ Commit Message Validation Failed
