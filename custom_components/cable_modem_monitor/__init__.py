@@ -193,14 +193,23 @@ async def async_setup_entry(
 
     # Step 6: Create data DataUpdateCoordinator
     host = entry.data[CONF_HOST]
+    model = entry.data.get(CONF_MODEL, host)
+    coordinator_label = f"{model} ({host})" if model != host else host
 
     async def _async_update_data() -> ModemSnapshot:
-        return await hass.async_add_executor_job(orchestrator.get_modem_data)
+        snapshot = await hass.async_add_executor_job(orchestrator.get_modem_data)
+        if snapshot.error:
+            _LOGGER.info(
+                "Update [%s] — no data (%s)",
+                model,
+                snapshot.connection_status.value,
+            )
+        return snapshot
 
     data_coordinator = DataUpdateCoordinator[ModemSnapshot](
         hass,
         _LOGGER,
-        name=f"Cable Modem {host}",
+        name=f"Cable Modem {coordinator_label}",
         update_method=_async_update_data,
         update_interval=(timedelta(seconds=scan_interval) if scan_interval > 0 else None),
         config_entry=entry,
@@ -216,14 +225,11 @@ async def async_setup_entry(
         health_coordinator = DataUpdateCoordinator[HealthInfo](
             hass,
             _LOGGER,
-            name=f"Cable Modem {host} Health",
+            name=f"Cable Modem {coordinator_label} Health",
             update_method=_async_update_health,
             update_interval=(timedelta(seconds=health_check_interval) if health_check_interval > 0 else None),
             config_entry=entry,
         )
-
-    # Model name for logging (used by recovery listener and step 8+)
-    model = entry.data.get(CONF_MODEL, host)
 
     # Step 7b: Health recovery listener — trigger immediate poll on recovery
     if health_coordinator is not None:

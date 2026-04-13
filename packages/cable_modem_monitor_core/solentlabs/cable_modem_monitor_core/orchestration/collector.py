@@ -133,7 +133,7 @@ class ModemDataCollector:
                 error=str(exc),
             )
         except (requests.ConnectionError, requests.Timeout) as exc:
-            _logger.info("Connection failed during auth [%s]: %s", self._modem_config.model, exc)
+            _logger.info("Connection failed during auth [%s]", self._modem_config.model)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.CONNECTIVITY,
@@ -181,7 +181,7 @@ class ModemDataCollector:
                 error=str(exc),
             )
         except (requests.ConnectionError, requests.Timeout) as exc:
-            _logger.info("Connection failed during resource loading [%s]: %s", self._modem_config.model, exc)
+            _logger.info("Connection failed during resource loading [%s]", self._modem_config.model)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.CONNECTIVITY,

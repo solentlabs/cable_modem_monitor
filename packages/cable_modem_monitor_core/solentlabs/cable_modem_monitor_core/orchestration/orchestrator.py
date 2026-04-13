@@ -414,7 +414,7 @@ class Orchestrator:
         elif self._first_poll_complete:
             session = "none"
         else:
-            session = "new"
+            session = "none"
 
         log(
             "Poll [%s] — auth: %s, url: %s, credentials: %s, session: %s",

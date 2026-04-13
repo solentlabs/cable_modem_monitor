@@ -212,12 +212,17 @@ async def _async_update_data() -> ModemSnapshot:
 data_coordinator = DataUpdateCoordinator(
     hass,
     logger,
-    name=f"Cable Modem {host}",
+    name=f"Cable Modem {coordinator_label}",
     update_method=_async_update_data,
     update_interval=timedelta(seconds=scan_interval),  # or None
     config_entry=entry,
 )
 ```
+
+Where `coordinator_label` is `"{model} ({host})"` when model is known,
+else just `"{host}"`. This ensures HA's built-in coordinator logging
+includes both identifiers for log correlation with Core's `[MODEL]`
+convention.
 
 **Return type:** `ModemSnapshot` — contains `connection_status`,
 `docsis_status`, `modem_data`, `health_info`, `error`. Channel counts
@@ -229,7 +234,10 @@ Sensors read directly from the snapshot.
 are captured in `ModemSnapshot.connection_status` and
 `ModemSnapshot.error`. The coordinator always succeeds, and sensors
 derive availability from the snapshot content (see
-ENTITY_MODEL_SPEC § Availability).
+ENTITY_MODEL_SPEC § Availability). The `_async_update_data` wrapper
+logs an INFO line (`"Update [MODEL] — no data (status)"`) on failed
+polls so the HA-layer log accurately reflects poll outcome alongside
+the coordinator's generic `success: True`.
 
 **First refresh:** `async_config_entry_first_refresh()` runs during
 setup. Because the orchestrator never raises, this call always
@@ -283,7 +291,7 @@ async def _async_update_health() -> HealthInfo:
 health_coordinator = DataUpdateCoordinator(
     hass,
     logger,
-    name=f"Cable Modem {host} Health",
+    name=f"Cable Modem {coordinator_label} Health",
     update_method=_async_update_health,
     update_interval=timedelta(seconds=health_check_interval),  # or None
     config_entry=entry,
