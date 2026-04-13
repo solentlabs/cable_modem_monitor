@@ -10,33 +10,33 @@ homeassistant>=2025.1.0                     # Home Assistant core (>= 2025.1.0 f
 # ⚙️ Runtime dependencies (mirrors pyproject.toml)
 # -------------------------------
 beautifulsoup4>=4.12.0,<5.0                 # HTML parsing
-lxml>=4.9.0,<5.0                            # XML/HTML parser backend
+lxml>=5.0.0                                 # XML/HTML parser backend
 requests>=2.31.0                            # HTTP client (HA determines version)
 aiohttp>=3.9.0                              # Async HTTP client (HA determines version)
 
 # -------------------------------
 # 🧪 Testing framework and plugins
 # -------------------------------
-pytest>=7.4.3                               # Core test runner (HA determines version)
-pytest-cov>=4.1.0                           # Coverage reporting (allow 5.x+ for HA compat)
-pytest-asyncio>=0.21.1                      # Async test support (allow 1.x+ for HA compat)
+pytest>=8.0.0                               # Core test runner
+pytest-cov>=5.0.0                           # Coverage reporting
+pytest-asyncio>=0.23.0                      # Async test support
 pytest-homeassistant-custom-component>=0.13.0,<1.0  # HA integration test harness
-pytest-mock>=3.12.0                         # Mocking utilities (allow 4.x+ for HA compat)
-pytest-socket>=0.6.0                        # Network access control for tests (matches CI)
+pytest-mock>=3.12.0                         # Mocking utilities
+pytest-socket>=0.7.0                        # Network access control for tests
 
 # -------------------------------
 # 🧹 Code quality and formatting
 # -------------------------------
-ruff>=0.8.2                                 # Linter and import sorter
-black>=23.11.0                              # Code formatter
-pre-commit>=3.6.0                           # Git hook manager
+ruff>=0.14.0                                # Linter and import sorter
+black>=24.0.0                               # Code formatter
+pre-commit>=4.0.0                           # Git hook manager
 pylint>=3.0.0                               # Optional static analysis
 
 # -------------------------------
 # 🔍 Type checking
 # -------------------------------
-mypy>=1.7.0                                 # Static type checker
-types-requests<2.31.0.10                    # Type stubs for requests (compatible with urllib3<2)
+mypy>=1.10.0                                # Static type checker
+types-requests>=2.31.0                      # Type stubs for requests
 
 # -------------------------------
 # 🔐 Security scanning
@@ -47,5 +47,5 @@ defusedxml>=0.7.1                           # Safer XML parsing
 # -------------------------------
 # 🧪 Additional testing utilities
 # -------------------------------
-freezegun>=1.2.2                            # Time-freezing for deterministic tests
-responses>=0.24.0                           # Mock HTTP responses
+freezegun>=1.5.0                            # Time-freezing for deterministic tests
+responses>=0.25.0                           # Mock HTTP responses

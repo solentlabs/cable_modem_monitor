@@ -70,7 +70,7 @@ jobs:
 
       - name: Comment on PR (informational)
         if: steps.check-emails.outputs.found_personal == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           PERSONAL_EMAILS: ${{ steps.check-emails.outputs.emails }}
         with:

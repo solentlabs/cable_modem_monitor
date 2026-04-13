@@ -98,11 +98,11 @@ jobs:
         run: |
           cd custom_components/cable_modem_monitor
           # Exclude docs/ (dev specs, not needed at runtime) and
-          # __pycache__/ (created by the pytest step above).
+          # Python bytecode cache (created by the pytest step above).
           zip -r ../../cable_modem_monitor.zip . -x 'docs/*' '*__pycache__*'
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: Release ${{ steps.version.outputs.tag }}
           body_path: /tmp/changelog.txt

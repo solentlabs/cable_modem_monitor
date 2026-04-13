@@ -13,7 +13,7 @@ dependencies = [
     # Runtime dependencies
     "requests>=2.31",     # HTTP client for modem polling
     "pydantic>=2.0",      # Data validation and modeling
-    "har-capture~=0.4.0", # HAR sanitization + enhanced PII validation
+    "har-capture~=0.6.0", # HAR sanitization + enhanced PII validation
 ]
 
 [project.optional-dependencies]

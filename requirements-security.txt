@@ -2,20 +2,19 @@
 # Install with: pip install -r requirements-security.txt
 
 # Bandit - Python security linter (catches many CodeQL issues)
-bandit[toml]==1.7.5
+bandit[toml]==1.9.4
 
 # Semgrep - Multi-language security scanner
-semgrep==1.45.0
+semgrep==1.159.0
 
-# Safety - Dependency vulnerability scanner
-safety==2.3.5
+# pip-audit - Dependency vulnerability scanner (PyPA/OSV, no auth required)
+pip-audit==2.10.0
 
 # Additional security-focused flake8 plugins
-flake8==6.1.0
+flake8==7.3.0
 flake8-bandit==4.1.1
-flake8-bugbear==23.9.16
-flake8-security==1.7.0
+flake8-bugbear==25.11.29
 
 # Type checking
-mypy==1.7.0
-types-requests==2.31.0.10
+mypy==1.20.1
+types-requests==2.33.0.20260408
