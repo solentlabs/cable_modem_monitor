@@ -91,7 +91,7 @@ jobs:
           pytest -v --tb=short
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: Release ${{ steps.version.outputs.tag }}
           body_path: /tmp/changelog.txt
