@@ -17,7 +17,7 @@ auth:
   pbkdf2_key_length: 128
 hardware:
   docsis_version: "3.1"
-  chipset: unknown
+  chipset: "Broadcom BCM3390"
 
 status: awaiting_verification
 
@@ -25,6 +25,11 @@ sources:
   auth_config:
     "[#115 Technicolor CGA4236](https://github.com/solentlabs/cable_modem_monitor/issues/115)
     — PBKDF2 double-hash auth"
+  chipset:
+    "Normann Engineering CGA4236 datasheet: 'Dual core ARMv7 and Viper CPUs
+    (total 11700 DMIPS)' — Viper is Broadcom's cable modem CPU core;
+    HAR ProcessorSpeed 1503 MHz matches BCM3390 (1.5 GHz); same Technicolor
+    REST platform family as CGA6444VF (confirmed Broadcom via HAR COSP list)"
 
 attribution:
   contributors:

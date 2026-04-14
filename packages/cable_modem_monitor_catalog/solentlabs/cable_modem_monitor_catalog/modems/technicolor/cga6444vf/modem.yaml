@@ -16,7 +16,7 @@ auth:
   salt_trigger: "seeksalthash"
 hardware:
   docsis_version: "3.1"
-  chipset: unknown
+  chipset: "Broadcom BCM3390"
 
 status: awaiting_verification
 
@@ -24,6 +24,10 @@ sources:
   auth_config:
     "[#120 CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120)
     — PBKDF2 double-hash auth"
+  chipset: "HAR /api/v1/sta_about COSP list (17 hal-*-broadcom modules including
+    hal-platform-broadcom); BCM3390 identified by vodafonekabelforum.de
+    (user robert_s, thread t=45183); corroborated by WikiDevi CGA4233
+    (confirmed BCM3390) and CGA4236 datasheet (Viper CPU = Broadcom)"
 
 attribution:
   contributors:
