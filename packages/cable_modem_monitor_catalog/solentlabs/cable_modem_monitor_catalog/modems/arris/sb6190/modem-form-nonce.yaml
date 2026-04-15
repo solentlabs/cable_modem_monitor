@@ -22,7 +22,7 @@ hardware:
   end_of_life: "2023"
   release_date: "2016"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config:
