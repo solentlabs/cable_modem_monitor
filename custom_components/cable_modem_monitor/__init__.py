@@ -48,6 +48,7 @@ from solentlabs.cable_modem_monitor_core.test_harness.runner import (
 )
 
 from .const import (
+    CONF_CHANNEL_IDENTITY,
     CONF_CREDENTIAL_ENCODING,
     CONF_CREDENTIAL_FIELD,
     CONF_ENTITY_PREFIX,
@@ -66,10 +67,12 @@ from .const import (
     DOMAIN,
     PLATFORMS,
     VERSION,
+    ChannelIdentity,
     get_device_name,
 )
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
 from .core.log_buffer import setup_log_buffer
+from .mapping_manager import ChannelMap, build_channel_map
 from .migrations import async_run_migrations
 from .services import async_register_services, async_unregister_services
 
@@ -94,6 +97,26 @@ def _get_package_versions() -> str:
         except Exception:  # noqa: BLE001
             parts.append(f"{label}: not installed")
     return ", ".join(parts)
+
+
+def _rebuild_channel_map(
+    entry: ConfigEntry,
+    snapshot: ModemSnapshot,
+    identity_mode: ChannelIdentity,
+) -> None:
+    """Rebuild channel map on runtime_data after a poll.
+
+    No-op when runtime_data is not yet set (first poll, before Step 9)
+    or when the snapshot has no modem_data.
+    """
+    runtime = getattr(entry, "runtime_data", None)
+    if runtime is None or snapshot.modem_data is None:
+        return
+    runtime.channel_map = build_channel_map(
+        snapshot.modem_data.get("downstream", []),
+        snapshot.modem_data.get("upstream", []),
+        identity_mode,
+    )
 
 
 async def async_migrate_entry(
@@ -196,6 +219,8 @@ async def async_setup_entry(
     model = entry.data.get(CONF_MODEL, host)
     coordinator_label = f"{model} ({host})" if model != host else host
 
+    identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
+
     async def _async_update_data() -> ModemSnapshot:
         snapshot = await hass.async_add_executor_job(orchestrator.get_modem_data)
         if snapshot.error:
@@ -204,6 +229,7 @@ async def async_setup_entry(
                 model,
                 snapshot.connection_status.value,
             )
+        _rebuild_channel_map(entry, snapshot, identity_mode)
         return snapshot
 
     data_coordinator = DataUpdateCoordinator[ModemSnapshot](
@@ -248,9 +274,20 @@ async def async_setup_entry(
 
     if health_coordinator is not None:
         await health_coordinator.async_config_entry_first_refresh()
-        _LOGGER.info("Health monitoring started [%s] — every %ds", model, health_check_interval)
+        _LOGGER.info("Health monitoring started [%s] — %s", model, _format_interval(health_check_interval))
 
-    # Step 9: Store runtime data
+    # Step 9: Store runtime data (with initial channel map from first poll)
+    modem_data = snapshot.modem_data if snapshot else None
+    initial_channel_map = (
+        build_channel_map(
+            modem_data.get("downstream", []),
+            modem_data.get("upstream", []),
+            identity_mode,
+        )
+        if modem_data
+        else ChannelMap()
+    )
+
     entry.runtime_data = CableModemRuntimeData(
         data_coordinator=data_coordinator,
         health_coordinator=health_coordinator,
@@ -258,6 +295,7 @@ async def async_setup_entry(
         health_monitor=health_monitor,
         cancel_event=None,
         modem_identity=modem_identity,
+        channel_map=initial_channel_map,
     )
 
     # Step 10: Forward platform setup
@@ -279,6 +317,20 @@ async def async_setup_entry(
     return True
 
 
+def _format_interval(seconds: int) -> str:
+    """Format a polling interval as a human-readable string."""
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    parts = []
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    if secs:
+        parts.append(f"{secs}s")
+    return f"every {' '.join(parts)}" if parts else "every 0s"
+
+
 def _log_operational_summary(
     scan_interval: int,
     health_check_interval: int,
@@ -289,18 +341,11 @@ def _log_operational_summary(
     Tells the user the polling cadence and how to enable detailed
     logging. After this message, per-poll details are DEBUG only.
     """
-    if scan_interval > 0:
-        poll_msg = f"every {scan_interval // 60}m" if scan_interval >= 60 else f"every {scan_interval}s"
-    else:
-        poll_msg = "manual only"
-
-    if health_check_interval > 0:
-        health_msg = f"every {health_check_interval}s"
-    else:
-        health_msg = "disabled"
+    poll_msg = _format_interval(scan_interval) if scan_interval > 0 else "manual only"
+    health_msg = _format_interval(health_check_interval) if health_check_interval > 0 else "disabled"
 
     _LOGGER.info(
-        "Initialized [%s] — polling %s, health checks %s. " "Enable debug logging for per-poll details.",
+        "Initialized [%s] — Polling %s, health checks %s. " "Enable debug logging for per-poll details.",
         model,
         poll_msg,
         health_msg,

@@ -93,6 +93,7 @@ async def async_migrate(
         "variant": variant,
         "user_selected_modem": detected_modem or old_data.get("modem_choice", ""),
         "entity_prefix": old_data.get("entity_prefix", "none"),
+        "channel_identity": "id",  # preserve v1 DCID-based entity naming
         "host": old_data.get("host", ""),
         "username": old_data.get("username", ""),
         "password": old_data.get("password", ""),

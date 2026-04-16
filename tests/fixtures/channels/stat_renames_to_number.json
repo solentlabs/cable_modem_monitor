@@ -1,0 +1,64 @@
+[
+  {
+    "id": "ds_qam_channel",
+    "stat_ids": ["sensor.cable_modem_ds_qam_ch_29_power"],
+    "prefix": "cable_modem",
+    "expected": [
+      ["sensor.cable_modem_ds_qam_ch_29_power", "sensor.cable_modem_ds_ch_1_power"]
+    ]
+  },
+  {
+    "id": "ds_ofdm_channel",
+    "stat_ids": ["sensor.cable_modem_ds_ofdm_ch_30_power"],
+    "prefix": "cable_modem",
+    "expected": [
+      ["sensor.cable_modem_ds_ofdm_ch_30_power", "sensor.cable_modem_ds_ch_2_power"]
+    ]
+  },
+  {
+    "id": "us_atdma_channel",
+    "stat_ids": ["sensor.cable_modem_us_atdma_ch_5_power"],
+    "prefix": "cable_modem",
+    "expected": [
+      ["sensor.cable_modem_us_atdma_ch_5_power", "sensor.cable_modem_us_ch_1_power"]
+    ]
+  },
+  {
+    "id": "multiple_metrics",
+    "stat_ids": [
+      "sensor.cable_modem_ds_qam_ch_29_power",
+      "sensor.cable_modem_ds_qam_ch_29_snr",
+      "sensor.cable_modem_ds_qam_ch_29_frequency"
+    ],
+    "prefix": "cable_modem",
+    "expected": [
+      ["sensor.cable_modem_ds_qam_ch_29_power", "sensor.cable_modem_ds_ch_1_power"],
+      ["sensor.cable_modem_ds_qam_ch_29_snr", "sensor.cable_modem_ds_ch_1_snr"],
+      ["sensor.cable_modem_ds_qam_ch_29_frequency", "sensor.cable_modem_ds_ch_1_frequency"]
+    ]
+  },
+  {
+    "id": "unknown_channel_id_skipped",
+    "stat_ids": ["sensor.cable_modem_ds_qam_ch_99_power"],
+    "prefix": "cable_modem",
+    "expected": []
+  },
+  {
+    "id": "wrong_prefix_skipped",
+    "stat_ids": ["sensor.cable_modem_mb8611_ds_qam_ch_29_power"],
+    "prefix": "cable_modem",
+    "expected": []
+  },
+  {
+    "id": "number_mode_stat_skipped",
+    "stat_ids": ["sensor.cable_modem_ds_ch_1_power"],
+    "prefix": "cable_modem",
+    "expected": []
+  },
+  {
+    "id": "empty_input",
+    "stat_ids": [],
+    "prefix": "cable_modem",
+    "expected": []
+  }
+]

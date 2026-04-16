@@ -302,7 +302,7 @@ class ModemDataCollector:
             return self._last_auth_result or AuthResult(success=True)
 
         self._session_reused = False
-        _logger.debug("No active session [%s] — authenticating", self._modem_config.model)
+        _logger.debug("No active session [%s] — Authenticating", self._modem_config.model)
         result = self._auth_manager.authenticate(
             self._session,
             self._base_url,

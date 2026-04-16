@@ -1,9 +1,8 @@
 """Tests for sensor entity creation and value rendering.
 
-Tests the pure _index_channels function and verifies sensor entity
-creation logic via _create_channel_sensors, _create_lan_sensors, and
-_create_data_dependent_entities.  Entity value rendering is tested
-with mock coordinator data.
+Verifies sensor entity creation logic via _create_channel_sensors,
+_create_lan_sensors, and _create_data_dependent_entities.  Entity
+value rendering is tested with mock coordinator data.
 
 Deferred entity creation tests verify UC-84: when the first poll
 returns modem_data=None (modem unreachable at startup), data-dependent
@@ -28,6 +27,11 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     HealthStatus,
 )
 
+from custom_components.cable_modem_monitor.const import (
+    CONF_CHANNEL_IDENTITY,
+    ChannelIdentity,
+)
+from custom_components.cable_modem_monitor.mapping_manager import build_channel_map
 from custom_components.cable_modem_monitor.sensor import (
     ChannelSensor,
     HttpLatencySensor,
@@ -43,7 +47,6 @@ from custom_components.cable_modem_monitor.sensor import (
     _create_channel_sensors,
     _create_lan_sensors,
     _humanize_field_name,
-    _index_channels,
 )
 
 from .conftest import MOCK_ENTRY_DATA, MOCK_MODEM_DATA
@@ -82,56 +85,6 @@ MODEM_DATA_WITH_PASSTHROUGH: dict[str, Any] = {
 }
 
 # -----------------------------------------------------------------------
-# _index_channels — pure function
-# -----------------------------------------------------------------------
-
-# ┌────────────────────────────────┬──────────────┬─────────────────────────┬────────────────────┐
-# │ channels                       │ default_type │ expected keys           │ description        │
-# ├────────────────────────────────┼──────────────┼─────────────────────────┼────────────────────┤
-# │ typed channels                 │ "qam"        │ (type, id) tuples       │ basic indexing     │
-# │ missing channel_type           │ "qam"        │ uses default_type       │ default fallback   │
-# │ missing channel_id             │ "qam"        │ skipped                 │ no id = no entry   │
-# │ empty list                     │ "qam"        │ empty dict              │ no channels        │
-# └────────────────────────────────┴──────────────┴─────────────────────────┴────────────────────┘
-#
-# fmt: off
-INDEX_CASES = [
-    (
-        [{"channel_type": "qam", "channel_id": 1, "power": 2.5}],
-        "qam",
-        {("qam", 1)},
-        "basic",
-    ),
-    (
-        [{"channel_id": 5, "power": 1.0}],
-        "ofdm",
-        {("ofdm", 5)},
-        "default_type",
-    ),
-    (
-        [{"channel_type": "qam", "power": 0.0}],
-        "qam",
-        set(),
-        "no_id_skipped",
-    ),
-    (
-        [],
-        "qam",
-        set(),
-        "empty",
-    ),
-]
-# fmt: on
-
-
-@pytest.mark.parametrize("channels,default,expected_keys,desc", INDEX_CASES, ids=[c[3] for c in INDEX_CASES])
-def test_index_channels(channels, default, expected_keys, desc):
-    """_index_channels builds dict keyed by (type, id)."""
-    result = _index_channels(channels, default)
-    assert set(result.keys()) == expected_keys
-
-
-# -----------------------------------------------------------------------
 # _create_channel_sensors
 # -----------------------------------------------------------------------
 
@@ -158,15 +111,42 @@ def test_create_channel_sensors_downstream(mock_runtime_data):
     coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
     sensors = _create_channel_sensors(coord, entry, MOCK_MODEM_DATA)
 
+    # ID mode (from MOCK_ENTRY_DATA):
     # 2 DS channels × (power, snr always + frequency, corrected, uncorrected present) = 2 × 5 = 10
     # 1 US channel × (power always + frequency present) = 1 × 2 = 2
     # Total = 12
     assert len(sensors) == 12
 
-    # Verify a downstream sensor has correct attributes
+    # Verify a downstream sensor has correct ID-mode naming
     ds_power = [s for s in sensors if "qam" in str(s._attr_unique_id) and "power" in str(s._attr_unique_id)]
     assert len(ds_power) == 1
     assert ds_power[0]._attr_name == "DS QAM Ch 1 Power"
+
+
+def test_create_channel_sensors_position_mode(mock_runtime_data):
+    """Position mode creates sensors keyed by channel_number (no type in name)."""
+    entry_data = {**MOCK_ENTRY_DATA, CONF_CHANNEL_IDENTITY: ChannelIdentity.NUMBER}
+    coord = MagicMock()
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data=MOCK_MODEM_DATA,
+    )
+    coord.last_update_success = True
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = entry_data
+    entry.runtime_data = mock_runtime_data
+
+    sensors = _create_channel_sensors(coord, entry, MOCK_MODEM_DATA)
+
+    # Same count: 2 DS × 5 metrics + 1 US × 2 metrics = 12
+    assert len(sensors) == 12
+
+    # Position-mode naming: no channel type in name
+    ds_power = [s for s in sensors if "_ds_ch_1_power" in str(s._attr_unique_id)]
+    assert len(ds_power) == 1
+    assert ds_power[0]._attr_name == "DS Ch 1 Power"
 
 
 def test_create_channel_sensors_empty_data(mock_runtime_data):
@@ -277,8 +257,8 @@ def test_modem_status_sensor_operational(mock_runtime_data):
     assert sensor.extra_state_attributes["connection_status"] == "online"
 
 
-def test_channel_sensor_native_value(mock_runtime_data):
-    """Channel sensor reads correct field from channel data."""
+def test_channel_sensor_native_value_id_mode(mock_runtime_data):
+    """Channel sensor reads correct field from channel data (ID mode)."""
     coord = MagicMock()
     coord.data = ModemSnapshot(
         connection_status=ConnectionStatus.ONLINE,
@@ -287,6 +267,11 @@ def test_channel_sensor_native_value(mock_runtime_data):
     )
     coord.last_update_success = True
 
+    mock_runtime_data.channel_map = build_channel_map(
+        MOCK_MODEM_DATA["downstream"],
+        MOCK_MODEM_DATA["upstream"],
+        ChannelIdentity.ID,
+    )
     entry = MagicMock()
     entry.entry_id = "test_entry"
     entry.data = MOCK_ENTRY_DATA
@@ -296,8 +281,8 @@ def test_channel_sensor_native_value(mock_runtime_data):
         coord,
         entry,
         direction="downstream",
-        channel_type="qam",
-        channel_id=1,
+        slot_key=("qam", 1),
+        identity_mode=ChannelIdentity.ID,
         field="power",
         name_suffix="Power",
         unit="dBmV",
@@ -314,6 +299,50 @@ def test_channel_sensor_native_value(mock_runtime_data):
     assert "modulation" in attrs
 
 
+def test_channel_sensor_native_value_position_mode(mock_runtime_data):
+    """Channel sensor reads correct field from channel data (position mode)."""
+    coord = MagicMock()
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data=MOCK_MODEM_DATA,
+    )
+    coord.last_update_success = True
+
+    mock_runtime_data.channel_map = build_channel_map(
+        MOCK_MODEM_DATA["downstream"],
+        MOCK_MODEM_DATA["upstream"],
+        ChannelIdentity.NUMBER,
+    )
+    entry_data = {**MOCK_ENTRY_DATA, CONF_CHANNEL_IDENTITY: ChannelIdentity.NUMBER}
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = entry_data
+    entry.runtime_data = mock_runtime_data
+
+    sensor = ChannelSensor(
+        coord,
+        entry,
+        direction="downstream",
+        slot_key=1,
+        identity_mode=ChannelIdentity.NUMBER,
+        field="power",
+        name_suffix="Power",
+        unit="dBmV",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:signal",
+        value_type=float,
+    )
+    assert sensor.native_value == 2.5
+    assert sensor._attr_name == "DS Ch 1 Power"
+    assert sensor._attr_unique_id is not None
+    assert "cable_modem_ds_ch_1_power" in sensor._attr_unique_id
+    attrs = sensor.extra_state_attributes
+    assert attrs["channel_id"] == 1
+    assert attrs["channel_number"] == 1
+
+
 def test_channel_sensor_not_found(mock_runtime_data):
     """Channel sensor returns None when channel not in data."""
     coord = MagicMock()
@@ -323,6 +352,11 @@ def test_channel_sensor_not_found(mock_runtime_data):
         modem_data=MOCK_MODEM_DATA,
     )
 
+    mock_runtime_data.channel_map = build_channel_map(
+        MOCK_MODEM_DATA["downstream"],
+        MOCK_MODEM_DATA["upstream"],
+        ChannelIdentity.ID,
+    )
     entry = MagicMock()
     entry.entry_id = "test_entry"
     entry.data = MOCK_ENTRY_DATA
@@ -332,8 +366,8 @@ def test_channel_sensor_not_found(mock_runtime_data):
         coord,
         entry,
         direction="downstream",
-        channel_type="qam",
-        channel_id=999,  # doesn't exist
+        slot_key=("qam", 999),  # doesn't exist
+        identity_mode=ChannelIdentity.ID,
         field="power",
         name_suffix="Power",
         unit="dBmV",

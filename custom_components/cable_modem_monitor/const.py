@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 from homeassistant.const import Platform
 
 # IMPORTANT: Do not edit VERSION manually!
@@ -17,6 +19,7 @@ CONF_MODEL = "model"
 CONF_VARIANT = "variant"
 CONF_USER_SELECTED_MODEM = "user_selected_modem"
 CONF_ENTITY_PREFIX = "entity_prefix"
+CONF_CHANNEL_IDENTITY = "channel_identity"
 CONF_MODEM_DIR = "modem_dir"
 
 # Config entry keys — derived during validation (config flow Step 4)
@@ -41,15 +44,45 @@ DEFAULT_HEALTH_CHECK_INTERVAL = 30
 MIN_HEALTH_CHECK_INTERVAL = 10
 MAX_HEALTH_CHECK_INTERVAL = 86400  # 24 hours
 
-# Entity prefix options
-ENTITY_PREFIX_NONE = "none"
-ENTITY_PREFIX_MODEL = "model"
-ENTITY_PREFIX_IP = "ip"
-
 # SSL certificate verification — disabled for consumer cable modems.
 # Consumer modems universally use self-signed certificates on private LANs.
 # Enabling verification would break 99%+ of installations.
 VERIFY_SSL = False
+
+
+# ---------------------------------------------------------------------------
+# Value enums for config entry fields
+# ---------------------------------------------------------------------------
+
+
+class ChannelIdentity(StrEnum):
+    """How per-channel entities are identified.
+
+    NUMBER uses the modem's row position (stable across reboots).
+    ID uses the CMTS-assigned Channel ID (DOCSIS-native, can change).
+
+    See CHANNEL_IDENTIFICATION_SPEC.md § 5.
+    """
+
+    NUMBER = "number"
+    ID = "id"
+
+
+class EntityPrefix(StrEnum):
+    """Entity ID prefix strategy for multi-modem disambiguation.
+
+    NONE is the default for single-modem setups.
+    MODEL and IP add a disambiguator for multi-modem setups.
+    """
+
+    NONE = "none"
+    MODEL = "model"
+    IP = "ip"
+
+
+# ---------------------------------------------------------------------------
+# Derived helpers
+# ---------------------------------------------------------------------------
 
 
 def get_device_name(entity_prefix: str, *, model: str = "", host: str = "") -> str:
@@ -58,8 +91,8 @@ def get_device_name(entity_prefix: str, *, model: str = "", host: str = "") -> s
     Used by entity base classes (DeviceInfo) and _update_device_registry.
     Must be called consistently so entities link to the correct device.
     """
-    if entity_prefix == ENTITY_PREFIX_MODEL:
+    if entity_prefix == EntityPrefix.MODEL:
         return f"Cable Modem {model}"
-    if entity_prefix == ENTITY_PREFIX_IP:
+    if entity_prefix == EntityPrefix.IP:
         return f"Cable Modem {host}"
     return "Cable Modem"

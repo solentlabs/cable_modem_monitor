@@ -13,11 +13,13 @@
         "description": "选择一个 {manufacturer} 调制解调器型号。标有 * 的型号尚未验证。",
         "data": {
           "model": "调制解调器型号",
-          "entity_prefix": "Entity ID 前缀"
+          "entity_prefix": "Entity ID 前缀",
+          "channel_identity": "Channel Naming"
         },
         "data_description": {
           "model": "从列表中选择您的调制解调器型号。",
-          "entity_prefix": "将型号名称或 IP 添加到实体 ID。监控多个调制解调器时必填。"
+          "entity_prefix": "将型号名称或 IP 添加到实体 ID。监控多个调制解调器时必填。",
+          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
         }
       },
       "variant": {
@@ -162,6 +164,16 @@
     "request_health_check": {
       "name": "Request Health Check",
       "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
+    },
+    "convert_channel_identity": {
+      "name": "Convert Channel Identity",
+      "description": "Renames orphaned channel entities to match the current channel identity mode. Run after changing the mode in config flow. Modem must be online.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to convert. Defaults to the first configured modem."
+        }
+      }
     }
   }
 }

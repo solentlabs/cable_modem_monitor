@@ -1,0 +1,50 @@
+[
+  {
+    "id": "ds_channel_1",
+    "stat_ids": ["sensor.cable_modem_ds_ch_1_power"],
+    "prefix": "cable_modem",
+    "expected": [
+      ["sensor.cable_modem_ds_ch_1_power", "sensor.cable_modem_ds_qam_ch_29_power"]
+    ]
+  },
+  {
+    "id": "ds_channel_2_ofdm",
+    "stat_ids": ["sensor.cable_modem_ds_ch_2_snr"],
+    "prefix": "cable_modem",
+    "expected": [
+      ["sensor.cable_modem_ds_ch_2_snr", "sensor.cable_modem_ds_ofdm_ch_30_snr"]
+    ]
+  },
+  {
+    "id": "us_channel",
+    "stat_ids": ["sensor.cable_modem_us_ch_1_frequency"],
+    "prefix": "cable_modem",
+    "expected": [
+      ["sensor.cable_modem_us_ch_1_frequency", "sensor.cable_modem_us_atdma_ch_5_frequency"]
+    ]
+  },
+  {
+    "id": "unknown_channel_number_skipped",
+    "stat_ids": ["sensor.cable_modem_ds_ch_99_power"],
+    "prefix": "cable_modem",
+    "expected": []
+  },
+  {
+    "id": "wrong_prefix_skipped",
+    "stat_ids": ["sensor.cable_modem_mb8611_ds_ch_1_power"],
+    "prefix": "cable_modem",
+    "expected": []
+  },
+  {
+    "id": "id_mode_stat_skipped",
+    "stat_ids": ["sensor.cable_modem_ds_qam_ch_29_power"],
+    "prefix": "cable_modem",
+    "expected": []
+  },
+  {
+    "id": "empty_input",
+    "stat_ids": [],
+    "prefix": "cable_modem",
+    "expected": []
+  }
+]

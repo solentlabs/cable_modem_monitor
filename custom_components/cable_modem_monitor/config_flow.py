@@ -44,6 +44,7 @@ from .config_flow_helpers import (
     validate_connection,
 )
 from .const import (
+    CONF_CHANNEL_IDENTITY,
     CONF_CREDENTIAL_ENCODING,
     CONF_CREDENTIAL_FIELD,
     CONF_ENTITY_PREFIX,
@@ -61,9 +62,8 @@ from .const import (
     DEFAULT_HEALTH_CHECK_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    ENTITY_PREFIX_IP,
-    ENTITY_PREFIX_MODEL,
-    ENTITY_PREFIX_NONE,
+    ChannelIdentity,
+    EntityPrefix,
 )
 from .lib.host_validation import parse_host_input
 
@@ -243,9 +243,10 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             # Check for variants
             self._variants = await load_variant_list(self.hass, self._selected_summary.path)
 
-            # Store entity prefix for later
+            # Store entity prefix and channel identity for later
             self._connection_input = {
-                CONF_ENTITY_PREFIX: user_input.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
+                CONF_ENTITY_PREFIX: user_input.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE),
+                CONF_CHANNEL_IDENTITY: user_input.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.NUMBER),
             }
 
             if len(self._variants) > 1:
@@ -272,6 +273,12 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         # Entity prefix options
         prefix_options = _build_prefix_options(self.hass)
 
+        # Channel identity options
+        identity_options = [
+            selector.SelectOptionDict(value=ChannelIdentity.NUMBER, label="Channel Number (recommended)"),
+            selector.SelectOptionDict(value=ChannelIdentity.ID, label="Channel ID (DOCSIS)"),
+        ]
+
         # Show selected manufacturer in the step description.
         # "All" becomes empty so the description reads naturally:
         # "Choose a modem model" instead of "Choose a All modem model."
@@ -297,6 +304,15 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=prefix_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_CHANNEL_IDENTITY,
+                        default=ChannelIdentity.NUMBER,
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=identity_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
@@ -348,9 +364,13 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     ) -> config_entries.ConfigFlowResult:
         """Step 3 — Enter host and credentials."""
         if user_input is not None:
-            # Merge with entity prefix from Step 1b
+            # Merge with entity prefix and channel identity from Step 1b
             if self._connection_input:
-                user_input[CONF_ENTITY_PREFIX] = self._connection_input.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
+                user_input[CONF_ENTITY_PREFIX] = self._connection_input.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE)
+                user_input[CONF_CHANNEL_IDENTITY] = self._connection_input.get(
+                    CONF_CHANNEL_IDENTITY,
+                    ChannelIdentity.NUMBER,
+                )
             self._connection_input = user_input
             return await self.async_step_validate()
 
@@ -460,7 +480,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             CONF_MODEL: summary.model,
             CONF_VARIANT: self._selected_variant,
             CONF_USER_SELECTED_MODEM: display_name,
-            CONF_ENTITY_PREFIX: conn.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
+            CONF_ENTITY_PREFIX: conn.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE),
+            CONF_CHANNEL_IDENTITY: conn.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.NUMBER),
             CONF_MODEM_DIR: modem_dir,
             # Connection (Step 3)
             CONF_HOST: hostname,
@@ -808,18 +829,18 @@ def _build_prefix_options(hass: HomeAssistant) -> list[selector.SelectOptionDict
     ``none`` (Default) is only available when no other entry already uses it.
     """
     existing = hass.config_entries.async_entries(DOMAIN)
-    none_in_use = any(e.data.get(CONF_ENTITY_PREFIX) == ENTITY_PREFIX_NONE for e in existing)
+    none_in_use = any(e.data.get(CONF_ENTITY_PREFIX) == EntityPrefix.NONE for e in existing)
 
     if none_in_use or existing:
         return [
-            selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
-            selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
+            selector.SelectOptionDict(value=EntityPrefix.MODEL, label="Model"),
+            selector.SelectOptionDict(value=EntityPrefix.IP, label="IP Address"),
         ]
 
     return [
-        selector.SelectOptionDict(value=ENTITY_PREFIX_NONE, label="Default"),
-        selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
-        selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
+        selector.SelectOptionDict(value=EntityPrefix.NONE, label="Default"),
+        selector.SelectOptionDict(value=EntityPrefix.MODEL, label="Model"),
+        selector.SelectOptionDict(value=EntityPrefix.IP, label="IP Address"),
     ]
 
 

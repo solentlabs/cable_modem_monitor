@@ -46,38 +46,19 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     HealthStatus,
 )
 
-from .const import CONF_ENTITY_PREFIX, CONF_SUPPORTS_ICMP, DOMAIN, get_device_name
+from .const import (
+    CONF_CHANNEL_IDENTITY,
+    CONF_ENTITY_PREFIX,
+    CONF_SUPPORTS_ICMP,
+    DOMAIN,
+    ChannelIdentity,
+    get_device_name,
+)
 from .coordinator import CableModemConfigEntry
 from .lib.utils import parse_uptime_to_seconds
+from .mapping_manager import SlotKey, build_channel_map
 
 _LOGGER = logging.getLogger(__name__)
-
-
-# ------------------------------------------------------------------
-# Channel indexing
-# ------------------------------------------------------------------
-
-
-def _index_channels(
-    channels: list[dict[str, Any]],
-    default_type: str,
-) -> dict[tuple[str, str | int], dict[str, Any]]:
-    """Build an indexed dict from a channel list for O(1) lookup.
-
-    Args:
-        channels: List of channel dicts from modem_data.
-        default_type: Default channel_type when not present on channel.
-
-    Returns:
-        Dict keyed by (channel_type, channel_id).
-    """
-    result: dict[tuple[str, str | int], dict[str, Any]] = {}
-    for ch in channels:
-        ch_type = ch.get("channel_type", default_type)
-        ch_id = ch.get("channel_id")
-        if ch_id is not None:
-            result[(ch_type, ch_id)] = ch
-    return result
 
 
 # ------------------------------------------------------------------
@@ -644,9 +625,14 @@ class SystemInfoFieldSensor(_SystemInfoSensor):
 class ChannelSensor(ModemSensorBase):
     """Generic channel metric sensor.
 
-    Parameterized by direction, channel key, and metric definition.
-    One instance per channel per metric.  All non-metric fields from the
-    channel dict flow as extra_state_attributes (tier 2/3 pass-through).
+    Parameterized by direction, slot key, identity mode, and metric
+    definition.  One instance per channel per metric.  All non-metric
+    fields from the channel dict flow as extra_state_attributes
+    (tier 2/3 pass-through).
+
+    The identity mode determines entity naming (a single ``if``):
+    - Position mode: ``DS Ch 1 Power`` / ``ds_ch_1_power``
+    - ID mode: ``DS QAM Ch 29 Power`` / ``ds_qam_ch_29_power``
     """
 
     def __init__(
@@ -655,8 +641,8 @@ class ChannelSensor(ModemSensorBase):
         entry: CableModemConfigEntry,
         *,
         direction: str,
-        channel_type: str,
-        channel_id: str | int,
+        slot_key: SlotKey,
+        identity_mode: ChannelIdentity,
         field: str,
         name_suffix: str,
         unit: str | None,
@@ -668,16 +654,24 @@ class ChannelSensor(ModemSensorBase):
         """Initialize the channel sensor."""
         super().__init__(coordinator, entry)
         self._direction = direction
-        self._channel_type = channel_type
-        self._channel_id = channel_id
+        self._slot_key = slot_key
+        self._identity_mode = identity_mode
         self._field = field
         self._value_type = value_type
 
         prefix = "DS" if direction == "downstream" else "US"
         dir_code = "ds" if direction == "downstream" else "us"
 
-        self._attr_name = f"{prefix} {channel_type.upper()} Ch {channel_id} {name_suffix}"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem" f"_{dir_code}_{channel_type}_ch_{channel_id}_{field}"
+        if identity_mode == ChannelIdentity.NUMBER:
+            # Position mode: no channel type in name/id
+            self._attr_name = f"{prefix} Ch {slot_key} {name_suffix}"
+            self._attr_unique_id = f"{entry.entry_id}_cable_modem_{dir_code}_ch_{slot_key}_{field}"
+        else:
+            # ID mode: (channel_type, channel_id) tuple
+            ch_type, ch_id = slot_key  # type: ignore[misc]
+            self._attr_name = f"{prefix} {ch_type.upper()} Ch {ch_id} {name_suffix}"
+            self._attr_unique_id = f"{entry.entry_id}_cable_modem_{dir_code}_{ch_type}_ch_{ch_id}_{field}"
+
         self._attr_icon = icon
         self._attr_state_class = state_class
         if unit:
@@ -686,14 +680,17 @@ class ChannelSensor(ModemSensorBase):
             self._attr_device_class = device_class
 
     def _find_channel(self) -> dict[str, Any] | None:
-        """Find this channel in modem_data by type and ID."""
-        modem_data = self._snapshot.modem_data
-        if modem_data is None:
+        """Find this channel via pre-built slot maps on runtime_data.
+
+        Slot maps are rebuilt once per poll in the coordinator update
+        callback (see ``__init__._async_update_data``).  Sensors do an
+        O(1) dict lookup here.
+        """
+        if self._snapshot.modem_data is None:
             return None
-        for ch in modem_data.get(self._direction, []):
-            if ch.get("channel_type", "") == self._channel_type and ch.get("channel_id") == self._channel_id:
-                return ch  # type: ignore[no-any-return]
-        return None
+        channel_map = self._entry.runtime_data.channel_map
+        direction_map = channel_map.downstream if self._direction == "downstream" else channel_map.upstream
+        return direction_map.get(self._slot_key)
 
     @functools.cached_property
     def native_value(self) -> float | int | None:
@@ -708,17 +705,15 @@ class ChannelSensor(ModemSensorBase):
 
     @functools.cached_property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return channel identity and all non-metric fields."""
-        attrs: dict[str, Any] = {
-            "channel_id": self._channel_id,
-            "channel_type": self._channel_type,
-        }
+        """Return all non-metric fields as attributes.
+
+        Both channel_number and channel_id are always present
+        regardless of identity mode.
+        """
         ch = self._find_channel()
-        if ch is not None:
-            for key, value in ch.items():
-                if key not in ("channel_id", "channel_type", self._field):
-                    attrs[key] = value
-        return attrs
+        if ch is None:
+            return {}
+        return {key: value for key, value in ch.items() if key != self._field}
 
 
 # ------------------------------------------------------------------
@@ -849,12 +844,24 @@ def _create_channel_sensors(
     entry: CableModemConfigEntry,
     modem_data: dict[str, Any],
 ) -> list[SensorEntity]:
-    """Create per-channel sensor entities from first poll data."""
+    """Create per-channel sensor entities from first poll data.
+
+    Uses the mapping manager to build slot maps based on the user's
+    channel identity mode.  Position mode creates entities for all
+    positions (including unlocked); ID mode creates only for locked
+    channels with valid keys.
+    """
+    identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
+    slots = build_channel_map(
+        modem_data.get("downstream", []),
+        modem_data.get("upstream", []),
+        identity_mode,
+    )
+
     entities: list[SensorEntity] = []
 
     # Downstream
-    ds_index = _index_channels(modem_data.get("downstream", []), "qam")
-    for (ch_type, ch_id), ch in ds_index.items():
+    for slot_key, ch in slots.downstream.items():
         for field, name, unit, dev_cls, state_cls, icon, val_type in _DS_METRICS:
             if field in _DS_ALWAYS_FIELDS or field in ch:
                 entities.append(
@@ -862,8 +869,8 @@ def _create_channel_sensors(
                         data_coord,
                         entry,
                         direction="downstream",
-                        channel_type=ch_type,
-                        channel_id=ch_id,
+                        slot_key=slot_key,
+                        identity_mode=identity_mode,
                         field=field,
                         name_suffix=name,
                         unit=unit,
@@ -875,8 +882,7 @@ def _create_channel_sensors(
                 )
 
     # Upstream
-    us_index = _index_channels(modem_data.get("upstream", []), "atdma")
-    for (ch_type, ch_id), ch in us_index.items():
+    for slot_key, ch in slots.upstream.items():
         for field, name, unit, dev_cls, state_cls, icon, val_type in _US_METRICS:
             if field in _US_ALWAYS_FIELDS or field in ch:
                 entities.append(
@@ -884,8 +890,8 @@ def _create_channel_sensors(
                         data_coord,
                         entry,
                         direction="upstream",
-                        channel_type=ch_type,
-                        channel_id=ch_id,
+                        slot_key=slot_key,
+                        identity_mode=identity_mode,
                         field=field,
                         name_suffix=name,
                         unit=unit,

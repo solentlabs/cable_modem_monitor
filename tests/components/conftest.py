@@ -31,6 +31,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
 )
 
 from custom_components.cable_modem_monitor.const import (
+    CONF_CHANNEL_IDENTITY,
     CONF_ENTITY_PREFIX,
     CONF_HEALTH_CHECK_INTERVAL,
     CONF_LEGACY_SSL,
@@ -42,7 +43,8 @@ from custom_components.cable_modem_monitor.const import (
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONF_VARIANT,
-    ENTITY_PREFIX_NONE,
+    ChannelIdentity,
+    EntityPrefix,
 )
 from custom_components.cable_modem_monitor.coordinator import (
     CableModemRuntimeData,
@@ -63,8 +65,10 @@ MOCK_SYSTEM_INFO: dict[str, Any] = {
 
 MOCK_DOWNSTREAM: list[dict[str, Any]] = [
     {
+        "channel_number": 1,
         "channel_id": 1,
         "channel_type": "qam",
+        "lock_status": "locked",
         "frequency": 555000000,
         "power": 2.5,
         "snr": 38.0,
@@ -73,8 +77,10 @@ MOCK_DOWNSTREAM: list[dict[str, Any]] = [
         "modulation": "256QAM",
     },
     {
+        "channel_number": 2,
         "channel_id": 2,
         "channel_type": "ofdm",
+        "lock_status": "locked",
         "frequency": 722000000,
         "power": -1.0,
         "snr": 35.5,
@@ -86,8 +92,10 @@ MOCK_DOWNSTREAM: list[dict[str, Any]] = [
 
 MOCK_UPSTREAM: list[dict[str, Any]] = [
     {
+        "channel_number": 1,
         "channel_id": 1,
         "channel_type": "atdma",
+        "lock_status": "locked",
         "frequency": 36400000,
         "power": 42.0,
         "modulation": "64QAM",
@@ -107,7 +115,8 @@ MOCK_ENTRY_DATA: dict[str, Any] = {
     CONF_MANUFACTURER: "Solent Labs",
     CONF_MODEL: "TPS-2000",
     CONF_VARIANT: None,
-    CONF_ENTITY_PREFIX: ENTITY_PREFIX_NONE,
+    CONF_CHANNEL_IDENTITY: ChannelIdentity.ID,
+    CONF_ENTITY_PREFIX: EntityPrefix.NONE,
     CONF_MODEM_DIR: "solentlabs/tps-2000",
     CONF_PROTOCOL: "http",
     CONF_LEGACY_SSL: False,

@@ -305,6 +305,7 @@ V2_REQUIRED_KEYS = frozenset(
         "variant",
         "user_selected_modem",
         "entity_prefix",
+        "channel_identity",
         "host",
         "username",
         "password",
@@ -363,6 +364,7 @@ def _transform_v1_to_v2(v1: dict, modem_dir: str, variant: str | None = None) ->
         "variant": variant,
         "user_selected_modem": v1["detected_modem"],
         "entity_prefix": v1.get("entity_prefix", "none"),
+        "channel_identity": "id",  # preserve v1 DCID-based entity naming
         "host": v1["host"],
         "username": v1["username"],
         "password": v1["password"],

@@ -1,0 +1,10 @@
+[
+  {
+    "channel_number": 1,
+    "channel_id": 5,
+    "channel_type": "atdma",
+    "lock_status": "locked",
+    "power": 42.0,
+    "frequency": 36400000
+  }
+]

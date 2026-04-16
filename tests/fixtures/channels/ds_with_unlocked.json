@@ -1,0 +1,26 @@
+[
+  {
+    "channel_number": 1,
+    "channel_id": 29,
+    "channel_type": "qam",
+    "lock_status": "locked",
+    "power": 2.5,
+    "snr": 38.0
+  },
+  {
+    "channel_number": 2,
+    "channel_id": 0,
+    "channel_type": "qam",
+    "lock_status": "not_locked",
+    "power": 0.0,
+    "snr": 0.0
+  },
+  {
+    "channel_number": 3,
+    "channel_id": 31,
+    "channel_type": "ofdm",
+    "lock_status": "locked",
+    "power": -0.5,
+    "snr": 36.0
+  }
+]

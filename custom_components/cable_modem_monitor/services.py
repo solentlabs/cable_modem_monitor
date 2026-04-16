@@ -9,6 +9,10 @@ Services:
         backoff. Targets a specific config entry via device_id.
     cable_modem_monitor.request_health_check:
         Triggers an immediate health check (ICMP + HTTP probes).
+    cable_modem_monitor.convert_channel_identity:
+        Migrates recorder statistics between channel naming modes
+        (number ↔ id). Reads target from config entry, finds orphaned
+        stats from previous installs, renames via recorder task queue.
 
 See HA_ADAPTER_SPEC.md § Services.
 """
@@ -16,6 +20,7 @@ See HA_ADAPTER_SPEC.md § Services.
 from __future__ import annotations
 
 import logging
+import re
 from collections import defaultdict
 from typing import Any
 
@@ -27,9 +32,11 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.util import slugify as ha_slugify
 
 from .const import (
+    CONF_CHANNEL_IDENTITY,
     CONF_ENTITY_PREFIX,
     CONF_SUPPORTS_ICMP,
     DOMAIN,
+    ChannelIdentity,
     get_device_name,
 )
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
@@ -39,6 +46,7 @@ _LOGGER = logging.getLogger(__name__)
 SERVICE_GENERATE_DASHBOARD = "generate_dashboard"
 SERVICE_REQUEST_REFRESH = "request_refresh"
 SERVICE_REQUEST_HEALTH_CHECK = "request_health_check"
+SERVICE_CONVERT_CHANNEL_IDENTITY = "convert_channel_identity"
 SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
     {
         vol.Optional("device_id"): cv.string,
@@ -169,18 +177,14 @@ def _get_entity_prefix(entry: CableModemConfigEntry) -> str:
 # ------------------------------------------------------------------
 
 
-def _get_channel_info(
+def _get_channel_info_id_mode(
     channels: list[dict[str, Any]],
     default_type: str,
 ) -> list[tuple[str, int]]:
-    """Extract (channel_type, channel_id) pairs from a channel list.
-
-    Core's parser coordinator normalizes these fields, so this is a
-    straight read — no type guessing or ID parsing needed.
+    """Extract (channel_type, channel_id) pairs for ID mode dashboards.
 
     Args:
-        channels: Channel dicts from modem_data["downstream"] or
-            modem_data["upstream"].
+        channels: Channel dicts from modem_data.
         default_type: Fallback type when channel_type is absent.
     """
     result: list[tuple[str, int]] = []
@@ -194,6 +198,37 @@ def _get_channel_info(
                 ch_id = idx + 1
         result.append((ch_type, ch_id))
     return sorted(result)
+
+
+def _get_channel_info_number_mode(
+    channels: list[dict[str, Any]],
+) -> list[tuple[str, int]]:
+    """Extract channel numbers for position mode dashboards.
+
+    Returns ("", channel_number) tuples so downstream functions
+    keep the same signature.  The empty type string signals position
+    mode to label/pattern formatters.
+    """
+    result: list[tuple[str, int]] = []
+    for idx, ch in enumerate(channels):
+        ch_num = ch.get("channel_number", idx + 1)
+        if ch.get("lock_status") == "locked":
+            result.append(("", ch_num))
+    return sorted(result, key=lambda x: x[1])
+
+
+def _get_channel_info(
+    modem_data: dict[str, Any],
+    identity_mode: ChannelIdentity,
+) -> tuple[list[tuple[str, int]], list[tuple[str, int]]]:
+    """Extract channel info for both directions based on identity mode."""
+    if identity_mode == ChannelIdentity.NUMBER:
+        ds = _get_channel_info_number_mode(modem_data.get("downstream", []))
+        us = _get_channel_info_number_mode(modem_data.get("upstream", []))
+    else:
+        ds = _get_channel_info_id_mode(modem_data.get("downstream", []), "qam")
+        us = _get_channel_info_id_mode(modem_data.get("upstream", []), "atdma")
+    return ds, us
 
 
 def _group_by_type(
@@ -274,9 +309,13 @@ def _format_channel_label(
 
     Args:
         ch_type: Channel type (e.g., "qam", "ofdm").
-        ch_id: Channel ID number.
+            Empty string for position mode.
+        ch_id: Channel ID or channel number.
         label_format: One of "full", "id_only", "type_id".
     """
+    if not ch_type:
+        # Position mode — no type in label
+        return f"Ch {ch_id}"
     if label_format == "id_only":
         return f"Ch {ch_id}"
     if label_format == "type_id":
@@ -354,6 +393,11 @@ def _build_status_card_yaml(
         "    entities:",
         f"      - entity: sensor.{entity_prefix}_status",
         "        name: Status",
+        "        tap_action:",
+        "          action: call-service",
+        "          service: button.press",
+        "          target:",
+        f"            entity_id: button.{entity_prefix}_update_modem_data",
     ]
     if has_icmp:
         lines.append(f"      - entity: sensor.{entity_prefix}_ping_latency")
@@ -399,12 +443,12 @@ def _build_status_card_yaml(
     if has_restart:
         lines.append(f"      - entity: button.{entity_prefix}_restart_modem")
         lines.append("        name: Restart")
-    lines.extend(
-        [
-            "    show_header_toggle: false",
-            "    state_color: false",
-        ]
-    )
+        lines.append("        tap_action:")
+        lines.append("          action: toggle")
+        lines.append("          confirmation:")
+        lines.append("            text: This will restart your modem and temporarily disconnect your internet.")
+    lines.append("    show_header_toggle: false")
+    lines.append("    state_color: false")
     return lines
 
 
@@ -518,6 +562,34 @@ def _add_channel_graphs(
         )
 
 
+def _build_channel_graph_defs(
+    entity_prefix: str,
+    identity_mode: ChannelIdentity,
+    downstream_info: list[tuple[str, int]],
+    upstream_info: list[tuple[str, int]],
+) -> list[tuple[str, list[tuple[str, int]], str, str]]:
+    """Build the channel graph definitions for the dashboard.
+
+    Returns (opt_key, channel_info, title_key, entity_pattern) tuples.
+    """
+    p = entity_prefix
+    if identity_mode == ChannelIdentity.NUMBER:
+        ds = f"sensor.{p}_ds_ch_{{ch_id}}"
+        us = f"sensor.{p}_us_ch_{{ch_id}}"
+    else:
+        ds = f"sensor.{p}_ds_{{ch_type}}_ch_{{ch_id}}"
+        us = f"sensor.{p}_us_{{ch_type}}_ch_{{ch_id}}"
+    # fmt: off
+    return [
+        ("ds_power", downstream_info, "ds_power", f"{ds}_power"),
+        ("ds_snr",   downstream_info, "ds_snr",   f"{ds}_snr"),
+        ("ds_freq",  downstream_info, "ds_freq",  f"{ds}_frequency"),
+        ("us_power", upstream_info,   "us_power", f"{us}_power"),
+        ("us_freq",  upstream_info,   "us_freq",  f"{us}_frequency"),
+    ]
+    # fmt: on
+
+
 # ------------------------------------------------------------------
 # Service handler factory
 # ------------------------------------------------------------------
@@ -574,8 +646,8 @@ def create_generate_dashboard_handler(
         channel_label = call.data.get("channel_label", "auto")
         channel_grouping = call.data.get("channel_grouping", "by_direction")
 
-        downstream_info = _get_channel_info(modem_data.get("downstream", []), "qam")
-        upstream_info = _get_channel_info(modem_data.get("upstream", []), "atdma")
+        identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
+        downstream_info, upstream_info = _get_channel_info(modem_data, identity_mode)
 
         yaml_parts = [
             "# Cable Modem Dashboard",
@@ -594,15 +666,12 @@ def create_generate_dashboard_handler(
                 )
             )
 
-        # fmt: off
-        channel_graphs = [
-            ("ds_power", downstream_info, "ds_power", f"sensor.{entity_prefix}_ds_{{ch_type}}_ch_{{ch_id}}_power"),
-            ("ds_snr",   downstream_info, "ds_snr",   f"sensor.{entity_prefix}_ds_{{ch_type}}_ch_{{ch_id}}_snr"),
-            ("ds_freq",  downstream_info, "ds_freq",  f"sensor.{entity_prefix}_ds_{{ch_type}}_ch_{{ch_id}}_frequency"),
-            ("us_power", upstream_info,   "us_power", f"sensor.{entity_prefix}_us_{{ch_type}}_ch_{{ch_id}}_power"),
-            ("us_freq",  upstream_info,   "us_freq",  f"sensor.{entity_prefix}_us_{{ch_type}}_ch_{{ch_id}}_frequency"),
-        ]
-        # fmt: on
+        channel_graphs = _build_channel_graph_defs(
+            entity_prefix,
+            identity_mode,
+            downstream_info,
+            upstream_info,
+        )
 
         for opt_key, ch_info, title_key, entity_pattern in channel_graphs:
             if opts[opt_key]:
@@ -689,6 +758,183 @@ def create_request_health_check_handler(
 
 
 # ------------------------------------------------------------------
+# Channel identity conversion
+# ------------------------------------------------------------------
+
+
+def _build_channel_lookup(
+    modem_data: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    """Build direction → channel list lookup from modem data."""
+    return {
+        "ds": modem_data.get("downstream", []),
+        "us": modem_data.get("upstream", []),
+    }
+
+
+# Statistic ID patterns per mode (entity_id format):
+#   ID mode:       sensor.{prefix}_{ds|us}_{type}_ch_{id}_{metric}
+#   Position mode: sensor.{prefix}_{ds|us}_ch_{num}_{metric}
+_ID_MODE_STAT_ID = re.compile(r"^sensor\.(\w+)_(ds|us)_(\w+)_ch_(\d+)_(\w+)$")
+_NUMBER_MODE_STAT_ID = re.compile(r"^sensor\.(\w+)_(ds|us)_ch_(\d+)_(\w+)$")
+
+
+def _plan_stat_renames_to_number(
+    stat_ids: list[str],
+    channels: dict[str, list[dict[str, Any]]],
+    prefix: str,
+) -> list[tuple[str, str]]:
+    """Plan statistic renames from id-mode to number-mode entity_ids."""
+    lookup: dict[tuple[str, str, int], int] = {}
+    for direction, ch_list in channels.items():
+        for ch in ch_list:
+            ch_type = ch.get("channel_type")
+            ch_id = ch.get("channel_id")
+            ch_num = ch.get("channel_number")
+            if ch_type is not None and ch_id is not None and ch_num is not None:
+                lookup[(direction, ch_type, ch_id)] = ch_num
+
+    renames: list[tuple[str, str]] = []
+    for stat_id in stat_ids:
+        match = _ID_MODE_STAT_ID.match(stat_id)
+        if not match:
+            continue
+        stat_prefix, direction, ch_type, ch_id_str, metric = match.groups()
+        if stat_prefix != prefix:
+            continue
+        ch_num = lookup.get((direction, ch_type, int(ch_id_str)))
+        if ch_num is None:
+            continue
+        new_id = f"sensor.{prefix}_{direction}_ch_{ch_num}_{metric}"
+        renames.append((stat_id, new_id))
+    return renames
+
+
+def _plan_stat_renames_to_id(
+    stat_ids: list[str],
+    channels: dict[str, list[dict[str, Any]]],
+    prefix: str,
+) -> list[tuple[str, str]]:
+    """Plan statistic renames from number-mode to id-mode entity_ids."""
+    lookup: dict[tuple[str, int], tuple[str, int]] = {}
+    for direction, ch_list in channels.items():
+        for ch in ch_list:
+            ch_type = ch.get("channel_type")
+            ch_id = ch.get("channel_id")
+            ch_num = ch.get("channel_number")
+            if ch_type is not None and ch_id is not None and ch_num is not None:
+                lookup[(direction, ch_num)] = (ch_type, ch_id)
+
+    renames: list[tuple[str, str]] = []
+    for stat_id in stat_ids:
+        match = _NUMBER_MODE_STAT_ID.match(stat_id)
+        if not match:
+            continue
+        stat_prefix, direction, ch_num_str, metric = match.groups()
+        if stat_prefix != prefix:
+            continue
+        key = lookup.get((direction, int(ch_num_str)))
+        if key is None:
+            continue
+        ch_type, ch_id = key
+        new_id = f"sensor.{prefix}_{direction}_{ch_type}_ch_{ch_id}_{metric}"
+        renames.append((stat_id, new_id))
+    return renames
+
+
+def _migrate_statistics(
+    hass: HomeAssistant,
+    stat_renames: list[tuple[str, str]],
+) -> int:
+    """Migrate recorder statistics from old entity_ids to new.
+
+    Uses the recorder's task queue directly — no entity registry
+    events, no race with running entities.  Both clear and rename
+    tasks go through queue_task FIFO, so the clear for each target
+    completes before the rename attempts to use that statistic_id.
+    """
+    from homeassistant.helpers.recorder import get_instance
+
+    recorder = get_instance(hass)
+
+    # Queue clear + rename pairs.  FIFO ordering guarantees the
+    # clear runs before the rename for each target statistic_id.
+    for old_stat_id, new_stat_id in stat_renames:
+        recorder.async_clear_statistics([new_stat_id])
+        recorder.async_update_statistics_metadata(
+            old_stat_id,
+            new_statistic_id=new_stat_id,
+        )
+
+    return len(stat_renames)
+
+
+def create_convert_channel_identity_handler(
+    hass: HomeAssistant,
+) -> Any:
+    """Create the convert_channel_identity service handler."""
+
+    async def handle_convert(call: ServiceCall) -> dict[str, Any]:
+        """Migrate recorder history to match the current channel mode.
+
+        Searches recorder statistics for entries that use the opposite
+        naming pattern (e.g. from a previous install).  Renames them
+        to the current mode so historical data is preserved.
+        """
+        device_id = call.data.get("device_id")
+        if device_id:
+            entry = _resolve_config_entry_for_device(hass, device_id)
+        else:
+            entry = _find_loaded_entry(hass)
+        if entry is None:
+            return {"error": "No cable modem configured"}
+
+        target_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
+
+        snapshot = entry.runtime_data.data_coordinator.data
+        if snapshot is None or snapshot.modem_data is None:
+            return {"error": "No modem data available — modem must be online"}
+
+        channels = _build_channel_lookup(snapshot.modem_data)
+        prefix = _get_entity_prefix(entry)
+
+        # Query recorder for all statistic IDs.
+        from homeassistant.components.recorder.statistics import (
+            async_list_statistic_ids,
+        )
+
+        all_stats = await async_list_statistic_ids(hass)
+        all_stat_ids = [s["statistic_id"] for s in all_stats]
+
+        # Plan renames from opposite-mode stats to current mode.
+        if target_mode == ChannelIdentity.NUMBER:
+            stat_renames = _plan_stat_renames_to_number(all_stat_ids, channels, prefix)
+        else:
+            stat_renames = _plan_stat_renames_to_id(all_stat_ids, channels, prefix)
+
+        if not stat_renames:
+            return {
+                "info": f"No statistics to migrate — already in {target_mode.value} mode",
+                "renamed": 0,
+            }
+
+        migrated = _migrate_statistics(hass, stat_renames)
+        model = entry.runtime_data.modem_identity.model
+        _LOGGER.info(
+            "Migrated statistics to %s mode [%s]: %d statistics renamed",
+            target_mode.value,
+            model,
+            migrated,
+        )
+
+        # Reload so sensors pick up the migrated statistics.
+        hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+        return {"renamed": migrated, "mode": target_mode.value}
+
+    return handle_convert
+
+
+# ------------------------------------------------------------------
 # Registration
 # ------------------------------------------------------------------
 
@@ -712,11 +958,23 @@ def async_register_services(hass: HomeAssistant) -> None:
         SERVICE_REQUEST_HEALTH_CHECK,
         create_request_health_check_handler(hass),
     )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_CONVERT_CHANNEL_IDENTITY,
+        create_convert_channel_identity_handler(hass),
+        schema=vol.Schema(
+            {
+                vol.Optional("device_id"): cv.string,
+            }
+        ),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
     _LOGGER.debug(
-        "Registered services: %s, %s, %s",
+        "Registered services: %s, %s, %s, %s",
         SERVICE_GENERATE_DASHBOARD,
         SERVICE_REQUEST_REFRESH,
         SERVICE_REQUEST_HEALTH_CHECK,
+        SERVICE_CONVERT_CHANNEL_IDENTITY,
     )
 
 
@@ -725,4 +983,5 @@ def async_unregister_services(hass: HomeAssistant) -> None:
     hass.services.async_remove(DOMAIN, SERVICE_GENERATE_DASHBOARD)
     hass.services.async_remove(DOMAIN, SERVICE_REQUEST_REFRESH)
     hass.services.async_remove(DOMAIN, SERVICE_REQUEST_HEALTH_CHECK)
+    hass.services.async_remove(DOMAIN, SERVICE_CONVERT_CHANNEL_IDENTITY)
     _LOGGER.debug("Unregistered services")

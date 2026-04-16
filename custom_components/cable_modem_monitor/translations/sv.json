@@ -13,11 +13,13 @@
         "description": "Välj en {manufacturer}-modemmodell. Modeller markerade med * är overifierade.",
         "data": {
           "model": "Modemmodell",
-          "entity_prefix": "Entity ID-prefix"
+          "entity_prefix": "Entity ID-prefix",
+          "channel_identity": "Channel Naming"
         },
         "data_description": {
           "model": "Välj din modemmodell från listan.",
-          "entity_prefix": "Lägger till modellnamn eller IP till Entity ID:n. Krävs vid övervakning av flera modem."
+          "entity_prefix": "Lägger till modellnamn eller IP till Entity ID:n. Krävs vid övervakning av flera modem.",
+          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
         }
       },
       "variant": {
@@ -162,6 +164,16 @@
     "request_health_check": {
       "name": "Request Health Check",
       "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
+    },
+    "convert_channel_identity": {
+      "name": "Convert Channel Identity",
+      "description": "Renames orphaned channel entities to match the current channel identity mode. Run after changing the mode in config flow. Modem must be online.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "Which modem to convert. Defaults to the first configured modem."
+        }
+      }
     }
   }
 }

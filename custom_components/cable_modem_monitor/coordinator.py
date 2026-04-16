@@ -10,11 +10,13 @@ or ``const.py`` (which should stay a leaf module with no heavy imports).
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypeAlias
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from .mapping_manager import ChannelMap
 
 if TYPE_CHECKING:
     from solentlabs.cable_modem_monitor_core.orchestration.models import (
@@ -45,6 +47,7 @@ class CableModemRuntimeData:
     health_monitor: HealthMonitor | None
     cancel_event: threading.Event | None
     modem_identity: ModemIdentity
+    channel_map: ChannelMap = field(default_factory=ChannelMap)
 
 
 CableModemConfigEntry: TypeAlias = ConfigEntry[CableModemRuntimeData]  # noqa: UP040 — mypy doesn't support PEP 695 yet

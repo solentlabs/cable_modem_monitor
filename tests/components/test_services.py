@@ -6,6 +6,8 @@ Service handler tests mock runtime_data and HA infrastructure.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,6 +20,7 @@ from custom_components.cable_modem_monitor.coordinator import (
 from custom_components.cable_modem_monitor.services import (
     _add_channel_graphs,
     _build_channel_graph_yaml,
+    _build_channel_lookup,
     _build_error_graphs_yaml,
     _build_latency_graph_yaml,
     _build_status_card_yaml,
@@ -25,10 +28,12 @@ from custom_components.cable_modem_monitor.services import (
     _find_loaded_entry,
     _format_channel_label,
     _format_title_with_type,
-    _get_channel_info,
+    _get_channel_info_id_mode,
     _get_dashboard_titles,
     _get_entity_prefix,
     _group_by_type,
+    _plan_stat_renames_to_id,
+    _plan_stat_renames_to_number,
     _resolve_config_entry_for_device,
     _resolve_target_entries,
     _unique_types,
@@ -96,8 +101,8 @@ CHANNEL_INFO_CASES: list[tuple[list[dict[str, Any]], str, list[tuple[str, int]],
     ids=[c[3] for c in CHANNEL_INFO_CASES],
 )
 def test_get_channel_info(channels, default_type, expected, desc):
-    """_get_channel_info extracts and sorts channel tuples."""
-    assert _get_channel_info(channels, default_type) == expected
+    """_get_channel_info_id_mode extracts and sorts channel tuples."""
+    assert _get_channel_info_id_mode(channels, default_type) == expected
 
 
 # -----------------------------------------------------------------------
@@ -841,12 +846,13 @@ def test_register_services() -> None:
     hass = MagicMock()
     async_register_services(hass)
 
-    assert hass.services.async_register.call_count == 3
+    assert hass.services.async_register.call_count == 4
     registered = {call.args[1] for call in hass.services.async_register.call_args_list}
     assert registered == {
         "generate_dashboard",
         "request_refresh",
         "request_health_check",
+        "convert_channel_identity",
     }
 
 
@@ -855,10 +861,76 @@ def test_unregister_services() -> None:
     hass = MagicMock()
     async_unregister_services(hass)
 
-    assert hass.services.async_remove.call_count == 3
+    assert hass.services.async_remove.call_count == 4
     removed = {call.args[1] for call in hass.services.async_remove.call_args_list}
     assert removed == {
         "generate_dashboard",
         "request_refresh",
         "request_health_check",
+        "convert_channel_identity",
     }
+
+
+# -----------------------------------------------------------------------
+# Stat rename planning (_plan_stat_renames_to_number / _plan_stat_renames_to_id)
+# -----------------------------------------------------------------------
+
+CHANNELS_DIR = Path(__file__).parent.parent / "fixtures" / "channels"
+
+
+def _load_fixture(name: str) -> Any:
+    return json.loads((CHANNELS_DIR / name).read_text())
+
+
+def _channels() -> dict[str, list[dict[str, Any]]]:
+    """Build channel lookup from fixtures (ds_locked + us_locked)."""
+    return _build_channel_lookup(
+        {
+            "downstream": _load_fixture("ds_locked.json"),
+            "upstream": _load_fixture("us_locked.json"),
+        }
+    )
+
+
+_TO_NUMBER_CASES = _load_fixture("stat_renames_to_number.json")
+_TO_ID_CASES = _load_fixture("stat_renames_to_id.json")
+
+
+class TestPlanStatRenamesToNumber:
+    """_plan_stat_renames_to_number: id-mode stats → number-mode."""
+
+    CHANNELS = _channels()
+
+    @pytest.mark.parametrize(
+        "case",
+        _TO_NUMBER_CASES,
+        ids=[c["id"] for c in _TO_NUMBER_CASES],
+    )
+    def test_plan(self, case: dict[str, Any]) -> None:
+        result = _plan_stat_renames_to_number(
+            case["stat_ids"],
+            self.CHANNELS,
+            case["prefix"],
+        )
+        expected = [tuple(pair) for pair in case["expected"]]
+        assert result == expected
+
+
+class TestPlanStatRenamesToId:
+    """_plan_stat_renames_to_id: number-mode stats → id-mode."""
+
+    CHANNELS = _channels()
+
+    @pytest.mark.parametrize(
+        "case",
+        _TO_ID_CASES,
+        ids=[c["id"] for c in _TO_ID_CASES],
+    )
+    def test_plan(self, case: dict[str, Any]) -> None:
+        result = _plan_stat_renames_to_id(
+            case["stat_ids"],
+            self.CHANNELS,
+            case["prefix"],
+        )
+        expected = [tuple(pair) for pair in case["expected"]]
+        assert result == expected

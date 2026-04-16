@@ -420,6 +420,7 @@ async def test_full_flow_creates_entry(hass: HomeAssistant):
     assert result["title"] == "Solent Labs TPS-2000 (192.168.100.1)"
     assert result["data"]["protocol"] == "http"
     assert result["data"]["manufacturer"] == "Solent Labs"
+    assert result["data"]["channel_identity"] == "number"
 
 
 # -----------------------------------------------------------------------

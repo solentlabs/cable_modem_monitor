@@ -1,0 +1,20 @@
+[
+  {
+    "channel_number": 1,
+    "channel_id": 29,
+    "channel_type": "qam",
+    "lock_status": "locked",
+    "power": 2.5,
+    "snr": 38.0,
+    "frequency": 555000000
+  },
+  {
+    "channel_number": 2,
+    "channel_id": 30,
+    "channel_type": "ofdm",
+    "lock_status": "locked",
+    "power": -1.0,
+    "snr": 35.5,
+    "frequency": 722000000
+  }
+]

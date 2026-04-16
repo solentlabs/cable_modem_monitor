@@ -79,7 +79,7 @@ def test_get_package_versions_not_installed():
 SUMMARY_CASES = [
     (600, 30, "every 10m",   "every 30s", "minutes_with_health"),
     (30,  0,  "every 30s",   "disabled",  "seconds_no_health"),
-    (0,   60, "manual only", "every 60s", "manual_with_health"),
+    (0,   60, "manual only", "every 1m",  "manual_with_health"),
     (0,   0,  "manual only", "disabled",  "manual_no_health"),
 ]
 # fmt: on
