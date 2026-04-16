@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.16] - 2026-04-16
+
+### Added
+
+- **Dual-mode channel identity** — position mode (`channel_number`) is
+  the default for new installs, giving stable entity IDs across
+  reboots. Existing installs keep ID mode (`channel_id`) via v1→v2
+  migration so DCID-based naming continues. A `convert_channel_identity`
+  dev service migrates recorder statistics between modes without
+  delete + re-add. Related to #117. Closes P28.
+- **Channel numbering across all parser formats** — Core auto-assigns
+  `channel_number` (1-based position) on all 7 parser formats. Unlocked
+  channels now return only `channel_number` + `lock_status`; all other
+  fields are nulled. Locked-only channels count toward the DS/US totals.
+- **TCP vs HTTP timing separation in health probes** — HTTP probe now
+  measures TCP connect and server response independently. TCP is
+  logged for diagnostics; `http_latency_ms` carries only server
+  response time (the modem load indicator). Related to #117.
+- **SB8200 HW v7 variant** — unprefixed base64 credentials in the URL
+  query string; same page/parser as base SB8200, only auth parameters
+  differ. MCP intake pipeline detects the unprefixed form. Related
+  to #124.
+- **Request-side query param detection in MCP intake** — session-level
+  query parameters that appear on every data-fetch entry are emitted
+  as `session.query_params` in the analysis output (filters jQuery
+  cache-busters and auth-managed params). Related to #86.
+
+### Fixed
+
+- **Dashboard restart confirmation dialog** — the restart button moved
+  out of the entities-card row into a dedicated button card so the
+  confirmation dialog reliably fires on every tap (the entities-card
+  row `tap_action` was being bypassed by the inner button widget).
+- **MB8611 / MB8600 restart** — added `pre_fetch_action` mirroring
+  the Arris HNAP pattern (browser always calls `GetMotoStatusSecXXX`
+  before `SetStatusSecuritySettings`). Without the pre-fetch the
+  modem returns ERROR instead of accepting the SET. Related to #60.
+- **TG3442DE data-fetch and logout** — firmware requires a `_n=`
+  cache-buster query parameter on all AJAX requests; server returns
+  HTTP 400 without it. `session.query_params` now threads static
+  query parameters through both the HTTP resource loader and the
+  action executor. Related to #86.
+- **`form_pbkdf2` auth Content-Type** — Technicolor modems only accept
+  `application/x-www-form-urlencoded`, not JSON. The salt request and
+  login POST now send form-encoded bodies. Resolves "No salt in
+  server response" failures. Related to #120, #115.
+- **Config flow connectivity error propagation** — the `form_nonce`
+  encoding pre-fetch swallowed all exceptions and fell back to plain
+  encoding, then proceeded to a doomed auth attempt. Connectivity
+  and timeout errors now surface immediately as "network unreachable"
+  instead of 40-line DEBUG tracebacks. Also fixes the
+  `verified`/`confirmed` status check so confirmed modems no longer
+  render with the unverified marker.
+- **Grace-period stability log** — probes firing during the
+  post-stability grace window now log `(grace: 12s/30s)` instead of
+  the misleading `(stable: 4/3)` counter that overflowed past the
+  threshold.
+
+### Changed
+
+- **Function/type colocation sweep** — free functions that take a
+  single typed argument moved onto the type (e.g. `find_mapping` →
+  `FieldMapping.find_by`, `detect_transport` → `TransportResult.detect`,
+  `detect_auth` → `AuthDetail.detect`). Phase-local MCP result types
+  moved out of the shared registry into their phase module.
+  `get_device_name` moved out of HA `const.py` into `lib/utils.py` to
+  keep `const.py` a pure leaf. Closes P29.
+- **Config flow variant labels** — variants with the same auth
+  strategy are now disambiguated by variant name instead of ISP list:
+  `"URL Token (Comcast, Spectrum)"` → `"URL Token"` (default),
+  `"URL Token (Spectrum)"` → `"URL Token — v7"` (named).
+- **Fleet verification** — TM1602A confirmed on alpha.15 user
+  diagnostics (#112); CH7465MT confirmed post provisioned-speed fix;
+  SB6190 form-nonce with b64_packed encoding confirmed (#83);
+  Broadcom BCM3390 chipset identified on CGA6444VF and CGA4236.
+
 ## [3.14.0-alpha.15] - 2026-04-12
 
 ### Added
