@@ -52,10 +52,9 @@ from .const import (
     CONF_SUPPORTS_ICMP,
     DOMAIN,
     ChannelIdentity,
-    get_device_name,
 )
 from .coordinator import CableModemConfigEntry
-from .lib.utils import parse_uptime_to_seconds
+from .lib.utils import get_device_name, parse_uptime_to_seconds
 from .mapping_manager import SlotKey, build_channel_map
 
 _LOGGER = logging.getLogger(__name__)

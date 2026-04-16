@@ -12,8 +12,9 @@ import re
 from typing import Any
 
 from ...validation.har_utils import parse_form_params, path_from_url
-from ..types import ActionDetail, ActionsDetail, CoreGap
+from ..types import CoreGap
 from .patterns import get_logout_patterns, get_restart_patterns
+from .types import ActionDetail, ActionsDetail
 
 # ---------------------------------------------------------------------------
 # Endpoint patterns (loaded from action_patterns.json)

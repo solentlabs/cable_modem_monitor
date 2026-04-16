@@ -14,7 +14,6 @@ from solentlabs.cable_modem_monitor_core.mcp.analysis.session import (
     SessionDetail,
     _cookie_name_from_set_cookie,
     _is_session_cookie,
-    detect_session,
 )
 
 from tests.conftest import collect_fixtures, load_fixture
@@ -35,7 +34,7 @@ def test_session_cookie(fixture_path: Path) -> None:
     """Correct cookie_name detected for each fixture."""
     data = load_fixture(fixture_path)
     warnings: list[str] = []
-    result = detect_session(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
+    result = SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
     assert result.cookie_name == data["_expected_cookie"]
 
 
@@ -48,7 +47,7 @@ def test_session_headers(fixture_path: Path) -> None:
     """Session headers detected correctly for fixtures that specify them."""
     data = load_fixture(fixture_path)
     warnings: list[str] = []
-    result = detect_session(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
+    result = SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
     for key, value in data["_expected_headers"].items():
         assert key in result.headers, f"Missing session header: {key}"
         assert result.headers[key] == value
@@ -63,7 +62,7 @@ def test_session_token_prefix(fixture_path: Path) -> None:
     """Token prefix detected correctly for fixtures that specify it."""
     data = load_fixture(fixture_path)
     warnings: list[str] = []
-    result = detect_session(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
+    result = SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
     assert result.token_prefix == data["_expected_token_prefix"]
 
 
@@ -76,7 +75,7 @@ def test_session_expected_warnings(fixture_path: Path) -> None:
     """Fixtures with _expected_warning produce the expected warning."""
     data = load_fixture(fixture_path)
     warnings: list[str] = []
-    detect_session(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
+    SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
     expected = data["_expected_warning"]
     assert any(expected in w for w in warnings), f"Expected warning containing {expected!r}, got {warnings}"
 
@@ -93,28 +92,28 @@ class TestSessionWarnings:
         """max_concurrent warning emitted for non-none, non-HNAP auth."""
         data = load_fixture(VALID_DIR / "form_with_cookie.json")
         warnings: list[str] = []
-        detect_session(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
+        SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
         assert any("max_concurrent" in w for w in warnings)
 
     def test_no_max_concurrent_warning_for_hnap(self) -> None:
         """No max_concurrent warning for HNAP transport."""
         data = load_fixture(VALID_DIR / "hnap_implicit.json")
         warnings: list[str] = []
-        detect_session(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
+        SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
         assert not any("max_concurrent" in w for w in warnings)
 
     def test_no_max_concurrent_warning_for_none(self) -> None:
         """No max_concurrent warning for auth:none."""
         data = load_fixture(VALID_DIR / "none_no_cookies.json")
         warnings: list[str] = []
-        detect_session(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
+        SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
         assert not any("max_concurrent" in w for w in warnings)
 
     def test_cookie_on_none_auth_warns(self) -> None:
         """Cookie detected on auth:none modem produces warning."""
         data = load_fixture(VALID_DIR / "form_with_cookie.json")
         warnings: list[str] = []
-        detect_session(data["_entries"], "http", "none", warnings)
+        SessionDetail.detect(data["_entries"], "http", "none", warnings)
         assert any("Cookie" in w and "auth:none" in w for w in warnings)
 
 

@@ -44,13 +44,13 @@ class FieldMapping:
             result["label"] = self.label
         return result
 
-
-def find_mapping(mappings: list[FieldMapping], field_name: str) -> FieldMapping | None:
-    """Find a mapping by canonical field name."""
-    for m in mappings:
-        if m.field == field_name:
-            return m
-    return None
+    @classmethod
+    def find_by(cls, mappings: list[FieldMapping], field_name: str) -> FieldMapping | None:
+        """Find a mapping by canonical field name."""
+        for m in mappings:
+            if m.field == field_name:
+                return m
+        return None
 
 
 @dataclass

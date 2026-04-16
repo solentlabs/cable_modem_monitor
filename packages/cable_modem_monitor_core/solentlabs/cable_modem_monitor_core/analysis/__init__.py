@@ -6,7 +6,7 @@ orchestrator diagnostics.
 Public API:
     Models: PollEvent, HealthEvent, BackoffEvent, RecoveryEvent, CoreAnalysis
     Parsers: parse_core_logs, parse_diagnostics
-    Utilities: compute_outage_durations, parse_ts
+    Utilities: parse_ts
 """
 
 from __future__ import annotations
@@ -19,7 +19,6 @@ from .models import (
     HealthEvent,
     PollEvent,
     RecoveryEvent,
-    compute_outage_durations,
 )
 
 __all__ = [
@@ -29,7 +28,6 @@ __all__ = [
     "HealthEvent",
     "PollEvent",
     "RecoveryEvent",
-    "compute_outage_durations",
     "parse_core_logs",
     "parse_diagnostics",
     "parse_ts",

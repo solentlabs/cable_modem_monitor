@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..format.types import DetectedTable
-from .types import FieldMapping, find_mapping
+from .types import FieldMapping
 
 # -----------------------------------------------------------------------
 # Filter match values
@@ -36,7 +36,7 @@ def detect_filter_table(
     """
     filters: dict[str, Any] = {}
 
-    lock_mapping = find_mapping(mappings, "lock_status")
+    lock_mapping = FieldMapping.find_by(mappings, "lock_status")
     if (
         lock_mapping is not None
         and lock_mapping.index is not None
@@ -44,7 +44,7 @@ def detect_filter_table(
     ):
         filters["lock_status"] = "locked"
 
-    freq_mapping = find_mapping(mappings, "frequency")
+    freq_mapping = FieldMapping.find_by(mappings, "frequency")
     if (
         freq_mapping is not None
         and freq_mapping.index is not None

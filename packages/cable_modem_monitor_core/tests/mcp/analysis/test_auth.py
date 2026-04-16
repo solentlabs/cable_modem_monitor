@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pytest
 from solentlabs.cable_modem_monitor_core.mcp.analysis import AuthDetail
-from solentlabs.cable_modem_monitor_core.mcp.analysis.auth import detect_auth
 from solentlabs.cable_modem_monitor_core.mcp.analysis.auth.hnap import (
     _detect_hmac_algorithm,
 )
@@ -52,7 +51,7 @@ def test_valid_auth_strategy(fixture_path: Path) -> None:
     data = load_fixture(fixture_path)
     warnings: list[str] = []
     hard_stops: list[str] = []
-    result = detect_auth(data["_entries"], data["_transport"], warnings, hard_stops)
+    result = AuthDetail.detect(data["_entries"], data["_transport"], warnings, hard_stops)
     assert result.strategy == data["_expected_strategy"]
     assert result.confidence == data["_expected_confidence"]
     assert not hard_stops
@@ -64,7 +63,7 @@ def test_invalid_auth_hard_stop(fixture_path: Path) -> None:
     data = load_fixture(fixture_path)
     warnings: list[str] = []
     hard_stops: list[str] = []
-    result = detect_auth(data["_entries"], data["_transport"], warnings, hard_stops)
+    result = AuthDetail.detect(data["_entries"], data["_transport"], warnings, hard_stops)
     assert result.strategy == data["_expected_strategy"]
     assert result.confidence == data["_expected_confidence"]
     assert any(data["_expected_hard_stop"] in hs for hs in hard_stops)
@@ -83,7 +82,7 @@ def test_invalid_auth_hard_stop(fixture_path: Path) -> None:
 def test_auth_field_extraction(fixture_path: Path) -> None:
     """Strategy-specific fields extracted correctly."""
     data = load_fixture(fixture_path)
-    result = detect_auth(data["_entries"], data["_transport"], [], [])
+    result = AuthDetail.detect(data["_entries"], data["_transport"], [], [])
     for key, value in data["_expected_fields"].items():
         assert key in result.fields, f"Missing auth field: {key}"
         assert result.fields[key] == value, f"Auth field {key}: expected {value!r}, got {result.fields[key]!r}"
@@ -103,7 +102,7 @@ def test_auth_expected_warnings(fixture_path: Path) -> None:
     """Fixtures with _expected_warning produce the expected warning."""
     data = load_fixture(fixture_path)
     warnings: list[str] = []
-    detect_auth(data["_entries"], data["_transport"], warnings, [])
+    AuthDetail.detect(data["_entries"], data["_transport"], warnings, [])
     expected = data["_expected_warning"]
     assert any(expected in w for w in warnings), f"Expected warning containing {expected!r}, got {warnings}"
 
@@ -372,7 +371,7 @@ def test_credential_post_gap_detection(url_path: str, expect_gap: bool, desc: st
 
     entries = [_build_credential_post_entry(url_path)]
     core_gaps: list[CoreGap] = []
-    detect_auth(entries, "http", [], [], core_gaps)
+    AuthDetail.detect(entries, "http", [], [], core_gaps)
     login_gaps = [g for g in core_gaps if g.category == "unmatched_login"]
     if expect_gap:
         assert len(login_gaps) == 1

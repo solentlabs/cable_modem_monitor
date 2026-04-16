@@ -26,24 +26,24 @@ class TransportResult:
         """Serialize to a plain dict for MCP tool output."""
         return {"transport": self.transport, "confidence": self.confidence}
 
+    @classmethod
+    def detect(cls, entries: list[dict[str, Any]]) -> TransportResult:
+        """Detect transport protocol from HAR entries.
 
-def detect_transport(entries: list[dict[str, Any]]) -> TransportResult:
-    """Detect transport protocol from HAR entries.
+        Scans all entries for HNAP markers (``/HNAP1/`` URL, ``SOAPAction``
+        header, ``HNAP_AUTH`` header). Any match → ``hnap``, else ``http``.
 
-    Scans all entries for HNAP markers (``/HNAP1/`` URL, ``SOAPAction``
-    header, ``HNAP_AUTH`` header). Any match → ``hnap``, else ``http``.
+        Args:
+            entries: HAR ``log.entries`` list.
 
-    Args:
-        entries: HAR ``log.entries`` list.
+        Returns:
+            TransportResult with transport and confidence.
+        """
+        for entry in entries:
+            req = entry["request"]
+            url = req.get("url", "")
+            req_hdrs = lower_headers(req)
+            if is_hnap_request(url, req_hdrs):
+                return cls(transport="hnap", confidence="high")
 
-    Returns:
-        TransportResult with transport and confidence.
-    """
-    for entry in entries:
-        req = entry["request"]
-        url = req.get("url", "")
-        req_hdrs = lower_headers(req)
-        if is_hnap_request(url, req_hdrs):
-            return TransportResult(transport="hnap", confidence="high")
-
-    return TransportResult(transport="http", confidence="high")
+        return cls(transport="http", confidence="high")

@@ -14,9 +14,12 @@ Post-analysis:
 - ``js_endpoints`` - uncaptured JS endpoint discovery
 - ``request_requirements`` - session-level query param detection
 
-Shared result types live in ``types``.
+Pipeline-wide types (``CoreGap``, ``FleetPatterns``) live in ``types``.
+Phase-local result types live with their phase (e.g., ``auth/types.py``,
+``actions/types.py``, ``format/types.py``, ``mapping/types.py``).
 """
 
-from .types import ActionDetail, ActionsDetail, AuthDetail
+from .actions.types import ActionDetail, ActionsDetail
+from .auth.types import AuthDetail
 
 __all__ = ["ActionDetail", "ActionsDetail", "AuthDetail"]

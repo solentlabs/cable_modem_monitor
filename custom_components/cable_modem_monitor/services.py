@@ -37,9 +37,9 @@ from .const import (
     CONF_SUPPORTS_ICMP,
     DOMAIN,
     ChannelIdentity,
-    get_device_name,
 )
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
+from .lib.utils import get_device_name
 
 _LOGGER = logging.getLogger(__name__)
 

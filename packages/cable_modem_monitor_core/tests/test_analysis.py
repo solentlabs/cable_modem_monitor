@@ -13,7 +13,6 @@ import pytest
 from solentlabs.cable_modem_monitor_core.analysis import (
     CoreAnalysis,
     HealthEvent,
-    compute_outage_durations,
     parse_core_logs,
     parse_diagnostics,
     parse_ts,
@@ -176,7 +175,7 @@ class TestParseTs:
 
 
 # ---------------------------------------------------------------------------
-# compute_outage_durations
+# CoreAnalysis.outage_durations
 # ---------------------------------------------------------------------------
 
 
@@ -189,7 +188,7 @@ class TestOutageDurations:
             HealthEvent(datetime(2025, 4, 1, 10, 1), "T100", "unresponsive"),
             HealthEvent(datetime(2025, 4, 1, 10, 3), "T100", "responsive"),
         ]
-        durations = compute_outage_durations(events)
+        durations = CoreAnalysis(health_checks=events).outage_durations()
 
         assert len(durations) == 1
         assert durations[0] == timedelta(minutes=2)
@@ -199,19 +198,19 @@ class TestOutageDurations:
             HealthEvent(datetime(2025, 4, 1, 10, 0), "T100", "responsive"),
             HealthEvent(datetime(2025, 4, 1, 10, 1), "T100", "unresponsive"),
         ]
-        durations = compute_outage_durations(events)
+        durations = CoreAnalysis(health_checks=events).outage_durations()
 
         assert len(durations) == 0
 
     def test_empty_input(self) -> None:
-        assert compute_outage_durations([]) == []
+        assert CoreAnalysis().outage_durations() == []
 
     def test_all_responsive(self) -> None:
         events = [
             HealthEvent(datetime(2025, 4, 1, 10, 0), "T100", "responsive"),
             HealthEvent(datetime(2025, 4, 1, 10, 1), "T100", "responsive"),
         ]
-        assert compute_outage_durations(events) == []
+        assert CoreAnalysis(health_checks=events).outage_durations() == []
 
     def test_multiple_outages(self) -> None:
         events = [
@@ -220,7 +219,7 @@ class TestOutageDurations:
             HealthEvent(datetime(2025, 4, 1, 10, 5), "T100", "unresponsive"),
             HealthEvent(datetime(2025, 4, 1, 10, 6), "T100", "responsive"),
         ]
-        durations = compute_outage_durations(events)
+        durations = CoreAnalysis(health_checks=events).outage_durations()
 
         assert len(durations) == 2
         assert durations[0] == timedelta(minutes=2)

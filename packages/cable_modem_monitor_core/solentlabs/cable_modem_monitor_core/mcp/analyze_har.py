@@ -19,13 +19,13 @@ from pathlib import Path
 from typing import Any
 
 from ..har import load_har_json
-from .analysis.actions import ActionsDetail, detect_actions
-from .analysis.auth import AuthDetail, detect_auth
+from .analysis.actions import ActionsDetail
+from .analysis.auth import AuthDetail
 from .analysis.format import detect_sections
 from .analysis.js_endpoints import detect_uncaptured_endpoints
 from .analysis.request_requirements import detect_request_requirements
-from .analysis.session import SessionDetail, detect_session
-from .analysis.transport import TransportResult, detect_transport
+from .analysis.session import SessionDetail
+from .analysis.transport import TransportResult
 from .analysis.types import CoreGap, FleetPatterns
 
 
@@ -92,16 +92,16 @@ def analyze_har(
     core_gaps: list[CoreGap] = []
 
     # Phase 1: Transport
-    transport_result = detect_transport(entries)
+    transport_result = TransportResult.detect(entries)
 
     # Phase 2: Auth
-    auth_result = detect_auth(entries, transport_result.transport, warnings, hard_stops, core_gaps)
+    auth_result = AuthDetail.detect(entries, transport_result.transport, warnings, hard_stops, core_gaps)
 
     # Phase 3: Session
-    session_result = detect_session(entries, transport_result.transport, auth_result.strategy, warnings)
+    session_result = SessionDetail.detect(entries, transport_result.transport, auth_result.strategy, warnings)
 
     # Phase 4: Actions
-    actions_result = detect_actions(entries, transport_result.transport, warnings, core_gaps)
+    actions_result = ActionsDetail.detect(entries, transport_result.transport, warnings, core_gaps)
 
     # Phase 5-6: Format detection and field mapping
     sections = detect_sections(entries, transport_result.transport, warnings, hard_stops, fleet=fleet)

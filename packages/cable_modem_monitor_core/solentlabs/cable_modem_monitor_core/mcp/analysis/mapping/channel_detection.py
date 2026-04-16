@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..format.types import DetectedTable
-from .types import FieldMapping, find_mapping
+from .types import FieldMapping
 
 # -----------------------------------------------------------------------
 # Public API
@@ -27,7 +27,7 @@ def detect_channel_type_table(
 
     Maps only values observed in the HAR.
     """
-    mod_mapping = find_mapping(mappings, "modulation")
+    mod_mapping = FieldMapping.find_by(mappings, "modulation")
     if mod_mapping is not None and mod_mapping.index is not None:
         col_idx = mod_mapping.index
         observed_values = set()

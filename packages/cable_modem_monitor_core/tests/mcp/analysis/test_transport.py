@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 from solentlabs.cable_modem_monitor_core.mcp.analysis.transport import (
     TransportResult,
-    detect_transport,
 )
 
 from tests.conftest import collect_fixtures, load_fixture
@@ -28,10 +27,10 @@ VALID_FIXTURES = collect_fixtures(VALID_DIR)
 
 
 @pytest.mark.parametrize("fixture_path", VALID_FIXTURES, ids=[f.stem for f in VALID_FIXTURES])
-def test_detect_transport(fixture_path: Path) -> None:
+def test_transport_detect(fixture_path: Path) -> None:
     """Transport detection returns correct transport for each fixture."""
     data = load_fixture(fixture_path)
-    result = detect_transport(data["_entries"])
+    result = TransportResult.detect(data["_entries"])
     assert result.transport == data["_expected_transport"]
     assert result.confidence == "high"
 

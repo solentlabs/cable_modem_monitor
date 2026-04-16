@@ -4,6 +4,21 @@ from __future__ import annotations
 
 import re
 
+from ..const import EntityPrefix
+
+
+def get_device_name(entity_prefix: str, *, model: str = "", host: str = "") -> str:
+    """Compute the HA device name from entity prefix setting.
+
+    Used by entity base classes (DeviceInfo) and _update_device_registry.
+    Must be called consistently so entities link to the correct device.
+    """
+    if entity_prefix == EntityPrefix.MODEL:
+        return f"Cable Modem {model}"
+    if entity_prefix == EntityPrefix.IP:
+        return f"Cable Modem {host}"
+    return "Cable Modem"
+
 
 def extract_number(text: str) -> int | None:
     """Extract integer from text."""

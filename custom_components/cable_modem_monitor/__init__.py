@@ -68,10 +68,10 @@ from .const import (
     PLATFORMS,
     VERSION,
     ChannelIdentity,
-    get_device_name,
 )
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
 from .core.log_buffer import setup_log_buffer
+from .lib.utils import get_device_name
 from .mapping_manager import ChannelMap, build_channel_map
 from .migrations import async_run_migrations
 from .services import async_register_services, async_unregister_services

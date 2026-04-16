@@ -108,31 +108,27 @@ class CoreAnalysis:
     recoveries: list[RecoveryEvent] = field(default_factory=list)
     transitions: list[tuple[datetime, str]] = field(default_factory=list)
 
+    def outage_durations(self) -> list[timedelta]:
+        """Walk health events chronologically to find outage windows.
 
-def compute_outage_durations(health_checks: list[HealthEvent]) -> list[timedelta]:
-    """Walk health events chronologically to find outage windows.
+        An outage starts when status transitions to ``"unresponsive"`` and
+        ends when status returns to ``"responsive"``.  Open-ended outages
+        (unresponsive at end of data) are not included.
 
-    An outage starts when status transitions to ``"unresponsive"`` and
-    ends when status returns to ``"responsive"``.  Open-ended outages
-    (unresponsive at end of data) are not included.
+        Returns:
+            Duration of each closed outage window.
+        """
+        durations: list[timedelta] = []
+        outage_start: datetime | None = None
+        prev_status = "responsive"
 
-    Args:
-        health_checks: Health events, in any order (sorted internally).
+        for h in sorted(self.health_checks, key=lambda x: x.timestamp):
+            if h.status == "unresponsive" and prev_status != "unresponsive":
+                outage_start = h.timestamp
+            elif h.status == "responsive" and prev_status == "unresponsive":
+                if outage_start:
+                    durations.append(h.timestamp - outage_start)
+                outage_start = None
+            prev_status = h.status
 
-    Returns:
-        Duration of each closed outage window.
-    """
-    durations: list[timedelta] = []
-    outage_start: datetime | None = None
-    prev_status = "responsive"
-
-    for h in sorted(health_checks, key=lambda x: x.timestamp):
-        if h.status == "unresponsive" and prev_status != "unresponsive":
-            outage_start = h.timestamp
-        elif h.status == "responsive" and prev_status == "unresponsive":
-            if outage_start:
-                durations.append(h.timestamp - outage_start)
-            outage_start = None
-        prev_status = h.status
-
-    return durations
+        return durations

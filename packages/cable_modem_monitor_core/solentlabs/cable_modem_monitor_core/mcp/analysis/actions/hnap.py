@@ -11,7 +11,7 @@ import json
 from typing import Any
 
 from ...validation.har_utils import lower_headers
-from ..types import ActionDetail, ActionsDetail
+from .types import ActionDetail, ActionsDetail
 
 
 def detect_hnap_actions(entries: list[dict[str, Any]]) -> ActionsDetail:

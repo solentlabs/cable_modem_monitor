@@ -40,9 +40,9 @@ from .const import (
     CONF_SUPPORTS_ICMP,
     CONF_VARIANT,
     DOMAIN,
-    get_device_name,
 )
 from .coordinator import CableModemConfigEntry
+from .lib.utils import get_device_name
 from .services import async_request_modem_refresh
 
 _LOGGER = logging.getLogger(__name__)

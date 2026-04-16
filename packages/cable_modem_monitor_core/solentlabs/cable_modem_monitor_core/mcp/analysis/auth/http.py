@@ -22,7 +22,7 @@ from ...validation.har_utils import (
     parse_form_params,
     path_from_url,
 )
-from ..types import AuthDetail, CoreGap
+from ..types import CoreGap
 from .patterns import (
     get_login_url_patterns,
     get_nonce_error_prefix,
@@ -31,6 +31,7 @@ from .patterns import (
     get_sjcl_page_variables,
     get_sjcl_post_fields,
 )
+from .types import AuthDetail
 
 # ---------------------------------------------------------------------------
 # Auth patterns (loaded from auth_patterns.json)

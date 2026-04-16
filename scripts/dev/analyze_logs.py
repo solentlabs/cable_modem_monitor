@@ -24,7 +24,6 @@ from statistics import mean, median
 from solentlabs.cable_modem_monitor_core.analysis import (
     CoreAnalysis,
     RecoveryEvent,
-    compute_outage_durations,
     parse_core_logs,
     parse_ts,
 )
@@ -370,7 +369,7 @@ def _report_recovery(results: HAAnalysis) -> list[str]:
 
     lines.extend(_report_event_lists(results))
 
-    outage_durations = compute_outage_durations(core.health_checks)
+    outage_durations = core.outage_durations()
     if outage_durations:
         lines.append("")
         lines.append("  Outage durations:")

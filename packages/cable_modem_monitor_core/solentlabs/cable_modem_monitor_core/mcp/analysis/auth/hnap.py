@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from ...validation.har_utils import lower_headers
-from ..types import AuthDetail
+from .types import AuthDetail
 
 
 def detect_hnap_auth(entries: list[dict[str, Any]], warnings: list[str]) -> AuthDetail:

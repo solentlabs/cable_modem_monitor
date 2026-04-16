@@ -54,47 +54,48 @@ class SessionDetail:
             "token_prefix": self.token_prefix,
         }
 
+    @classmethod
+    def detect(
+        cls,
+        entries: list[dict[str, Any]],
+        transport: str,
+        auth_strategy: str,
+        warnings: list[str],
+    ) -> SessionDetail:
+        """Detect session configuration from HAR entries.
 
-def detect_session(
-    entries: list[dict[str, Any]],
-    transport: str,
-    auth_strategy: str,
-    warnings: list[str],
-) -> SessionDetail:
-    """Detect session configuration from HAR entries.
+        Args:
+            entries: HAR ``log.entries`` list.
+            transport: Detected transport (``http`` or ``hnap``).
+            auth_strategy: Detected auth strategy name.
+            warnings: Mutable list to append warnings to.
 
-    Args:
-        entries: HAR ``log.entries`` list.
-        transport: Detected transport (``http`` or ``hnap``).
-        auth_strategy: Detected auth strategy name.
-        warnings: Mutable list to append warnings to.
+        Returns:
+            SessionDetail with detected session configuration.
+        """
+        # HNAP session is implicit -- the auth manager sets both cookies
+        # (uid + PrivateKey) and signs requests via HNAP_AUTH header.
+        # No session block needed in modem.yaml.
+        if transport == "hnap":
+            return cls()
 
-    Returns:
-        SessionDetail with detected session configuration.
-    """
-    # HNAP session is implicit -- the auth manager sets both cookies
-    # (uid + PrivateKey) and signs requests via HNAP_AUTH header.
-    # No session block needed in modem.yaml.
-    if transport == "hnap":
-        return SessionDetail()
+        # Stateless strategies typically don't need session config
+        if auth_strategy == "none":
+            # Still scan for unusual patterns (cookie set without login)
+            session = _scan_session_artifacts(entries)
+            if session.cookie_name:
+                warnings.append(
+                    f"Cookie '{session.cookie_name}' detected on auth:none modem -- "
+                    "unusual but not invalid. Verify if session tracking is needed."
+                )
+            return session
 
-    # Stateless strategies typically don't need session config
-    if auth_strategy == "none":
-        # Still scan for unusual patterns (cookie set without login)
         session = _scan_session_artifacts(entries)
-        if session.cookie_name:
-            warnings.append(
-                f"Cookie '{session.cookie_name}' detected on auth:none modem -- "
-                "unusual but not invalid. Verify if session tracking is needed."
-            )
+
+        # Infer max_concurrent from session evidence
+        _infer_max_concurrent(session, auth_strategy, warnings)
+
         return session
-
-    session = _scan_session_artifacts(entries)
-
-    # Infer max_concurrent from session evidence
-    _infer_max_concurrent(session, auth_strategy, warnings)
-
-    return session
 
 
 def _scan_session_artifacts(entries: list[dict[str, Any]]) -> SessionDetail:
