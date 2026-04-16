@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reboots. Existing installs keep ID mode (`channel_id`) via v1→v2
   migration so DCID-based naming continues. A `convert_channel_identity`
   dev service migrates recorder statistics between modes without
-  delete + re-add. Related to #117. Closes P28.
+  delete + re-add. Related to #117.
 - **Channel numbering across all parser formats** — Core auto-assigns
   `channel_number` (1-based position) on all 7 parser formats. Unlocked
   channels now return only `channel_number` + `lock_status`; all other
@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `detect_auth` → `AuthDetail.detect`). Phase-local MCP result types
   moved out of the shared registry into their phase module.
   `get_device_name` moved out of HA `const.py` into `lib/utils.py` to
-  keep `const.py` a pure leaf. Closes P29.
+  keep `const.py` a pure leaf.
 - **Config flow variant labels** — variants with the same auth
   strategy are now disambiguated by variant name instead of ISP list:
   `"URL Token (Comcast, Spectrum)"` → `"URL Token"` (default),
@@ -195,7 +195,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DM1000 enhancements** — `password_field` list, per-array JSON
   resources, OFDM channel support. Related to #92.
 - **MCP form discovery** — `login_page` emission, discoverable
-  `hidden_fields` filtering, `form_selector` detection (P23).
+  `hidden_fields` filtering, `form_selector` detection.
 - **SJCL known-answer tests** — fixture-driven crypto tests anchored
   to `sjclCrypto.js` reference values, plus end-to-end integration
   test running `FormSjclAuthManager` against `HARMockServer`.
@@ -229,11 +229,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **P8 complete: `javascript_json` format detection** — MCP intake
-  pipeline now detects JS variable assignments containing JSON arrays
-  in `<script>` tags (e.g., TG3442DE `json_dsData = [{...}]`).
-  Closes the last P8 deterministic gap.
-- **P20 complete: native `docsis_status`** — MB7621 (`Network Access`
+- **`javascript_json` format detection** — MCP intake pipeline now
+  detects JS variable assignments containing JSON arrays in
+  `<script>` tags (e.g., TG3442DE `json_dsData = [{...}]`).
+- **Native `docsis_status`** — MB7621 (`Network Access`
   from MotoConnection.asp) and XB6/XB7 (`combined_status` computed
   from downstream + upstream status). Three modems now have native
   DOCSIS status instead of relying on lock-status derivation.
@@ -262,11 +261,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **P8 pipeline regressions** — session cookie detection expanded
-  (`credential`/`sec` indicators), strategy-aware auth field copy,
-  `html_fields` CSS selector serialization, nested JSON direction
-  inference (G54 recursive key scanning).
-- **P10 internal quality** — `to_dict()` on diagnostics models,
+- **MCP intake pipeline regressions** — session cookie detection
+  expanded (`credential`/`sec` indicators), strategy-aware auth field
+  copy, `html_fields` CSS selector serialization, nested JSON
+  direction inference (G54 recursive key scanning).
+- **Internal quality improvements** — `to_dict()` on diagnostics models,
   mock server `get_challenge_response()`, generic `ComputedField`
   for derived system_info, CM1200 InitTagValue offset docs.
 - **Computed `system_info` fields** — generic `ComputedField` with
