@@ -619,22 +619,28 @@ def _find_loaded_entry(
     return None
 
 
-def _resolve_dashboard_target(
-    hass: HomeAssistant, call: ServiceCall
-) -> tuple[CableModemConfigEntry, dict[str, Any]] | str:
+class DashboardError(Exception):
+    """Raised when a dashboard target cannot be resolved.
+
+    The exception message is the YAML error string returned to the caller.
+    """
+
+
+def _resolve_dashboard_target(hass: HomeAssistant, call: ServiceCall) -> tuple[CableModemConfigEntry, dict[str, Any]]:
     """Resolve the config entry and modem data for a dashboard request.
 
-    Returns the (entry, modem_data) tuple on success, or an error YAML
-    string when the entry or its data snapshot is missing.
+    Raises:
+        DashboardError: When no config entry is loaded, or when the
+            entry has no modem data snapshot yet.
     """
     device_id = call.data.get("device_id")
     entry = _resolve_config_entry_for_device(hass, device_id) if device_id else _find_loaded_entry(hass)
     if entry is None:
-        return "# Error: No cable modem configured"
+        raise DashboardError("# Error: No cable modem configured")
 
     snapshot = entry.runtime_data.data_coordinator.data
     if snapshot is None or snapshot.modem_data is None:
-        return "# Error: No modem data available"
+        raise DashboardError("# Error: No modem data available")
 
     return entry, snapshot.modem_data
 
@@ -646,10 +652,10 @@ def create_generate_dashboard_handler(
 
     def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:
         """Handle the generate_dashboard service call."""
-        resolved = _resolve_dashboard_target(hass, call)
-        if isinstance(resolved, str):
-            return {"yaml": resolved}
-        entry, modem_data = resolved
+        try:
+            entry, modem_data = _resolve_dashboard_target(hass, call)
+        except DashboardError as exc:
+            return {"yaml": str(exc)}
 
         entity_prefix = _get_entity_prefix(entry)
         has_icmp = bool(entry.data.get(CONF_SUPPORTS_ICMP, False))
