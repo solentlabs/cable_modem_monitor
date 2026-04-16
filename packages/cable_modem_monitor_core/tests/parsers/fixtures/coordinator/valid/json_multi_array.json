@@ -74,12 +74,14 @@
     "downstream": [
       {
         "channel_id": 1,
+        "channel_number": 1,
         "frequency": 735000000,
         "power": -6.5,
         "channel_type": "qam"
       },
       {
         "channel_id": 0,
+        "channel_number": 2,
         "power": -7.4,
         "channel_type": "ofdm"
       }

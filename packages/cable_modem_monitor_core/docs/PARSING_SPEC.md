@@ -547,52 +547,26 @@ All `BaseParser` implementations and parser.py hooks produce the same
 `ModemData` shape. This is the contract between parsing and everything
 downstream (entities, diagnostics, platform output).
 
-Channel dicts and system_info are open — canonical fields are guaranteed,
-but any additional field mapped in parser.yaml or extracted by parser.py
-passes through without core changes. This lets modems expose values like
-`channel_width`, `active_subcarriers`, `temperature`, or `fft_size`
-without modifying Core or the `BaseParser` implementations.
+Channel dicts and system_info are open — canonical fields are
+guaranteed, but any additional field mapped in parser.yaml or extracted
+by parser.py passes through without core changes. This lets modems
+expose values like `channel_width`, `active_subcarriers`,
+`temperature`, or `fft_size` without modifying Core or the
+`BaseParser` implementations.
+
+### ModemData Shape
 
 ```python
 {
-    "downstream": [
-        {
-            # Canonical fields (Core understands these)
-            "channel_id": int,         # DOCSIS channel ID
-            "lock_status": str,        # "Locked" | "Not Locked"
-            "modulation": str,         # "QAM256", "OFDM", etc.
-            "channel_type": str,       # "qam" | "ofdm"
-            "frequency": int,          # Hz (always)
-            "power": float,            # dBmV
-            "snr": float,              # dB
-            "corrected": int,          # correctable codeword errors
-            "uncorrected": int,        # uncorrectable codeword errors
-
-            # Modem-specific fields pass through (Core ignores, HA exposes)
-            # e.g., "channel_width": 192000000, "active_subcarriers": 1880
-        },
-    ],
-    "upstream": [
-        {
-            # Canonical fields
-            "channel_id": int,
-            "lock_status": str,
-            "modulation": str,
-            "channel_type": str,       # "atdma" | "ofdma"
-            "frequency": int,          # Hz
-            "power": float,            # dBmV
-            "symbol_rate": int,        # ksym/s (if available)
-
-            # Modem-specific fields pass through
-        },
-    ],
+    "downstream": [channel_dict, ...],   # QAM and/or OFDM channels
+    "upstream": [channel_dict, ...],     # ATDMA and/or OFDMA channels
     "system_info": {
         # Standard fields (present when the modem exposes them)
-        "system_uptime": str,          # e.g., "7 days 00:00:01"
+        "system_uptime": str,            # e.g., "7 days 00:00:01"
         "hardware_version": str,
         "software_version": str,
         "model_name": str,
-        "docsis_status": str,          # "Operational" | "Not Synchronized"
+        "docsis_status": str,            # "Operational" | "Not Synchronized"
 
         # Modem-specific fields pass through
         # e.g., "boot_status", "security_status", "docsis_version"
@@ -600,33 +574,127 @@ without modifying Core or the `BaseParser` implementations.
 }
 ```
 
+### Channel Field Contracts by Type
+
+QAM and OFDM are fundamentally different channel types with different
+field semantics. QAM channels use a single modulation scheme per
+channel — the `modulation` field is meaningful. OFDM channels use
+per-subcarrier adaptive modulation across thousands of subcarriers —
+there is no single modulation value. The field contracts reflect this.
+
+#### Identity fields (all channel types)
+
+Every channel dict contains these fields. They are used for entity
+identity, position tracking, and lock status derivation.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `channel_number` | int | 1-based position within direction |
+| `channel_id` | int | DCID/UCID assigned by CMTS |
+| `channel_type` | str | `"qam"`, `"ofdm"`, `"atdma"`, `"ofdma"` |
+| `lock_status` | str | `"locked"` / `"not_locked"` |
+
+#### QAM Downstream (`channel_type: "qam"`)
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `frequency` | int | Hz, always normalized |
+| `power` | float | dBmV |
+| `snr` | float | dB |
+| `modulation` | str | Single scheme per channel: `"256QAM"`, `"64QAM"`, etc. |
+| `corrected` | int | Correctable codeword errors |
+| `uncorrected` | int | Uncorrectable codeword errors |
+
+#### ATDMA Upstream (`channel_type: "atdma"`)
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `frequency` | int | Hz |
+| `power` | float | dBmV |
+| `modulation` | str | `"64QAM"`, `"QPSK"`, etc. |
+| `symbol_rate` | int | Sym/s |
+
+#### OFDM Downstream (`channel_type: "ofdm"`)
+
+OFDM channels carry different metrics than QAM. `corrected` and
+`uncorrected` are LDPC codeword counts (not Reed-Solomon) and are
+reported by roughly half the fleet.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `frequency` | int | Center frequency in Hz (when available) |
+| `power` | float | dBmV (PLC power) |
+| `snr` | float | Average RxMER in dB |
+| `corrected` | int | LDPC codeword corrections (when available) |
+| `uncorrected` | int | Uncorrectable LDPC codewords (when available) |
+| `modulation` | str | Optional. PLC subcarrier modulation (e.g., `"QAM4096"`). Values must be actual modulation schemes, not generic labels — `"OFDM"`, `"Other"`, `"OFDM PLC"` are channel type restatements and should be normalized via `map` or omitted. |
+
+#### OFDMA Upstream (`channel_type: "ofdma"`)
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `frequency` | int | Center frequency in Hz (when available) |
+| `power` | float | dBmV |
+| `modulation` | str | Optional. Same rules as OFDM downstream. |
+
+#### Extended fields (optional, pass-through)
+
+These fields are available on some modems and pass through to
+downstream consumers without Core interpretation. When present, they
+must use the canonical type and unit.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `channel_width` | int | Hz — normalize from MHz or string |
+| `fft_type` | str | `"2K"` / `"4K"` / `"8K"` |
+| `active_subcarriers` | int | |
+
+#### Fields stripped from OFDM/OFDMA output
+
+These fields are not part of the OFDM contract. If present in parser
+output, they are removed by coordinator post-processing.
+
+| Field | Why |
+| ----- | --- |
+| `is_ofdm` | Redundant with `channel_type`. CM3500B-only artifact. |
+| `symbol_rate` | Not applicable to OFDM/OFDMA. |
+
 ### Entity Identity Key
 
-Channel entities are identified by the composite key
-`(channel_type, channel_id)`. This key is stable across polls and
-maps to entity IDs like `sensor.ds_qam_ch_21_power`.
+Core outputs channels as a list, with each channel carrying identity
+fields for both keying strategies. The HA layer selects the entity
+identity key via a user-configurable mode — see
+[CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §5
+for the mapping manager design.
 
-- `channel_type` disambiguates DOCSIS 3.1 modems where SC-QAM and
-  OFDM channels can share the same channel ID
-- `channel_id` is the DOCSIS Channel ID assigned by the CMTS, not the
-  display row index — ISP technicians reference channel IDs, and error
-  counts accumulate per channel ID
+**Core identity fields (always present on every channel):**
 
-Both fields are **required** in every channel dict. A channel without
-`channel_type` or `channel_id` cannot be mapped to an entity.
+- `channel_number` — the modem's row position (1-based). Stable
+  across reboots. Used as entity slot in position mode.
+- `channel_id` — the CMTS-assigned DOCSIS Channel ID (DCID/UCID).
+  Can change on reboot. Used with `channel_type` as the entity key
+  in ID mode.
+- `channel_type` — `qam`, `ofdm`, `atdma`, `ofdma`. Disambiguates
+  DOCSIS 3.1 modems where SC-QAM and OFDM channels can share the
+  same Channel ID.
 
-When a modem reboots, the CMTS may assign different channels
-(rebonding). The entity model handles this — channels that disappear
-become inactive, new channels get new entities. See the entity model
-specification for lifecycle details.
+**Optional identity field:**
+
+- `source_channel_number` — present only on JS-embedded modems when
+  the per-function position differs from the unified `channel_number`.
+  Enables correlation with modem web UIs that show separate QAM and
+  OFDM tables with independent numbering.
+
+Core does not key or index by any of these fields — it emits them as
+data. The HA mapping manager reads the user's chosen identity mode
+and builds slot maps accordingly.
 
 ### Field Guarantees
 
-**Canonical fields** — Core understands these and uses them for
-entity identity, status derivation, health checks, and DOCSIS lock
-detection:
+**Identity fields** — Core understands these and uses them for entity
+identity, status derivation, health checks, and DOCSIS lock detection:
 
-- `channel_id` is always present and non-zero for valid channels
+- `channel_id` is always present and always an integer (not a string)
 - `channel_type` uses canonical values: `qam`, `ofdm`, `atdma`, `ofdma`
 - `lock_status` uses canonical values: `locked`, `not_locked`. Raw
   modem-specific values (e.g., `"Locked"`, `"Not Locked"`, `"Active"`,
@@ -635,10 +703,25 @@ detection:
   field. The orchestrator uses normalized `lock_status` to derive
   `docsis_status` — see
   [RUNTIME_POLLING_SPEC.md](RUNTIME_POLLING_SPEC.md#status-derivation)
-- `frequency` is always in Hz (`BaseParser` implementations normalize from MHz/GHz)
+- `channel_number` is always present, 1-based. Most formats auto-assign
+  from row/element position when not mapped; HNAP requires explicit
+  mapping (all HNAP parser.yaml files map it from index 0). See
+  [CHANNEL_IDENTIFICATION_SPEC.md §10](CHANNEL_IDENTIFICATION_SPEC.md#core-channel_number-pre-pass)
+  for the per-format reconciliation
+
+**Metric fields** — type and unit guarantees:
+
+- `frequency` is always in Hz (`BaseParser` implementations normalize
+  from MHz/GHz)
 - `power` and `snr` are floats even when the source is integer
-- `system_info` keys are snake_case, values are strings
+- `channel_width` is always in Hz when present
 - Missing optional fields are omitted (not `null` or empty string)
+- `system_info` keys are snake_case, values are strings
+
+**Unlocked channels** — when `lock_status` is `"not_locked"`, all
+metric fields are stripped. Only `channel_number` and `lock_status`
+remain. This prevents firmware noise (`-Infinity`, `0`, `"Unknown"`)
+from leaking into output. See CHANNEL_IDENTIFICATION_SPEC.md §6.
 
 **Additional mapped fields** — Core does not validate or interpret
 these. They flow from parser output to downstream attributes unchanged.

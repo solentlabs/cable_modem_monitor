@@ -10,6 +10,7 @@ See PARSING_SPEC.md HTMLTableParser section.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from bs4 import Tag
@@ -103,6 +104,11 @@ def _extract_row(
             return None
 
         raw_text = cells[col.index].get_text(strip=True)
+
+        if col.pattern:
+            m = re.search(col.pattern, raw_text)
+            raw_text = m.group(1) if m else ""
+
         value = convert_value(
             raw_text,
             col.type,

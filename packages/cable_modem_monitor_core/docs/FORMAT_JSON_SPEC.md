@@ -155,3 +155,6 @@ validation error.
 2. Navigate to array(s) using dot-notation path
 3. For each object in each array, map keys to canonical fields
 4. Concatenate results from all arrays
+5. Auto-assign `channel_number` from 1-based array index when not
+   already mapped by parser.yaml (see
+   [CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §10)

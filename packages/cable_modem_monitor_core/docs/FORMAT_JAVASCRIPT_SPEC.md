@@ -156,6 +156,32 @@ upstream:
 Multiple functions in the same section (e.g., QAM + OFDM downstream)
 produce channels that are concatenated into a single list.
 
+### Channel number assignment
+
+When a section has multiple functions, the framework assigns unified
+`channel_number` across the combined list (1-based, function order as
+declared in parser.yaml). QAM channels keep their function-local
+positions; OFDM channels are numbered after the last QAM channel.
+
+The original per-function position is emitted as
+`source_channel_number` when it differs from the unified
+`channel_number`. This lets users correlate with modem web UIs that
+display separate QAM and OFDM tables with independent numbering.
+
+**Example:** 32 QAM channels (functions[0]) + 2 OFDM channels
+(functions[1]):
+
+| Unified `channel_number` | `source_channel_number` | Type |
+|---|---|---|
+| 1 | *(omitted — same)* | qam |
+| ... | | |
+| 32 | *(omitted — same)* | qam |
+| 33 | 1 | ofdm |
+| 34 | 2 | ofdm |
+
+See [CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md)
+§10 for the full format coverage.
+
 ## JSJsonParser
 
 Extracts data from JSON arrays embedded in JavaScript variable
@@ -219,3 +245,9 @@ downstream:
 
 The `variable` field distinguishes downstream from upstream when both
 share the same resource URL (e.g., `json_dsData` vs `json_usData`).
+
+### Channel number assignment (javascript_json)
+
+`channel_number` is auto-assigned from the 1-based array index when
+not already mapped by parser.yaml. See
+[CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §10.

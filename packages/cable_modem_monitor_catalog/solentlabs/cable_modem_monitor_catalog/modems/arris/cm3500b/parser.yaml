@@ -8,6 +8,10 @@ downstream:
         type: header_text
       row_start: 1
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
+          pattern: "(\\d+)"
         - index: 1
           field: channel_id
           type: integer
@@ -42,14 +46,16 @@ downstream:
       row_start: 1
       columns:
         - index: 0
-          field: ofdm_label
-          type: string
+          field: source_channel_number
+          type: integer
+          pattern: "(\\d+)"
         - index: 1
           field: fft_type
           type: string
         - index: 2
           field: channel_width
           type: float
+          scale: 1000000 # MHz → Hz
         - index: 3
           field: active_subcarriers
           type: integer
@@ -75,6 +81,10 @@ upstream:
         type: header_text
       row_start: 1
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
+          pattern: "(\\d+)"
         - index: 1
           field: channel_id
           type: integer
@@ -104,14 +114,16 @@ upstream:
       row_start: 1
       columns:
         - index: 0
-          field: ofdm_label
-          type: string
+          field: source_channel_number
+          type: integer
+          pattern: "(\\d+)"
         - index: 1
           field: fft_type
           type: string
         - index: 2
           field: channel_width
           type: float
+          scale: 1000000 # MHz → Hz
         - index: 3
           field: active_subcarriers
           type: integer

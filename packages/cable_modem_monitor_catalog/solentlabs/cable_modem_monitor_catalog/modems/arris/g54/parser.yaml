@@ -54,7 +54,8 @@ downstream:
           type: integer
         - key: "channelBandwidth"
           field: channel_width
-          type: string
+          type: float
+          scale: 1000000 # MHz → Hz
         - key: "fftType"
           field: fft_type
           type: string
@@ -122,7 +123,8 @@ upstream:
           type: string
         - key: "channelBandwidth"
           field: channel_width
-          type: string
+          type: float
+          scale: 1000000 # MHz → Hz
         - key: "power"
           field: power_state
           type: string
@@ -158,6 +160,12 @@ system_info:
           field: docsis_version
           type: string
           path: "release"
+        - key: "cmStatParamsStatusDescription"
+          field: docsis_status
+          type: string
+          path: "docsis.cmstatus"
+          map:
+            "DOCSIS_CM_STAT_PARAMS_OPERATIONAL": "Operational"
 
 # DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
 # at a vastly different scale and are not aggregated.

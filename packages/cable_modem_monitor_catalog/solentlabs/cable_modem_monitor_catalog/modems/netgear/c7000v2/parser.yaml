@@ -75,6 +75,12 @@ system_info:
     - format: javascript
       resource: "/DocsisStatus.htm"
       functions:
+        - name: "InitTagValue"
+          delimiter: "|"
+          fields:
+            - offset: 3
+              field: docsis_status
+              type: string
         - name: "InitProvRateTableTagValue"
           delimiter: "|"
           fields:

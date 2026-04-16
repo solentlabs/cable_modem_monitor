@@ -3,6 +3,9 @@ downstream:
   data_key: MotoConnDownstreamChannel
   field_delimiter: "^"
   fields:
+    - index: 0
+      field: channel_number
+      type: integer
     - index: 1
       field: lock_status
       type: lock_status
@@ -28,7 +31,6 @@ downstream:
       field: corrected
       type: integer
     - index: 8
-
       field: uncorrected
       type: integer
   record_delimiter: "|+|"
@@ -38,6 +40,9 @@ upstream:
   data_key: MotoConnUpstreamChannel
   field_delimiter: "^"
   fields:
+    - index: 0
+      field: channel_number
+      type: integer
     - index: 1
       field: lock_status
       type: lock_status
@@ -57,7 +62,6 @@ upstream:
       field: frequency
       type: frequency
     - index: 6
-
       field: power
       type: float
   record_delimiter: "|+|"

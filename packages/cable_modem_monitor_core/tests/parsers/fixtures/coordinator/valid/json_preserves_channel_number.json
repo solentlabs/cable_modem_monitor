@@ -1,0 +1,71 @@
+{
+  "_description": "Auto-assign channel_number skips channels that already have it from parser.yaml",
+  "_json": {
+    "/api/downstream": {
+      "channels": [
+        {
+          "chNum": 5,
+          "channelId": 10,
+          "frequency": 519000000,
+          "power": 3.2
+        },
+        {
+          "chNum": 6,
+          "channelId": 11,
+          "frequency": 525000000,
+          "power": 2.8
+        }
+      ]
+    }
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "json",
+      "resource": "/api/downstream",
+      "array_path": "channels",
+      "fields": [
+        {
+          "key": "chNum",
+          "field": "channel_number",
+          "type": "integer"
+        },
+        {
+          "key": "channelId",
+          "field": "channel_id",
+          "type": "integer"
+        },
+        {
+          "key": "frequency",
+          "field": "frequency",
+          "type": "integer"
+        },
+        {
+          "key": "power",
+          "field": "power",
+          "type": "float"
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {
+        "channel_number": 5,
+        "channel_id": 10,
+        "frequency": 519000000,
+        "power": 3.2
+      },
+      {
+        "channel_number": 6,
+        "channel_id": 11,
+        "frequency": 525000000,
+        "power": 2.8
+      }
+    ],
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 2,
+      "upstream_channel_count": 0
+    }
+  }
+}

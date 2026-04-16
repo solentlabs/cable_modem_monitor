@@ -7,6 +7,9 @@ downstream:
         type: header_text
       row_start: 2
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
         - index: 1
           field: lock_status
           type: lock_status
@@ -47,6 +50,9 @@ upstream:
         type: header_text
       row_start: 2
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
         - index: 1
           field: lock_status
           type: lock_status

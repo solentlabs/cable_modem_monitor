@@ -2,6 +2,7 @@
   "downstream": [
     {
       "channel_id": 1,
+      "channel_number": 1,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 10.4,
@@ -9,6 +10,7 @@
     },
     {
       "channel_id": 2,
+      "channel_number": 2,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 10.2,
@@ -16,6 +18,7 @@
     },
     {
       "channel_id": 3,
+      "channel_number": 3,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 9.5,
@@ -23,6 +26,7 @@
     },
     {
       "channel_id": 4,
+      "channel_number": 4,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 9.6,
@@ -30,6 +34,7 @@
     },
     {
       "channel_id": 5,
+      "channel_number": 5,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 9.8,
@@ -37,6 +42,7 @@
     },
     {
       "channel_id": 6,
+      "channel_number": 6,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 9.3,
@@ -44,6 +50,7 @@
     },
     {
       "channel_id": 7,
+      "channel_number": 7,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.5,
@@ -51,6 +58,7 @@
     },
     {
       "channel_id": 8,
+      "channel_number": 8,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.1,
@@ -58,6 +66,7 @@
     },
     {
       "channel_id": 9,
+      "channel_number": 9,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.0,
@@ -65,6 +74,7 @@
     },
     {
       "channel_id": 10,
+      "channel_number": 10,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.5,
@@ -72,6 +82,7 @@
     },
     {
       "channel_id": 11,
+      "channel_number": 11,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.2,
@@ -79,6 +90,7 @@
     },
     {
       "channel_id": 12,
+      "channel_number": 12,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.3,
@@ -86,6 +98,7 @@
     },
     {
       "channel_id": 13,
+      "channel_number": 13,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.1,
@@ -93,6 +106,7 @@
     },
     {
       "channel_id": 14,
+      "channel_number": 14,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.8,
@@ -100,6 +114,7 @@
     },
     {
       "channel_id": 15,
+      "channel_number": 15,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.1,
@@ -107,6 +122,7 @@
     },
     {
       "channel_id": 16,
+      "channel_number": 16,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.1,
@@ -114,6 +130,7 @@
     },
     {
       "channel_id": 17,
+      "channel_number": 17,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 5.7,
@@ -121,6 +138,7 @@
     },
     {
       "channel_id": 18,
+      "channel_number": 18,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 7.5,
@@ -128,6 +146,7 @@
     },
     {
       "channel_id": 19,
+      "channel_number": 19,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 7.2,
@@ -135,6 +154,7 @@
     },
     {
       "channel_id": 20,
+      "channel_number": 20,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 7.6,
@@ -142,6 +162,7 @@
     },
     {
       "channel_id": 21,
+      "channel_number": 21,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 8.4,
@@ -149,6 +170,7 @@
     },
     {
       "channel_id": 22,
+      "channel_number": 22,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 7.8,
@@ -156,6 +178,7 @@
     },
     {
       "channel_id": 23,
+      "channel_number": 23,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 7.6,
@@ -163,6 +186,7 @@
     },
     {
       "channel_id": 24,
+      "channel_number": 24,
       "channel_type": "qam",
       "modulation": "QAM256",
       "power": 7.7,
@@ -171,11 +195,11 @@
   ],
   "system_info": {
     "dhcp_status": "success",
+    "docsis_status": "Operational",
     "downstream_channel_count": 24,
     "ds_scanning_status": "success",
     "hardware_version": "1.01",
     "model": "CGA2121",
-    "docsis_status": "Operational",
     "software_version": "CGA2121E-5_65_0-ES-13-E113C5-c7410r5714-241120",
     "system_uptime": "18 days 00h:09m:46s",
     "tftp_status": "success",
@@ -185,24 +209,28 @@
   "upstream": [
     {
       "channel_id": 1,
+      "channel_number": 1,
       "channel_type": "atdma",
       "modulation": "QAM64",
       "power": 44.0
     },
     {
       "channel_id": 2,
+      "channel_number": 2,
       "channel_type": "atdma",
       "modulation": "QAM64",
       "power": 43.5
     },
     {
       "channel_id": 3,
+      "channel_number": 3,
       "channel_type": "atdma",
       "modulation": "QAM64",
       "power": 43.7
     },
     {
       "channel_id": 4,
+      "channel_number": 4,
       "channel_type": "atdma",
       "modulation": "QAM64",
       "power": 43.4

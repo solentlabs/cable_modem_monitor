@@ -33,6 +33,7 @@
     "downstream": [
       {
         "channel_id": 1,
+        "channel_number": 1,
         "frequency": 507000000,
         "channel_type": "qam"
       }

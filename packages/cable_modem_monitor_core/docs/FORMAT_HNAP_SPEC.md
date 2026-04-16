@@ -33,13 +33,17 @@ delimiter, producing an empty final element after split (ignored by
 the parser).
 
 Downstream and upstream have **different field counts**. The fields
-are positional --- no headers. Index 0 is a row counter (skipped).
+are positional --- no headers. Index 0 is the modem's row counter ---
+parser.yaml maps it as `channel_number` (see
+[CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §3
+Finding 3). Unlike other formats, HNAP parsers do **not** auto-assign
+`channel_number` --- it must be explicitly mapped from index 0.
 
 **Downstream** (9 data fields per record --- validated from S33v2 HAR):
 
 | Index | Field | Example (SC-QAM) | Example (OFDM) |
 |-------|-------|-------------------|----------------|
-| 0 | *(row counter --- skip)* | `1` | `25` |
+| 0 | channel_number | `1` | `25` |
 | 1 | lock_status | `Locked` | `Locked` |
 | 2 | channel_type | `QAM256` | `OFDM PLC` |
 | 3 | channel_id | `24` | `159` |
@@ -53,7 +57,7 @@ are positional --- no headers. Index 0 is a row counter (skipped).
 
 | Index | Field | Example (SC-QAM) | Example (OFDMA) |
 |-------|-------|-------------------|-----------------|
-| 0 | *(row counter --- skip)* | `1` | `5` |
+| 0 | channel_number | `1` | `5` |
 | 1 | lock_status | `Locked` | `Locked` |
 | 2 | channel_type | `SC-QAM` | `OFDMA` |
 | 3 | channel_id | `1` | `7` |
@@ -80,6 +84,9 @@ downstream:
   record_delimiter: "|+|"
   field_delimiter: "^"
   fields:
+    - index: 0
+      field: channel_number
+      type: integer
     - index: 1
       field: lock_status
       type: string
@@ -115,6 +122,9 @@ upstream:
   record_delimiter: "|+|"
   field_delimiter: "^"
   fields:
+    - index: 0
+      field: channel_number
+      type: integer
     - index: 1
       field: lock_status
       type: string

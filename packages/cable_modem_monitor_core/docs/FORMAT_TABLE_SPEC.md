@@ -195,6 +195,7 @@ upstream:
 | `tables[].columns[].field` | string | yes | Canonical output field name |
 | `tables[].columns[].type` | string | yes | Field type (see table above) |
 | `tables[].columns[].unit` | string | no | Unit suffix to strip |
+| `tables[].columns[].pattern` | string | no | Regex with a capture group — applied to cell text before type conversion. Extracts a substring (e.g., `"(\\d+)"` to pull a number from `"1 QAM256"`). |
 | `tables[].columns[].map` | dict | no | Value mapping (exact match, applied before type conversion) |
 | `tables[].channel_type` | object | no | Channel type: `fixed`, `map`, or explicit field |
 | `tables[].filter` | object | no | Row filter rules |
@@ -473,3 +474,27 @@ are reported in a separate HTML table from the signal measurements.
 
 All other current modems have their supplementary fields (error stats,
 etc.) as inline columns in the primary table — no merge needed.
+
+## Channel Number Assignment
+
+Both `HTMLTableParser` and `HTMLTableTransposedParser` auto-assign
+`channel_number` from the 1-based row (or column) position when it
+is not already present on the channel dict — i.e., when parser.yaml
+does not map a column to `field: channel_number`.
+
+When parser.yaml maps a column to `channel_number`, the modem-provided
+value is used as-is. This covers modems that include an explicit
+position column (e.g., MB7621 "Channel", TC4400 "Channel Index").
+For columns containing mixed text (e.g., CM3500B "1 QAM256"), use
+the `pattern` field to extract the number:
+
+```yaml
+- index: 0
+  field: channel_number
+  type: integer
+  pattern: "(\\d+)"
+```
+
+Auto-assignment happens after companion table merging, so the final
+channel list has stable 1-based positions. See
+[CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §10.

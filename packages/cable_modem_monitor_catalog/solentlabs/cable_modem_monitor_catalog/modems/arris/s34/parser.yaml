@@ -3,6 +3,9 @@ downstream:
   data_key: CustomerConnDownstreamChannel
   field_delimiter: "^"
   fields:
+    - index: 0
+      field: channel_number
+      type: integer
     - index: 1
       field: lock_status
       type: lock_status
@@ -30,10 +33,6 @@ downstream:
     - index: 8
       field: uncorrected
       type: integer
-  filter:
-    channel_id:
-      not: 0
-
   record_delimiter: "|+|"
   response_key: GetCustomerStatusDownstreamChannelInfoResponse
 upstream:
@@ -41,6 +40,9 @@ upstream:
   data_key: CustomerConnUpstreamChannel
   field_delimiter: "^"
   fields:
+    - index: 0
+      field: channel_number
+      type: integer
     - index: 1
       field: lock_status
       type: lock_status
@@ -62,10 +64,6 @@ upstream:
     - index: 6
       field: power
       type: float
-  filter:
-    channel_id:
-      not: 0
-
   record_delimiter: "|+|"
   response_key: GetCustomerStatusUpstreamChannelInfoResponse
 system_info:

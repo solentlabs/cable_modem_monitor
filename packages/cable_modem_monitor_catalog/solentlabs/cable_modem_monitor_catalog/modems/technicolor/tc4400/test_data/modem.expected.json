@@ -3,6 +3,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 1,
+      "channel_number": 1,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 489000000,
@@ -17,6 +18,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 2,
+      "channel_number": 2,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 483000000,
@@ -31,6 +33,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 3,
+      "channel_number": 3,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 477000000,
@@ -45,6 +48,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 4,
+      "channel_number": 4,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 471000000,
@@ -59,6 +63,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 5,
+      "channel_number": 5,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 465000000,
@@ -73,6 +78,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 6,
+      "channel_number": 6,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 459000000,
@@ -87,6 +93,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 7,
+      "channel_number": 7,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 453000000,
@@ -101,6 +108,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 13,
+      "channel_number": 8,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 417000000,
@@ -115,6 +123,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 14,
+      "channel_number": 9,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 411000000,
@@ -129,6 +138,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 15,
+      "channel_number": 10,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 405000000,
@@ -143,6 +153,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 16,
+      "channel_number": 11,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 399000000,
@@ -157,6 +168,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 17,
+      "channel_number": 12,
       "channel_type": "qam",
       "corrected": 1,
       "frequency": 393000000,
@@ -171,6 +183,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 18,
+      "channel_number": 13,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 387000000,
@@ -185,6 +198,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 19,
+      "channel_number": 14,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 381000000,
@@ -199,6 +213,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 20,
+      "channel_number": 15,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 375000000,
@@ -213,6 +228,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 21,
+      "channel_number": 16,
       "channel_type": "qam",
       "corrected": 0,
       "frequency": 369000000,
@@ -227,6 +243,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 22,
+      "channel_number": 17,
       "channel_type": "qam",
       "corrected": 5,
       "frequency": 363000000,
@@ -241,6 +258,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 23,
+      "channel_number": 18,
       "channel_type": "qam",
       "corrected": 5,
       "frequency": 357000000,
@@ -255,6 +273,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 24,
+      "channel_number": 19,
       "channel_type": "qam",
       "corrected": 4,
       "frequency": 351000000,
@@ -269,6 +288,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 25,
+      "channel_number": 20,
       "channel_type": "qam",
       "corrected": 4,
       "frequency": 345000000,
@@ -283,6 +303,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 26,
+      "channel_number": 21,
       "channel_type": "qam",
       "corrected": 80,
       "frequency": 339000000,
@@ -297,6 +318,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 27,
+      "channel_number": 22,
       "channel_type": "qam",
       "corrected": 15,
       "frequency": 333000000,
@@ -311,6 +333,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 28,
+      "channel_number": 23,
       "channel_type": "qam",
       "corrected": 13,
       "frequency": 327000000,
@@ -325,6 +348,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 29,
+      "channel_number": 24,
       "channel_type": "qam",
       "corrected": 9,
       "frequency": 321000000,
@@ -339,6 +363,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 30,
+      "channel_number": 25,
       "channel_type": "qam",
       "corrected": 36,
       "frequency": 315000000,
@@ -353,6 +378,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 31,
+      "channel_number": 26,
       "channel_type": "qam",
       "corrected": 28,
       "frequency": 309000000,
@@ -367,6 +393,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 32,
+      "channel_number": 27,
       "channel_type": "qam",
       "corrected": 26,
       "frequency": 303000000,
@@ -381,6 +408,7 @@
     {
       "bonding_status": "Partial Service",
       "channel_id": 33,
+      "channel_number": 28,
       "channel_type": "ofdm",
       "corrected": 2546380990,
       "frequency": 812000000,
@@ -395,6 +423,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 47,
+      "channel_number": 30,
       "channel_type": "qam",
       "corrected": 3562121,
       "frequency": 723000000,
@@ -409,6 +438,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 48,
+      "channel_number": 31,
       "channel_type": "qam",
       "corrected": 944655,
       "frequency": 729000000,
@@ -437,6 +467,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 1,
+      "channel_number": 1,
       "channel_type": "qam",
       "frequency": 16700000,
       "lock_status": "locked",
@@ -447,6 +478,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 2,
+      "channel_number": 2,
       "channel_type": "qam",
       "frequency": 23400000,
       "lock_status": "locked",
@@ -457,6 +489,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 3,
+      "channel_number": 3,
       "channel_type": "ofdma",
       "frequency": 51525000,
       "lock_status": "locked",
@@ -467,6 +500,7 @@
     {
       "bonding_status": "Bonded",
       "channel_id": 7,
+      "channel_number": 4,
       "channel_type": "ofdma",
       "frequency": 23925000,
       "lock_status": "locked",

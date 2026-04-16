@@ -1,0 +1,18 @@
+{
+  "_description": "Column pattern that does not match yields None (field omitted from channel)",
+  "_html": "<html><body><table><tr><th colspan='3'>Channels</th></tr><tr><th>Label</th><th>Frequency</th><th>Power</th></tr><tr><td>NoDigitsHere</td><td>507000000 Hz</td><td>3.2 dBmV</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Channels"},
+    "row_start": 2,
+    "columns": [
+      {"index": 0, "field": "channel_number", "type": "integer", "pattern": "(\\d+)"},
+      {"index": 1, "field": "frequency", "type": "frequency", "unit": "Hz"},
+      {"index": 2, "field": "power", "type": "float", "unit": "dBmV"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"frequency": 507000000, "power": 3.2, "channel_type": "qam"}
+  ]
+}

@@ -49,6 +49,7 @@
   "_expected": {
     "downstream": [
       {
+        "channel_number": 1,
         "channel_id": 1,
         "frequency": 507000000,
         "power": 3.2,
@@ -56,6 +57,7 @@
         "channel_type": "qam"
       },
       {
+        "channel_number": 2,
         "channel_id": 2,
         "frequency": 513000000,
         "power": 2.8,

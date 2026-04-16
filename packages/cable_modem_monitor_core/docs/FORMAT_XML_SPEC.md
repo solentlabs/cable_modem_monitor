@@ -199,6 +199,9 @@ system_info:
       every channel
    j. Apply `filter` — exclude channels by field value
 2. Concatenate channels from all tables in order
+3. Auto-assign `channel_number` from 1-based element index when not
+   already mapped by parser.yaml (see
+   [CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §10)
 
 ## Extraction Algorithm (System Info)
 

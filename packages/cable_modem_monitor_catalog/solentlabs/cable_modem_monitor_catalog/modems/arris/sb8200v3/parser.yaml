@@ -44,9 +44,6 @@ downstream:
         - source: PlcScAvgMer
           field: snr
           type: float
-        - source: ofdmModulation
-          field: modulation
-          type: string
         - source: ofdmCorrected
           field: corrected
           type: integer
@@ -120,3 +117,8 @@ system_info:
         - source: HwModel
           field: hardware_version
           type: string
+        - source: cm_connected
+          field: docsis_status
+          type: string
+          map:
+            "1": "Operational"

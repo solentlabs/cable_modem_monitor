@@ -1,7 +1,7 @@
 {
-  "_description": "Coordinator routes transposed section to HTMLTableTransposedParser",
+  "_description": "Auto-assign channel_number skips channels that already have it from parser.yaml",
   "_html": {
-    "/status.html": "<html><body><table><tr><th>Downstream</th><th colspan=2>Value</th></tr><tr><td>Channel ID</td><td>1</td><td>2</td></tr><tr><td>Frequency</td><td>519000000 Hz</td><td>513000000 Hz</td></tr><tr><td>Power Level</td><td>5 dBmV</td><td>4 dBmV</td></tr></table></body></html>"
+    "/status.html": "<html><body><table><tr><th>Downstream</th><th colspan=2>Value</th></tr><tr><td>Channel</td><td>3</td><td>4</td></tr><tr><td>Channel ID</td><td>10</td><td>11</td></tr><tr><td>Frequency</td><td>519000000 Hz</td><td>525000000 Hz</td></tr></table></body></html>"
   },
   "_parser_config": {
     "downstream": {
@@ -13,6 +13,11 @@
       },
       "rows": [
         {
+          "label": "Channel",
+          "field": "channel_number",
+          "type": "integer"
+        },
+        {
           "label": "Channel ID",
           "field": "channel_id",
           "type": "integer"
@@ -22,12 +27,6 @@
           "field": "frequency",
           "type": "frequency",
           "unit": "Hz"
-        },
-        {
-          "label": "Power Level",
-          "field": "power",
-          "type": "float",
-          "unit": "dBmV"
         }
       ],
       "channel_type": {
@@ -38,17 +37,15 @@
   "_expected": {
     "downstream": [
       {
-        "channel_id": 1,
-        "channel_number": 1,
+        "channel_number": 3,
+        "channel_id": 10,
         "frequency": 519000000,
-        "power": 5.0,
         "channel_type": "qam"
       },
       {
-        "channel_id": 2,
-        "channel_number": 2,
-        "frequency": 513000000,
-        "power": 4.0,
+        "channel_number": 4,
+        "channel_id": 11,
+        "frequency": 525000000,
         "channel_type": "qam"
       }
     ],

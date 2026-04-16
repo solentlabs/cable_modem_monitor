@@ -92,6 +92,7 @@
   "_expected": {
     "downstream": [
       {
+        "channel_number": 1,
         "channel_id": 10,
         "frequency": 519000000,
         "power": 5.0,
@@ -100,6 +101,7 @@
     ],
     "upstream": [
       {
+        "channel_number": 1,
         "channel_id": 41,
         "frequency": 17800000,
         "power": 54.3,

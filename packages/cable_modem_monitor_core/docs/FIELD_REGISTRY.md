@@ -21,9 +21,15 @@ Core validates these. Parsers must use exactly these names.
 
 | Section | Fields |
 |---------|--------|
-| downstream | `channel_id`, `frequency`, `power`, `snr`, `lock_status`, `modulation`, `channel_type`, `corrected`, `uncorrected` |
-| upstream | `channel_id`, `frequency`, `power`, `lock_status`, `modulation`, `channel_type`, `symbol_rate` |
+| downstream | `channel_number`, `channel_id`, `frequency`, `power`, `snr`, `lock_status`, `modulation`, `channel_type`, `corrected`, `uncorrected` |
+| upstream | `channel_number`, `channel_id`, `frequency`, `power`, `lock_status`, `modulation`, `channel_type`, `symbol_rate` |
 | system_info | `software_version`, `hardware_version`, `system_uptime`, `docsis_status` |
+
+`channel_number` is always present (1-based, auto-assigned from row
+position when not explicitly mapped). `source_channel_number` is
+present only on JS-embedded modems when the per-function position
+differs from the unified `channel_number`. See
+[CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §10.
 
 ---
 

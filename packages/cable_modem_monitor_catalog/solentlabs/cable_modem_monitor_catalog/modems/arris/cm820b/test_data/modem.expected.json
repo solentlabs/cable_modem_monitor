@@ -2,6 +2,7 @@
   "downstream": [
     {
       "channel_id": 73,
+      "channel_number": 1,
       "channel_type": "qam",
       "corrected": 33958022,
       "frequency": 178000000,
@@ -12,6 +13,7 @@
     },
     {
       "channel_id": 74,
+      "channel_number": 2,
       "channel_type": "qam",
       "corrected": 63659057,
       "frequency": 186000000,
@@ -22,6 +24,7 @@
     },
     {
       "channel_id": 75,
+      "channel_number": 3,
       "channel_type": "qam",
       "corrected": 43399209,
       "frequency": 194000000,
@@ -32,6 +35,7 @@
     },
     {
       "channel_id": 76,
+      "channel_number": 4,
       "channel_type": "qam",
       "corrected": 60277178,
       "frequency": 202000000,
@@ -42,6 +46,7 @@
     },
     {
       "channel_id": 77,
+      "channel_number": 5,
       "channel_type": "qam",
       "corrected": 48522677,
       "frequency": 210000000,
@@ -52,6 +57,7 @@
     },
     {
       "channel_id": 78,
+      "channel_number": 6,
       "channel_type": "qam",
       "corrected": 4390535,
       "frequency": 218000000,
@@ -62,6 +68,7 @@
     },
     {
       "channel_id": 79,
+      "channel_number": 7,
       "channel_type": "qam",
       "corrected": 17719208,
       "frequency": 226000000,
@@ -72,6 +79,7 @@
     },
     {
       "channel_id": 80,
+      "channel_number": 8,
       "channel_type": "qam",
       "corrected": 42073256,
       "frequency": 234000000,
@@ -97,6 +105,7 @@
   "upstream": [
     {
       "channel_id": 6,
+      "channel_number": 1,
       "channel_type": "atdma",
       "frequency": 47000000,
       "modulation": "32QAM",
@@ -105,6 +114,7 @@
     },
     {
       "channel_id": 8,
+      "channel_number": 2,
       "channel_type": "atdma",
       "frequency": 61000000,
       "modulation": "32QAM",
@@ -113,6 +123,7 @@
     },
     {
       "channel_id": 7,
+      "channel_number": 3,
       "channel_type": "atdma",
       "frequency": 54000000,
       "modulation": "32QAM",
@@ -121,6 +132,7 @@
     },
     {
       "channel_id": 5,
+      "channel_number": 4,
       "channel_type": "atdma",
       "frequency": 40000000,
       "modulation": "32QAM",

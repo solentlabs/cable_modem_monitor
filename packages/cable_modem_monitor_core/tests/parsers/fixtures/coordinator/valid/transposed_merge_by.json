@@ -69,6 +69,7 @@
     "downstream": [
       {
         "channel_id": 10,
+        "channel_number": 1,
         "frequency": 519000000,
         "power": 5.0,
         "channel_type": "qam",
@@ -77,6 +78,7 @@
       },
       {
         "channel_id": 9,
+        "channel_number": 2,
         "frequency": 513000000,
         "power": 4.0,
         "channel_type": "qam",

@@ -96,8 +96,21 @@ parser output → no entity created.
 
 ### Per-Channel Downstream Sensors
 
-One entity per metric per channel. Created dynamically from
-coordinator data.
+One entity per metric per channel. Entity creation and unique_id
+format depend on the user's channel identity mode — see
+[Channel Identity](#channel-identity).
+
+**Position mode** (`channel_identity: "number"`):
+
+| Entity | unique_id suffix | Unit | device_class | state_class | Condition |
+|--------|-----------------|------|--------------|-------------|-----------|
+| Power | `_ds_ch_{n}_power` | dBmV | — | MEASUREMENT | Always |
+| SNR | `_ds_ch_{n}_snr` | dB | — | MEASUREMENT | Always |
+| Frequency | `_ds_ch_{n}_frequency` | Hz | FREQUENCY | MEASUREMENT | If present |
+| Corrected | `_ds_ch_{n}_corrected` | — | — | TOTAL_INCREASING | If present |
+| Uncorrected | `_ds_ch_{n}_uncorrected` | — | — | TOTAL_INCREASING | If present |
+
+**ID mode** (`channel_identity: "id"`):
 
 | Entity | unique_id suffix | Unit | device_class | state_class | Condition |
 |--------|-----------------|------|--------------|-------------|-----------|
@@ -107,20 +120,31 @@ coordinator data.
 | Corrected | `_ds_{type}_ch_{id}_corrected` | — | — | TOTAL_INCREASING | If present |
 | Uncorrected | `_ds_{type}_ch_{id}_uncorrected` | — | — | TOTAL_INCREASING | If present |
 
-**Attributes on every DS channel sensor:** `channel_id`, `channel_type`.
-Additional Tier 2/3 fields from parser output (lock_status, modulation,
-etc.) flow as attributes.
+**Attributes on every DS channel sensor:** `channel_number`,
+`channel_id`, `channel_type`. Both identifiers are always present
+regardless of mode. Additional Tier 2/3 fields from parser output
+(lock_status, modulation, etc.) flow as attributes.
 
 ### Per-Channel Upstream Sensors
+
+**Position mode** (`channel_identity: "number"`):
+
+| Entity | unique_id suffix | Unit | device_class | state_class | Condition |
+|--------|-----------------|------|--------------|-------------|-----------|
+| Power | `_us_ch_{n}_power` | dBmV | — | MEASUREMENT | Always |
+| Frequency | `_us_ch_{n}_frequency` | Hz | FREQUENCY | MEASUREMENT | If present |
+
+**ID mode** (`channel_identity: "id"`):
 
 | Entity | unique_id suffix | Unit | device_class | state_class | Condition |
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_us_{type}_ch_{id}_power` | dBmV | — | MEASUREMENT | Always |
 | Frequency | `_us_{type}_ch_{id}_frequency` | Hz | FREQUENCY | MEASUREMENT | If present |
 
-**Attributes on every US channel sensor:** `channel_id`, `channel_type`.
-Additional fields (symbol_rate, lock_status, modulation, ranging_status,
-etc.) flow as attributes.
+**Attributes on every US channel sensor:** `channel_number`,
+`channel_id`, `channel_type`. Both identifiers are always present
+regardless of mode. Additional fields (symbol_rate, lock_status,
+modulation, ranging_status, etc.) flow as attributes.
 
 ### LAN Statistics Sensors
 
@@ -192,21 +216,57 @@ for the derivation rules that produce the three input values.
 
 ## Channel Identity
 
-Channels are keyed by `(channel_type, channel_id)`:
+The user selects a channel identity mode at config time, stored in
+`entry.data["channel_identity"]`. This is a setup-time choice —
+identical in UX to the entity prefix setting. No conversion between
+modes; changing requires deleting and re-adding the integration.
 
-- **Downstream types:** `qam`, `ofdm`
-- **Upstream types:** `atdma`, `ofdma`
+See
+[CHANNEL_IDENTIFICATION_SPEC.md](../../../packages/cable_modem_monitor_core/docs/CHANNEL_IDENTIFICATION_SPEC.md)
+for the full rationale.
 
-The DataUpdateCoordinator normalizes raw parser output into indexed dicts
-(`_downstream_by_id`, `_upstream_by_id`) for O(1) lookup. Channels
-are sorted by frequency within each type and assigned a 1-based
-`_index`.
+### Identity modes
 
-Entities bind to whatever channels the modem currently reports. If the
-modem reboots and bonds to different channels, the entities reflect the
-new channels on the next poll. Channel IDs are stable across polls for
-a given modem session but may change after reboot — this is how DOCSIS
-channel bonding works.
+| Mode | Slot key | Entity example | Default |
+|------|----------|----------------|---------|
+| `number` | `channel_number` (modem's row position) | `sensor.cable_modem_ds_ch_1_power` | Yes (new installs) |
+| `id` | `(channel_type, channel_id)` (CMTS assignment) | `sensor.cable_modem_ds_qam_ch_29_power` | No |
+
+**Channel types:**
+
+- **Downstream:** `qam`, `ofdm`
+- **Upstream:** `atdma`, `ofdma`
+
+### Mapping manager
+
+The mapping manager translates Core's channel list into keyed entity
+slots. It reads `channel_identity` from `entry.data` and builds
+`_downstream_by_slot` and `_upstream_by_slot` dicts for O(1) lookup.
+
+- **Position mode:** slots keyed by `channel_number` — all positions
+  included. Unlocked channels return `None` metrics. Entity set is
+  fixed at setup from the channel list length.
+- **ID mode:** slots keyed by `(channel_type, channel_id)` — unlocked
+  channels excluded (no valid key). Entity set is dynamic — entities
+  are created from whatever channels the modem currently reports.
+
+Sensors read from `_*_by_slot` for data and from
+`entry.data["channel_identity"]` to select their entity ID format.
+
+### Rebonding behavior
+
+- **Position mode:** Entities survive reboots. Channel numbers come
+  from the modem's own row positions. If the CMTS reassigns Channel
+  IDs, `channel_id` attributes update but entity identity is
+  unchanged.
+- **ID mode:** Current behavior. Old entities show "Unknown," new
+  channel IDs appear without entities. Reset Entities resolves it.
+
+### Migration (existing installs)
+
+`async_migrate_entry` runs once at startup when the config entry
+version is V1: adds `channel_identity: "id"` to `entry.data` and
+bumps the version. Pure metadata update — no entity rewrites.
 
 ---
 
@@ -289,7 +349,7 @@ over with its own unique_id.
 | Implicit capabilities (field present = capable) | Entity created if field present |
 | Health check results (latency, reachability) | Health sensor entities |
 | `ActionFactory` (restart support) | Button entities |
-| Channel normalization (`channel_type`, `channel_id`) | Entity unique_id incorporates channel key |
+| Channel normalization (`channel_number`, `channel_type`, `channel_id`) | Mapping manager builds slot maps; entity unique_id incorporates mode-dependent key |
 
 Core owns the data model. HA owns the presentation. The HA adapter
 passes `ModemIdentity` fields through to the Modem Info sensor — no
@@ -392,7 +452,17 @@ All unique_ids are prefixed with `{entry_id}_cable_modem_`:
 **System sensors:** suffix is the sensor name (e.g., `_status`,
 `_software_version`, `_total_corrected`).
 
-**Channel sensors:**
+**Channel sensors** (format depends on identity mode):
+
+Position mode (`number`):
+
+```text
+{entry_id}_cable_modem_{ds|us}_ch_{channel_number}_{field}
+```
+
+Example: `abc123_cable_modem_ds_ch_1_power`
+
+ID mode (`id`):
 
 ```text
 {entry_id}_cable_modem_{ds|us}_{channel_type}_ch_{channel_id}_{field}
@@ -417,5 +487,11 @@ Example: `abc123_cable_modem_ds_ofdm_ch_159_power`
 All sensor classes set `_attr_has_entity_name = True`. HA generates
 the full entity name from `{device_name} {sensor_name}`.
 
-Channel sensor names include type and ID:
-`"DS {TYPE} Ch {ID} {Metric}"` (e.g., "DS OFDM Ch 159 Power").
+Channel sensor names depend on identity mode:
+
+- **Position mode:** `"{DIR} Ch {n} {Metric}"` — no channel type in
+  the name. Positions are unique by definition and type-agnostic.
+  Example: "DS Ch 1 Power".
+- **ID mode:** `"{DIR} {TYPE} Ch {ID} {Metric}"` — channel type
+  included for DOCSIS 3.1 disambiguation.
+  Example: "DS OFDM Ch 159 Power".

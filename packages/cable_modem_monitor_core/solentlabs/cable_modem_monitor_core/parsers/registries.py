@@ -82,6 +82,12 @@ def _parse_html_table_channels(
     for companion_channels, merge_by in companion_tables:
         _merge_channels(primary_channels, companion_channels, merge_by)
 
+    # Auto-assign channel_number from 1-based row position when not
+    # already mapped by parser.yaml.  See CHANNEL_IDENTIFICATION_SPEC §10.
+    for idx, channel in enumerate(primary_channels, start=1):
+        if "channel_number" not in channel:
+            channel["channel_number"] = idx
+
     return primary_channels
 
 
@@ -122,6 +128,12 @@ def _parse_transposed_channels(
     for companion_channels, merge_by in companion_tables:
         _merge_channels(primary_channels, companion_channels, merge_by)
 
+    # Auto-assign channel_number from 1-based row position when not
+    # already mapped by parser.yaml.  See CHANNEL_IDENTIFICATION_SPEC §10.
+    for idx, channel in enumerate(primary_channels, start=1):
+        if "channel_number" not in channel:
+            channel["channel_number"] = idx
+
     return primary_channels
 
 
@@ -129,13 +141,30 @@ def _parse_js_embedded_channels(
     section: JSEmbeddedSection,
     resources: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Parse channels from JS-embedded section — all functions concatenated."""
-    channels: list[dict[str, Any]] = []
+    """Parse channels from JS-embedded section with unified channel_number.
+
+    Concatenates function outputs in declaration order and assigns unified
+    1-based ``channel_number`` across the combined list. Emits
+    ``source_channel_number`` when the per-function position differs from
+    the unified number.  See CHANNEL_IDENTIFICATION_SPEC §10.
+    """
+    function_results: list[list[dict[str, Any]]] = []
     for func in section.functions:
         parser = JSEmbeddedParser(section.resource, func)
         result = parser.parse(resources)
         if isinstance(result, list):
-            channels.extend(result)
+            function_results.append(result)
+
+    channels: list[dict[str, Any]] = []
+    unified = 1
+    for func_channels in function_results:
+        for func_pos, channel in enumerate(func_channels, start=1):
+            channel["channel_number"] = unified
+            if func_pos != unified:
+                channel["source_channel_number"] = func_pos
+            unified += 1
+            channels.append(channel)
+
     return channels
 
 
@@ -148,6 +177,13 @@ def _parse_json_channels(
     channels = parser.parse(resources)
     if not isinstance(channels, list):
         return []
+
+    # Auto-assign channel_number from 1-based row position when not
+    # already mapped by parser.yaml.  See CHANNEL_IDENTIFICATION_SPEC §10.
+    for idx, channel in enumerate(channels, start=1):
+        if "channel_number" not in channel:
+            channel["channel_number"] = idx
+
     return channels
 
 
@@ -160,6 +196,13 @@ def _parse_js_json_channels(
     channels = parser.parse(resources)
     if not isinstance(channels, list):
         return []
+
+    # Auto-assign channel_number from 1-based row position when not
+    # already mapped by parser.yaml.  See CHANNEL_IDENTIFICATION_SPEC §10.
+    for idx, channel in enumerate(channels, start=1):
+        if "channel_number" not in channel:
+            channel["channel_number"] = idx
+
     return channels
 
 
@@ -172,6 +215,13 @@ def _parse_xml_channels(
     channels = parser.parse(resources)
     if not isinstance(channels, list):
         return []
+
+    # Auto-assign channel_number from 1-based row position when not
+    # already mapped by parser.yaml.  See CHANNEL_IDENTIFICATION_SPEC §10.
+    for idx, channel in enumerate(channels, start=1):
+        if "channel_number" not in channel:
+            channel["channel_number"] = idx
+
     return channels
 
 

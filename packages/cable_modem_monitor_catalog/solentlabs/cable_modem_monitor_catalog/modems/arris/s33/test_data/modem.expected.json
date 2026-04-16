@@ -2,6 +2,7 @@
   "downstream": [
     {
       "channel_id": 1,
+      "channel_number": 1,
       "channel_type": "qam",
       "corrected": 5,
       "frequency": 423000000,
@@ -12,6 +13,7 @@
     },
     {
       "channel_id": 2,
+      "channel_number": 2,
       "channel_type": "qam",
       "corrected": 3,
       "frequency": 429000000,
@@ -22,6 +24,7 @@
     },
     {
       "channel_id": 3,
+      "channel_number": 3,
       "channel_type": "qam",
       "corrected": 8,
       "frequency": 435000000,
@@ -32,6 +35,7 @@
     },
     {
       "channel_id": 4,
+      "channel_number": 4,
       "channel_type": "qam",
       "corrected": 2,
       "frequency": 441000000,
@@ -42,6 +46,7 @@
     },
     {
       "channel_id": 5,
+      "channel_number": 5,
       "channel_type": "qam",
       "corrected": 12,
       "frequency": 447000000,
@@ -52,6 +57,7 @@
     },
     {
       "channel_id": 6,
+      "channel_number": 6,
       "channel_type": "qam",
       "corrected": 6,
       "frequency": 453000000,
@@ -62,6 +68,7 @@
     },
     {
       "channel_id": 7,
+      "channel_number": 7,
       "channel_type": "qam",
       "corrected": 4,
       "frequency": 459000000,
@@ -72,6 +79,7 @@
     },
     {
       "channel_id": 8,
+      "channel_number": 8,
       "channel_type": "qam",
       "corrected": 9,
       "frequency": 465000000,
@@ -82,6 +90,7 @@
     },
     {
       "channel_id": 159,
+      "channel_number": 9,
       "channel_type": "ofdm",
       "corrected": 245891,
       "frequency": 663000000,
@@ -104,6 +113,7 @@
   "upstream": [
     {
       "channel_id": 1,
+      "channel_number": 1,
       "channel_type": "qam",
       "frequency": 38400000,
       "lock_status": "locked",
@@ -112,6 +122,7 @@
     },
     {
       "channel_id": 2,
+      "channel_number": 2,
       "channel_type": "qam",
       "frequency": 32000000,
       "lock_status": "locked",
@@ -120,6 +131,7 @@
     },
     {
       "channel_id": 3,
+      "channel_number": 3,
       "channel_type": "qam",
       "frequency": 25600000,
       "lock_status": "locked",
@@ -128,6 +140,7 @@
     },
     {
       "channel_id": 4,
+      "channel_number": 4,
       "channel_type": "qam",
       "frequency": 19200000,
       "lock_status": "locked",

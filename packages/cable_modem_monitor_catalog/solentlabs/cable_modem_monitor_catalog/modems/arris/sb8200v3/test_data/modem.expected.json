@@ -2,6 +2,7 @@
   "downstream": [
     {
       "channel_id": 1,
+      "channel_number": 1,
       "channel_type": "qam",
       "frequency": 495000000,
       "lock_status": "locked",
@@ -11,6 +12,7 @@
     },
     {
       "channel_id": 2,
+      "channel_number": 2,
       "channel_type": "qam",
       "frequency": 501000000,
       "lock_status": "locked",
@@ -20,6 +22,7 @@
     },
     {
       "channel_id": 3,
+      "channel_number": 3,
       "channel_type": "qam",
       "frequency": 507000000,
       "lock_status": "locked",
@@ -29,6 +32,7 @@
     },
     {
       "channel_id": 4,
+      "channel_number": 4,
       "channel_type": "qam",
       "frequency": 513000000,
       "lock_status": "locked",
@@ -38,22 +42,22 @@
     },
     {
       "channel_id": 33,
+      "channel_number": 5,
       "channel_type": "ofdm",
       "corrected": 12345,
       "frequency": 258000000,
       "lock_status": "locked",
-      "modulation": "OFDM PLC",
       "power": 9.5,
       "snr": 38.2,
       "uncorrected": 67
     },
     {
       "channel_id": 34,
+      "channel_number": 6,
       "channel_type": "ofdm",
       "corrected": 9876,
       "frequency": 834000000,
       "lock_status": "locked",
-      "modulation": "OFDM PLC",
       "power": 8.8,
       "snr": 37.5,
       "uncorrected": 43
@@ -69,6 +73,7 @@
   "upstream": [
     {
       "channel_id": 1,
+      "channel_number": 1,
       "channel_type": "qam",
       "channel_width": 6400000,
       "frequency": 38596000,
@@ -77,6 +82,7 @@
     },
     {
       "channel_id": 2,
+      "channel_number": 2,
       "channel_type": "qam",
       "channel_width": 6400000,
       "frequency": 25204000,
@@ -85,6 +91,7 @@
     },
     {
       "channel_id": 3,
+      "channel_number": 3,
       "channel_type": "qam",
       "channel_width": 6400000,
       "frequency": 31604000,
@@ -93,6 +100,7 @@
     },
     {
       "channel_id": 4,
+      "channel_number": 4,
       "channel_type": "qam",
       "channel_width": 3200000,
       "frequency": 44796000,
@@ -101,6 +109,7 @@
     },
     {
       "channel_id": 5,
+      "channel_number": 5,
       "channel_type": "ofdma",
       "channel_width": 47500000,
       "frequency": 30720000,

@@ -11,6 +11,9 @@ downstream:
         type: id
       row_start: 1
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
         - index: 1
           field: lock_status
           type: lock_status
@@ -48,6 +51,9 @@ downstream:
         type: id
       row_start: 1
       columns:
+        - index: 0
+          field: source_channel_number
+          type: integer
         - index: 1
           field: lock_status
           type: lock_status
@@ -83,6 +89,9 @@ upstream:
         type: id
       row_start: 1
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
         - index: 1
           field: lock_status
           type: lock_status
@@ -111,6 +120,9 @@ upstream:
         type: id
       row_start: 1
       columns:
+        - index: 0
+          field: source_channel_number
+          type: integer
         - index: 1
           field: lock_status
           type: lock_status

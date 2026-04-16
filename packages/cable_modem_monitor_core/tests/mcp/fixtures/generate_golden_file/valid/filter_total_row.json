@@ -32,12 +32,14 @@
     "downstream": [
       {
         "channel_id": 1,
+        "channel_number": 1,
         "frequency": 507000000,
         "power": 3.2,
         "channel_type": "qam"
       },
       {
         "channel_id": 2,
+        "channel_number": 2,
         "frequency": 513000000,
         "power": 2.8,
         "channel_type": "qam"

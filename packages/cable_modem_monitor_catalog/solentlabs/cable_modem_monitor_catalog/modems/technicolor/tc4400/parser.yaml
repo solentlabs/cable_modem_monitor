@@ -18,6 +18,9 @@ downstream:
       filter:
         lock_status: "locked"
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
         - index: 1
           field: channel_id
           type: integer
@@ -71,6 +74,9 @@ upstream:
       filter:
         lock_status: "locked"
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
         - index: 1
           field: channel_id
           type: integer

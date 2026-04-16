@@ -7,6 +7,10 @@ downstream:
         type: header_text
       row_start: 1
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
+          pattern: "(\\d+)"
         - index: 1
           field: channel_id
           type: integer
@@ -43,6 +47,10 @@ upstream:
         type: header_text
       row_start: 1
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
+          pattern: "(\\d+)"
         - index: 1
           field: channel_id
           type: integer

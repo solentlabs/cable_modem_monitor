@@ -31,6 +31,7 @@ class ColumnMapping(BaseModel):
     type: str
     unit: str = ""
     format: str = ""
+    pattern: str = ""
     map: dict[str, str] | None = None
     scale: int | float | None = None
 

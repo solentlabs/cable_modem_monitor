@@ -239,8 +239,8 @@ class TestLoadPostProcessor:
         # Golden file must include the custom field
         golden_with_custom = {
             "downstream": [
-                {"channel_id": 1, "frequency": 507000000, "power": 2.5, "custom_field": "added"},
-                {"channel_id": 2, "frequency": 513000000, "power": 2.6, "custom_field": "added"},
+                {"channel_id": 1, "channel_number": 1, "frequency": 507000000, "power": 2.5, "custom_field": "added"},
+                {"channel_id": 2, "channel_number": 2, "frequency": 513000000, "power": 2.6, "custom_field": "added"},
             ],
             "upstream": [],
             "system_info": {

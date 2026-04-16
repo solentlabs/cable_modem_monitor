@@ -65,7 +65,6 @@ class PostProcessor:
                     "channel_type": "ofdma",
                     "frequency": int(freq_mhz * 1_000_000),
                     "power": float(ch_data.get("rep power", "0")),
-                    "modulation": "OFDMA",
                 }
             )
         return channels

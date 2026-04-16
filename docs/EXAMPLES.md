@@ -68,7 +68,7 @@ showing all 24 downstream channels (typical for DOCSIS 3.0 modems),
 upstream channels, and error tracking.
 
 <details>
-<summary><b>Click to expand full dashboard YAML</b></summary>
+<summary>**Click to expand full dashboard YAML**</summary>
 
 ```yaml
 type: vertical-stack
@@ -257,7 +257,7 @@ The `sensor.cable_modem_last_boot_time` is a timestamp sensor. You can customize
   format: relative
 ```
 
-*Shows: "29 days ago"*
+Output: `29 days ago`
 
 **Date only** - Just the date:
 
@@ -266,7 +266,7 @@ The `sensor.cable_modem_last_boot_time` is a timestamp sensor. You can customize
   format: date
 ```
 
-*Shows: "2025-09-25"*
+Output: `2025-09-25`
 
 **Time only** - Just the time:
 
@@ -275,7 +275,7 @@ The `sensor.cable_modem_last_boot_time` is a timestamp sensor. You can customize
   format: time
 ```
 
-*Shows: "00:38:00"*
+Output: `00:38:00`
 
 **Full datetime (fits in UI)** - Date and time:
 
@@ -284,7 +284,7 @@ The `sensor.cable_modem_last_boot_time` is a timestamp sensor. You can customize
   format: datetime
 ```
 
-*Shows: "2025-09-25 00:38:00"*
+Output: `2025-09-25 00:38:00`
 
 **Custom template** - For more control (may be too long for some UIs):
 
@@ -297,7 +297,7 @@ content: >
   }}
 ```
 
-*Shows: "Last Reboot: 2025-09-25 00:38"*
+Output: `Last Reboot: 2025-09-25 00:38`
 
 ---
 
@@ -326,7 +326,7 @@ automation:
   - alias: "Cable Modem - Low SNR Warning"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.cable_modem_downstream_ch_1_snr
+        entity_id: sensor.cable_modem_ds_ch_1_snr
         below: 30
     action:
       - service: notify.notify

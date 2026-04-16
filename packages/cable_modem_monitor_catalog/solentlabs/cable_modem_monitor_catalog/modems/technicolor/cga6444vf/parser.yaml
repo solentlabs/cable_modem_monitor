@@ -113,3 +113,9 @@ system_info:
           type: uptime
           format: seconds
           path: "data"
+        - key: CMStatus
+          field: docsis_status
+          type: string
+          path: "data"
+          map:
+            "OPERATIONAL": "Operational"

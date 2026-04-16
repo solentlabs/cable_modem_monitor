@@ -73,6 +73,16 @@ class ModemParserCoordinator:
         for section_name in _CHANNEL_SECTIONS:
             result[section_name] = self._extract_channel_section(section_name, resources)
 
+        # Null metrics on unlocked channels before aggregation.
+        # See CHANNEL_IDENTIFICATION_SPEC.md §6.
+        for section_name in _CHANNEL_SECTIONS:
+            _null_unlocked_channels(result[section_name])
+
+        # Strip fields that don't belong on OFDM/OFDMA channels.
+        # See PARSING_SPEC.md § Output Contract.
+        for section_name in _CHANNEL_SECTIONS:
+            _strip_ofdm_fields(result[section_name])
+
         system_info = self._extract_system_info(resources)
         if system_info:
             result["system_info"] = system_info
@@ -159,11 +169,11 @@ class ModemParserCoordinator:
         """
         system_info = data.setdefault("system_info", {})
 
-        # Channel counts — always computed, native wins
+        # Channel counts — locked channels only, native wins
         downstream = data.get("downstream", [])
         upstream = data.get("upstream", [])
-        system_info.setdefault("downstream_channel_count", len(downstream))
-        system_info.setdefault("upstream_channel_count", len(upstream))
+        system_info.setdefault("downstream_channel_count", _count_locked(downstream))
+        system_info.setdefault("upstream_channel_count", _count_locked(upstream))
 
         # Aggregate sums — from parser.yaml aggregate section
         for field_name, field_def in self._config.aggregate.items():
@@ -186,6 +196,76 @@ class ModemParserCoordinator:
             value = _apply_computed(system_info, computed_def)
             if value is not None:
                 system_info[computed_name] = value
+
+
+# ---------------------------------------------------------------------------
+# Unlocked channel nulling — see CHANNEL_IDENTIFICATION_SPEC.md §6
+# ---------------------------------------------------------------------------
+
+# Fields preserved on unlocked channels. Everything else is stripped.
+_UNLOCKED_KEEP_FIELDS = frozenset({"channel_number", "lock_status"})
+
+
+def _null_unlocked_channels(channels: list[dict[str, Any]]) -> None:
+    """Strip metric fields from unlocked channels (in-place).
+
+    Unlocked channels keep only ``channel_number`` and ``lock_status``.
+    All other keys are removed. This prevents firmware noise
+    (``-inf``, ``0``, ``"Unknown"``) from leaking into output.
+
+    Channels without ``lock_status`` are left alone — some modems do
+    not report lock status at all.
+    """
+    for channel in channels:
+        lock_status = channel.get("lock_status")
+        if lock_status is not None and lock_status != "locked":
+            for key in list(channel):
+                if key not in _UNLOCKED_KEEP_FIELDS:
+                    del channel[key]
+
+
+# ---------------------------------------------------------------------------
+# OFDM field normalization — see PARSING_SPEC.md § Output Contract
+# ---------------------------------------------------------------------------
+
+# Fields always stripped from OFDM/OFDMA channels.
+_OFDM_STRIP_FIELDS = frozenset({"is_ofdm", "symbol_rate"})
+
+# Channel types subject to OFDM field stripping.
+_OFDM_TYPES = frozenset({"ofdm", "ofdma"})
+
+# Generic modulation labels that restate channel type rather than
+# reporting an actual modulation scheme. Stripped from OFDM/OFDMA.
+# Real PLC modulation values (e.g. "QAM4096") are preserved.
+# See PARSING_SPEC.md § Output Contract.
+_OFDM_GENERIC_MODULATION = frozenset({"Other", "OFDM", "OFDM PLC", "OFDMA"})
+
+
+def _strip_ofdm_fields(channels: list[dict[str, Any]]) -> None:
+    """Strip fields that don't belong on OFDM/OFDMA channels (in-place).
+
+    ``is_ofdm`` is redundant with ``channel_type``. ``symbol_rate`` is
+    not applicable to OFDM/OFDMA. Generic modulation labels that
+    restate the channel type are stripped — real PLC modulation values
+    (e.g. ``"QAM4096"``) are preserved.
+    """
+    for channel in channels:
+        if channel.get("channel_type") in _OFDM_TYPES:
+            for field in _OFDM_STRIP_FIELDS:
+                channel.pop(field, None)
+            mod = channel.get("modulation")
+            if mod in _OFDM_GENERIC_MODULATION:
+                del channel["modulation"]
+
+
+def _count_locked(channels: list[dict[str, Any]]) -> int:
+    """Count channels that are locked (bonded).
+
+    Channels without ``lock_status`` are counted — they come from
+    modems that don't report lock status, so all parsed channels are
+    presumed active.
+    """
+    return sum(1 for ch in channels if ch.get("lock_status", "locked") == "locked")
 
 
 # ---------------------------------------------------------------------------

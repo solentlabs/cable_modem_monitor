@@ -50,6 +50,9 @@ upstream:
         type: header_text
       row_start: 1
       columns:
+        - index: 0
+          field: channel_number
+          type: integer
         - index: 1
           field: channel_id
           type: integer
@@ -75,6 +78,14 @@ upstream:
 
 system_info:
   sources:
+    - format: html_fields
+      resource: "/cmconnectionstatus.html"
+      fields:
+        - field: docsis_status
+          label: "DOCSIS Network Access Enabled"
+          type: string
+          map:
+            "Allowed": "Operational"
     - format: html_fields
       resource: "/cmswinfo.html"
       fields:

@@ -2,6 +2,7 @@
   "downstream": [
     {
       "channel_id": 1,
+      "channel_number": 1,
       "channel_type": "qam",
       "corrected": 84,
       "frequency": 139000000,
@@ -13,6 +14,7 @@
     },
     {
       "channel_id": 2,
+      "channel_number": 2,
       "channel_type": "qam",
       "corrected": 74,
       "frequency": 147000000,
@@ -24,6 +26,7 @@
     },
     {
       "channel_id": 3,
+      "channel_number": 3,
       "channel_type": "qam",
       "corrected": 80,
       "frequency": 155000000,
@@ -35,6 +38,7 @@
     },
     {
       "channel_id": 4,
+      "channel_number": 4,
       "channel_type": "qam",
       "corrected": 65,
       "frequency": 163000000,
@@ -46,6 +50,7 @@
     },
     {
       "channel_id": 5,
+      "channel_number": 5,
       "channel_type": "qam",
       "corrected": 85,
       "frequency": 171000000,
@@ -57,6 +62,7 @@
     },
     {
       "channel_id": 6,
+      "channel_number": 6,
       "channel_type": "qam",
       "corrected": 87,
       "frequency": 179000000,
@@ -68,6 +74,7 @@
     },
     {
       "channel_id": 7,
+      "channel_number": 7,
       "channel_type": "qam",
       "corrected": 76,
       "frequency": 187000000,
@@ -79,6 +86,7 @@
     },
     {
       "channel_id": 8,
+      "channel_number": 8,
       "channel_type": "qam",
       "corrected": 84,
       "frequency": 195000000,
@@ -91,6 +99,7 @@
     {
       "active_subcarriers": 1840,
       "channel_id": 159,
+      "channel_number": 9,
       "channel_type": "ofdm",
       "channel_width": 94000000,
       "corrected": 3121853777,
@@ -113,6 +122,7 @@
   "upstream": [
     {
       "channel_id": 9,
+      "channel_number": 1,
       "channel_type": "atdma",
       "frequency": 49600000,
       "lock_status": "locked",
@@ -122,6 +132,7 @@
     },
     {
       "channel_id": 10,
+      "channel_number": 2,
       "channel_type": "atdma",
       "frequency": 43100000,
       "lock_status": "locked",
@@ -132,6 +143,7 @@
     {
       "active_subcarriers": 200,
       "channel_id": 14,
+      "channel_number": 3,
       "channel_type": "ofdma",
       "channel_width": 10000000,
       "fft_type": "2K",
