@@ -151,14 +151,25 @@ def _update_stability(
         consecutive_stable = 1
         grace_start = None
 
-    _logger.debug(
-        "Restart recovery: probe %d — %d DS, %d US (stable: %d/%d)",
-        probe_num,
-        counts[0],
-        counts[1],
-        consecutive_stable,
-        STABILITY_COUNT,
-    )
+    if grace_start is not None:
+        grace_elapsed = min(int(time.monotonic() - grace_start), GRACE_PERIOD_SECONDS)
+        _logger.debug(
+            "Restart recovery: probe %d — %d DS, %d US (grace: %ds/%ds)",
+            probe_num,
+            counts[0],
+            counts[1],
+            grace_elapsed,
+            GRACE_PERIOD_SECONDS,
+        )
+    else:
+        _logger.debug(
+            "Restart recovery: probe %d — %d DS, %d US (stable: %d/%d)",
+            probe_num,
+            counts[0],
+            counts[1],
+            consecutive_stable,
+            STABILITY_COUNT,
+        )
 
     if consecutive_stable >= STABILITY_COUNT and grace_start is None:
         grace_start = time.monotonic()

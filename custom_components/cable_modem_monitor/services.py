@@ -373,7 +373,6 @@ def _build_status_card_yaml(
     system_info: dict[str, Any],
     *,
     has_icmp: bool,
-    has_restart: bool,
 ) -> list[str]:
     """Build YAML for the status entities card.
 
@@ -385,7 +384,6 @@ def _build_status_card_yaml(
         entity_prefix: Entity ID prefix (e.g., "cable_modem").
         system_info: The system_info dict from modem data.
         has_icmp: Whether ICMP ping latency entity exists.
-        has_restart: Whether the restart button exists.
     """
     lines = [
         "  - type: entities",
@@ -440,16 +438,32 @@ def _build_status_card_yaml(
         )
     lines.extend(_build_provisioned_speed_entities(entity_prefix, system_info))
     lines.extend(_build_hardware_diag_entities(entity_prefix, system_info))
-    if has_restart:
-        lines.append(f"      - entity: button.{entity_prefix}_restart_modem")
-        lines.append("        name: Restart")
-        lines.append("        tap_action:")
-        lines.append("          action: toggle")
-        lines.append("          confirmation:")
-        lines.append("            text: This will restart your modem and temporarily disconnect your internet.")
     lines.append("    show_header_toggle: false")
     lines.append("    state_color: false")
     return lines
+
+
+def _build_restart_button_card_yaml(entity_prefix: str) -> list[str]:
+    """Build YAML for the standalone restart button card.
+
+    A dedicated `button` card is used instead of an entities-row so the
+    confirmation dialog reliably guards every tap. In an entities card,
+    clicking the button widget bypasses the row's tap_action.
+    """
+    return [
+        "  - type: button",
+        f"    entity: button.{entity_prefix}_restart_modem",
+        "    name: Restart Modem",
+        "    icon: mdi:restart",
+        "    show_state: false",
+        "    tap_action:",
+        "      action: call-service",
+        "      service: button.press",
+        "      target:",
+        f"        entity_id: button.{entity_prefix}_restart_modem",
+        "      confirmation:",
+        "        text: This will restart your modem and temporarily disconnect your internet.",
+    ]
 
 
 def _build_channel_graph_yaml(
@@ -605,6 +619,26 @@ def _find_loaded_entry(
     return None
 
 
+def _resolve_dashboard_target(
+    hass: HomeAssistant, call: ServiceCall
+) -> tuple[CableModemConfigEntry, dict[str, Any]] | str:
+    """Resolve the config entry and modem data for a dashboard request.
+
+    Returns the (entry, modem_data) tuple on success, or an error YAML
+    string when the entry or its data snapshot is missing.
+    """
+    device_id = call.data.get("device_id")
+    entry = _resolve_config_entry_for_device(hass, device_id) if device_id else _find_loaded_entry(hass)
+    if entry is None:
+        return "# Error: No cable modem configured"
+
+    snapshot = entry.runtime_data.data_coordinator.data
+    if snapshot is None or snapshot.modem_data is None:
+        return "# Error: No modem data available"
+
+    return entry, snapshot.modem_data
+
+
 def create_generate_dashboard_handler(
     hass: HomeAssistant,
 ) -> Any:
@@ -612,19 +646,11 @@ def create_generate_dashboard_handler(
 
     def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:
         """Handle the generate_dashboard service call."""
-        device_id = call.data.get("device_id")
-        if device_id:
-            entry = _resolve_config_entry_for_device(hass, device_id)
-        else:
-            entry = _find_loaded_entry(hass)
-        if entry is None:
-            return {"yaml": "# Error: No cable modem configured"}
+        resolved = _resolve_dashboard_target(hass, call)
+        if isinstance(resolved, str):
+            return {"yaml": resolved}
+        entry, modem_data = resolved
 
-        snapshot = entry.runtime_data.data_coordinator.data
-        if snapshot is None or snapshot.modem_data is None:
-            return {"yaml": "# Error: No modem data available"}
-
-        modem_data = snapshot.modem_data
         entity_prefix = _get_entity_prefix(entry)
         has_icmp = bool(entry.data.get(CONF_SUPPORTS_ICMP, False))
         has_restart = entry.runtime_data.orchestrator.supports_restart
@@ -662,9 +688,11 @@ def create_generate_dashboard_handler(
                     entity_prefix,
                     system_info,
                     has_icmp=has_icmp,
-                    has_restart=has_restart,
                 )
             )
+
+        if has_restart:
+            yaml_parts.extend(_build_restart_button_card_yaml(entity_prefix))
 
         channel_graphs = _build_channel_graph_defs(
             entity_prefix,

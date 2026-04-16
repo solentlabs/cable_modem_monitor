@@ -23,6 +23,7 @@ from custom_components.cable_modem_monitor.services import (
     _build_channel_lookup,
     _build_error_graphs_yaml,
     _build_latency_graph_yaml,
+    _build_restart_button_card_yaml,
     _build_status_card_yaml,
     _find_loaded_entries,
     _find_loaded_entry,
@@ -202,7 +203,6 @@ def test_build_status_card_yaml_full():
         "cable_modem",
         system_info,
         has_icmp=True,
-        has_restart=True,
     )
     yaml = "\n".join(lines)
     assert "sensor.cable_modem_status" in yaml
@@ -211,7 +211,8 @@ def test_build_status_card_yaml_full():
     assert "sensor.cable_modem_system_uptime" in yaml
     assert "sensor.cable_modem_last_boot_time" in yaml
     assert "sensor.cable_modem_total_corrected_errors" in yaml
-    assert "button.cable_modem_restart_modem" in yaml
+    # Restart lives in its own button card, not the status entities row.
+    assert "restart_modem" not in yaml
 
 
 def test_build_status_card_yaml_minimal():
@@ -221,7 +222,6 @@ def test_build_status_card_yaml_minimal():
         "cable_modem",
         system_info,
         has_icmp=False,
-        has_restart=False,
     )
     yaml = "\n".join(lines)
     assert "sensor.cable_modem_status" in yaml
@@ -232,7 +232,21 @@ def test_build_status_card_yaml_minimal():
     assert "system_uptime" not in yaml
     assert "last_boot_time" not in yaml
     assert "total_corrected_errors" not in yaml
-    assert "restart_modem" not in yaml
+
+
+def test_build_restart_button_card_yaml():
+    """Restart button is a dedicated `button` card so confirmation always fires."""
+    lines = _build_restart_button_card_yaml("cable_modem")
+    yaml = "\n".join(lines)
+    assert "type: button" in yaml
+    assert "entity: button.cable_modem_restart_modem" in yaml
+    # Entities-card row tap_actions get bypassed by the button widget,
+    # so we use call-service + confirmation on a standalone button card.
+    assert "action: call-service" in yaml
+    assert "service: button.press" in yaml
+    assert "entity_id: button.cable_modem_restart_modem" in yaml
+    assert "confirmation:" in yaml
+    assert "This will restart your modem" in yaml
 
 
 def test_build_channel_graph_yaml():

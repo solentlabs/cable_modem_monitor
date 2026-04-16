@@ -1682,6 +1682,7 @@ period state are internal to `monitor_recovery()`.
 - INFO: `"Restart recovery: modem responding (12s), waiting for channel stabilization"`
 - DEBUG: `"Restart recovery: probe 3 — 18 DS, 4 US (stable: 2/3)"`
 - INFO: `"Restart recovery: channels stable (24 DS, 4 US), entering grace period"`
+- DEBUG: `"Restart recovery: probe 4 — 24 DS, 4 US (grace: 10s/30s)"`
 - INFO: `"Restart recovery: grace period complete, recovered in 45s"`
 - WARNING: `"Restart recovery: channel stabilization timeout after 300s (counts still changing)"`
 
