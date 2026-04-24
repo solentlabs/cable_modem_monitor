@@ -26,6 +26,7 @@ Core, it should.
 | Section | What it covers |
 |---------|----------------|
 | [Runtime Data](#runtime-data) | `CableModemRuntimeData` structure on `entry.runtime_data` |
+| [Persistence Layers](#persistence-layers) | Where state lives: `runtime_data`, `entry.data`, `entry.options`, Store helper |
 | [Startup](#startup) | `async_setup_entry` — component creation and wiring |
 | [Unload](#unload) | `async_unload_entry` — cleanup and cancellation |
 | [Async Boundary](#async-boundary) | Which Core calls need executor wrapping |
@@ -39,6 +40,7 @@ Core, it should.
 | [Reauth Flow](#reauth-flow) | Circuit breaker → `async_step_reauth` |
 | [Diagnostics Platform](#diagnostics-platform) | Core diagnostics + HA-side data |
 | [Services](#services) | `generate_dashboard`, `request_refresh`, `request_health_check` |
+| [Channel Bond Change Notifications](#channel-bond-change-notifications) | First-poll onboarding + totals-change detection with `generate_dashboard` hint |
 | [Config Entry Migration](#config-entry-migration) | Version-keyed migration with auto-discovery |
 | [Testing](#testing) | No modem-specific names, dynamic catalog discovery |
 | [Distribution](#distribution) | HACS zip, PyPI packages, version pinning, release tiers |
@@ -109,6 +111,45 @@ async def async_setup_entry(
 **Why not `hass.data[DOMAIN]`:** The old pattern requires manual dict
 management (setdefault, pop) and has no type safety. `runtime_data` is
 typed, auto-cleaned, and scoped to the entry.
+
+---
+
+## Persistence Layers
+
+Per-entry state lives in one of four places, each with different
+lifetime and write-trigger semantics. Pick deliberately — the wrong
+layer can cause spurious integration reloads or lost state on restart.
+
+| Layer | Lifetime | Write triggers | Use for |
+|-------|----------|----------------|---------|
+| `entry.runtime_data` | Process lifetime; cleared on unload/reload | None | Live Core objects (orchestrator, coordinators), channel map |
+| `entry.data` | Persistent across restarts | Fires update listener → integration reload | User config (host, credentials), validation-derived fields, write-once markers |
+| `entry.options` | Persistent across restarts | Same as `entry.data` | User-editable settings from the options flow (`scan_interval`, `health_check_interval`) |
+| `Store` helper | Persistent across restarts | None — silent writes | Runtime state that mutates at poll cadence (e.g., channel-bond baseline) |
+
+**Picking a layer:**
+
+- Does it need to survive HA restart? *No* → `runtime_data`. *Yes* →
+  one of the other three.
+- Does it mutate frequently (per poll, per change)? *Yes* → `Store`.
+  Writing to `entry.data` or `entry.options` would fire the update
+  listener on every change, reloading the integration.
+- Is it user-facing setup config? → `entry.data`.
+- Is it user-editable via Settings → Configure? → `entry.options`.
+- Is it a marker set once and never mutated afterwards (e.g.
+  `CONF_CHANNEL_ONBOARDING_ELIGIBLE`)? → `entry.data` is safe because
+  the single write happens before any listener is registered.
+
+**Store helper.** HA's `homeassistant.helpers.storage.Store` persists
+a typed payload under HA's config storage without firing config-entry
+listeners. Each Store domain gets its own module with typed load /
+save / remove helpers — `channel_bond_storage.py` is the first.
+Storage keys are namespaced `cable_modem_monitor.{entry_id}.{domain}`
+and cleaned up via `async_remove_entry` in `__init__.py` when the
+user deletes the config entry.
+
+Follow the same pattern for future runtime-state domains: one module,
+one typed payload, load / save / remove helpers, cleanup hook.
 
 ---
 
@@ -993,6 +1034,71 @@ automation:
 
 ---
 
+## Channel Bond Change Notifications
+
+The data coordinator fires persistent notifications when bonded channel
+totals shift between polls. Two triggers share one mechanism; both
+point the user at `generate_dashboard` so they can refresh a stale
+Lovelace dashboard.
+
+**Triggers:**
+
+| Trigger | When it fires | Notification ID |
+|---------|---------------|-----------------|
+| Onboarding | First successful poll after setup | `cable_modem_monitor_onboarding_{entry_id}` |
+| Change | Downstream or upstream total differs from the persisted baseline | `cable_modem_monitor_channel_change_{entry_id}` |
+
+Stable IDs per entry mean re-firing replaces rather than stacks.
+
+**Persisted state:**
+
+- `CONF_CHANNEL_ONBOARDING_ELIGIBLE` on **entry data** — set to
+  `True` by the config flow on fresh setup; absent on upgraded
+  entries. Written once at create time (before listeners exist) and
+  never mutated afterwards, so it doesn't trigger the integration's
+  update listener reload.
+- Baseline totals live in a dedicated `homeassistant.helpers.storage.Store`
+  (`channel_bond_storage.py`) keyed by entry ID. The Store payload is
+  `{baseline_downstream: int, baseline_upstream: int}`. Presence of a
+  Store payload means the entry has already been onboarded (fresh) or
+  silently baselined (upgrade); absence means the next successful poll
+  should run first-time logic.
+
+**Why Store, not entry data.** The integration's update listener
+reloads the integration on **any** entry-data mutation. If baseline
+totals were stored on the entry, every real channel-count change
+would fire a reload — exactly when the user wants stability. The
+Store helper persists per-entry state without tripping listeners.
+
+**Suppression rule:** comparison is skipped entirely when
+`orchestrator.recovery_active` is `True`. Counts can flux while a
+recovery window is open (channels renegotiate the bond); the baseline
+is preserved so a transient that resolves back to the prior totals
+produces no notification.
+
+**Upgrade path:** entries created before this feature lack
+`CONF_CHANNEL_ONBOARDING_ELIGIBLE`. On first post-upgrade poll the
+coordinator silently writes the current totals to the Store — no
+retroactive onboarding notification.
+
+**Cleanup.** `async_remove_entry` in `__init__.py` removes the Store
+payload when the config entry is deleted.
+
+**Known gap — totals only.** The notifier tracks summed downstream and
+upstream counts, not per-channel-type (QAM/OFDM/ATDMA/OFDMA).
+A reshuffle that leaves the total unchanged (e.g. QAM −1, OFDM +1 on
+DOCSIS 3.1 provisioning changes) is not detected. This is a
+deliberate simplification; per-type tracking can be added later if
+field reports indicate real misses.
+
+**Pure logic lives in `channel_bond_notifier.py`** (no HA imports), so
+the decision tree is unit-testable without mocks. The coordinator owns
+the HA integration: reading `system_info`, reading
+`orchestrator.recovery_active`, persisting entry data, and calling
+`persistent_notification.create`.
+
+---
+
 ## Config Entry Migration
 
 Config entries evolve as the integration adds features and
@@ -1104,12 +1210,16 @@ The HA adapter layer consists of these modules:
 
 | Module | Responsibility |
 |--------|---------------|
-| `__init__.py` | Startup, unload, migration dispatch, device registry, service registration |
+| `__init__.py` | Startup, unload, migration dispatch, device registry, service registration, `async_remove_entry` cleanup |
 | `coordinator.py` | `CableModemRuntimeData` dataclass + `CableModemConfigEntry` type alias |
 | `recovery_adapter.py` | Recovery cadence listener — observer into Core + dispatcher signal that flips `update_interval` while a window is open |
+| `mapping_manager.py` | Channel identity mapping (`ChannelMap`) — builds per-poll mapping between channel number/id and entity unique_id |
+| `channel_bond_notifier.py` | Pure logic for channel-bond change detection — selects `NotifierAction` given totals, stored baseline, and recovery state |
+| `channel_bond_storage.py` | Store-backed persistence for channel-bond baseline totals — per-entry load / save / remove |
 | `sensor.py` | Entity classes for all sensor types |
 | `button.py` | Restart, Update, Reset Entities buttons |
 | `config_flow.py` | Setup wizard and options flow |
+| `config_flow_helpers.py` | Validation pipeline, probe detection, encoding detection — async wrappers around Core I/O |
 | `diagnostics.py` | Diagnostics download combining Core + HA-side data |
 | `const.py` | Domain constants, config keys, defaults |
 | `services.py` | `generate_dashboard` service handler |

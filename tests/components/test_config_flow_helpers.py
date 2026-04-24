@@ -28,6 +28,7 @@ from custom_components.cable_modem_monitor.config_flow_helpers import (
     _run_validation,
     build_model_display_name,
     classify_error,
+    default_health_check_interval,
     detect_probes,
     filter_by_manufacturer,
     format_variant_label,
@@ -307,6 +308,26 @@ class TestDetectProbes:
         config.health.supports_head = True
         detect_probes("192.168.100.1", "https://192.168.100.1", config, legacy_ssl=True)
         mock_head.assert_called_once_with("https://192.168.100.1", legacy_ssl=True)
+
+
+# =====================================================================
+# default_health_check_interval — capability-based default selection
+# =====================================================================
+
+
+@pytest.mark.parametrize(
+    "supports_icmp,supports_head,expected,desc",
+    [
+        (True, True, 30, "icmp_and_head"),
+        (True, False, 30, "icmp_only"),
+        (False, True, 30, "head_only"),
+        (False, False, 60, "get_only"),
+    ],
+    ids=lambda v: v if isinstance(v, str) else "",
+)
+def test_default_health_check_interval(supports_icmp, supports_head, expected, desc):
+    """GET-only modems (no ICMP, no HEAD) get the slower 60s default."""
+    assert default_health_check_interval(supports_icmp, supports_head) == expected
 
 
 # =====================================================================

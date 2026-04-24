@@ -30,6 +30,14 @@ CONF_SUPPORTS_HEAD = "supports_head"
 CONF_CREDENTIAL_ENCODING = "credential_encoding"
 CONF_CREDENTIAL_FIELD = "credential_field"
 
+# Config entry key — channel-bond onboarding eligibility.
+# Set to ``True`` by the config flow on fresh setup; absent for
+# upgraded entries that pre-date the channel-bond notifier. Never
+# mutated after create, so it doesn't trip the entry update listener
+# (which reloads the integration). Baseline totals themselves live in
+# the dedicated Store (``channel_bond_storage``), not entry data.
+CONF_CHANNEL_ONBOARDING_ELIGIBLE = "channel_onboarding_eligible"
+
 # Polling configuration (options flow)
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_HEALTH_CHECK_INTERVAL = "health_check_interval"
@@ -41,6 +49,10 @@ MAX_SCAN_INTERVAL = 86400  # 24 hours
 
 # Defaults — health checks
 DEFAULT_HEALTH_CHECK_INTERVAL = 30
+# Used when the modem supports neither ICMP nor HTTP HEAD: the only
+# remaining probe is a full GET, so the cadence is slowed to reduce
+# load on modems with weak web servers.
+DEFAULT_HEALTH_CHECK_INTERVAL_GET_ONLY = 60
 MIN_HEALTH_CHECK_INTERVAL = 10
 MAX_HEALTH_CHECK_INTERVAL = 86400  # 24 hours
 

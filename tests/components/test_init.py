@@ -20,11 +20,13 @@ from solentlabs.cable_modem_monitor_core.orchestration.models import ModemIdenti
 
 from custom_components.cable_modem_monitor import (
     _async_update_listener,
+    _check_channel_bond_change,
     _create_core_components,
     _get_package_versions,
     _log_operational_summary,
     _update_device_registry,
     async_migrate_entry,
+    async_remove_entry,
     async_setup_entry,
     async_unload_entry,
 )
@@ -526,3 +528,234 @@ async def test_update_listener_reloads():
     await _async_update_listener(hass, entry)
 
     hass.config_entries.async_reload.assert_awaited_once_with("test_123")
+
+
+# -----------------------------------------------------------------------
+# _check_channel_bond_change — onboarding + totals change detection
+# -----------------------------------------------------------------------
+
+
+def _make_snapshot(downstream_count: int | None = 24, upstream_count: int | None = 4):
+    """Build a minimal snapshot carrying system_info channel counts."""
+    from solentlabs.cable_modem_monitor_core.orchestration.models import ModemSnapshot
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import (
+        CollectorSignal,
+        ConnectionStatus,
+        DocsisStatus,
+    )
+
+    system_info: dict[str, object] = {}
+    if downstream_count is not None:
+        system_info["downstream_channel_count"] = downstream_count
+    if upstream_count is not None:
+        system_info["upstream_channel_count"] = upstream_count
+
+    return ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data={"system_info": system_info, "downstream": [], "upstream": []},
+        collector_signal=CollectorSignal.OK,
+    )
+
+
+def _make_bond_test_harness(
+    *,
+    entry_data: dict,
+    stored_state=None,
+    recovery_active: bool = False,
+    snapshot=None,
+):
+    """Build (hass, entry, orchestrator, snapshot) for bond-change tests.
+
+    Patches the Store helpers at the import site so ``async_load_bond_state``
+    returns ``stored_state`` and ``async_save_bond_state`` is observable.
+    """
+    hass = MagicMock()
+    hass.services.async_call = AsyncMock()
+    entry = MagicMock()
+    entry.entry_id = "entry_abc"
+    entry.data = entry_data
+    orchestrator = MagicMock()
+    orchestrator.recovery_active = recovery_active
+    return hass, entry, orchestrator, snapshot or _make_snapshot()
+
+
+async def test_channel_bond_fresh_setup_fires_onboarding():
+    """First successful poll on a fresh-setup entry fires the onboarding notification."""
+    entry_data = {"channel_onboarding_eligible": True}
+    hass, entry, orchestrator, snapshot = _make_bond_test_harness(entry_data=entry_data)
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.async_load_bond_state",
+            AsyncMock(return_value=None),
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.async_save_bond_state",
+            AsyncMock(),
+        ) as mock_save,
+    ):
+        await _check_channel_bond_change(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    # Baseline persisted via Store, not entry data.
+    hass.config_entries.async_update_entry.assert_not_called()
+    mock_save.assert_awaited_once()
+    saved_state = mock_save.call_args.args[2]
+    assert saved_state.baseline_downstream == 24
+    assert saved_state.baseline_upstream == 4
+
+    hass.services.async_call.assert_awaited_once()
+    call_args = hass.services.async_call.call_args
+    assert call_args.args[0] == "persistent_notification"
+    assert call_args.args[1] == "create"
+    payload = call_args.args[2]
+    assert payload["notification_id"] == "cable_modem_monitor_onboarding_entry_abc"
+    assert "TPS-2000" in payload["message"]
+    assert "generate_dashboard" in payload["message"]
+
+
+async def test_channel_bond_upgraded_entry_silent_init():
+    """Entry without the eligibility flag (upgraded) baselines silently."""
+    entry_data: dict = {}  # no channel_onboarding_eligible key — upgraded entry
+    hass, entry, orchestrator, snapshot = _make_bond_test_harness(entry_data=entry_data)
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.async_load_bond_state",
+            AsyncMock(return_value=None),
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.async_save_bond_state",
+            AsyncMock(),
+        ) as mock_save,
+    ):
+        await _check_channel_bond_change(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    hass.config_entries.async_update_entry.assert_not_called()
+    mock_save.assert_awaited_once()
+    assert mock_save.call_args.args[2].baseline_downstream == 24
+    hass.services.async_call.assert_not_called()
+
+
+async def test_channel_bond_change_fires_notification():
+    """Totals differing from baseline fire the change notification."""
+    from custom_components.cable_modem_monitor.channel_bond_storage import BondState
+
+    entry_data = {"channel_onboarding_eligible": True}
+    hass, entry, orchestrator, snapshot = _make_bond_test_harness(
+        entry_data=entry_data,
+        snapshot=_make_snapshot(downstream_count=23, upstream_count=4),
+    )
+    prior = BondState(baseline_downstream=24, baseline_upstream=4)
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.async_load_bond_state",
+            AsyncMock(return_value=prior),
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.async_save_bond_state",
+            AsyncMock(),
+        ) as mock_save,
+    ):
+        await _check_channel_bond_change(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    hass.config_entries.async_update_entry.assert_not_called()
+    assert mock_save.call_args.args[2].baseline_downstream == 23
+
+    payload = hass.services.async_call.call_args.args[2]
+    assert payload["notification_id"] == "cable_modem_monitor_channel_change_entry_abc"
+    assert "downstream 24 → 23" in payload["message"]
+
+
+async def test_channel_bond_steady_counts_no_op():
+    """No change means no notification, no Store write, no entry-data write."""
+    from custom_components.cable_modem_monitor.channel_bond_storage import BondState
+
+    entry_data = {"channel_onboarding_eligible": True}
+    hass, entry, orchestrator, snapshot = _make_bond_test_harness(entry_data=entry_data)
+    stored = BondState(baseline_downstream=24, baseline_upstream=4)
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.async_load_bond_state",
+            AsyncMock(return_value=stored),
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.async_save_bond_state",
+            AsyncMock(),
+        ) as mock_save,
+    ):
+        await _check_channel_bond_change(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    hass.config_entries.async_update_entry.assert_not_called()
+    mock_save.assert_not_awaited()
+    hass.services.async_call.assert_not_called()
+
+
+async def test_channel_bond_recovery_suppresses_change():
+    """Count mismatch during a recovery window: no notification, no Store write."""
+    from custom_components.cable_modem_monitor.channel_bond_storage import BondState
+
+    entry_data = {"channel_onboarding_eligible": True}
+    hass, entry, orchestrator, snapshot = _make_bond_test_harness(
+        entry_data=entry_data,
+        recovery_active=True,
+        snapshot=_make_snapshot(downstream_count=0, upstream_count=0),
+    )
+    stored = BondState(baseline_downstream=24, baseline_upstream=4)
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.async_load_bond_state",
+            AsyncMock(return_value=stored),
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.async_save_bond_state",
+            AsyncMock(),
+        ) as mock_save,
+    ):
+        await _check_channel_bond_change(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    hass.config_entries.async_update_entry.assert_not_called()
+    mock_save.assert_not_awaited()
+    hass.services.async_call.assert_not_called()
+
+
+async def test_channel_bond_missing_snapshot_data_no_op():
+    """Snapshots without system_info counts are ignored before Store is touched."""
+    entry_data = {"channel_onboarding_eligible": True}
+    snapshot = _make_snapshot(downstream_count=None, upstream_count=None)
+    hass, entry, orchestrator, _ = _make_bond_test_harness(entry_data=entry_data, snapshot=snapshot)
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.async_load_bond_state",
+            AsyncMock(return_value=None),
+        ) as mock_load,
+        patch(
+            "custom_components.cable_modem_monitor.async_save_bond_state",
+            AsyncMock(),
+        ) as mock_save,
+    ):
+        await _check_channel_bond_change(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    mock_load.assert_not_awaited()
+    mock_save.assert_not_awaited()
+    hass.config_entries.async_update_entry.assert_not_called()
+    hass.services.async_call.assert_not_called()
+
+
+async def test_async_remove_entry_clears_bond_store():
+    """HA's entry-removal hook cleans up the channel-bond Store for the entry."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "entry_abc"
+
+    with patch(
+        "custom_components.cable_modem_monitor.async_remove_bond_state",
+        AsyncMock(),
+    ) as mock_remove:
+        await async_remove_entry(hass, entry)
+
+    mock_remove.assert_awaited_once_with(hass, "entry_abc")

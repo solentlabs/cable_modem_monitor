@@ -421,6 +421,55 @@ async def test_full_flow_creates_entry(hass: HomeAssistant):
     assert result["data"]["protocol"] == "http"
     assert result["data"]["manufacturer"] == "Solent Labs"
     assert result["data"]["channel_identity"] == "number"
+    # ICMP + HEAD both detected — standard 30s default.
+    assert result["data"]["health_check_interval"] == 30
+
+
+async def test_full_flow_get_only_modem_defaults_to_60s(hass: HomeAssistant):
+    """GET-only modems (no ICMP, no HEAD) get the slower 60s default at setup."""
+    get_only_validation = {
+        **MOCK_VALIDATION_RESULT,
+        "supports_icmp": False,
+        "supports_head": False,
+    }
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_SINGLE_VARIANT,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            return_value=get_only_validation,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.async_setup_entry",
+            return_value=True,
+        ),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"manufacturer": "__all__"},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"model": "Solent Labs/TPS-2000", "entity_prefix": "none"},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"host": "192.168.100.1"},
+        )
+        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
+            result = await hass.config_entries.flow.async_configure(result["flow_id"])
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"]["health_check_interval"] == 60
 
 
 # -----------------------------------------------------------------------

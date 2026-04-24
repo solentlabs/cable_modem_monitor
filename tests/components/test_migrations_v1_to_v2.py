@@ -372,7 +372,7 @@ def _transform_v1_to_v2(v1: dict, modem_dir: str, variant: str | None = None) ->
         "legacy_ssl": v1.get("legacy_ssl", False),
         # supports_icmp / supports_head intentionally omitted
         "scan_interval": v1.get("scan_interval", 600),
-        "health_check_interval": 30,
+        "health_check_interval": 60,
     }
 
 
@@ -404,7 +404,7 @@ class TestFullMigrationShape:
         assert v2["host"] == "192.168.100.1"
         assert "supports_icmp" not in v2
         assert "supports_head" not in v2
-        assert v2["health_check_interval"] == 30
+        assert v2["health_check_interval"] == 60
 
     def test_defaults_when_optional_keys_missing(self):
         """Missing optional v1 keys get correct v2 defaults."""
@@ -422,7 +422,7 @@ class TestFullMigrationShape:
         assert "supports_icmp" not in v2
         assert "supports_head" not in v2
         assert v2["scan_interval"] == 600
-        assert v2["health_check_interval"] == 30
+        assert v2["health_check_interval"] == 60
 
 
 # =============================================================================
@@ -466,6 +466,8 @@ class TestAsyncMigrate:
         assert new_data["variant"] == "basic"
         assert new_data["manufacturer"] == "Vendor"
         assert new_data["model"] == "Model"
+        # Migration has no probe data — defaults to the safer GET-only cadence.
+        assert new_data["health_check_interval"] == 60
 
     async def test_success_uses_catalog_manufacturer(self):
         """Migration uses canonical catalog manufacturer, not raw v1 value."""

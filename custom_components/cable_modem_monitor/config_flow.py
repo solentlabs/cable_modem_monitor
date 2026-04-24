@@ -36,6 +36,7 @@ from solentlabs.cable_modem_monitor_core.catalog_manager import (
 
 from .config_flow_helpers import (
     build_model_display_name,
+    default_health_check_interval,
     filter_by_manufacturer,
     format_variant_label,
     get_manufacturers,
@@ -45,6 +46,7 @@ from .config_flow_helpers import (
 )
 from .const import (
     CONF_CHANNEL_IDENTITY,
+    CONF_CHANNEL_ONBOARDING_ELIGIBLE,
     CONF_CREDENTIAL_ENCODING,
     CONF_CREDENTIAL_FIELD,
     CONF_ENTITY_PREFIX,
@@ -494,9 +496,17 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             CONF_SUPPORTS_HEAD: validation["supports_head"],
             CONF_CREDENTIAL_ENCODING: validation.get("credential_encoding", "plain"),
             CONF_CREDENTIAL_FIELD: validation.get("credential_field", ""),
-            # Polling defaults
+            # Polling defaults — health interval adapts to probe capability
             CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
-            CONF_HEALTH_CHECK_INTERVAL: DEFAULT_HEALTH_CHECK_INTERVAL,
+            CONF_HEALTH_CHECK_INTERVAL: default_health_check_interval(
+                validation["supports_icmp"],
+                validation["supports_head"],
+            ),
+            # Marks fresh setups as eligible for the one-time channel-bond
+            # onboarding notification. Never mutated after create so it
+            # doesn't trip the update listener. Upgraded entries lack the
+            # key entirely and skip onboarding (silent init instead).
+            CONF_CHANNEL_ONBOARDING_ELIGIBLE: True,
         }
 
         return self.async_create_entry(title=title, data=entry_data)

@@ -36,6 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without the "please enable debug logging and retry" round-trip.
   Same line surfaces in initial setup, reauth, options-flow
   re-validation, and steady-state polling — no per-flow plumbing.
+- **Channel-bond change notifications** — the integration raises a
+  persistent notification when downstream or upstream bonded channel
+  totals change between polls, with a hint pointing at the
+  `generate_dashboard` dev service so a stale dashboard can be
+  refreshed. First-poll onboarding notification surfaces the same
+  service for new users. Suppressed during restart-recovery windows
+  (transient flux is expected). Baseline totals persist via a
+  dedicated `Store` helper — not config-entry data — so updates
+  don't trigger integration reloads. Documented in
+  `HA_ADAPTER_SPEC.md` including a new "Persistence Layers" section
+  covering the runtime_data / entry.data / entry.options / Store
+  split.
 
 ### Changed
 
@@ -47,6 +59,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Restart and Reset Entities buttons against each other; the
   destructive-button discipline lives on `RuntimeData` rather than
   the button instances.
+- **Adaptive health-check default interval** — at setup, modems with
+  neither ICMP nor HTTP HEAD support default to a 60s health check
+  (versus 30s when either lightweight probe is available). GET-only
+  probes download a full page body, so slowing the cadence reduces
+  load on budget modem web servers. v1→v2 migration also defaults
+  to 60s since probe data collected during migration is not
+  trustworthy.
 
 ### Removed
 

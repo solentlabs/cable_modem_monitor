@@ -47,8 +47,21 @@ from solentlabs.cable_modem_monitor_core.test_harness.runner import (
     load_post_processor,
 )
 
+from .channel_bond_notifier import (
+    ChannelTotals,
+    evaluate,
+    format_change_message,
+    format_onboarding_message,
+)
+from .channel_bond_storage import (
+    BondState,
+    async_load_bond_state,
+    async_remove_bond_state,
+    async_save_bond_state,
+)
 from .const import (
     CONF_CHANNEL_IDENTITY,
+    CONF_CHANNEL_ONBOARDING_ELIGIBLE,
     CONF_CREDENTIAL_ENCODING,
     CONF_CREDENTIAL_FIELD,
     CONF_ENTITY_PREFIX,
@@ -98,6 +111,67 @@ def _get_package_versions() -> str:
         except Exception:  # noqa: BLE001
             parts.append(f"{label}: not installed")
     return ", ".join(parts)
+
+
+async def _check_channel_bond_change(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+    snapshot: ModemSnapshot,
+    orchestrator: Orchestrator,
+    model: str,
+) -> None:
+    """Detect channel-bond total changes and fire the appropriate notification.
+
+    Silent on the first post-upgrade poll (no retroactive onboarding) and
+    while a recovery window is open (transient count flux is expected).
+    Persists the baseline to a dedicated ``Store`` — not entry data —
+    so baseline updates don't trip the integration's update listener.
+    """
+    modem_data = snapshot.modem_data
+    if not modem_data:
+        return
+    system_info = modem_data.get("system_info", {})
+    ds = system_info.get("downstream_channel_count")
+    us = system_info.get("upstream_channel_count")
+    if not isinstance(ds, int) or not isinstance(us, int):
+        return
+
+    current = ChannelTotals(downstream=ds, upstream=us)
+    stored = await async_load_bond_state(hass, entry.entry_id)
+    onboarding_eligible = bool(entry.data.get(CONF_CHANNEL_ONBOARDING_ELIGIBLE, False))
+
+    action = evaluate(
+        current=current,
+        stored=stored,
+        onboarding_eligible=onboarding_eligible,
+        recovery_active=orchestrator.recovery_active,
+    )
+
+    if action == "none":
+        return
+
+    new_state = BondState(baseline_downstream=current.downstream, baseline_upstream=current.upstream)
+    await async_save_bond_state(hass, entry.entry_id, new_state)
+
+    if action == "silent_init":
+        return
+
+    if action == "onboarding":
+        title = "Cable Modem Monitor: modem online"
+        message = format_onboarding_message(model=model, current=current)
+        notification_id = f"cable_modem_monitor_onboarding_{entry.entry_id}"
+    else:
+        # "change" — evaluate only returns this when stored is not None.
+        assert stored is not None
+        title = "Cable Modem Monitor: channel bond changed"
+        message = format_change_message(model=model, prior=stored, current=current)
+        notification_id = f"cable_modem_monitor_channel_change_{entry.entry_id}"
+
+    await hass.services.async_call(
+        "persistent_notification",
+        "create",
+        {"title": title, "message": message, "notification_id": notification_id},
+    )
 
 
 def _rebuild_channel_map(
@@ -231,6 +305,7 @@ async def async_setup_entry(
                 snapshot.connection_status.value,
             )
         _rebuild_channel_map(entry, snapshot, identity_mode)
+        await _check_channel_bond_change(hass, entry, snapshot, orchestrator, model)
         return snapshot
 
     data_coordinator = DataUpdateCoordinator[ModemSnapshot](
@@ -380,6 +455,15 @@ async def async_unload_entry(
 
     _LOGGER.info("Unloaded [%s]", model)
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Clean up per-entry Store state when the config entry is deleted.
+
+    Called by HA after ``async_unload_entry``. Entry data and options are
+    managed by HA; Store payloads (e.g. the channel-bond baseline) are not.
+    """
+    await async_remove_bond_state(hass, entry.entry_id)
 
 
 async def _async_update_listener(
