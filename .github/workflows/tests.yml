@@ -97,7 +97,7 @@ jobs:
 
       - name: Intake pipeline accuracy
         run: |
-          python packages/cable_modem_monitor_catalog_tools/scripts/mcp_pipeline_regression.py -v --scorecard intake-pipeline-scorecard.json
+          python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py -v --scorecard intake-pipeline-scorecard.json
 
       - name: Upload intake pipeline scorecard
         if: always()

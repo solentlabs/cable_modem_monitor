@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""MCP pipeline accuracy tracker.
+"""Intake pipeline accuracy tracker.
 
-Tests the MCP intake pipeline by treating each catalog HAR as a fresh
-submission. For each modem:
+Tests the catalog_tools intake pipeline by treating each catalog HAR
+as a fresh submission. For each modem:
 
 1. Run HAR through validate_har -> analyze_har -> generate_config
 2. Run generate_golden_file with the generated parser.yaml
@@ -19,11 +19,11 @@ Baseline mode (--baseline):
     the current state after pipeline improvements.
 
 Usage:
-    python .../mcp_pipeline_regression.py
-    python .../mcp_pipeline_regression.py --modem arris/sb8200
-    python .../mcp_pipeline_regression.py -v
-    python .../mcp_pipeline_regression.py --scorecard scorecard.json
-    python .../mcp_pipeline_regression.py --baseline baseline.json
+    python .../intake_pipeline_regression.py
+    python .../intake_pipeline_regression.py --modem arris/sb8200
+    python .../intake_pipeline_regression.py -v
+    python .../intake_pipeline_regression.py --scorecard scorecard.json
+    python .../intake_pipeline_regression.py --baseline baseline.json
 """
 
 from __future__ import annotations
@@ -595,7 +595,7 @@ def _write_step_summary(results: list[ModemResult]) -> None:
     drift_count = sum(1 for r in results if r.golden_diffs and not r.stage_failed)
 
     lines = [
-        f"## MCP Pipeline Accuracy: **{fleet_pct:.1f}%**",
+        f"## Intake Pipeline Accuracy: **{fleet_pct:.1f}%**",
         "",
         "| Metric | Value |",
         "|--------|-------|",
@@ -637,7 +637,7 @@ def _save_baseline(path: Path, results: list[ModemResult]) -> None:
     """Write current results as the new baseline."""
     baseline = {_result_key(r): _result_status(r) for r in results}
     data = {
-        "_comment": "MCP pipeline regression baseline. Update with --update-baseline.",
+        "_comment": "Intake pipeline regression baseline. Update with --update-baseline.",
         "results": dict(sorted(baseline.items())),
     }
     path.write_text(json.dumps(data, indent=2) + "\n")
@@ -707,7 +707,7 @@ def _print_baseline_comparison(
 
 def main() -> None:
     """Run the regression sweep."""
-    parser = argparse.ArgumentParser(description="MCP pipeline regression — accuracy tracking")
+    parser = argparse.ArgumentParser(description="Intake pipeline regression — accuracy tracking")
     parser.add_argument("--modem", help="Run only this modem (e.g., arris/sb8200)")
     parser.add_argument(
         "--verbose",
