@@ -11,6 +11,7 @@ pip install --root-user-action=ignore -r tests/requirements.txt
 echo "📦 Installing solentlabs packages (editable)..."
 pip install --root-user-action=ignore -e packages/cable_modem_monitor_core
 pip install --root-user-action=ignore -e packages/cable_modem_monitor_catalog
+pip install --root-user-action=ignore -e packages/cable_modem_monitor_catalog_tools
 
 # Install CodeQL CLI if not already installed
 if ! command -v codeql > /dev/null 2>&1; then

@@ -65,14 +65,23 @@ class TestLoadHarJsonLfsDetection:
         har_file = tmp_path / "modem.har"
         har_file.write_text(LFS_POINTER, encoding="utf-8")
 
-        with pytest.raises(LfsPointerError, match="Git LFS pointer"):
+        # Mock subprocess so the test doesn't actually invoke `git lfs pull`
+        # against the surrounding repository (which would have side effects
+        # on the working tree / index).
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError),
+            pytest.raises(LfsPointerError, match="Git LFS pointer"),
+        ):
             load_har_json(har_file)
 
     def test_error_message_includes_install_instructions(self, tmp_path: Path) -> None:
         har_file = tmp_path / "modem.har"
         har_file.write_text(LFS_POINTER, encoding="utf-8")
 
-        with pytest.raises(LfsPointerError, match="git lfs install"):
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError),
+            pytest.raises(LfsPointerError, match="git lfs install"),
+        ):
             load_har_json(har_file)
 
     def test_attempts_git_lfs_pull(self, tmp_path: Path) -> None:

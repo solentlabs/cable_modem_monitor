@@ -1,13 +1,13 @@
 """HAR data extraction — shared resource dict construction.
 
 Builds transport-specific resource dicts from HAR entries. Used by:
-- ``mcp.generate_golden_file`` — golden file generation
-- ``mcp.analysis.format.hnap`` — HNAP format detection
+- ``cable_modem_monitor_catalog_tools.generate_golden_file`` — golden file generation
+- ``cable_modem_monitor_catalog_tools.analysis.format.hnap`` — HNAP format detection
 - ``testing.auth_hnap`` — mock server data response
 
 Also provides :func:`load_har_json`, the single HAR loading entry
 point used across Core, Catalog, and tooling.  Detects Git LFS
-pointers and attempts auto-recovery so tests and MCP tools fail
+pointers and attempts auto-recovery so tests and tooling fail
 with actionable guidance instead of opaque ``JSONDecodeError``.
 
 Candidate for future extraction to the ``har-capture`` package.

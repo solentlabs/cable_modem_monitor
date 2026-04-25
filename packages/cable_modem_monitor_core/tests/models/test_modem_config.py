@@ -20,7 +20,7 @@ from pydantic import ValidationError
 from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
 from solentlabs.cable_modem_monitor_core.models.modem_config.actions import CbnAction, HttpAction
 
-from tests.conftest import collect_fixtures, load_fixture
+from tests._helpers import collect_fixtures, load_fixture
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "modem_config"
 VALID_DIR = FIXTURES_DIR / "valid"

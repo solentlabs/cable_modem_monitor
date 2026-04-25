@@ -69,7 +69,7 @@ jobs:
       - name: Install Core with extras
         run: |
           python -m pip install --upgrade pip
-          pip install -e "packages/cable_modem_monitor_core[mcp,sjcl]"
+          pip install -e "packages/cable_modem_monitor_core[sjcl]"
           pip install pytest pytest-socket pytest-cov
 
       - name: Run Core tests
@@ -86,16 +86,25 @@ jobs:
         run: |
           pytest tests/ -v --tb=short --cov=solentlabs/cable_modem_monitor_catalog --cov-report=term-missing --cov-fail-under=90
 
-      - name: MCP pipeline accuracy
+      - name: Install Catalog Tools
         run: |
-          python packages/cable_modem_monitor_catalog/scripts/mcp_pipeline_regression.py -v --scorecard mcp-scorecard.json
+          pip install -e packages/cable_modem_monitor_catalog_tools
 
-      - name: Upload MCP scorecard
+      - name: Run Catalog Tools tests
+        working-directory: packages/cable_modem_monitor_catalog_tools
+        run: |
+          pytest tests/ -v --tb=short --cov=solentlabs/cable_modem_monitor_catalog_tools --cov-report=term-missing --cov-fail-under=80
+
+      - name: Intake pipeline accuracy
+        run: |
+          python packages/cable_modem_monitor_catalog_tools/scripts/mcp_pipeline_regression.py -v --scorecard intake-pipeline-scorecard.json
+
+      - name: Upload intake pipeline scorecard
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcp-scorecard
-          path: mcp-scorecard.json
+          name: intake-pipeline-scorecard
+          path: intake-pipeline-scorecard.json
           retention-days: 90
 
   lint:

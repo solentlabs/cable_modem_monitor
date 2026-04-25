@@ -215,7 +215,12 @@ def update_version_test(repo_root: Path, version: str) -> bool:
 
 
 def update_package_versions(repo_root: Path, version: str) -> bool:
-    """Update version in Core and Catalog pyproject.toml files."""
+    """Update version in Core and Catalog pyproject.toml files.
+
+    Catalog Tools is intentionally excluded — it is a repo-only internal
+    authoring pipeline, never published to PyPI, and its version is not
+    coupled to Core/Catalog releases.
+    """
     package_dirs = [
         repo_root / "packages" / "cable_modem_monitor_core",
         repo_root / "packages" / "cable_modem_monitor_catalog",
@@ -555,6 +560,20 @@ def _check_file_contains(path: Path, label: str, needle: str) -> bool:
         return False
 
 
+def _verify_dependency_pins(pkg: Path, version: str) -> bool:
+    """Check cross-package dependency pins in pyproject files.
+
+    Catalog pins Core with `==`. Catalog Tools is a repo-only internal
+    package and uses `>=` ranges instead — not checked here.
+    """
+    core_pin = f'"solentlabs-cable-modem-monitor-core=={version}"'
+    return _check_file_contains(
+        pkg / "cable_modem_monitor_catalog" / "pyproject.toml",
+        "catalog→core dependency",
+        core_pin,
+    )
+
+
 def verify_version_consistency(repo_root: Path, version: str) -> bool:
     """Verify that all version files have been updated correctly.
 
@@ -610,13 +629,8 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
         if not _check_file_contains(path, label, needle):
             all_correct = False
 
-    # Check catalog→core dependency pin
-    catalog_dep_pin = f'"solentlabs-cable-modem-monitor-core=={version}"'
-    if not _check_file_contains(
-        pkg / "cable_modem_monitor_catalog" / "pyproject.toml",
-        "catalog→core dependency",
-        catalog_dep_pin,
-    ):
+    # Check cross-package dependency pins
+    if not _verify_dependency_pins(pkg, version):
         all_correct = False
 
     if all_correct:

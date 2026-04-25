@@ -2,14 +2,18 @@
 """Normalize YAML key ordering across the catalog fleet.
 
 Reorders keys in modem.yaml and parser.yaml files to match the
-canonical ordering defined by the Pydantic model field definitions.
+canonical ordering derived from the Pydantic model field definitions.
 Uses ruamel.yaml for round-trip fidelity: comments, quoting style,
 and scalar style (``|`` blocks) are preserved.
 
-Key ordering logic is imported from Core (single source of truth):
-- Top-level orders derived from ``ModemConfig`` / ``ParserConfig`` fields.
-- Nested context orders are hardcoded presentation choices (span
-  discriminated unions, can't be derived from a single model).
+Key-ordering logic is imported from Catalog Tools' generate_config
+module (which derives top-level orders from Core's ``ModemConfig`` /
+``ParserConfig`` field definitions, plus hardcoded presentation
+choices for nested contexts that span discriminated unions).
+
+This script is Catalog hygiene tooling — operates on data in this
+package — but it requires Catalog Tools to be installed in the dev
+environment because that's where the ordering logic lives.
 
 Run from the repo root::
 
@@ -28,7 +32,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
-from solentlabs.cable_modem_monitor_core.mcp.generate_config.validation import (
+from solentlabs.cable_modem_monitor_catalog_tools.generate_config.validation import (
     CONTEXT_ORDERS,
     MODEM_KEY_ORDER,
     PARSER_KEY_ORDER,

@@ -79,6 +79,9 @@ db-*/
 
 # CodeQL CLI installation (local development only)
 /codeql/
+/codeql-linux64.zip
+/codeql-osx64.zip
+/codeql-win64.zip
 
 # GitHub CodeQL workflow artifacts
 .github/codeql/databases/

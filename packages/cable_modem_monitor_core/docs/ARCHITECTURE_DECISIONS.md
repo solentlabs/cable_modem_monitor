@@ -8,10 +8,13 @@ files; this document explains the choices that shaped them.
 
 ## Package Boundaries
 
-### Three packages with strict dependency direction
+### Three runtime packages with strict dependency direction
 
 **Decision:** Core (engine) ← Catalog (content) ← HA Integration
-(adapter), enforced through real Python packaging.
+(adapter), enforced through real Python packaging. A fourth package —
+`catalog_tools` — provides maintainer authoring tools; it is off
+this runtime chain. See "catalog_tools is a developer accelerator"
+below.
 
 **Rationale:** Import violations are missing module errors, not lint
 warnings. Core is platform-agnostic and could power any consumer —
@@ -36,6 +39,79 @@ writing test code.
 
 **Constrains:** Test assertions cannot be customized per-modem.
 Strategy changes are validated across all modems automatically.
+
+### catalog_tools is a developer accelerator, never a runtime dep
+
+**Decision:** The `cable_modem_monitor_catalog_tools` package
+contains the modem-onboarding pipeline — HAR analysis, YAML
+generation, golden-file construction, verification ingest,
+analyzer-correctness lints, fleet-pattern scanning, and trial
+parsing. It is installed only in maintainer development environments
+and CI. It is never installed by HA or any other runtime consumer.
+
+**Rationale:** The system's minimum required surface is Core +
+Catalog. A maintainer could hand-author a valid `parser.yaml` and
+`modem.yaml` and the integration would work end-to-end. Catalog tools
+exist to reach a working configuration *faster and more consistently*,
+not to make configuration possible. Every byte that ships to a user's
+HA instance has install-size, dependency-closure, and security-
+attack-surface cost; keeping intake tooling off that chain keeps those
+costs tied only to runtime value.
+
+**Operational test:** Deleting the `catalog_tools` package directory
+must leave Core + Catalog + HA fully functional. If anything in
+catalog_tools is structurally required by runtime code, that thing
+is misplaced and must move into Core or Catalog.
+
+**Constrains:** Nothing in Core, Catalog, or the HA integration may
+import from `catalog_tools`. The HA integration's `manifest.json` does
+not list `catalog_tools` as a requirement. `catalog_tools` depends on
+Core and Catalog (one-way edge); neither ever depends on it.
+
+### Catalog's runtime API surface is `CATALOG_PATH`
+
+**Decision:** The only symbol the HA integration imports from
+Catalog is `CATALOG_PATH` — a `Path` constant pointing at the modem
+directory tree (`modems/{manufacturer}/{model}/`). Everything else
+the integration needs, it gets from Core.
+
+**Rationale:** Catalog is content-only. Its "API" is the structured
+data at `CATALOG_PATH/{manufacturer}/{model}/*`, consumed by Core's
+config loaders. A richer runtime API would pull per-modem logic into
+Catalog, contradicting "Catalog has no business logic." Keeping the
+runtime import surface at a single constant makes the rule
+enforceable: if a runtime consumer needs to import anything else from
+Catalog, the code belongs in Core instead.
+
+**Constrains:** Helpers that operate on catalog YAML files at runtime
+(config loading, cross-file validation) live in Core. Helpers that
+operate on catalog YAML files at authoring time (fleet scanning,
+trial parsing, normalization) live in `catalog_tools`. Catalog's
+runtime package never grows a second top-level symbol without a
+decision update.
+
+### Pydantic is a Core runtime dep
+
+**Decision:** `pydantic>=2.0` is declared in Core's
+`[project] dependencies`, not gated behind an optional extra.
+
+**Rationale:** Core's `models/` package defines `ModemConfig`,
+`ParserConfig`, and `ModemData` as Pydantic `BaseModel` subclasses.
+They are imported by runtime consumers —
+`core/validation/cross_file.py`, `core/orchestration/*`,
+`core/test_harness/runner.py`. A clean non-HA install of Core cannot
+function without pydantic.
+
+Prior to the v3.14 carve-out, pydantic was mis-declared as
+`[project.optional-dependencies] mcp = ["pydantic>=2.0"]`. The bug
+was masked in practice because Home Assistant itself depends on
+pydantic and supplies it transitively. The carve-out corrects the
+declaration.
+
+**Constrains:** Anyone installing `solentlabs-cable-modem-monitor-core`
+receives pydantic as a transitive install. The `[mcp]` optional
+extra is removed; intake-pipeline heavy deps (ruamel.yaml and any
+future additions) live in `cable_modem_monitor_catalog_tools`.
 
 ---
 
@@ -535,16 +611,22 @@ missing auth flows, and ambiguous transports halt analysis. No guessing.
 Metadata not in the HAR is filled via web search with source
 provenance.
 
-### Core owns the onboarding spec
+### catalog_tools owns the onboarding spec
 
-**Decision:** ONBOARDING_SPEC.md lives in Core's docs, not Catalog's.
+**Decision:** `ONBOARDING_SPEC.md` lives in catalog_tools' docs.
+(Previously in Core's docs; moved in the v3.14 catalog_tools
+carve-out.)
 
 **Rationale:** The onboarding process generates Catalog content but
-uses Core's validation, test harness, and schema definitions. Core
-is the authority on what constitutes a valid modem config.
+is executed by catalog_tools using Core's validation, test harness,
+and schema definitions. Core remains the authority on what
+constitutes a valid modem config; catalog_tools is the package that
+*exercises* Core's schemas to produce content. The spec describing
+the authoring pipeline belongs with the package that implements it.
 
-**Constrains:** The MCP tools depend on Core's schema validators and
-test harness.
+**Constrains:** catalog_tools depends on Core's schema validators
+and test harness. Core does not depend on catalog_tools; the
+onboarding spec does not belong in Core's surface area.
 
 ---
 
@@ -624,7 +706,7 @@ validator updates. No existing code changes.
 | `ORCHESTRATION_SPEC.md` | Orchestrator, collector, health monitor, restart monitor — interface contracts and data models |
 | `ORCHESTRATION_USE_CASES.md` | Scenario-based use cases — normal ops, auth failures, connectivity, restart, health, lifecycle |
 | `RUNTIME_POLLING_SPEC.md` | Poll cycle, session lifecycle, error recovery |
-| `ONBOARDING_SPEC.md` | MCP-driven modem onboarding |
+| `../../cable_modem_monitor_catalog_tools/docs/ONBOARDING_SPEC.md` | Catalog Tools modem onboarding |
 | `FIELD_REGISTRY.md` | Field naming authority |
 | `VERIFICATION_STATUS.md` | Parser status lifecycle |
 | `../../../custom_components/cable_modem_monitor/docs/CONFIG_FLOW_SPEC.md` | Setup wizard |

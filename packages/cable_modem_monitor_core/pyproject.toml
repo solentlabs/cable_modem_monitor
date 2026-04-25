@@ -12,6 +12,7 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "pyyaml>=6.0",
     "defusedxml>=0.7.1",
+    "pydantic>=2.0",
     "requests>=2.31",
 ]
 license = "MIT"
@@ -39,13 +40,11 @@ Issues = "https://github.com/solentlabs/cable_modem_monitor/issues"
 Changelog = "https://github.com/solentlabs/cable_modem_monitor/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-mcp = ["pydantic>=2.0"]
 sjcl = ["cryptography>=41.0"]
 cbn = ["cryptography>=41.0"]
 
 [dependency-groups]
 dev = [
-    "solentlabs-cable-modem-monitor-core[mcp]",
     "pytest>=8.0",
     "pytest-socket>=0.7",
     "ruff>=0.14",

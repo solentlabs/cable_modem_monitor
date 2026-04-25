@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (developer-only — no user-facing impact)
+
+- **Internal restructure: catalog authoring pipeline carved out of
+  Core into a repo-only package.** The modem onboarding pipeline
+  (HAR analysis, YAML generation, golden-file construction, parity
+  checks) has moved from `core/mcp/` to a new repo-only package
+  `cable_modem_monitor_catalog_tools` that is never installed by HA
+  and not published to PyPI. Two stray catalog runtime files
+  (`fleet_scanner`, `trial_parser`) used only at authoring time
+  moved with it. See `core/docs/ARCHITECTURE_DECISIONS.md` §
+  "catalog_tools is a developer accelerator, never a runtime dep."
+- **Pydantic correctness fix:** `pydantic>=2.0` promoted from
+  Core's `[mcp]` optional extra to a first-class runtime dep. The
+  prior declaration was a bug — Core's `models/`,
+  `validation/cross_file.py`, and `orchestration/*` import pydantic
+  at runtime, but the bug was masked because HA pulls pydantic
+  transitively. The `[mcp]` extra is removed. Anyone using a
+  dev/CI command like `pip install -e packages/cable_modem_monitor_core[mcp,sjcl]`
+  should drop the `mcp` element.
+
 ### Added
 
 - **Recovery state machine** — new `orchestration/recovery.py` owns

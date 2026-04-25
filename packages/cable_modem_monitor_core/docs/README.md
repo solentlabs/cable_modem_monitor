@@ -23,8 +23,13 @@
 | [RUNTIME_POLLING_SPEC.md](RUNTIME_POLLING_SPEC.md) | Poll cycle, session lifecycle, health pipeline, restart recovery |
 | [FIELD_REGISTRY.md](FIELD_REGISTRY.md) | Three-tier field naming authority |
 | [VERIFICATION_STATUS.md](VERIFICATION_STATUS.md) | Parser status enum and verification lifecycle |
-| [ONBOARDING_SPEC.md](ONBOARDING_SPEC.md) | MCP-driven modem onboarding workflow |
 | [SNMP_RESEARCH.md](SNMP_RESEARCH.md) | SNMP on cable modems — research findings, deferred |
+
+Intake / onboarding pipeline specs live in the
+[Catalog Tools docs](../../cable_modem_monitor_catalog_tools/docs/)
+(carved out of Core in v3.14). Catalog Tools is the maintainer
+authoring package — HA never installs it. See ARCHITECTURE_DECISIONS.md
+§ "catalog_tools is a developer accelerator, never a runtime dep".
 
 ## HA Integration Specs
 

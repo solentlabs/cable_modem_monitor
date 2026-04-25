@@ -35,6 +35,7 @@ specs, see the indexes in each package's `docs/` directory.
 
 | Index | Scope |
 |-------|-------|
-| [Core specs](../packages/cable_modem_monitor_core/docs/README.md) | Architecture, auth, parsing, orchestration, onboarding |
-| [Catalog docs](../packages/cable_modem_monitor_catalog/docs/README.md) | Intake pipeline, mock server, modem testing |
+| [Core specs](../packages/cable_modem_monitor_core/docs/README.md) | Architecture, auth, parsing, orchestration |
+| [Catalog docs](../packages/cable_modem_monitor_catalog/docs/README.md) | Modem data, mock server |
+| [Catalog Tools docs](../packages/cable_modem_monitor_catalog_tools/docs/README.md) | Intake pipeline, onboarding spec, authoring workflow (maintainer-only) |
 | [HA specs](../custom_components/cable_modem_monitor/docs/README.md) | Config flow, entities, adapter wiring |

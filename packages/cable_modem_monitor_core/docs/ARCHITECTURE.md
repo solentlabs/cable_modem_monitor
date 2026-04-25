@@ -29,47 +29,54 @@ graph TD
     HA["<b>HA Integration</b><hr/>cable-modem-monitor"] --> Core["<b>pip package</b><hr/>solentlabs-cable-modem-monitor-core"]
     HA --> Catalog["<b>pip package</b><hr/>solentlabs-cable-modem-monitor-catalog"]
     Catalog --> Core
+    Tools["<b>pip package (dev only)</b><hr/>solentlabs-cable-modem-monitor-catalog-tools"] -.-> Core
+    Tools -.-> Catalog
+    style Tools stroke-dasharray: 5 5
 ```
+
+The dashed edge indicates that `catalog_tools` is a developer
+accelerator, never installed by HA or any runtime consumer. See
+[ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) §
+"catalog_tools is a developer accelerator, never a runtime dep".
 
 **Import paths:**
 
 - `from solentlabs.cable_modem_monitor_core import ...`
 - `from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH`
+- `from solentlabs.cable_modem_monitor_catalog_tools import ...` (maintainer dev only)
 
 **Repository layout:**
 
 ```text
 packages/
-├── cable_modem_monitor_core/
-│   ├── pyproject.toml              # name = "solentlabs-cable-modem-monitor-core"
+├── cable_modem_monitor_core/           # runtime engine
+│   ├── pyproject.toml                  # name = "solentlabs-cable-modem-monitor-core"
 │   └── solentlabs/cable_modem_monitor_core/
-└── cable_modem_monitor_catalog/
-    ├── pyproject.toml              # name = "solentlabs-cable-modem-monitor-catalog"
-    └── solentlabs/cable_modem_monitor_catalog/
+├── cable_modem_monitor_catalog/        # modem data (pure content)
+│   ├── pyproject.toml                  # name = "solentlabs-cable-modem-monitor-catalog"
+│   └── solentlabs/cable_modem_monitor_catalog/
+└── cable_modem_monitor_catalog_tools/  # maintainer authoring tools (never installed by HA)
+    ├── pyproject.toml                  # name = "solentlabs-cable-modem-monitor-catalog-tools"
+    └── solentlabs/cable_modem_monitor_catalog_tools/
 custom_components/
-└── cable_modem_monitor/            # HA integration
+└── cable_modem_monitor/                # HA integration
 ```
+
+HA installs only `core + catalog`. `catalog_tools` is a developer
+accelerator — see
+[ARCHITECTURE_DECISIONS.md § catalog_tools is a developer accelerator](ARCHITECTURE_DECISIONS.md).
 
 ### Optional extras
 
-Core's base dependencies are minimal — what the runtime engine needs.
-Additional functionality is available via optional extras:
+Core's base dependencies are minimal — what the runtime engine needs
+(including `pydantic` as a runtime dep — Core's models require it).
+Additional transport-specific functionality is available via optional
+extras:
 
 | Extra | Install | What it adds | Who uses it |
 |-------|---------|--------------|-------------|
-| `[mcp]` | `pip install solentlabs-cable-modem-monitor-core[mcp]` | `pydantic>=2.0` | MCP server tools (`validate_har`, `analyze_har`, `enrich_metadata`, `generate_config`, `generate_golden_file`, `write_modem_package`, `run_tests`, `validate_config`), Catalog's build-time validation, dev-gate CI |
-
-The `[mcp]` extra provides Pydantic for config schema validation. The HA
-integration never imports the `models` module — it uses parsed dicts from
-the coordinator. Pydantic is only needed by the MCP onboarding tools and
-Catalog's dev-time validation pipeline.
-
-Catalog's dev dependencies reference the extra:
-
-```toml
-[dependency-groups]
-dev = ["solentlabs-cable-modem-monitor-core[mcp]"]
-```
+| `[sjcl]` | `pip install solentlabs-cable-modem-monitor-core[sjcl]` | `cryptography>=41.0` | `form_sjcl` auth strategy (AES-CCM) |
+| `[cbn]` | `pip install solentlabs-cable-modem-monitor-core[cbn]` | `cryptography>=41.0` | `form_cbn` auth strategy (AES-256-CBC) |
 
 ### Core — `solentlabs-cable-modem-monitor-core`
 
@@ -880,8 +887,8 @@ bad channel_type inference — the tests will reinforce the incorrect
 output indefinitely. The golden file review during intake is the critical
 correctness gate. After commit, the regression only guards against drift
 from whatever was committed, right or wrong. This is by design — the
-intake process (MCP scaffolding + LLM iteration + human review) is where
-correctness must be established.
+intake process (Catalog Tools scaffolding + LLM iteration + human
+review) is where correctness must be established.
 
 ### Two Regression Scopes
 
@@ -893,13 +900,14 @@ correctness must be established.
 - Implemented by: catalog test suite (auto-discovered HAR/golden file pairs)
 - Pass criteria: zero golden file drift
 
-**MCP regression** — MCP-generated configs through the extraction pipeline:
+**Pipeline regression** — catalog-tools-generated configs through the
+extraction pipeline:
 
-- Uses HAR → MCP intake pipeline → generated modem.yaml + parser.yaml
+- Uses HAR → Catalog Tools intake pipeline → generated modem.yaml + parser.yaml
 - Overwrites committed configs with generated versions
 - Runs same extraction pipeline → golden file comparison
-- Tests: can the MCP pipeline reproduce working configs from a HAR alone?
-- Pass criteria: zero golden file drift (MCP output = manual curation)
+- Tests: can the intake pipeline reproduce working configs from a HAR alone?
+- Pass criteria: zero golden file drift (generated output = manual curation)
 - Current state: significant drift (pipeline gaps in field mapping, type
   normalization, channel type inference, format-specific extraction)
 
@@ -1247,7 +1255,7 @@ output, and resolves which `modem*.yaml` applies (base or variant).
 **Golden file lifecycle:**
 
 1. Contributor submits HAR capture via `har-capture`
-2. MCP pipeline: `validate_har` → `analyze_har` → `enrich_metadata` → `generate_config` → `generate_golden_file` → `write_modem_package`
+2. Catalog Tools pipeline: `validate_har` → `analyze_har` → `enrich_metadata` → `generate_config` → `generate_golden_file` → `write_modem_package`
 3. `run_tests` replays HAR against `HARMockServer`, compares output to golden file
 4. Developer reviews golden file against the raw HAR responses
 5. Reviewed output is committed as `{name}.expected.json`
@@ -1413,9 +1421,9 @@ levels; Core only emits log records.
 | `RUNTIME_POLLING_SPEC.md` | Poll cycle, session lifecycle, health pipeline, restart recovery |
 | `FIELD_REGISTRY.md` | Three-tier field naming authority |
 | `VERIFICATION_STATUS.md` | Parser status lifecycle |
-| `ONBOARDING_SPEC.md` | MCP-driven modem onboarding workflow |
 <!-- Cross-package links: these relative paths work in the monorepo but
      will need updating if packages are published separately to PyPI. -->
+| `../../cable_modem_monitor_catalog_tools/docs/ONBOARDING_SPEC.md` | Catalog Tools modem onboarding workflow |
 | `../../../custom_components/cable_modem_monitor/docs/CONFIG_FLOW_SPEC.md` | Setup wizard step sequence |
 | `../../../custom_components/cable_modem_monitor/docs/ENTITY_MODEL_SPEC.md` | Core output → HA entities, attributes, availability |
 | `../../../custom_components/cable_modem_monitor/docs/HA_ADAPTER_SPEC.md` | HA wiring — runtime data, coordinators, polling modes, restart, reauth |

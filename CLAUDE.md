@@ -51,8 +51,10 @@ wins over convenience.
    *how*. If a config field requires regex, code, or implementation
    knowledge, the abstraction is wrong.
 
-8. **MCP intake is the onboarding path.** New modems come through the
-   MCP pipeline (`/modem-intake`), not manual file construction. The
+8. **Catalog Tools intake is the onboarding path.** New modems come through
+   the Catalog Tools pipeline (`/modem-intake` skill), not manual file
+   construction. Catalog Tools lives in `packages/cable_modem_monitor_catalog_tools/`
+   and is a maintainer-only package (never installed by HA). The
    pipeline validates against specs end-to-end. Manual construction
    bypasses that validation.
 
@@ -139,7 +141,8 @@ Authoritative doc indexes:
 
 | Index | Scope |
 | ----- | ----- |
-| `packages/cable_modem_monitor_core/docs/README.md` | Core specs — architecture, auth, parsing, orchestration, onboarding |
+| `packages/cable_modem_monitor_core/docs/README.md` | Core specs — architecture, auth, parsing, orchestration |
+| `packages/cable_modem_monitor_catalog_tools/docs/README.md` | Catalog Tools specs — intake pipeline, onboarding, authoring workflow |
 | `custom_components/cable_modem_monitor/docs/README.md` | HA specs — config flow, entities, adapter wiring |
 | `docs/README.md` | Project docs — guides, references, setup |
 | `docs/CODE_REVIEW.md` | Coding standards, test patterns, naming conventions |

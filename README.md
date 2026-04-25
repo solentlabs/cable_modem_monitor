@@ -45,7 +45,7 @@ Monitor your cable modem's signal quality, errors, and connection health in real
 
 **Returning contributor?** See the [Contributing Guide](./CONTRIBUTING.md) for workflow, code style, and PR guidelines.
 
-**Architecture (v3.14):** Two pip packages in `packages/` (Core + Catalog) plus a thin HA adapter in `custom_components/`. See [CONTRIBUTING.md](./CONTRIBUTING.md#project-architecture) for details.
+**Architecture (v3.14):** Two runtime pip packages in `packages/` (Core + Catalog) plus a thin HA adapter in `custom_components/`. A third package — **Catalog Tools** — provides maintainer authoring tools (HAR analysis, YAML generation, verification) and is never installed by HA. See [CONTRIBUTING.md](./CONTRIBUTING.md#project-architecture) for details.
 
 ---
 

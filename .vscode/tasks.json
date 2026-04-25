@@ -75,6 +75,20 @@
       "problemMatcher": []
     },
     {
+      "label": "🧪 Test: Catalog Tools",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/pytest tests/ -q --tb=short --cov=solentlabs/cable_modem_monitor_catalog_tools --cov-report=term:skip-covered --cov-fail-under=80",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/cable_modem_monitor_catalog_tools"
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "🧪 Test: Cable Modem Monitor (HA)",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/pytest tests/ -o addopts= -q --tb=short --strict-markers --cov=custom_components/cable_modem_monitor --cov-report=term:skip-covered --cov-fail-under=70",

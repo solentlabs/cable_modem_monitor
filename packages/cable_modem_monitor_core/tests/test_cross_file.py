@@ -22,7 +22,7 @@ from solentlabs.cable_modem_monitor_core.validation.cross_file import (
     validate_cross_file,
 )
 
-from tests.conftest import collect_fixtures, load_fixture
+from tests._helpers import collect_fixtures, load_fixture
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "cross_file"
 VALID_DIR = FIXTURES_DIR / "valid"

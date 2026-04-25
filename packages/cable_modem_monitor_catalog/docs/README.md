@@ -9,9 +9,13 @@ For architecture, specs, and field definitions, see the
 
 | Document | Covers |
 |----------|--------|
-| [INTAKE_PIPELINE.md](INTAKE_PIPELINE.md) | Pipeline overview — who does what, extension points, fleet patterns |
-| [MODEM_INTAKE_WORKFLOW.md](MODEM_INTAKE_WORKFLOW.md) | Operator workflow — step-by-step instructions with code snippets |
 | [MOCK_SERVER.md](MOCK_SERVER.md) | Mock server for testing catalog entries |
+
+Intake pipeline / onboarding workflow docs moved to
+[Catalog Tools docs](../../cable_modem_monitor_catalog_tools/docs/)
+in v3.14. Catalog Tools is a separate, optional maintainer package —
+not installed by HA. Look there for `INTAKE_PIPELINE.md`,
+`MODEM_INTAKE_WORKFLOW.md`, and `ONBOARDING_SPEC.md`.
 
 **Note:** `FIELD_REGISTRY.md` and `VERIFICATION_STATUS.md` have moved to
 [Core docs](../../cable_modem_monitor_core/docs/) — they define contracts
