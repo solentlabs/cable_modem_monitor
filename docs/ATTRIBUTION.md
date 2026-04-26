@@ -135,6 +135,70 @@ Open source thrives on mutual respect and acknowledgment. We're committed to doi
 
 ---
 
+## Attribution Standards
+
+When adding a parser informed by external code or research, follow
+these standards.
+
+### Parser docstring template
+
+Document the source in the parser docstring:
+
+```python
+"""
+{Manufacturer} {Model} parser for Cable Modem Monitor.
+
+Auth implementation informed by:
+- {Author/Project name}: {URL}
+
+See ATTRIBUTION.md for full credits.
+"""
+```
+
+### Adding to ATTRIBUTION.md
+
+Add an entry under "External References" with:
+
+- Project name and author
+- Repository URL
+- What we learned from it
+- License acknowledgment
+
+We learn from, not copy. External references inform our approach;
+we implement in our own architecture with proper attribution.
+
+### AI-assisted attribution discipline
+
+AI tools sometimes add plausible-sounding citations that weren't
+actually referenced during development. Before committing:
+
+1. **Review all attributions** — verify each one is real and that you
+   can explain how it influenced the work.
+2. **Verify you can answer "how did we use this?"** — if you can't
+   explain the specific influence, use softer framing instead of
+   claiming direct learning.
+3. **Data contributors are verifiable** — issue numbers, forum posts,
+   and HAR captures can be traced. External code references added by
+   AI may not be.
+
+### Honest framing levels
+
+| Framing | When to use it | Example phrasing |
+|---------|----------------|------------------|
+| "Based on" / "Informed by" | The source's approach is traceable in the code | "Auth flow informed by BowlesCR/MB8600_Login (HMAC-MD5 challenge-response)" |
+| "Field definitions from" | Specific field names or values came from the source | "Response field names from Tatsh/mb8611" |
+| "Related prior art" | Similar work exists; direct influence can't be verified | "Related prior art: other DOCSIS modem monitoring projects" |
+
+### When in doubt
+
+- **Don't remove existing attribution** — removing credit looks worse
+  than over-crediting.
+- **Soften the language** — change "Based on" to "Related prior art."
+- **Document the uncertainty** — note in your tracker that influence
+  couldn't be verified.
+
+---
+
 ## How to Get Credit
 
 ### Contributing Code

@@ -8,11 +8,11 @@ body:
       value: |
         ## Request Support for a New Modem
 
-        To add support for your modem, we need a **HAR capture** from its web interface. This records the complete HTTP flow — authentication, API calls, page content — everything needed to build a parser.
+        Adding support for your modem starts with a **HAR capture** from its web interface. This records the complete HTTP flow — authentication, API calls, page content — everything needed to build a parser.
 
-        > **Please Note:** This project is maintained by a single developer in spare time. Modem requests are handled as capacity allows, with priority given to submissions that include complete, well-sanitized captures. There's no guaranteed timeline for new parser development.
+        **New here?** Read the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) for the full walkthrough — it covers capturing, screening for PII (manually or with AI assist), and submitting.
 
-        **New here?** Read [Improving the Modem Request Process](https://github.com/solentlabs/cable_modem_monitor/discussions/88) for background, or the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) for the full walkthrough.
+        **Help grow the catalog.** The catalog includes modems the maintainer can't physically test — it grows when contributors with hardware help analyze captures and propose entries. If you have AI access, you can do significantly more than file a request: analyze your own capture, propose the catalog entry, and help triage other users' submissions. See [AI-Assisted Catalog Contribution](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#ai-assisted-catalog-contribution).
 
   - type: input
     id: modem-model
@@ -104,8 +104,6 @@ body:
         - label: I captured using incognito/private browsing (or cleared cookies first)
           required: true
         - label: I have searched my capture file for my WiFi SSID and password to verify they're not present
-          required: true
-        - label: I understand this is a solo-maintained project with no guaranteed timeline for new parsers
           required: true
         - label: I'm willing to test the parser once it's developed
           required: false

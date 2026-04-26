@@ -13,149 +13,58 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ---
 
-## Help Us Add Your Modem
+## Adding Modem Support
 
-**Don't see your modem supported?** You can help us add it by capturing a HAR file from your modem's web interface.
+There are two paths, depending on what you can do:
 
-> **See the [Modem Request Guide](./docs/MODEM_REQUEST.md)** for complete instructions on capturing data, reviewing for PII, and submitting your request.
+- **HA user requesting support for your modem** — see
+  [docs/MODEM_REQUEST.md](./docs/MODEM_REQUEST.md). Capture a HAR,
+  screen it for PII, file a request.
+- **Have AI access and want to help expand the catalog** — see
+  [AI-Assisted Catalog Contribution](#ai-assisted-catalog-contribution)
+  below. Analyze captures, propose catalog entries, triage incoming
+  requests.
 
-**Quick summary:**
-
-1. Capture your modem's login and status pages with [har-capture](https://github.com/solentlabs/har-capture)
-2. **Review the capture for your WiFi credentials** - automated sanitization isn't perfect
-3. [Open a modem request issue](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml)
-
-Your HAR capture becomes the test fixture that lets us develop and verify the parser without physical access to your modem.
+Either path is valuable. The catalog includes modems the maintainer
+can't physically test — community contribution is how it grows.
 
 ---
 
 ## Development Environment
 
-This project uses **Git LFS** for large test fixtures (HAR captures).
-Install it before cloning — see the
-[Getting Started Guide](./docs/setup/GETTING_STARTED.md) for details.
+See the [Getting Started Guide](./docs/setup/GETTING_STARTED.md) for
+environment setup. Come back here once you can run `make validate`.
 
-See the **[Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for
-complete environment setup. It covers Local Python, Dev Container, and
-WSL2 paths in a single document. Come back here once you can run
-`make validate`.
+### Format, Lint, Test
 
-> **Windows users:** WSL2 is required. The Getting Started Guide covers this.
+Day-to-day, the workflow runs through VS Code tasks
+(`Ctrl+Shift+P` → `Tasks: Run Task`):
 
-### Write Your Code
+- **🎨 Format Code** — auto-format on demand
+- **🧪 Test: All** — full test suite (Core, Catalog, HA)
+- **⚡ Test: Quick** — fast feedback during development
 
-Make your code changes or additions on a new branch.
+Linting runs continuously in the **PROBLEMS** tab via the Ruff, mypy,
+and Pyright extensions — keep it at zero.
 
-### Format and Lint
+For terminal use, `make format` / `make check` / `make test` cover the
+same ground. `./scripts/dev/commit.sh "message"` runs format → check →
+commit in one step. Pre-commit hooks check formatting, linting,
+type-check, and PII; pre-push hooks run the full lint and test suite
+(1–2 minutes).
 
-Before committing, ensure your code is well-formatted and passes all quality checks.
+### Test on Local HA
 
-**Recommended Workflow:**
+VS Code tasks bring up a local Home Assistant container with the
+integration bind-mounted:
 
-```bash
-# Option 1: Smart commit helper (formats, checks, and commits)
-./scripts/dev/commit.sh "your commit message"
+- **🚀 HA: Start** — start HA at http://localhost:8123
+- **🚀 HA: Start (Debug)** — same, with `custom_components.cable_modem_monitor`
+  at DEBUG log level
+- **📋 HA: View Logs** — tail the HA log
+- **⏹️ HA: Stop** — shut down the container
 
-# Option 2: Manual workflow
-make format        # Auto-format code
-make quick-check   # Fast checks (lint + format)
-make check         # Full checks (lint + format + type-check)
-git add -A
-git commit -m "your message"
-```
-
-**Quick commands (using Make):**
-
-```bash
-# Run all code quality checks
-make check         # Full checks (recommended before push)
-
-# Quick checks (faster, skips type-check)
-make quick-check
-
-# Auto-fix linting issues
-make lint-fix
-
-# Format code
-make format
-
-# Run comprehensive linting (includes security)
-make lint-all
-```
-
-### What Runs Automatically
-
-`setup.sh` installs all hooks. Here's what they do:
-
-**On commit** (pre-commit):
-
-- Code formatting (Black) and linting (Ruff) with auto-fix
-- Type checking (mypy, pyright) on Core/Catalog packages
-- File checks: trailing whitespace, YAML/JSON validation, large files
-- Custom: commit email privacy, changelog reminder, PII in test fixtures
-
-**On commit message** (commit-msg):
-
-- Conventional commit format validation
-
-**On push** (pre-push):
-
-- Full project lint (`ruff check .`)
-- Full test suite (`pytest`)
-- This takes 1-2 minutes — it's intentional, not stuck
-
-If a hook fails, read the error output — it usually explains what to fix.
-Run `make format` to auto-fix most formatting issues.
-
-```bash
-# Run all hooks manually on all files
-pre-commit run --all-files
-```
-
-### Run Tests
-
-```bash
-make test    # Runs all three test suites (HA, Core, Catalog)
-```
-
-For a specific package:
-
-```bash
-pytest tests/ -v                                                      # HA only
-cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..  # Core only
-```
-
-### Test on Local HA (Optional)
-
-You can test your changes on a local Home Assistant instance via Docker:
-
-```bash
-# Start HA with integration bind-mounted
-make docker-start
-
-# Open http://localhost:8123 and add the integration
-# After code changes, restart to pick them up:
-make docker-restart
-```
-
-**Testing a PR:**
-
-```bash
-gh pr checkout XX
-make docker-start
-```
-
-**Debug logging** — add this to your HA `configuration.yaml` to see
-detailed integration logs:
-
-```yaml
-logger:
-  default: warning
-  logs:
-    custom_components.cable_modem_monitor: debug
-```
-
-Then check Settings → System → Logs after restarting.
+To test a PR, `gh pr checkout NNN` then run **🚀 HA: Start**.
 
 ## Project Architecture
 
@@ -180,13 +89,103 @@ adapter declares them as dependencies in `manifest.json`.
 - Core + Catalog: `pytest` in each package's `tests/` directory (not from repo root)
 - HA integration: `pytest` at repo root (`tests/`)
 
-## Adding Support for New Modem Models
+## AI-Assisted Catalog Contribution
 
-**For users:** Submit a HAR capture via the [Modem Request Guide](docs/MODEM_REQUEST.md). This is the primary onboarding path.
+The maintainer doesn't have access to most of the modems in the
+catalog. Catalog growth depends on contributors who have the hardware
+and on AI tools that lower the bar to analyzing captures and proposing
+entries. This section is for that audience.
 
-**For developers:** New modems are onboarded through the MCP intake pipeline. The pipeline validates HAR captures, detects auth strategy, generates modem/parser configs, and produces golden files. See [Intake Pipeline](packages/cable_modem_monitor_catalog/docs/INTAKE_PIPELINE.md) for an overview, or [ONBOARDING_SPEC.md](packages/cable_modem_monitor_core/docs/ONBOARDING_SPEC.md) for the full specification.
+If you have AI access (Claude, ChatGPT, or similar with file
+attachment support), you can do significantly more than file a request:
 
-Modem configurations live in the catalog package (`packages/cable_modem_monitor_catalog/`). Each modem has a `modem.yaml`, `parser.yaml`, and `test_data/` directory with a HAR capture and golden file.
+- Audit your own HAR capture for completeness before submitting
+- Walk an incoming HAR through the intake pipeline and propose a
+  catalog entry
+- Triage user-submitted HARs and give feedback on quality
+- Analyze logs from bug reports to identify patterns
+
+### Auditing a HAR for completeness
+
+The most common reason a HAR is unusable is that it was recorded
+against an already-logged-in browser session — the auth flow is
+missing. Attach the `.sanitized.har` to your AI assistant and run this
+prompt:
+
+````text
+You are auditing a HAR capture from a cable modem's web interface.
+The capture will be used to build a parser, so it needs to contain
+the full HTTP conversation including any login flow.
+
+Please inspect the attached HAR and answer these questions in order.
+Output a fenced markdown block I can paste into a GitHub issue.
+
+1. Total number of entries (requests) in the HAR.
+2. Is there evidence of authentication in the capture? Look for any
+   of: a POST request whose URL contains "login", "auth", "session",
+   "hnap", or "admin"; a POST carrying form-encoded credentials in
+   the body; or any request carrying an `Authorization` header
+   (which is how HTTP Basic Auth modems present credentials). List
+   what you find (URL + method + which signal). Note: HNAP-style
+   modems POST to `/HNAP1/` for normal operations too, so listing
+   all of them is fine — presence is what matters.
+3. Does the FIRST request to the modem carry a Cookie header? On
+   its own this is a hint, not proof — but combined with the
+   *absence* of any authentication evidence in question 2, it
+   strongly suggests the capture was recorded against an already
+   logged-in session.
+4. How many distinct data-bearing responses are present? Count
+   responses whose Content-Type starts with "text/html",
+   "application/json", "application/xml", or "text/xml". List the
+   paths.
+5. Do any responses look truncated or empty (response body size
+   under 200 bytes)? List them — small responses are sometimes
+   legitimate (status pings, redirects), so this is an FYI, not a
+   failure on its own.
+6. Overall verdict: PASS / RECAPTURE NEEDED / UNCERTAIN, with a
+   one-sentence reason.
+
+Format the output exactly like this:
+
+```
+## HAR audit
+
+- Entries: <N>
+- Authentication evidence: <list or "none found">
+- First-request cookie: <yes/no>
+- Data-bearing responses: <count> — <paths>
+- Small responses (FYI): <list or "none">
+- Verdict: <PASS | RECAPTURE NEEDED | UNCERTAIN> — <reason>
+```
+````
+
+**PASS** → continue to the intake pipeline. **RECAPTURE NEEDED** →
+recapture using an incognito/private browsing window so the modem
+forces a fresh login. **UNCERTAIN** → submit anyway with the audit
+output included.
+
+A capture with no authentication evidence *and* a Cookie header on the
+first request is almost certainly post-auth and won't produce a working
+parser.
+
+### The intake pipeline
+
+The `cable_modem_monitor_catalog_tools` package contains the intake
+pipeline — a deterministic toolchain that validates HAR captures,
+detects auth strategy, classifies response formats, generates
+`modem.yaml` and `parser.yaml`, and produces golden files.
+
+- [Intake Pipeline overview](packages/cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md)
+- [Modem Intake Workflow](packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md)
+- [Onboarding Spec](packages/cable_modem_monitor_catalog_tools/docs/ONBOARDING_SPEC.md)
+
+The catalog tools package is maintainer-only and never installed by
+Home Assistant — it's a developer accelerator for catalog growth.
+
+Modem configurations live in the catalog package
+(`packages/cable_modem_monitor_catalog/`). Each modem has a
+`modem.yaml`, `parser.yaml`, and `test_data/` directory with a HAR
+capture and golden file.
 
 ## Code Style
 
@@ -196,108 +195,38 @@ Modem configurations live in the catalog package (`packages/cable_modem_monitor_
 - Keep functions focused and small
 - Use async/await for I/O operations
 
-### Linting
-
-Run `make check` for all code quality checks, or `make quick-check` for
-a faster pass. See [Linting Guide](docs/reference/LINTING.md) for
-individual tool commands and configuration.
-
-## Testing Guide
-
-`make test` runs all three test suites (HA integration, Core, Catalog).
-See [Run Tests](#run-tests) above for per-package commands.
-
 ## Submitting Changes
 
-### Pull Request Process
+Standard fork → branch → PR flow. Before pushing: `make check` and
+`make test` (or VS Code's **🧪 Test: All** task) — pre-push hooks will
+run them anyway, but catching failures locally is faster.
 
-1. **Fork the repository** and create a feature branch
-
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-2. **Make your changes** following code style guidelines
-
-3. **Add/update tests** for your changes
-
-4. **Run the test suite**
-
-   ```bash
-   pytest tests/ -v
-   cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
-   ```
-
-5. **Update documentation** if needed (README.md, CHANGELOG.md)
-
-6. **Commit your changes** with clear commit messages
-
-   ```bash
-   git commit -m "Add support for Arris TG1682G modem"
-   ```
-
-7. **Push to your fork** and create a pull request
-
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-### Pull Request Guidelines
-
-- **Clear description**: Explain what changes you made and why
-- **Link issues**: Reference any related GitHub issues (see Issue Closing Policy below)
-- **Test results**: Include test output showing all tests pass
-- **Screenshots**: For UI changes, include before/after screenshots
-- **Documentation**: Update README, CHANGELOG, or other docs as needed
+PRs that touch a modem (parser, catalog entry) should follow the
+[AI-Assisted Catalog Contribution](#ai-assisted-catalog-contribution)
+flow above. Reference issues with `Related to #X` or `Addresses #X` —
+never `Fixes #X` (see [Issue Closing Policy](#issue-closing-policy)).
+Update CHANGELOG.md when relevant.
 
 ### Issue Closing Policy
 
-**Important**: Developers should NEVER auto-close user-reported issues via PR keywords like "Fixes #123" or "Closes #456".
+**No issue is ever auto-closed.** Don't use `Fixes #X`, `Closes #X`,
+or `Resolves #X` in PR bodies or commit messages — GitHub auto-closes
+from any commit message in a merge, including buried references. Use
+`Related to #X` or `Addresses #X` instead.
 
-**Auto-close is ONLY appropriate for:**
+Closing requires either an artifact proving the fix worked, or a
+deliberate manual close by the maintainer (when the reporter has left
+the conversation — not automatic).
 
-- ✅ Developer-only improvements (code refactoring, test improvements)
-- ✅ Quality of life enhancements for developers
-- ✅ Documentation-only updates
-- ✅ CI/CD pipeline improvements
-- ✅ Development tooling updates
-
-**User validation REQUIRED for:**
-
-- ❌ Bug fixes affecting user experience
-- ❌ New modem support or parser changes
-- ❌ Authentication or connection handling
-- ❌ Any feature that changes integration behavior
-- ❌ Performance or reliability improvements
-
-**How to link issues without auto-closing:**
-
-```markdown
-# ❌ DO NOT use these keywords (they auto-close):
-Fixes #123
-Closes #456
-Resolves #789
-
-# ✅ USE these phrases instead:
-Addresses #123
-Related to #456
-Implements changes for #789
-See #123 (awaiting user validation)
-```
-
-**Why this matters:**
-
-- Users need to test and validate fixes in their environment
-- What works in tests may not work with all modem firmware versions
-- User feedback helps catch edge cases and regressions
-- Maintainers manually close issues after user confirmation
-
-**After the PR is merged:**
-
-1. Comment on the issue linking to the release
-2. Request user testing and validation
-3. Wait for user confirmation
-4. Maintainer manually closes the issue after validation
+- **Bug or defect** — artifact is the reporter confirming the fix on
+  their hardware.
+- **Modem support request** — closing requires:
+  - **From the user:** sanitized HAR capture (`modem.har`) and
+    verified diagnostics (`modem.verified.json`)
+  - **Derived from the HAR:** `modem.yaml`, `parser.yaml`, optionally
+    `parser.py`, and `modem.expected.json`
+  - **Gate:** all of the above pass the regression test suite before
+    the branch merges
 
 ### Commit Message Format
 
@@ -320,110 +249,18 @@ including the `release.py` script and step-by-step instructions.
 
 ## Code of Conduct
 
-### Our Standards
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
-- Be respectful and inclusive
-- Welcome newcomers and help them learn
-- Focus on what is best for the community
-- Show empathy towards others
+## Attribution
 
-### Unacceptable Behavior
+When adding a parser informed by external code or research, document
+the source in the parser docstring and add an entry to
+[docs/ATTRIBUTION.md](docs/ATTRIBUTION.md). For how to phrase external
+influence honestly — especially when AI tools were involved — see
+[Attribution Standards](docs/ATTRIBUTION.md#attribution-standards).
 
-- Harassment, discrimination, or offensive comments
-- Trolling or insulting comments
-- Publishing others' private information
-- Unprofessional conduct
-
-## Attribution Policy
-
-We believe in giving credit where credit is due. This section outlines how we acknowledge contributions.
-
-### Data Contributors
-
-Users who provide modem captures for new parser development are acknowledged in:
-
-| Location | What's Credited |
-| ---------- | ----------------- |
-| Fixture README | Name, modem model, capture date |
-| Parser `verification_source` | Issue link after user confirms working |
-| Release notes | When parser ships |
-
-### External Code & Inspiration
-
-When we reference external implementations to understand modem protocols or authentication:
-
-1. **Document the source** in the parser docstring:
-
-   ```python
-   """
-   Motorola MB8611 parser for Cable Modem Monitor.
-
-   Auth implementation informed by:
-   - BowlesCR/MB8600_Login: https://github.com/BowlesCR/MB8600_Login
-
-   See ATTRIBUTION.md for full credits.
-   """
-   ```
-
-2. **Add to ATTRIBUTION.md** with:
-   - Project name and author
-   - Repository URL
-   - What we learned from it
-   - License acknowledgment
-
-3. **We learn from, not copy** - External references inform our approach, but we implement in our own architecture with proper attribution.
-
-### AI-Assisted Development
-
-When using AI tools during development, additional care is needed for attribution:
-
-1. **Review all attributions before committing** - AI may add plausible-sounding citations that weren't actually referenced during development.
-
-2. **Verify you can answer "how did we use this?"** - If you can't explain the specific influence, use softer framing instead of claiming direct learning.
-
-3. **Data contributors are verifiable** - Issue numbers, forum posts, and HAR captures can be traced. External code references added by AI may not be.
-
-#### Honest Framing Levels
-
-| Framing | Use When | Example |
-| --------- | ---------- | --------- |
-| "Based on" / "Informed by" | You directly studied their code or docs | BowlesCR's HMAC-MD5 auth flow |
-| "Field definitions from" | You verified specific details came from them | Tatsh's StatusSoftwareSfVer fields |
-| "Related prior art" | Similar work exists, can't verify direct influence | Projects doing similar modem monitoring |
-
-#### When In Doubt
-
-- **Don't remove existing attribution** - Removing credit looks worse than over-crediting
-- **Soften the language** - Change "Based on" to "Related prior art"
-- **Document the uncertainty** - Note in your tracker that influence couldn't be verified
-
-### Testers & Validators
-
-Users who test pre-release parsers and confirm functionality:
-
-| Contribution | Acknowledgment |
-| -------------- | ---------------- |
-| Confirms parser works | Parser marked "Verified", issue closed with thanks |
-| Reports bugs during testing | Credited in fix commit |
-| Provides additional captures | Added to fixture README |
-
-### Our Commitment
-
-- ✅ Credit external research and code references
-- ✅ Acknowledge all data contributors
-- ✅ Thank testers who validate our work
-- ✅ Respect open source licenses
-- ✅ Reach out to original authors when heavily referencing their work
-
-### If We Missed You
-
-If we've used your work without proper attribution or forgot to credit your contribution:
-
-1. We apologize - it was unintentional
-2. Please [open an issue](https://github.com/solentlabs/cable_modem_monitor/issues) or contact us
-3. We'll add proper attribution immediately
-
-See [ATTRIBUTION.md](./docs/ATTRIBUTION.md) for the full list of credits.
+Data contributors, testers, and external references are credited in
+ATTRIBUTION.md.
 
 ---
 

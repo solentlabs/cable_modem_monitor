@@ -87,8 +87,9 @@ Related to #
 ### For New Modem Support
 
 <!-- Only applicable if adding support for a new modem model.
-     The recommended path is the MCP intake pipeline (/modem-intake),
-     which generates configs from a HAR capture. -->
+     The recommended path is the catalog_tools intake pipeline
+     (/modem-intake skill), which generates configs from a HAR capture.
+     See CONTRIBUTING.md § AI-Assisted Catalog Contribution. -->
 
 - [ ] HAR captured with [`har-capture`](https://github.com/solentlabs/har-capture) (auto-sanitizes PII)
 - [ ] Modem directory created: `packages/cable_modem_monitor_catalog/.../modems/<manufacturer>/<model>/`

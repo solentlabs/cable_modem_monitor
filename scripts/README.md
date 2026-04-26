@@ -116,7 +116,7 @@ make check
 
 ## Testing on Home Assistant
 
-Use the Docker-based local HA instance for testing. See [CONTRIBUTING.md](../CONTRIBUTING.md#5-test-on-local-ha-optional) for details.
+Use the Docker-based local HA instance for testing. See [CONTRIBUTING.md](../CONTRIBUTING.md#test-on-local-ha) for details.
 
 ```bash
 make docker-start    # Start HA with integration mounted
