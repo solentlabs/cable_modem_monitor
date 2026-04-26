@@ -17,9 +17,7 @@ body:
       value: |
         ## Verify Modem Support
 
-        This form is for modems marked **Awaiting** in the catalog. Your report helps confirm the parser works on real hardware.
-
-        **The most helpful thing you can do is attach a diagnostics file** (instructions below). It contains your modem's data structure so we can verify everything parsed correctly.
+        Reports against modems marked **Awaiting** in the catalog confirm the parser works on real hardware. The most useful submission attaches a **diagnostics file** — its data structure is what proves the parser handled your modem correctly.
 
   - type: input
     id: modem_model
@@ -73,16 +71,9 @@ body:
       value: |
         ---
 
-        ## Diagnostics File (Recommended)
+        ## Diagnostics File
 
-        Attaching a diagnostics file lets us verify the parsed data structure matches your modem:
-
-        1. Go to **Settings > Devices & Services > Cable Modem Monitor**
-        2. Click your modem device
-        3. Click the three-dot menu > **Download Diagnostics**
-        4. Drag and drop the file below
-
-        The diagnostics file **automatically sanitizes** sensitive information (MAC addresses, serial numbers, IPs). Review it before sharing if you'd like to double-check.
+        Settings → Devices & Services → Cable Modem Monitor → device → three-dot menu → **Download Diagnostics**. Drag and drop below. The file is automatically sanitized (MAC addresses, serial numbers, IPs); review before sharing if you'd like to double-check.
 
   - type: textarea
     id: diagnostics_file
@@ -100,14 +91,3 @@ body:
       description: Any other information that might be helpful?
     validations:
       required: false
-
-  - type: markdown
-    attributes:
-      value: |
-        ---
-
-        ### What Happens Next?
-
-        - A maintainer will review your report and diagnostics
-        - If verified, your modem status will be updated to Confirmed
-        - Other users will know this parser is reliable
