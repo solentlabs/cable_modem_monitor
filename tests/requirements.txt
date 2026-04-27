@@ -10,7 +10,7 @@ pytest-homeassistant-custom-component>=0.13.0
 requests-mock>=1.11.0
 
 # Integration tests (SSL certificate generation)
-cryptography>=41.0.0
+cryptography>=47.0.0
 
 # Required by integration
 har-capture>=0.3.2
