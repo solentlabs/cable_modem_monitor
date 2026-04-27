@@ -371,6 +371,39 @@ The "Ungrouped" entity will disappear once the browser cache is cleared.
 
 ---
 
+## "Migration handler not found" After A Pre-Release Install Attempt
+
+### Problem: Pre-release install via `update.install` service silently downgraded the integration
+
+**Symptoms:**
+
+- You called the `update.install` service (e.g., from Developer Tools or an automation) with `version: feature/v3.X.0` or a similar branch ref
+- After restarting, Home Assistant logs `Migration handler not found for entry <name> for cable_modem_monitor`
+- The integration won't start; existing config entries appear broken
+- Module paths in the log show pre-v3.14 paths (e.g., `custom_components.cable_modem_monitor.core.parser_registry`) instead of the expected `solentlabs.cable_modem_monitor_core.*`
+
+**Cause:**
+
+The `update.install` service does not parse branch references — passing a branch name as the `version` field falls back silently to the latest GitHub Release. Because pre-releases (alpha/beta) are a separate distribution tier, that fallback can land you on an older stable release that doesn't recognize your existing config-entry schema. The migration error is the symptom; the silent downgrade is the cause.
+
+This is HACS's documented behavior — see [hacs/integration#3513](https://github.com/hacs/integration/issues/3513) for the maintainer's "by design" ruling on `update.install` with branch refs.
+
+**Solution:**
+
+1. Open **HACS** → Integrations → **Cable Modem Monitor**
+2. Click the ⋯ menu → **Redownload**
+3. Toggle **Show beta versions** on
+4. Pick the version you actually wanted (the latest pre-release, or a specific tag)
+5. Click **Download** and restart Home Assistant
+
+If your config entry was migrated forward and is now stuck on an older install, you may need to delete and re-add the integration after returning to the correct version. Schema migrations are one-way (newer integration versions migrate older entries forward; older versions cannot migrate newer entries backward).
+
+**Prevention:**
+
+Always use the HACS UI pre-release switch flow for testing alphas/betas. Never use the `update.install` service with branch refs. The service is fine for installing exact release tag versions (e.g., `v3.14.0`), but not for branches.
+
+---
+
 ## Getting Help
 
 If you encounter issues not covered here:

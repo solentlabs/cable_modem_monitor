@@ -64,7 +64,7 @@ Monitor your cable modem's signal quality, errors, and connection health in real
 - 🔄 **Remote Control**: Restart your modem from Home Assistant
 - 🤖 **Automation Ready**: Trigger actions on signal degradation or errors
 - 🔐 **Privacy First**: All local processing, automatic PII sanitization
-- 🛡️ **Security Focused**: CodeQL scanned with 6 custom security queries
+- 🛡️ **Security Focused**: CodeQL scanned on every push, weekly schedule, and PR
 - 🔌 **Plug & Play**: Easy UI configuration, no YAML editing needed
 
 ### See It In Action
@@ -124,12 +124,12 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
 ### Developer Friendly
 
 - **Extensible**: Plugin architecture makes adding new modem models easy
-- **Well Tested**: 2,400+ test cases with comprehensive coverage
-- **Type Safe**: Full type hints and mypy validation
+- **Well Tested**: comprehensive test coverage across Core, Catalog, Catalog Tools, and HA integration suites — see CI badge above for current pass status
+- **Type Safe**: Full type hints, mypy and pyright validation
 
 ## Supported Modems
 
-This integration supports modems from ARRIS, Compal, Motorola, Netgear, Technicolor, and Virgin Media. Compatibility varies based on firmware versions and ISP customizations.
+This integration supports modems from ARRIS, Compal, Hitron, Motorola, Netgear, SerComm, Technicolor, and Virgin Media. Compatibility varies based on firmware versions and ISP customizations.
 
 > **[View the Supported Modems List](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)** - Complete list with DOCSIS versions, ISP compatibility, verification status, and model timelines.
 
@@ -153,36 +153,35 @@ The catalog grows when contributors with hardware step up. Two paths:
 3. Click **Download**
 4. Restart Home Assistant
 
-### Testing a Branch or Pre-Release
+### Testing a Pre-Release Version
 
-If you already have Cable Modem Monitor installed via HACS, you can switch to any branch or tag without reinstalling:
+Pre-release versions (alpha and beta) are opt-in via HACS's per-integration pre-release switch:
 
-1. Go to **Developer Tools → Actions**
-2. Search for **`update.install`**
-3. Under **Targets**, select your Cable Modem Monitor update entity (e.g., `update.cable_modem_monitor_update`)
-4. In the **version** field, enter the branch name or tag (e.g., `feature/v3.13.2`)
-5. Click **Perform action**
-6. Restart Home Assistant
+1. Open **HACS** → Integrations → **Cable Modem Monitor**
+2. Click the ⋯ menu → **Redownload**
+3. Toggle **Show beta versions** on
+4. Pick the version you want from the dropdown
+5. Click **Download** and restart Home Assistant
 
-To go back to the latest release, repeat the steps above with the release tag (e.g., `v3.13.1`), or redownload from HACS.
-
-> *Thanks to [@ChBi89](https://github.com/ChBi89) for [discovering this workflow](https://github.com/solentlabs/cable_modem_monitor/issues/63#issuecomment-2556672682).*
+To return to stable, repeat the steps with **Show beta versions** off and pick the latest stable.
 
 ## Setup
 
 1. Go to **Settings → Devices & Services → Add Integration**
 2. Search for **Cable Modem Monitor**
 3. Enter your modem's IP address (typically `192.168.100.1`)
-4. Select your modem model or leave on "Auto" for automatic detection
+4. Select your modem manufacturer, then pick your specific model from the catalog
+5. Choose Channel Number mode (recommended — stable entity IDs across reboots) or Channel ID mode
 
 ### Options
 
 After setup, configure via **Settings → Devices & Services → Cable Modem Monitor → Configure**:
 
-- **Polling Interval**: How often to check modem status (60–1800 seconds, default: 600)
-- **Modem Model**: Change model selection or switch to auto-detection
+- **Polling Interval**: How often to fetch full modem status (30 seconds – 24 hours, default: 10 minutes)
+- **Health Check Interval**: How often to run lightweight reachability probes (default depends on probe support: 30 seconds with ICMP/HEAD, 60 seconds with HTTP-GET only)
+- **Modem Model**: Change model selection
 - **Credentials**: Update username/password if your modem requires authentication
-- **History Retention**: Days to keep when using Clear History (1–365, default: 30)
+- **Channel Identity**: Switch between Channel Number and Channel ID modes (also exposed via the `convert_channel_identity` service)
 
 ---
 
@@ -245,12 +244,18 @@ Replace `{type}` with channel type (atdma, ofdma) and `X` with the channel numbe
 
 ### Controls
 
-- `button.cable_modem_restart_modem`: Restart your cable modem remotely
+The integration registers three buttons under the modem device:
+
+- **Restart Modem**: Reboots the modem remotely (requires modem credentials)
+- **Update Modem Data**: Triggers an immediate poll outside the regular cadence
+- **Reset Entities**: Clears entity registry entries for this modem (useful after a modem swap or schema migration)
 
 ### Services
 
-- `cable_modem_monitor.clear_history`: Clear old historical data (keeps specified number of days)
-- `cable_modem_monitor.cleanup_entities`: Remove orphaned entities from registry (useful after upgrades)
+- **`cable_modem_monitor.generate_dashboard`**: Generates a Lovelace dashboard YAML tailored to your modem's channel layout. Configurable: which graphs to include (status card, downstream/upstream power/SNR/frequency, errors, latency), `graph_hours` window (1–168), and short-title mode.
+- **`cable_modem_monitor.request_refresh`**: Triggers an immediate data poll for the selected device.
+- **`cable_modem_monitor.request_health_check`**: Runs an immediate health probe (ICMP / TCP / HTTP) outside the regular cadence.
+- **`cable_modem_monitor.convert_channel_identity`**: Switches the integration between Channel Number mode (stable entity IDs across reboots — recommended) and Channel ID mode (DOCSIS DCID-based naming).
 
 ## Understanding the Values
 
@@ -318,15 +323,9 @@ Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add
 
 ### Security Features
 
-- **CodeQL Scanning**: Automated security analysis on every commit
-  - 100+ standard security queries (OWASP Top 10, CWE coverage)
-  - 6 custom security queries specific to cable modem integration:
-    - HTTP requests without timeouts
-    - Command injection prevention
-    - XML External Entity (XXE) protection
-    - Hardcoded credential detection
-    - SSL/TLS misconfiguration checks
-    - Path traversal prevention
+- **CodeQL Scanning**: Automated security analysis on every push, weekly schedule, and pull request.
+  - **Standard CodeQL Python suite**: 100+ security queries covering OWASP Top 10 and broad CWE coverage — command injection, hardcoded credentials, SSL/TLS misuse, path traversal, XXE, and more.
+  - **Custom queries**: One project-specific query at `cable-modem-monitor-ql/queries/no_timeout.ql` flags HTTP requests without explicit timeouts, which would otherwise hang the integration on unreachable modems.
 - **Security Documentation**: See [CodeQL Testing Guide](./docs/reference/CODEQL_TESTING_GUIDE.md) for details
 - **Vulnerability Reporting**: See [SECURITY.md](./SECURITY.md) for responsible disclosure
 
