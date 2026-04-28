@@ -20,11 +20,6 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
       - name: Extract version from tag
         id: version
         run: |
@@ -82,19 +77,14 @@ jobs:
           # Save to file to preserve formatting
           echo "$CHANGELOG" > /tmp/changelog.txt
 
-      - name: Install test dependencies
-        run: |
-          pip install -r tests/requirements.txt
-
-      - name: Run tests
-        run: |
-          pytest -v --tb=short
-
       - name: Package integration for HACS
         run: |
           cd custom_components/cable_modem_monitor
           # Exclude docs/ (dev specs, not needed at runtime) and
-          # Python bytecode cache (created by the pytest step above).
+          # any bytecode cache. Tests run in tests.yml on every
+          # push to main and feature/*; release.yml does not
+          # re-run them — by the time we tag, tests have already
+          # passed on the same commit.
           zip -r ../../cable_modem_monitor.zip . -x 'docs/*' '*__pycache__*'
 
       - name: Create GitHub Release
