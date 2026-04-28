@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.1] - 2026-04-28
+
+First public beta of v3.14. The cumulative v3.14 changeset is
+documented in the [3.14.0-alpha.17] entry below; beta.1 ships the
+new distribution mechanism on top of that work.
+
+### Changed
+
+- **HACS distribution switched to release-asset (`zip_release: true`).**
+  Each release tag attaches a `cable_modem_monitor.zip`. Smaller
+  install (~120 KB vs ~3.4 MB source archive); excludes spec/dev
+  files. Paired with `hide_default_branch: true` to prevent silent
+  downgrades from the version selector.
+- **Beta is the public-test entry tier.** Alpha is now a
+  local-source-only development concept post-alpha.17 — no GitHub
+  releases, no PyPI publish, no HACS visibility. Betas install
+  manually via HACS → integration → Redownload → "Need a different
+  version?" → Release. There is no auto-update path on betas — each
+  beta is a deliberate per-version install by design.
+- Documentation rewrites for the new model: README install section,
+  TROUBLESHOOTING, RELEASING, HA_ADAPTER_SPEC, CONTRIBUTING, issue
+  templates, MODEM_REQUEST, and catalog_tools intake docs. Catalog
+  Tools framing updated from "maintainer-only" to "open to
+  contributors with hardware."
+
+### Removed
+
+- `update.install` troubleshooting guidance. The Home Assistant
+  service is not supported with this integration; use the HACS
+  manual picker instead.
+
+### Migration
+
+- **Alpha testers on `feature/v3.14.0` branch tracking:** that path
+  is no longer supported (HACS rejects branch installs once
+  `zip_release` is set on the default branch). Install beta.1 via
+  the manual picker described above.
+
 ## [3.14.0-alpha.17] - 2026-04-26
 
 ### Changed (developer-only — no user-facing impact)
