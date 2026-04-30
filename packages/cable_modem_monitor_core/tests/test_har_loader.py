@@ -210,3 +210,233 @@ class TestBuildResourceDictJsonSniffing:
         resources = build_resource_dict(str(har))
 
         assert isinstance(resources["/data/broken.asp"], BeautifulSoup)
+
+
+def _hnap_entry(
+    url: str,
+    response_body: str,
+    *,
+    soap_action: str = "http://purenetworks.com/HNAP1/GetMultipleHNAPs",
+) -> dict:
+    """Build a minimal HNAP POST HAR entry."""
+    return {
+        "request": {
+            "url": url,
+            "method": "POST",
+            "headers": [{"name": "SOAPAction", "value": soap_action}],
+        },
+        "response": {
+            "status": 200,
+            "content": {"mimeType": "application/json", "text": response_body},
+        },
+    }
+
+
+# -----------------------------------------------------------------------
+# build_resource_dict — _build_http_resources skip branches
+# -----------------------------------------------------------------------
+
+
+class TestBuildResourceDictSkipBranches:
+    """Defensive skip branches in HTTP resource building."""
+
+    def test_non_200_status_skipped(self, tmp_path: Path) -> None:
+        """Entries with non-200 status are skipped (not added to resources)."""
+        har = _har_file(
+            tmp_path,
+            [_har_entry("https://192.168.100.1/status.html", "x", status=404)],
+        )
+        resources = build_resource_dict(str(har))
+        assert "/status.html" not in resources
+
+    def test_empty_url_path_skipped(self, tmp_path: Path) -> None:
+        """Entries whose URL has no path component are skipped."""
+        # urlparse("") yields path="" — triggers the `if not url_path: continue`
+        har = _har_file(tmp_path, [_har_entry("", "body")])
+        resources = build_resource_dict(str(har))
+        assert resources == {}
+
+    def test_empty_body_text_skipped(self, tmp_path: Path) -> None:
+        """Entries with empty response body text are skipped."""
+        har = _har_file(
+            tmp_path,
+            [_har_entry("https://192.168.100.1/empty.html", "")],
+        )
+        resources = build_resource_dict(str(har))
+        assert "/empty.html" not in resources
+
+    def test_base64_decode_failure_skipped(self, tmp_path: Path) -> None:
+        """Entries with corrupted base64 encoding are skipped."""
+        entry = _har_entry("https://192.168.100.1/binary.bin", "!!!not-base64!!!")
+        entry["response"]["content"]["encoding"] = "base64"
+        har = _har_file(tmp_path, [entry])
+
+        resources = build_resource_dict(str(har))
+
+        assert "/binary.bin" not in resources
+
+    def test_base64_encoded_text_decoded(self, tmp_path: Path) -> None:
+        """Valid base64 encoding is decoded before mime-type detection."""
+        import base64
+
+        body = base64.b64encode(b'{"hwVersion": "X"}').decode("ascii")
+        entry = _har_entry("https://192.168.100.1/info.json", body, mime="application/json")
+        entry["response"]["content"]["encoding"] = "base64"
+        har = _har_file(tmp_path, [entry])
+
+        resources = build_resource_dict(str(har))
+
+        assert resources["/info.json"]["hwVersion"] == "X"
+
+    def test_undecodable_body_skipped(self, tmp_path: Path) -> None:
+        """Body that's neither JSON nor HTML produces no resource entry."""
+        # Plain text body without JSON markers and without HTML tags
+        har = _har_file(
+            tmp_path,
+            [
+                _har_entry(
+                    "https://192.168.100.1/plain.bin",
+                    "raw binary content",
+                    mime="application/octet-stream",
+                )
+            ],
+        )
+        resources = build_resource_dict(str(har))
+        assert "/plain.bin" not in resources
+
+    def test_invalid_json_with_json_content_type_returns_none(self, tmp_path: Path) -> None:
+        """Invalid JSON body with application/json mime type is dropped."""
+        har = _har_file(
+            tmp_path,
+            [
+                _har_entry(
+                    "https://192.168.100.1/api/info",
+                    "not valid json {{{",
+                    mime="application/json",
+                )
+            ],
+        )
+        resources = build_resource_dict(str(har))
+        assert "/api/info" not in resources
+
+
+# -----------------------------------------------------------------------
+# HNAP resource extraction — merge_hnap_har_responses + helpers
+# -----------------------------------------------------------------------
+
+
+class TestHnapResourceExtraction:
+    """HNAP response merging and SOAPAction parsing."""
+
+    def test_hnap_resource_dict_built_from_har(self, tmp_path: Path) -> None:
+        """build_resource_dict prefers HNAP entries when present."""
+        body = json.dumps(
+            {
+                "GetMultipleHNAPsResponse": {
+                    "GetCustomerStatusDownstreamChannelInfoResponse": {
+                        "CustomerConnDownstreamChannel": "1^Locked^256QAM^"
+                    },
+                    "GetMultipleHNAPsResult": "OK",
+                }
+            }
+        )
+        har = _har_file(
+            tmp_path,
+            [_hnap_entry("https://192.168.100.1/HNAP1/", body)],
+        )
+
+        resources = build_resource_dict(str(har))
+
+        assert "hnap_response" in resources
+        merged = resources["hnap_response"]
+        assert "GetCustomerStatusDownstreamChannelInfoResponse" in merged
+        # GetMultipleHNAPsResult should be filtered out
+        assert "GetMultipleHNAPsResult" not in merged
+
+    def test_hnap_login_action_excluded(self, tmp_path: Path) -> None:
+        """SOAPAction containing 'Login' is treated as auth, not data — falls back to HTTP."""
+        body = json.dumps({"GetMultipleHNAPsResponse": {"FooResponse": {"x": "y"}}})
+        # Login action: should be filtered out by is_hnap_data_entry
+        har = _har_file(
+            tmp_path,
+            [
+                _hnap_entry(
+                    "https://192.168.100.1/HNAP1/",
+                    body,
+                    soap_action="http://purenetworks.com/HNAP1/Login",
+                )
+            ],
+        )
+
+        resources = build_resource_dict(str(har))
+
+        # No HNAP data found → falls through to HTTP path
+        assert "hnap_response" not in resources
+
+    def test_hnap_non_post_excluded(self, tmp_path: Path) -> None:
+        """GET request to /HNAP1/ is not treated as HNAP data."""
+        body = json.dumps({"GetMultipleHNAPsResponse": {}})
+        entry = _hnap_entry("https://192.168.100.1/HNAP1/", body)
+        entry["request"]["method"] = "GET"
+        har = _har_file(tmp_path, [entry])
+
+        resources = build_resource_dict(str(har))
+
+        assert "hnap_response" not in resources
+
+    def test_hnap_non_hnap_path_excluded(self, tmp_path: Path) -> None:
+        """POST to a non-HNAP path is not treated as HNAP data."""
+        body = json.dumps({"foo": "bar"})
+        entry = _hnap_entry("https://192.168.100.1/api/data", body)
+        har = _har_file(tmp_path, [entry])
+
+        resources = build_resource_dict(str(har))
+
+        assert "hnap_response" not in resources
+
+    def test_hnap_missing_soap_action_header_returns_empty(self, tmp_path: Path) -> None:
+        """Request without a SOAPAction header has soap_action == '' (empty fallback)."""
+        from solentlabs.cable_modem_monitor_core.har import get_soap_action
+
+        # Direct unit test of the helper
+        request: dict = {"headers": []}
+        assert get_soap_action(request) == ""
+
+    def test_hnap_empty_body_skipped(self, tmp_path: Path) -> None:
+        """HNAP entry with empty response body contributes nothing."""
+        entry = _hnap_entry("https://192.168.100.1/HNAP1/", "")
+        har = _har_file(tmp_path, [entry])
+
+        resources = build_resource_dict(str(har))
+
+        assert "hnap_response" not in resources
+
+    def test_hnap_invalid_json_skipped(self, tmp_path: Path) -> None:
+        """HNAP entry with malformed JSON contributes nothing."""
+        entry = _hnap_entry("https://192.168.100.1/HNAP1/", "not valid json {{{")
+        har = _har_file(tmp_path, [entry])
+
+        resources = build_resource_dict(str(har))
+
+        assert "hnap_response" not in resources
+
+
+# -----------------------------------------------------------------------
+# _is_html_content — content-sniffing branch
+# -----------------------------------------------------------------------
+
+
+class TestHtmlContentSniffing:
+    """HTML detection by leading-tag sniffing when MIME is non-HTML."""
+
+    def test_doctype_html_sniffed(self, tmp_path: Path) -> None:
+        """Body starting with <!DOCTYPE is detected as HTML even with octet mime."""
+        from bs4 import BeautifulSoup
+
+        body = "<!DOCTYPE html><html><body>x</body></html>"
+        entry = _har_entry("https://192.168.100.1/page", body, mime="application/octet-stream")
+        har = _har_file(tmp_path, [entry])
+
+        resources = build_resource_dict(str(har))
+
+        assert isinstance(resources["/page"], BeautifulSoup)

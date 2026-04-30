@@ -671,3 +671,48 @@ class TestExecuteAction:
             execute_action(collector, modem_config, action)
 
         assert mock_hnap.call_args[1]["private_key"] == ""
+
+    def test_cbn_action_dispatches(self) -> None:
+        """CBN action routes to execute_cbn_action with setter endpoint."""
+        from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
+            CbnAction,
+        )
+
+        collector = MagicMock()
+        collector._session = MagicMock(spec=requests.Session)
+        collector._base_url = "http://192.168.100.1"
+
+        modem_config = MagicMock()
+        modem_config.auth = MagicMock()
+        modem_config.auth.setter_endpoint = "/xml/setter.xml"
+        modem_config.auth.session_cookie_name = "sessionToken"
+        modem_config.timeout = 10
+
+        action = CbnAction(type="cbn", fun=8)
+
+        with patch("solentlabs.cable_modem_monitor_core.orchestration.actions.execute_cbn_action") as mock_cbn:
+            mock_cbn.return_value = MagicMock(success=True)
+            execute_action(collector, modem_config, action)
+
+        mock_cbn.assert_called_once()
+        call_kwargs = mock_cbn.call_args[1]
+        assert call_kwargs["setter_endpoint"] == "/xml/setter.xml"
+        assert call_kwargs["session_cookie_name"] == "sessionToken"
+        assert call_kwargs["timeout"] == 10
+
+    def test_unknown_action_returns_failure(self, caplog) -> None:
+        """An action object that's none of the known types returns ActionResult(success=False)."""
+
+        class _UnknownAction:
+            """Sentinel — not registered in dispatch."""
+
+        collector = MagicMock()
+        modem_config = MagicMock()
+        modem_config.model = "TPS-2000"
+
+        with caplog.at_level(logging.WARNING):
+            result = execute_action(collector, modem_config, _UnknownAction())  # type: ignore[arg-type]
+
+        assert result.success is False
+        assert "Unknown action type" in result.message
+        assert "Unknown action type" in caplog.text

@@ -40,6 +40,36 @@ writing test code.
 **Constrains:** Test assertions cannot be customized per-modem.
 Strategy changes are validated across all modems automatically.
 
+### Test harness lives in Core, not catalog_tools
+
+**Decision:** `core/test_harness/` (HARMockServer, auth simulators,
+discovery, runner, golden-file comparison) stays in Core, despite the
+fact that the standalone CLI it exposes (`python -m
+…core.test_harness`) is contributor-onboarding tooling.
+
+**Rationale:** Three packages consume the test harness — Core (for its
+own auth and loader unit tests, where `HARMockServer` is the in-process
+fixture), Catalog (for regression and golden-file pipelines), and
+catalog_tools (for the contributor onboarding workflow). Of those,
+only Core is upstream of the others. Moving the harness into
+catalog_tools would force Core to depend on catalog_tools to run its
+own tests, inverting the package dependency direction and breaking the
+"catalog_tools is never a runtime dep" decision below (Core's tests
+are part of what verifies that runtime).
+
+**Note on prior confusion:** When `load_post_processor` (a runtime
+extension-point loader, peer of `load_parser_config`) was discovered
+imported by HA from `core.test_harness.runner`, it surfaced a real
+misplacement — but only of that one function, not of test_harness as
+a whole. The function was extracted to `core/post_processor.py`.
+test_harness itself is correctly placed.
+
+**Constrains:** The harness is part of Core's published surface, not a
+separately-installable contributor tool. Test-harness coverage counts
+toward Core's coverage gate. The standalone CLI (`__main__.py`)
+remains in Core and is invoked via `python -m
+solentlabs.cable_modem_monitor_core.test_harness`.
+
 ### catalog_tools is a developer accelerator, never a runtime dep
 
 **Decision:** The `cable_modem_monitor_catalog_tools` package

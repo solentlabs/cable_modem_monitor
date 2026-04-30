@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import pytest
+
+from custom_components.cable_modem_monitor.const import EntityPrefix
 from custom_components.cable_modem_monitor.lib.utils import (
     extract_float,
     extract_number,
+    get_device_name,
     parse_uptime_to_seconds,
 )
 
@@ -130,3 +134,67 @@ class TestParseUptime:
         result = parse_uptime_to_seconds("0 days 01:23:45")
         expected = (0 * 86400) + (1 * 3600) + (23 * 60) + 45
         assert result == expected
+
+
+# -----------------------------------------------------------------------
+# get_device_name — entity-prefix branches
+# -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "prefix,model,host,expected",
+    [
+        (EntityPrefix.MODEL, "TPS-2000", "192.168.100.1", "Cable Modem TPS-2000"),
+        (EntityPrefix.IP, "TPS-2000", "192.168.100.1", "Cable Modem 192.168.100.1"),
+        (EntityPrefix.NONE, "TPS-2000", "192.168.100.1", "Cable Modem"),
+    ],
+    ids=["model_prefix", "ip_prefix", "no_prefix"],
+)
+def test_get_device_name(prefix, model, host, expected):
+    """Device name is derived from the entity-prefix setting."""
+    assert get_device_name(prefix, model=model, host=host) == expected
+
+
+# -----------------------------------------------------------------------
+# extract_number / extract_float — ValueError branches
+# -----------------------------------------------------------------------
+
+
+def test_extract_number_value_error_returns_none():
+    """Bare hyphen survives the digit/'-' filter but fails int() — returns None."""
+    assert extract_number("-") is None
+
+
+def test_extract_float_value_error_returns_none():
+    """Bare punctuation survives the digit/'.-' filter but fails float() — returns None."""
+    assert extract_float(".-") is None
+
+
+# -----------------------------------------------------------------------
+# parse_uptime_to_seconds — plain numeric and exception branches
+# -----------------------------------------------------------------------
+
+
+def test_parse_uptime_plain_numeric_string():
+    """Pure-digit string is treated as raw seconds."""
+    assert parse_uptime_to_seconds("1471890") == 1471890
+
+
+def test_parse_uptime_plain_numeric_zero_returns_none():
+    """Zero-second uptime is reported as None (no useful signal)."""
+    assert parse_uptime_to_seconds("0") is None
+
+
+def test_parse_uptime_unexpected_exception_returns_none():
+    """Pathological input that crashes the parser falls through to None."""
+
+    # An object that isn't str-comparable in the way the parser expects
+    # would crash inside the regex matchers; the outer except catches it.
+    class _Boom:
+        def strip(self):
+            raise RuntimeError("synthetic")
+
+        def __bool__(self) -> bool:
+            return True
+
+    assert parse_uptime_to_seconds(_Boom()) is None  # type: ignore[arg-type]

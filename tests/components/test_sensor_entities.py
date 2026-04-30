@@ -1004,3 +1004,132 @@ def test_deferred_re_notification_not_scheduled_when_no_data(mock_runtime_data):
 
     add_entities.assert_not_called()
     coord.hass.async_create_task.assert_not_called()
+
+
+# -----------------------------------------------------------------------
+# async_setup_entry — sensor platform wiring
+# -----------------------------------------------------------------------
+
+
+def _setup_entry_inputs(
+    mock_runtime_data,
+    *,
+    modem_data: dict[str, Any] | None = MOCK_MODEM_DATA,
+    has_health: bool = True,
+    icmp: bool = True,
+    head: bool = True,
+):
+    """Build (hass, entry, add_entities) for an async_setup_entry call."""
+    snapshot = (
+        ModemSnapshot(
+            connection_status=ConnectionStatus.ONLINE,
+            docsis_status=DocsisStatus.OPERATIONAL,
+            modem_data=modem_data,
+        )
+        if modem_data is not None
+        else ModemSnapshot(
+            connection_status=ConnectionStatus.UNREACHABLE,
+            docsis_status=DocsisStatus.NOT_LOCKED,
+            modem_data=None,
+        )
+    )
+    mock_runtime_data.data_coordinator.data = snapshot
+    if not has_health:
+        mock_runtime_data.health_coordinator = None
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {
+        **MOCK_ENTRY_DATA,
+        "supports_icmp": icmp,
+        "supports_head": head,
+    }
+    entry.runtime_data = mock_runtime_data
+
+    hass = MagicMock()
+    add_entities = MagicMock()
+    return hass, entry, add_entities
+
+
+async def test_async_setup_entry_happy_path(mock_runtime_data) -> None:
+    """All sensors created when modem_data and health_coord are present."""
+    from custom_components.cable_modem_monitor.sensor import (
+        HttpLatencySensor,
+        ModemInfoSensor,
+        ModemStatusSensor,
+        PingLatencySensor,
+        TcpLatencySensor,
+        async_setup_entry,
+    )
+
+    hass, entry, add_entities = _setup_entry_inputs(mock_runtime_data)
+
+    await async_setup_entry(hass, entry, add_entities)
+
+    add_entities.assert_called_once()
+    entities = add_entities.call_args[0][0]
+    types = {type(e) for e in entities}
+
+    # Always-created
+    assert ModemStatusSensor in types
+    assert ModemInfoSensor in types
+    # Health sensors (ICMP + HEAD enabled)
+    assert TcpLatencySensor in types
+    assert PingLatencySensor in types
+    assert HttpLatencySensor in types
+    # Data-dependent entities present (channel sensors, system_info, etc.)
+    assert len(entities) > 5
+
+
+async def test_async_setup_entry_no_health_coord(mock_runtime_data) -> None:
+    """No latency sensors created when health_coordinator is None."""
+    from custom_components.cable_modem_monitor.sensor import (
+        HttpLatencySensor,
+        PingLatencySensor,
+        TcpLatencySensor,
+        async_setup_entry,
+    )
+
+    hass, entry, add_entities = _setup_entry_inputs(mock_runtime_data, has_health=False)
+
+    await async_setup_entry(hass, entry, add_entities)
+
+    add_entities.assert_called_once()
+    entities = add_entities.call_args[0][0]
+    types = {type(e) for e in entities}
+
+    assert TcpLatencySensor not in types
+    assert PingLatencySensor not in types
+    assert HttpLatencySensor not in types
+
+
+async def test_async_setup_entry_defers_when_no_modem_data(
+    mock_runtime_data,
+) -> None:
+    """No modem_data on first poll defers data-dependent entities."""
+    from unittest.mock import patch
+
+    from custom_components.cable_modem_monitor.sensor import (
+        ModemInfoSensor,
+        ModemStatusSensor,
+        async_setup_entry,
+    )
+
+    hass, entry, add_entities = _setup_entry_inputs(mock_runtime_data, modem_data=None)
+
+    with patch("custom_components.cable_modem_monitor.sensor." "_register_deferred_entity_creation") as mock_register:
+        await async_setup_entry(hass, entry, add_entities)
+
+    # First call: only always-created + health sensors, no data-dependent
+    add_entities.assert_called_once()
+    entities = add_entities.call_args[0][0]
+    types = {type(e) for e in entities}
+    assert ModemStatusSensor in types
+    assert ModemInfoSensor in types
+    # No ChannelSensor (would only appear with modem_data)
+    from custom_components.cable_modem_monitor.sensor import ChannelSensor
+
+    assert ChannelSensor not in types
+
+    # Deferred registration was set up
+    mock_register.assert_called_once_with(mock_runtime_data.data_coordinator, entry, add_entities)

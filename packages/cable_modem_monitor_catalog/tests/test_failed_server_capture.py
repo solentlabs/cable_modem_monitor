@@ -35,7 +35,7 @@ from solentlabs.cable_modem_monitor_core.config_loader import (
     load_parser_config,
 )
 from solentlabs.cable_modem_monitor_core.orchestration import create_collector
-from solentlabs.cable_modem_monitor_core.test_harness.runner import (
+from solentlabs.cable_modem_monitor_core.post_processor import (
     load_post_processor,
 )
 

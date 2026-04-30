@@ -43,7 +43,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemSnapshot,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
-from solentlabs.cable_modem_monitor_core.test_harness.runner import (
+from solentlabs.cable_modem_monitor_core.post_processor import (
     load_post_processor,
 )
 

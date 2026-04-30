@@ -13,6 +13,7 @@ wiring logic only. Catalog validity is tested in the catalog test suite.
 from __future__ import annotations
 
 import logging
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -759,3 +760,195 @@ async def test_async_remove_entry_clears_bond_store():
         await async_remove_entry(hass, entry)
 
     mock_remove.assert_awaited_once_with(hass, "entry_abc")
+
+
+# -----------------------------------------------------------------------
+# _check_channel_bond_change — early-out branches
+# -----------------------------------------------------------------------
+
+
+async def test_channel_bond_no_modem_data_no_op():
+    """Snapshot with modem_data=None exits before touching the bond store."""
+    from solentlabs.cable_modem_monitor_core.orchestration.models import ModemSnapshot
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import (
+        CollectorSignal,
+        ConnectionStatus,
+        DocsisStatus,
+    )
+
+    snapshot = ModemSnapshot(
+        connection_status=ConnectionStatus.UNREACHABLE,
+        docsis_status=DocsisStatus.NOT_LOCKED,
+        modem_data=None,
+        collector_signal=CollectorSignal.OK,
+    )
+    hass, entry, orchestrator, _ = _make_bond_test_harness(
+        entry_data={"channel_onboarding_eligible": True}, snapshot=snapshot
+    )
+
+    with patch(
+        "custom_components.cable_modem_monitor.async_load_bond_state",
+        AsyncMock(),
+    ) as mock_load:
+        await _check_channel_bond_change(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    mock_load.assert_not_awaited()
+    hass.services.async_call.assert_not_called()
+
+
+# -----------------------------------------------------------------------
+# _rebuild_channel_map — runtime presence and snapshot data branches
+# -----------------------------------------------------------------------
+
+
+def _rebuild_inputs(*, with_runtime: bool, with_modem_data: bool) -> tuple[Any, Any, Any]:
+    """Build (entry, snapshot, identity) inputs for _rebuild_channel_map tests."""
+    from solentlabs.cable_modem_monitor_core.orchestration.models import ModemSnapshot
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import (
+        ConnectionStatus,
+        DocsisStatus,
+    )
+
+    from custom_components.cable_modem_monitor.const import ChannelIdentity
+
+    entry: Any = MagicMock()
+    if with_runtime:
+        runtime = MagicMock()
+        runtime.channel_map = None
+        entry.runtime_data = runtime
+    else:
+        # Use a minimal object with no runtime_data attribute (covers the
+        # pre-Step-9 case where _rebuild_channel_map's getattr-fallback fires).
+        class _Bare:
+            pass
+
+        entry = _Bare()
+
+    snapshot = ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data=({"downstream": [{"channel_id": 1}], "upstream": [{"channel_id": 1}]} if with_modem_data else None),
+    )
+    return entry, snapshot, ChannelIdentity.ID
+
+
+def test_rebuild_channel_map_no_runtime_data_no_op():
+    """Pre-Step-9 entry without runtime_data returns silently."""
+    from custom_components.cable_modem_monitor import _rebuild_channel_map
+
+    entry, snapshot, identity = _rebuild_inputs(with_runtime=False, with_modem_data=True)
+
+    # Should not raise; nothing to assert beyond no exception (entry has no
+    # runtime_data, so the function returns at the early-out).
+    _rebuild_channel_map(entry, snapshot, identity)
+
+
+def test_rebuild_channel_map_no_modem_data_no_op():
+    """Snapshot without modem_data leaves runtime.channel_map untouched."""
+    from custom_components.cable_modem_monitor import _rebuild_channel_map
+
+    entry, snapshot, identity = _rebuild_inputs(with_runtime=True, with_modem_data=False)
+
+    _rebuild_channel_map(entry, snapshot, identity)
+
+    # channel_map was untouched (still the sentinel value we set)
+    assert entry.runtime_data.channel_map is None
+
+
+def test_rebuild_channel_map_builds_map():
+    """With runtime + modem_data, channel_map is rebuilt from snapshot."""
+    from custom_components.cable_modem_monitor import _rebuild_channel_map
+
+    entry, snapshot, identity = _rebuild_inputs(with_runtime=True, with_modem_data=True)
+
+    _rebuild_channel_map(entry, snapshot, identity)
+
+    # channel_map was reassigned to a fresh ChannelMap built from the snapshot.
+    assert entry.runtime_data.channel_map is not None
+    assert entry.runtime_data.channel_map is not None  # not the sentinel
+
+
+# -----------------------------------------------------------------------
+# _attach_health_recovery_listener — recovery-edge detection
+# -----------------------------------------------------------------------
+
+
+def _health_recovery_inputs():
+    """Wire up listener inputs and return (hass, health_coord, data_coord, listener_fn)."""
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    from custom_components.cable_modem_monitor import _attach_health_recovery_listener
+
+    hass = MagicMock()
+    health_coord = MagicMock()
+    health_coord.data = MagicMock()
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
+    data_coord = MagicMock()
+    data_coord.async_request_refresh = AsyncMock()
+
+    _attach_health_recovery_listener(hass, health_coord, data_coord, "TPS-2000")
+    listener_fn = health_coord.async_add_listener.call_args[0][0]
+    return hass, health_coord, data_coord, listener_fn
+
+
+def test_health_recovery_triggers_refresh_on_unresponsive_to_responsive():
+    """Transition UNRESPONSIVE -> RESPONSIVE schedules an immediate poll."""
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    hass, health_coord, data_coord, listener_fn = _health_recovery_inputs()
+
+    # Tick 1: UNRESPONSIVE (sets previous to UNRESPONSIVE)
+    health_coord.data.health_status = HealthStatus.UNRESPONSIVE
+    listener_fn()
+    hass.async_create_task.assert_not_called()
+
+    # Tick 2: RESPONSIVE (recovery detected)
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
+    listener_fn()
+    hass.async_create_task.assert_called_once()
+
+
+def test_health_recovery_skips_when_data_none():
+    """Listener exits silently when health_coordinator.data is None."""
+    hass, health_coord, _, listener_fn = _health_recovery_inputs()
+
+    health_coord.data = None
+    listener_fn()
+
+    hass.async_create_task.assert_not_called()
+
+
+def test_health_recovery_no_op_in_steady_responsive():
+    """RESPONSIVE -> RESPONSIVE is not treated as recovery."""
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    hass, health_coord, _, listener_fn = _health_recovery_inputs()
+
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
+    listener_fn()
+    listener_fn()
+
+    hass.async_create_task.assert_not_called()
+
+
+# -----------------------------------------------------------------------
+# _format_interval — hours branch
+# -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "seconds,expected",
+    [
+        (3600, "every 1h"),
+        (3660, "every 1h 1m"),
+        (3661, "every 1h 1m 1s"),
+        (7200, "every 2h"),
+    ],
+    ids=["1h_exact", "1h_1m", "1h_1m_1s", "2h_exact"],
+)
+def test_format_interval_includes_hours(seconds, expected, caplog):
+    """_format_interval emits an hours component when seconds >= 3600."""
+    with caplog.at_level(logging.INFO, logger="custom_components.cable_modem_monitor"):
+        _log_operational_summary(seconds, 30, "TPS-2000")
+
+    assert expected in caplog.text

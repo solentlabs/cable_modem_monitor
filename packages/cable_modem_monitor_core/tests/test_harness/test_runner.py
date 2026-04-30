@@ -3,7 +3,10 @@
 Integration tests using ``tmp_path`` modem directories and real
 mock servers. Covers: happy path (pass), golden file mismatch
 (failure), missing golden file (error), auth error, and
-PostProcessor dynamic import.
+PostProcessor pipeline integration.
+
+Loader unit tests for ``load_post_processor`` in isolation live in
+``tests/test_post_processor.py``.
 """
 
 from __future__ import annotations
@@ -19,7 +22,6 @@ from solentlabs.cable_modem_monitor_core.test_harness.discovery import (
     discover_modem_tests,
 )
 from solentlabs.cable_modem_monitor_core.test_harness.runner import (
-    load_post_processor,
     run_modem_test,
     run_modem_test_orchestrated,
 )
@@ -191,37 +193,18 @@ def test_pipeline_error(
 
 
 # ---------------------------------------------------------------------------
-# PostProcessor dynamic import
+# PostProcessor pipeline integration
 # ---------------------------------------------------------------------------
 
 
-class TestLoadPostProcessor:
-    """Dynamic import of PostProcessor from parser.py."""
+class TestPostProcessorPipelineIntegration:
+    """PostProcessor hooks invoked through the runner pipeline.
 
-    def test_loads_post_processor(self, tmp_path: Path) -> None:
-        """Successfully loads a PostProcessor class."""
-        parser_py = tmp_path / "parser.py"
-        parser_py.write_text(textwrap.dedent("""\
-            class PostProcessor:
-                \"\"\"Test post-processor.\"\"\"
-
-                def parse_downstream(self, channels, resources):
-                    return channels
-        """))
-
-        pp = load_post_processor(parser_py)
-
-        assert pp is not None
-        assert hasattr(pp, "parse_downstream")
-
-    def test_no_post_processor_class(self, tmp_path: Path) -> None:
-        """Returns None if PostProcessor class not defined."""
-        parser_py = tmp_path / "parser.py"
-        parser_py.write_text("# Empty module\nX = 42\n")
-
-        pp = load_post_processor(parser_py)
-
-        assert pp is None
+    Loader unit tests for ``load_post_processor`` in isolation live in
+    ``tests/test_post_processor.py``. The cases below exercise the
+    runner's interaction with PostProcessor — golden file matching,
+    error capture — not the loader itself.
+    """
 
     def test_post_processor_integration(self, tmp_path: Path) -> None:
         """PostProcessor hooks are invoked during pipeline run."""
@@ -401,19 +384,6 @@ class TestHnapTransport:
 
         assert result.passed is True, f"HNAP pipeline failed: {result.error}"
         assert result.error == ""
-
-
-class TestLoadPostProcessorEdge:
-    """Edge cases for PostProcessor dynamic import."""
-
-    def test_non_python_file(self, tmp_path: Path) -> None:
-        """Non-Python file returns None (spec_from_file_location returns None)."""
-        bad_file = tmp_path / "not_a_module"
-        bad_file.write_text("")
-
-        pp = load_post_processor(bad_file)
-
-        assert pp is None
 
 
 # ---------------------------------------------------------------------------

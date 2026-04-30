@@ -22,11 +22,9 @@ See ONBOARDING_SPEC.md Test Execution Flow section.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import logging
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import requests
@@ -41,14 +39,12 @@ from ..loaders.http import HTTPResourceLoader
 from ..orchestration.factory import create_orchestrator
 from ..orchestration.signals import ConnectionStatus
 from ..parsers.coordinator import ModemParserCoordinator
+from ..post_processor import load_post_processor
 from .discovery import ModemTestCase
 from .golden_file import ComparisonResult, compare_golden_file
 from .server import HARMockServer
 
 _logger = logging.getLogger(__name__)
-
-# Fixed class name for parser.py post-processors.
-_POST_PROCESSOR_CLASS = "PostProcessor"
 
 
 @dataclass
@@ -433,34 +429,3 @@ def _run_orchestrated(
             raise RuntimeError(f"Expected ONLINE, got {snapshot.connection_status.value}")
 
         return snapshot.modem_data
-
-
-def load_post_processor(parser_py_path: Path) -> Any:
-    """Dynamically import a PostProcessor from a parser.py file.
-
-    Loads the module from *parser_py_path* and returns an instance
-    of the ``PostProcessor`` class. The class name is a fixed
-    convention — all parser.py files use ``PostProcessor``.
-
-    Args:
-        parser_py_path: Absolute path to the ``parser.py`` file.
-
-    Returns:
-        An instance of ``PostProcessor``, or ``None`` if the class
-        is not defined in the module.
-    """
-    spec = importlib.util.spec_from_file_location(
-        f"parser_py_{parser_py_path.parent.name}",
-        parser_py_path,
-    )
-    if spec is None or spec.loader is None:
-        return None
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    cls = getattr(module, _POST_PROCESSOR_CLASS, None)
-    if cls is None:
-        return None
-
-    return cls()

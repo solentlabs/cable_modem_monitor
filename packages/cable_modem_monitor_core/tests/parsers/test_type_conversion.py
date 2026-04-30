@@ -330,3 +330,61 @@ def test_convert_uptime(
     """Test uptime conversion with format parameter."""
     result = convert_value(raw, "uptime", input_format=input_format)
     assert result == expected, f"{desc}: expected {expected!r}, got {result!r}"
+
+
+# --- Uptime defensive paths ---
+
+
+def test_uptime_no_format_returns_value_unchanged(caplog) -> None:
+    """uptime type without input_format logs warning, returns value as-is."""
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        result = convert_value("3600", "uptime")
+    # No format specified — value passes through, warning logged
+    assert result == "3600"
+    assert "uptime type requires a format" in caplog.text
+
+
+def test_uptime_unknown_format_returns_value_unchanged(caplog) -> None:
+    """uptime with non-'seconds' non-placeholder format logs warning, returns value."""
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        result = convert_value("3600", "uptime", input_format="unknown_format_string")
+    assert result == "3600"
+    assert "Unknown uptime format" in caplog.text
+
+
+def test_uptime_negative_seconds_returns_none() -> None:
+    """Negative seconds value yields None (logically not a valid uptime)."""
+    result = convert_value("-100", "uptime", input_format="seconds")
+    assert result is None
+
+
+def test_uptime_pattern_no_match_returns_none() -> None:
+    """Custom-format pattern that doesn't match the input yields None."""
+    result = convert_value(
+        "no numbers here",
+        "uptime",
+        input_format="D: {days} H: {hours} M: {minutes} S: {seconds}",
+    )
+    assert result is None
+
+
+def test_uptime_pattern_cached_on_repeat() -> None:
+    """Repeat calls with the same format reuse the compiled pattern (cache hit branch)."""
+    from solentlabs.cable_modem_monitor_core.parsers.type_conversion import (
+        _uptime_pattern_cache,
+    )
+
+    fmt = "{days}d {hours}h {minutes}m {seconds}s"
+    # Clear the cache slot for hermetic behaviour
+    _uptime_pattern_cache.pop(fmt, None)
+
+    convert_value("1d 2h 3m 4s", "uptime", input_format=fmt)
+    assert fmt in _uptime_pattern_cache
+
+    # Second call hits the cached-pattern branch
+    result = convert_value("5d 6h 7m 8s", "uptime", input_format=fmt)
+    assert result == "5 days 06h:07m:08s"

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`load_post_processor` moved out of `core.test_harness.runner`** to
+  its own module, `solentlabs.cable_modem_monitor_core.post_processor`.
+  The function is a runtime extension-point loader (peer of
+  `load_parser_config`), used by HA's setup path to import per-modem
+  `parser.py` files. It was placed in `test_harness/` only because the
+  test runner was the first caller; HA picked up the same import path
+  when it needed the function later. Internal-only change — no behavior
+  change for end users.
+
 ## [3.14.0-beta.2] - 2026-04-29
 
 ### Fixed

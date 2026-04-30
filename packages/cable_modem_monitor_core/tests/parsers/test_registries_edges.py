@@ -163,3 +163,111 @@ def test_transposed_flat_missing_rows() -> None:
             resource="/data.htm",
             selector=TableSelector.model_validate({"type": "nth", "match": 0}),
         )
+
+
+# ------------------------------------------------------------------
+# Additional channel/sysinfo type guards
+# ------------------------------------------------------------------
+
+
+class TestTransposedChannelSkipsNonList:
+    """_parse_transposed_channels skips a table_def whose parse result isn't a list."""
+
+    def test_non_list_table_continued_past(self) -> None:
+        from solentlabs.cable_modem_monitor_core.parsers.registries import (
+            _parse_transposed_channels,
+        )
+
+        # A single-table section: parser returns non-list → continue → primary_channels []
+        section = MagicMock()
+        section.resource = "/data.htm"
+        # Simulate the "tables" list path the function's branch builds
+        section.tables = []
+        section.selector = MagicMock()
+        section.rows = MagicMock()
+        section.channel_type = "downstream"
+
+        with patch("solentlabs.cable_modem_monitor_core.parsers.registries.HTMLTableTransposedParser") as mock_cls:
+            mock_cls.return_value.parse.return_value = "not a list"
+            result = _parse_transposed_channels(section, {})
+
+        assert result == []
+
+
+class TestJsJsonChannelNumberAssignment:
+    """_parse_js_json_channels auto-assigns channel_number when absent."""
+
+    def test_channel_number_assigned_per_position(self) -> None:
+        from solentlabs.cable_modem_monitor_core.parsers.registries import (
+            _parse_js_json_channels,
+        )
+
+        section = MagicMock()
+        with patch("solentlabs.cable_modem_monitor_core.parsers.registries.JSJsonParser") as mock_cls:
+            mock_cls.return_value.parse.return_value = [
+                {"channel_id": 10},
+                {"channel_id": 11, "channel_number": 5},  # already mapped
+                {"channel_id": 12},
+            ]
+            result = _parse_js_json_channels(section, {})
+
+        assert result[0]["channel_number"] == 1
+        assert result[1]["channel_number"] == 5  # unchanged
+        assert result[2]["channel_number"] == 3
+
+
+class TestXmlChannelParser:
+    """_parse_xml_channels: list path + non-list early-out."""
+
+    def test_xml_non_list_returns_empty(self) -> None:
+        from solentlabs.cable_modem_monitor_core.parsers.registries import (
+            _parse_xml_channels,
+        )
+
+        section = MagicMock()
+        with patch("solentlabs.cable_modem_monitor_core.parsers.registries.XMLChannelParser") as mock_cls:
+            mock_cls.return_value.parse.return_value = None
+            result = _parse_xml_channels(section, {})
+        assert result == []
+
+    def test_xml_list_assigns_channel_numbers(self) -> None:
+        from solentlabs.cable_modem_monitor_core.parsers.registries import (
+            _parse_xml_channels,
+        )
+
+        section = MagicMock()
+        with patch("solentlabs.cable_modem_monitor_core.parsers.registries.XMLChannelParser") as mock_cls:
+            mock_cls.return_value.parse.return_value = [
+                {"channel_id": 1},
+                {"channel_id": 2, "channel_number": 99},  # preserved
+            ]
+            result = _parse_xml_channels(section, {})
+
+        assert result[0]["channel_number"] == 1
+        assert result[1]["channel_number"] == 99
+
+
+class TestSysinfoTypeGuardsExtra:
+    """Type guards for js_vars and xml sysinfo wrappers."""
+
+    def test_js_vars_non_dict_returns_empty(self) -> None:
+        from solentlabs.cable_modem_monitor_core.parsers.registries import (
+            _parse_js_vars_sysinfo,
+        )
+
+        source = MagicMock()
+        with patch("solentlabs.cable_modem_monitor_core.parsers.registries.JSVarsParser") as mock_cls:
+            mock_cls.return_value.parse.return_value = ["list, not dict"]
+            result = _parse_js_vars_sysinfo(source, {})
+        assert result == {}
+
+    def test_xml_sysinfo_non_dict_returns_empty(self) -> None:
+        from solentlabs.cable_modem_monitor_core.parsers.registries import (
+            _parse_xml_sysinfo,
+        )
+
+        source = MagicMock()
+        with patch("solentlabs.cable_modem_monitor_core.parsers.registries.XMLSystemInfoParser") as mock_cls:
+            mock_cls.return_value.parse.return_value = None
+            result = _parse_xml_sysinfo(source, {})
+        assert result == {}
