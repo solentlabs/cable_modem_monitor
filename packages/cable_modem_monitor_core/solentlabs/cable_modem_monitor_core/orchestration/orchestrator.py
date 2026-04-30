@@ -91,6 +91,10 @@ class Orchestrator:
         # reset_auth(), DEBUG on steady-state
         self._first_poll_complete: bool = False
 
+        # Reuse-disable logging — INFO on the first forced fresh-login
+        # poll after adaptive disable, DEBUG on steady-state.
+        self._session_reuse_disabled_logged: bool = False
+
         # Counter-reset detection — proxy for "last boot time" when
         # the modem doesn't report native uptime (see #110)
         self._prev_error_totals: tuple[int, int] | None = None  # (corrected, uncorrected)
@@ -167,6 +171,7 @@ class Orchestrator:
         self._policy.reset()
         self._collector.clear_session()
         self._first_poll_complete = False
+        self._session_reuse_disabled_logged = False
         _logger.info("Auth state reset — next poll will attempt fresh login")
 
     def reset_connectivity(self) -> None:
@@ -309,10 +314,12 @@ class Orchestrator:
         self._log_poll_context()
 
         if not self._policy.should_attempt_session_reuse() and self._collector.session_is_valid:
-            _logger.info(
+            log = _logger.info if not self._session_reuse_disabled_logged else _logger.debug
+            log(
                 "Session reuse disabled [%s] — clearing session before poll",
                 self._modem_config.model,
             )
+            self._session_reuse_disabled_logged = True
             self._collector.clear_session()
 
         # Notify health monitor — avoids redundant HTTP probe during collection
