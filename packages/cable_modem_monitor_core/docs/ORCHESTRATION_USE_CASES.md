@@ -347,36 +347,46 @@ Session may be stale, or strategy doesn't grant data access.
 | 2 | Collector: auth succeeds (or session reused) | | |
 | 3 | Resource Loader: GET /status.html → HTTP 401 | | |
 | 4 | Collector returns `ModemResult(signal=LOAD_AUTH)` | | |
-| 5 | Orchestrator: streak++ | | |
-| 6 | Orchestrator: collector.clear_session() | session cleared | |
-| 7 | Return `ModemSnapshot(AUTH_FAILED)` | | |
+| 5 | Orchestrator: collector.clear_session() | session cleared | |
+| 6 | Orchestrator: retry collection once in same poll | | |
+| 7 | Retry still fails | | |
+| 8 | Orchestrator: streak++ | | |
+| 9 | Return `ModemSnapshot(AUTH_FAILED)` | | |
 
 **Assertions:**
 
-- Session is cleared so next poll starts with fresh login
+- Session is cleared before the same-poll retry
+- Orchestrator retries LOAD_AUTH once in the same poll
 - Auth failure streak is incremented (LOAD_AUTH is auth-related)
-- If persistent, will escalate to circuit breaker (same as wrong credentials)
+- If the retry also fails, the failure remains auth-related and can
+  still escalate to the circuit breaker
 - INFO log: "LOAD_AUTH — clearing session, reporting auth_failed..."
 
 ---
 
 ### UC-18: LOAD_AUTH — self-correcting stale session
 
-**Preconditions:** UC-17 occurred (session cleared). Credentials are correct.
+**Preconditions:** Data page returned LOAD_AUTH because the reused
+session was stale. Credentials are correct.
 
 | Step | Action | State change | Observable |
 |------|--------|-------------|------------|
 | 1 | Consumer calls `get_modem_data()` | | |
-| 2 | Collector: no session → fresh login → success | | |
-| 3 | Collector: load → parse → OK | | |
-| 4 | Orchestrator: streak→0 | streak reset | |
-| 5 | Return `ModemSnapshot(ONLINE)` | | |
+| 2 | Collector returns `ModemResult(signal=LOAD_AUTH)` | | |
+| 3 | Orchestrator: clear session | session cleared | |
+| 4 | Orchestrator: retry collection once in same poll | | |
+| 5 | Collector: no session → fresh login → success | | |
+| 6 | Collector: load → parse → OK | | |
+| 7 | Orchestrator: streak→0 | streak reset | |
+| 8 | Return `ModemSnapshot(ONLINE)` | | |
 
 **Assertions:**
 
-- Fresh login resolves the stale session
+- Fresh login resolves the stale session within the same poll
+- `auth_failed` is not surfaced when the retry succeeds
 - Streak resets to 0
-- Single LOAD_AUTH → fresh login → success is the expected self-healing path
+- Single LOAD_AUTH → same-poll fresh login → success is the expected
+  self-healing path
 
 ---
 
@@ -451,15 +461,17 @@ has expired the session (firmware timeout or max-session limit).
 | 2 | Collector: session valid (uid cookie + key) → reuse | | |
 | 3 | Resource Loader: POST /HNAP1/ with stale session → HTTP 404 | | |
 | 4 | Collector: HNAP error + reused session → LOAD_AUTH | | |
-| 5 | Orchestrator: streak++, collector.clear_session() | session cleared | |
-| 6 | Return `ModemSnapshot(AUTH_FAILED)` | | |
+| 5 | Orchestrator: collector.clear_session() | session cleared | |
+| 6 | Orchestrator: retry collection once in same poll | | |
+| 7 | Collector: fresh login → HNAP load → parse → OK | | ONLINE |
 
 **Assertions:**
 
 - Signal is LOAD_AUTH (not LOAD_ERROR) — session context determines routing
-- Session is cleared so next poll starts with fresh login (→ UC-18)
-- Auth failure streak is incremented
+- Session is cleared before the same-poll retry (→ UC-18)
+- Successful retry does not increment auth failure streak
 - WARNING log: "HNAP HTTP 404 on reused session [MODEL] — session likely expired"
+- INFO logs show the retry and successful same-poll recovery
 
 **Note:** Some HNAP firmware returns 404 for expired sessions, not 401.
 Others may return 500. The routing does not depend on the specific status
@@ -617,7 +629,7 @@ Modem has come back online.
 **Assertions:**
 
 - Transition is logged: "Status transition [MODEL]: unreachable → online"
-- If stale session rejected (3a): next poll does fresh login, self-corrects (UC-18)
+- If stale session rejected (3a): same poll does fresh login, self-corrects (UC-18)
 - No proactive session clear — LOAD_AUTH handles it naturally
 
 ---
@@ -1753,8 +1765,9 @@ password work on the next attempt. Retrying with known-bad credentials:
 
 **Distinguishing AUTH_FAILED from LOAD_AUTH:** LOAD_AUTH (401/403 on a
 data page after successful login) is a session issue, not a credential
-issue. LOAD_AUTH clears the session and the next poll re-authenticates
-fresh — this is self-correcting (UC-18). AUTH_FAILED is the modem
+issue. LOAD_AUTH clears the session and retries once in the same poll;
+if that fresh login succeeds, the condition self-corrects (UC-18).
+AUTH_FAILED is the modem
 rejecting the login itself.
 
 > **Status:** UC-20 documents the current behavior (threshold=6).
