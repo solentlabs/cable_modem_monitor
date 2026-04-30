@@ -338,8 +338,8 @@ class Orchestrator:
             if not load_auth_recovered:
                 self._policy.reset_stale_session_recovery_streak()
 
-            self._first_poll_complete = True
             self._log_poll_result(result)
+            self._first_poll_complete = True
             return self._handle_success(result)
         finally:
             if self._health_monitor is not None:
@@ -502,7 +502,7 @@ class Orchestrator:
         )
 
     def _log_poll_result(self, result: ModemResult) -> None:
-        """Log poll outcome. Parse line at INFO always. Failure at WARNING."""
+        """Log poll outcome. First success at INFO, steady-state at DEBUG."""
         model = self._modem_config.model
 
         if not result.success:
@@ -517,7 +517,8 @@ class Orchestrator:
         ds = len(result.modem_data.get("downstream", [])) if result.modem_data else 0
         us = len(result.modem_data.get("upstream", [])) if result.modem_data else 0
 
-        _logger.info(
+        log = _logger.info if not self._first_poll_complete else _logger.debug
+        log(
             "Parse complete [%s]: %d DS, %d US channels",
             model,
             ds,
