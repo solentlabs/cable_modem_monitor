@@ -315,6 +315,10 @@ class Orchestrator:
             result = self._collector.execute()
             collection_success = result.success
 
+            if not result.success and result.signal is CollectorSignal.LOAD_AUTH:
+                result = self._retry_load_auth_once()
+                collection_success = result.success
+
             if not result.success:
                 self._log_poll_result(result)
                 return self._handle_failure(result)
@@ -325,6 +329,29 @@ class Orchestrator:
         finally:
             if self._health_monitor is not None:
                 self._health_monitor.record_collection_end(collection_success)
+
+    def _retry_load_auth_once(self) -> ModemResult:
+        """Retry one LOAD_AUTH failure immediately with a fresh session.
+
+        LOAD_AUTH represents session expiry or stale auth state, not
+        credential rejection. Clear the current session and allow one
+        fresh collection attempt in the same poll to smooth over HNAP
+        session expiry without falling back to the next scheduled poll.
+        """
+        _logger.info(
+            "LOAD_AUTH [%s] — clearing session and retrying once in same poll",
+            self._modem_config.model,
+        )
+        self._collector.clear_session()
+
+        retry_result = self._collector.execute()
+        if retry_result.success:
+            _logger.info(
+                "LOAD_AUTH recovered [%s] — fresh login succeeded in same poll",
+                self._modem_config.model,
+            )
+
+        return retry_result
 
     def _handle_failure(self, result: ModemResult) -> ModemSnapshot:
         """Apply signal policy for a failed collection."""
