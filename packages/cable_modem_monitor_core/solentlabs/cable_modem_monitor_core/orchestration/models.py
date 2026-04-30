@@ -188,6 +188,13 @@ class OrchestratorDiagnostics:
             reachable.
         connectivity_backoff_remaining: Polls to skip before next
             connection attempt. 0 when no backoff active.
+        stale_session_recovery_streak: Consecutive recovered stale-
+            session events. Increments when a LOAD_AUTH same-poll retry
+            succeeds and resets on an intervening normal success or
+            unrecovered failure.
+        session_reuse_disabled: Whether the orchestrator has stopped
+            attempting cached-session reuse for the rest of this
+            runtime after repeated consecutive stale-session recoveries.
         resource_fetches: Per-resource timing and size from the last
             successful collection.
         last_poll_timestamp: Monotonic time of last get_modem_data()
@@ -201,6 +208,8 @@ class OrchestratorDiagnostics:
     auth_strategy: str = ""
     connectivity_streak: int = 0
     connectivity_backoff_remaining: int = 0
+    stale_session_recovery_streak: int = 0
+    session_reuse_disabled: bool = False
     resource_fetches: list[ResourceFetch] = field(default_factory=list)
     last_poll_timestamp: float | None = None
 
@@ -214,6 +223,8 @@ class OrchestratorDiagnostics:
             "auth_strategy": self.auth_strategy,
             "connectivity_streak": self.connectivity_streak,
             "connectivity_backoff_remaining": self.connectivity_backoff_remaining,
+            "stale_session_recovery_streak": self.stale_session_recovery_streak,
+            "session_reuse_disabled": self.session_reuse_disabled,
             "resource_fetches": [f.to_dict() for f in self.resource_fetches],
             "last_poll_timestamp": self.last_poll_timestamp,
         }

@@ -195,6 +195,8 @@ class Orchestrator:
             auth_strategy=auth.strategy if auth else "",
             connectivity_streak=self._policy.connectivity_streak,
             connectivity_backoff_remaining=self._policy.connectivity_backoff_remaining,
+            stale_session_recovery_streak=self._policy.stale_session_recovery_streak,
+            session_reuse_disabled=self._policy.session_reuse_disabled,
             resource_fetches=self._collector.last_resource_fetches,
             last_poll_timestamp=self._last_poll_timestamp,
         )
@@ -306,11 +308,19 @@ class Orchestrator:
         # Log poll context — INFO on first poll, DEBUG on steady-state
         self._log_poll_context()
 
+        if not self._policy.should_attempt_session_reuse() and self._collector.session_is_valid:
+            _logger.info(
+                "Session reuse disabled [%s] — clearing session before poll",
+                self._modem_config.model,
+            )
+            self._collector.clear_session()
+
         # Notify health monitor — avoids redundant HTTP probe during collection
         if self._health_monitor is not None:
             self._health_monitor.record_collection_start()
 
         collection_success = False
+        load_auth_recovered = False
         try:
             result = self._collector.execute()
             collection_success = result.success
@@ -318,10 +328,15 @@ class Orchestrator:
             if not result.success and result.signal is CollectorSignal.LOAD_AUTH:
                 result = self._retry_load_auth_once()
                 collection_success = result.success
+                load_auth_recovered = result.success
 
             if not result.success:
+                self._policy.reset_stale_session_recovery_streak()
                 self._log_poll_result(result)
                 return self._handle_failure(result)
+
+            if not load_auth_recovered:
+                self._policy.reset_stale_session_recovery_streak()
 
             self._first_poll_complete = True
             self._log_poll_result(result)
@@ -346,6 +361,7 @@ class Orchestrator:
 
         retry_result = self._collector.execute()
         if retry_result.success:
+            self._policy.record_stale_session_recovery()
             _logger.info(
                 "LOAD_AUTH recovered [%s] — fresh login succeeded in same poll",
                 self._modem_config.model,

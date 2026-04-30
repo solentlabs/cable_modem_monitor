@@ -47,15 +47,19 @@ class SignalPolicy:
         collector: ModemDataCollector,
         auth_failure_threshold: int = 6,
         max_connectivity_backoff: int = 6,
+        stale_recovery_threshold: int = 2,
         model: str = "",
     ) -> None:
         self._collector = collector
         self._threshold = auth_failure_threshold
         self._max_connectivity_backoff = max_connectivity_backoff
+        self._stale_recovery_threshold = stale_recovery_threshold
         self._model = model
 
         self._auth_failure_streak: int = 0
         self._circuit_open: bool = False
+        self._stale_session_recovery_streak: int = 0
+        self._session_reuse_disabled: bool = False
 
         # Connectivity backoff — separate from auth
         self._connectivity_streak: int = 0
@@ -80,6 +84,57 @@ class SignalPolicy:
     def connectivity_backoff_remaining(self) -> int:
         """Polls remaining in the connectivity backoff window."""
         return self._connectivity_backoff
+
+    @property
+    def stale_session_recovery_streak(self) -> int:
+        """Current consecutive recovered stale-session streak."""
+        return self._stale_session_recovery_streak
+
+    @property
+    def session_reuse_disabled(self) -> bool:
+        """Whether session reuse is disabled for the current runtime."""
+        return self._session_reuse_disabled
+
+    def should_attempt_session_reuse(self) -> bool:
+        """Whether the next poll should try the cached session first."""
+        return not self._session_reuse_disabled
+
+    def record_stale_session_recovery(self) -> None:
+        """Record a consecutive same-poll stale-session recovery.
+
+        After repeated consecutive recovered LOAD_AUTH events, disable
+        session reuse for the rest of the runtime to avoid burning the
+        first request of each poll on firmware with chronically short
+        session TTLs.
+        """
+        if self._session_reuse_disabled:
+            return
+
+        self._stale_session_recovery_streak += 1
+        if self._stale_session_recovery_streak < self._stale_recovery_threshold:
+            return
+
+        self._session_reuse_disabled = True
+        _logger.info(
+            "Recovered stale-session streak reached threshold [%s] — "
+            "disabling session reuse for this runtime "
+            "(%d consecutive recoveries)",
+            self._model,
+            self._stale_session_recovery_streak,
+        )
+
+    def reset_stale_session_recovery_streak(self) -> None:
+        """Reset the consecutive stale-session recovery streak.
+
+        A normal successful poll or any unrecovered failure breaks the
+        pattern. Once session reuse is disabled, the threshold-reaching
+        streak is left intact for diagnostics until reset_auth() or
+        process restart.
+        """
+        if self._session_reuse_disabled:
+            return
+
+        self._stale_session_recovery_streak = 0
 
     def check_connectivity_backoff(self) -> bool:
         """Check and decrement the connectivity backoff counter.
@@ -131,7 +186,7 @@ class SignalPolicy:
         if signal == CollectorSignal.AUTH_LOCKOUT:
             self._auth_failure_streak += 1
             _logger.warning(
-                "Auth lockout [%s] — firmware anti-brute-force triggered, " "stopping immediately (streak: %d)",
+                "Auth lockout [%s] — firmware anti-brute-force triggered, stopping immediately (streak: %d)",
                 self._model,
                 self._auth_failure_streak,
             )
@@ -142,7 +197,7 @@ class SignalPolicy:
             self._auth_failure_streak += 1
             self._collector.clear_session()
             _logger.info(
-                "LOAD_AUTH [%s] — clearing session, reporting auth_failed " "(streak: %d/%d)",
+                "LOAD_AUTH [%s] — clearing session, reporting auth_failed (streak: %d/%d)",
                 self._model,
                 self._auth_failure_streak,
                 self._threshold,
@@ -158,7 +213,7 @@ class SignalPolicy:
             )
             self._connectivity_backoff = backoff
             _logger.warning(
-                "Connection failure [%s] — unreachable (streak: %d, " "backoff: %d polls)",
+                "Connection failure [%s] — unreachable (streak: %d, backoff: %d polls)",
                 self._model,
                 self._connectivity_streak,
                 backoff,
@@ -184,6 +239,8 @@ class SignalPolicy:
         """
         self._auth_failure_streak = 0
         self._circuit_open = False
+        self._stale_session_recovery_streak = 0
+        self._session_reuse_disabled = False
         self._connectivity_streak = 0
         self._connectivity_backoff = 0
 

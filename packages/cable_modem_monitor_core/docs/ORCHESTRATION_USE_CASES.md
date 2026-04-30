@@ -387,6 +387,11 @@ session was stale. Credentials are correct.
 - Streak resets to 0
 - Single LOAD_AUTH → same-poll fresh login → success is the expected
   self-healing path
+- The orchestrator increments a consecutive stale-session recovery
+  streak on each successful same-poll recovery
+- An intervening normal successful poll resets that streak
+- After 2 consecutive recovered stale sessions, later polls stop
+  attempting cached-session reuse and start with a fresh login
 
 ---
 
@@ -472,6 +477,8 @@ has expired the session (firmware timeout or max-session limit).
 - Successful retry does not increment auth failure streak
 - WARNING log: "HNAP HTTP 404 on reused session [MODEL] — session likely expired"
 - INFO logs show the retry and successful same-poll recovery
+- After the second consecutive recovered stale session, later polls
+  clear the cached session before collection and go straight to fresh auth
 
 **Note:** Some HNAP firmware returns 404 for expired sessions, not 401.
 Others may return 500. The routing does not depend on the specific status

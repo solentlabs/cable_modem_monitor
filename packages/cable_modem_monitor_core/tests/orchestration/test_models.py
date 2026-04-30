@@ -218,6 +218,8 @@ class TestOrchestratorDiagnostics:
             "auth_strategy": "",
             "connectivity_streak": 0,
             "connectivity_backoff_remaining": 0,
+            "stale_session_recovery_streak": 0,
+            "session_reuse_disabled": False,
             "resource_fetches": [],
             "last_poll_timestamp": None,
         }

@@ -310,6 +310,15 @@ login attempts. The auth manager reuses the session (cookies + HNAP
 private key) as long as it's valid. This is critical — logging in every
 poll triggers the lockout.
 
+**Adaptive reuse disable** — some firmware keeps the local session
+looking valid while the server has already expired it, which produces a
+same-poll `LOAD_AUTH` recovery loop on every reused-session poll. After
+2 consecutive recovered stale-session events, the orchestrator stops
+attempting session reuse for the rest of that process lifetime and
+starts each poll with a fresh login. An intervening normal successful
+poll resets the recovery streak. This state is runtime-only —
+`reset_auth()` or process restart re-enables reuse.
+
 **Login backoff** — after a `LoginLockoutError` (firmware anti-brute-force
 triggered), the orchestrator suppresses login for 3 polls. This gives the
 modem time to clear its lockout state. The counter decrements each poll
@@ -348,6 +357,8 @@ strategy returns `AuthResult.FAILURE`.
 | Login backoff counter | Orchestrator | Anti-brute-force suppression | Decremented each poll |
 | Auth failure streak | Orchestrator | Circuit breaker threshold tracking | Reset on successful collection |
 | Circuit open flag | Orchestrator | Stops polling on persistent auth failure | Cleared by client reauth |
+| Stale-session recovery streak | Orchestrator | Tracks consecutive recovered `LOAD_AUTH` same-poll retries | Reset by an intervening normal success, `reset_auth()`, or process restart |
+| Session reuse disabled flag | Orchestrator | Forces fresh auth on each poll after repeated consecutive stale-session recoveries | Reset by `reset_auth()` or process restart |
 | Connectivity streak | Orchestrator | Tracks consecutive unreachable failures | Reset on success, non-connectivity failure, reset_connectivity(), or health recovery |
 | Connectivity backoff | Orchestrator | Exponential backoff: min(2^(streak-1), 6) | Decremented each poll, cleared by reset_connectivity() or health recovery |
 | Last poll status | Orchestrator | Detect status transitions (e.g., unreachable → online) | Updated each poll |

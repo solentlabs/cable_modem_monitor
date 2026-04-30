@@ -619,6 +619,93 @@ class TestLoadAuth:
 
         assert orch.diagnostics().circuit_breaker_open is True
 
+    def test_load_auth_recovery_streak_resets_on_normal_success(self) -> None:
+        """A normal poll breaks the consecutive stale-session recovery streak."""
+        collector = _mock_collector(
+            [
+                _fail_result(CollectorSignal.LOAD_AUTH),
+                _ok_result(),
+                _ok_result(),
+                _fail_result(CollectorSignal.LOAD_AUTH),
+                _ok_result(),
+            ]
+        )
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        diag = orch.diagnostics()
+        assert diag.stale_session_recovery_streak == 1
+        assert diag.session_reuse_disabled is False
+
+        orch.get_modem_data()
+        diag = orch.diagnostics()
+        assert diag.stale_session_recovery_streak == 0
+        assert diag.session_reuse_disabled is False
+
+        orch.get_modem_data()
+        diag = orch.diagnostics()
+        assert diag.stale_session_recovery_streak == 1
+        assert diag.session_reuse_disabled is False
+
+    def test_load_auth_disables_reuse_after_two_consecutive_recoveries(self) -> None:
+        """Two consecutive stale-session recoveries disable reuse for this runtime."""
+        collector = _mock_collector(
+            [
+                _fail_result(CollectorSignal.LOAD_AUTH),
+                _ok_result(),
+                _fail_result(CollectorSignal.LOAD_AUTH),
+                _ok_result(),
+                _ok_result(),
+            ]
+        )
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        diag = orch.diagnostics()
+        assert diag.stale_session_recovery_streak == 1
+        assert diag.session_reuse_disabled is False
+
+        orch.get_modem_data()
+        diag = orch.diagnostics()
+        assert diag.stale_session_recovery_streak == 2
+        assert diag.session_reuse_disabled is True
+
+        collector.clear_session.reset_mock()
+        orch.get_modem_data()
+
+        assert collector.execute.call_count == 5
+        collector.clear_session.assert_called_once()
+
+    def test_reset_auth_clears_adaptive_reuse_state(self) -> None:
+        """Credential reset re-enables session reuse and clears the counter."""
+        collector = _mock_collector(
+            [
+                _fail_result(CollectorSignal.LOAD_AUTH),
+                _ok_result(),
+                _fail_result(CollectorSignal.LOAD_AUTH),
+                _ok_result(),
+                _fail_result(CollectorSignal.LOAD_AUTH),
+                _ok_result(),
+            ]
+        )
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        orch.get_modem_data()
+        assert orch.diagnostics().session_reuse_disabled is True
+
+        orch.reset_auth()
+
+        diag = orch.diagnostics()
+        assert diag.stale_session_recovery_streak == 0
+        assert diag.session_reuse_disabled is False
+
+        collector.clear_session.reset_mock()
+        orch.get_modem_data()
+
+        assert collector.execute.call_count == 6
+        collector.clear_session.assert_called_once()
+
 
 class TestPasswordChanged:
     """UC-87: Password changed — circuit trips on first AUTH_FAILED."""
