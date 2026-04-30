@@ -1655,7 +1655,7 @@ class TestHealthRecoveryClearsBackoff:
         assert orch.diagnostics().connectivity_streak == 0
         assert orch.diagnostics().connectivity_backoff_remaining == 0
 
-    def test_stale_responsive_probe_does_not_clear_backoff(self) -> None:
+    def test_stale_responsive_probe_does_not_clear_backoff(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Cached RESPONSIVE from before the outage must NOT clear backoff.
 
         Regression guard for the MB7621 hardware observation at
@@ -1665,7 +1665,13 @@ class TestHealthRecoveryClearsBackoff:
         while the modem is actually down. The orchestrator's
         freshness check must ignore a probe whose timestamp pre-
         dates the last observed CONNECTIVITY failure.
+
+        Time is mocked across every poll: ``time.monotonic`` is
+        host-dependent (seconds since boot) and would otherwise
+        return small values on freshly booted CI runners, breaking
+        the freshness comparison against the literal probe time.
         """
+        import solentlabs.cable_modem_monitor_core.orchestration.orchestrator as orch_module
         from solentlabs.cable_modem_monitor_core.orchestration.models import HealthInfo
         from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
 
@@ -1679,36 +1685,25 @@ class TestHealthRecoveryClearsBackoff:
         collector.execute.return_value = _fail_result(CollectorSignal.CONNECTIVITY)
         orch = _make_orchestrator(collector=collector, health_monitor=health_monitor)
 
-        # First poll observes the connectivity failure. Monkey-patch
-        # time.monotonic so the recorded failure timestamp is well
-        # after the probe's 100.0.
-        import solentlabs.cable_modem_monitor_core.orchestration.orchestrator as orch_module
+        # Pin orchestrator time to t=200.0 for every poll. The
+        # exact value doesn't matter — only that it's > 100.0
+        # (the probe time) so the freshness check correctly
+        # classifies the cached probe as stale.
+        monkeypatch.setattr(orch_module.time, "monotonic", lambda: 200.0)
 
-        orig_monotonic = orch_module.time.monotonic
-        orch_module.time.monotonic = lambda: 200.0  # type: ignore[assignment]
-        try:
-            orch.get_modem_data()
-        finally:
-            orch_module.time.monotonic = orig_monotonic
-
-        # Backoff is now 1. Second poll would normally check the
-        # shortcut. The cached RESPONSIVE reading is stale (probe
-        # at t=100 < failure at t=200), so the shortcut must NOT
-        # fire — backoff decrements normally and the poll is
-        # skipped (backoff was 1, check decrements to 0 and allows
-        # the poll, then fails again).
+        # Poll 1: connectivity failure → backoff=1
+        orch.get_modem_data()
         assert orch.diagnostics().connectivity_backoff_remaining == 1
 
-        # Drive a second failure so backoff grows to 2.
+        # Poll 2: backoff was 1, decrements to 0, poll runs, fails → backoff=2
         orch.get_modem_data()
-
         assert orch.diagnostics().connectivity_backoff_remaining == 2
 
-        # Now a third poll. backoff > 0, health is cached RESPONSIVE,
-        # but latest_probe_at (100.0) is older than the most recent
-        # connectivity failure. The shortcut must stay closed —
-        # backoff decrements to 1 and the poll is skipped (reports
-        # UNREACHABLE without invoking the collector).
+        # Poll 3: backoff>0, health is cached RESPONSIVE, but
+        # latest_probe_at (100.0) < _last_connectivity_failure_at
+        # (200.0). Shortcut must stay closed — backoff decrements
+        # to 1 and the poll is skipped (UNREACHABLE without
+        # invoking the collector).
         call_count_before = collector.execute.call_count
         snapshot = orch.get_modem_data()
 
@@ -1717,12 +1712,15 @@ class TestHealthRecoveryClearsBackoff:
         # Backoff ticked down normally (2 → 1), not cleared.
         assert orch.diagnostics().connectivity_backoff_remaining == 1
 
-    def test_fresh_responsive_probe_still_clears_backoff(self) -> None:
+    def test_fresh_responsive_probe_still_clears_backoff(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A probe that ran AFTER the last failure correctly clears backoff.
 
         Complement to the stale-probe test: confirms the freshness
-        gate doesn't accidentally break the legitimate case.
+        gate doesn't accidentally break the legitimate case. ``time``
+        is mocked across every poll for the same host-determinism
+        reason as the stale-probe test.
         """
+        import solentlabs.cable_modem_monitor_core.orchestration.orchestrator as orch_module
         from solentlabs.cable_modem_monitor_core.orchestration.models import HealthInfo
         from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
 
@@ -1735,16 +1733,14 @@ class TestHealthRecoveryClearsBackoff:
         collector.execute.return_value = _fail_result(CollectorSignal.CONNECTIVITY)
         orch = _make_orchestrator(collector=collector, health_monitor=health_monitor)
 
-        # Two failures to build backoff.
-        import solentlabs.cable_modem_monitor_core.orchestration.orchestrator as orch_module
+        # Pin orchestrator time to t=200.0 — failures recorded here
+        # land between the stale probe (100.0) and the fresh probe
+        # (300.0) introduced below.
+        monkeypatch.setattr(orch_module.time, "monotonic", lambda: 200.0)
 
-        orig_monotonic = orch_module.time.monotonic
-        orch_module.time.monotonic = lambda: 200.0  # type: ignore[assignment]
-        try:
-            orch.get_modem_data()
-            orch.get_modem_data()
-        finally:
-            orch_module.time.monotonic = orig_monotonic
+        # Two failures to build backoff.
+        orch.get_modem_data()
+        orch.get_modem_data()
 
         assert orch.diagnostics().connectivity_backoff_remaining == 2
 
