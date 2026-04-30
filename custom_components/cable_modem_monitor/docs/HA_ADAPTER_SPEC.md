@@ -254,6 +254,12 @@ is memory on the orchestrator instance; when the entry unloads, the
 instance is garbage-collected and the state goes with it. Fresh
 `async_setup_entry` always starts with `recovery_active == False`.
 
+**Unload is not the defensive cleanup hook.** Normal unload relies on
+Home Assistant's config-entry teardown for attached rows. Defensive
+cleanup for stale same-domain rows lives in `async_remove_entry`, which
+can still see registry rows after HA has already severed the
+`config_entry_id` link.
+
 ---
 
 ## Async Boundary
@@ -737,6 +743,15 @@ Three defences, all required:
    it to `None`. The reset flow must not assume the entry is still
    loaded when it returns.
 
+**Cleanup scope during reset.** Reset uses the same installed-entry
+allowlist as `async_remove_entry`.
+
+- rows owned by the current entry are removed
+- rows owned by another still-installed Cable Modem Monitor entry are
+  preserved
+- same-domain rows that match no installed Cable Modem Monitor entry are
+  removed as orphans
+
 ---
 
 ## Reauth Flow
@@ -1085,6 +1100,24 @@ retroactive onboarding notification.
 **Cleanup.** `async_remove_entry` in `__init__.py` removes the Store
 payload when the config entry is deleted.
 
+`async_remove_entry` also performs a defensive registry sweep against
+the installed Cable Modem Monitor entry allowlist.
+
+For entity rows with `platform == DOMAIN`:
+
+- remove rows owned by the deleted entry
+- preserve rows owned by any still-installed Cable Modem Monitor entry
+- remove rows that match no installed Cable Modem Monitor entry at all
+
+Ownership is resolved from `config_entry_id` first and then from the
+stable entry-prefixed unique ID scheme.
+
+Device ownership uses the device identifier tuple `(DOMAIN, entry_id)`.
+
+This is intentionally stronger than current-entry positive attribution:
+same-domain rows that no longer match any installed entry are treated as
+orphans and removed.
+
 **Known gap — totals only.** The notifier tracks summed downstream and
 upstream counts, not per-channel-type (QAM/OFDM/ATDMA/OFDMA).
 A reshuffle that leaves the total unchanged (e.g. QAM −1, OFDM +1 on
@@ -1202,6 +1235,25 @@ migration tests verify the key transform (v1 keys → v2 keys with
 correct types and defaults). Use generic names for migration test
 data. Catalog resolution algorithms (`resolve_modem_dir`) are tested
 with synthetic `ModemSummary` data — not the real catalog.
+
+**Cleanup hardening tests cover both entry lifecycle paths.** Adapter
+tests for registry cleanup must cover the same installed-entry
+allowlist semantics through both `async_remove_entry` and the Reset
+Entities button:
+
+- remove rows owned by the target entry
+- preserve rows owned by another still-installed Cable Modem Monitor
+  entry
+- remove same-domain rows whose `config_entry_id` is already cleared
+  when their stable unique ID still points at the target entry
+- remove same-domain rows that match no installed Cable Modem Monitor
+  entry at all
+- apply the same ownership rules to device-registry cleanup in
+  `async_remove_entry`
+
+These tests stay adapter-scoped: they exercise Home Assistant registry
+behavior with mocked registry rows and generic entry IDs, not real modem
+catalog data.
 
 ---
 

@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import functools
 import logging
-from collections import Counter
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import CONF_HOST, EntityCategory
@@ -43,6 +42,7 @@ from .const import (
 )
 from .coordinator import CableModemConfigEntry
 from .lib.utils import get_device_name
+from .registry_cleanup import cleanup_owned_entities, installed_entry_ids
 from .services import async_request_modem_refresh
 
 _LOGGER = logging.getLogger(__name__)
@@ -256,26 +256,26 @@ class ResetEntitiesButton(_ButtonBase):
 
         # Remove all entities
         entity_reg = er.async_get(self.hass)
-        entries_to_remove = [
-            entity_entry
-            for entity_entry in entity_reg.entities.values()
-            if (entity_entry.platform == DOMAIN and entity_entry.config_entry_id == self._entry.entry_id)
-        ]
-        entities_to_remove = [entry.entity_id for entry in entries_to_remove]
+        cleanup_summary = cleanup_owned_entities(
+            entity_reg,
+            self._entry.entry_id,
+            installed_entry_ids(self.hass),
+        )
+        removed_count = len(cleanup_summary.removed_entity_ids)
 
         model = self._entry.runtime_data.modem_identity.model
         # Breakdown by platform so the count reconciles with each
         # platform's own "Created N entities" log on re-init.
-        breakdown = Counter(entry.domain for entry in entries_to_remove)
-        breakdown_str = ", ".join(f"{n} {domain}" for domain, n in sorted(breakdown.items()))
+        breakdown_str = ", ".join(
+            f"{n} {domain}"
+            for domain, n in sorted(cleanup_summary.removed_entity_domains.items())
+        )
         _LOGGER.info(
             "Removing %d entities for reset [%s]: %s",
-            len(entities_to_remove),
+            removed_count,
             model,
             breakdown_str,
         )
-        for entity_id in entities_to_remove:
-            entity_reg.async_remove(entity_id)
 
         # Update config entry with new probe results and reload
         if updated:
@@ -293,11 +293,15 @@ class ResetEntitiesButton(_ButtonBase):
                 f"HEAD={'yes' if updated.get(CONF_SUPPORTS_HEAD) else 'no'}"
             )
 
-        _LOGGER.info("Entity reset complete [%s] — removed %d entities and reloaded", model, len(entities_to_remove))
+        _LOGGER.info(
+            "Entity reset complete [%s] — removed %d entities and reloaded",
+            model,
+            removed_count,
+        )
 
         await self._notify(
             "Entity Reset Complete",
-            f"Removed {len(entities_to_remove)} entities and reloaded the integration.{probe_msg}",
+            f"Removed {removed_count} entities and reloaded the integration.{probe_msg}",
             _NOTIFY_RESET,
         )
 

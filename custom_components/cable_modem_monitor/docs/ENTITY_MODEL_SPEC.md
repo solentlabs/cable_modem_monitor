@@ -289,11 +289,36 @@ Sensors read from `_*_by_slot` for data and from
 - **ID mode:** Current behavior. Old entities show "Unknown," new
   channel IDs appear without entities. Reset Entities resolves it.
 
+### Reset and removal cleanup
+
+Reset and config-entry removal both use an installed-entry allowlist.
+
+For any live entity-registry row in the `cable_modem_monitor` platform:
+
+- remove it when it belongs to the current entry
+- preserve it when it belongs to another installed Cable Modem Monitor
+  entry
+- remove it when it matches no installed Cable Modem Monitor entry at
+  all
+
+Ownership is resolved from `config_entry_id` first and then from the
+stable unique ID prefix `{entry_id}_...`.
+
+This matters for migrated installs because Home Assistant can leave
+stale same-domain rows whose `config_entry_id` has already been cleared
+or still points at a deleted entry. The entry-prefixed unique ID remains
+the fallback ownership signal for deciding whether the row matches an
+installed entry.
+
 ### Migration (existing installs)
 
 `async_migrate_entry` runs once at startup when the config entry
 version is V1: adds `channel_identity: "id"` to `entry.data` and
 bumps the version. Pure metadata update — no entity rewrites.
+
+Cleanup hardening is separate from config-entry migration. No v2 schema
+change is required because the existing entry-scoped unique IDs already
+provide the ownership marker needed for stale-row cleanup.
 
 ---
 

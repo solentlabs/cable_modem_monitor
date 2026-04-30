@@ -1,11 +1,19 @@
 """Tests for button entities — setup, press handling, availability.
 
+TEST DATA TABLES
+================
+This module uses inline behavioral tests because each button flow covers
+a distinct adapter path. Shared cleanup coverage stays in dedicated
+fixtures and explicit orphan/allowlist scenarios rather than a single
+parametrized matrix.
+
 Mocks: orchestrator.restart(), orchestrator.reset_connectivity(),
        config_entries, entity_registry.
 """
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -43,9 +51,16 @@ def _collect_entities(target: list):
     """Return an AddEntitiesCallback that appends to *target*."""
 
     def callback(new_entities, update_before_add=False):
+        del update_before_add
         target.extend(new_entities)
 
     return callback
+
+
+async def _call_redetect_probes(button: Any) -> dict[str, bool] | None:
+    """Call the private probe helper through an Any cast for test coverage."""
+    probe_helper = object.__getattribute__(button, "_redetect_probes")
+    return await probe_helper()
 
 
 # -----------------------------------------------------------------------
@@ -63,7 +78,7 @@ async def test_setup_entry_with_restart(
 
     await async_setup_entry(hass, entry, _collect_entities(entities))
 
-    names = [e._attr_name for e in entities]
+    names = [e.name for e in entities]
     assert "Restart Modem" in names
     assert "Update Modem Data" in names
     assert "Reset Entities" in names
@@ -82,7 +97,7 @@ async def test_setup_entry_without_restart(
 
     await async_setup_entry(hass, entry, _collect_entities(entities))
 
-    names = [e._attr_name for e in entities]
+    names = [e.name for e in entities]
     assert "Restart Modem" not in names
     assert len(entities) == 2
 
@@ -215,8 +230,8 @@ async def test_restart_button_unavailable_during_dispatch(
     # Capture _attr_available at the moment restart() runs
     available_during_restart: list[bool] = []
 
-    async def _capture_state(*args, **kwargs):
-        available_during_restart.append(button._attr_available)
+    async def _capture_state(*_args, **_kwargs):
+        available_during_restart.append(button.available)
         return RestartResult(
             success=True,
             elapsed_seconds=2.5,
@@ -229,7 +244,7 @@ async def test_restart_button_unavailable_during_dispatch(
     # During dispatch: unavailable
     assert available_during_restart == [False]
     # After dispatch: available again
-    assert button._attr_available is True
+    assert button.available is True
     # State pushed to HA twice (before + after)
     assert button.async_write_ha_state.call_count == 2
 
@@ -253,7 +268,7 @@ async def test_restart_button_available_restored_on_exception(
         await button.async_press()
 
     # finally block restores availability
-    assert button._attr_available is True
+    assert button.available is True
     assert button.async_write_ha_state.call_count == 2
 
 
@@ -271,7 +286,7 @@ async def test_restart_button_sets_and_clears_active_operation(
 
     observed_during_press: list[str | None] = []
 
-    async def _capture(*args, **kwargs):
+    async def _capture(*_args, **_kwargs):
         observed_during_press.append(mock_runtime_data.active_operation)
         return RestartResult(success=True, elapsed_seconds=2.0)
 
@@ -327,7 +342,6 @@ async def test_restart_button_refuses_when_operation_in_progress(
 
 
 async def test_restart_button_refuses_when_reset_in_progress(
-    mock_orchestrator: MagicMock,
     mock_runtime_data: CableModemRuntimeData,
 ):
     """A restart press during a reset operation is refused."""
@@ -351,27 +365,70 @@ async def test_restart_button_refuses_when_reset_in_progress(
 async def test_reset_button_press_with_probes(
     mock_runtime_data: CableModemRuntimeData,
 ):
-    """Reset button re-detects probes, removes entities, reloads."""
+    """Reset removes current-entry rows and same-domain rows with no live owner."""
     entry = _make_entry(mock_runtime_data)
     button = ResetEntitiesButton(entry)
     button.hass = MagicMock()
     button.hass.services.async_call = AsyncMock()
     button.hass.config_entries.async_update_entry = MagicMock()
     button.hass.config_entries.async_reload = AsyncMock()
+    other_entry = MagicMock()
+    other_entry.entry_id = "other_entry"
+    button.hass.config_entries.async_entries.return_value = [entry, other_entry]
 
-    # Mock entity registry with two entities for this entry
+    # Mock entity registry with current-entry rows, active foreign rows,
+    # and stale same-domain rows that no longer match any installed entry.
     mock_entity_reg = MagicMock()
     entity_1 = MagicMock()
     entity_1.platform = "cable_modem_monitor"
     entity_1.config_entry_id = "test_entry"
     entity_1.entity_id = "sensor.modem_1"
     entity_1.domain = "sensor"
+    entity_1.unique_id = "test_entry_cable_modem_status"
+
     entity_2 = MagicMock()
     entity_2.platform = "cable_modem_monitor"
-    entity_2.config_entry_id = "test_entry"
-    entity_2.entity_id = "sensor.modem_2"
+    entity_2.config_entry_id = None
+    entity_2.entity_id = "sensor.modem_orphan"
     entity_2.domain = "sensor"
-    mock_entity_reg.entities.values.return_value = [entity_1, entity_2]
+    entity_2.unique_id = "test_entry_cable_modem_downstream_power"
+
+    entity_3 = MagicMock()
+    entity_3.platform = "cable_modem_monitor"
+    entity_3.config_entry_id = "other_entry"
+    entity_3.entity_id = "sensor.other_entry"
+    entity_3.domain = "sensor"
+    entity_3.unique_id = "other_entry_cable_modem_status"
+
+    entity_4 = MagicMock()
+    entity_4.platform = "cable_modem_monitor"
+    entity_4.config_entry_id = None
+    entity_4.entity_id = "sensor.unattributable"
+    entity_4.domain = "sensor"
+    entity_4.unique_id = None
+
+    entity_5 = MagicMock()
+    entity_5.platform = "cable_modem_monitor"
+    entity_5.config_entry_id = "deleted_entry"
+    entity_5.entity_id = "sensor.deleted_entry"
+    entity_5.domain = "sensor"
+    entity_5.unique_id = "deleted_entry_cable_modem_status"
+
+    entity_6 = MagicMock()
+    entity_6.platform = "cable_modem_monitor"
+    entity_6.config_entry_id = None
+    entity_6.entity_id = "sensor.other_entry_orphan"
+    entity_6.domain = "sensor"
+    entity_6.unique_id = "other_entry_cable_modem_downstream_power"
+
+    mock_entity_reg.entities.values.return_value = [
+        entity_1,
+        entity_2,
+        entity_3,
+        entity_4,
+        entity_5,
+        entity_6,
+    ]
 
     # Mock probe detection returning results
     probe_result = {"supports_icmp": True, "supports_head": False}
@@ -385,8 +442,15 @@ async def test_reset_button_press_with_probes(
     ):
         await button.async_press()
 
-    # Entities removed
-    assert mock_entity_reg.async_remove.call_count == 2
+    # Current-entry rows and rows with no installed owner are removed.
+    assert mock_entity_reg.async_remove.call_count == 4
+    removed_entity_ids = [call.args[0] for call in mock_entity_reg.async_remove.call_args_list]
+    assert removed_entity_ids == [
+        "sensor.modem_1",
+        "sensor.modem_orphan",
+        "sensor.unattributable",
+        "sensor.deleted_entry",
+    ]
 
     # Config entry updated with new probes
     button.hass.config_entries.async_update_entry.assert_called_once()
@@ -444,7 +508,7 @@ async def test_redetect_probes_success(
         ]
     )
 
-    result = await button._redetect_probes()
+    result = await _call_redetect_probes(button)
 
     assert result == {"supports_icmp": True, "supports_head": True}
 
@@ -460,7 +524,7 @@ async def test_redetect_probes_config_load_failure(
         side_effect=FileNotFoundError("modem.yaml not found"),
     )
 
-    result = await button._redetect_probes()
+    result = await _call_redetect_probes(button)
 
     assert result is None
 
@@ -479,6 +543,6 @@ async def test_redetect_probes_detection_failure(
         ],
     )
 
-    result = await button._redetect_probes()
+    result = await _call_redetect_probes(button)
 
     assert result is None

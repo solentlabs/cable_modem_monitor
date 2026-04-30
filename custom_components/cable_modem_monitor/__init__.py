@@ -24,7 +24,10 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import (
+    device_registry as dr,
+    entity_registry as er,
+)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_core.config_loader import (
@@ -88,6 +91,7 @@ from .lib.utils import get_device_name
 from .mapping_manager import ChannelMap, build_channel_map
 from .migrations import async_run_migrations
 from .recovery_adapter import attach_recovery_cadence_listener
+from .registry_cleanup import cleanup_owned_registry_rows
 from .services import async_register_services, async_unregister_services
 
 _LOGGER = logging.getLogger(__name__)
@@ -463,7 +467,21 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     Called by HA after ``async_unload_entry``. Entry data and options are
     managed by HA; Store payloads (e.g. the channel-bond baseline) are not.
     """
+    cleanup_summary = cleanup_owned_registry_rows(
+        hass,
+        er.async_get(hass),
+        dr.async_get(hass),
+        entry.entry_id,
+    )
     await async_remove_bond_state(hass, entry.entry_id)
+
+    _LOGGER.info(
+        "Removed registry rows for entry %s: %d entities, %d devices removed, %d devices unlinked",
+        entry.entry_id,
+        len(cleanup_summary.removed_entity_ids),
+        len(cleanup_summary.removed_device_ids),
+        len(cleanup_summary.unlinked_device_ids),
+    )
 
 
 async def _async_update_listener(

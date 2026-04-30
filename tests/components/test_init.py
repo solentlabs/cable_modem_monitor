@@ -19,6 +19,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from solentlabs.cable_modem_monitor_core.orchestration.models import ModemIdentity
 
+import custom_components.cable_modem_monitor as cable_modem_monitor
 from custom_components.cable_modem_monitor import (
     _async_update_listener,
     _check_channel_bond_change,
@@ -760,6 +761,107 @@ async def test_async_remove_entry_clears_bond_store():
         await async_remove_entry(hass, entry)
 
     mock_remove.assert_awaited_once_with(hass, "entry_abc")
+
+
+async def test_async_remove_entry_cleans_orphan_compatible_entities_and_devices():
+    """Entry removal cleans target rows and same-domain rows with no live owner."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "entry_abc"
+    remaining_entry = MagicMock()
+    remaining_entry.entry_id = "other_entry"
+    hass.config_entries.async_entries.return_value = [remaining_entry]
+
+    entity_attached = MagicMock()
+    entity_attached.platform = "cable_modem_monitor"
+    entity_attached.config_entry_id = "entry_abc"
+    entity_attached.entity_id = "sensor.attached"
+    entity_attached.unique_id = "entry_abc_cable_modem_status"
+
+    entity_orphan = MagicMock()
+    entity_orphan.platform = "cable_modem_monitor"
+    entity_orphan.config_entry_id = None
+    entity_orphan.entity_id = "sensor.orphan"
+    entity_orphan.unique_id = "entry_abc_cable_modem_downstream_power"
+
+    entity_foreign = MagicMock()
+    entity_foreign.platform = "cable_modem_monitor"
+    entity_foreign.config_entry_id = "other_entry"
+    entity_foreign.entity_id = "sensor.foreign"
+    entity_foreign.unique_id = "other_entry_cable_modem_status"
+
+    entity_unattributable = MagicMock()
+    entity_unattributable.platform = "cable_modem_monitor"
+    entity_unattributable.config_entry_id = None
+    entity_unattributable.entity_id = "sensor.unattributable"
+    entity_unattributable.unique_id = None
+
+    entity_other_orphan = MagicMock()
+    entity_other_orphan.platform = "cable_modem_monitor"
+    entity_other_orphan.config_entry_id = None
+    entity_other_orphan.entity_id = "sensor.other_orphan"
+    entity_other_orphan.unique_id = "other_entry_cable_modem_status"
+
+    entity_deleted = MagicMock()
+    entity_deleted.platform = "cable_modem_monitor"
+    entity_deleted.config_entry_id = "deleted_entry"
+    entity_deleted.entity_id = "sensor.deleted"
+    entity_deleted.unique_id = "deleted_entry_cable_modem_status"
+
+    device_owned = MagicMock()
+    device_owned.id = "device-owned"
+    device_owned.identifiers = {("cable_modem_monitor", "entry_abc")}
+    device_owned.config_entries = set()
+
+    device_foreign = MagicMock()
+    device_foreign.id = "device-foreign"
+    device_foreign.identifiers = {("cable_modem_monitor", "other_entry")}
+    device_foreign.config_entries = set()
+
+    device_deleted = MagicMock()
+    device_deleted.id = "device-deleted"
+    device_deleted.identifiers = {("cable_modem_monitor", "deleted_entry")}
+    device_deleted.config_entries = set()
+
+    mock_entity_reg = MagicMock()
+    mock_entity_reg.entities.values.return_value = [
+        entity_attached,
+        entity_orphan,
+        entity_foreign,
+        entity_unattributable,
+        entity_other_orphan,
+        entity_deleted,
+    ]
+
+    mock_device_reg = MagicMock()
+    mock_device_reg.devices.values.return_value = [
+        device_owned,
+        device_foreign,
+        device_deleted,
+    ]
+
+    with (
+        patch.object(cable_modem_monitor, "er", create=True) as mock_er_module,
+        patch("custom_components.cable_modem_monitor.dr.async_get", return_value=mock_device_reg),
+        patch(
+            "custom_components.cable_modem_monitor.async_remove_bond_state",
+            AsyncMock(),
+        ) as mock_remove_bond,
+    ):
+        mock_er_module.async_get.return_value = mock_entity_reg
+
+        await async_remove_entry(hass, entry)
+
+    removed_entity_ids = [call.args[0] for call in mock_entity_reg.async_remove.call_args_list]
+    assert removed_entity_ids == [
+        "sensor.attached",
+        "sensor.orphan",
+        "sensor.unattributable",
+        "sensor.deleted",
+    ]
+    removed_device_ids = [call.args[0] for call in mock_device_reg.async_remove_device.call_args_list]
+    assert removed_device_ids == ["device-owned", "device-deleted"]
+    mock_remove_bond.assert_awaited_once_with(hass, "entry_abc")
 
 
 # -----------------------------------------------------------------------
