@@ -185,3 +185,62 @@ def cleanup_owned_registry_rows(
         )
 
     return summary
+
+
+def _upstream_family_from_unique_id(
+    unique_id: str | None,
+    target_entry_id: str,
+) -> str | None:
+    """Return the upstream channel family encoded in an ID-mode unique ID."""
+    if not unique_id:
+        return None
+
+    prefix = f"{target_entry_id}_cable_modem_us_"
+    if not unique_id.startswith(prefix):
+        return None
+
+    family, separator, _ = unique_id[len(prefix) :].partition("_ch_")
+    if not separator or not family:
+        return None
+
+    return family
+
+
+def cleanup_obsolete_upstream_family_entities(
+    entity_registry: er.EntityRegistry,
+    *,
+    target_entry_id: str,
+    current_families: set[str],
+) -> list[str]:
+    """Remove stale typed-upstream entity rows for one entry.
+
+    This targets only ID-mode upstream entity unique IDs whose encoded
+    family no longer appears in the current runtime upstream channel set.
+    """
+    if not current_families:
+        return []
+
+    removed_entity_ids: list[str] = []
+
+    for entity_entry in entity_registry.entities.values():
+        if entity_entry.platform != DOMAIN:
+            continue
+
+        owner_from_unique_id = _matching_entry_id_from_unique_id(
+            entity_entry.unique_id,
+            {target_entry_id},
+        )
+        if owner_from_unique_id != target_entry_id:
+            continue
+
+        upstream_family = _upstream_family_from_unique_id(
+            entity_entry.unique_id,
+            target_entry_id,
+        )
+        if upstream_family is None or upstream_family in current_families:
+            continue
+
+        entity_registry.async_remove(entity_entry.entity_id)
+        removed_entity_ids.append(entity_entry.entity_id)
+
+    return removed_entity_ids

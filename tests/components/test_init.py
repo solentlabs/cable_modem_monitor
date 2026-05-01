@@ -203,20 +203,21 @@ _PATCH_LOAD_POST = "custom_components.cable_modem_monitor.load_post_processor"
 
 
 def test_wiring_loads_config_and_returns_tuple():
-    """Happy path: loads config, returns (orchestrator, health_monitor, identity)."""
+    """Happy path: loads config and returns components plus resolved probes."""
     with (
         patch(_PATCH_LOAD_MODEM, return_value=STUB_MODEM_CONFIG),
         patch(_PATCH_LOAD_PARSER, return_value=None),
         patch(_PATCH_LOAD_POST, return_value=None),
         patch("pathlib.Path.exists", return_value=False),
     ):
-        orchestrator, health_monitor, identity = _create_core_components(MOCK_ENTRY_DATA)
+        orchestrator, health_monitor, identity, resolved_probes = _create_core_components(MOCK_ENTRY_DATA)
 
     assert orchestrator is not None
     assert health_monitor is not None
     assert identity.manufacturer == "Solent Labs"
     assert identity.model == "TPS-2000"
     assert identity.status == "confirmed"
+    assert resolved_probes == {"supports_icmp": True, "supports_head": True}
 
 
 def test_wiring_variant_uses_variant_yaml():
@@ -301,7 +302,7 @@ def test_health_monitor_conditional(supports_icmp, http_probe, expect_created, d
         patch(_PATCH_LOAD_POST, return_value=None),
         patch("pathlib.Path.exists", return_value=False),
     ):
-        _, health_monitor, _ = _create_core_components(data)
+        _, health_monitor, _, _ = _create_core_components(data)
 
     if expect_created:
         assert health_monitor is not None
@@ -319,7 +320,7 @@ def test_health_monitor_no_health_config():
         patch(_PATCH_LOAD_POST, return_value=None),
         patch("pathlib.Path.exists", return_value=False),
     ):
-        _, health_monitor, _ = _create_core_components(MOCK_ENTRY_DATA)
+        _, health_monitor, _, _ = _create_core_components(MOCK_ENTRY_DATA)
 
     # health=None → defaults to http_probe=True, supports_icmp=True
     assert health_monitor is not None
@@ -335,7 +336,7 @@ def test_identity_without_hardware():
         patch(_PATCH_LOAD_POST, return_value=None),
         patch("pathlib.Path.exists", return_value=False),
     ):
-        _, _, identity = _create_core_components(MOCK_ENTRY_DATA)
+        _, _, identity, _ = _create_core_components(MOCK_ENTRY_DATA)
 
     assert identity.docsis_version is None
     assert identity.release_date is None
@@ -430,7 +431,12 @@ async def test_setup_entry_happy_path():
         call_count += 1
         if call_count == 1:
             return "core: v1.0.0, catalog: v1.0.0"
-        return (mock_orch, mock_health_mon, mock_identity)
+        return (
+            mock_orch,
+            mock_health_mon,
+            mock_identity,
+            {"supports_icmp": True, "supports_head": True},
+        )
 
     hass.async_add_executor_job = _mock_executor
     hass.services.has_service.return_value = False
@@ -471,11 +477,207 @@ async def test_setup_entry_happy_path():
     assert entry.runtime_data.data_coordinator is mock_data_coord
     assert entry.runtime_data.health_coordinator is mock_health_coord
     assert entry.runtime_data.orchestrator is mock_orch
+    assert entry.runtime_data.probe_support == {
+        "supports_icmp": True,
+        "supports_head": True,
+    }
     mock_data_coord.async_config_entry_first_refresh.assert_awaited_once()
     mock_health_coord.async_config_entry_first_refresh.assert_awaited_once()
     hass.config_entries.async_forward_entry_setups.assert_awaited_once()
     # Recovery cadence listener is attached exactly once.
     mock_attach.assert_called_once_with(hass, entry, mock_orch, mock_data_coord)
+
+
+async def test_setup_entry_normalizes_missing_probe_flags_before_platform_setup():
+    """Startup persists effective probe flags when a migrated entry omitted them."""
+    hass = MagicMock()
+
+    mock_orch = MagicMock()
+    mock_orch.supports_restart = True
+    mock_health_mon = MagicMock()
+    mock_identity = ModemIdentity(
+        manufacturer="Solent Labs",
+        model="TPS-2000",
+        docsis_version="3.0",
+        release_date="2024",
+        status="confirmed",
+    )
+
+    call_count = 0
+
+    async def _mock_executor(func, *args):
+        del func, args
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return "core: v1.0.0, catalog: v1.0.0"
+        return (
+            mock_orch,
+            mock_health_mon,
+            mock_identity,
+            {"supports_icmp": True, "supports_head": True},
+        )
+
+    hass.async_add_executor_job = _mock_executor
+    hass.services.has_service.return_value = False
+    hass.config_entries.async_forward_entry_setups = AsyncMock()
+    hass.config_entries.async_update_entry = MagicMock()
+
+    entry = MagicMock()
+    entry.data = {
+        key: value
+        for key, value in MOCK_ENTRY_DATA.items()
+        if key not in {"supports_icmp", "supports_head"}
+    }
+    entry.options = {}
+    entry.entry_id = "test_123"
+    entry.title = "Solent Labs TPS-2000"
+
+    mock_data_coord = MagicMock()
+    mock_data_coord.async_config_entry_first_refresh = AsyncMock()
+    mock_health_coord = MagicMock()
+    mock_health_coord.async_config_entry_first_refresh = AsyncMock()
+
+    mock_duc = MagicMock()
+    mock_duc.__getitem__.return_value.side_effect = [
+        mock_data_coord,
+        mock_health_coord,
+    ]
+
+    with (
+        patch("custom_components.cable_modem_monitor.setup_log_buffer"),
+        patch(
+            "custom_components.cable_modem_monitor.DataUpdateCoordinator",
+            mock_duc,
+        ),
+        patch("custom_components.cable_modem_monitor._update_device_registry"),
+        patch("custom_components.cable_modem_monitor.async_register_services"),
+        patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener"),
+    ):
+        result = await async_setup_entry(hass, entry)
+
+    assert result is True
+    hass.config_entries.async_update_entry.assert_called_once_with(
+        entry,
+        data={
+            **entry.data,
+            "supports_icmp": True,
+            "supports_head": True,
+        },
+    )
+    hass.config_entries.async_forward_entry_setups.assert_awaited_once()
+
+
+async def test_setup_entry_reconciles_obsolete_upstream_family_rows_before_platform_setup():
+    """Startup retires stale same-entry upstream family rows before new sensors load."""
+    hass = MagicMock()
+
+    mock_orch = MagicMock()
+    mock_orch.supports_restart = True
+    mock_health_mon = MagicMock()
+    mock_identity = ModemIdentity(
+        manufacturer="Solent Labs",
+        model="TPS-2000",
+        docsis_version="3.0",
+        release_date="2024",
+        status="confirmed",
+    )
+
+    qam_snapshot = MagicMock()
+    qam_snapshot.modem_data = {
+        "downstream": [],
+        "upstream": [
+            {
+                "channel_type": "qam",
+                "channel_id": 9,
+                "channel_number": 1,
+                "power": 42.0,
+            }
+        ],
+    }
+    qam_snapshot.connection_status.value = "online"
+
+    call_count = 0
+
+    async def _mock_executor(func, *args):
+        del func, args
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return "core: v1.0.0, catalog: v1.0.0"
+        return (
+            mock_orch,
+            mock_health_mon,
+            mock_identity,
+            {"supports_icmp": True, "supports_head": True},
+        )
+
+    hass.async_add_executor_job = _mock_executor
+    hass.services.has_service.return_value = False
+    hass.config_entries.async_forward_entry_setups = AsyncMock()
+    hass.config_entries.async_update_entry = MagicMock()
+
+    entry = MagicMock()
+    entry.data = MOCK_ENTRY_DATA
+    entry.options = {}
+    entry.entry_id = "test_123"
+    entry.title = "Solent Labs TPS-2000"
+
+    stale_upstream = MagicMock()
+    stale_upstream.platform = "cable_modem_monitor"
+    stale_upstream.config_entry_id = "test_123"
+    stale_upstream.entity_id = "sensor.test_us_atdma_ch_9_power"
+    stale_upstream.unique_id = "test_123_cable_modem_us_atdma_ch_9_power"
+
+    current_upstream = MagicMock()
+    current_upstream.platform = "cable_modem_monitor"
+    current_upstream.config_entry_id = "test_123"
+    current_upstream.entity_id = "sensor.test_us_qam_ch_9_power"
+    current_upstream.unique_id = "test_123_cable_modem_us_qam_ch_9_power"
+
+    foreign_upstream = MagicMock()
+    foreign_upstream.platform = "cable_modem_monitor"
+    foreign_upstream.config_entry_id = "other_entry"
+    foreign_upstream.entity_id = "sensor.other_us_atdma_ch_9_power"
+    foreign_upstream.unique_id = "other_entry_cable_modem_us_atdma_ch_9_power"
+
+    mock_entity_reg = MagicMock()
+    mock_entity_reg.entities.values.return_value = [
+        stale_upstream,
+        current_upstream,
+        foreign_upstream,
+    ]
+
+    mock_data_coord = MagicMock()
+    mock_data_coord.async_config_entry_first_refresh = AsyncMock()
+    mock_data_coord.data = qam_snapshot
+
+    mock_health_coord = MagicMock()
+    mock_health_coord.async_config_entry_first_refresh = AsyncMock()
+
+    mock_duc = MagicMock()
+    mock_duc.__getitem__.return_value.side_effect = [
+        mock_data_coord,
+        mock_health_coord,
+    ]
+
+    with (
+        patch("custom_components.cable_modem_monitor.setup_log_buffer"),
+        patch(
+            "custom_components.cable_modem_monitor.DataUpdateCoordinator",
+            mock_duc,
+        ),
+        patch("custom_components.cable_modem_monitor.er.async_get", return_value=mock_entity_reg),
+        patch("custom_components.cable_modem_monitor._update_device_registry"),
+        patch("custom_components.cable_modem_monitor.async_register_services"),
+        patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener"),
+    ):
+        result = await async_setup_entry(hass, entry)
+
+    assert result is True
+    removed_entity_ids = [call.args[0] for call in mock_entity_reg.async_remove.call_args_list]
+    assert removed_entity_ids == ["sensor.test_us_atdma_ch_9_power"]
+    hass.config_entries.async_forward_entry_setups.assert_awaited_once()
 
 
 # -----------------------------------------------------------------------

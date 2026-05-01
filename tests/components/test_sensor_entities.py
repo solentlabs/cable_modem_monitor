@@ -1054,11 +1054,8 @@ def _setup_entry_inputs(
 async def test_async_setup_entry_happy_path(mock_runtime_data) -> None:
     """All sensors created when modem_data and health_coord are present."""
     from custom_components.cable_modem_monitor.sensor import (
-        HttpLatencySensor,
         ModemInfoSensor,
         ModemStatusSensor,
-        PingLatencySensor,
-        TcpLatencySensor,
         async_setup_entry,
     )
 
@@ -1073,12 +1070,32 @@ async def test_async_setup_entry_happy_path(mock_runtime_data) -> None:
     # Always-created
     assert ModemStatusSensor in types
     assert ModemInfoSensor in types
-    # Health sensors (ICMP + HEAD enabled)
+
+
+async def test_async_setup_entry_uses_runtime_probe_support(mock_runtime_data) -> None:
+    """Health sensor creation follows runtime probe support, not raw entry data."""
+    from custom_components.cable_modem_monitor.sensor import (
+        HttpLatencySensor,
+        PingLatencySensor,
+        TcpLatencySensor,
+        async_setup_entry,
+    )
+
+    mock_runtime_data.probe_support = {"supports_icmp": True, "supports_head": False}
+    hass, entry, add_entities = _setup_entry_inputs(
+        mock_runtime_data,
+        icmp=False,
+        head=False,
+    )
+
+    await async_setup_entry(hass, entry, add_entities)
+
+    entities = add_entities.call_args[0][0]
+    types = {type(entity) for entity in entities}
+
     assert TcpLatencySensor in types
     assert PingLatencySensor in types
-    assert HttpLatencySensor in types
-    # Data-dependent entities present (channel sensors, system_info, etc.)
-    assert len(entities) > 5
+    assert HttpLatencySensor not in types
 
 
 async def test_async_setup_entry_no_health_coord(mock_runtime_data) -> None:

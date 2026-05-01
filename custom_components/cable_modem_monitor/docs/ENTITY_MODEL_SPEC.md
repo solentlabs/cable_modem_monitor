@@ -91,9 +91,14 @@ parser output → no entity created.
 
 | Entity | unique_id suffix | State | device_class | state_class | Unit | Condition |
 |--------|-----------------|-------|--------------|-------------|------|-----------|
-| Ping Latency | `_ping_latency` | float | — | MEASUREMENT | ms | `supports_icmp = True` |
+| Ping Latency | `_ping_latency` | float | — | MEASUREMENT | ms | `entry.runtime_data.probe_support.supports_icmp = True` |
 | TCP Latency | `_tcp_latency` | float | — | MEASUREMENT | ms | Health coordinator exists (HTTP probe enabled) |
-| HTTP Latency | `_http_latency` | float | — | MEASUREMENT | ms | `supports_head = True` (HEAD-only — no GET fallback for bimodal-corrupted data) |
+| HTTP Latency | `_http_latency` | float | — | MEASUREMENT | ms | `entry.runtime_data.probe_support.supports_head = True` (HEAD-only — no GET fallback for bimodal-corrupted data) |
+
+Ping / HTTP latency gating reads the shared runtime probe-support
+object resolved during startup. Persisted config-entry probe keys are
+still normalized and stored, but platform setup does not independently
+default missing probe metadata.
 
 ### Per-Channel Downstream Sensors
 
@@ -319,6 +324,19 @@ bumps the version. Pure metadata update — no entity rewrites.
 Cleanup hardening is separate from config-entry migration. No v2 schema
 change is required because the existing entry-scoped unique IDs already
 provide the ownership marker needed for stale-row cleanup.
+
+If a migrated entry reaches v2 without canonical `supports_icmp` /
+`supports_head` keys, the first v2 startup now normalizes those probe
+flags before sensor platform setup. That keeps Ping / HTTP latency
+entity gating aligned with the same effective probe-capability state
+startup already uses for the health monitor.
+
+If a migrated entry reaches v2 with stale same-entry typed upstream
+entities from an older family naming scheme, the first v2 startup also
+reconciles those rows before sensor platform setup. When current
+runtime upstream data has converged to a replacement family, obsolete
+same-entry typed upstream rows are retired automatically so the entry
+converges without requiring `Reset Entities`.
 
 ---
 

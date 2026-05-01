@@ -67,6 +67,7 @@ class CableModemRuntimeData:
     orchestrator: Orchestrator
     health_monitor: HealthMonitor | None
     modem_identity: ModemIdentity
+  probe_support: ProbeSupport
     active_operation: Literal["restart", "reset"] | None = None
 
 
@@ -88,6 +89,11 @@ flag. The two answer different questions:
   seconds-to-minutes during a reset.)
 - `orchestrator.recovery_active` — is the *modem* currently in a
   recovery window? (True for the duration of
+
+**`probe_support`** is the shared effective HA-side probe capability
+state resolved during startup. Sensor setup, dashboard generation, and
+diagnostics read this runtime object rather than independently
+defaulting missing `entry.data` probe keys.
   `_RECOVERY_WINDOW_SECONDS` after any recovery trigger.)
 
 The button is disabled when *either* is set. During a button-press
@@ -122,7 +128,7 @@ layer can cause spurious integration reloads or lost state on restart.
 
 | Layer | Lifetime | Write triggers | Use for |
 |-------|----------|----------------|---------|
-| `entry.runtime_data` | Process lifetime; cleared on unload/reload | None | Live Core objects (orchestrator, coordinators), channel map |
+| `entry.runtime_data` | Process lifetime; cleared on unload/reload | None | Live Core objects (orchestrator, coordinators), resolved probe support, channel map |
 | `entry.data` | Persistent across restarts | Fires update listener → integration reload | User config (host, credentials), validation-derived fields, write-once markers |
 | `entry.options` | Persistent across restarts | Same as `entry.data` | User-editable settings from the options flow (`scan_interval`, `health_check_interval`) |
 | `Store` helper | Persistent across restarts | None — silent writes | Runtime state that mutates at poll cadence (e.g., channel-bond baseline) |
@@ -178,6 +184,12 @@ async_setup_entry(hass, entry)
  │     create_orchestrator(modem_config, parser_config,
  │         post_processor, base_url, username, password, ...)
  │     → (orchestrator, health_monitor, modem_identity)
+│
+├─ 3a. Normalize effective probe support for migrated entries
+│      If `supports_icmp` / `supports_head` are absent or stale,
+│      persist the resolved effective values before platform setup.
+│      This makes migrated entries converge to the same capability
+│      state that startup already uses for the health monitor.
  │
  ├─ 4. Create data DataUpdateCoordinator
  │     update_method wraps orchestrator.get_modem_data()
@@ -201,8 +213,14 @@ async_setup_entry(hass, entry)
  │     coordinator.async_config_entry_first_refresh()
  │     (always runs, even if polling is disabled)
  │
- ├─ 7. Store RuntimeData on entry
+├─ 6a. Reconcile obsolete upstream families (ID mode only)
+│      Use the first-refresh snapshot to remove stale same-entry
+│      typed upstream registry rows whose encoded family no longer
+│      exists in current runtime data.
+│
+├─ 7. Store RuntimeData on entry
  │     entry.runtime_data = CableModemRuntimeData(...)
+│     includes shared resolved `probe_support`
  │
  ├─ 8. Forward platform setup (sensor, button)
  │
@@ -220,6 +238,12 @@ and identity internally.
 **Step 6 always runs.** Even when polling is disabled, the first poll
 runs during setup so entities have real data. "Disabled" means no
 scheduled polls after setup, not "never poll."
+
+**Step 6a is intentionally narrow.** Startup reconciliation only
+targets ID-mode same-entry typed upstream unique IDs. It does not try
+to clean all stale entities generically; it removes only obsolete
+upstream families whose replacement family is present in the current
+runtime snapshot before platform setup creates the new entities.
 
 ---
 
@@ -1178,8 +1202,8 @@ Adding a future migration = one file.  No changes to dispatch logic.
 | `username` | `username` | Unchanged |
 | `password` | `password` | Unchanged |
 | `legacy_ssl` | `legacy_ssl` | Unchanged |
-| `supports_icmp` | `supports_icmp` | Unchanged |
-| `supports_head` | `supports_head` | Unchanged (default `false` if missing) |
+| `supports_icmp` | `supports_icmp` | Preserved when present; otherwise normalized on first v2 startup from the resolved effective startup capability |
+| `supports_head` | `supports_head` | Preserved when present; otherwise normalized on first v2 startup from the resolved effective startup capability |
 | `entity_prefix` | `entity_prefix` | Unchanged (default `"none"` if missing) |
 | `scan_interval` | `scan_interval` | Unchanged |
 | — | `modem_dir` | Catalog lookup: manufacturer + model → relative directory path |
@@ -1198,6 +1222,14 @@ The result is a relative path from the catalog root (e.g.,
 manufacturer renamed beyond recognition), migration logs a warning
 with the original values and returns `False`.  HA marks the entry as
 failed — the user reconfigures through the setup wizard.
+
+**Startup normalization for migrated entries.** The `v1_to_v2`
+migration intentionally stays file/catalog-only and does not perform
+network probing. If a migrated entry reaches v2 without canonical
+`supports_icmp` / `supports_head` keys, the first v2 startup persists
+the same resolved probe-capability state already used to create the
+health monitor. This keeps migration deterministic while still making
+migrated entries converge before platform setup.
 
 **v1 keys removed:** `parser_name`, `detected_manufacturer`,
 `detected_modem`, `modem_choice`, `working_url`,
@@ -1235,6 +1267,33 @@ migration tests verify the key transform (v1 keys → v2 keys with
 correct types and defaults). Use generic names for migration test
 data. Catalog resolution algorithms (`resolve_modem_dir`) are tested
 with synthetic `ModemSummary` data — not the real catalog.
+
+**Startup normalization tests cover migrated-entry convergence.**
+Adapter startup tests must also cover the first-v2-load path where a
+migrated entry omitted canonical `supports_icmp` / `supports_head`
+keys. These tests verify that:
+
+- startup persists the resolved probe-capability values before platform
+  setup runs
+- migrated entries do not collapse missing probe keys to `False`
+- the startup health-monitor path and the later sensor-platform path
+  read the same effective capability state
+
+**Runtime probe-support tests cover shared HA-side consumers.**
+Adapter tests must verify that sensor setup, dashboard generation, and
+diagnostics read the shared runtime probe-support object rather than
+independently defaulting raw `entry.data` probe keys.
+
+**Startup family-reconciliation tests cover typed upstream cleanup.**
+Adapter startup tests must also cover the first-refresh path where
+current runtime data has converged to a replacement upstream family and
+stale same-entry typed rows from the previous family still exist. These
+tests verify that:
+
+- obsolete same-entry upstream typed rows are removed before platform
+  setup
+- current-family rows remain intact
+- rows belonging to other entries remain intact
 
 **Cleanup hardening tests cover both entry lifecycle paths.** Adapter
 tests for registry cleanup must cover the same installed-entry

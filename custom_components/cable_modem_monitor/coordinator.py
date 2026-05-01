@@ -10,7 +10,7 @@ or ``const.py`` (which should stay a leaf module with no heavy imports).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -38,6 +38,13 @@ if TYPE_CHECKING:
 ActiveOperation = Literal["restart", "reset"]
 
 
+class ProbeSupport(TypedDict):
+    """Resolved probe capability state for one config entry."""
+
+    supports_icmp: bool
+    supports_head: bool
+
+
 @dataclass
 class CableModemRuntimeData:
     """All runtime state for one config entry.
@@ -52,6 +59,7 @@ class CableModemRuntimeData:
     orchestrator: Orchestrator
     health_monitor: HealthMonitor | None
     modem_identity: ModemIdentity
+    probe_support: ProbeSupport
     channel_map: ChannelMap = field(default_factory=ChannelMap)
     # Set while a destructive button handler (Restart, Reset) is
     # running; cleared in the handler's ``finally`` block. Read by

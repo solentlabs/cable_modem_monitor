@@ -85,13 +85,16 @@ from .const import (
     VERSION,
     ChannelIdentity,
 )
-from .coordinator import CableModemConfigEntry, CableModemRuntimeData
+from .coordinator import CableModemConfigEntry, CableModemRuntimeData, ProbeSupport
 from .core.log_buffer import setup_log_buffer
 from .lib.utils import get_device_name
 from .mapping_manager import ChannelMap, build_channel_map
 from .migrations import async_run_migrations
 from .recovery_adapter import attach_recovery_cadence_listener
-from .registry_cleanup import cleanup_owned_registry_rows
+from .registry_cleanup import (
+    cleanup_obsolete_upstream_family_entities,
+    cleanup_owned_registry_rows,
+)
 from .services import async_register_services, async_unregister_services
 
 _LOGGER = logging.getLogger(__name__)
@@ -198,6 +201,97 @@ def _rebuild_channel_map(
     )
 
 
+def _current_upstream_families(snapshot: ModemSnapshot | None) -> set[str]:
+    """Return normalized upstream channel families from current runtime data."""
+    modem_data = snapshot.modem_data if snapshot else None
+    if modem_data is None:
+        return set()
+
+    return {
+        str(channel_type).lower()
+        for channel in modem_data.get("upstream", [])
+        if (channel_type := channel.get("channel_type"))
+    }
+
+
+def _reconcile_upstream_family_entities(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+    snapshot: ModemSnapshot | None,
+    identity_mode: ChannelIdentity,
+) -> list[str]:
+    """Retire stale typed-upstream entity rows before platform setup."""
+    if identity_mode != ChannelIdentity.ID:
+        return []
+
+    current_families = _current_upstream_families(snapshot)
+    if not current_families:
+        return []
+
+    return cleanup_obsolete_upstream_family_entities(
+        er.async_get(hass),
+        target_entry_id=entry.entry_id,
+        current_families=current_families,
+    )
+
+
+def _persist_resolved_probe_support(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+    resolved_probes: ProbeSupport,
+) -> None:
+    """Persist resolved probe flags when entry data does not match."""
+    if not any(entry.data.get(key) != value for key, value in resolved_probes.items()):
+        return
+
+    hass.config_entries.async_update_entry(
+        entry,
+        data={**entry.data, **resolved_probes},
+    )
+
+
+def _log_first_poll_result(snapshot: ModemSnapshot | None, model: str) -> None:
+    """Log the outcome of the first data poll."""
+    if snapshot and snapshot.modem_data:
+        _LOGGER.info("First poll complete [%s] — data received", model)
+        return
+
+    status = snapshot.connection_status.value if snapshot else "unknown"
+    _LOGGER.info("First poll complete [%s] — no data (%s)", model, status)
+
+
+async def _refresh_health_coordinator(
+    health_coordinator: DataUpdateCoordinator[HealthInfo] | None,
+    health_check_interval: int,
+    model: str,
+) -> None:
+    """Run the initial health refresh and log startup cadence."""
+    if health_coordinator is None:
+        return
+
+    await health_coordinator.async_config_entry_first_refresh()
+    _LOGGER.info(
+        "Health monitoring started [%s] — %s",
+        model,
+        _format_interval(health_check_interval),
+    )
+
+
+def _log_upstream_family_reconciliation(
+    removed_upstream_entity_ids: list[str],
+    model: str,
+) -> None:
+    """Log startup-time upstream family cleanup when rows were removed."""
+    if not removed_upstream_entity_ids:
+        return
+
+    _LOGGER.info(
+        "Removed obsolete upstream entity rows before platform setup [%s] — %d rows",
+        model,
+        len(removed_upstream_entity_ids),
+    )
+
+
 async def async_migrate_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -286,12 +380,14 @@ async def async_setup_entry(
 
     # Steps 1-5: Load config and create Core components (sync I/O)
     try:
-        orchestrator, health_monitor, modem_identity = await hass.async_add_executor_job(
+        orchestrator, health_monitor, modem_identity, resolved_probes = await hass.async_add_executor_job(
             _create_core_components, entry.data
         )
     except Exception:
         _LOGGER.exception("Failed to load modem configuration from catalog")
         return False
+
+    _persist_resolved_probe_support(hass, entry, resolved_probes)
 
     # Step 6: Create data DataUpdateCoordinator
     host = entry.data[CONF_HOST]
@@ -353,15 +449,21 @@ async def async_setup_entry(
 
     # Log first-poll result at HA level (Core logs parse details under solentlabs.*)
     snapshot = data_coordinator.data
-    if snapshot and snapshot.modem_data:
-        _LOGGER.info("First poll complete [%s] — data received", model)
-    else:
-        status = snapshot.connection_status.value if snapshot else "unknown"
-        _LOGGER.info("First poll complete [%s] — no data (%s)", model, status)
+    _log_first_poll_result(snapshot, model)
 
-    if health_coordinator is not None:
-        await health_coordinator.async_config_entry_first_refresh()
-        _LOGGER.info("Health monitoring started [%s] — %s", model, _format_interval(health_check_interval))
+    await _refresh_health_coordinator(
+        health_coordinator,
+        health_check_interval,
+        model,
+    )
+
+    removed_upstream_entity_ids = _reconcile_upstream_family_entities(
+        hass,
+        entry,
+        snapshot,
+        identity_mode,
+    )
+    _log_upstream_family_reconciliation(removed_upstream_entity_ids, model)
 
     # Step 9: Store runtime data (with initial channel map from first poll)
     modem_data = snapshot.modem_data if snapshot else None
@@ -381,6 +483,7 @@ async def async_setup_entry(
         orchestrator=orchestrator,
         health_monitor=health_monitor,
         modem_identity=modem_identity,
+        probe_support=resolved_probes,
         channel_map=initial_channel_map,
     )
 
@@ -499,7 +602,7 @@ async def _async_update_listener(
 
 def _create_core_components(
     data: Mapping[str, Any],
-) -> tuple[Orchestrator, HealthMonitor | None, ModemIdentity]:
+) -> tuple[Orchestrator, HealthMonitor | None, ModemIdentity, ProbeSupport]:
     """Load modem config and create Core components.
 
     Implements startup Steps 1-5 from HA_ADAPTER_SPEC.md.  Runs in an
@@ -541,8 +644,12 @@ def _create_core_components(
     http_probe = health_cfg.http_probe if health_cfg else True
     default_icmp = health_cfg.supports_icmp if health_cfg else True
     default_head = health_cfg.supports_head if health_cfg else True
+    resolved_probes: ProbeSupport = {
+        CONF_SUPPORTS_ICMP: bool(data.get(CONF_SUPPORTS_ICMP, default_icmp)),
+        CONF_SUPPORTS_HEAD: bool(data.get(CONF_SUPPORTS_HEAD, default_head)),
+    }
 
-    return create_orchestrator(
+    orchestrator, health_monitor, modem_identity = create_orchestrator(
         modem_config=modem_config,
         parser_config=parser_config,
         post_processor=post_processor,
@@ -550,11 +657,12 @@ def _create_core_components(
         username=data.get(CONF_USERNAME, ""),
         password=data.get(CONF_PASSWORD, ""),
         legacy_ssl=data.get(CONF_LEGACY_SSL, False),
-        supports_icmp=data.get(CONF_SUPPORTS_ICMP, default_icmp),
-        supports_head=data.get(CONF_SUPPORTS_HEAD, default_head),
+        supports_icmp=resolved_probes[CONF_SUPPORTS_ICMP],
+        supports_head=resolved_probes[CONF_SUPPORTS_HEAD],
         http_probe=http_probe,
         model=modem_config.model,
     )
+    return orchestrator, health_monitor, modem_identity, resolved_probes
 
 
 # ------------------------------------------------------------------

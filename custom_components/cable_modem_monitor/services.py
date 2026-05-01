@@ -34,8 +34,6 @@ from homeassistant.util import slugify as ha_slugify
 from .const import (
     CONF_CHANNEL_IDENTITY,
     CONF_ENTITY_PREFIX,
-    CONF_SUPPORTS_HEAD,
-    CONF_SUPPORTS_ICMP,
     DOMAIN,
     ChannelIdentity,
 )
@@ -682,8 +680,8 @@ def create_generate_dashboard_handler(
             return {"yaml": str(exc)}
 
         entity_prefix = _get_entity_prefix(entry)
-        has_icmp = bool(entry.data.get(CONF_SUPPORTS_ICMP, False))
-        has_head = bool(entry.data.get(CONF_SUPPORTS_HEAD, False))
+        has_icmp = entry.runtime_data.probe_support["supports_icmp"]
+        has_head = entry.runtime_data.probe_support["supports_head"]
         has_restart = entry.runtime_data.orchestrator.supports_restart
         system_info = modem_data.get("system_info", {})
 

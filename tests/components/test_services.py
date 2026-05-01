@@ -838,6 +838,33 @@ def test_generate_dashboard_handler(
     assert "entity: button.cable_modem_restart_modem" in yaml
 
 
+def test_generate_dashboard_handler_uses_runtime_probe_support(
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """Dashboard latency cards follow runtime probe support, not raw entry data."""
+    mock_runtime_data.probe_support = {"supports_icmp": True, "supports_head": False}
+
+    entry = _make_mock_entry(mock_runtime_data)
+    entry.data = {
+        "entity_prefix": "none",
+        "host": "192.168.100.1",
+        "supports_icmp": False,
+        "supports_head": False,
+    }
+
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    handler = create_generate_dashboard_handler(hass)
+    call = MagicMock()
+    call.data = {"include_latency": True}
+
+    yaml = handler(call)["yaml"]
+
+    assert "sensor.cable_modem_ping_latency" in yaml
+    assert "sensor.cable_modem_http_latency" not in yaml
+
+
 def test_generate_dashboard_handler_no_restart_support(
     mock_runtime_data: CableModemRuntimeData,
 ) -> None:

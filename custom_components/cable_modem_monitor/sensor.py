@@ -49,8 +49,6 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
 from .const import (
     CONF_CHANNEL_IDENTITY,
     CONF_ENTITY_PREFIX,
-    CONF_SUPPORTS_HEAD,
-    CONF_SUPPORTS_ICMP,
     DOMAIN,
     ChannelIdentity,
 )
@@ -1105,9 +1103,9 @@ async def async_setup_entry(
     # -- Health sensors (from health coordinator) --
     if health_coord is not None:
         entities.append(TcpLatencySensor(health_coord, entry))
-        if entry.data.get(CONF_SUPPORTS_ICMP, False):
+        if runtime.probe_support["supports_icmp"]:
             entities.append(PingLatencySensor(health_coord, entry))
-        if entry.data.get(CONF_SUPPORTS_HEAD, False):
+        if runtime.probe_support["supports_head"]:
             entities.append(HttpLatencySensor(health_coord, entry))
 
     # -- Data-dependent sensors (require modem_data from first poll) --

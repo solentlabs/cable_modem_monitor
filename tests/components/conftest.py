@@ -340,4 +340,5 @@ def mock_runtime_data(
         orchestrator=mock_orchestrator,
         health_monitor=mock_health_monitor,
         modem_identity=mock_modem_identity,
+        probe_support={"supports_icmp": True, "supports_head": True},
     )
