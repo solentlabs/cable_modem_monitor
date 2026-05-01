@@ -84,14 +84,16 @@
           "username": "Benutzername",
           "password": "Passwort",
           "scan_interval": "Daten-Abfrageintervall",
-          "health_check_interval": "Erreichbarkeitsprüfung"
+          "health_check_interval": "Erreichbarkeitsprüfung",
+          "auto_entity_reconciliation": "Automatische Entitätsabstimmung"
         },
         "data_description": {
           "host": "Normalerweise 192.168.100.1",
           "username": "Leer lassen, wenn nicht erforderlich.",
           "password": "Leer = aktuelles Passwort behalten.",
           "scan_interval": "Wie oft Modemdaten abgefragt werden. Standard 10 Minuten. Auf 00:00:00 setzen, um automatische Abfragen zu deaktivieren (nur manuell über den Aktualisieren-Button).",
-          "health_check_interval": "Wie oft die Erreichbarkeit des Modems geprüft wird. Standard 30 Sekunden. Auf 00:00:00 setzen, um Erreichbarkeitsprüfungen zu deaktivieren."
+          "health_check_interval": "Wie oft die Erreichbarkeit des Modems geprüft wird. Standard 30 Sekunden. Auf 00:00:00 setzen, um Erreichbarkeitsprüfungen zu deaktivieren.",
+          "auto_entity_reconciliation": "Bereinigt veraltete, verwaltete Modementitäten beim Start automatisch. Nur deaktivieren, wenn dein Modem Kanaldaten so meldet, dass die automatische Bereinigung falsch wird."
         }
       }
     },

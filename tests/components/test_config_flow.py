@@ -622,6 +622,7 @@ async def test_options_full_flow_success(hass: HomeAssistant):
                 "password": "newpass",
                 "scan_interval": {"hours": 0, "minutes": 5, "seconds": 0},
                 "health_check_interval": {"hours": 0, "minutes": 1, "seconds": 0},
+                "auto_entity_reconciliation": True,
             },
         )
 
@@ -632,6 +633,7 @@ async def test_options_full_flow_success(hass: HomeAssistant):
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"]["scan_interval"] == 300
     assert result["data"]["health_check_interval"] == 60
+    assert result["data"]["auto_entity_reconciliation"] is True
 
 
 async def test_options_flow_validation_failure(hass: HomeAssistant):
@@ -660,6 +662,7 @@ async def test_options_flow_validation_failure(hass: HomeAssistant):
                 "password": "pass",
                 "scan_interval": {"hours": 0, "minutes": 10, "seconds": 0},
                 "health_check_interval": {"hours": 0, "minutes": 0, "seconds": 30},
+                "auto_entity_reconciliation": False,
             },
         )
 
@@ -697,6 +700,7 @@ async def test_options_password_preserved(hass: HomeAssistant):
                 "password": "",  # blank — should preserve "password" from entry
                 "scan_interval": {"hours": 0, "minutes": 10, "seconds": 0},
                 "health_check_interval": {"hours": 0, "minutes": 0, "seconds": 30},
+                "auto_entity_reconciliation": True,
             },
         )
 

@@ -84,14 +84,16 @@
           "username": "Username",
           "password": "Password",
           "scan_interval": "Data Poll Interval",
-          "health_check_interval": "Health Check Interval"
+          "health_check_interval": "Health Check Interval",
+          "auto_entity_reconciliation": "Automatic Entity Reconciliation"
         },
         "data_description": {
           "host": "Usually 192.168.100.1",
           "username": "Leave blank if not required.",
           "password": "Blank keeps current password.",
           "scan_interval": "How often to poll modem data. Default 10 minutes. Set to 00:00:00 to disable automatic polling (manual only via Update button).",
-          "health_check_interval": "How often to check modem reachability. Default 30 seconds. Set to 00:00:00 to disable health checks."
+          "health_check_interval": "How often to check modem reachability. Default 30 seconds. Set to 00:00:00 to disable health checks.",
+          "auto_entity_reconciliation": "Automatically clean up stale managed modem entities during startup. Turn this off only if your modem reports channel data in a way that causes incorrect automatic cleanup."
         }
       }
     },

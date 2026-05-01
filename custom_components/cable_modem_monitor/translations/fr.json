@@ -84,14 +84,16 @@
           "username": "Nom d'utilisateur",
           "password": "Mot de passe",
           "scan_interval": "Intervalle d'Interrogation des Donnees",
-          "health_check_interval": "Intervalle de Verification de l'Etat"
+          "health_check_interval": "Intervalle de Verification de l'Etat",
+          "auto_entity_reconciliation": "Reconciliation automatique des entites"
         },
         "data_description": {
           "host": "Generalement 192.168.100.1",
           "username": "Laisser vide si non requis.",
           "password": "Vide conserve le mot de passe actuel.",
           "scan_interval": "Frequence d'interrogation des donnees du modem. Par defaut 10 minutes. Reglez sur 00:00:00 pour desactiver l'interrogation automatique (mise a jour manuelle uniquement via le bouton Actualiser).",
-          "health_check_interval": "Frequence de verification de l'accessibilite du modem. Par defaut 30 secondes. Reglez sur 00:00:00 pour desactiver les verifications d'etat."
+          "health_check_interval": "Frequence de verification de l'accessibilite du modem. Par defaut 30 secondes. Reglez sur 00:00:00 pour desactiver les verifications d'etat.",
+          "auto_entity_reconciliation": "Nettoie automatiquement les entites gerees obsoletes du modem au demarrage. Desactivez cette option seulement si votre modem rapporte les donnees de canaux d'une maniere qui provoque un nettoyage automatique incorrect."
         }
       }
     },

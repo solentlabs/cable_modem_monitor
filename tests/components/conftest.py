@@ -48,6 +48,9 @@ from custom_components.cable_modem_monitor.const import (
 from custom_components.cable_modem_monitor.coordinator import (
     CableModemRuntimeData,
 )
+from custom_components.cable_modem_monitor.integration_manager import (
+    CableModemIntegrationManager,
+)
 
 # ---------------------------------------------------------------------------
 # Canned modem data — realistic minimal set
@@ -341,4 +344,5 @@ def mock_runtime_data(
         health_monitor=mock_health_monitor,
         modem_identity=mock_modem_identity,
         probe_support={"supports_icmp": True, "supports_head": True},
+        integration_manager=CableModemIntegrationManager(MagicMock(), "test_entry"),
     )

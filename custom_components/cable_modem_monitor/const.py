@@ -39,8 +39,12 @@ CONF_CREDENTIAL_FIELD = "credential_field"
 CONF_CHANNEL_ONBOARDING_ELIGIBLE = "channel_onboarding_eligible"
 
 # Polling configuration (options flow)
+CONF_AUTO_ENTITY_RECONCILIATION = "auto_entity_reconciliation"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_HEALTH_CHECK_INTERVAL = "health_check_interval"
+
+# Automatic entity reconciliation
+DEFAULT_AUTO_ENTITY_RECONCILIATION = True
 
 # Defaults — data polling
 DEFAULT_SCAN_INTERVAL = 600  # 10 minutes

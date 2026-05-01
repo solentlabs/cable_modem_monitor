@@ -30,6 +30,9 @@ from custom_components.cable_modem_monitor.button import (
 from custom_components.cable_modem_monitor.coordinator import (
     CableModemRuntimeData,
 )
+from custom_components.cable_modem_monitor.entity_registry_helpers import (
+    RegistryCleanupSummary,
+)
 
 from .conftest import MOCK_ENTRY_DATA
 
@@ -372,85 +375,23 @@ async def test_reset_button_press_with_probes(
     button.hass.services.async_call = AsyncMock()
     button.hass.config_entries.async_update_entry = MagicMock()
     button.hass.config_entries.async_reload = AsyncMock()
-    other_entry = MagicMock()
-    other_entry.entry_id = "other_entry"
-    button.hass.config_entries.async_entries.return_value = [entry, other_entry]
+    mock_runtime_data.integration_manager.cleanup_entities_for_reset = MagicMock(
+        return_value=RegistryCleanupSummary(
+            removed_entity_ids=[
+                "sensor.modem_1",
+                "sensor.modem_orphan",
+                "sensor.unattributable",
+                "sensor.deleted_entry",
+            ]
+        )
+    )
 
-    # Mock entity registry with current-entry rows, active foreign rows,
-    # and stale same-domain rows that no longer match any installed entry.
-    mock_entity_reg = MagicMock()
-    entity_1 = MagicMock()
-    entity_1.platform = "cable_modem_monitor"
-    entity_1.config_entry_id = "test_entry"
-    entity_1.entity_id = "sensor.modem_1"
-    entity_1.domain = "sensor"
-    entity_1.unique_id = "test_entry_cable_modem_status"
-
-    entity_2 = MagicMock()
-    entity_2.platform = "cable_modem_monitor"
-    entity_2.config_entry_id = None
-    entity_2.entity_id = "sensor.modem_orphan"
-    entity_2.domain = "sensor"
-    entity_2.unique_id = "test_entry_cable_modem_downstream_power"
-
-    entity_3 = MagicMock()
-    entity_3.platform = "cable_modem_monitor"
-    entity_3.config_entry_id = "other_entry"
-    entity_3.entity_id = "sensor.other_entry"
-    entity_3.domain = "sensor"
-    entity_3.unique_id = "other_entry_cable_modem_status"
-
-    entity_4 = MagicMock()
-    entity_4.platform = "cable_modem_monitor"
-    entity_4.config_entry_id = None
-    entity_4.entity_id = "sensor.unattributable"
-    entity_4.domain = "sensor"
-    entity_4.unique_id = None
-
-    entity_5 = MagicMock()
-    entity_5.platform = "cable_modem_monitor"
-    entity_5.config_entry_id = "deleted_entry"
-    entity_5.entity_id = "sensor.deleted_entry"
-    entity_5.domain = "sensor"
-    entity_5.unique_id = "deleted_entry_cable_modem_status"
-
-    entity_6 = MagicMock()
-    entity_6.platform = "cable_modem_monitor"
-    entity_6.config_entry_id = None
-    entity_6.entity_id = "sensor.other_entry_orphan"
-    entity_6.domain = "sensor"
-    entity_6.unique_id = "other_entry_cable_modem_downstream_power"
-
-    mock_entity_reg.entities.values.return_value = [
-        entity_1,
-        entity_2,
-        entity_3,
-        entity_4,
-        entity_5,
-        entity_6,
-    ]
-
-    # Mock probe detection returning results
     probe_result = {"supports_icmp": True, "supports_head": False}
 
-    with (
-        patch(
-            "custom_components.cable_modem_monitor.button.er.async_get",
-            return_value=mock_entity_reg,
-        ),
-        patch.object(button, "_redetect_probes", new=AsyncMock(return_value=probe_result)),
-    ):
+    with patch.object(button, "_redetect_probes", new=AsyncMock(return_value=probe_result)):
         await button.async_press()
 
-    # Current-entry rows and rows with no installed owner are removed.
-    assert mock_entity_reg.async_remove.call_count == 4
-    removed_entity_ids = [call.args[0] for call in mock_entity_reg.async_remove.call_args_list]
-    assert removed_entity_ids == [
-        "sensor.modem_1",
-        "sensor.modem_orphan",
-        "sensor.unattributable",
-        "sensor.deleted_entry",
-    ]
+    mock_runtime_data.integration_manager.cleanup_entities_for_reset.assert_called_once_with()
 
     # Config entry updated with new probes
     button.hass.config_entries.async_update_entry.assert_called_once()
@@ -475,16 +416,9 @@ async def test_reset_button_press_probes_failed(
     button.hass.config_entries.async_update_entry = MagicMock()
     button.hass.config_entries.async_reload = AsyncMock()
 
-    mock_entity_reg = MagicMock()
-    mock_entity_reg.entities.values.return_value = []
+    mock_runtime_data.integration_manager.cleanup_entities_for_reset = MagicMock(return_value=RegistryCleanupSummary())
 
-    with (
-        patch(
-            "custom_components.cable_modem_monitor.button.er.async_get",
-            return_value=mock_entity_reg,
-        ),
-        patch.object(button, "_redetect_probes", new=AsyncMock(return_value=None)),
-    ):
+    with patch.object(button, "_redetect_probes", new=AsyncMock(return_value=None)):
         await button.async_press()
 
     # No config entry update when probes failed
@@ -492,6 +426,7 @@ async def test_reset_button_press_probes_failed(
 
     # Still reloads
     button.hass.config_entries.async_reload.assert_awaited_once()
+    mock_runtime_data.integration_manager.cleanup_entities_for_reset.assert_called_once_with()
 
 
 async def test_redetect_probes_success(

@@ -84,14 +84,16 @@
           "username": "Usuario",
           "password": "Contrasena",
           "scan_interval": "Intervalo de Consulta de Datos",
-          "health_check_interval": "Intervalo de Verificacion de Estado"
+          "health_check_interval": "Intervalo de Verificacion de Estado",
+          "auto_entity_reconciliation": "Reconciliacion Automatica de Entidades"
         },
         "data_description": {
           "host": "Normalmente 192.168.100.1",
           "username": "Dejar en blanco si no es necesario.",
           "password": "En blanco mantiene la contrasena actual.",
           "scan_interval": "Cada cuanto consultar los datos del modem. Por defecto 10 minutos. Establecer en 00:00:00 para desactivar la consulta automatica (solo manual mediante el boton Actualizar).",
-          "health_check_interval": "Cada cuanto verificar la accesibilidad del modem. Por defecto 30 segundos. Establecer en 00:00:00 para desactivar las verificaciones de estado."
+          "health_check_interval": "Cada cuanto verificar la accesibilidad del modem. Por defecto 30 segundos. Establecer en 00:00:00 para desactivar las verificaciones de estado.",
+          "auto_entity_reconciliation": "Limpia automaticamente las entidades administradas obsoletas del modem durante el inicio. Desactivalo solo si tu modem informa los datos de canales de una forma que provoque una limpieza automatica incorrecta."
         }
       }
     },

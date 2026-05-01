@@ -84,14 +84,16 @@
           "username": "Användarnamn",
           "password": "Lösenord",
           "scan_interval": "Datapollningsintervall",
-          "health_check_interval": "Hälsokontrollintervall"
+          "health_check_interval": "Hälsokontrollintervall",
+          "auto_entity_reconciliation": "Automatisk entitetsavstamning"
         },
         "data_description": {
           "host": "Vanligtvis 192.168.100.1",
           "username": "Lämna tomt om det inte krävs.",
           "password": "Tomt behåller nuvarande lösenord.",
           "scan_interval": "Hur ofta modemdata hämtas. Standard 10 minuter. Ställ in 00:00:00 för att inaktivera automatisk pollning (manuellt via Uppdatera-knappen).",
-          "health_check_interval": "Hur ofta modemets tillgänglighet kontrolleras. Standard 30 sekunder. Ställ in 00:00:00 för att inaktivera hälsokontroller."
+          "health_check_interval": "Hur ofta modemets tillgänglighet kontrolleras. Standard 30 sekunder. Ställ in 00:00:00 för att inaktivera hälsokontroller.",
+          "auto_entity_reconciliation": "Rensar automatiskt bort foraldrade hanterade modementiteter vid uppstart. Stang bara av detta om ditt modem rapporterar kanaldata pa ett satt som orsakar felaktig automatisk rensning."
         }
       }
     },

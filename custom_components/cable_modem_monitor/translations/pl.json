@@ -84,14 +84,16 @@
           "username": "Nazwa użytkownika",
           "password": "Hasło",
           "scan_interval": "Interwał odpytywania danych",
-          "health_check_interval": "Interwał sprawdzania dostępności"
+          "health_check_interval": "Interwał sprawdzania dostępności",
+          "auto_entity_reconciliation": "Automatyczne uzgadnianie encji"
         },
         "data_description": {
           "host": "Zwykle 192.168.100.1",
           "username": "Pozostaw puste, jeśli nie jest wymagane.",
           "password": "Puste pole zachowuje obecne hasło.",
           "scan_interval": "Jak często pobierać dane z modemu. Domyślnie 10 minut. Ustaw 00:00:00, aby wyłączyć automatyczne odpytywanie (tylko ręcznie przyciskiem Aktualizuj).",
-          "health_check_interval": "Jak często sprawdzać dostępność modemu. Domyślnie 30 sekund. Ustaw 00:00:00, aby wyłączyć sprawdzanie dostępności."
+          "health_check_interval": "Jak często sprawdzać dostępność modemu. Domyślnie 30 sekund. Ustaw 00:00:00, aby wyłączyć sprawdzanie dostępności.",
+          "auto_entity_reconciliation": "Automatycznie usuwa przestarzale zarzadzane encje modemu podczas uruchamiania. Wylacz to tylko wtedy, gdy modem raportuje dane kanalow w sposob powodujacy nieprawidlowe automatyczne czyszczenie."
         }
       }
     },

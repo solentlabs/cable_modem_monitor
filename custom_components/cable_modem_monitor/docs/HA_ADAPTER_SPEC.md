@@ -142,7 +142,7 @@ layer can cause spurious integration reloads or lost state on restart.
 |-------|----------|----------------|---------|
 | `entry.runtime_data` | Process lifetime; cleared on unload/reload | None | Live Core objects (orchestrator, coordinators), resolved probe support, channel map |
 | `entry.data` | Persistent across restarts | Fires update listener → integration reload | User config (host, credentials), validation-derived fields, write-once markers |
-| `entry.options` | Persistent across restarts | Same as `entry.data` | User-editable settings from the options flow (`scan_interval`, `health_check_interval`) |
+| `entry.options` | Persistent across restarts | Same as `entry.data` | User-editable settings from the options flow (`scan_interval`, `health_check_interval`, `auto_entity_reconciliation`) |
 | `Store` helper | Persistent across restarts | None — silent writes | Runtime state that mutates at poll cadence (e.g., channel-bond baseline) |
 
 **Picking a layer:**
@@ -225,10 +225,10 @@ async_setup_entry(hass, entry)
  │     coordinator.async_config_entry_first_refresh()
  │     (always runs, even if polling is disabled)
  │
-├─ 6a. Reconcile obsolete upstream families (ID mode only)
-│      Use the first-refresh snapshot to remove stale same-entry
-│      typed upstream registry rows whose encoded family no longer
-│      exists in current runtime data.
+├─ 6a. Reconcile obsolete typed channel entities (ID mode only)
+│      Use the first-refresh snapshot to derive the current typed
+│      channel-metric families and remove stale same-entry managed
+│      rows before platform setup.
 │
 ├─ 7. Store RuntimeData on entry
  │     entry.runtime_data = CableModemRuntimeData(...)
@@ -252,10 +252,19 @@ runs during setup so entities have real data. "Disabled" means no
 scheduled polls after setup, not "never poll."
 
 **Step 6a:** Startup reconciliation only
-targets ID-mode same-entry typed upstream unique IDs. It does not try
-to clean all stale entities generically; it removes only obsolete
-upstream families whose replacement family is present in the current
-runtime snapshot before platform setup creates the new entities.
+targets ID-mode same-entry typed channel-metric unique IDs. It does not
+try to clean all stale entities generically; it derives the current
+typed channel families from the first-refresh runtime snapshot, builds
+an entity-reconciliation plan for those managed rows, and removes only
+the stale same-entry rows before platform setup creates any missing
+entities.
+
+This automatic startup reconciliation is controlled by the user-facing
+`Automatic Entity Reconciliation` option and is enabled by default.
+When the option is off, normal startup skips this step. The manager
+boundary must still preserve an internal override seam for future
+migration or upgrade-repair callers that need one forced
+reconciliation pass for correctness.
 
 Architecturally, this startup reconciliation belongs to the shared
 entry-scoped lifecycle owner rather than to ad hoc startup helpers.
@@ -1299,16 +1308,39 @@ Adapter tests must verify that sensor setup, dashboard generation, and
 diagnostics read the shared runtime probe-support object rather than
 independently defaulting raw `entry.data` probe keys.
 
-**Startup family-reconciliation tests cover typed upstream cleanup.**
+**Startup entity-reconciliation tests cover typed channel cleanup.**
 Adapter startup tests must also cover the first-refresh path where
-current runtime data has converged to a replacement upstream family and
-stale same-entry typed rows from the previous family still exist. These
-tests verify that:
+current runtime data has converged to the current typed channel-metric
+surface and stale same-entry typed rows from the previous surface still
+exist. These tests verify that:
 
-- obsolete same-entry upstream typed rows are removed before platform
+- obsolete same-entry typed channel rows are removed before platform
   setup
-- current-family rows remain intact
+- current typed-channel rows remain intact
 - rows belonging to other entries remain intact
+
+**Lifecycle-owner tests cover the phase-1 boundary directly.** Adapter
+tests must cover the IntegrationManager and helper-level primitives as
+first-class surfaces, not only through startup and button call sites.
+These tests verify that:
+
+- helper ownership matching and removal rules are correct in isolation
+- the IntegrationManager directly owns reset and remove-entry cleanup
+  routing
+- manager-bound startup reconciliation can be validated without
+  depending on unrelated setup wiring
+
+**Reconciliation-engine tests cover the phase-2 plan surface.** The new
+engine remains caller-agnostic and must be tested as a pure planning
+surface. These tests verify that:
+
+- supplied families produce one typed reconciliation plan object
+- the plan computes `keep`, `remove`, `create_later`, and `unmanaged`
+  rows from current registry state
+- one real runtime family provider derives the current typed-channel
+  families from snapshot data rather than synthetic-only family setup
+- unmanaged same-entry rows are reported but not implicitly deleted by
+  the engine
 
 **Cleanup hardening tests cover both entry lifecycle paths.** Adapter
 tests for registry cleanup must cover the same installed-entry
@@ -1340,6 +1372,7 @@ The HA adapter layer consists of these modules:
 | `__init__.py` | Startup, unload, migration dispatch, device registry, service registration, `async_remove_entry` cleanup |
 | `coordinator.py` | `CableModemRuntimeData` dataclass + `CableModemConfigEntry` type alias |
 | `integration_manager.py` | Shared entry-scoped lifecycle owner for reconciliation policy, managed-entity contract, and lifecycle routing |
+| `entity_reconciliation.py` | Pure entity-reconciliation plan generation over target-owned registry rows and supplied family descriptors plus runtime family providers |
 | `recovery_adapter.py` | Recovery cadence listener — observer into Core + dispatcher signal that flips `update_interval` while a window is open |
 | `mapping_manager.py` | Channel identity mapping (`ChannelMap`) — builds per-poll mapping between channel number/id and entity unique_id |
 | `channel_bond_notifier.py` | Pure logic for channel-bond change detection — selects `NotifierAction` given totals, stored baseline, and recovery state |

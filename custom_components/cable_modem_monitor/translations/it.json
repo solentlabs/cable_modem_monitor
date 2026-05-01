@@ -84,14 +84,16 @@
           "username": "Nome utente",
           "password": "Password",
           "scan_interval": "Intervallo di Polling Dati",
-          "health_check_interval": "Intervallo Verifica Stato"
+          "health_check_interval": "Intervallo Verifica Stato",
+          "auto_entity_reconciliation": "Riconciliazione automatica delle entita"
         },
         "data_description": {
           "host": "Di solito 192.168.100.1",
           "username": "Lascia vuoto se non richiesto.",
           "password": "Vuoto mantiene la password attuale.",
           "scan_interval": "Ogni quanto interrogare i dati del modem. Predefinito 10 minuti. Imposta su 00:00:00 per disattivare il polling automatico (solo manuale tramite il pulsante Aggiorna).",
-          "health_check_interval": "Ogni quanto verificare la raggiungibilita del modem. Predefinito 30 secondi. Imposta su 00:00:00 per disattivare le verifiche di stato."
+          "health_check_interval": "Ogni quanto verificare la raggiungibilita del modem. Predefinito 30 secondi. Imposta su 00:00:00 per disattivare le verifiche di stato.",
+          "auto_entity_reconciliation": "Pulisce automaticamente le entita gestite obsolete del modem all'avvio. Disattivalo solo se il modem riporta i dati dei canali in modo da causare una pulizia automatica errata."
         }
       }
     },

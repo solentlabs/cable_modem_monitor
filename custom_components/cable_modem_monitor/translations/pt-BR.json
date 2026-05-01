@@ -84,14 +84,16 @@
           "username": "Usuário",
           "password": "Senha",
           "scan_interval": "Intervalo de Consulta de Dados",
-          "health_check_interval": "Intervalo de Verificação de Saúde"
+          "health_check_interval": "Intervalo de Verificação de Saúde",
+          "auto_entity_reconciliation": "Reconciliacao automatica de entidades"
         },
         "data_description": {
           "host": "Geralmente 192.168.100.1",
           "username": "Deixe em branco se não for necessário.",
           "password": "Em branco mantém a senha atual.",
           "scan_interval": "Com que frequência consultar os dados do modem. Padrão 10 minutos. Defina como 00:00:00 para desativar a consulta automática (apenas manual pelo botão Atualizar).",
-          "health_check_interval": "Com que frequência verificar a acessibilidade do modem. Padrão 30 segundos. Defina como 00:00:00 para desativar as verificações de saúde."
+          "health_check_interval": "Com que frequência verificar a acessibilidade do modem. Padrão 30 segundos. Defina como 00:00:00 para desativar as verificações de saúde.",
+          "auto_entity_reconciliation": "Limpa automaticamente entidades gerenciadas obsoletas do modem durante a inicializacao. Desative isso apenas se o modem relatar os dados de canais de uma forma que cause limpeza automatica incorreta."
         }
       }
     },

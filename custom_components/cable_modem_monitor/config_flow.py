@@ -46,6 +46,7 @@ from .config_flow_helpers import (
     validate_connection,
 )
 from .const import (
+    CONF_AUTO_ENTITY_RECONCILIATION,
     CONF_CHANNEL_IDENTITY,
     CONF_CHANNEL_ONBOARDING_ELIGIBLE,
     CONF_CREDENTIAL_ENCODING,
@@ -62,6 +63,7 @@ from .const import (
     CONF_SUPPORTS_ICMP,
     CONF_USER_SELECTED_MODEM,
     CONF_VARIANT,
+    DEFAULT_AUTO_ENTITY_RECONCILIATION,
     DEFAULT_HEALTH_CHECK_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -707,6 +709,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             )
                         ),
                     ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
+                    vol.Required(
+                        CONF_AUTO_ENTITY_RECONCILIATION,
+                        default=options.get(
+                            CONF_AUTO_ENTITY_RECONCILIATION,
+                            DEFAULT_AUTO_ENTITY_RECONCILIATION,
+                        ),
+                    ): bool,
                 }
             ),
         )
@@ -864,6 +873,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             data={
                 CONF_SCAN_INTERVAL: scan,
                 CONF_HEALTH_CHECK_INTERVAL: health,
+                CONF_AUTO_ENTITY_RECONCILIATION: inp.get(
+                    CONF_AUTO_ENTITY_RECONCILIATION,
+                    DEFAULT_AUTO_ENTITY_RECONCILIATION,
+                ),
             },
         )
 
@@ -905,6 +918,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             _duration_to_seconds(saved.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL))
                         ),
                     ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
+                    vol.Required(
+                        CONF_AUTO_ENTITY_RECONCILIATION,
+                        default=saved.get(
+                            CONF_AUTO_ENTITY_RECONCILIATION,
+                            entry.options.get(
+                                CONF_AUTO_ENTITY_RECONCILIATION,
+                                DEFAULT_AUTO_ENTITY_RECONCILIATION,
+                            ),
+                        ),
+                    ): bool,
                 }
             ),
             errors=errors,

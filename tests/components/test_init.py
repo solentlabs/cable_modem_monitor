@@ -19,7 +19,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from solentlabs.cable_modem_monitor_core.orchestration.models import ModemIdentity
 
-import custom_components.cable_modem_monitor as cable_modem_monitor
 from custom_components.cable_modem_monitor import (
     _async_update_listener,
     _check_channel_bond_change,
@@ -524,11 +523,7 @@ async def test_setup_entry_normalizes_missing_probe_flags_before_platform_setup(
     hass.config_entries.async_update_entry = MagicMock()
 
     entry = MagicMock()
-    entry.data = {
-        key: value
-        for key, value in MOCK_ENTRY_DATA.items()
-        if key not in {"supports_icmp", "supports_head"}
-    }
+    entry.data = {key: value for key, value in MOCK_ENTRY_DATA.items() if key not in {"supports_icmp", "supports_head"}}
     entry.options = {}
     entry.entry_id = "test_123"
     entry.title = "Solent Labs TPS-2000"
@@ -568,8 +563,8 @@ async def test_setup_entry_normalizes_missing_probe_flags_before_platform_setup(
     hass.config_entries.async_forward_entry_setups.assert_awaited_once()
 
 
-async def test_setup_entry_reconciles_obsolete_upstream_family_rows_before_platform_setup():
-    """Startup retires stale same-entry upstream family rows before new sensors load."""
+async def test_setup_entry_reconciles_obsolete_typed_channel_rows_before_platform_setup():
+    """Startup retires stale same-entry typed channel rows before new sensors load."""
     hass = MagicMock()
 
     mock_orch = MagicMock()
@@ -623,29 +618,29 @@ async def test_setup_entry_reconciles_obsolete_upstream_family_rows_before_platf
     entry.entry_id = "test_123"
     entry.title = "Solent Labs TPS-2000"
 
-    stale_upstream = MagicMock()
-    stale_upstream.platform = "cable_modem_monitor"
-    stale_upstream.config_entry_id = "test_123"
-    stale_upstream.entity_id = "sensor.test_us_atdma_ch_9_power"
-    stale_upstream.unique_id = "test_123_cable_modem_us_atdma_ch_9_power"
+    stale_typed_channel = MagicMock()
+    stale_typed_channel.platform = "cable_modem_monitor"
+    stale_typed_channel.config_entry_id = "test_123"
+    stale_typed_channel.entity_id = "sensor.test_us_atdma_ch_9_power"
+    stale_typed_channel.unique_id = "test_123_cable_modem_us_atdma_ch_9_power"
 
-    current_upstream = MagicMock()
-    current_upstream.platform = "cable_modem_monitor"
-    current_upstream.config_entry_id = "test_123"
-    current_upstream.entity_id = "sensor.test_us_qam_ch_9_power"
-    current_upstream.unique_id = "test_123_cable_modem_us_qam_ch_9_power"
+    current_typed_channel = MagicMock()
+    current_typed_channel.platform = "cable_modem_monitor"
+    current_typed_channel.config_entry_id = "test_123"
+    current_typed_channel.entity_id = "sensor.test_us_qam_ch_9_power"
+    current_typed_channel.unique_id = "test_123_cable_modem_us_qam_ch_9_power"
 
-    foreign_upstream = MagicMock()
-    foreign_upstream.platform = "cable_modem_monitor"
-    foreign_upstream.config_entry_id = "other_entry"
-    foreign_upstream.entity_id = "sensor.other_us_atdma_ch_9_power"
-    foreign_upstream.unique_id = "other_entry_cable_modem_us_atdma_ch_9_power"
+    foreign_typed_channel = MagicMock()
+    foreign_typed_channel.platform = "cable_modem_monitor"
+    foreign_typed_channel.config_entry_id = "other_entry"
+    foreign_typed_channel.entity_id = "sensor.other_us_atdma_ch_9_power"
+    foreign_typed_channel.unique_id = "other_entry_cable_modem_us_atdma_ch_9_power"
 
     mock_entity_reg = MagicMock()
     mock_entity_reg.entities.values.return_value = [
-        stale_upstream,
-        current_upstream,
-        foreign_upstream,
+        stale_typed_channel,
+        current_typed_channel,
+        foreign_typed_channel,
     ]
 
     mock_data_coord = MagicMock()
@@ -667,7 +662,10 @@ async def test_setup_entry_reconciles_obsolete_upstream_family_rows_before_platf
             "custom_components.cable_modem_monitor.DataUpdateCoordinator",
             mock_duc,
         ),
-        patch("custom_components.cable_modem_monitor.er.async_get", return_value=mock_entity_reg),
+        patch(
+            "custom_components.cable_modem_monitor.integration_manager.er.async_get",
+            return_value=mock_entity_reg,
+        ),
         patch("custom_components.cable_modem_monitor._update_device_registry"),
         patch("custom_components.cable_modem_monitor.async_register_services"),
         patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener"),
@@ -677,6 +675,104 @@ async def test_setup_entry_reconciles_obsolete_upstream_family_rows_before_platf
     assert result is True
     removed_entity_ids = [call.args[0] for call in mock_entity_reg.async_remove.call_args_list]
     assert removed_entity_ids == ["sensor.test_us_atdma_ch_9_power"]
+    hass.config_entries.async_forward_entry_setups.assert_awaited_once()
+
+
+async def test_setup_entry_skips_startup_reconciliation_when_option_disabled():
+    """Startup skips automatic entity reconciliation when the option is off."""
+    hass = MagicMock()
+
+    mock_orch = MagicMock()
+    mock_orch.supports_restart = True
+    mock_health_mon = MagicMock()
+    mock_identity = ModemIdentity(
+        manufacturer="Solent Labs",
+        model="TPS-2000",
+        docsis_version="3.0",
+        release_date="2024",
+        status="confirmed",
+    )
+
+    qam_snapshot = MagicMock()
+    qam_snapshot.modem_data = {
+        "downstream": [],
+        "upstream": [
+            {
+                "channel_type": "qam",
+                "channel_id": 9,
+                "channel_number": 1,
+                "power": 42.0,
+            }
+        ],
+    }
+    qam_snapshot.connection_status.value = "online"
+
+    call_count = 0
+
+    async def _mock_executor(func, *args):
+        del func, args
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return "core: v1.0.0, catalog: v1.0.0"
+        return (
+            mock_orch,
+            mock_health_mon,
+            mock_identity,
+            {"supports_icmp": True, "supports_head": True},
+        )
+
+    hass.async_add_executor_job = _mock_executor
+    hass.services.has_service.return_value = False
+    hass.config_entries.async_forward_entry_setups = AsyncMock()
+    hass.config_entries.async_update_entry = MagicMock()
+
+    entry = MagicMock()
+    entry.data = MOCK_ENTRY_DATA
+    entry.options = {"auto_entity_reconciliation": False}
+    entry.entry_id = "test_123"
+    entry.title = "Solent Labs TPS-2000"
+
+    stale_typed_channel = MagicMock()
+    stale_typed_channel.platform = "cable_modem_monitor"
+    stale_typed_channel.config_entry_id = "test_123"
+    stale_typed_channel.entity_id = "sensor.test_us_atdma_ch_9_power"
+    stale_typed_channel.unique_id = "test_123_cable_modem_us_atdma_ch_9_power"
+
+    mock_entity_reg = MagicMock()
+    mock_entity_reg.entities.values.return_value = [stale_typed_channel]
+
+    mock_data_coord = MagicMock()
+    mock_data_coord.async_config_entry_first_refresh = AsyncMock()
+    mock_data_coord.data = qam_snapshot
+
+    mock_health_coord = MagicMock()
+    mock_health_coord.async_config_entry_first_refresh = AsyncMock()
+
+    mock_duc = MagicMock()
+    mock_duc.__getitem__.return_value.side_effect = [
+        mock_data_coord,
+        mock_health_coord,
+    ]
+
+    with (
+        patch("custom_components.cable_modem_monitor.setup_log_buffer"),
+        patch(
+            "custom_components.cable_modem_monitor.DataUpdateCoordinator",
+            mock_duc,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.integration_manager.er.async_get",
+            return_value=mock_entity_reg,
+        ),
+        patch("custom_components.cable_modem_monitor._update_device_registry"),
+        patch("custom_components.cable_modem_monitor.async_register_services"),
+        patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener"),
+    ):
+        result = await async_setup_entry(hass, entry)
+
+    assert result is True
+    mock_entity_reg.async_remove.assert_not_called()
     hass.config_entries.async_forward_entry_setups.assert_awaited_once()
 
 
@@ -1043,15 +1139,19 @@ async def test_async_remove_entry_cleans_orphan_compatible_entities_and_devices(
     ]
 
     with (
-        patch.object(cable_modem_monitor, "er", create=True) as mock_er_module,
-        patch("custom_components.cable_modem_monitor.dr.async_get", return_value=mock_device_reg),
+        patch(
+            "custom_components.cable_modem_monitor.integration_manager.er.async_get",
+            return_value=mock_entity_reg,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.integration_manager.dr.async_get",
+            return_value=mock_device_reg,
+        ),
         patch(
             "custom_components.cable_modem_monitor.async_remove_bond_state",
             AsyncMock(),
         ) as mock_remove_bond,
     ):
-        mock_er_module.async_get.return_value = mock_entity_reg
-
         await async_remove_entry(hass, entry)
 
     removed_entity_ids = [call.args[0] for call in mock_entity_reg.async_remove.call_args_list]

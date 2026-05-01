@@ -84,14 +84,16 @@
           "username": "用户名",
           "password": "密码",
           "scan_interval": "数据轮询间隔",
-          "health_check_interval": "健康检查间隔"
+          "health_check_interval": "健康检查间隔",
+          "auto_entity_reconciliation": "自动实体协调"
         },
         "data_description": {
           "host": "通常是 192.168.100.1",
           "username": "如果不需要请留空。",
           "password": "留空则保留当前密码。",
           "scan_interval": "调制解调器数据的轮询频率。默认 10 分钟。设为 00:00:00 可禁用自动轮询（仅通过「更新」按钮手动获取）。",
-          "health_check_interval": "检查调制解调器是否可达的频率。默认 30 秒。设为 00:00:00 可禁用健康检查。"
+          "health_check_interval": "检查调制解调器是否可达的频率。默认 30 秒。设为 00:00:00 可禁用健康检查。",
+          "auto_entity_reconciliation": "在启动期间自动清理过时的受管调制解调器实体。仅当你的调制解调器报告信道数据的方式会导致自动清理出错时才关闭此选项。"
         }
       }
     },

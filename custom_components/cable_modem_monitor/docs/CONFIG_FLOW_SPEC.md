@@ -332,6 +332,7 @@ Configure.
 - Host, username, password (without re-selecting modem)
 - Data poll interval (30s–86400s, or disabled for manual-only)
 - Health check interval (10s–86400s, or disabled)
+- Automatic Entity Reconciliation (enabled by default; startup-only)
 - Full reconfiguration (restart from Step 1)
 
 **What cannot change without reconfiguration:**

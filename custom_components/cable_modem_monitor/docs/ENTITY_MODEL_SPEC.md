@@ -292,6 +292,8 @@ Entity identity and lifecycle policy are separate concerns.
 - the mapping manager owns slot construction and channel lookup shape
 - the IntegrationManager owns shared entity lifecycle policy for the
   config entry
+- the reconciliation engine derives managed-vs-expected plan deltas for
+  one or more entity families under IntegrationManager ownership
 - helper-level registry code owns row matching/filtering/removal
   mechanics
 
@@ -307,6 +309,12 @@ cleanup policy themselves.
 - **ID mode:** The IntegrationManager owns reconciliation policy for
   stale same-entry rows. Reset Entities remains the explicit
   destructive repair path.
+
+The engine contract is family-oriented rather than bug-oriented. A
+family describes the unique IDs that should exist for one current
+surface, and the engine computes which same-entry managed rows should be
+kept, removed, or created later. Families that are not supplied to a
+given reconciliation pass remain unmanaged for that pass.
 
 ### Reset and removal cleanup
 
@@ -349,12 +357,12 @@ If a migrated entry reaches v2 without canonical `supports_icmp` /
 flags before sensor platform setup. Ping / HTTP latency entity gating
 uses the same effective probe-capability state as the health monitor.
 
-If a migrated entry reaches v2 with stale same-entry typed upstream
-entities from an older family naming scheme, the first v2 startup also
+If a migrated entry reaches v2 with stale same-entry typed channel
+entities from an older typed identity surface, the first v2 startup also
 reconciles those rows before sensor platform setup. When current
-runtime upstream data has converged to a replacement family, obsolete
-same-entry typed upstream rows are retired automatically so the entry
-converges without requiring `Reset Entities`.
+runtime channel data has converged to the current typed-channel metric
+surface, obsolete same-entry typed rows are retired automatically so the
+entry converges without requiring `Reset Entities`.
 
 ---
 

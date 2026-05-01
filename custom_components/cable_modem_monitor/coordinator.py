@@ -30,6 +30,8 @@ if TYPE_CHECKING:
         Orchestrator,
     )
 
+    from .integration_manager import CableModemIntegrationManager
+
 # Name of a destructive button operation currently in progress, or
 # None when nothing is running. Acts as a mutex between the Restart
 # and Reset buttons — a second press while one is in flight is
@@ -60,6 +62,7 @@ class CableModemRuntimeData:
     health_monitor: HealthMonitor | None
     modem_identity: ModemIdentity
     probe_support: ProbeSupport
+    integration_manager: CableModemIntegrationManager
     channel_map: ChannelMap = field(default_factory=ChannelMap)
     # Set while a destructive button handler (Restart, Reset) is
     # running; cleared in the handler's ``finally`` block. Read by

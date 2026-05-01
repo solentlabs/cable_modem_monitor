@@ -63,6 +63,7 @@ from .channel_bond_storage import (
     async_save_bond_state,
 )
 from .const import (
+    CONF_AUTO_ENTITY_RECONCILIATION,
     CONF_CHANNEL_IDENTITY,
     CONF_CHANNEL_ONBOARDING_ELIGIBLE,
     CONF_CREDENTIAL_ENCODING,
@@ -78,6 +79,7 @@ from .const import (
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONF_VARIANT,
+    DEFAULT_AUTO_ENTITY_RECONCILIATION,
     DEFAULT_HEALTH_CHECK_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -87,14 +89,11 @@ from .const import (
 )
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData, ProbeSupport
 from .core.log_buffer import setup_log_buffer
+from .integration_manager import CableModemIntegrationManager
 from .lib.utils import get_device_name
 from .mapping_manager import ChannelMap, build_channel_map
 from .migrations import async_run_migrations
 from .recovery_adapter import attach_recovery_cadence_listener
-from .registry_cleanup import (
-    cleanup_obsolete_upstream_family_entities,
-    cleanup_owned_registry_rows,
-)
 from .services import async_register_services, async_unregister_services
 
 _LOGGER = logging.getLogger(__name__)
@@ -201,37 +200,20 @@ def _rebuild_channel_map(
     )
 
 
-def _current_upstream_families(snapshot: ModemSnapshot | None) -> set[str]:
-    """Return normalized upstream channel families from current runtime data."""
-    modem_data = snapshot.modem_data if snapshot else None
-    if modem_data is None:
-        return set()
-
-    return {
-        str(channel_type).lower()
-        for channel in modem_data.get("upstream", [])
-        if (channel_type := channel.get("channel_type"))
-    }
-
-
-def _reconcile_upstream_family_entities(
-    hass: HomeAssistant,
-    entry: CableModemConfigEntry,
+def _reconcile_startup_entities(
+    integration_manager: CableModemIntegrationManager,
     snapshot: ModemSnapshot | None,
     identity_mode: ChannelIdentity,
+    *,
+    automatic_enabled: bool,
+    force: bool = False,
 ) -> list[str]:
-    """Retire stale typed-upstream entity rows before platform setup."""
-    if identity_mode != ChannelIdentity.ID:
-        return []
-
-    current_families = _current_upstream_families(snapshot)
-    if not current_families:
-        return []
-
-    return cleanup_obsolete_upstream_family_entities(
-        er.async_get(hass),
-        target_entry_id=entry.entry_id,
-        current_families=current_families,
+    """Retire stale typed channel entity rows before platform setup."""
+    return integration_manager.reconcile_startup_entities(
+        snapshot,
+        identity_mode,
+        automatic_enabled=automatic_enabled,
+        force=force,
     )
 
 
@@ -277,18 +259,18 @@ async def _refresh_health_coordinator(
     )
 
 
-def _log_upstream_family_reconciliation(
-    removed_upstream_entity_ids: list[str],
+def _log_startup_entity_reconciliation(
+    removed_entity_ids: list[str],
     model: str,
 ) -> None:
-    """Log startup-time upstream family cleanup when rows were removed."""
-    if not removed_upstream_entity_ids:
+    """Log startup-time entity reconciliation when rows were removed."""
+    if not removed_entity_ids:
         return
 
     _LOGGER.info(
-        "Removed obsolete upstream entity rows before platform setup [%s] — %d rows",
+        "Removed obsolete typed channel entity rows before platform setup [%s] — %d rows",
         model,
-        len(removed_upstream_entity_ids),
+        len(removed_entity_ids),
     )
 
 
@@ -395,6 +377,7 @@ async def async_setup_entry(
     coordinator_label = f"{model} ({host})" if model != host else host
 
     identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
+    integration_manager = CableModemIntegrationManager(hass, entry.entry_id)
 
     async def _async_update_data() -> ModemSnapshot:
         snapshot = await hass.async_add_executor_job(orchestrator.get_modem_data)
@@ -457,13 +440,16 @@ async def async_setup_entry(
         model,
     )
 
-    removed_upstream_entity_ids = _reconcile_upstream_family_entities(
-        hass,
-        entry,
+    removed_entity_ids = _reconcile_startup_entities(
+        integration_manager,
         snapshot,
         identity_mode,
+        automatic_enabled=entry.options.get(
+            CONF_AUTO_ENTITY_RECONCILIATION,
+            DEFAULT_AUTO_ENTITY_RECONCILIATION,
+        ),
     )
-    _log_upstream_family_reconciliation(removed_upstream_entity_ids, model)
+    _log_startup_entity_reconciliation(removed_entity_ids, model)
 
     # Step 9: Store runtime data (with initial channel map from first poll)
     modem_data = snapshot.modem_data if snapshot else None
@@ -484,6 +470,7 @@ async def async_setup_entry(
         health_monitor=health_monitor,
         modem_identity=modem_identity,
         probe_support=resolved_probes,
+        integration_manager=integration_manager,
         channel_map=initial_channel_map,
     )
 
@@ -570,12 +557,10 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     Called by HA after ``async_unload_entry``. Entry data and options are
     managed by HA; Store payloads (e.g. the channel-bond baseline) are not.
     """
-    cleanup_summary = cleanup_owned_registry_rows(
+    cleanup_summary = CableModemIntegrationManager(
         hass,
-        er.async_get(hass),
-        dr.async_get(hass),
         entry.entry_id,
-    )
+    ).cleanup_registry_rows_for_removal()
     await async_remove_bond_state(hass, entry.entry_id)
 
     _LOGGER.info(

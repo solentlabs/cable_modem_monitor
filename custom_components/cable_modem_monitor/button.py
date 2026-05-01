@@ -21,7 +21,6 @@ import logging
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import CONF_HOST, EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
@@ -42,7 +41,6 @@ from .const import (
 )
 from .coordinator import CableModemConfigEntry
 from .lib.utils import get_device_name
-from .registry_cleanup import cleanup_owned_entities, installed_entry_ids
 from .services import async_request_modem_refresh
 
 _LOGGER = logging.getLogger(__name__)
@@ -254,21 +252,14 @@ class ResetEntitiesButton(_ButtonBase):
         # Re-detect probe capabilities
         updated = await self._redetect_probes()
 
-        # Remove all entities
-        entity_reg = er.async_get(self.hass)
-        cleanup_summary = cleanup_owned_entities(
-            entity_reg,
-            self._entry.entry_id,
-            installed_entry_ids(self.hass),
-        )
+        cleanup_summary = self._entry.runtime_data.integration_manager.cleanup_entities_for_reset()
         removed_count = len(cleanup_summary.removed_entity_ids)
 
         model = self._entry.runtime_data.modem_identity.model
         # Breakdown by platform so the count reconciles with each
         # platform's own "Created N entities" log on re-init.
         breakdown_str = ", ".join(
-            f"{n} {domain}"
-            for domain, n in sorted(cleanup_summary.removed_entity_domains.items())
+            f"{n} {domain}" for domain, n in sorted(cleanup_summary.removed_entity_domains.items())
         )
         _LOGGER.info(
             "Removing %d entities for reset [%s]: %s",

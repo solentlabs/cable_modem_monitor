@@ -84,14 +84,16 @@
           "username": "Gebruikersnaam",
           "password": "Wachtwoord",
           "scan_interval": "Data-poll-interval",
-          "health_check_interval": "Bereikbaarheidscontrole-interval"
+          "health_check_interval": "Bereikbaarheidscontrole-interval",
+          "auto_entity_reconciliation": "Automatische entiteitsafstemming"
         },
         "data_description": {
           "host": "Meestal 192.168.100.1",
           "username": "Leeg laten indien niet vereist.",
           "password": "Leeg laten behoudt het huidige wachtwoord.",
           "scan_interval": "Hoe vaak modemgegevens worden opgehaald. Standaard 10 minuten. Stel in op 00:00:00 om automatisch pollen uit te schakelen (alleen handmatig via de knop Bijwerken).",
-          "health_check_interval": "Hoe vaak de bereikbaarheid van de modem wordt gecontroleerd. Standaard 30 seconden. Stel in op 00:00:00 om bereikbaarheidscontroles uit te schakelen."
+          "health_check_interval": "Hoe vaak de bereikbaarheid van de modem wordt gecontroleerd. Standaard 30 seconden. Stel in op 00:00:00 om bereikbaarheidscontroles uit te schakelen.",
+          "auto_entity_reconciliation": "Ruimt verouderde beheerde modementiteiten automatisch op tijdens het opstarten. Schakel dit alleen uit als je modem kanaalgegevens zo meldt dat automatische opschoning onjuist wordt."
         }
       }
     },
