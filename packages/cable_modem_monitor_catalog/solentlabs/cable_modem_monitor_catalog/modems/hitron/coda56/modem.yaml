@@ -13,7 +13,7 @@ auth:
 
 hardware:
   docsis_version: "3.1"
-  chipset: unknown
+  chipset: "Intel Puma 7 (FHCE2703)"
 
 status: confirmed
 
@@ -25,6 +25,10 @@ sources:
     "[Hitron CODA56 Product Page](https://us.hitrontech.com/products/consumers/coda56/)
     — DOCSIS 3.1, 2.5 Gbps, 2x2 OFDM;
     [Datasheet (PDF)](https://us.hitrontech.com/wp-content/uploads/2022/11/DS-CODA56RES.pdf)"
+  chipset:
+    "[iFixit — Hitron CODA Teardown](https://www.ifixit.com/Teardown/Hitron+CODA+Teardown/169712)
+    — main SoC Intel FHCE2703 SR3SA (Puma 7); CODA family teardown,
+    CODA56 not individually torn down but assumed to share the SoC"
 
 attribution:
   contributors:

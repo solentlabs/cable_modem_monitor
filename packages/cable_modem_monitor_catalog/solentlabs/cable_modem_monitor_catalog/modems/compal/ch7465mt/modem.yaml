@@ -23,12 +23,17 @@ actions:
 hardware:
   docsis_version: "3.0"
   release_date: "2015"
+  chipset: "Intel Puma DHCE2652"
 
 status: confirmed
 
 sources:
   auth_config: "[PR #129 — CH7465MT HAR captures](https://github.com/solentlabs/cable_modem_monitor/pull/129)"
   hardware: "[Compal CH7465MT datasheet](https://www.compal-broadband.com)"
+  chipset:
+    "[DeviWiki — Compal CH7465LG-LC](https://deviwiki.com/wiki/Compal_Broadband_Networks_CH7465LG-LC)
+    — Intel Puma DHCE2652 (1.2 GHz dual-core), 128 MiB flash, 512 MiB RAM;
+    sibling LG variant in the CH7465 family, same hardware platform"
 
 attribution:
   contributors:
