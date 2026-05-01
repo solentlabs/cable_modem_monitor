@@ -223,10 +223,14 @@ Example — successful collection with no channels:
 
 | Tier | Level | When | Purpose |
 |------|-------|------|---------|
-| Pulse | INFO always | Every successful poll | `"Parse complete [MODEL]: 24 DS, 4 US"` — heartbeat showing the modem is alive and parsing |
+| Pulse | INFO first poll, DEBUG after | Successful poll summaries | `"Parse complete [MODEL]: 24 DS, 4 US"` — visible at INFO for first-poll confirmation, then DEBUG in steady-state to keep success-path logs quiet |
 | Auth/resource | INFO first poll, DEBUG after | Steady-state noise reduction | Auth strategy, session state, resource loading. Visible at INFO for first-poll diagnostics, drops to DEBUG after to avoid flooding multi-modem logs |
 | Failures | WARNING/ERROR always | Never demoted | Auth failures, connectivity errors, parse errors. Always visible regardless of poll count |
 | Wire data | DEBUG always | Troubleshooting only | Request/response details, parsing internals |
+
+Status transitions and adaptive-reuse state changes stay at INFO even
+after the first poll. These are operator-relevant events, not
+steady-state heartbeat logs.
 
 ### Auth Log Level
 

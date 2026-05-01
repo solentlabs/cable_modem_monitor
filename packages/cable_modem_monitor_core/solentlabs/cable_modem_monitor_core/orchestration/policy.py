@@ -197,7 +197,7 @@ class SignalPolicy:
             self._auth_failure_streak += 1
             self._collector.clear_session()
             _logger.info(
-                "LOAD_AUTH [%s] — clearing session, reporting auth_failed (streak: %d/%d)",
+                "LOAD_AUTH [%s] — retry failed, reporting auth_failed (streak: %d/%d)",
                 self._model,
                 self._auth_failure_streak,
                 self._threshold,
