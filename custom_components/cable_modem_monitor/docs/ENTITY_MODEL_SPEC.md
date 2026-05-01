@@ -285,18 +285,37 @@ slots. It reads `channel_identity` from `entry.data` and builds
 Sensors read from `_*_by_slot` for data and from
 `entry.data["channel_identity"]` to select their entity ID format.
 
+### Lifecycle ownership
+
+Entity identity and lifecycle policy are separate concerns.
+
+- the mapping manager owns slot construction and channel lookup shape
+- the IntegrationManager owns shared entity lifecycle policy for the
+  config entry
+- helper-level registry code owns row matching/filtering/removal
+  mechanics
+
+Platform files consume these boundaries; they do not own registry
+cleanup policy themselves.
+
 ### Rebonding behavior
 
 - **Position mode:** Entities survive reboots. Channel numbers come
   from the modem's own row positions. If the CMTS reassigns Channel
   IDs, `channel_id` attributes update but entity identity is
   unchanged.
-- **ID mode:** Current behavior. Old entities show "Unknown," new
-  channel IDs appear without entities. Reset Entities resolves it.
+- **ID mode:** The IntegrationManager owns reconciliation policy for
+  stale same-entry rows. Reset Entities remains the explicit
+  destructive repair path.
 
 ### Reset and removal cleanup
 
 Reset and config-entry removal both use an installed-entry allowlist.
+
+Ownership and cleanup policy belong to the adapter's shared lifecycle
+owner. Registry helpers perform matching and safe removals, but the
+policy for when cleanup or reconciliation runs does not belong in
+individual platform files.
 
 For any live entity-registry row in the `cable_modem_monitor` platform:
 
@@ -326,10 +345,9 @@ change is required because the existing entry-scoped unique IDs already
 provide the ownership marker needed for stale-row cleanup.
 
 If a migrated entry reaches v2 without canonical `supports_icmp` /
-`supports_head` keys, the first v2 startup now normalizes those probe
-flags before sensor platform setup. That keeps Ping / HTTP latency
-entity gating aligned with the same effective probe-capability state
-startup already uses for the health monitor.
+`supports_head` keys, the first v2 startup normalizes those probe
+flags before sensor platform setup. Ping / HTTP latency entity gating
+uses the same effective probe-capability state as the health monitor.
 
 If a migrated entry reaches v2 with stale same-entry typed upstream
 entities from an older family naming scheme, the first v2 startup also

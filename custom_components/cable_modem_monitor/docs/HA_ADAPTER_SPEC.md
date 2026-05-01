@@ -9,6 +9,12 @@ Core's synchronous API and HA's async event loop.
 scheduling, entity creation, and HA lifecycle. If logic could live in
 Core, it should.
 
+**Ownership model:** Shared entity lifecycle policy belongs to one
+entry-scoped IntegrationManager-style boundary in the adapter layer.
+Registry matching/removal mechanics belong to helper-level code. The
+coordinator remains a refresh router and runtime-data owner; entities,
+buttons, and services must not become alternate lifecycle-policy paths.
+
 **Minimum HA version:** 2024.12 (for `entry.runtime_data` support).
 
 **Related specs:**
@@ -67,7 +73,8 @@ class CableModemRuntimeData:
     orchestrator: Orchestrator
     health_monitor: HealthMonitor | None
     modem_identity: ModemIdentity
-  probe_support: ProbeSupport
+    probe_support: ProbeSupport
+    integration_manager: CableModemIntegrationManager
     active_operation: Literal["restart", "reset"] | None = None
 
 
@@ -89,12 +96,17 @@ flag. The two answer different questions:
   seconds-to-minutes during a reset.)
 - `orchestrator.recovery_active` — is the *modem* currently in a
   recovery window? (True for the duration of
+  `_RECOVERY_WINDOW_SECONDS` after any recovery trigger.)
 
 **`probe_support`** is the shared effective HA-side probe capability
 state resolved during startup. Sensor setup, dashboard generation, and
 diagnostics read this runtime object rather than independently
 defaulting missing `entry.data` probe keys.
-  `_RECOVERY_WINDOW_SECONDS` after any recovery trigger.)
+
+**`integration_manager`** is the adapter-layer owner of shared entity
+lifecycle policy. It owns reconciliation planning/application and the
+managed-entity contract for the current entry. Low-level registry
+helpers remain outside the runtime dataclass; the manager consumes them.
 
 The button is disabled when *either* is set. During a button-press
 restart both are True briefly; after `restart()` returns,
@@ -239,11 +251,14 @@ and identity internally.
 runs during setup so entities have real data. "Disabled" means no
 scheduled polls after setup, not "never poll."
 
-**Step 6a is intentionally narrow.** Startup reconciliation only
+**Step 6a:** Startup reconciliation only
 targets ID-mode same-entry typed upstream unique IDs. It does not try
 to clean all stale entities generically; it removes only obsolete
 upstream families whose replacement family is present in the current
 runtime snapshot before platform setup creates the new entities.
+
+Architecturally, this startup reconciliation belongs to the shared
+entry-scoped lifecycle owner rather than to ad hoc startup helpers.
 
 ---
 
@@ -1324,10 +1339,13 @@ The HA adapter layer consists of these modules:
 |--------|---------------|
 | `__init__.py` | Startup, unload, migration dispatch, device registry, service registration, `async_remove_entry` cleanup |
 | `coordinator.py` | `CableModemRuntimeData` dataclass + `CableModemConfigEntry` type alias |
+| `integration_manager.py` | Shared entry-scoped lifecycle owner for reconciliation policy, managed-entity contract, and lifecycle routing |
 | `recovery_adapter.py` | Recovery cadence listener — observer into Core + dispatcher signal that flips `update_interval` while a window is open |
 | `mapping_manager.py` | Channel identity mapping (`ChannelMap`) — builds per-poll mapping between channel number/id and entity unique_id |
 | `channel_bond_notifier.py` | Pure logic for channel-bond change detection — selects `NotifierAction` given totals, stored baseline, and recovery state |
 | `channel_bond_storage.py` | Store-backed persistence for channel-bond baseline totals — per-entry load / save / remove |
+| `entity.py` | Shared base entity for typed runtime-data / manager access and common entity behavior |
+| `entity_registry_helpers.py` | Helper-level registry ownership matching, filtering, and safe removal primitives |
 | `sensor.py` | Entity classes for all sensor types |
 | `button.py` | Restart, Update, Reset Entities buttons |
 | `config_flow.py` | Setup wizard and options flow |
@@ -1344,6 +1362,13 @@ All modem-specific logic lives in Core and Catalog. The adapter
 imports from `solentlabs.cable_modem_monitor_core` and
 `solentlabs.cable_modem_monitor_catalog` — never from modem config
 files or parser code directly.
+
+The important ownership rule is:
+
+- `integration_manager.py` owns shared entity lifecycle policy
+- helper modules own registry mechanics and shared glue
+- platform files consume manager-owned state and must not duplicate
+  lifecycle logic
 
 ---
 
