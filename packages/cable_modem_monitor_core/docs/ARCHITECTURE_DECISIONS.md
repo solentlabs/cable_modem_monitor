@@ -768,8 +768,8 @@ editing format-list frozensets in multiple files.
    this table — a missing entry raises at import time.
 
 **Why ClassVars on the model.** Auth strategies already use this
-pattern (`AuthStrategyBase` with `display_name`/`transport` ClassVars
-+ `_AUTH_MODELS` list). Format metadata is the same shape: a few
+pattern (`AuthStrategyBase` with `display_name`/`transport` ClassVars +
+`_AUTH_MODELS` list). Format metadata is the same shape: a few
 attributes that cross-cutting machinery needs to know about. Putting
 them on the model keeps everything about a format colocated and lets
 the loader, validator, and registry derive their views.

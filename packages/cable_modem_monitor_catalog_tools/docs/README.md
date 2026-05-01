@@ -2,8 +2,8 @@
 
 Documentation for the catalog authoring lifecycle. Catalog Tools
 covers both ends of a modem's life in the catalog: **intake**
-(turning a HAR capture into modem.yaml + parser.yaml + test_data
-+ golden files) and **confirmation** (turning a contributor's HA
+(turning a HAR capture into modem.yaml + parser.yaml + test_data +
+golden files) and **confirmation** (turning a contributor's HA
 diagnostics into a `verified.json` fixture and flipping the
 modem's status from `awaiting_verification` to `confirmed`). Open
 to contributors with hardware and (typically) AI assistance for
