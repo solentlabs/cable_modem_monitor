@@ -65,6 +65,14 @@ integration bind-mounted:
 
 To test a PR, `gh pr checkout NNN` then run **🚀 HA: Start**.
 
+If you need to test the real HACS install or update path instead of the
+bind-mounted dev workflow, use the separate guide at
+[docs/setup/TESTING_VIA_HACS.md](./docs/setup/TESTING_VIA_HACS.md). Keep that
+workflow on a dedicated HACS testing branch rather than on the normal
+feature branch, especially when you need a simple way to test Python
+package changes on a non-dev system through commit-pinned manifest
+requirements.
+
 ## Project Architecture
 
 The codebase is split into three layers:

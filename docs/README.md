@@ -28,6 +28,7 @@ specs, see the indexes in each package's `docs/` directory.
 | Document | Covers |
 |----------|--------|
 | [setup/GETTING_STARTED.md](setup/GETTING_STARTED.md) | Setup, daily workflow, troubleshooting (single canonical path: VS Code dev container, WSL2 on Windows) |
+| [setup/TESTING_VIA_HACS.md](setup/TESTING_VIA_HACS.md) | Separate HA instance workflow for validating branch install and update behavior through HACS |
 
 ## Package Specs (separate indexes)
 
