@@ -17,6 +17,7 @@
 | [FORMAT_JSON_SPEC.md](FORMAT_JSON_SPEC.md) | JSONParser and JSONTransposedParser — JSON API responses, including indexed-pivot rows |
 | [FORMAT_XML_SPEC.md](FORMAT_XML_SPEC.md) | XMLParser — XML element children via tag name navigation |
 | [SYSTEM_INFO_SPEC.md](SYSTEM_INFO_SPEC.md) | system_info extraction — multi-source, format schemas, field tiers |
+| [SIGNAL_HEALTH_EVALUATION_SPEC.md](SIGNAL_HEALTH_EVALUATION_SPEC.md) | Signal-health grading — thresholds, DOCSIS trust rule, metric groups, result contract |
 | [RESOURCE_LOADING_SPEC.md](RESOURCE_LOADING_SPEC.md) | Resource dict contract, loader behavior, HNAP batching |
 | [ORCHESTRATION_SPEC.md](ORCHESTRATION_SPEC.md) | Orchestrator, collector, health monitor, restart monitor — interface contracts and data models |
 | [ORCHESTRATION_USE_CASES.md](ORCHESTRATION_USE_CASES.md) | 81 scenario-based use cases — normal ops, auth failures, connectivity, restart, health, lifecycle |

@@ -332,6 +332,7 @@ Configure.
 - Host, username, password (without re-selecting modem)
 - Data poll interval (30s–86400s, or disabled for manual-only)
 - Health check interval (10s–86400s, or disabled)
+- Signal Health thresholds and enablement
 - Full reconfiguration (restart from Step 1)
 
 **What cannot change without reconfiguration:**
@@ -343,6 +344,50 @@ Configure.
 configurable, including disabled. See
 [HA_ADAPTER_SPEC.md](HA_ADAPTER_SPEC.md#polling-modes) for the
 complete matrix and interval limits.
+
+### Signal-health settings
+
+Signal Health adds enough configuration surface that it is not appended
+as a long tail of fields to the current
+connection settings form.
+
+Form shape:
+
+- main options menu
+- `connection_settings` sub-form for host, credentials, and intervals
+- `signal_health` sub-form for the summary sensor thresholds and
+   enablement
+
+Why this shape:
+
+- connection changes need live modem validation
+- signal-health threshold changes should use local-only validation
+- a separate sub-form is clearer than a long mixed form with two very
+   different validation models
+
+Signal-health threshold changes still give immediate feedback after the
+form closes. The UX is:
+
+- local-only validation before save
+- save to `entry.options`
+- entry reload via the normal update-listener path
+- immediate fresh modem-data poll during reload so the recalculated grade is
+   visible right away
+
+Users should not need to wait for the normal scheduled data interval after a
+rare threshold adjustment.
+
+The `signal_health` form does not expose every evaluator threshold for user
+modification. It exposes only the thresholds that are intentionally
+user-configurable. Physical or standards-backed limits that define hard-failure
+territory remain fixed in the evaluator contract unless the specification moves
+them into the user-facing options surface.
+
+A dedicated `signal_health` form is reached from the main options menu.
+
+Signal-health options live in `entry.options`, not `entry.data`.
+The HA adapter reads them, builds a typed thresholds object, and passes
+that object into Core's evaluator on each update.
 
 ---
 

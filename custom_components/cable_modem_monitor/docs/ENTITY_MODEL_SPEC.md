@@ -11,6 +11,12 @@ in standard HA format. Users derive additional entities (template
 sensors, binary_sensors) from attributes as needed. The integration
 does not create entities for every possible use case.
 
+**Exception:** The adapter may add a small number of curated,
+high-value interpretation entities when they summarize normalized modem
+telemetry in a reusable, automation-friendly way and would otherwise
+force users to rebuild the same logic in templates. Signal Health is
+the example of this exception.
+
 ---
 
 ## Contents
@@ -94,6 +100,30 @@ parser output → no entity created.
 | Ping Latency | `_ping_latency` | float | — | MEASUREMENT | ms | `supports_icmp = True` |
 | TCP Latency | `_tcp_latency` | float | — | MEASUREMENT | ms | Health coordinator exists (HTTP probe enabled) |
 | HTTP Latency | `_http_latency` | float | — | MEASUREMENT | ms | `supports_head = True` (HEAD-only — no GET fallback for bimodal-corrupted data) |
+
+### Signal Health Sensor
+
+The integration exposes this summary sensor:
+
+| Entity | unique_id suffix | State | Condition | Notes |
+|--------|-----------------|-------|-----------|-------|
+| Signal Health | `_signal_health` | `good`, `fair`, `poor` | Always created as a top-level summary entity; unavailable only when current `modem_data` is absent | Summarizes RF health from normalized DOCSIS telemetry |
+
+The Signal Health sensor is a curated interpretation entity, not a raw
+modem field. Its purpose is to translate channel telemetry into one
+actionable grade plus compact diagnostic context.
+
+Its design constraints are:
+
+- Core owns the grading rules and typed result models
+- HA owns persistence of user-configurable thresholds in `entry.options`
+- the entity remains available when only one metric is provisional
+  (for example, first-poll error-rate baseline establishment)
+- missing unsupported metrics are omitted from grading rather than
+  replaced with modem-specific heuristics
+
+See `CONFIG_FLOW_SPEC.md` for the options-flow shape and
+`HA_ADAPTER_SPEC.md` for runtime and persistence expectations.
 
 ### Per-Channel Downstream Sensors
 
@@ -375,6 +405,7 @@ over with its own unique_id.
 | Field names, types, units | `device_class`, `state_class`, `unit_of_measurement` |
 | Implicit capabilities (field present = capable) | Entity created if field present |
 | Health check results (latency, reachability) | Health sensor entities |
+| Signal-health evaluation over normalized telemetry | Signal Health sensor state, summaries, translations, and availability |
 | `ActionFactory` (restart support) | Button entities |
 | Channel normalization (`channel_number`, `channel_type`, `channel_id`) | Mapping manager builds slot maps; entity unique_id incorporates mode-dependent key |
 
@@ -518,6 +549,34 @@ Channel sensor names depend on identity mode:
 
 - **Position mode:** `"{DIR} Ch {n} {Metric}"` — no channel type in
   the name. Positions are unique by definition and type-agnostic.
+
+---
+
+## Entity Translations And Icons
+
+Platinum-quality entities must use Home Assistant's standard
+translation and icon mechanisms rather than hardcoded UI strings where
+the platform supports translation-driven behavior.
+
+For new top-level curated entities such as Signal Health
+sensor:
+
+- add `translations/en.json` entries as the source of truth
+- add best-effort matching entries to every shipped translation file
+- use `translation_key` on the entity where appropriate
+- add `icons.json` entries for state-based icons when the entity's
+  state model benefits from icon translation
+
+For the Signal Health sensor specifically:
+
+- `en.json` must include the entity name and any user-facing option
+  labels or descriptions
+- the other shipped language files should receive best-effort matching
+  entries in the same change
+- `icons.json` should map `good`, `fair`, and `poor` to distinct icons
+
+This requirement exists because a flagship summary entity is part of
+the primary user experience, not an internal-only metric surface.
   Example: "DS Ch 1 Power".
 - **ID mode:** `"{DIR} {TYPE} Ch {ID} {Metric}"` — channel type
   included for DOCSIS 3.1 disambiguation.

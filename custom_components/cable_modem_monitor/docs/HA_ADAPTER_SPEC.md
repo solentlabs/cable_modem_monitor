@@ -124,7 +124,7 @@ layer can cause spurious integration reloads or lost state on restart.
 |-------|----------|----------------|---------|
 | `entry.runtime_data` | Process lifetime; cleared on unload/reload | None | Live Core objects (orchestrator, coordinators), channel map |
 | `entry.data` | Persistent across restarts | Fires update listener → integration reload | User config (host, credentials), validation-derived fields, write-once markers |
-| `entry.options` | Persistent across restarts | Same as `entry.data` | User-editable settings from the options flow (`scan_interval`, `health_check_interval`) |
+| `entry.options` | Persistent across restarts | Same as `entry.data` | User-editable settings from the options flow (`scan_interval`, `health_check_interval`, signal-health thresholds) |
 | `Store` helper | Persistent across restarts | None — silent writes | Runtime state that mutates at poll cadence (e.g., channel-bond baseline) |
 
 **Picking a layer:**
@@ -150,6 +150,33 @@ user deletes the config entry.
 
 Follow the same pattern for future runtime-state domains: one module,
 one typed payload, load / save / remove helpers, cleanup hook.
+
+### Signal-health state split
+
+Signal Health uses the persistence layers as
+follows:
+
+- `entry.options` stores user-configurable thresholds and enablement
+- `entry.runtime_data` may hold a small in-memory baseline for metrics
+  that require prior successful samples, such as error-rate velocity
+- no persistent Store state is required for the initial design; the
+  first successful sample after startup re-establishes baseline
+
+The HA adapter is responsible for reading `entry.options`, building a
+typed thresholds object, and passing that object into the Core
+signal-health evaluator. Core does not read Home Assistant storage
+directly.
+
+Threshold-only changes do not perform live modem validation before the options
+form is saved. They still produce immediate feedback after save. The path is:
+
+- save signal-health settings to `entry.options`
+- let the normal update-listener path reload the entry
+- rely on `async_setup_entry`'s mandatory first poll to fetch fresh modem data
+  immediately on reload
+
+This preserves the clean separation between local form validation and modem I/O
+while still avoiding a poor user experience after a threshold change.
 
 ---
 
@@ -963,7 +990,7 @@ current channel data.
 ### `request_refresh`
 
 Triggers an immediate modem data poll, bypassing connectivity backoff.
-Intended for automations that need on-demand polling (e.g., "ping
+Used by automations that need on-demand polling (e.g., "ping
 fails → trigger modem check").
 
 **Fields:** Optional `device_id` (device selector filtered to
@@ -1203,6 +1230,19 @@ correct types and defaults). Use generic names for migration test
 data. Catalog resolution algorithms (`resolve_modem_dir`) are tested
 with synthetic `ModemSummary` data — not the real catalog.
 
+**Translations and icons are part of the feature surface.** For any new
+top-level entity with user-facing significance, adapter tests and review
+checklists must verify:
+
+- `translations/en.json` contains the source-of-truth strings
+- best-effort matching entries were added for the other shipped
+  translation files in the same change
+- `icons.json` contains any required state-based icons
+- the entity uses translation-driven naming and icon patterns where HA
+  supports them
+
+Signal Health is explicitly in this category.
+
 ---
 
 ## Module Inventory
@@ -1228,6 +1268,8 @@ The HA adapter layer consists of these modules:
 | `core/log_buffer.py` | Log capture for diagnostics (HA adapter + Core package loggers) |
 | `lib/host_validation.py` | URL building, host input parsing |
 | `lib/utils.py` | Utility functions (e.g., uptime parsing) |
+| `translations/*.json` | Source English plus best-effort shipped-language translations for user-facing strings |
+| `icons.json` | State-based icon translations for entities that need icon mapping |
 
 All modem-specific logic lives in Core and Catalog. The adapter
 imports from `solentlabs.cable_modem_monitor_core` and
