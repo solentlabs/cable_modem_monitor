@@ -15,6 +15,8 @@ actions:
     action_name: SetArrisConfigurationInfo
     params:
       Action: reboot
+      SetEEEEnable: ${ethSWEthEEE:0}
+      LED_Status: ${LedStatus:1}
     pre_fetch_action: GetArrisConfigurationInfo
     response_key: SetArrisConfigurationInfoResponse
     result_key: SetArrisConfigurationInfoResult
@@ -48,6 +50,8 @@ notes: |
   HNAP protocol uses GetCustomer* action names (vs MB8611's GetMoto*).
   JavaScript reveals identical protocol structure to MB8611.
   Session stored in sessionStorage.getItem('PrivateKey').
+  Restart payload preserves current EEE and LED values from
+  GetArrisConfigurationInfo before sending Action=reboot.
   S33 blocks ICMP ping - HTTP-only health checks required.
   Modem UI swaps CustomerConnSystemUpTime display with clock time (JS bug); HNAP API returns real uptime.
   Compatible: S33v2 (same parser, MD5 HMAC), S33v3 (same parser, SHA256 HMAC).
@@ -56,3 +60,4 @@ references:
     - "[#32 — [Modem Request] Arris S33 - Uptime and Frequency Fixes](https://github.com/solentlabs/cable_modem_monitor/issues/32)"
     - "[#87 — [Bug]: S33 OFDM Channel No Longer Reporting](https://github.com/solentlabs/cable_modem_monitor/issues/87)"
     - "[#117 — [Bug]: Arris S33v2 crashing when monitor enabled](https://github.com/solentlabs/cable_modem_monitor/issues/117)"
+    - "[#146 — [Bug]: Arris S33 Modem Reboot Not Working](https://github.com/solentlabs/cable_modem_monitor/issues/146)"
