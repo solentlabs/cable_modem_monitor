@@ -30,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registers through the centralized format registry so new formats
   compose in additively. Surfaces to contributors via modem.yaml
   `format:` selection.
+- Home Assistant entity lifecycle and reconciliation management for
+  migrated config entries. The HA adapter now uses a dedicated
+  integration manager plus startup reconciliation planning to converge
+  migrated entries toward fresh-install entity state, with tests and HA
+  adapter spec updates covering the new lifecycle boundary. Related to
+  #147.
 
 ### Fixed
 
@@ -82,6 +88,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `session_reuse_disabled`. Strategy is intentionally not exposed
   as a per-modem yaml field (per the "no per-modem recovery tuning"
   principle).
+- Migrated config entries now clean up stale entity and registry state
+  more reliably during startup reconciliation and integration removal,
+  reducing drift between upgraded installs and fresh installs. Related
+  to #143.
 
 ### Changed
 
