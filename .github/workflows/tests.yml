@@ -101,7 +101,7 @@ jobs:
 
       - name: Upload intake pipeline scorecard
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: intake-pipeline-scorecard
           path: intake-pipeline-scorecard.json
