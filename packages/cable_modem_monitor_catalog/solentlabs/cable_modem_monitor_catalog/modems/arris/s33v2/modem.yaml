@@ -15,6 +15,8 @@ actions:
     action_name: SetArrisConfigurationInfo
     params:
       Action: reboot
+      SetEEEEnable: ${ethSWEthEEE:0}
+      LED_Status: ${LedStatus:1}
     pre_fetch_action: GetArrisConfigurationInfo
     response_key: SetArrisConfigurationInfoResponse
     result_key: SetArrisConfigurationInfoResult
@@ -44,8 +46,11 @@ notes: |
   Same firmware family (TB01.03.*) and HNAP protocol as S33.
   Parser is identical to S33.
   Compatible: S33 (same parser, MD5 HMAC).
+  Reboot params mirrored from S33 fix (#146); pre-fetch defaults
+  are the safety net pending variant validation.
   Modem UI swaps CustomerConnSystemUpTime display with clock time (JS bug); HNAP API returns real uptime.
   Known anti-brute-force: LOCKUP (temp lock) and REBOOT (forces restart).
 references:
   issues:
     - "[#117 — [Bug]: Arris S33v2 crashing when monitor enabled](https://github.com/solentlabs/cable_modem_monitor/issues/117)"
+    - "[#146 — [Bug]: Arris S33 Modem Reboot Not Working](https://github.com/solentlabs/cable_modem_monitor/issues/146)"

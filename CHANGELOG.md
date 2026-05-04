@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Arris S33 reboot now succeeds — and the same fix propagated to
+  S33v2, S33v3, and S34 (#146).** The Arris HNAP firmware rejects a
+  bare `Action=reboot` payload; the modem requires a full
+  `SetArrisConfigurationInfo` body that preserves the current EEE
+  and LED state. Catalog reboot actions on all four siblings now
+  carry `SetEEEEnable: ${ethSWEthEEE:0}` and
+  `LED_Status: ${LedStatus:1}`, interpolated from the existing
+  `GetArrisConfigurationInfo` pre-fetch. S33 fix verified on
+  hardware by the reporter (#148, ccpk1); S33v2/S33v3/S34 mirrored
+  from shared firmware lineage with the executor-level default
+  fallback as the safety net, pending variant validation. Related
+  to #117 (S33v2), #98 (S33v3), #108 (S34).
 - **TG3442DE and g54 OFDM/OFDMA `frequency` silently dropped (#86).**
   Both modems' firmwares report OFDM/OFDMA frequency in shapes the
   parser silently dropped: TG3442DE as a `"low~high"` band string
