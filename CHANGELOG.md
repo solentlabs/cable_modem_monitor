@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CM1200 silent `no_signal` for ~8 minutes after fresh re-add
+  (#151).** Some cable modems serve a stub HTML page (HTTP 200,
+  page chrome with no data section) on data URLs when the firmware
+  is in an ambiguous auth state — typically when a stale session
+  is still alive on the modem-side after the integration is
+  re-added. The integration's loader gate only flagged login pages
+  with a `<input type="password">` field; a stub without one slipped
+  through, the parser logged warnings about every missing JS
+  function anchor, returned empty channels, and the orchestrator
+  reported `no_signal` as if the modem were online but unsynced.
+  The reporter sat in that silent state until the modem eventually
+  returned 401 and the existing `LOAD_AUTH` recovery path kicked in.
+  The new `LOAD_INTEGRITY` collector signal closes the gap: the
+  parser coordinator now reports per-resource expected-vs-fulfilled
+  anchor counts, and the collector raises `LOAD_INTEGRITY` when any
+  resource has expected anchors > 0 and fulfilled = 0. Treated
+  identically to `LOAD_AUTH` (clear session, retry once in same
+  poll, increment auth streak, surface as `auth_failed`) so
+  recovery happens on the very next poll instead of waiting for
+  the modem's internal session timeout. JS-format and JS-JSON
+  modems get real anchor counting; other formats report trivially
+  fulfilled until the same failure shape surfaces there. UC-19a
+  documents the full flow; `RESOURCE_LOADING_SPEC.md` failure-mode
+  table corrected (the prior text predicted `PARSE_ERROR` for
+  this case, which never matched the actual silent-`no_signal`
+  behavior).
+- **Catalog Tools intake produced configs that failed Core
+  validation — `session.max_concurrent: 1 requires actions.logout`
+  (#151 stretch).** The session inference and action detection are
+  independent passes in `catalog_tools/analyze_har`. When the
+  session pass inferred IP-based single-session tracking but the
+  HAR didn't include a logout request, the assembler set
+  `max_concurrent: 1` without an accompanying `actions.logout`,
+  producing a modem.yaml the Core validator correctly rejected
+  (single-session without logout would lock users out). The
+  cross-block constraint now lives in the assembler: when
+  `max_concurrent: 1` is inferred but no logout endpoint was
+  detected, drop the inference. Contributors capturing a new
+  modem must include a logout flow before the integration treats
+  it as single-session. Unblocked netgear/cm2000 in the regression
+  pipeline.
 - **Arris S33 reboot now succeeds — and the same fix propagated to
   S33v2, S33v3, and S34 (#146).** The Arris HNAP firmware rejects a
   bare `Action=reboot` payload; the modem requires a full

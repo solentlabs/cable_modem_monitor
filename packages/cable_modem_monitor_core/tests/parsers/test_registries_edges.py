@@ -51,7 +51,7 @@ class TestChannelTypeGuards:
         section = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.HNAPParser") as mock_cls:
             mock_cls.return_value.parse.return_value = {"not": "a list"}
-            result = _parse_hnap_channels(section, {})
+            result, _ = _parse_hnap_channels(section, {})
         assert result == []
 
     def test_json_non_list_returns_empty(self) -> None:
@@ -59,7 +59,7 @@ class TestChannelTypeGuards:
         section = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.JSONParser") as mock_cls:
             mock_cls.return_value.parse.return_value = None
-            result = _parse_json_channels(section, {})
+            result, _ = _parse_json_channels(section, {})
         assert result == []
 
     def test_js_json_non_list_returns_empty(self) -> None:
@@ -67,7 +67,7 @@ class TestChannelTypeGuards:
         section = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.JSJsonParser") as mock_cls:
             mock_cls.return_value.parse.return_value = "not a list"
-            result = _parse_js_json_channels(section, {})
+            result, _ = _parse_js_json_channels(section, {})
         assert result == []
 
     def test_html_table_non_list_skipped(self) -> None:
@@ -81,7 +81,7 @@ class TestChannelTypeGuards:
 
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.HTMLTableParser") as mock_cls:
             mock_cls.return_value.parse.return_value = None
-            result = _parse_html_table_channels(section, {})
+            result, _ = _parse_html_table_channels(section, {})
         assert result == []
 
 
@@ -98,7 +98,7 @@ class TestSysinfoTypeGuards:
         source = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.HTMLFieldsParser") as mock_cls:
             mock_cls.return_value.parse.return_value = ["not", "a", "dict"]
-            result = _parse_html_fields_sysinfo(source, {})
+            result, _ = _parse_html_fields_sysinfo(source, {})
         assert result == {}
 
     def test_hnap_sysinfo_non_dict_returns_empty(self) -> None:
@@ -106,7 +106,7 @@ class TestSysinfoTypeGuards:
         source = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.HNAPFieldsParser") as mock_cls:
             mock_cls.return_value.parse.return_value = None
-            result = _parse_hnap_sysinfo(source, {})
+            result, _ = _parse_hnap_sysinfo(source, {})
         assert result == {}
 
 
@@ -189,7 +189,7 @@ class TestTransposedChannelSkipsNonList:
 
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.HTMLTableTransposedParser") as mock_cls:
             mock_cls.return_value.parse.return_value = "not a list"
-            result = _parse_transposed_channels(section, {})
+            result, _ = _parse_transposed_channels(section, {})
 
         assert result == []
 
@@ -209,7 +209,7 @@ class TestJsJsonChannelNumberAssignment:
                 {"channel_id": 11, "channel_number": 5},  # already mapped
                 {"channel_id": 12},
             ]
-            result = _parse_js_json_channels(section, {})
+            result, _ = _parse_js_json_channels(section, {})
 
         assert result[0]["channel_number"] == 1
         assert result[1]["channel_number"] == 5  # unchanged
@@ -227,7 +227,7 @@ class TestXmlChannelParser:
         section = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.XMLChannelParser") as mock_cls:
             mock_cls.return_value.parse.return_value = None
-            result = _parse_xml_channels(section, {})
+            result, _ = _parse_xml_channels(section, {})
         assert result == []
 
     def test_xml_list_assigns_channel_numbers(self) -> None:
@@ -241,7 +241,7 @@ class TestXmlChannelParser:
                 {"channel_id": 1},
                 {"channel_id": 2, "channel_number": 99},  # preserved
             ]
-            result = _parse_xml_channels(section, {})
+            result, _ = _parse_xml_channels(section, {})
 
         assert result[0]["channel_number"] == 1
         assert result[1]["channel_number"] == 99
@@ -258,7 +258,7 @@ class TestSysinfoTypeGuardsExtra:
         source = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.JSVarsParser") as mock_cls:
             mock_cls.return_value.parse.return_value = ["list, not dict"]
-            result = _parse_js_vars_sysinfo(source, {})
+            result, _ = _parse_js_vars_sysinfo(source, {})
         assert result == {}
 
     def test_xml_sysinfo_non_dict_returns_empty(self) -> None:
@@ -269,5 +269,5 @@ class TestSysinfoTypeGuardsExtra:
         source = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.XMLSystemInfoParser") as mock_cls:
             mock_cls.return_value.parse.return_value = None
-            result = _parse_xml_sysinfo(source, {})
+            result, _ = _parse_xml_sysinfo(source, {})
         assert result == {}

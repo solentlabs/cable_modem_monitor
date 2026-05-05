@@ -425,6 +425,33 @@ class TestHTTPResourceLoader:
             with pytest.raises(LoginPageDetectedError):
                 loader.fetch(targets)
 
+    def test_stub_html_passes_loader_unchanged(self) -> None:
+        """UC-19a: stub HTML without a password input is NOT classified as
+        a login page — it passes through to the parser. Stub-page detection
+        moved to the parser-coordinator layer (issue #151)."""
+        stub_html = (
+            "<html><head><title>Modem</title>"
+            '<link rel="stylesheet" href="css/main.css">'
+            '<script src="jquery.js"></script>'
+            "</head><body><div>Loading...</div></body></html>"
+        )
+        entries = _build_entries({"/status.html": ("text/html", stub_html)})
+
+        with HARMockServer(entries) as server:
+            session = requests.Session()
+            loader = HTTPResourceLoader(
+                session,
+                server.base_url,
+                timeout=10,
+                detect_login_pages=True,
+            )
+            targets = [ResourceTarget(path="/status.html", format="table")]
+            resources = loader.fetch(targets)
+
+        # Loader's job is HTTP-shape; it does not know parser anchors.
+        # Stub passes through; the coordinator detects zero-fulfillment.
+        assert "/status.html" in resources
+
     def test_401_raises_resource_load_error(self) -> None:
         """401 response raises ResourceLoadError with status code."""
         # Build a HAR entry that returns 401

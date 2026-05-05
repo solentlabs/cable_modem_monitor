@@ -160,13 +160,14 @@ class CollectorSignal(Enum):
     context.
     """
 
-    OK = "ok"                        # Collection completed — modem_data is populated
-    AUTH_FAILED = "auth_failed"      # Wrong credentials or strategy mismatch
-    AUTH_LOCKOUT = "auth_lockout"    # Firmware anti-brute-force triggered
-    CONNECTIVITY = "connectivity"    # Connection refused, timeout, DNS failure
-    LOAD_ERROR = "load_error"        # HTTP error on data page (5xx, 404)
-    LOAD_AUTH = "load_auth"          # Session expired: HTTP 401/403, or HNAP HTTP error on reused session
-    PARSE_ERROR = "parse_error"      # Parser exception (malformed response)
+    OK = "ok"                          # Collection completed — modem_data is populated
+    AUTH_FAILED = "auth_failed"        # Wrong credentials or strategy mismatch
+    AUTH_LOCKOUT = "auth_lockout"      # Firmware anti-brute-force triggered
+    CONNECTIVITY = "connectivity"      # Connection refused, timeout, DNS failure
+    LOAD_ERROR = "load_error"          # HTTP error on data page (5xx, 404)
+    LOAD_AUTH = "load_auth"            # Session expired: HTTP 401/403, or HNAP HTTP error on reused session
+    LOAD_INTEGRITY = "load_integrity"  # HTTP 200 stub: parser found 0 of N expected anchors (login-page detection false negative)
+    PARSE_ERROR = "parse_error"        # Parser exception (malformed response)
 ```
 
 ### Signal → Policy Mapping (Orchestrator reference)
@@ -178,7 +179,8 @@ class CollectorSignal(Enum):
 | `AUTH_LOCKOUT` | Trip circuit breaker immediately, report `auth_failed` |
 | `CONNECTIVITY` | Abort, report `unreachable`, apply connectivity backoff |
 | `LOAD_ERROR` | Abort, report `unreachable` |
-| `LOAD_AUTH` | Clear session, report `auth_failed`, no retry |
+| `LOAD_AUTH` | Clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-17, UC-18) |
+| `LOAD_INTEGRITY` | Same as `LOAD_AUTH` — clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-19a) |
 | `PARSE_ERROR` | Abort, report `parser_issue` |
 
 ### State Ownership
@@ -212,6 +214,12 @@ Example — HNAP 404 on reused session:
 - **Log** (WARNING): `"HNAP HTTP 404 on reused session [MODEL] — session likely expired"`
 - **Signal**: `CollectorSignal.LOAD_AUTH`
 - **ModemResult.error**: `"HNAP HTTP 404 — session expired"`
+
+Example — stub response (login-page detection false negative):
+
+- **Log** (WARNING): `"Stub response on /status.html [MODEL] — 0 of 4 expected parser anchors found, treating as session integrity failure"`
+- **Signal**: `CollectorSignal.LOAD_INTEGRITY`
+- **ModemResult.error**: `"0 of 4 expected anchors on /status.html — stub response"`
 
 Example — successful collection with no channels:
 

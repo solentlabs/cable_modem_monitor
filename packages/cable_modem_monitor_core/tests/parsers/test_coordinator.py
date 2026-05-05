@@ -67,7 +67,7 @@ def test_extraction(fixture_path: Path) -> None:
     config = ParserConfig.model_validate(data["_parser_config"])
     coordinator = ModemParserCoordinator(config)
 
-    result = coordinator.parse(resources)
+    result, _ = coordinator.parse(resources)
     expected = data["_expected"]
 
     assert result == expected, (
@@ -187,7 +187,7 @@ class TestPostProcessorHooks:
         resources = _build_resources(ds_fixture["_html"])
         config = ParserConfig.model_validate(ds_fixture["_parser_config"])
         coordinator = ModemParserCoordinator(config, _MockPostProcessor())
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         assert result["downstream"][0]["custom_field"] == "enriched"
         assert result["downstream"][0]["frequency"] == 507000000
@@ -197,7 +197,7 @@ class TestPostProcessorHooks:
         resources = _build_resources(ds_fixture["_html"])
         config = ParserConfig.model_validate(ds_fixture["_parser_config"])
         coordinator = ModemParserCoordinator(config, _ReplacingPostProcessor())
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         assert result["downstream"] == [{"channel_id": 99, "channel_type": "qam", "custom": True}]
 
@@ -208,7 +208,7 @@ class TestPostProcessorHooks:
         config = ParserConfig.model_validate(data["_parser_config"])
         # _MockPostProcessor has parse_downstream but NOT parse_upstream
         coordinator = ModemParserCoordinator(config, _MockPostProcessor())
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         # upstream used as-is, no "custom_field" added
         assert result["upstream"][0]["frequency"] == 37700000
@@ -222,7 +222,7 @@ class TestPostProcessorHooks:
         resources = _build_resources(data["_html"])
         config = ParserConfig.model_validate(data["_parser_config"])
         coordinator = ModemParserCoordinator(config, _MockPostProcessor())
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         # Hook replaced the extracted system_info; enrichment adds channel counts
         assert result["system_info"]["custom_key"] == "custom_value"
@@ -234,7 +234,7 @@ class TestPostProcessorHooks:
         resources = _build_resources(ds_fixture["_html"])
         config = ParserConfig.model_validate(ds_fixture["_parser_config"])
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         assert result["downstream"][0]["frequency"] == 507000000
         assert "custom_field" not in result["downstream"][0]
@@ -253,7 +253,7 @@ class TestEdgeCases:
         data = _load_fixture("minimal_downstream.json")
         config = ParserConfig.model_validate(data["_parser_config"])
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse({})
+        result, _ = coordinator.parse({})
 
         assert result["downstream"] == []
         assert result["upstream"] == []
@@ -264,7 +264,7 @@ class TestEdgeCases:
         config = ParserConfig(system_info=data["_parser_config"]["system_info"])
         resources = _build_resources(data["_html"])
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         assert result["downstream"] == []
         assert result["upstream"] == []
@@ -278,7 +278,7 @@ class TestEdgeCases:
         data = _load_fixture("minimal_downstream.json")
         config = ParserConfig.model_validate(data["_parser_config"])
         coordinator = ModemParserCoordinator(config, _MockPostProcessor())
-        result = coordinator.parse({})
+        result, _ = coordinator.parse({})
 
         assert result["downstream"] == []
         # parse_system_info hook is called with empty dict — returns custom data
@@ -327,7 +327,7 @@ class TestDerivedFieldEnrichment:
             }
         )
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         assert result["system_info"]["downstream_channel_count"] == 3
         assert result["system_info"]["upstream_channel_count"] == 0
@@ -350,7 +350,7 @@ class TestDerivedFieldEnrichment:
             }
         )
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         # Native value ("99") wins over computed (1)
         # html_fields parser returns the raw string; type conversion
@@ -381,7 +381,7 @@ class TestDerivedFieldEnrichment:
             }
         )
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         assert result["system_info"]["total_corrected"] == 300
 
@@ -416,7 +416,7 @@ class TestDerivedFieldEnrichment:
             }
         )
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         # Native value ("999") wins over computed (300)
         # html_fields returns raw string; the precedence rule still applies
@@ -447,7 +447,7 @@ class TestDerivedFieldEnrichment:
             }
         )
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         assert result["system_info"]["total_corrected"] == 300
 
@@ -469,7 +469,7 @@ class TestDerivedFieldEnrichment:
             }
         )
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         # Channels don't have "corrected" field → no aggregate
         assert "total_corrected" not in result["system_info"]
@@ -485,7 +485,7 @@ class TestDerivedFieldEnrichment:
             }
         )
         coordinator = ModemParserCoordinator(config)
-        result = coordinator.parse(resources)
+        result, _ = coordinator.parse(resources)
 
         assert result["system_info"]["downstream_channel_count"] == 1
         assert result["system_info"]["upstream_channel_count"] == 0
@@ -498,6 +498,136 @@ class TestDerivedFieldEnrichment:
     #   fixtures/coordinator/valid/computed_zero_total.json
     #   fixtures/coordinator/valid/computed_native_wins.json
     #   fixtures/coordinator/valid/computed_precision.json
+
+
+# ---------------------------------------------------------------------------
+# ParseDiagnostics — end-to-end via coordinator (UC-19a, issue #151)
+# ---------------------------------------------------------------------------
+
+# Synthetic JS-format parser config matching real-world stub-vulnerable
+# modems: multiple named JS functions, all in one resource. Generic
+# names per principle #19 — no modem-specific identifiers.
+_JS_PARSER_CONFIG = {
+    "downstream": {
+        "format": "javascript",
+        "resource": "/status.html",
+        "functions": [
+            {
+                "name": "InitDsTableA",
+                "channel_type": "qam",
+                "delimiter": "|",
+                "fields_per_channel": 4,
+                "fields": [
+                    {"offset": 0, "field": "channel_id", "type": "integer"},
+                    {"offset": 1, "field": "lock_status", "type": "string"},
+                ],
+            },
+            {
+                "name": "InitDsTableB",
+                "channel_type": "ofdm",
+                "delimiter": "|",
+                "fields_per_channel": 4,
+                "fields": [
+                    {"offset": 0, "field": "channel_id", "type": "integer"},
+                ],
+            },
+        ],
+    },
+    "upstream": {
+        "format": "javascript",
+        "resource": "/status.html",
+        "functions": [
+            {
+                "name": "InitUsTable",
+                "channel_type": "atdma",
+                "delimiter": "|",
+                "fields_per_channel": 3,
+                "fields": [
+                    {"offset": 0, "field": "channel_id", "type": "integer"},
+                ],
+            },
+        ],
+    },
+}
+
+# Page with all 3 expected function bodies present — happy path.
+_FULL_HTML = """<html><body><script>
+function InitDsTableA() { var tagValueList = '1|1|locked|QAM256|0' }
+function InitDsTableB() { var tagValueList = '1|2|locked|OFDM|0' }
+function InitUsTable()  { var tagValueList = '1|1|locked|0' }
+</script></body></html>"""
+
+# Stub page with valid HTML chrome but none of the expected function
+# bodies — matches the CM1200 #151 capture shape (page header, CSS
+# includes, JS framework references, no data).
+_STUB_HTML = """<html><head>
+<title>Modem</title>
+<link rel="stylesheet" href="css/main.css">
+<script src="jquery.js"></script>
+<script>
+var vLocked = "Locked";
+var vUnknown = "Unknown";
+$(document).ready(function() {});
+</script>
+</head><body><div class="content">Loading...</div></body></html>"""
+
+# Page with one function body present and one missing — partial fulfillment.
+_PARTIAL_HTML = """<html><body><script>
+function InitDsTableA() { var tagValueList = '1|1|locked|QAM256|0' }
+function InitUsTable()  { var tagValueList = '1|1|locked|0' }
+</script></body></html>"""
+
+
+class TestParseDiagnostics:
+    """End-to-end ParseDiagnostics through the coordinator (issue #151)."""
+
+    def test_full_extraction_zero_fulfillment_false(self) -> None:
+        """All declared anchors present → has_zero_fulfillment is False."""
+        config = ParserConfig.model_validate(_JS_PARSER_CONFIG)
+        coordinator = ModemParserCoordinator(config)
+
+        _, diagnostics = coordinator.parse(_build_resources({"/status.html": _FULL_HTML}))
+
+        assert diagnostics.has_zero_fulfillment is False
+        # 3 functions declared (2 downstream + 1 upstream), all 3 located.
+        count = diagnostics.by_resource["/status.html"]
+        assert count.expected == 3
+        assert count.fulfilled == 3
+
+    def test_stub_response_zero_fulfillment_true(self) -> None:
+        """Stub HTML (no anchors) → has_zero_fulfillment is True."""
+        config = ParserConfig.model_validate(_JS_PARSER_CONFIG)
+        coordinator = ModemParserCoordinator(config)
+
+        _, diagnostics = coordinator.parse(_build_resources({"/status.html": _STUB_HTML}))
+
+        assert diagnostics.has_zero_fulfillment is True
+        assert diagnostics.zero_fulfillment_resources == ["/status.html"]
+        count = diagnostics.by_resource["/status.html"]
+        assert count.expected == 3
+        assert count.fulfilled == 0
+
+    def test_partial_fulfillment_zero_fulfillment_false(self) -> None:
+        """Some anchors present (firmware variant) → not stub detection."""
+        config = ParserConfig.model_validate(_JS_PARSER_CONFIG)
+        coordinator = ModemParserCoordinator(config)
+
+        _, diagnostics = coordinator.parse(_build_resources({"/status.html": _PARTIAL_HTML}))
+
+        assert diagnostics.has_zero_fulfillment is False
+        count = diagnostics.by_resource["/status.html"]
+        assert count.expected == 3
+        # 2 of 3 functions present (downstream A + upstream, missing downstream B)
+        assert count.fulfilled == 2
+
+    def test_missing_resource_zero_fulfillment_true(self) -> None:
+        """Resource not in dict → fulfilled=0 against expected anchors."""
+        config = ParserConfig.model_validate(_JS_PARSER_CONFIG)
+        coordinator = ModemParserCoordinator(config)
+
+        _, diagnostics = coordinator.parse({})
+
+        assert diagnostics.has_zero_fulfillment is True
 
 
 # ---------------------------------------------------------------------------

@@ -31,6 +31,7 @@ class CollectorSignal(Enum):
     CONNECTIVITY = "connectivity"
     LOAD_ERROR = "load_error"
     LOAD_AUTH = "load_auth"
+    LOAD_INTEGRITY = "load_integrity"
     PARSE_ERROR = "parse_error"
 
 

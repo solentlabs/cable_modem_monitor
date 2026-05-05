@@ -41,6 +41,7 @@ declaratively.
 | [parser.yaml Schema](#parseryaml-schema) | Common concepts: field types, units, scale, uptime, filters |
 | [parser.py — Post-Processing Hooks](#parserpy--post-processing-hooks) | When and how to use code-based post-processing |
 | [Output Contract](#output-contract) | ModemData schema, field guarantees, entity identity |
+| [Parser Diagnostics](#parser-diagnostics) | Per-resource expected vs. fulfilled anchor counts |
 | [Channel Type Detection](#channel-type-detection) | How QAM vs OFDM is determined |
 | [Aggregate](#aggregate-derived-system_info-fields) | Channel counts, error totals, scoped sums |
 | [Computed](#computed-derived-system_info-fields) | Derived system_info from other system_info fields |
@@ -757,6 +758,59 @@ The presence of data in the output IS the capability declaration:
 
 No separate capabilities list in modem.yaml. No registration. If the
 parser extracts it, the entity exists.
+
+---
+
+## Parser Diagnostics
+
+Alongside `ModemData`, the parser coordinator surfaces per-resource
+diagnostics describing how completely the parse covered the
+extraction targets declared in `parser.yaml`. These diagnostics are
+the orchestrator's signal that a "successful" empty parse is
+actually a stub-page false negative (see UC-19a).
+
+### Contract
+
+For each `resource` referenced by `parser.yaml`, the coordinator
+reports two counts:
+
+| Field | Meaning |
+|-------|---------|
+| `expected_anchors` | Number of named extraction targets declared for this resource — sum of `functions[].name` across format-specific sources (`format: javascript`), `variable` declarations (`format: javascript_json`), `<table>` matchers (`format: table`), HNAP `data_key` references, etc. |
+| `fulfilled_anchors` | Number of those targets the parser actually located in the response body |
+
+Reported as a flat collection of `(resource_path, expected, fulfilled)`
+records on the coordinator's parse output, available to the collector
+without parsing internals.
+
+### Semantics
+
+- `fulfilled_anchors == expected_anchors` — extraction was complete; any zero-channel result is a real `no_signal` (UC-04 / UC-05).
+- `0 < fulfilled_anchors < expected_anchors` — extraction was partial; current behavior preserved (warn and continue). Common on firmware variants where some sources legitimately do not exist.
+- `fulfilled_anchors == 0` with `expected_anchors > 0` — stub-response detection. The collector raises this to `CollectorSignal.LOAD_INTEGRITY` (see UC-19a, ORCHESTRATION_SPEC § Signal Catalog).
+
+### Implementation note
+
+How the coordinator computes `fulfilled_anchors` is a format-specific
+concern — JS-format parsers know which named functions located their
+`tagValueList`; table parsers know which `<table>` matchers hit;
+HNAP parsers know which `data_key` references resolved. This
+specification defines **what is reported**, not the mechanism by
+which each format counts. Parsers may surface the count via tuple
+return, recorder injection, or coordinator-side inspection of the
+extracted data shape against `parser_config` — whichever fits the
+format cleanly.
+
+The `BaseParser` output shape (`ModemData`) is unchanged. Diagnostics
+are a sibling channel, not a replacement.
+
+### Diagnostic dump exposure
+
+Captured in HA's diagnostics download (per `RUNTIME_POLLING_SPEC §
+Diagnostics for Remote Troubleshooting`) as a list of
+`(resource_path, expected_anchors, fulfilled_anchors)` records.
+Lets bug-report reviewers see at a glance which resources matched
+and which slipped to stub.
 
 ---
 

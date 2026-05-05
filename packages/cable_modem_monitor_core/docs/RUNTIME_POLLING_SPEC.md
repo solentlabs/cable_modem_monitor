@@ -122,8 +122,9 @@ The orchestrator derives status fields after each poll:
 | Condition | Value |
 |-----------|-------|
 | Channels present | `online` |
-| Zero channels + system_info present | `no_signal` |
-| Zero channels + no system_info | `no_signal` (with diagnostic warning) |
+| Zero channels, parser fulfilled all expected anchors | `no_signal` |
+| Zero channels, parser fulfilled some anchors (no `system_info`) | `no_signal` (with diagnostic warning) |
+| Zero channels, parser fulfilled **0 of N** expected anchors (stub response) | `auth_failed` via `LOAD_INTEGRITY` (see UC-19a) |
 | Auth failure / lockout | `auth_failed` |
 | Connection error / timeout | `unreachable` |
 
@@ -337,9 +338,10 @@ regardless of success. Session reuse is the primary defense against
 lockout, backoff is the safety net.
 
 **Auth circuit breaker** — persistent auth failures (wrong credentials,
-changed password, firmware changed auth mechanism) trigger an escalating
-response. The orchestrator tracks consecutive auth-related failures
-(AUTH_FAILED, AUTH_LOCKOUT, LOAD_AUTH). After 6 consecutive failures
+changed password, firmware changed auth mechanism, persistent stub
+responses) trigger an escalating response. The orchestrator tracks
+consecutive auth-related failures (AUTH_FAILED, AUTH_LOCKOUT, LOAD_AUTH,
+LOAD_INTEGRITY). After 6 consecutive failures
 (~2 lockout cycles on HNAP modems), the circuit breaker opens and
 polling stops entirely. The client (HA) triggers a reauth flow — the
 user must reconfigure credentials to resume. See `ORCHESTRATION_SPEC.md`
@@ -511,7 +513,8 @@ Every signal a protocol layer can emit and the orchestrator's policy:
 | HTTP 401/403 on data page | Resource Loader | Clear session, increment auth streak | `auth_failed` |
 | HTTP 5xx on data page | Resource Loader | Abort poll | `unreachable` |
 | Channels found | Parser | Build response, reset auth streak | `online` |
-| Zero channels | Parser | Derive status from system_info | `no_signal` |
+| Zero channels, all expected anchors fulfilled | Parser | Derive status from system_info | `no_signal` |
+| Zero channels, **0 of N** expected anchors fulfilled | Parser Coordinator | Clear session, increment auth streak (`LOAD_INTEGRITY`) | `auth_failed` |
 
 ### Diagnostics for Remote Troubleshooting
 

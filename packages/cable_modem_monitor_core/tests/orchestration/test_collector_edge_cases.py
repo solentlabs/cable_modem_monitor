@@ -31,6 +31,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.collector import (
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     CollectorSignal,
 )
+from solentlabs.cable_modem_monitor_core.parsers.diagnostics import ParseDiagnostics
 
 # ------------------------------------------------------------------
 # Helpers
@@ -163,10 +164,15 @@ class TestAuthContextUpdate:
         mock_context = AuthContext(private_key="test_key")
         mock_result = AuthResult(success=True, auth_context=mock_context)
 
+        empty_modem_data = {"downstream": [], "upstream": [], "system_info": {}}
         with (
             patch.object(collector._auth_manager, "authenticate", return_value=mock_result),
             patch.object(collector, "_load_resources", return_value=({}, [])),
-            patch.object(collector, "_parse", return_value={"downstream": [], "upstream": [], "system_info": {}}),
+            patch.object(
+                collector,
+                "_parse",
+                return_value=(empty_modem_data, ParseDiagnostics()),
+            ),
         ):
             result = collector.execute()
 
@@ -294,7 +300,7 @@ class TestHnapLogout:
         with (
             patch.object(collector, "authenticate", return_value=MagicMock(success=True)),
             patch.object(collector, "_load_resources", return_value=({}, [])),
-            patch.object(collector, "_parse", return_value=modem_data),
+            patch.object(collector, "_parse", return_value=(modem_data, ParseDiagnostics())),
             patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action,
         ):
             result = collector.execute()

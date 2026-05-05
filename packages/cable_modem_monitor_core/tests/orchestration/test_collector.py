@@ -40,6 +40,10 @@ from solentlabs.cable_modem_monitor_core.orchestration.collector import (
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     CollectorSignal,
 )
+from solentlabs.cable_modem_monitor_core.parsers.diagnostics import (
+    AnchorCount,
+    ParseDiagnostics,
+)
 
 # ------------------------------------------------------------------
 # Helpers — minimal modem configs as plain objects
@@ -259,7 +263,7 @@ def _run_collector_with_failure(
         else patch.object(
             collector,
             "_parse",
-            return_value={"downstream": [], "upstream": [], "system_info": {}},
+            return_value=({"downstream": [], "upstream": [], "system_info": {}}, ParseDiagnostics()),
         )
     )
 
@@ -357,7 +361,7 @@ def _run_hnap_collector_with_failure(
         patch.object(
             collector,
             "_parse",
-            return_value={"downstream": [], "upstream": [], "system_info": {}},
+            return_value=({"downstream": [], "upstream": [], "system_info": {}}, ParseDiagnostics()),
         ),
     ):
         collector._session_reused = session_reused
@@ -489,7 +493,7 @@ class TestSuccessfulCollection:
             patch.object(
                 collector,
                 "_parse",
-                return_value=modem_data,
+                return_value=(modem_data, ParseDiagnostics()),
             ),
         ):
             result = collector.execute()
@@ -522,7 +526,7 @@ class TestSuccessfulCollection:
             patch.object(
                 collector,
                 "_parse",
-                return_value=modem_data,
+                return_value=(modem_data, ParseDiagnostics()),
             ),
         ):
             result = collector.execute()
@@ -531,6 +535,91 @@ class TestSuccessfulCollection:
         assert result.signal == CollectorSignal.OK
         assert result.modem_data is not None
         assert result.modem_data["downstream"] == []
+
+
+# ------------------------------------------------------------------
+# Tests — UC-19a stub-page detection (LOAD_INTEGRITY signal)
+# ------------------------------------------------------------------
+
+
+class TestStubPageDetection:
+    """execute() emits LOAD_INTEGRITY when parser found 0 of N expected anchors.
+
+    See ORCHESTRATION_USE_CASES.md § UC-19a.
+    """
+
+    def test_zero_fulfillment_emits_load_integrity(self) -> None:
+        """0 of N anchors fulfilled on a single resource → LOAD_INTEGRITY."""
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+        modem_data = {"downstream": [], "upstream": [], "system_info": {"model": "T100"}}
+        diagnostics = ParseDiagnostics(by_resource={"/status.html": AnchorCount(expected=4, fulfilled=0)})
+        with (
+            patch.object(collector, "authenticate", return_value=MagicMock(success=True)),
+            patch.object(collector, "_load_resources", return_value=({"data": "ok"}, [])),
+            patch.object(collector, "_parse", return_value=(modem_data, diagnostics)),
+        ):
+            result = collector.execute()
+
+        assert result.success is False
+        assert result.signal == CollectorSignal.LOAD_INTEGRITY
+        assert "/status.html" in result.error
+
+    def test_full_fulfillment_emits_ok(self) -> None:
+        """All anchors fulfilled (even with zero channels) → OK, not LOAD_INTEGRITY (UC-04)."""
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+        modem_data = {"downstream": [], "upstream": [], "system_info": {"firmware": "1.0"}}
+        diagnostics = ParseDiagnostics(by_resource={"/status.html": AnchorCount(expected=4, fulfilled=4)})
+        with (
+            patch.object(collector, "authenticate", return_value=MagicMock(success=True)),
+            patch.object(collector, "_load_resources", return_value=({"data": "ok"}, [])),
+            patch.object(collector, "_parse", return_value=(modem_data, diagnostics)),
+        ):
+            result = collector.execute()
+
+        assert result.success is True
+        assert result.signal == CollectorSignal.OK
+
+    def test_partial_fulfillment_emits_ok(self) -> None:
+        """Partial fulfillment is firmware-variant territory, not stub — OK."""
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+        modem_data = {"downstream": [{"channel_id": 1}], "upstream": [], "system_info": {}}
+        diagnostics = ParseDiagnostics(by_resource={"/status.html": AnchorCount(expected=4, fulfilled=2)})
+        with (
+            patch.object(collector, "authenticate", return_value=MagicMock(success=True)),
+            patch.object(collector, "_load_resources", return_value=({"data": "ok"}, [])),
+            patch.object(collector, "_parse", return_value=(modem_data, diagnostics)),
+        ):
+            result = collector.execute()
+
+        assert result.success is True
+        assert result.signal == CollectorSignal.OK
+
+    def test_zero_on_one_of_many_resources_emits_load_integrity(self) -> None:
+        """One stub resource among others → still LOAD_INTEGRITY."""
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+        modem_data = {"downstream": [], "upstream": [], "system_info": {}}
+        diagnostics = ParseDiagnostics(
+            by_resource={
+                "/data.html": AnchorCount(expected=2, fulfilled=2),
+                "/router.html": AnchorCount(expected=4, fulfilled=0),
+            }
+        )
+        with (
+            patch.object(collector, "authenticate", return_value=MagicMock(success=True)),
+            patch.object(collector, "_load_resources", return_value=({"data": "ok"}, [])),
+            patch.object(collector, "_parse", return_value=(modem_data, diagnostics)),
+        ):
+            result = collector.execute()
+
+        assert result.success is False
+        assert result.signal == CollectorSignal.LOAD_INTEGRITY
+        assert "/router.html" in result.error
+        # Resource with full fulfillment must NOT appear in error
+        assert "/data.html" not in result.error
 
 
 # ------------------------------------------------------------------
@@ -566,7 +655,7 @@ class TestLogout:
             patch.object(
                 collector,
                 "_parse",
-                return_value=modem_data,
+                return_value=(modem_data, ParseDiagnostics()),
             ),
             patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action,
         ):
@@ -600,7 +689,7 @@ class TestLogout:
             patch.object(
                 collector,
                 "_parse",
-                return_value=modem_data,
+                return_value=(modem_data, ParseDiagnostics()),
             ),
             patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action,
         ):
@@ -633,7 +722,7 @@ class TestLogout:
             patch.object(
                 collector,
                 "_parse",
-                return_value=modem_data,
+                return_value=(modem_data, ParseDiagnostics()),
             ),
             patch(
                 "solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action",
@@ -665,7 +754,7 @@ class TestLogout:
         with (
             patch.object(collector, "authenticate", return_value=auth_result),
             patch.object(collector, "_load_resources", return_value=({}, [])),
-            patch.object(collector, "_parse", return_value=modem_data),
+            patch.object(collector, "_parse", return_value=(modem_data, ParseDiagnostics())),
             patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action"),
         ):
             # Set auth context as if authentication succeeded
@@ -973,7 +1062,7 @@ class TestResourceFetchesProperty:
             patch.object(
                 collector,
                 "_parse",
-                return_value={"downstream": [], "upstream": [], "system_info": {}},
+                return_value=({"downstream": [], "upstream": [], "system_info": {}}, ParseDiagnostics()),
             ),
         ):
             result = collector.execute()

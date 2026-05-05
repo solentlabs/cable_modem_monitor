@@ -251,3 +251,46 @@ share the same resource URL (e.g., `json_dsData` vs `json_usData`).
 `channel_number` is auto-assigned from the 1-based array index when
 not already mapped by parser.yaml. See
 [CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §10.
+
+---
+
+## Failure modes
+
+### Named target absent in `<script>` tag
+
+Both formats locate their extraction sites by a configured **name**:
+
+- `javascript` — `functions[].name` (e.g., `"InitDsTableTagValue"`)
+- `javascript_json` — `variable` (e.g., `"json_dsData"`)
+
+When that name is not present in any `<script>` tag in the response
+body — for example because the modem returned an HTML stub with
+chrome but no data section — the parser logs a WARNING and returns
+empty for that source. No exception is raised. Per-format detail:
+
+- `JSEmbeddedParser`: `_extract_tag_value_list` returns `None`,
+  parser logs `"Function '{name}' not found in resource '{path}'"`,
+  contributes no channels.
+- `JSJsonParser`: variable regex match fails, parser logs the
+  equivalent warning, contributes no channels.
+
+This is intentional best-effort behavior — firmware variants may
+legitimately omit individual functions or variables (e.g., a
+DOCSIS 3.0 firmware revision missing OFDM anchors). Partial
+fulfillment is not a failure.
+
+**Stub-page case (all named targets absent):** When *every* configured
+target across a resource is absent, the response is structurally not
+a data page. The Parser Coordinator surfaces this via the
+`Parser Diagnostics` contract (`PARSING_SPEC § Parser Diagnostics`)
+as `expected_anchors > 0, fulfilled_anchors == 0`, and the collector
+raises it to `CollectorSignal.LOAD_INTEGRITY`. See UC-19a in
+`ORCHESTRATION_USE_CASES.md` for the full recovery flow.
+
+### MCP onboarding implication
+
+When a modem's HAR fixture replays at `fulfilled_anchors == 0`
+against the proposed `parser.yaml`, that is a parser-config bug at
+intake (wrong function names, wrong resource path), not a stub
+response. Catalog Tools intake should flag this distinctly from
+genuine stub captures — same failure shape, different cause.

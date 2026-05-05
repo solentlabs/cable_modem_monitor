@@ -73,9 +73,12 @@ def generate_golden_file(
     if not resources:
         errors.append("No resources found in HAR")
 
-    # Extract via coordinator (single extraction path)
+    # Extract via coordinator (single extraction path).
+    # Discard ParseDiagnostics — the golden-file generator surfaces only
+    # the data dict; stub-page detection is a runtime concern owned by
+    # the production collector.
     coordinator = ModemParserCoordinator(parser_config)
-    golden = coordinator.parse(resources)
+    golden, _ = coordinator.parse(resources)
 
     # Build result
     downstream = golden.get("downstream", [])

@@ -399,8 +399,9 @@ session was stale. Credentials are correct.
 
 **Preconditions:** Resource Loader fetches a data page. Modem returns
 HTTP 200 but the body is a login page (auth redirect, session expired
-silently). Without detection, this would reach the parser and cause
-PARSE_ERROR.
+silently). Without detection, this would reach the parser and produce
+empty-data results — see UC-19a for the false-negative case where
+detection misses.
 
 | Step | Action | State change | Observable |
 |------|--------|-------------|------------|
@@ -417,6 +418,56 @@ PARSE_ERROR.
 - Login page detection checks for `<input type="password">` or similar
 - Session is cleared for fresh login on next poll
 - WARNING log: "Data page /status.html appears to be a login page"
+
+---
+
+### UC-19a: Stub-page detection — login-page false negative
+
+**Preconditions:** Resource Loader fetches a data page. Modem returns
+HTTP 200 with valid HTML chrome but the body lacks every parser anchor
+declared in `parser.yaml` — neither a `<input type="password">` (so
+login-page detection returns false) nor any of the JavaScript function
+bodies or JSON variables the parser is configured to extract from.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `get_modem_data()` | | |
+| 2 | Collector: auth succeeds (or session reused) | | |
+| 3 | Resource Loader: GET /status.html → HTTP 200, no password field | | |
+| 4 | Resource Loader: page added to resources (login-page false negative) | | |
+| 5 | Coordinator: parsers run, find 0 of N expected anchors per resource | | |
+| 6 | Coordinator: emit `ParseDiagnostics(expected_anchors=N, fulfilled_anchors=0)` | | |
+| 7 | Collector returns `ModemResult(signal=LOAD_INTEGRITY)` | | |
+| 8 | Orchestrator: clear session | session cleared | |
+| 9 | Orchestrator: retry collection once in same poll | | |
+| 10 | If retry still produces stub | streak++ | |
+| 11 | Return `ModemSnapshot(AUTH_FAILED)` | | |
+
+**Assertions:**
+
+- Signal is `LOAD_INTEGRITY`, not `OK` — zero-anchor fulfillment is not a valid result
+- Connection status surfaces as `AUTH_FAILED` (priority 3 per `ENTITY_MODEL_SPEC § Status Sensor`)
+- Same-poll retry follows the LOAD_AUTH precedent (UC-17/UC-18); if the stub clears, recovery is symmetric to UC-18
+- Auth failure streak is incremented when retry also fails (LOAD_INTEGRITY is auth-related)
+- Repeated failures escalate to circuit breaker via the standard streak threshold
+- WARNING log: `"Stub response on /status.html [MODEL] — 0 of N expected parser anchors found, treating as session integrity failure"`
+- `ParseDiagnostics` is captured per resource in the diagnostic dump (`RUNTIME_POLLING_SPEC § Diagnostics for Remote Troubleshooting`)
+
+**Discriminator from UC-04:** UC-04 assumes the parser fulfilled its
+anchors and extracted values from a modem that simply reports zero
+locked channels. UC-19a is the inverse — the parser couldn't locate
+any of its declared sources at all. UC-04: `fulfilled == expected`
+with empty channels. UC-19a: `fulfilled == 0` with `expected > 0`.
+
+**Background:** Issue #151. Surfaced on Netgear CM1200 returning a
+7 KB stub on both `/DocsisStatus.htm` and `/RouterStatus.htm` for
+~8 minutes after a fresh integration re-add — all four expected
+`Init…TableTagValue` JS function bodies absent. Integration sat
+silent at `no_signal` until the modem eventually self-corrected with
+a 401. UC-19a closes the gap so detection happens on the next poll
+instead of waiting for the modem's internal session timeout.
+Architectural foundation: `ARCHITECTURE_DECISIONS.md § Signal/policy
+separation`.
 
 ---
 

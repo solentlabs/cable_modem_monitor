@@ -647,6 +647,56 @@ class TestLoadAuth:
         assert diag.stale_session_recovery_streak == 1
         assert diag.session_reuse_disabled is False
 
+
+class TestLoadIntegrity:
+    """UC-19a: LOAD_INTEGRITY signal handling — stub-page recovery (issue #151)."""
+
+    def test_load_integrity_clears_session_and_increments_streak(self) -> None:
+        """Persistent stub response → clears session, streak=1, status=AUTH_FAILED."""
+        collector = _mock_collector(_fail_result(CollectorSignal.LOAD_INTEGRITY))
+        orch = _make_orchestrator(collector=collector)
+
+        snapshot = orch.get_modem_data()
+
+        assert snapshot.connection_status == ConnectionStatus.AUTH_FAILED
+        assert orch.diagnostics().auth_failure_streak == 1
+        # Same-poll retry — collector executed twice
+        assert collector.execute.call_count == 2
+        collector.clear_session.assert_called()
+
+    def test_load_integrity_recovers_in_same_poll(self) -> None:
+        """First poll stub → cleared session → second poll real data → ONLINE."""
+        collector = _mock_collector(
+            [
+                _fail_result(CollectorSignal.LOAD_INTEGRITY),
+                _ok_result(),
+            ]
+        )
+        orch = _make_orchestrator(collector=collector)
+
+        snapshot = orch.get_modem_data()
+
+        # Recovers within the same poll, no AUTH_FAILED surfaced
+        assert snapshot.connection_status == ConnectionStatus.ONLINE
+        assert orch.diagnostics().auth_failure_streak == 0
+        assert collector.execute.call_count == 2
+        collector.clear_session.assert_called_once()
+
+    def test_load_integrity_escalates_to_circuit_breaker(self) -> None:
+        """Sustained stub responses eventually trip the circuit breaker."""
+        results = [_fail_result(CollectorSignal.LOAD_INTEGRITY) for _ in range(12)]
+        collector = _mock_collector(results)
+        orch = _make_orchestrator(collector=collector)
+
+        for _ in range(6):
+            orch.get_modem_data()
+
+        assert orch.diagnostics().circuit_breaker_open is True
+
+
+class TestLoadAuthAdaptiveReuse:
+    """UC-18 follow-on: stale-session recovery streak adapts session reuse."""
+
     def test_load_auth_disables_reuse_after_two_consecutive_recoveries(self) -> None:
         """Two consecutive stale-session recoveries disable reuse for this runtime."""
         collector = _mock_collector(

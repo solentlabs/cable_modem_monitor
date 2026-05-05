@@ -16,7 +16,16 @@ class TestCollectorSignal:
 
     def test_all_signals_present(self) -> None:
         """All spec-defined signals exist."""
-        expected = {"ok", "auth_failed", "auth_lockout", "connectivity", "load_error", "load_auth", "parse_error"}
+        expected = {
+            "ok",
+            "auth_failed",
+            "auth_lockout",
+            "connectivity",
+            "load_error",
+            "load_auth",
+            "load_integrity",
+            "parse_error",
+        }
         actual = {s.value for s in CollectorSignal}
         assert actual == expected
 
@@ -60,7 +69,7 @@ class TestHealthStatus:
 # ┌──────────────────┬─────────────┬──────────────────────────────┐
 # │ Enum             │ Count       │ Purpose                      │
 # ├──────────────────┼─────────────┼──────────────────────────────┤
-# │ CollectorSignal  │ 7 members   │ Pipeline failure classes     │
+# │ CollectorSignal  │ 8 members   │ Pipeline failure classes     │
 # │ ConnectionStatus │ 5 members   │ Derived from poll outcome    │
 # │ DocsisStatus     │ 4 members   │ Derived from lock_status     │
 # │ HealthStatus     │ 5 members   │ Derived from probes          │
@@ -68,7 +77,7 @@ class TestHealthStatus:
 #
 # fmt: off
 ENUM_MEMBER_COUNTS = [
-    (CollectorSignal,  7, "pipeline failure classes"),
+    (CollectorSignal,  8, "pipeline failure classes"),
     (ConnectionStatus, 5, "poll outcome statuses"),
     (DocsisStatus,     4, "DOCSIS lock statuses"),
     (HealthStatus,     5, "health probe statuses"),

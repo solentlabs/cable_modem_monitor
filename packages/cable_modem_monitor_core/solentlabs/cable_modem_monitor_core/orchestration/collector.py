@@ -27,6 +27,7 @@ from ..loaders.http import (
 )
 from ..models.modem_config.auth import BasicAuth, NoneAuth
 from ..parsers.coordinator import ModemParserCoordinator
+from ..parsers.diagnostics import ParseDiagnostics
 from .actions import execute_action
 from .models import ModemResult, ResourceFetch
 from .signals import CollectorSignal
@@ -200,16 +201,11 @@ class ModemDataCollector:
                 error=str(exc),
             )
 
-        # Phase 3: Parse
-        try:
-            data = self._parse(resources)
-        except Exception as exc:
-            _logger.warning("Parse error [%s]: %s", self._modem_config.model, exc)
-            return ModemResult(
-                success=False,
-                signal=CollectorSignal.PARSE_ERROR,
-                error=str(exc),
-            )
+        # Phase 3: Parse + stub-page integrity check (UC-19a)
+        parse_outcome = self._run_parse_phase(resources)
+        if isinstance(parse_outcome, ModemResult):
+            return parse_outcome
+        data = parse_outcome
 
         # Phase 4: Logout (best-effort, after successful collection)
         self._execute_logout_if_needed()
@@ -509,11 +505,57 @@ class ModemDataCollector:
             error=str(exc),
         )
 
-    def _parse(self, resources: dict[str, Any]) -> dict[str, Any]:
-        """Parse resources into ModemData."""
+    def _parse(self, resources: dict[str, Any]) -> tuple[dict[str, Any], ParseDiagnostics]:
+        """Parse resources into ModemData with diagnostics."""
         if self._coordinator is None:
             raise RuntimeError("No parser coordinator configured")
         return self._coordinator.parse(resources)
+
+    def _run_parse_phase(self, resources: dict[str, Any]) -> dict[str, Any] | ModemResult:
+        """Run parse + stub-page integrity check.
+
+        Returns ModemData on success or a failure ModemResult for
+        PARSE_ERROR / LOAD_INTEGRITY paths. Keeps execute() readable.
+        """
+        try:
+            data, diagnostics = self._parse(resources)
+        except Exception as exc:
+            _logger.warning("Parse error [%s]: %s", self._modem_config.model, exc)
+            return ModemResult(
+                success=False,
+                signal=CollectorSignal.PARSE_ERROR,
+                error=str(exc),
+            )
+        if diagnostics.has_zero_fulfillment:
+            return self._build_load_integrity_result(diagnostics)
+        return data
+
+    def _build_load_integrity_result(self, diagnostics: ParseDiagnostics) -> ModemResult:
+        """Build a LOAD_INTEGRITY result for a stub-page response.
+
+        Triggered when the parser found 0 of N expected anchors on any
+        resource — the response arrived as HTTP 200 but is structurally
+        not a data page. The orchestrator clears the session and
+        re-authenticates per UC-19a.
+        """
+        affected = ", ".join(diagnostics.zero_fulfillment_resources)
+        counts = "; ".join(
+            f"{path} ({c.fulfilled}/{c.expected})"
+            for path, c in diagnostics.by_resource.items()
+            if c.expected > 0 and c.fulfilled == 0
+        )
+        _logger.warning(
+            "Stub response on %s [%s] — 0 of N expected parser anchors found, "
+            "treating as session integrity failure (%s)",
+            affected,
+            self._modem_config.model,
+            counts,
+        )
+        return ModemResult(
+            success=False,
+            signal=CollectorSignal.LOAD_INTEGRITY,
+            error=f"0 of N expected anchors on {affected} — stub response",
+        )
 
     def _execute_logout_if_needed(self) -> None:
         """Execute logout action for single-session modems.

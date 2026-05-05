@@ -205,6 +205,22 @@ class SignalPolicy:
             self._maybe_trip_circuit_breaker()
             return ConnectionStatus.AUTH_FAILED
 
+        if signal == CollectorSignal.LOAD_INTEGRITY:
+            # UC-19a — stub-page response. Same recovery semantics as
+            # LOAD_AUTH: clear session, count toward auth streak,
+            # surface as auth_failed. Distinct signal preserved for
+            # log clarity ("stub response" vs "credentials rejected").
+            self._auth_failure_streak += 1
+            self._collector.clear_session()
+            _logger.info(
+                "LOAD_INTEGRITY [%s] — stub response, clearing session, reporting auth_failed (streak: %d/%d)",
+                self._model,
+                self._auth_failure_streak,
+                self._threshold,
+            )
+            self._maybe_trip_circuit_breaker()
+            return ConnectionStatus.AUTH_FAILED
+
         if signal == CollectorSignal.CONNECTIVITY:
             self._connectivity_streak += 1
             backoff = min(

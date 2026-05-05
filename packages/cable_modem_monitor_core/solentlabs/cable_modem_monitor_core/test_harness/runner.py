@@ -376,9 +376,13 @@ def _run_pipeline(
             )
             resources = loader.fetch(targets, auth_result)
 
-        # Parse
+        # Parse — discard diagnostics, this harness only surfaces the
+        # extracted data; downstream callers (CLI, golden-file generator)
+        # consume the dict alone. Stub-page detection lives in the
+        # production collector path, not in the test harness.
         coordinator = ModemParserCoordinator(parser_config, post_processor)
-        return coordinator.parse(resources)
+        data, _ = coordinator.parse(resources)
+        return data
 
 
 def _run_orchestrated(

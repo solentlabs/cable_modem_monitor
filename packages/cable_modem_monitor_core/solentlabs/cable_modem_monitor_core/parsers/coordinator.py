@@ -3,6 +3,8 @@
 Reads parser.yaml config, dispatches to registered parsers per section,
 applies parser.py post-processing hooks, enriches system_info with
 derived fields (channel counts, aggregate sums), and assembles ModemData.
+Surfaces per-resource ParseDiagnostics alongside ModemData so the
+collector can detect stub-page responses (UC-19a).
 
 Parser registries (type-to-callable dispatch tables) live in
 ``registries.py``.
@@ -13,9 +15,11 @@ See PARSING_SPEC.md ModemParserCoordinator and Aggregate sections.
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from typing import Any, TypeVar
 
 from ..models.parser_config.config import ParserConfig
+from .diagnostics import AnchorCount, ParseDiagnostics
 from .registries import CHANNEL_PARSERS, SYSINFO_PARSERS
 
 _T = TypeVar("_T")
@@ -54,7 +58,7 @@ class ModemParserCoordinator:
         self._config = config
         self._post_processor = post_processor
 
-    def parse(self, resources: dict[str, Any]) -> dict[str, Any]:
+    def parse(self, resources: dict[str, Any]) -> tuple[dict[str, Any], ParseDiagnostics]:
         """Run the full extraction pipeline and assemble ModemData.
 
         Sequence: extract channels → extract system_info → apply hooks
@@ -65,13 +69,20 @@ class ModemParserCoordinator:
                 format-dependent (BeautifulSoup for HTML, dict for JSON).
 
         Returns:
-            ModemData dict with downstream, upstream, and optional
-            system_info. Derived fields are merged into system_info.
+            Tuple of (ModemData, ParseDiagnostics). ModemData has
+            downstream, upstream, and optional system_info, with
+            derived fields merged into system_info. ParseDiagnostics
+            reports per-resource expected vs. fulfilled anchor counts
+            (see PARSING_SPEC.md § Parser Diagnostics).
         """
         result: dict[str, Any] = {}
+        per_resource: dict[str, AnchorCount] = defaultdict(AnchorCount)
 
         for section_name in _CHANNEL_SECTIONS:
-            result[section_name] = self._extract_channel_section(section_name, resources)
+            channels, count, resource = self._extract_channel_section(section_name, resources)
+            result[section_name] = channels
+            if resource is not None:
+                per_resource[resource] = per_resource[resource] + count
 
         # Null metrics on unlocked channels before aggregation.
         # See CHANNEL_IDENTIFICATION_SPEC.md §6.
@@ -83,54 +94,75 @@ class ModemParserCoordinator:
         for section_name in _CHANNEL_SECTIONS:
             _strip_ofdm_fields(result[section_name])
 
-        system_info = self._extract_system_info(resources)
+        system_info, sysinfo_counts = self._extract_system_info(resources)
         if system_info:
             result["system_info"] = system_info
+        for resource, count in sysinfo_counts.items():
+            per_resource[resource] = per_resource[resource] + count
 
         self._enrich_derived_fields(result)
-        return result
+        diagnostics = ParseDiagnostics(by_resource=dict(per_resource))
+        return result, diagnostics
 
     def _extract_channel_section(
         self,
         section_name: str,
         resources: dict[str, Any],
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[list[dict[str, Any]], AnchorCount, str | None]:
         """Extract channels for a single section.
 
         Dispatches to the channel parser registry by section config type.
+        Returns (channels, anchor_count, resource_path). resource_path is
+        None when the section is absent from parser.yaml.
         """
         section = getattr(self._config, section_name, None)
         if section is None:
-            return self._apply_hook(section_name, [], resources)
+            return self._apply_hook(section_name, [], resources), AnchorCount(), None
 
         parser_fn = CHANNEL_PARSERS.get(type(section))
         if parser_fn is None:
             raise NotImplementedError(f"{type(section).__name__} has no registered channel parser")
 
-        channels = parser_fn(section, resources)
-        return self._apply_hook(section_name, channels, resources)
+        channels, anchors = parser_fn(section, resources)
+        # HNAP and arrays-mode JSON sections lack a single section-level
+        # `resource` — they don't participate in per-resource stub
+        # detection (the wrapper already aggregates per-array internally).
+        resource_path = getattr(section, "resource", None) or None
+        return self._apply_hook(section_name, channels, resources), anchors, resource_path
 
     def _extract_system_info(
         self,
         resources: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> tuple[dict[str, Any], dict[str, AnchorCount]]:
         """Extract system_info from all configured sources.
 
         Dispatches to the system info source registry by source config type.
-        Merges results with last-write-wins.
+        Merges results with last-write-wins. Returns (system_info,
+        per_resource_anchors). Per-resource anchors aggregate across all
+        sources sharing a resource path.
         """
+        per_resource: dict[str, AnchorCount] = defaultdict(AnchorCount)
+
         section = self._config.system_info
         if section is None:
-            return self._apply_hook("system_info", {}, resources)
+            return self._apply_hook("system_info", {}, resources), dict(per_resource)
 
         merged: dict[str, Any] = {}
         for source in section.sources:
             parser_fn = SYSINFO_PARSERS.get(type(source))
             if parser_fn is None:
                 raise NotImplementedError(f"{type(source).__name__} has no registered system_info parser")
-            merged.update(parser_fn(source, resources))
+            data, anchors = parser_fn(source, resources)
+            merged.update(data)
+            # HNAP sysinfo sources share the no-resource property of HNAP
+            # channel sections — skip per-resource aggregation for them.
+            # Empty-string resource paths (e.g., arrays-mode JSON) are
+            # treated the same way.
+            resource_path = getattr(source, "resource", None) or None
+            if resource_path is not None:
+                per_resource[resource_path] = per_resource[resource_path] + anchors
 
-        return self._apply_hook("system_info", merged, resources)
+        return self._apply_hook("system_info", merged, resources), dict(per_resource)
 
     def _apply_hook(
         self,

@@ -325,8 +325,11 @@ class Orchestrator:
             result = self._collector.execute()
             collection_success = result.success
 
-            if not result.success and result.signal is CollectorSignal.LOAD_AUTH:
-                result = self._retry_load_auth_once()
+            if not result.success and result.signal in (
+                CollectorSignal.LOAD_AUTH,
+                CollectorSignal.LOAD_INTEGRITY,
+            ):
+                result = self._retry_load_auth_once(result.signal)
                 collection_success = result.success
                 load_auth_recovered = result.success
 
@@ -345,16 +348,19 @@ class Orchestrator:
             if self._health_monitor is not None:
                 self._health_monitor.record_collection_end(collection_success)
 
-    def _retry_load_auth_once(self) -> ModemResult:
-        """Retry one LOAD_AUTH failure immediately with a fresh session.
+    def _retry_load_auth_once(self, signal: CollectorSignal) -> ModemResult:
+        """Retry one auth-integrity failure immediately with a fresh session.
 
-        LOAD_AUTH represents session expiry or stale auth state, not
-        credential rejection. Clear the current session and allow one
-        fresh collection attempt in the same poll to smooth over HNAP
-        session expiry without falling back to the next scheduled poll.
+        Handles both LOAD_AUTH (session expiry, stale auth state) and
+        LOAD_INTEGRITY (stub-page response, UC-19a). Both indicate the
+        current session is unable to retrieve real data; clearing it
+        and re-authenticating in the same poll smooths over the failure
+        without waiting for the next scheduled cycle.
         """
+        signal_name = signal.value.upper()
         _logger.info(
-            "LOAD_AUTH [%s] — clearing session and retrying once in same poll",
+            "%s [%s] — clearing session and retrying once in same poll",
+            signal_name,
             self._modem_config.model,
         )
         self._collector.clear_session()
@@ -363,7 +369,8 @@ class Orchestrator:
         if retry_result.success:
             self._policy.record_stale_session_recovery()
             _logger.info(
-                "LOAD_AUTH recovered [%s] — fresh login succeeded in same poll",
+                "%s recovered [%s] — fresh login succeeded in same poll",
+                signal_name,
                 self._modem_config.model,
             )
 

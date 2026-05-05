@@ -74,3 +74,48 @@ class TestParseErrorDoesNotAffectStreak:
     def test_circuit_breaker_default(self, policy: SignalPolicy) -> None:
         """Circuit breaker starts closed."""
         assert policy.circuit_open is False
+
+
+class TestLoadIntegrityTreatedLikeLoadAuth:
+    """LOAD_INTEGRITY (UC-19a) gets the same recovery semantics as LOAD_AUTH."""
+
+    def test_load_integrity_returns_auth_failed(self, policy: SignalPolicy) -> None:
+        """LOAD_INTEGRITY surfaces as ConnectionStatus.AUTH_FAILED."""
+        result = ModemResult(
+            success=False,
+            signal=CollectorSignal.LOAD_INTEGRITY,
+            error="0 of 4 expected anchors on /status.html — stub response",
+        )
+        assert policy.apply(result) == ConnectionStatus.AUTH_FAILED
+
+    def test_load_integrity_clears_session(self) -> None:
+        """LOAD_INTEGRITY triggers session clear (same as LOAD_AUTH)."""
+        collector = MagicMock()
+        policy = SignalPolicy(collector)
+        result = ModemResult(success=False, signal=CollectorSignal.LOAD_INTEGRITY)
+        policy.apply(result)
+        collector.clear_session.assert_called_once()
+
+    def test_load_integrity_increments_auth_streak(self, policy: SignalPolicy) -> None:
+        """LOAD_INTEGRITY counts toward the auth failure streak."""
+        result = ModemResult(success=False, signal=CollectorSignal.LOAD_INTEGRITY)
+        assert policy.auth_failure_streak == 0
+        policy.apply(result)
+        assert policy.auth_failure_streak == 1
+        policy.apply(result)
+        assert policy.auth_failure_streak == 2
+
+    def test_load_integrity_trips_circuit_breaker_at_threshold(self, policy: SignalPolicy) -> None:
+        """Sustained LOAD_INTEGRITY trips the circuit breaker like LOAD_AUTH does."""
+        result = ModemResult(success=False, signal=CollectorSignal.LOAD_INTEGRITY)
+        for _ in range(policy._threshold):
+            policy.apply(result)
+        assert policy.circuit_open is True
+
+    def test_intervening_ok_resets_streak(self, policy: SignalPolicy) -> None:
+        """A successful poll between LOAD_INTEGRITY events resets the streak."""
+        load_integrity = ModemResult(success=False, signal=CollectorSignal.LOAD_INTEGRITY)
+        policy.apply(load_integrity)
+        assert policy.auth_failure_streak == 1
+        policy.clear_streak()
+        assert policy.auth_failure_streak == 0

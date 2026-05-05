@@ -39,8 +39,24 @@ def _add_analysis_blocks(result: dict[str, Any], analysis: dict[str, Any]) -> No
     ``cookie_name`` and ``token_prefix`` are detected by session analysis
     but belong on the auth strategy config (auth owns the cookie it
     produces). This function moves them from session to auth.
+
+    Cross-block constraint: ``session.max_concurrent: 1`` requires
+    ``actions.logout`` (Core validator: single-session modem without
+    logout locks users out). When session inference proposes
+    ``max_concurrent=1`` but no logout endpoint was detected in the
+    HAR, demote ``max_concurrent`` so the generated config validates.
+    The contributor must capture a logout flow before single-session
+    semantics can be re-enabled.
     """
     session_data = analysis.get("session", {})
+    actions_data = analysis.get("actions", {})
+
+    if session_data.get("max_concurrent") == 1 and not actions_data.get("logout"):
+        # Inferred single-session without observed logout — invalid combo.
+        # Drop the inference; contributor needs to capture logout for
+        # max_concurrent to come back.
+        session_data = {**session_data, "max_concurrent": None}
+
     auth_block = _build_auth_block(analysis.get("auth", {}), session_data)
     if auth_block:
         result["auth"] = auth_block
@@ -49,7 +65,7 @@ def _add_analysis_blocks(result: dict[str, Any], analysis: dict[str, Any]) -> No
     if session_block:
         result["session"] = session_block
 
-    actions_block = _build_actions_block(analysis.get("actions", {}))
+    actions_block = _build_actions_block(actions_data)
     if actions_block:
         result["actions"] = actions_block
 
@@ -168,6 +184,17 @@ _SJCL_DEFAULTS: dict[str, int] = {
     "ccm_tag_length": 16,
 }
 
+# PBKDF2 challenge-response defaults: same iteration count and key
+# length as SJCL — these are the values both Technicolor (cga4236,
+# cga6444vf) and Arris (tg3442de) firmwares use, and they're not
+# present in the HAR wire data because the JS computes them client-
+# side from constants. The schema requires them; without defaults the
+# generated modem.yaml fails Pydantic validation.
+_PBKDF2_DEFAULTS: dict[str, int] = {
+    "pbkdf2_iterations": 1000,
+    "pbkdf2_key_length": 128,
+}
+
 
 def _inject_strategy_defaults(block: dict[str, Any]) -> None:
     """Inject required defaults for strategies with known crypto parameters.
@@ -178,6 +205,9 @@ def _inject_strategy_defaults(block: dict[str, Any]) -> None:
     strategy = block.get("strategy")
     if strategy == "form_sjcl":
         for key, value in _SJCL_DEFAULTS.items():
+            block.setdefault(key, value)
+    elif strategy == "form_pbkdf2":
+        for key, value in _PBKDF2_DEFAULTS.items():
             block.setdefault(key, value)
 
 

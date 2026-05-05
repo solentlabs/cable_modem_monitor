@@ -364,9 +364,12 @@ Applied once at module import time.
 
 Some modems silently serve a login page at a data URL when the session
 expires — HTTP 200, but the body is a login form instead of data.
-Without detection, this reaches the parser and causes PARSE_ERROR,
-which misclassifies the root cause (auth, not parser) and prevents
-self-healing (no session clear, no auth streak increment).
+Without detection, this reaches the parser and produces empty
+extraction results that surface as a silent `no_signal` — wrong
+root-cause classification (looks like a modem with zero channels,
+actually an auth integrity failure) with no self-healing trigger.
+The fall-through case is fully covered by UC-19a (see
+[ORCHESTRATION_USE_CASES.md](ORCHESTRATION_USE_CASES.md)).
 
 ### Runtime behavior
 
@@ -394,7 +397,7 @@ Structured formats (JSON, XML) and HNAP transport are not checked.
 | Failure | Impact | Likelihood | Mitigation |
 |---------|--------|------------|------------|
 | False positive (data page has `<input type="password">`) | Auth failure loop — session cleared every poll | Very low — parser.yaml only references status/data pages, not settings/admin pages | Detected during HAR regression; override via `session.login_page` (future, if needed) |
-| False negative (login page without `<input type="password">`) | Falls through to PARSE_ERROR — wrong classification but not destructive | Low — JS-only SPA login forms | Detected during MCP onboarding (see below) |
+| False negative (response without `<input type="password">` is not real data) | Falls through to the parser and produces silent empty results — incorrectly surfaces as `no_signal`. Covers both JS-rendered SPA login forms and stub responses (issue #151). | Low — but observed in the field (CM1200, 2026-05-02) | Runtime: Parser Coordinator detects `0 of N expected anchors fulfilled` and raises `LOAD_INTEGRITY` (see UC-19a, `PARSING_SPEC § Parser Diagnostics`). Intake: HAR-time MCP onboarding flag (see below) |
 
 If a false positive occurs in the field, the escape hatch is a
 per-modem `session.login_page` override in modem.yaml with an
