@@ -1,8 +1,0 @@
-# Dependabot: security advisories only.
-# Version updates handled manually once per release cycle (see RELEASING.md).
-# Security updates fire automatically — no `updates:` entries needed for them.
-#
-# To re-enable scheduled version updates, see git history for the prior config.
-
-version: 2
-updates: []
