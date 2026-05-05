@@ -103,6 +103,19 @@ wins over convenience.
     `from __future__ import annotations` makes it parse, but the code
     reads wrong.
 
+15a. **Suppression discipline.** When a quality gate flags an issue,
+    the default reach is the code fix. Suppression mechanisms
+    (`# type: ignore`, `# pyright: ignore`, bare `# noqa`,
+    schema-validator scaffolds, validator bypass flags) are last
+    resorts. Any suppression added in a change must carry a same-line
+    justification comment naming what's actually true and why
+    suppression is the right shape. `make suppression-check` (and the
+    `Suppression Discipline` CI job) enforces this on lines added in
+    your changes; existing suppressions are grandfathered. When in
+    doubt, name the tradeoff to the developer rather than silently
+    inserting a suppression — never propose a suppression as the
+    first answer to a quality-gate failure.
+
 ### Testing
 
 16. **Table-driven tests by default.** Identify the pattern BEFORE

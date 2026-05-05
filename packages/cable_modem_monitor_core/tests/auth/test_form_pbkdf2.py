@@ -132,9 +132,9 @@ def _mock_post(session: requests.Session, *responses: Any) -> None:
     so each successive POST yields the next item. Exception instances raise.
     """
     if len(responses) == 1:
-        session.post = MagicMock(return_value=responses[0])  # type: ignore[assignment]
+        session.post = MagicMock(return_value=responses[0])  # type: ignore[assignment]  # monkey-patch on real Session; mypy can't model attribute replacement
     else:
-        session.post = MagicMock(side_effect=list(responses))  # type: ignore[assignment]
+        session.post = MagicMock(side_effect=list(responses))  # type: ignore[assignment]  # multi-response variant of the same monkey-patch
 
 
 def _resp(*, json_value: Any = None, json_error: bool = False, status_code: int = 200) -> MagicMock:

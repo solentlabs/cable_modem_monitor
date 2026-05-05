@@ -1,0 +1,9 @@
+{
+  "_description": "Multiple files in one diff — line counters reset per-file, paths preserved",
+  "_diff": "diff --git a/a.py b/a.py\nindex 1111111..2222222 100644\n--- a/a.py\n+++ b/a.py\n@@ -5,0 +6,1 @@\n+a = 1  # type: ignore\ndiff --git a/sub/b.py b/sub/b.py\nindex 3333333..4444444 100644\n--- a/sub/b.py\n+++ b/sub/b.py\n@@ -10,0 +11,2 @@\n+b = 2\n+c = 3  # noqa: B008\n",
+  "_expected": [
+    ["a.py", 6, "a = 1  # type: ignore"],
+    ["sub/b.py", 11, "b = 2"],
+    ["sub/b.py", 12, "c = 3  # noqa: B008"]
+  ]
+}

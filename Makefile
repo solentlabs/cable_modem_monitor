@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression pii-check catalog-readme-check install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
+.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression pii-check catalog-readme-check suppression-check install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
 
 # Pin tool invocations to the project venv so that subprocesses
 # without venv on PATH (release.py shelling out, fresh clones, CI
@@ -118,7 +118,7 @@ validate:
 # hacs/action@main, which runs in a GitHub-hosted Docker context with
 # external network checks against home-assistant/brands and HACS APIs;
 # not reasonably reproducible locally — same exception class as hassfest).
-validate-ci: check test intake-regression pii-check catalog-readme-check
+validate-ci: check test intake-regression pii-check catalog-readme-check suppression-check
 	@echo "✅ Full CI validation passed!"
 	@$(VENV_BIN)/pip list --outdated 2>/dev/null || true
 
@@ -131,6 +131,14 @@ intake-regression:
 pii-check:
 	@echo "🔍 Scanning fixtures for PII..."
 	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py
+
+# Suppression-discipline scan — mirrors CI suppression-check job.
+# Scans the most recent commit's added lines for unjustified
+# `# type: ignore` / `# pyright: ignore` / bare `# noqa` patterns.
+# See CLAUDE.md § Code Discipline (Suppression discipline).
+suppression-check:
+	@echo "🔍 Scanning for unjustified suppressions..."
+	@$(VENV_BIN)/python scripts/check_suppression_discipline.py --branch HEAD~1
 
 # Catalog README freshness — mirrors CI catalog-readme job.
 catalog-readme-check:

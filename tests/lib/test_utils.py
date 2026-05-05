@@ -197,4 +197,4 @@ def test_parse_uptime_unexpected_exception_returns_none():
         def __bool__(self) -> bool:
             return True
 
-    assert parse_uptime_to_seconds(_Boom()) is None  # type: ignore[arg-type]
+    assert parse_uptime_to_seconds(_Boom()) is None  # type: ignore[arg-type]  # _Boom raises in .strip() to assert the parser's defensive except returns None

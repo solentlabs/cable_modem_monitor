@@ -1,0 +1,8 @@
+{
+  "_description": "Multiple hunks in one file — line counter is reset per hunk header, not accumulated",
+  "_diff": "diff --git a/example.py b/example.py\nindex 1111111..2222222 100644\n--- a/example.py\n+++ b/example.py\n@@ -10,0 +11,1 @@\n+first_addition  # type: ignore\n@@ -50,0 +52,1 @@\n+second_addition  # noqa\n",
+  "_expected": [
+    ["example.py", 11, "first_addition  # type: ignore"],
+    ["example.py", 52, "second_addition  # noqa"]
+  ]
+}

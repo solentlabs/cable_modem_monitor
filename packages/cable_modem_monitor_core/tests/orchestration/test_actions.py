@@ -711,7 +711,7 @@ class TestExecuteAction:
         modem_config.model = "TPS-2000"
 
         with caplog.at_level(logging.WARNING):
-            result = execute_action(collector, modem_config, _UnknownAction())  # type: ignore[arg-type]
+            result = execute_action(collector, modem_config, _UnknownAction())  # type: ignore[arg-type]  # _UnknownAction is intentionally off-spec to exercise the unknown-action branch
 
         assert result.success is False
         assert "Unknown action type" in result.message

@@ -1,0 +1,8 @@
+{
+  "_description": "Two added lines on a Python file — both reported, with new-side line numbers preserved",
+  "_diff": "diff --git a/example.py b/example.py\nindex abc123..def456 100644\n--- a/example.py\n+++ b/example.py\n@@ -10,0 +11,2 @@\n+x = 1  # type: ignore[arg-type]\n+y = 2  # type: ignore[arg-type]  # rationale here\n",
+  "_expected": [
+    ["example.py", 11, "x = 1  # type: ignore[arg-type]"],
+    ["example.py", 12, "y = 2  # type: ignore[arg-type]  # rationale here"]
+  ]
+}

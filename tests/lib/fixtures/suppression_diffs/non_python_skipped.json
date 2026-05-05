@@ -1,0 +1,5 @@
+{
+  "_description": "Non-.py file additions are filtered out so the scanner stays Python-scoped",
+  "_diff": "diff --git a/notes.md b/notes.md\n--- a/notes.md\n+++ b/notes.md\n@@ -1,0 +1,1 @@\n+# type: ignore — docs example, not real code\n",
+  "_expected": []
+}

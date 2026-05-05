@@ -208,6 +208,38 @@ jobs:
         run: |
           python packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py
 
+  suppression-check:
+    name: Suppression Discipline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          # Need full history so the scanner can diff against the
+          # base ref (origin/main or the PR target) to scope checks
+          # to lines added on this branch.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Determine base ref
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "ref=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          else
+            # Push to a branch — diff against origin/main as the trunk.
+            echo "ref=origin/main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run suppression discipline check
+        run: |
+          python scripts/check_suppression_discipline.py --branch "${{ steps.base.outputs.ref }}"
+
   catalog-readme:
     name: Catalog README
     runs-on: ubuntu-latest

@@ -39,7 +39,7 @@ def test_anchor_count_addition_aggregates_per_resource() -> None:
 def test_anchor_count_is_immutable() -> None:
     count = AnchorCount(expected=4, fulfilled=4)
     with pytest.raises(FrozenInstanceError):
-        count.fulfilled = 0  # type: ignore[misc]
+        count.fulfilled = 0  # type: ignore[misc]  # intentional: asserting frozen dataclass rejects mutation
 
 
 # ---------------------------------------------------------------------------

@@ -58,6 +58,19 @@ repos:
         files: ^(packages/|custom_components/|tests/).*\.py$
         pass_filenames: false
 
+  # Suppression discipline — quality-gate suppressions added in a
+  # change must carry a same-line justification comment. Catches the
+  # AI antipattern of reaching for `# type: ignore` as a first answer.
+  # See CLAUDE.md § Code Discipline (Suppression discipline).
+  - repo: local
+    hooks:
+      - id: suppression-discipline
+        name: suppression-discipline
+        entry: .venv/bin/python scripts/check_suppression_discipline.py
+        language: system
+        pass_filenames: false
+        files: \.py$
+
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

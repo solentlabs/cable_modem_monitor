@@ -1,0 +1,7 @@
+{
+  "_description": "Deletions are skipped (don't bump new-line counter); only added lines are reported",
+  "_diff": "diff --git a/example.py b/example.py\nindex 1111111..2222222 100644\n--- a/example.py\n+++ b/example.py\n@@ -5 +5 @@\n-old_line\n+new_line  # type: ignore[arg-type]\n",
+  "_expected": [
+    ["example.py", 5, "new_line  # type: ignore[arg-type]"]
+  ]
+}
