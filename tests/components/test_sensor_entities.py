@@ -967,7 +967,7 @@ async def test_deferred_re_notification_calls_async_set_updated_data(
         "custom_components.cable_modem_monitor.sensor.asyncio.sleep",
         new_callable=AsyncMock,
     ):
-        await coro
+        _ = await coro
 
     coord.async_set_updated_data.assert_called_once_with(snapshot)
 

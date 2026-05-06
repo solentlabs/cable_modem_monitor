@@ -708,7 +708,7 @@ def create_generate_dashboard_handler(
 
         yaml_parts = [
             "# Cable Modem Dashboard",
-            "# Copy from here, paste into:" " Dashboard > Add Card > Manual",
+            "# Copy from here, paste into: Dashboard > Add Card > Manual",
             "type: vertical-stack",
             "cards:",
         ]

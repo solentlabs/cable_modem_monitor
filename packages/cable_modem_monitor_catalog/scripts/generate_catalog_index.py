@@ -242,17 +242,17 @@ def generate_index(output_path: Path | None = None) -> str:
         "# Cable Modem Catalog",
         "",
         "[![PyPI version](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-catalog)]"
-        "(https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)",
+        + "(https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)",
         "[![Downloads](https://img.shields.io/pypi/dm/solentlabs-cable-modem-monitor-catalog)]"
-        "(https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)",
+        + "(https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)",
         "[![Python](https://img.shields.io/pypi/pyversions/solentlabs-cable-modem-monitor-catalog)]"
-        "(https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)",
+        + "(https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)",
         "[![CI](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)]"
-        "(https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)",
+        + "(https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)",
         "[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]"
-        "(https://opensource.org/licenses/MIT)",
+        + "(https://opensource.org/licenses/MIT)",
         "",
-        "> **Internal dependency of [Cable Modem Monitor]" "(https://github.com/solentlabs/cable_modem_monitor).**",
+        "> **Internal dependency of [Cable Modem Monitor](https://github.com/solentlabs/cable_modem_monitor).**",
         "> Not intended for direct use — install the HA integration via [HACS](https://hacs.xyz/).",
         ">",
         "> This package contains modem configuration files, parser configs, and test fixtures",
@@ -325,10 +325,10 @@ def generate_index(output_path: Path | None = None) -> str:
             "- **Names**: All model names and part numbers that share this config (searchable)",
             "- **Status**: ✅ Confirmed | ⏳ Awaiting Verification | 🚫 Unsupported",
             "- **Transport**: "
-            "![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square) = web scraping | "
-            "![REST](https://img.shields.io/badge/-REST-5B9A5B?style=flat-square) = JSON REST API | "
-            "[![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square)]"
-            "(https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol) = SOAP-based, requires auth",
+            + "![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square) = web scraping | "
+            + "![REST](https://img.shields.io/badge/-REST-5B9A5B?style=flat-square) = JSON REST API | "
+            + "[![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square)]"
+            + "(https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol) = SOAP-based, requires auth",
             "",
         ]
     )
