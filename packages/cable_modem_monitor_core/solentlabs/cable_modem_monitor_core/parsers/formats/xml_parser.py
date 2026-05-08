@@ -22,7 +22,11 @@ import logging
 from typing import Any
 from xml.etree.ElementTree import Element
 
-from ...models.parser_config.common import ChannelTypeFixed, ChannelTypeMap
+from ...models.parser_config.common import (
+    ChannelTypeConfig,
+    ChannelTypeFixed,
+    ChannelTypeMap,
+)
 from ...models.parser_config.xml_format import (
     LockStatusAllOf,
     XMLSection,
@@ -131,19 +135,27 @@ def _extract_column(element: Element, col: Any) -> Any:
     sub = element.find(col.source)
     if sub is None or sub.text is None:
         return None
-    return convert_value(
+    value = convert_value(
         sub.text.strip(),
         col.type,
         scale=col.scale,
         input_format=col.format,
     )
+    if col.map is not None and value in col.map:
+        value = col.map[value]
+    return value
 
 
 def _apply_channel_type(
     channel: dict[str, Any],
-    channel_type: ChannelTypeFixed | ChannelTypeMap | None,
+    channel_type: ChannelTypeConfig | None,
 ) -> None:
-    """Apply fixed or mapped channel type to the channel dict."""
+    """Apply fixed or mapped channel type to the channel dict.
+
+    ``ChannelTypeDerive`` is a no-op here — the coordinator applies
+    direction-aware derivation post-extraction (the format parser
+    doesn't know whether this is a downstream or upstream section).
+    """
     if channel_type is None:
         return
     if isinstance(channel_type, ChannelTypeFixed):

@@ -1,0 +1,17 @@
+{
+  "_description": "is_ofdm is redundant with channel_type and must be stripped from OFDM/OFDMA output",
+  "_data": {
+    "downstream": [
+      {
+        "channel_number": 33,
+        "channel_id": 159,
+        "channel_type": "ofdm",
+        "lock_status": "locked",
+        "is_ofdm": true
+      }
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].is_ofdm", "rule": "ofdm_stripped_field"}
+  ]
+}

@@ -28,7 +28,7 @@ downstream:
           unit: dB
         - index: 5
           field: modulation
-          type: string
+          type: modulation
         - index: 7
           field: corrected
           type: integer
@@ -68,7 +68,7 @@ upstream:
           unit: "kSym/s"
         - index: 6
           field: modulation
-          type: string
+          type: modulation
       channel_type:
         fixed: atdma
 

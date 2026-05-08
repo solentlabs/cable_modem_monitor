@@ -80,6 +80,7 @@ FIELD_TYPES: frozenset[str] = frozenset(
         "frequency",
         "boolean",
         "lock_status",
+        "modulation",
         "uptime",
     }
 )

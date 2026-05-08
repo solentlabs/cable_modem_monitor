@@ -3,6 +3,19 @@
 > **This file**: Core principles, behavioral constraints, and development rules.
 > The principles section is the foundation — internalize it before any work.
 
+## Read First — Contribution Process Rules
+
+Before doing any non-trivial work in this repository, read
+[`CONTRIBUTING.md`](CONTRIBUTING.md) § Before You File. Process rules —
+when something is a PR vs a Discussion vs an issue, scope thresholds
+(Core changes, refactors touching more than two files, net-new
+direction) — live there.
+
+CLAUDE.md covers code-quality, architecture, and behavioral rules. It
+does not duplicate process rules. If a process question arises (where
+does this go? PR or Discussion? issue or PR?), the answer is in
+CONTRIBUTING.md, not here.
+
 ## Core Principles
 
 These principles govern every change to this project. They are not

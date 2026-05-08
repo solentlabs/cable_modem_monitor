@@ -42,7 +42,7 @@
     },
     "modulation": {
       "tier": 1,
-      "type": "string",
+      "type": "modulation",
       "headers": ["modulation", "mod"],
       "json_keys": ["modulation"]
     },

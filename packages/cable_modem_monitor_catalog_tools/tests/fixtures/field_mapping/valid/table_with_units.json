@@ -17,7 +17,7 @@
   "_expected_fields": {
     "channel_id": {"type": "integer", "tier": 1, "index": 0},
     "lock_status": {"type": "lock_status", "tier": 1, "index": 1},
-    "modulation": {"type": "string", "tier": 1, "index": 2},
+    "modulation": {"type": "modulation", "tier": 1, "index": 2},
     "frequency": {"type": "frequency", "tier": 1, "index": 3},
     "power": {"type": "float", "tier": 1, "index": 4},
     "snr": {"type": "float", "tier": 1, "index": 5},

@@ -194,6 +194,15 @@ def test_table_field_extraction(fixture_path: Path) -> None:
             if "index" in expected:
                 assert m.index == expected["index"], f"{field_name} index"
 
+    # Modulation field type — set via the registry; Core's
+    # canonicalize_modulation handler runs at extraction time. Per-modem
+    # ``map:`` blocks are obsolete.
+    mapping_fields = {m.field: m for m in section.mappings}
+    mod = mapping_fields.get("modulation")
+    if mod is not None:
+        assert mod.type == "modulation", f"expected type='modulation', got {mod.type!r}"
+        assert mod.map == {}, f"modulation map should be empty (Core canonicalizes); got {mod.map!r}"
+
 
 # =====================================================================
 # Transposed field extraction - fixture-driven
@@ -230,6 +239,15 @@ def test_transposed_field_extraction(fixture_path: Path) -> None:
 
     if "_expected_channel_count" in data:
         assert section.channel_count == data["_expected_channel_count"]
+
+    mapping_fields_full = {m.field: m for m in section.mappings}
+    mod = mapping_fields_full.get("modulation")
+    if mod is not None:
+        # modulation field type is set via the registry — Core's
+        # canonicalize_modulation handler runs at extraction time, no
+        # per-modem ``map:`` needed.
+        assert mod.type == "modulation", f"expected type='modulation', got {mod.type!r}"
+        assert mod.map == {}, f"modulation map should be empty (Core canonicalizes); got {mod.map!r}"
 
 
 # =====================================================================
@@ -271,6 +289,15 @@ def test_json_field_extraction(fixture_path: Path) -> None:
 
     if "_expected_channel_type" in data:
         assert section.channel_type == data["_expected_channel_type"]
+
+    mapping_fields_full = {m.field: m for m in section.mappings}
+    mod = mapping_fields_full.get("modulation")
+    if mod is not None:
+        # modulation field type is set via the registry — Core's
+        # canonicalize_modulation handler runs at extraction time, no
+        # per-modem ``map:`` needed.
+        assert mod.type == "modulation", f"expected type='modulation', got {mod.type!r}"
+        assert mod.map == {}, f"modulation map should be empty (Core canonicalizes); got {mod.map!r}"
 
 
 # =====================================================================
@@ -422,6 +449,15 @@ def test_js_field_extraction(fixture_path: Path) -> None:
 
     if "_expected_fields_per_record" in data:
         assert section.fields_per_record == data["_expected_fields_per_record"]
+
+    mapping_fields_full = {m.field: m for m in section.mappings}
+    mod = mapping_fields_full.get("modulation")
+    if mod is not None:
+        # modulation field type is set via the registry — Core's
+        # canonicalize_modulation handler runs at extraction time, no
+        # per-modem ``map:`` needed.
+        assert mod.type == "modulation", f"expected type='modulation', got {mod.type!r}"
+        assert mod.map == {}, f"modulation map should be empty (Core canonicalizes); got {mod.map!r}"
 
 
 # =====================================================================

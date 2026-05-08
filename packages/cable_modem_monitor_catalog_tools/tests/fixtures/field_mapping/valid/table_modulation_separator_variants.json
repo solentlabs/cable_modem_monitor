@@ -1,0 +1,23 @@
+{
+  "_description": "Table with separator/case variants (256-QAM, 256qam, 256 QAM) — all canonicalized to QAM256",
+  "_table": {
+    "table_id": "",
+    "css_class": "",
+    "headers": ["Channel ID", "Lock Status", "Modulation", "Frequency", "Power", "SNR"],
+    "rows": [
+      ["1", "Locked", "256-QAM", "507000000", "3.2", "38.5"],
+      ["2", "Locked", "256qam",  "513000000", "3.1", "37.8"],
+      ["3", "Locked", "256 QAM", "519000000", "3.0", "37.4"]
+    ],
+    "preceding_text": "Downstream Bonded Channels",
+    "title_row_text": "",
+    "table_index": 0
+  },
+  "_format": "table",
+  "_direction": "downstream",
+  "_expected_modulation_map": {
+    "256-QAM": "QAM256",
+    "256 QAM": "QAM256",
+    "256qam": "QAM256"
+  }
+}

@@ -7,7 +7,7 @@
       "channel_width": 109000000,
       "frequency": 751000000,
       "lock_status": "locked",
-      "modulation": "2048QAM",
+      "modulation": "QAM2048",
       "power": -9.5,
       "snr": 33.0
     },
@@ -18,7 +18,7 @@
       "channel_width": 61000000,
       "frequency": 175000000,
       "lock_status": "locked",
-      "modulation": "2048QAM",
+      "modulation": "QAM2048",
       "power": 4.5,
       "snr": 35.0
     },
@@ -28,7 +28,7 @@
       "channel_type": "qam",
       "frequency": 570000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.2,
       "snr": 36.4
     },
@@ -38,7 +38,7 @@
       "channel_type": "qam",
       "frequency": 578000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": 0.1,
       "snr": 36.6
     },
@@ -48,7 +48,7 @@
       "channel_type": "qam",
       "frequency": 586000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.2,
       "snr": 36.4
     },
@@ -58,7 +58,7 @@
       "channel_type": "qam",
       "frequency": 594000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.4,
       "snr": 36.6
     },
@@ -68,7 +68,7 @@
       "channel_type": "qam",
       "frequency": 602000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": 0.0,
       "snr": 36.6
     },
@@ -78,7 +78,7 @@
       "channel_type": "qam",
       "frequency": 618000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.5,
       "snr": 36.4
     },
@@ -88,7 +88,7 @@
       "channel_type": "qam",
       "frequency": 626000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.0,
       "snr": 35.8
     },
@@ -98,7 +98,7 @@
       "channel_type": "qam",
       "frequency": 634000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.8,
       "snr": 36.6
     },
@@ -108,7 +108,7 @@
       "channel_type": "qam",
       "frequency": 642000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.0,
       "snr": 36.6
     },
@@ -118,7 +118,7 @@
       "channel_type": "qam",
       "frequency": 650000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.1,
       "snr": 37.4
     },
@@ -128,7 +128,7 @@
       "channel_type": "qam",
       "frequency": 658000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.2,
       "snr": 36.6
     },
@@ -138,7 +138,7 @@
       "channel_type": "qam",
       "frequency": 666000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.9,
       "snr": 37.4
     },
@@ -148,7 +148,7 @@
       "channel_type": "qam",
       "frequency": 674000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.1,
       "snr": 37.6
     },
@@ -158,7 +158,7 @@
       "channel_type": "qam",
       "frequency": 682000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.4,
       "snr": 36.6
     },
@@ -168,7 +168,7 @@
       "channel_type": "qam",
       "frequency": 690000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.7,
       "snr": 37.4
     },
@@ -178,7 +178,7 @@
       "channel_type": "qam",
       "frequency": 474000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.9,
       "snr": 34.3
     },
@@ -188,7 +188,7 @@
       "channel_type": "qam",
       "frequency": 482000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.4,
       "snr": 34.9
     },
@@ -198,7 +198,7 @@
       "channel_type": "qam",
       "frequency": 490000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.0,
       "snr": 34.5
     },
@@ -208,7 +208,7 @@
       "channel_type": "qam",
       "frequency": 498000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.2,
       "snr": 33.5
     },
@@ -218,7 +218,7 @@
       "channel_type": "qam",
       "frequency": 522000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.3,
       "snr": 34.9
     },
@@ -228,7 +228,7 @@
       "channel_type": "qam",
       "frequency": 530000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.1,
       "snr": 35.6
     },
@@ -238,7 +238,7 @@
       "channel_type": "qam",
       "frequency": 538000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.9,
       "snr": 35.6
     },
@@ -248,7 +248,7 @@
       "channel_type": "qam",
       "frequency": 546000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": 0.0,
       "snr": 36.4
     },
@@ -258,7 +258,7 @@
       "channel_type": "qam",
       "frequency": 554000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.4,
       "snr": 36.6
     },
@@ -268,7 +268,7 @@
       "channel_type": "qam",
       "frequency": 562000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -0.2,
       "snr": 36.6
     },
@@ -278,7 +278,7 @@
       "channel_type": "qam",
       "frequency": 698000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.8,
       "snr": 37.4
     },
@@ -288,7 +288,7 @@
       "channel_type": "qam",
       "frequency": 706000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.6,
       "snr": 37.4
     },
@@ -298,7 +298,7 @@
       "channel_type": "qam",
       "frequency": 730000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.9,
       "snr": 37.4
     },
@@ -308,7 +308,7 @@
       "channel_type": "qam",
       "frequency": 738000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.9,
       "snr": 37.4
     },
@@ -318,7 +318,7 @@
       "channel_type": "qam",
       "frequency": 746000000,
       "lock_status": "locked",
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -2.4,
       "snr": 36.6
     }
@@ -340,7 +340,7 @@
       "channel_width": 35000000,
       "frequency": 29000000,
       "lock_status": "locked",
-      "modulation": "1024QAM",
+      "modulation": "QAM1024",
       "power": 51.5
     },
     {
@@ -349,7 +349,7 @@
       "channel_type": "qam",
       "frequency": 31000000,
       "lock_status": "locked",
-      "modulation": "64QAM",
+      "modulation": "QAM64",
       "power": 43.8
     },
     {
@@ -358,7 +358,7 @@
       "channel_type": "qam",
       "frequency": 51000000,
       "lock_status": "locked",
-      "modulation": "64QAM",
+      "modulation": "QAM64",
       "power": 44.0
     },
     {
@@ -367,7 +367,7 @@
       "channel_type": "qam",
       "frequency": 45000000,
       "lock_status": "locked",
-      "modulation": "64QAM",
+      "modulation": "QAM64",
       "power": 43.8
     },
     {
@@ -376,7 +376,7 @@
       "channel_type": "qam",
       "frequency": 37000000,
       "lock_status": "locked",
-      "modulation": "64QAM",
+      "modulation": "QAM64",
       "power": 44.0
     }
   ]

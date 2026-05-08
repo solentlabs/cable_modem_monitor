@@ -1,0 +1,20 @@
+{
+  "_description": "Modem doesn't publish lock_status — null and absent both pass per Field publication is per-modem",
+  "_data": {
+    "downstream": [
+      {
+        "channel_number": 1,
+        "channel_id": 32,
+        "channel_type": "qam",
+        "modulation": "QAM256"
+      },
+      {
+        "channel_number": 2,
+        "channel_id": 33,
+        "channel_type": "qam",
+        "lock_status": null,
+        "modulation": "QAM256"
+      }
+    ]
+  }
+}

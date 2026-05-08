@@ -591,6 +591,26 @@ channel — the `modulation` field is meaningful. OFDM channels use
 per-subcarrier adaptive modulation across thousands of subcarriers —
 there is no single modulation value. The field contracts reflect this.
 
+#### Field publication is per-modem
+
+Modems vary in what they expose. The catalog represents what each
+modem actually publishes — it does not fabricate fields the modem
+doesn't report.
+
+- **Identity fields** (`channel_number`, `channel_id`, `channel_type`)
+  are universally required. They drive entity identity and must be
+  canonical on every channel.
+- **All other fields** in the per-type tables below are *if-published*:
+  when the key is present and the value is non-null, it must conform to
+  the contract; when the key is absent or the value is null, no
+  violation. This covers modems that don't expose a column for the
+  field (e.g., older DOCSIS 3.0 status pages without lock state) and
+  the unlocked-channel nulling rule (unlocked channels carry only
+  `channel_number` and `lock_status`; other fields null).
+
+Parser regressions that silently drop a field are caught by parser ↔
+golden self-consistency, not by spec conformance.
+
 #### Identity fields (all channel types)
 
 Every channel dict contains these fields. They are used for entity
@@ -603,6 +623,25 @@ identity, position tracking, and lock status derivation.
 | `channel_type` | str | `"qam"`, `"ofdm"`, `"atdma"`, `"ofdma"` |
 | `lock_status` | str | `"locked"` / `"not_locked"` |
 
+#### Canonical modulation values
+
+The `modulation` field carries a single value that names a real modulation
+scheme. Canonical form is `QAM` followed by the constellation size, no
+separator: `QAM16`, `QAM32`, `QAM64`, `QAM256`, `QAM1024`, `QAM2048`,
+`QAM4096`. `QPSK` is permitted for ATDMA. Anything else is a spec
+violation.
+
+Regex: `^QAM(?:16|32|64|256|1024|2048|4096)$|^QPSK$`
+
+Modems report modulation in many surface forms (`256-QAM`, `256 QAM`,
+`256qam`, `qam_256`, etc.). Normalization is the parser's job — apply
+`map:` at extraction time, never push variants through to consumers.
+
+Non-modulation strings sometimes appear in the source's modulation
+column (channel-type restatements like `OFDM`, profile IDs, IUC lists,
+bare `QAM`). The parser MUST `map:` them to a canonical value or omit
+the field entirely. Passing them through is a spec violation.
+
 #### QAM Downstream (`channel_type: "qam"`)
 
 | Field | Type | Notes |
@@ -610,7 +649,7 @@ identity, position tracking, and lock status derivation.
 | `frequency` | int | Hz, always normalized |
 | `power` | float | dBmV |
 | `snr` | float | dB |
-| `modulation` | str | Single scheme per channel: `"256QAM"`, `"64QAM"`, etc. |
+| `modulation` | str | Single scheme per channel. Canonical form: `"QAM256"`, `"QAM64"`, etc. See [Canonical modulation values](#canonical-modulation-values). |
 | `corrected` | int | Correctable codeword errors |
 | `uncorrected` | int | Uncorrectable codeword errors |
 
@@ -620,7 +659,7 @@ identity, position tracking, and lock status derivation.
 | ----- | ---- | ----- |
 | `frequency` | int | Hz |
 | `power` | float | dBmV |
-| `modulation` | str | `"64QAM"`, `"QPSK"`, etc. |
+| `modulation` | str | Canonical form: `"QAM64"`, `"QPSK"`, etc. See [Canonical modulation values](#canonical-modulation-values). |
 | `symbol_rate` | int | Sym/s |
 
 #### OFDM Downstream (`channel_type: "ofdm"`)
@@ -636,7 +675,7 @@ reported by roughly half the fleet.
 | `snr` | float | Average RxMER in dB |
 | `corrected` | int | LDPC codeword corrections (when available) |
 | `uncorrected` | int | Uncorrectable LDPC codewords (when available) |
-| `modulation` | str | Optional. PLC subcarrier modulation (e.g., `"QAM4096"`). Values must be actual modulation schemes, not generic labels — `"OFDM"`, `"Other"`, `"OFDM PLC"` are channel type restatements and should be normalized via `map` or omitted. |
+| `modulation` | str | Optional. PLC subcarrier modulation in canonical form (e.g., `"QAM4096"`). The parser MUST normalize via `map:` or omit the field if the source carries non-modulation strings. Common offenders: channel-type restatements (`"OFDM"`, `"OFDMA"`, `"OFDM PLC"`, `"Other"`), DOCSIS 3.1 profile IDs, and IUC lists (`"0,1,3,4"`, `"3, 4, 5, 6, 9..."`). See [Canonical modulation values](#canonical-modulation-values). |
 
 #### OFDMA Upstream (`channel_type: "ofdma"`)
 
@@ -820,7 +859,7 @@ Modems report channel types differently. The strategy needs to classify
 each channel as one of four canonical types: `qam`, `ofdm`, `atdma`,
 `ofdma`.
 
-parser.yaml supports three detection mechanisms:
+parser.yaml supports four detection mechanisms:
 
 ### Fixed
 
@@ -832,6 +871,26 @@ each table contains one channel type:
 channel_type:
   fixed: "qam"
 ```
+
+### Derive (universal direction-aware rule)
+
+For modems with no dedicated channel_type column where the canonical
+direction-driven rule applies — DS QAM*/QPSK → `qam`, US QAM*/QPSK →
+`atdma`, OFDM → `ofdm`, OFDMA → `ofdma`. Replaces hand-coded ``map:``
+blocks that enumerate every constellation per direction.
+
+```yaml
+channel_type:
+  derive: from_modulation
+```
+
+The coordinator applies the derivation post-extraction (it knows
+direction from the section name). Combine with ``type: modulation`` on
+the modulation field so canonicalization runs before derivation.
+
+Use ``map:`` (below) instead when the modem publishes a sentinel
+value the universal rule doesn't recognize, or when the channel_type
+column is a separate field with non-canonical labels.
 
 ### Map (cross-field derivation)
 
@@ -868,8 +927,8 @@ modem provides a dedicated channel type column/row/field.
 
 All mapping types support ``map``: ``ColumnMapping`` (table),
 ``RowMapping`` (transposed), ``ChannelMapping`` (HNAP, JS),
-``JsonChannelMapping`` (JSON), and ``JSSystemInfoFieldMapping``
-(system_info javascript).
+``JsonChannelMapping`` (JSON), ``XMLColumnMapping`` (XML), and
+``JSSystemInfoFieldMapping`` (system_info javascript).
 
 **HTML table** (column mapping):
 

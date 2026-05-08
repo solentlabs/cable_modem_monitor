@@ -1,8 +1,8 @@
 """Type conversion for parser field values.
 
 Handles field type conversion (integer, float, string, frequency, boolean,
-lock_status, uptime_seconds), unit suffix stripping, value mapping,
-scale multiplication, and frequency normalization.
+lock_status, modulation, uptime_seconds), unit suffix stripping, value
+mapping, scale multiplication, and frequency normalization.
 
 See PARSING_SPEC.md Field Types for the authoritative type definitions.
 """
@@ -12,6 +12,8 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any
+
+from ..spec_conformance import canonicalize_modulation
 
 _logger = logging.getLogger(__name__)
 
@@ -231,6 +233,23 @@ def _to_lock_status(value: str) -> str:
     return "locked" if value.lower() in _LOCKED_VALUES else "not_locked"
 
 
+def _to_modulation(value: str) -> str | None:
+    """Canonicalize a modulation value to its standard form.
+
+    Recognized variants (``256QAM``, ``256-QAM``, ``256qam``, etc.)
+    return canonical form (``QAM256``). Unrecognized strings pass
+    through unchanged so the spec-conformance gate surfaces them as
+    real violations rather than silently dropping data — a passthrough
+    here is preferable to opaque field omission for non-modulation
+    strings the modem might emit (channel-type sentinels, profile IDs,
+    IUC lists, etc.). Empty input returns ``None``.
+    """
+    if not value:
+        return None
+    canonical = canonicalize_modulation(value)
+    return canonical if canonical is not None else value
+
+
 def _to_uptime(value: str, input_format: str) -> str | None:
     """Convert raw uptime value to canonical ``"Nd HH:MM:SS"`` string.
 
@@ -329,6 +348,7 @@ _TYPE_HANDLERS.update(
         "frequency": _to_frequency,
         "boolean": _to_boolean,
         "lock_status": _to_lock_status,
+        "modulation": _to_modulation,
         "uptime": _to_uptime,
     }
 )

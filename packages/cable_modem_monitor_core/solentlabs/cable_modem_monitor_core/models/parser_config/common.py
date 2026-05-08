@@ -160,6 +160,24 @@ class ChannelTypeMap(BaseModel):
     map: dict[str, str]
 
 
-ChannelTypeConfig = ChannelTypeFixed | ChannelTypeMap
+class ChannelTypeDerive(BaseModel):
+    """Auto-derive channel_type from the modulation field via the
+    universal direction-aware rule.
+
+    Use when the modem has no dedicated channel_type column and channel
+    type follows the canonical pattern (DS QAM* → qam, US QAM*/QPSK →
+    atdma, OFDMA → ofdma, OFDM → ofdm). Replaces hand-coded ``map:``
+    blocks that enumerate every constellation per direction.
+
+    Currently the only supported source is ``from_modulation``;
+    additional sources can be added if a non-modulation derivation rule
+    becomes universal across modems.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    derive: Literal["from_modulation"]
+
+
+ChannelTypeConfig = ChannelTypeFixed | ChannelTypeMap | ChannelTypeDerive
 
 FilterValue = str | dict[str, Any]

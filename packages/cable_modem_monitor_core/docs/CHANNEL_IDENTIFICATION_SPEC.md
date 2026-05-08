@@ -93,7 +93,7 @@ when it differs from the unified `channel_number`.
 [S34 parser.yaml][s34-parser] / HAR capture — 34 downstream positions
 in one response:
 
-- Positions 1-32: 256QAM
+- Positions 1-32: QAM256
 - Position 33: Not Locked (empty — could become either type)
 - Position 34: OFDM PLC
 

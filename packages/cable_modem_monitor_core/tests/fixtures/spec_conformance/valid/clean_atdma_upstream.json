@@ -1,0 +1,17 @@
+{
+  "_description": "ATDMA upstream channel with all canonical values",
+  "_data": {
+    "upstream": [
+      {
+        "channel_number": 1,
+        "channel_id": 1,
+        "channel_type": "atdma",
+        "lock_status": "locked",
+        "modulation": "QAM64",
+        "frequency": 47000000,
+        "power": 45.0,
+        "symbol_rate": 5120000
+      }
+    ]
+  }
+}

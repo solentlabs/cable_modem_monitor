@@ -70,6 +70,15 @@ CONVERT_VALUE_CASES = [
     ("Unlocked",        "lock_status", "not_locked", "lock_status Unlocked"),
     ("0",               "lock_status", "not_locked", "lock_status numeric 0"),
     ("no",              "lock_status", "not_locked", "lock_status no"),
+    ("QAM256",          "modulation", "QAM256",     "modulation canonical pass-through"),
+    ("256QAM",          "modulation", "QAM256",     "modulation number-prefix canonicalized"),
+    ("256-QAM",         "modulation", "QAM256",     "modulation hyphen separator canonicalized"),
+    ("256qam",          "modulation", "QAM256",     "modulation lowercase canonicalized"),
+    ("256 QAM",         "modulation", "QAM256",     "modulation space separator canonicalized"),
+    ("qpsk",            "modulation", "QPSK",       "modulation QPSK case normalized"),
+    ("OFDM",            "modulation", "OFDM",       "modulation unrecognized passes through (validator catches)"),
+    ("0,1,3,4",         "modulation", "0,1,3,4",    "modulation IUC list passes through (validator catches)"),
+    ("",                "modulation", None,         "modulation empty returns None"),
 ]
 # fmt: on
 

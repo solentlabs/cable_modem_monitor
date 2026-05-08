@@ -24,10 +24,13 @@ downstream:
       unit: "dB"
     - key: modulation
       field: modulation
-      type: string
+      type: modulation
+      # Source publishes integer codes (not modulation strings); the
+      # map translates code → value, then ``type: modulation`` validates
+      # the canonical form.
       map:
-        "1": "64QAM"
-        "2": "256QAM"
+        "1": "QAM64"
+        "2": "QAM256"
     - key: correcteds
       field: corrected
       type: integer
@@ -53,7 +56,7 @@ upstream:
       unit: "dBmV"
     - key: modtype
       field: modulation
-      type: string
+      type: modulation
     - key: scdmaMode
       field: channel_type
       type: string

@@ -1,0 +1,17 @@
+{
+  "_description": "channel_type is universally required — null is a violation even though other fields aren't",
+  "_data": {
+    "downstream": [
+      {
+        "channel_number": 1,
+        "channel_id": 32,
+        "channel_type": null,
+        "lock_status": "locked",
+        "modulation": "QAM256"
+      }
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].channel_type", "rule": "channel_type_enum"}
+  ]
+}

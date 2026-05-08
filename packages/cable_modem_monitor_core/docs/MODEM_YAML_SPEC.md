@@ -1122,13 +1122,20 @@ status: confirmed
 | Value | Meaning |
 |-------|---------|
 | `confirmed` | Full pipeline verified on real hardware (modem.verified.json present) |
-| `awaiting_verification` | Parser written, waiting for user confirmation |
+| `awaiting_verification` | Parser written or placeholder entry exists, awaiting user data or confirmation. Default for new modems and for entries blocked on missing HAR captures. |
 | `in_progress` | Work underway, not yet functional |
-| `unsupported` | Placeholder — awaiting user data |
+| `unsupported` | Modem cannot be monitored — no reachable channel-data endpoint (e.g., ISP firmware removed it, or the modem genuinely has no admin web interface). Reserved for permanent inability, not "we don't have data yet." |
+
+The distinction matters: an `awaiting_verification` modem could become
+`confirmed` once data lands. An `unsupported` modem can't — there's no
+data path the integration could use, even if the user provided HAR
+captures. If the channel data IS reachable but obscured by ISP firmware
+quirks (hidden URL, login-gated endpoint), that's
+`awaiting_verification`, not `unsupported`.
 
 `unsupported` modems have identity and hardware fields only — no auth,
 no pages, no parser. They document modems we know about but can't
-support yet.
+support.
 
 ### Attribution
 

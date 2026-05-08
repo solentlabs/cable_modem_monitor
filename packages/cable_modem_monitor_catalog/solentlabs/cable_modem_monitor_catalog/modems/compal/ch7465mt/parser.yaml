@@ -19,7 +19,7 @@ downstream:
           type: float
         - source: mod
           field: modulation
-          type: string
+          type: modulation
         - source: PreRs
           field: corrected
           type: integer
@@ -27,11 +27,7 @@ downstream:
           field: uncorrected
           type: integer
       channel_type:
-        field: modulation
-        map:
-          "256qam": "qam"
-          "64qam": "qam"
-          "OFDM": "ofdm"
+        derive: from_modulation
       lock_status:
         all_of:
           - IsQamLocked
@@ -63,13 +59,9 @@ upstream:
           scale: 1000
         - source: mod
           field: modulation
-          type: string
+          type: modulation
       channel_type:
-        field: modulation
-        map:
-          "64qam": "qam"
-          "16qam": "qam"
-          "OFDMA": "ofdma"
+        derive: from_modulation
       fixed_fields:
         lock_status: "locked"
       filter:
