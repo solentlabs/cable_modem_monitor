@@ -133,7 +133,7 @@ Disclose AI use on your first PR or issue. One sentence — which tool, what rol
 
 ### Read CONTRIBUTING.md alongside CLAUDE.md
 
-Most coding assistants auto-load project-instruction files (`CLAUDE.md` for Claude Code, `.cursorrules` for Cursor, `.github/copilot-instructions.md` for Copilot) but do **not** auto-load `CONTRIBUTING.md`. The architecture and code-quality rules in `CLAUDE.md` are not a substitute for the contribution-flow rules here. Add `CONTRIBUTING.md` to your AI's context explicitly when working on this repository — otherwise your tool will produce work that follows the code rules but skips the process rules (PRs that should have been Discussions, Core changes that bypass scope review, refactors spanning many files without prior alignment).
+Most coding assistants auto-load project-instruction files (`CLAUDE.md` for Claude Code, `.cursorrules` for Cursor, `.github/copilot-instructions.md` for Copilot) but do **not** auto-load `CONTRIBUTING.md`. `CLAUDE.md` is a thin behavioral guide that points to the authoritative docs (`docs/CODE_REVIEW.md`, `packages/cable_modem_monitor_core/docs/ARCHITECTURE.md`, `packages/cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md`) — it is not a substitute for the contribution-flow rules here. Add `CONTRIBUTING.md` to your AI's context explicitly when working on this repository — otherwise your tool will produce work that follows the code rules but skips the process rules (PRs that should have been Discussions, Core changes that bypass scope review, refactors spanning many files without prior alignment).
 
 ### One thread, one ask
 

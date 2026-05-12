@@ -503,7 +503,7 @@ new distribution mechanism on top of that work.
   and the trailing "What Happens Next?" sections. Also codified
   issue-label mutual-exclusivity (`needs-triage` / `in-development`
   / `needs-testing` / `needs-data` / `backlog` are exactly one) and
-  the `release:vX.Y` rule in `CLAUDE.md`.
+  the `release:vX.Y` rule in `CONTRIBUTING.md`.
 - **CHANGELOG hygiene** — internal roadmap references (Pxx codes,
   internal milestone names) stripped from prior alpha sections;
   user-facing entries cite GitHub issues only.
