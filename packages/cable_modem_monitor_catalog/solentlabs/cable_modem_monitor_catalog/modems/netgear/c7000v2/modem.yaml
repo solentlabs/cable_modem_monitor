@@ -5,6 +5,7 @@ default_host: "192.168.100.1"
 
 auth:
   strategy: basic
+  challenge_cookie: true
 
 actions:
   restart:
@@ -24,15 +25,16 @@ hardware:
 status: awaiting_verification
 
 sources:
-  auth_config: "[#61 C7000v2](https://github.com/solentlabs/cable_modem_monitor/issues/61)"
+  auth_config: "[#163 C7000v2 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/163)"
 
-  detection_hints: "[#61 C7000v2](https://github.com/solentlabs/cable_modem_monitor/issues/61)"
+  detection_hints: "[#163 C7000v2 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/163)"
 attribution:
   contributors:
     - github: https://github.com/Anthranilic
       contribution:
-        "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61)
-        diagnostics"
+        "[#61](https://github.com/solentlabs/cable_modem_monitor/issues/61)
+        and [#163](https://github.com/solentlabs/cable_modem_monitor/issues/163)
+        HAR captures and diagnostics"
 
 isps:
   - Comcast
@@ -44,6 +46,11 @@ notes: |
   InitUsTableTagValue(). System info from tagValueList in RouterStatus.htm
   (needs parser.py PostProcessor).
 
+  Basic Auth requires challenge_cookie: every authenticated request must
+  carry both Authorization and the XSRF_TOKEN cookie that the modem sets
+  on the initial GET /. Same pattern as CM1200 (HTTPS variant).
+
 references:
   issues:
     - "[#61 — [Modem Request] C7000v2](https://github.com/solentlabs/cable_modem_monitor/issues/61)"
+    - "[#163 — [Modem Request] C7000v2 (supersedes #61)](https://github.com/solentlabs/cable_modem_monitor/issues/163)"
