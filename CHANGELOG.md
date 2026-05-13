@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Modulation canonicalization elevated to core.** New
+  `type: modulation` field type auto-canonicalizes raw values
+  (`256QAM` → `QAM256`) via the shared helper — one source of
+  truth instead of per-modem map blocks. Paired with
+  `channel_type: derive: from_modulation`, the universal
+  direction-aware rule (DS `QAM*` → `qam`, US `QAM*` → `atdma`,
+  OFDM/OFDMA stand alone) replaces enumerated per-modem
+  channel-type maps. Catalog migrations: cm820b, tg3442de,
+  tm1602a, coda56 (DS keeps a source-code-to-value map layered
+  under the new type for the modem-specific 1→QAM64 / 2→QAM256
+  translation), ch7465mt. `XMLColumnMapping` gained `map:`
+  support along the way, closing a format gap.
+- **Spec-conformance gate against committed goldens.**
+  `validate_modem_data` runs against `modem.expected.json` for
+  every `status: confirmed` modem and asserts conformance with
+  `PARSING_SPEC`. 16 fixture-driven cases plus inline helper
+  coverage. Catches non-canonical modulation drift at PR time
+  rather than at runtime. `awaiting_verification` modems are
+  not enforced (parsers still iterating).
+
+### Fixed
+
+- **Netgear C7000v2 Basic Auth — 401 on every authenticated
+  request.** Firmware requires the `XSRF_TOKEN` cookie (set on
+  the initial `GET /`) to accompany every subsequent
+  `Authorization: Basic` header. Enabled `challenge_cookie: true`
+  in the C7000v2 `modem.yaml` — same pattern already shipping
+  for the CM1200 HTTPS variant. Addresses #163 (thanks to
+  @Anthranilic for the fresh HAR capture).
+- **Compal CH7465MT upstream `channel_type` miscoded as `qam`.**
+  Corrected to `atdma` as part of the modulation canonicalization
+  migration. Longstanding miscoding — upstream DOCSIS 3.0 SC-QAM
+  carriers are A-TDMA, not QAM.
+- **9 CodeQL code-scanning alerts.** Implicit string
+  concatenation in `services.py` and `generate_catalog_index.py`
+  converted to explicit `+`; ineffectual `await` in
+  `test_sensor_entities.py` marked explicit. Catalog README
+  byte-identical after regeneration; no behavior change.
+
+### Confirmed
+
+- **Arris S33** — verified on real hardware by @ccpk1 on
+  firmware `TB01.03.001.11_051722_212.S3` (32 DS + 4 US locked,
+  all signals nominal). `modem.har` refreshed from his sanitized
+  capture (114 entries, full reboot flow, all diagnostic
+  screens); `modem.expected.json` regenerated against the
+  existing curated `parser.yaml`; `modem.verified.json` added
+  from his diagnostics. S33v2 and S33v3 remain
+  `awaiting_verification` — each needs an independent
+  confirmation. Related to #146, #140.
+
 ## [3.14.0-beta.3] - 2026-05-01
 
 ### Added
