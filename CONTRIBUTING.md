@@ -233,9 +233,9 @@ Format the output exactly like this:
 ````
 
 **PASS** → continue to the intake pipeline. **RECAPTURE NEEDED** →
-recapture using an incognito/private browsing window so the modem
-forces a fresh login. **UNCERTAIN** → submit anyway with the audit
-output included.
+re-run har-capture and make sure the recording covers a full login
+flow (not just navigation after the modem already had a session).
+**UNCERTAIN** → submit anyway with the audit output included.
 
 A capture with no authentication evidence *and* a Cookie header on the
 first request is almost certainly post-auth and won't produce a working

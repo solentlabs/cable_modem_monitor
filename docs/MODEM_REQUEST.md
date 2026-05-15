@@ -35,12 +35,11 @@ auth flags in har-capture's CLI reference.
 
 A few cable-modem-specific tips on top of the upstream guide:
 
-- **Use an incognito/private browsing window.** If your browser has a
-  cached session, the capture will miss the login flow and won't be
-  usable for building a parser.
 - **During capture**, log in if needed, visit all status pages, and
   wait 3–5 seconds per page for async data to load before closing the
-  browser.
+  browser. har-capture launches its own controlled chromium instance,
+  so there's no need to use your regular browser's incognito mode —
+  each capture starts from a clean session.
 
 har-capture produces a sanitized, gzipped `.sanitized.har.gz` file —
 that's the artifact to attach in Step 3.
