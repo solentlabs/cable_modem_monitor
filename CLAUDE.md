@@ -200,6 +200,12 @@ propose fixes first.
 - **Run pyright alongside mypy.** `mypy` and Pyright (Pylance) have
   different strictness. Code passing mypy can still show red
   squiggles in VS Code. After mypy, run `.venv/bin/pyright`.
+- **Preserve actor when restating prior facts.** When summarizing or
+  recommending based on a prior exchange, the subject/object of "who
+  said/did/decided X" is load-bearing. Compressing "X reported Y"
+  into "we told X about Y" (or vice versa) misrepresents the record
+  even when the surrounding argument is sound. Re-read load-bearing
+  sentences against the actual exchange before submitting.
 
 ## Catalog & Data Discipline
 

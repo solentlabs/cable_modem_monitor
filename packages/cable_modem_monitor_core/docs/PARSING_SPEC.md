@@ -1030,16 +1030,36 @@ that doesn't → declare the aggregate to compute them.
 `downstream.qam` but the modem has only OFDM channels), the aggregate
 field is omitted from `system_info`. It is not set to zero.
 
-**DOCSIS version scoping:** DOCSIS 3.0 modems use `channels: downstream`
-(all channels are QAM). DOCSIS 3.1 modems use `channels: downstream.qam`
-so that `total_corrected`/`total_uncorrected` carry the same semantic
-meaning across the fleet — QAM FEC codeword totals. OFDM LDPC codewords
-are not aggregated: they operate at a vastly different scale (hundreds of
-millions vs single digits) and represent a fundamentally different error
-correction mechanism. OFDM error health is better expressed as error
-*rates* (see connection quality sensors, #110), not raw totals. Modems
-whose only error counters are OFDM (e.g., SB8200v3 XML API) omit the
-aggregate section entirely.
+**DOCSIS version scoping.** DOCSIS 3.0 modems use `channels: downstream`
+(all channels are SC-QAM). DOCSIS 3.1 modems use `channels: downstream.qam`
+so that `total_corrected` and `total_uncorrected` carry the same semantic
+meaning across the fleet: SC-QAM FEC codeword totals only. OFDM codeword
+counters are not aggregated into these fields, and OFDM counters are not
+comparable to SC-QAM counters. They are different entities at the spec
+level, not a unit conversion away from each other.
+
+Two facts in [DOCS-IF31-MIB](https://github.com/rlaager/docsis/blob/master/mibs/DOCS-IF31-MIB)
+enforce this boundary:
+
+- **Asynchronous per-profile counter discontinuities.**
+  `docsIf31CmDsOfdmProfileStatsCtrDiscontinuityTime` (MIB lines 1710-1719)
+  records the sysUpTime of the most recent counter discontinuity per
+  profile row. These events fire independently of modem reboot and
+  independently of SC-QAM counter resets. A cross-poll delta on OFDM
+  counters can include a per-profile reset with no analogue in SC-QAM
+  counter semantics.
+- **Different forward-error-correction chains.** SC-QAM uses Reed-Solomon
+  FEC. OFDM uses concatenated LDPC + BCH, per the MIB descriptions for
+  `docsIf31CmDsOfdmProfileStatsCorrectedCodewords` (MIB lines 1581-1589:
+  "failed pre-decoding LDPC syndrome check and passed BCH decoding") and
+  `UncorrectableCodewords` (MIB lines 1591-1598: "failed BCH decoding").
+  Direct numeric comparison across types is not meaningful.
+
+OFDM error rates may be exposed in a separate future feature, with
+per-profile entity exposure and per-profile discontinuity awareness;
+they cannot be summed with SC-QAM rates. Modems whose only error
+counters are OFDM (e.g., SB8200v3 XML API) omit the aggregate section
+entirely.
 
 **Stale counters from channel reassignment:** DOCSIS 3.1 allows the
 CMTS to reassign channel profiles dynamically. A channel slot that was

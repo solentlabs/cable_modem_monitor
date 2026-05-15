@@ -13,6 +13,7 @@ Common issues and solutions for Cable Modem Monitor.
 - [Connection and Authentication Issues](#connection-and-authentication-issues)
   - [Degraded Mode (Web Server Hung)](#2b-degraded-mode-web-server-hung)
   - [Combo Modem/Routers (Two IP Addresses)](#6-combo-modemrouters-two-ip-addresses)
+  - [Multiple Home Assistant Instances](#8-multiple-home-assistant-instances-polling-the-same-modem)
 - [Understanding the Status Sensor](#understanding-the-status-sensor)
 - [Understanding Log Output](#understanding-log-output)
 - [Upstream Sensors Not Appearing](#upstream-sensors-not-appearing)
@@ -194,6 +195,26 @@ If you see `icmp_blocked` status:
 
 - Some ISPs disable modem web interfaces (Xfinity, Rogers, etc.)
 - **No workaround available** - Contact your ISP
+
+#### 8. Multiple Home Assistant Instances Polling the Same Modem
+
+**Symptoms:**
+
+- Frequent stale-session recoveries in logs (LOAD_AUTH events on most polls)
+- INFO log line: `Recovered stale-session streak reached threshold ... disabling session reuse for this runtime`
+- Status occasionally flips to Unreachable, then recovers within ~50 seconds
+- Internet connectivity stays fine throughout
+
+**What's Happening:**
+
+Consumer cable modems typically allow only one authenticated web session at a time. When two Home Assistant instances poll the same modem, each authentication from one instance silently invalidates the other's session. The integration's LOAD_AUTH recovery handles each collision transparently by re-authenticating in the same poll, but sustained sub-minute polling from two instances can overwhelm the modem's web server and cause read timeouts that surface as Unreachable.
+
+The modem itself remains operational during these events: the DOCSIS data plane is independent of the management web interface, so your internet keeps working and ICMP keeps responding.
+
+**Solution:**
+
+- Raise the poll interval on both instances. Lower frequency gives the modem headroom; higher frequency makes collisions worse.
+- If you need the data in more than one Home Assistant instance, poll the modem from one and replicate sensor states between instances at the HA level (template sensors, MQTT bridge, statistics integration) rather than polling the modem twice.
 
 ---
 
