@@ -1,13 +1,11 @@
 # Cable Modem Monitor for Home Assistant
 
-<!-- Status & Installation -->
-[![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor)](https://github.com/solentlabs/cable_modem_monitor/releases)
-[![HACS installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HACS&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<!-- Packages -->
+<!-- Versions & Install -->
+[![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor?include_prereleases)](https://github.com/solentlabs/cable_modem_monitor/releases)
 [![Core](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-core?label=core)](https://pypi.org/project/solentlabs-cable-modem-monitor-core/)
 [![Catalog](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-catalog?label=catalog)](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)
+[![HACS installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HACS&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <!-- Build Status -->
 [![GitHub Actions](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)
