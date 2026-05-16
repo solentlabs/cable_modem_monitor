@@ -356,7 +356,6 @@
   "system_info": {
     "docsis_status": "Operational",
     "downstream_channel_count": 32,
-    "rate_uncorrected": 0.0,
     "upstream_channel_count": 4
   },
   "upstream": [

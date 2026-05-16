@@ -544,8 +544,18 @@ class Orchestrator:
     def _update_error_stats(self, modem_data: dict[str, Any]) -> None:
         """Detect error counter resets and compute per-minute error rates.
 
-        Two derivations share one prior-state read of the SC-QAM error
-        totals:
+        Reads ``system_info["total_corrected"]`` /
+        ``system_info["total_uncorrected"]`` — the parser coordinator's
+        aggregate output, scoped per the modem's ``parser.yaml``
+        ``aggregate`` declaration (``downstream.qam`` on DOCSIS 3.1,
+        ``downstream`` on DOCSIS 3.0-only). The orchestrator must not
+        re-derive these from raw channels: doing so would bypass the
+        YAML scope and pull in OFDM codeword counters, which are not
+        comparable to SC-QAM counters and have asynchronous per-profile
+        discontinuities (see
+        [PARSING_SPEC.md § Aggregate](../docs/PARSING_SPEC.md#aggregate-derived-system_info-fields)).
+
+        Two derivations share one prior-state read of the totals:
 
         - **Reset detection (#110):** a decrease in either total
           records ``stats_last_reset`` as a proxy for last boot time.
@@ -568,20 +578,25 @@ class Orchestrator:
         _prev_poll_monotonic)`` is always updated together so the next
         poll has a consistent baseline.
         """
-        current = self._sum_error_totals(modem_data)
-        if current is None:
-            return
+        system_info = modem_data.setdefault("system_info", {})
+        raw_corrected = system_info.get("total_corrected")
+        raw_uncorrected = system_info.get("total_uncorrected")
+        if raw_corrected is None or raw_uncorrected is None:
+            return  # modem has no SC-QAM aggregate — no rates derivable
+
+        try:
+            cur_corrected = int(raw_corrected)
+            cur_uncorrected = int(raw_uncorrected)
+        except (TypeError, ValueError):
+            return  # aggregate present but uncoercible — defensive guard
 
         current_monotonic = time.monotonic()
         prev_totals = self._prev_error_totals
         prev_monotonic = self._prev_poll_monotonic
         # State invariant: totals and monotonic timestamp are updated
         # together so the next poll's delta is internally consistent.
-        self._prev_error_totals = current
+        self._prev_error_totals = (cur_corrected, cur_uncorrected)
         self._prev_poll_monotonic = current_monotonic
-
-        cur_corrected, cur_uncorrected = current
-        system_info = modem_data.setdefault("system_info", {})
 
         # Zero floor: cur == 0 means rate == 0 by definition. Applies
         # even on the first poll, after a reset, or under bad clock
@@ -619,27 +634,6 @@ class Orchestrator:
             system_info["rate_corrected"] = (cur_corrected - prev_corrected) / delta_seconds * 60
         if cur_uncorrected > 0:
             system_info["rate_uncorrected"] = (cur_uncorrected - prev_uncorrected) / delta_seconds * 60
-
-    @staticmethod
-    def _sum_error_totals(modem_data: dict[str, Any]) -> tuple[int, int] | None:
-        """Sum corrected and uncorrected counts across all channels.
-
-        Returns None if no channels have error count fields.
-        """
-        total_corrected = 0
-        total_uncorrected = 0
-        found = False
-
-        for direction in ("downstream", "upstream"):
-            for channel in modem_data.get(direction, []):
-                corrected = channel.get("corrected")
-                uncorrected = channel.get("uncorrected")
-                if corrected is not None or uncorrected is not None:
-                    found = True
-                    total_corrected += int(corrected or 0)
-                    total_uncorrected += int(uncorrected or 0)
-
-        return (total_corrected, total_uncorrected) if found else None
 
     # ------------------------------------------------------------------
     # Internal — snapshot construction

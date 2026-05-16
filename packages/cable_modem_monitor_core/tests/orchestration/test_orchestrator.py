@@ -1515,23 +1515,28 @@ def _make_channels_with_errors(
     corrected: int = 100,
     uncorrected: int = 10,
 ) -> dict[str, Any]:
-    """Build ModemData with error counters on channels."""
+    """Build ModemData with SC-QAM error totals in ``system_info``.
+
+    ``corrected`` / ``uncorrected`` are the aggregate totals (what the
+    parser coordinator would emit), not per-channel values.
+    """
     ds = [
         {
             "channel_id": i + 1,
             "frequency": 600 + i * 6,
+            "channel_type": "qam",
             "lock_status": "locked",
-            "corrected": corrected,
-            "uncorrected": uncorrected,
         }
         for i in range(2)
     ]
     return _make_modem_data(
         downstream=ds,
-        upstream=[
-            {"channel_id": 3, "frequency": 30, "corrected": corrected // 2, "uncorrected": 0},
-        ],
-        system_info={"firmware": "1.0"},
+        upstream=[{"channel_id": 3, "frequency": 30}],
+        system_info={
+            "firmware": "1.0",
+            "total_corrected": corrected,
+            "total_uncorrected": uncorrected,
+        },
     )
 
 
@@ -1629,19 +1634,31 @@ class TestCounterResetDetection:
 
 
 def _data_with_totals(corrected: int, uncorrected: int) -> dict[str, Any]:
-    """Build modem_data with a single locked DS channel summing to given totals."""
+    """Build modem_data carrying SC-QAM error totals in ``system_info``.
+
+    The orchestrator reads ``system_info["total_corrected"]`` /
+    ``total_uncorrected`` — the parser coordinator's aggregate output,
+    scoped to SC-QAM per the YAML ``aggregate`` declaration. Tests
+    feed totals at the same layer the parser would, not as raw
+    per-channel fields.
+    """
     return _make_modem_data(
         downstream=[
             {
                 "channel_id": 1,
                 "frequency": 600,
+                "channel_type": "qam",
                 "lock_status": "locked",
                 "corrected": corrected,
                 "uncorrected": uncorrected,
             }
         ],
         upstream=[{"channel_id": 1, "frequency": 30}],
-        system_info={"firmware": "1.0"},
+        system_info={
+            "firmware": "1.0",
+            "total_corrected": corrected,
+            "total_uncorrected": uncorrected,
+        },
     )
 
 
@@ -1839,10 +1856,11 @@ class TestErrorRateComputation:
         assert "rate_uncorrected" not in system_info
 
     def test_no_error_counters_no_rate(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Modems without per-channel error counters expose no rate fields.
+        """Modems without an SC-QAM error aggregate expose no rate fields.
 
-        ``_sum_error_totals`` returns ``None`` when no channel reports
-        corrected/uncorrected, so ``_update_error_stats`` short-circuits
+        ``_update_error_stats`` reads ``system_info["total_corrected"]``
+        / ``total_uncorrected`` (the parser coordinator's aggregate
+        output). When either is absent, the method short-circuits
         without writing rate fields or updating prior-state.
         """
         snapshot = _run_polls(
@@ -1957,6 +1975,65 @@ class TestErrorRateComputation:
         after_info = snap_after.modem_data["system_info"]
         assert after_info["rate_corrected"] == pytest.approx(60.0)
         assert after_info["rate_uncorrected"] == pytest.approx(6.0)
+
+    def test_ofdm_channels_excluded_from_rate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Regression for #164: OFDM channel error counts must not contaminate rates.
+
+        The parser coordinator scopes ``total_corrected`` /
+        ``total_uncorrected`` to SC-QAM via the YAML ``aggregate``
+        declaration. The orchestrator must source from those
+        ``system_info`` fields rather than re-summing
+        ``corrected``/``uncorrected`` across every channel in
+        ``downstream`` — the earlier implementation did the latter,
+        which silently pulled in OFDM codewords. OFDM and SC-QAM
+        codeword counters use different FEC chains (LDPC+BCH vs
+        Reed-Solomon) and OFDM has asynchronous per-profile
+        discontinuities; the two are not comparable.
+
+        This test makes the bypass observable: OFDM channels carry
+        large ``corrected`` / ``uncorrected`` values that would
+        dominate any unscoped sum, but the rate must match the
+        ``system_info`` totals (SC-QAM only).
+        """
+
+        def with_qam_aggregate_and_ofdm_noise(total_c: int, total_u: int, ofdm_c: int, ofdm_u: int) -> dict[str, Any]:
+            return _make_modem_data(
+                downstream=[
+                    {
+                        "channel_id": 1,
+                        "channel_type": "qam",
+                        "lock_status": "locked",
+                        "corrected": total_c,
+                        "uncorrected": total_u,
+                    },
+                    {
+                        "channel_id": 33,
+                        "channel_type": "ofdm",
+                        "lock_status": "locked",
+                        "corrected": ofdm_c,
+                        "uncorrected": ofdm_u,
+                    },
+                ],
+                system_info={
+                    "firmware": "1.0",
+                    "total_corrected": total_c,
+                    "total_uncorrected": total_u,
+                },
+            )
+
+        snapshot = _run_polls(
+            monkeypatch,
+            [0.0, 0.0, 0.0, 60.0, 60.0, 60.0],
+            with_qam_aggregate_and_ofdm_noise(100, 10, 999_999, 999_999),
+            with_qam_aggregate_and_ofdm_noise(200, 20, 999_999_999, 999_999_999),
+        )
+
+        assert snapshot.modem_data is not None
+        system_info = snapshot.modem_data["system_info"]
+        # Rate reflects SC-QAM aggregate delta (100/60s, 10/60s × 60),
+        # not the OFDM channel's much larger counter delta.
+        assert system_info["rate_corrected"] == pytest.approx(100.0)
+        assert system_info["rate_uncorrected"] == pytest.approx(10.0)
 
 
 # ==================================================================
