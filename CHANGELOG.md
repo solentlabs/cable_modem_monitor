@@ -43,6 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   coverage. Catches non-canonical modulation drift at PR time
   rather than at runtime. `awaiting_verification` modems are
   not enforced (parsers still iterating).
+- **Optional-segment uptime format.** Uptime parsers now accept
+  format strings with bracketed optional segments
+  (e.g., `[{days} days ]{hours}:{minutes}:{seconds}`), so a single
+  declarative format can match both `2 days 03:14:15` and `03:14:15`
+  when the modem omits days under one day. Unified the cm2000 and
+  cm3000 uptime declarations on this shared format.
 
 ### Fixed
 

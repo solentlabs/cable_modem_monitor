@@ -10,6 +10,7 @@
 | Topic | Authoritative doc |
 | ----- | ----------------- |
 | Architecture (SoC, DRY, Core/HA boundary, additive features, protocol primitives) | `packages/cable_modem_monitor_core/docs/ARCHITECTURE.md` |
+| What enters Core's schema (fleet-observed metrics vs user analytics; signal-health-style proposals) | `packages/cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md` § Core Schema Model |
 | Modem config principles (data-driven YAML, config-as-parameters, intake pipeline) | `packages/cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md` § Principles |
 | Code quality (no shortcuts, quality gates, forward refs, suppression discipline) | `docs/CODE_REVIEW.md` § Design Principles + Source File Standards |
 | Test patterns (table-driven, fixtures vs inline, no data blobs, no modem-specifics, test overrides as smell) | `docs/CODE_REVIEW.md` § Test File Standards |

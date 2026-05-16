@@ -1019,7 +1019,15 @@ aggregate:
 | `channels` | string | yes | Scope: `downstream`, `upstream`, or type-qualified `downstream.qam`, `downstream.ofdm`, `upstream.atdma`, `upstream.ofdma` |
 
 **Operations:** Only `sum` is supported. This section is purpose-built
-for error totals, not a general aggregation engine.
+for error totals, not a general aggregation engine. Proposals to add
+new operations (e.g., `min`/`max`/`spread` for power-delta-style
+aggregates) must clear the schema-boundary test in
+[ARCHITECTURE_DECISIONS.md § Core's schema tracks fleet-observed
+metrics](ARCHITECTURE_DECISIONS.md#cores-schema-tracks-fleet-observed-metrics-not-user-analytics):
+the candidate metric must be fleet-observed (exposed by modems
+across vendors), not a user-side analytic computed from existing
+Core fields. User analytics belong in HA blueprints, not in this
+section.
 
 **Why parser.yaml, not modem.yaml?** The parser layer owns the data
 context — it knows channel types, field names, and section structure.

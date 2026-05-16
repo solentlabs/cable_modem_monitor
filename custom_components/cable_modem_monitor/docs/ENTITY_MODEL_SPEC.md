@@ -6,10 +6,20 @@ Core produces `ModemData` (channels + system_info) and health-check
 results (latency + status). This spec defines how those map to HA
 platforms, entities, attributes, and availability.
 
-**Design principle:** The integration exposes what the modem provides,
-in standard HA format. Users derive additional entities (template
-sensors, binary_sensors) from attributes as needed. The integration
-does not create entities for every possible use case.
+**Design principle:** The integration exposes a vendor-neutral
+schema of metrics observed across the cable-modem fleet, in standard
+HA format. Core admits derived fields when they re-present a
+fleet-observed datum more directly (e.g., per-minute error rates
+from cumulative FEC counters) or fill in cardinality the fleet does
+not always report natively (e.g., channel counts). User-side
+analytics — spreads, deltas, composed health grades, threshold-based
+classification — are out of scope for Core and the HA adapter; they
+belong in HA blueprints distributed alongside the integration. See
+[ARCHITECTURE_DECISIONS.md § Core's schema tracks fleet-observed
+metrics](../../../packages/cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md#cores-schema-tracks-fleet-observed-metrics-not-user-analytics)
+for the full decision and
+[BLUEPRINT_DISTRIBUTION_SPEC.md](BLUEPRINT_DISTRIBUTION_SPEC.md) for
+the user-analytics distribution path.
 
 ---
 
@@ -395,6 +405,22 @@ over with its own unique_id.
 Core owns the data model. HA owns the presentation. The HA adapter
 passes `ModemIdentity` fields through to the Modem Info sensor — no
 derivation, no URL construction, no string comparison.
+
+**What does not cross this boundary into Core:** user-side analytics
+that compose, aggregate, or evaluate Core fields against
+user-chosen thresholds. DS power spreads, max-of-N aggregates,
+weighted health scores, Good/Fair/Poor tier classification, and any
+"is this metric acceptable" judgment live in HA blueprints, not in
+Core or the HA adapter. The principle is that Core's schema
+documents what the fleet of modems reports; interpretation on top
+of that schema is the user's choice and belongs in a distribution
+surface designed for user customization. See
+[BLUEPRINT_DISTRIBUTION_SPEC.md](BLUEPRINT_DISTRIBUTION_SPEC.md) for
+how those user-analytics blueprints ship alongside the integration,
+and
+[ARCHITECTURE_DECISIONS.md § Core's schema tracks fleet-observed
+metrics](../../../packages/cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md#cores-schema-tracks-fleet-observed-metrics-not-user-analytics)
+for the underlying decision.
 
 ---
 
