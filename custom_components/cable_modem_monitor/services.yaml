@@ -33,6 +33,10 @@ generate_dashboard:
       default: true
       selector:
         boolean:
+    include_error_rates:
+      default: false
+      selector:
+        boolean:
     include_latency:
       default: true
       selector:

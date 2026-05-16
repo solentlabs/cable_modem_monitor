@@ -92,8 +92,11 @@ class Orchestrator:
         self._first_poll_complete: bool = False
 
         # Counter-reset detection — proxy for "last boot time" when
-        # the modem doesn't report native uptime (see #110)
+        # the modem doesn't report native uptime (see #110). The
+        # monotonic timestamp is paired with the totals to compute the
+        # per-minute error rates (#164); both are updated together.
         self._prev_error_totals: tuple[int, int] | None = None  # (corrected, uncorrected)
+        self._prev_poll_monotonic: float | None = None
         self._stats_last_reset: datetime | None = None
 
         # Diagnostics state
@@ -414,11 +417,13 @@ class Orchestrator:
         enrich_docsis_status(modem_data)
         docsis_status = modem_data.get("system_info", {}).get("docsis_status", DocsisStatus.UNKNOWN)
 
-        # Counter-reset detection — proxy for "last boot time" when
-        # the modem doesn't report native uptime (see #110). This
-        # updates orchestrator state only; it does NOT feed the
-        # reboot-signal vote (that's Recovery's own history).
-        self._check_counter_reset(modem_data)
+        # Counter-reset detection (#110) and per-minute error rates
+        # (#164) — both derived from one prior-state read of the
+        # SC-QAM error totals. Reset detection updates orchestrator
+        # state only; it does NOT feed the reboot-signal vote
+        # (that's Recovery's own history). Rate fields are written
+        # into modem_data["system_info"] for snapshot consumers.
+        self._update_error_stats(modem_data)
 
         # Recovery hook — runs the reboot-signal vote (may open a
         # window) and always refreshes Recovery's own baselines.
@@ -533,29 +538,64 @@ class Orchestrator:
         )
 
     # ------------------------------------------------------------------
-    # Internal — counter-reset detection (#110)
+    # Internal — counter-reset detection (#110) and error rates (#164)
     # ------------------------------------------------------------------
 
-    def _check_counter_reset(self, modem_data: dict[str, Any]) -> None:
-        """Detect error counter resets between polls.
+    def _update_error_stats(self, modem_data: dict[str, Any]) -> None:
+        """Detect error counter resets and compute per-minute error rates.
 
-        When total corrected or uncorrected counts decrease, the modem
-        has likely rebooted and cleared its stats. Records the timestamp
-        as a proxy for last boot time.
+        Two derivations share one prior-state read of the SC-QAM error
+        totals:
+
+        - **Reset detection (#110):** a decrease in either total
+          records ``stats_last_reset`` as a proxy for last boot time.
+        - **Error rates (#164):** ``rate_corrected`` / ``rate_uncorrected``
+          (errors/min) are written into ``modem_data["system_info"]``
+          from the inter-poll delta divided by monotonic elapsed time.
+
+        Each rate field is decided independently. Two ways a rate can
+        be reported on a given poll:
+
+        - **Zero floor:** a zero total means a zero rate by definition
+          (no errors → no rate of errors). This is true regardless of
+          poll number, baseline state, or clock state.
+        - **Inter-poll delta:** requires a prior baseline and a
+          positive monotonic elapsed time. Omitted on a counter reset
+          (the interval spans a discontinuity).
+
+        Otherwise the rate field is omitted (HA renders ``unknown``).
+        The prior-state tuple ``(_prev_error_totals,
+        _prev_poll_monotonic)`` is always updated together so the next
+        poll has a consistent baseline.
         """
         current = self._sum_error_totals(modem_data)
         if current is None:
             return
 
-        prev = self._prev_error_totals
+        current_monotonic = time.monotonic()
+        prev_totals = self._prev_error_totals
+        prev_monotonic = self._prev_poll_monotonic
+        # State invariant: totals and monotonic timestamp are updated
+        # together so the next poll's delta is internally consistent.
         self._prev_error_totals = current
+        self._prev_poll_monotonic = current_monotonic
 
-        if prev is None:
-            # First poll — no comparison possible
-            return
-
-        prev_corrected, prev_uncorrected = prev
         cur_corrected, cur_uncorrected = current
+        system_info = modem_data.setdefault("system_info", {})
+
+        # Zero floor: cur == 0 means rate == 0 by definition. Applies
+        # even on the first poll, after a reset, or under bad clock
+        # state — no inter-poll baseline is needed to know that zero
+        # errors implies zero rate.
+        if cur_corrected == 0:
+            system_info["rate_corrected"] = 0.0
+        if cur_uncorrected == 0:
+            system_info["rate_uncorrected"] = 0.0
+
+        if prev_totals is None or prev_monotonic is None:
+            return  # first poll — no inter-poll delta for non-zero totals
+
+        prev_corrected, prev_uncorrected = prev_totals
 
         if cur_corrected < prev_corrected or cur_uncorrected < prev_uncorrected:
             self._stats_last_reset = datetime.now(UTC)
@@ -567,6 +607,18 @@ class Orchestrator:
                 prev_uncorrected,
                 cur_uncorrected,
             )
+            return  # interval spans a discontinuity — no inter-poll delta
+
+        delta_seconds = current_monotonic - prev_monotonic
+        if delta_seconds <= 0:
+            return  # clock skew or paused VM — no inter-poll delta
+
+        # Inter-poll delta for non-zero totals. (Counters at zero
+        # were already handled by the zero floor above.)
+        if cur_corrected > 0:
+            system_info["rate_corrected"] = (cur_corrected - prev_corrected) / delta_seconds * 60
+        if cur_uncorrected > 0:
+            system_info["rate_uncorrected"] = (cur_uncorrected - prev_uncorrected) / delta_seconds * 60
 
     @staticmethod
     def _sum_error_totals(modem_data: dict[str, Any]) -> tuple[int, int] | None:

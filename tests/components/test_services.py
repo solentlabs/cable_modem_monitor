@@ -194,12 +194,20 @@ def test_dashboard_titles_long():
 
 
 def test_build_status_card_yaml_full():
-    """Status card includes all entities when modem provides all data."""
+    """Status card includes counts (stable summary values) and excludes rates.
+
+    Rate sensors exist as HA entities but are intentionally omitted from
+    the status entities row — point-in-time MEASUREMENT values jitter
+    poll-to-poll and don't belong in a stable summary. The rate trend
+    is available via the opt-in `include_error_rates` history graph.
+    """
     system_info = {
         "software_version": "1.0",
         "system_uptime": "12345",
         "total_corrected": 100,
         "total_uncorrected": 0,
+        "rate_corrected": 5.0,
+        "rate_uncorrected": 0.0,
     }
     lines = _build_status_card_yaml(
         "cable_modem",
@@ -216,6 +224,10 @@ def test_build_status_card_yaml_full():
     assert "sensor.cable_modem_system_uptime" in yaml
     assert "sensor.cable_modem_last_boot_time" in yaml
     assert "sensor.cable_modem_total_corrected_errors" in yaml
+    # Rates are intentionally NOT in the status entities row even when
+    # the fields are present in system_info.
+    assert "rate_corrected_errors" not in yaml
+    assert "rate_uncorrected_errors" not in yaml
     # Restart lives in its own button card, not the status entities row.
     assert "restart_modem" not in yaml
 
@@ -273,13 +285,26 @@ def test_build_channel_graph_yaml():
     assert "sensor.cm_ds_qam_ch_2_power" in yaml
 
 
-def test_build_error_graphs_yaml():
-    """Error graphs reference correct entities."""
+def test_build_error_graphs_yaml_counts_only_by_default():
+    """Default: counts only — rate graphs are opt-in via include_rates."""
     titles = _get_dashboard_titles(False)
     lines = _build_error_graphs_yaml("cm", titles)
     yaml = "\n".join(lines)
     assert "sensor.cm_total_corrected_errors" in yaml
     assert "sensor.cm_total_uncorrected_errors" in yaml
+    assert "rate_corrected_errors" not in yaml
+    assert "rate_uncorrected_errors" not in yaml
+
+
+def test_build_error_graphs_yaml_with_rates_opt_in():
+    """include_rates=True appends rate history graphs after counts."""
+    titles = _get_dashboard_titles(False)
+    lines = _build_error_graphs_yaml("cm", titles, include_rates=True)
+    yaml = "\n".join(lines)
+    assert "sensor.cm_total_corrected_errors" in yaml
+    assert "sensor.cm_total_uncorrected_errors" in yaml
+    assert "sensor.cm_rate_corrected_errors" in yaml
+    assert "sensor.cm_rate_uncorrected_errors" in yaml
 
 
 def test_build_latency_graph_yaml_with_icmp_and_head():
@@ -795,7 +820,11 @@ def test_add_channel_graphs_multi_type_by_direction() -> None:
 def test_generate_dashboard_handler(
     mock_runtime_data: CableModemRuntimeData,
 ) -> None:
-    """Dashboard handler generates YAML with channel graphs."""
+    """Default dashboard: status card with counts, count graphs, no rate graphs.
+
+    Rate sensors exist as HA entities (capability-gated in sensor.py) but
+    do not auto-generate into the dashboard. Opt-in via include_error_rates.
+    """
     entry = _make_mock_entry(mock_runtime_data)
     entry.data = {
         "entity_prefix": "none",
@@ -833,9 +862,51 @@ def test_generate_dashboard_handler(
     assert "sensor.cable_modem_ds_ofdm_ch_2_power" in yaml
     assert "sensor.cable_modem_us_atdma_ch_1_power" in yaml
     assert "sensor.cable_modem_total_corrected_errors" in yaml
+    # Rates are off by default — not in status card, not in graphs.
+    assert "rate_corrected_errors" not in yaml
+    assert "rate_uncorrected_errors" not in yaml
     assert "sensor.cable_modem_tcp_latency" in yaml
     assert "sensor.cable_modem_http_latency" in yaml
     assert "entity: button.cable_modem_restart_modem" in yaml
+
+
+def test_generate_dashboard_handler_with_error_rates_opt_in(
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """include_error_rates=True adds rate history graphs (still no entities row)."""
+    entry = _make_mock_entry(mock_runtime_data)
+    entry.data = {
+        "entity_prefix": "none",
+        "host": "192.168.100.1",
+        "supports_icmp": True,
+        "supports_head": True,
+    }
+
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    handler = create_generate_dashboard_handler(hass)
+    call = MagicMock()
+    call.data = {
+        "include_errors": True,
+        "include_error_rates": True,
+        "include_status_card": True,
+    }
+
+    yaml = handler(call)["yaml"]
+    # Rate graphs appear (opt-in honored).
+    assert "sensor.cable_modem_rate_corrected_errors" in yaml
+    assert "sensor.cable_modem_rate_uncorrected_errors" in yaml
+    # But the status entities row still excludes rate entities — the
+    # entities-row exclusion is unconditional regardless of opt-in.
+    status_card_lines: list[str] = []
+    for line in yaml.split("\n"):
+        if line.startswith("  - type: history-graph"):
+            break
+        status_card_lines.append(line)
+    status_card = "\n".join(status_card_lines)
+    assert "rate_corrected_errors" not in status_card
+    assert "rate_uncorrected_errors" not in status_card
 
 
 def test_generate_dashboard_handler_no_restart_support(

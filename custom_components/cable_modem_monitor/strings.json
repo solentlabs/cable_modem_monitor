@@ -143,6 +143,10 @@
           "name": "Error Graphs",
           "description": "Corrected and uncorrected error counts (7-day view)."
         },
+        "include_error_rates": {
+          "name": "Error Rate Graphs",
+          "description": "Add per-minute error rate graphs (errors/min, 7-day view). Off by default. Rates jitter poll-to-poll."
+        },
         "include_latency": {
           "name": "Latency Graph",
           "description": "Ping and HTTP response times (6-hour view)."

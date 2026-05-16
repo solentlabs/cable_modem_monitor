@@ -176,6 +176,8 @@ _CONSUMED_SYSTEM_INFO_FIELDS = frozenset({
     "upstream_channel_count",
     "total_corrected",
     "total_uncorrected",
+    "rate_corrected",
+    "rate_uncorrected",
 })
 # fmt: on
 
@@ -494,6 +496,33 @@ class ModemErrorTotalSensor(_SystemInfoSensor):
         """Return the error total."""
         value = self._get_system_info().get(self._field)
         return int(value) if value is not None else None
+
+
+class ModemErrorRateSensor(_SystemInfoSensor):
+    """Per-minute corrected or uncorrected error rate sensor (#164)."""
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+        *,
+        error_type: str,
+    ) -> None:
+        """Initialize the error rate sensor."""
+        super().__init__(coordinator, entry)
+        self._field = f"rate_{error_type}"
+        label = error_type.title()
+        self._attr_name = f"Rate {label} Errors"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_rate_{error_type}"
+        self._attr_icon = "mdi:alert-circle-check" if error_type == "corrected" else "mdi:alert-circle"
+        self._attr_native_unit_of_measurement = "errors/min"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @functools.cached_property
+    def native_value(self) -> float | None:
+        """Return the error rate (errors/min)."""
+        value = self._get_system_info().get(self._field)
+        return float(value) if value is not None else None
 
 
 class ModemSoftwareVersionSensor(_SystemInfoSensor):
@@ -993,11 +1022,21 @@ def _create_data_dependent_entities(
     entities.append(ModemChannelCountSensor(data_coord, entry, direction="downstream"))
     entities.append(ModemChannelCountSensor(data_coord, entry, direction="upstream"))
 
-    # Error totals (gated by field presence)
+    # Error totals and rates (gated by SC-QAM capability — `total_*`
+    # presence indicates the modem reports SC-QAM error counters. Rate
+    # sensors share the same gate because the orchestrator deliberately
+    # omits rate_* on the first poll, across counter resets, and when
+    # monotonic elapsed time is non-positive; gating rate creation on
+    # rate_* presence would prevent the sensor from ever materializing
+    # (HA's data-dependent entity creation is one-shot at first poll).
+    # The rate sensor reads None on polls where the orchestrator omits
+    # the field — HA renders that as `unknown`.
     if "total_corrected" in system_info:
         entities.append(ModemErrorTotalSensor(data_coord, entry, error_type="corrected"))
+        entities.append(ModemErrorRateSensor(data_coord, entry, error_type="corrected"))
     if "total_uncorrected" in system_info:
         entities.append(ModemErrorTotalSensor(data_coord, entry, error_type="uncorrected"))
+        entities.append(ModemErrorRateSensor(data_coord, entry, error_type="uncorrected"))
 
     # Software version and uptime (gated by field presence)
     if "software_version" in system_info:
@@ -1065,16 +1104,22 @@ def _register_deferred_entity_creation(
         )
         async_add_entities(new_entities)
 
-        # Guarantee initial state for deferred entities.  async_add_entities
-        # schedules entity registration as an eager-start task.  By the time
+        # Guarantee initial state for deferred entities. async_add_entities
+        # schedules entity registration as an eager-start task. By the time
         # entities register their coordinator listeners, the triggering
-        # coordinator update has already completed.  This delayed re-set
-        # fires _handle_coordinator_update() on all entities including the
-        # newly registered ones, populating state from current data without
-        # a new modem poll.
+        # coordinator update has already completed. Firing the listeners
+        # again (after the registration delay) fires _handle_coordinator_update()
+        # on all entities including the newly registered ones, populating
+        # state from current data without a new modem poll.
+        #
+        # async_update_listeners() is the right primitive here:
+        # async_set_updated_data() also unschedules and reschedules the
+        # refresh timer (resetting the regular poll cadence) and emits a
+        # "Manually updated" DEBUG line that misrepresents the intent
+        # (we didn't update anything, we're re-fanning current data).
         async def _async_ensure_initial_state() -> None:
             await asyncio.sleep(1)
-            data_coord.async_set_updated_data(data_coord.data)
+            data_coord.async_update_listeners()
 
         data_coord.hass.async_create_task(
             _async_ensure_initial_state(),

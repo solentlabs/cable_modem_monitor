@@ -85,6 +85,30 @@ MODEM_DATA_WITH_PASSTHROUGH: dict[str, Any] = {
     },
 }
 
+# First-poll-shaped data: SC-QAM totals present (capability), rate
+# fields absent (orchestrator omits rate_* on the first poll because
+# there's no prior baseline). Used to verify capability gating
+# creates rate sensors even when the rate fields aren't populated.
+MODEM_DATA_RATE_FIELDS_ABSENT: dict[str, Any] = {
+    "system_info": {
+        "software_version": "1.0",
+        "total_corrected": 100,
+        "total_uncorrected": 5,
+    },
+    "downstream": [
+        {
+            "channel_number": 1,
+            "channel_id": 1,
+            "channel_type": "qam",
+            "lock_status": "locked",
+            "frequency": 555000000,
+            "power": 2.5,
+            "snr": 38.0,
+        }
+    ],
+    "upstream": [],
+}
+
 # -----------------------------------------------------------------------
 # _create_channel_sensors
 # -----------------------------------------------------------------------
@@ -206,6 +230,70 @@ def test_error_total_sensor_value(mock_runtime_data):
     """Error total reads from system_info."""
     sensor = _make_sensor(ModemErrorTotalSensor, mock_runtime_data, error_type="corrected")
     assert sensor.native_value == 150
+
+
+@pytest.mark.parametrize("error_type", ["corrected", "uncorrected"])
+def test_error_total_sensor_missing(mock_runtime_data, error_type):
+    """Total sensor returns None when system_info lacks the field.
+
+    Mirrors ``test_error_rate_sensor_value``'s field-absent cases.
+    A modem with no SC-QAM error counters (OFDM-only, or before the
+    parser aggregate runs) has no ``total_*`` field in system_info;
+    the sensor reads None and HA renders ``unknown``.
+    """
+    sensor = _make_sensor(
+        ModemErrorTotalSensor,
+        mock_runtime_data,
+        modem_data={"system_info": {}, "downstream": [], "upstream": []},
+        error_type=error_type,
+    )
+    assert sensor.native_value is None
+
+
+# Table-driven: each row exercises ModemErrorRateSensor.native_value
+# against a custom system_info value, covering both error_types, both
+# nominal and zero values, and the absent-field (None) case.
+@pytest.mark.parametrize(
+    ("error_type", "field_value", "expected"),
+    [
+        pytest.param("corrected", 42.0, 42.0, id="corrected_typical"),
+        pytest.param("uncorrected", 0.5, 0.5, id="uncorrected_fractional"),
+        pytest.param("corrected", 0.0, 0.0, id="corrected_zero_is_real_signal"),
+        pytest.param("uncorrected", 0.0, 0.0, id="uncorrected_zero_is_real_signal"),
+        pytest.param("corrected", None, None, id="corrected_field_absent"),
+        pytest.param("uncorrected", None, None, id="uncorrected_field_absent"),
+    ],
+)
+def test_error_rate_sensor_value(mock_runtime_data, error_type, field_value, expected):
+    """Rate sensor reads from `rate_{error_type}` in system_info.
+
+    Covers nominal values, zero (a real signal — "no new errors observed"),
+    and field absent (orchestrator omitted on this poll → HA shows
+    `unknown`).
+    """
+    from custom_components.cable_modem_monitor.sensor import ModemErrorRateSensor
+
+    system_info = {} if field_value is None else {f"rate_{error_type}": field_value}
+    modem_data = {"system_info": system_info, "downstream": [], "upstream": []}
+    sensor = _make_sensor(
+        ModemErrorRateSensor,
+        mock_runtime_data,
+        modem_data=modem_data,
+        error_type=error_type,
+    )
+    assert sensor.native_value == expected
+
+
+@pytest.mark.parametrize("error_type", ["corrected", "uncorrected"])
+def test_error_rate_sensor_unit_and_state_class(mock_runtime_data, error_type):
+    """Rate sensor exposes errors/min as MEASUREMENT (point-in-time)."""
+    from homeassistant.components.sensor import SensorStateClass
+
+    from custom_components.cable_modem_monitor.sensor import ModemErrorRateSensor
+
+    sensor = _make_sensor(ModemErrorRateSensor, mock_runtime_data, error_type=error_type)
+    assert sensor._attr_native_unit_of_measurement == "errors/min"
+    assert sensor._attr_state_class == SensorStateClass.MEASUREMENT
 
 
 def test_software_version_sensor_value(mock_runtime_data):
@@ -673,6 +761,7 @@ def test_system_info_field_sensor(
 def test_create_data_dependent_entities(mock_runtime_data):
     """Helper creates system, channel, and LAN sensors from modem data."""
     from custom_components.cable_modem_monitor.sensor import (
+        ModemErrorRateSensor,
         _create_data_dependent_entities,
     )
 
@@ -680,20 +769,54 @@ def test_create_data_dependent_entities(mock_runtime_data):
     entities = _create_data_dependent_entities(coord, entry, MOCK_MODEM_DATA)
 
     # MOCK_MODEM_DATA has:
-    #   system_info with total_corrected, total_uncorrected, software_version, system_uptime
+    #   system_info with total_corrected, total_uncorrected, rate_corrected,
+    #     rate_uncorrected, software_version, system_uptime
     #   2 DS channels (qam + ofdm), 1 US channel (atdma)
     #   No lan_stats
     #
     # Expected entities:
     #   2 channel counts (DS + US)
     #   2 error totals (corrected + uncorrected)
+    #   2 error rates (corrected + uncorrected)
     #   1 software version
     #   1 system uptime
     #   1 last boot time (uptime present)
     #   12 channel sensors (see test_create_channel_sensors_downstream)
     #   0 LAN sensors (no lan_stats)
-    # Total = 19
-    assert len(entities) == 19
+    # Total = 21
+    assert len(entities) == 21
+
+    rate_sensors = [e for e in entities if isinstance(e, ModemErrorRateSensor)]
+    assert len(rate_sensors) == 2
+
+
+def test_create_data_dependent_entities_rate_omitted_first_poll(mock_runtime_data):
+    """Rate sensors are created on first poll (gated by SC-QAM capability).
+
+    The orchestrator omits ``rate_corrected`` / ``rate_uncorrected`` on the
+    first successful poll (no prior baseline), but HA's data-dependent
+    entity creation runs exactly once at first-data-available. Gating
+    rate creation on ``rate_corrected`` presence would leave the sensors
+    permanently absent. Capability gating (``total_corrected`` presence)
+    is the fix: the sensor exists from poll 1, reads ``None`` until the
+    orchestrator emits a rate on poll 2+.
+
+    Fixture: ``MODEM_DATA_RATE_FIELDS_ABSENT`` (module-level constant).
+    """
+    from custom_components.cable_modem_monitor.sensor import (
+        ModemErrorRateSensor,
+        _create_data_dependent_entities,
+    )
+
+    coord, entry = _make_coord_and_entry(MODEM_DATA_RATE_FIELDS_ABSENT, mock_runtime_data)
+    entities = _create_data_dependent_entities(coord, entry, MODEM_DATA_RATE_FIELDS_ABSENT)
+
+    rate_sensors = [e for e in entities if isinstance(e, ModemErrorRateSensor)]
+    assert len(rate_sensors) == 2
+    # On a poll where the orchestrator omitted the rate field, the
+    # sensor's native_value is None — HA renders this as `unknown`.
+    for sensor in rate_sensors:
+        assert sensor.native_value is None
 
 
 def test_create_data_dependent_entities_no_channels(mock_runtime_data):
@@ -723,9 +846,9 @@ def test_create_data_dependent_entities_with_passthrough(mock_runtime_data):
     coord, entry = _make_coord_and_entry(MODEM_DATA_WITH_PASSTHROUGH, mock_runtime_data)
     entities = _create_data_dependent_entities(coord, entry, MODEM_DATA_WITH_PASSTHROUGH)
 
-    # Base case has 19 entities (see test_create_data_dependent_entities).
-    # MODEM_DATA_WITH_PASSTHROUGH adds 3 Tier 3 fields → 19 + 3 = 22.
-    assert len(entities) == 22
+    # Base case has 21 entities (see test_create_data_dependent_entities).
+    # MODEM_DATA_WITH_PASSTHROUGH adds 3 Tier 3 fields → 21 + 3 = 24.
+    assert len(entities) == 24
 
     passthrough = [e for e in entities if isinstance(e, SystemInfoFieldSensor)]
     assert len(passthrough) == 3
@@ -798,7 +921,7 @@ def test_deferred_creation_on_first_data(mock_runtime_data):
     # Entities should be added
     add_entities.assert_called_once()
     created = add_entities.call_args[0][0]
-    assert len(created) == 19  # Same as test_create_data_dependent_entities
+    assert len(created) == 21  # Same as test_create_data_dependent_entities
 
 
 def test_deferred_creation_noop_while_no_data(mock_runtime_data):
@@ -917,14 +1040,17 @@ def test_deferred_creation_schedules_re_notification(mock_runtime_data):
 
 
 @pytest.mark.asyncio
-async def test_deferred_re_notification_calls_async_set_updated_data(
+async def test_deferred_re_notification_fires_coordinator_listeners(
     mock_runtime_data,
 ):
-    """Scheduled re-notification coroutine calls async_set_updated_data.
+    """Scheduled re-notification fans out to coordinator listeners.
 
     The coroutine body waits for entity registration to complete, then
-    re-sets coordinator data to fire _handle_coordinator_update() on all
-    entities including the newly registered deferred ones.
+    fires `async_update_listeners()` so newly-registered entities receive
+    `_handle_coordinator_update()` against the current snapshot. Using
+    `async_update_listeners()` (rather than `async_set_updated_data()`)
+    avoids resetting the refresh timer and the misleading "Manually
+    updated" DEBUG log — we are not updating data, only re-fanning it.
     """
     from unittest.mock import AsyncMock, patch
 
@@ -969,7 +1095,8 @@ async def test_deferred_re_notification_calls_async_set_updated_data(
     ):
         _ = await coro
 
-    coord.async_set_updated_data.assert_called_once_with(snapshot)
+    coord.async_update_listeners.assert_called_once_with()
+    coord.async_set_updated_data.assert_not_called()
 
 
 def test_deferred_re_notification_not_scheduled_when_no_data(mock_runtime_data):

@@ -339,10 +339,15 @@ from the poll data. The sensor platform handles this by:
    data-dependent entities via `async_add_entities` and unsubscribes
 5. `entry.async_on_unload(unsub)` ensures clean teardown if the entry
    is unloaded before the modem comes online
-6. Schedules a delayed re-notification task (1 second) that calls
-   `async_set_updated_data(coordinator.data)`, ensuring deferred
+6. Schedules a delayed re-notification task (1 second) that fires
+   `coordinator.async_update_listeners()`, ensuring deferred
    entities receive `_handle_coordinator_update()` after their
-   coordinator listeners are registered
+   coordinator listeners are registered. `async_update_listeners()`
+   is the right primitive here — `async_set_updated_data()` would
+   also unschedule and reschedule the refresh timer (resetting the
+   regular poll cadence) and emit HA's "Manually updated" DEBUG log
+   line, which misrepresents intent: we are re-fanning the current
+   data, not updating it.
 
 This guarantees that:
 

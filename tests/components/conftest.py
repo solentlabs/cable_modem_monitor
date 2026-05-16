@@ -60,6 +60,8 @@ MOCK_SYSTEM_INFO: dict[str, Any] = {
     "upstream_channel_count": 1,
     "total_corrected": 150,
     "total_uncorrected": 3,
+    "rate_corrected": 42.0,
+    "rate_uncorrected": 0.5,
 }
 
 MOCK_DOWNSTREAM: list[dict[str, Any]] = [

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Per-minute error rate sensors (#164).** SC-QAM `rate_corrected`
+  and `rate_uncorrected` fields (errors/min) in `system_info`,
+  derived by the orchestrator from inter-poll deltas on a monotonic
+  clock. Two new HA sensors (`Rate Corrected Errors`, `Rate
+  Uncorrected Errors`, MEASUREMENT state class) materialize whenever
+  the modem reports SC-QAM error counters; a per-counter zero-floor
+  rule means a total of `0` produces rate `0.0` immediately, so a
+  fresh modem with no errors reads `0.0` rather than `unknown` from
+  the first poll. Otherwise the sensors read `unknown` until the
+  second poll fills the delta. Rate history graphs are opt-in via a
+  new `include_error_rates` service option (default `false`); the
+  default dashboard is unchanged. SC-QAM scope only; OFDM rates are
+  future work per the DOCS-IF31-MIB boundary rule in PARSING_SPEC
+  § Aggregate. Surfaces what users in #110, #144, and #161 were
+  assembling with HA's `derivative` integration.
 - **Modulation canonicalization elevated to core.** New
   `type: modulation` field type auto-canonicalizes raw values
   (`256QAM` → `QAM256`) via the shared helper — one source of

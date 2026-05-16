@@ -143,6 +143,10 @@
           "name": "Foutengrafieken",
           "description": "Gecorrigeerde en ongecorrigeerde fouttellingen (7-dagen weergave)."
         },
+        "include_error_rates": {
+          "name": "Foutpercentage Grafieken",
+          "description": "Voegt per-minuut foutpercentagegrafieken toe (fouten/min, 7-dagen weergave). Standaard uit. Percentages fluctueren bij elke poll."
+        },
         "include_latency": {
           "name": "Latentiegrafiek",
           "description": "Ping- en HTTP-responstijden (6-uur weergave)."

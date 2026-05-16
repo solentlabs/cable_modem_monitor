@@ -1063,11 +1063,15 @@ enforce this boundary:
   `UncorrectableCodewords` (MIB lines 1591-1598: "failed BCH decoding").
   Direct numeric comparison across types is not meaningful.
 
+SC-QAM error rates (`rate_corrected`, `rate_uncorrected`) are derived
+from these totals by the orchestrator as a stateful inter-poll
+computation and inherit this SC-QAM scope automatically. See
+[ORCHESTRATION_SPEC.md § Derived Fields](ORCHESTRATION_SPEC.md#derived-fields).
 OFDM error rates may be exposed in a separate future feature, with
 per-profile entity exposure and per-profile discontinuity awareness;
 they cannot be summed with SC-QAM rates. Modems whose only error
 counters are OFDM (e.g., SB8200v3 XML API) omit the aggregate section
-entirely.
+entirely, and therefore have no rate fields.
 
 **Stale counters from channel reassignment:** DOCSIS 3.1 allows the
 CMTS to reassign channel profiles dynamically. A channel slot that was

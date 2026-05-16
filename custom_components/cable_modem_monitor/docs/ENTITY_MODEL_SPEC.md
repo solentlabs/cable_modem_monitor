@@ -60,6 +60,8 @@ output (some gated by config).
 | US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
 | Total Uncorrected | `_total_uncorrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
+| Rate Corrected | `_rate_corrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
+| Rate Uncorrected | `_rate_uncorrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
 | System Info Field³ | `_{field}` | pass-through | — | — | — | Dynamic per-field sensor for non-consumed system_info fields |
 
 ¹ See [Status Sensor](#status-sensor) for the priority cascade that
@@ -78,6 +80,18 @@ channel data. Channel counts (`len(channels)`) are always computed
 by the parser coordinator if not natively mapped. Consumers read from one
 place regardless of source. See
 [PARSING_SPEC.md](../../../packages/cable_modem_monitor_core/docs/PARSING_SPEC.md#aggregate-derived-system_info-fields).
+
+⁴ Error-rate sensors are gated by SC-QAM **capability** (the
+presence of `total_corrected` in `system_info`), not by immediate
+rate-field presence. HA's data-dependent entity creation is one-shot
+at first-data-available, and the orchestrator deliberately omits
+`rate_corrected` / `rate_uncorrected` on the first poll (no prior
+baseline), across counter resets, and when monotonic elapsed time
+is non-positive. Gating on rate-field presence would leave the
+sensors permanently absent. Instead, the rate sensors are created
+alongside the totals; `native_value` returns `None` (HA renders
+`unknown`) on polls where the orchestrator omits the field. See
+[ORCHESTRATION_SPEC.md § Derived Fields](../../../packages/cable_modem_monitor_core/docs/ORCHESTRATION_SPEC.md#derived-fields).
 
 **Implicit capabilities:** Capabilities are not declared — they are
 implicit from parser.yaml mappings (see

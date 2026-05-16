@@ -48,6 +48,7 @@ from unittest.mock import MagicMock
 import pytest
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemResult,
+    ModemSnapshot,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.orchestrator import (
     Orchestrator,
@@ -1620,6 +1621,342 @@ class TestCounterResetDetection:
             orch.get_modem_data()
 
         assert any("Counter reset detected" in r.message for r in caplog.records)
+
+
+# ==================================================================
+# Error Rate Computation (#164)
+# ==================================================================
+
+
+def _data_with_totals(corrected: int, uncorrected: int) -> dict[str, Any]:
+    """Build modem_data with a single locked DS channel summing to given totals."""
+    return _make_modem_data(
+        downstream=[
+            {
+                "channel_id": 1,
+                "frequency": 600,
+                "lock_status": "locked",
+                "corrected": corrected,
+                "uncorrected": uncorrected,
+            }
+        ],
+        upstream=[{"channel_id": 1, "frequency": 30}],
+        system_info={"firmware": "1.0"},
+    )
+
+
+def _patch_orch_monotonic(monkeypatch: pytest.MonkeyPatch, values: list[float]) -> None:
+    """Patch time.monotonic() to return the given values in sequence.
+
+    After the list is exhausted, the last value repeats. Time is a global
+    module attribute, so unrelated callers (pytest fixtures, recovery,
+    health monitor) also see the patch — clamping prevents StopIteration
+    from incidental calls outside the orchestrator's poll path.
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration import orchestrator as orch_mod
+
+    state = {"idx": 0}
+
+    def fake_monotonic() -> float:
+        idx = state["idx"]
+        state["idx"] = idx + 1
+        return values[idx] if idx < len(values) else values[-1]
+
+    monkeypatch.setattr(orch_mod.time, "monotonic", fake_monotonic)
+
+
+def _run_polls(
+    monkeypatch: pytest.MonkeyPatch,
+    monotonic: list[float],
+    *poll_data: dict[str, Any],
+) -> ModemSnapshot:
+    """Patch the clock, build a collector from successive poll dicts, run
+    N polls, return the final snapshot.
+
+    Each test's "interesting" inputs (monotonic sequence + poll data) stay
+    visible at the call site; orchestrator + collector wiring is hidden.
+
+    Args:
+        monotonic: Values returned by ``time.monotonic()`` in order
+            (last value clamps if exhausted). Three calls per
+            ``get_modem_data()`` roundtrip — see ``_patch_orch_monotonic``.
+        poll_data: One ``modem_data`` dict per scheduled poll, in order.
+    """
+    _patch_orch_monotonic(monkeypatch, monotonic)
+    collector = _mock_collector([_ok_result(d) for d in poll_data])
+    orch = _make_orchestrator(collector=collector)
+    snapshot: ModemSnapshot | None = None
+    for _ in poll_data:
+        snapshot = orch.get_modem_data()
+    assert snapshot is not None, "poll_data must contain at least one entry"
+    return snapshot
+
+
+class TestErrorRateComputation:
+    """Per-minute error rate fields in system_info (#164)."""
+
+    # Table-driven: each row is a "compute rate" scenario between two
+    # successful polls. Expected rate = delta_counts / delta_seconds * 60.
+    # Both counters share the same delta_seconds; we test corrected and
+    # uncorrected in the same row to exercise the dual computation.
+    @pytest.mark.parametrize(
+        ("prev_c", "prev_u", "cur_c", "cur_u", "delta_s", "expected_c", "expected_u"),
+        [
+            pytest.param(100, 10, 300, 30, 60.0, 200.0, 20.0, id="standard_60s_interval"),
+            pytest.param(100, 0, 340, 0, 120.0, 120.0, 0.0, id="scan_interval_120s_uncorrected_flat"),
+            pytest.param(10, 0, 11, 0, 600.0, 0.1, 0.0, id="fractional_long_interval"),
+            pytest.param(500, 50, 500, 50, 30.0, 0.0, 0.0, id="zero_delta_emits_zero_signal"),
+            pytest.param(0, 0, 6, 0, 60.0, 6.0, 0.0, id="counter_starts_at_zero"),
+        ],
+    )
+    def test_rate_computation(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        prev_c: int,
+        prev_u: int,
+        cur_c: int,
+        cur_u: int,
+        delta_s: float,
+        expected_c: float,
+        expected_u: float,
+    ) -> None:
+        """Second poll emits rate = delta_counts / delta_seconds * 60.
+
+        Rate uses monotonic elapsed time, not configured scan_interval —
+        the orchestrator has no knowledge of HA scheduling. Zero deltas
+        emit 0.0 explicitly (real signal, not absence of data).
+        """
+        snapshot = _run_polls(
+            monkeypatch,
+            [0.0, 0.0, 0.0, delta_s, delta_s, delta_s],
+            _data_with_totals(prev_c, prev_u),
+            _data_with_totals(cur_c, cur_u),
+        )
+
+        assert snapshot.modem_data is not None
+        system_info = snapshot.modem_data["system_info"]
+        assert system_info["rate_corrected"] == pytest.approx(expected_c)
+        assert system_info["rate_uncorrected"] == pytest.approx(expected_u)
+
+    # Zero-floor rule: cur == 0 implies rate == 0 by definition.
+    # Each counter is decided independently. Table covers first-poll
+    # partials and after-reset-to-zero.
+    @pytest.mark.parametrize(
+        ("cur_c", "cur_u", "expected_c", "expected_u"),
+        [
+            pytest.param(0, 0, 0.0, 0.0, id="both_zero_emit_zero_rates"),
+            pytest.param(0, 5, 0.0, None, id="only_corrected_zero"),
+            pytest.param(5, 0, None, 0.0, id="only_uncorrected_zero"),
+        ],
+    )
+    def test_first_poll_zero_floor_per_counter(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        cur_c: int,
+        cur_u: int,
+        expected_c: float | None,
+        expected_u: float | None,
+    ) -> None:
+        """First poll with a zero total emits rate=0 for that counter.
+
+        Zero floor applies independently per counter: a counter at zero
+        implies a zero rate (no errors → no rate of errors), regardless
+        of poll number. A non-zero counter without a baseline stays
+        absent (unknown).
+        """
+        snapshot = _run_polls(
+            monkeypatch,
+            [0.0, 0.0, 0.0],
+            _data_with_totals(cur_c, cur_u),
+        )
+
+        assert snapshot.modem_data is not None
+        system_info = snapshot.modem_data["system_info"]
+        if expected_c is None:
+            assert "rate_corrected" not in system_info
+        else:
+            assert system_info["rate_corrected"] == pytest.approx(expected_c)
+        if expected_u is None:
+            assert "rate_uncorrected" not in system_info
+        else:
+            assert system_info["rate_uncorrected"] == pytest.approx(expected_u)
+
+    def test_reset_to_zero_emits_zero_rates(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Counter reset that lands at zero emits rate=0 via the zero floor.
+
+        Reset detection still fires (``stats_last_reset`` set), but the
+        zero floor reports rate=0 anyway — the current truth is "no
+        errors observed", which is a defensible rate regardless of how
+        the interval got there.
+        """
+        snapshot = _run_polls(
+            monkeypatch,
+            [0.0, 0.0, 0.0, 60.0, 60.0, 60.0],
+            _data_with_totals(500, 50),
+            _data_with_totals(0, 0),  # reset to zero
+        )
+
+        assert snapshot.modem_data is not None
+        system_info = snapshot.modem_data["system_info"]
+        assert system_info["rate_corrected"] == pytest.approx(0.0)
+        assert system_info["rate_uncorrected"] == pytest.approx(0.0)
+        assert snapshot.stats_last_reset is not None
+
+    def test_first_poll_nonzero_omits_rate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """First poll with non-zero totals: no prior baseline, rate absent.
+
+        Complement to ``test_first_poll_zero_floor_per_counter`` — the two
+        partition first-poll behavior on whether each total is zero.
+        """
+        snapshot = _run_polls(
+            monkeypatch,
+            [0.0, 0.0, 0.0],
+            _data_with_totals(100, 10),
+        )
+
+        assert snapshot.modem_data is not None
+        system_info = snapshot.modem_data["system_info"]
+        assert "rate_corrected" not in system_info
+        assert "rate_uncorrected" not in system_info
+
+    def test_nonpositive_delta_seconds_omits_rate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Monotonic clock returning equal values → defensively omit rate.
+
+        Clock skew, paused VM, or container sleep can produce a
+        non-positive elapsed time; emitting a rate from that would
+        produce a divide-by-zero or negative-rate spike.
+        """
+        snapshot = _run_polls(
+            monkeypatch,
+            [0.0] * 6,
+            _data_with_totals(100, 10),
+            _data_with_totals(200, 20),
+        )
+
+        assert snapshot.modem_data is not None
+        system_info = snapshot.modem_data["system_info"]
+        assert "rate_corrected" not in system_info
+        assert "rate_uncorrected" not in system_info
+
+    def test_no_error_counters_no_rate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Modems without per-channel error counters expose no rate fields.
+
+        ``_sum_error_totals`` returns ``None`` when no channel reports
+        corrected/uncorrected, so ``_update_error_stats`` short-circuits
+        without writing rate fields or updating prior-state.
+        """
+        snapshot = _run_polls(
+            monkeypatch,
+            [0.0, 0.0, 0.0, 60.0, 60.0, 60.0],
+            _make_channels(),
+            _make_channels(),  # no corrected/uncorrected fields on either poll
+        )
+
+        assert snapshot.modem_data is not None
+        system_info = snapshot.modem_data["system_info"]
+        assert "rate_corrected" not in system_info
+        assert "rate_uncorrected" not in system_info
+
+    def test_counter_reset_omits_rate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Counter reset (decrease) → rate fields absent; stats_last_reset still set.
+
+        Kept separate from the omission table because reset has a
+        second invariant (``stats_last_reset`` recorded) that the
+        other edge cases don't share.
+        """
+        snapshot = _run_polls(
+            monkeypatch,
+            [0.0, 0.0, 0.0, 60.0, 60.0, 60.0],
+            _data_with_totals(500, 50),
+            _data_with_totals(10, 1),  # reset (decrease, both nonzero post-reset)
+        )
+
+        assert snapshot.modem_data is not None
+        system_info = snapshot.modem_data["system_info"]
+        assert "rate_corrected" not in system_info
+        assert "rate_uncorrected" not in system_info
+        assert snapshot.stats_last_reset is not None  # reset detection intact
+
+    def test_multi_poll_continuity(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Rate computation continues correctly across three successful polls.
+
+        Pins the state-update invariant: ``_prev_error_totals`` and
+        ``_prev_poll_monotonic`` must be advanced after each poll so the
+        third poll's rate is based on the second poll's baseline, not the
+        first poll's.
+
+        Poll 1: 100/10 at t=0     → no rate (no baseline)
+        Poll 2: 200/20 at t=60s   → rate = (100,10)/60*60 = 100/min, 10/min
+        Poll 3: 320/24 at t=120s  → rate = (120,4)/60*60 = 120/min, 4/min
+                                    (NOT based on poll 1, which would give
+                                    (220,14)/120*60 = 110/min, 7/min)
+        """
+        # Run polls 1 and 2 to set up, then assert on poll 2 and poll 3.
+        # _run_polls only returns the last snapshot, so we run twice.
+        _patch_orch_monotonic(
+            monkeypatch,
+            [0.0, 0.0, 0.0, 60.0, 60.0, 60.0, 120.0, 120.0, 120.0],
+        )
+        collector = _mock_collector(
+            [
+                _ok_result(_data_with_totals(100, 10)),
+                _ok_result(_data_with_totals(200, 20)),
+                _ok_result(_data_with_totals(320, 24)),
+            ]
+        )
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        snap2 = orch.get_modem_data()
+        snap3 = orch.get_modem_data()
+
+        assert snap2.modem_data is not None
+        assert snap2.modem_data["system_info"]["rate_corrected"] == pytest.approx(100.0)
+        assert snap2.modem_data["system_info"]["rate_uncorrected"] == pytest.approx(10.0)
+
+        assert snap3.modem_data is not None
+        assert snap3.modem_data["system_info"]["rate_corrected"] == pytest.approx(120.0)
+        assert snap3.modem_data["system_info"]["rate_uncorrected"] == pytest.approx(4.0)
+
+    def test_rate_resumes_after_reset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """After a reset poll, rate resumes on the next poll using the
+        post-reset value as the new baseline.
+
+        Poll 1: 500/50 at t=0     → no rate (no baseline)
+        Poll 2: 10/1  at t=60s    → reset detected, rate OMITTED; baseline
+                                    advances to (10, 1) at t=60
+        Poll 3: 70/7  at t=120s   → rate = (60, 6)/60*60 = 60/min, 6/min
+                                    (uses post-reset baseline, not pre-reset)
+        """
+        # Need intermediate snapshots (poll 2 asserts reset state) so we
+        # drive the orchestrator directly here rather than via _run_polls.
+        _patch_orch_monotonic(
+            monkeypatch,
+            [0.0, 0.0, 0.0, 60.0, 60.0, 60.0, 120.0, 120.0, 120.0],
+        )
+        collector = _mock_collector(
+            [
+                _ok_result(_data_with_totals(500, 50)),
+                _ok_result(_data_with_totals(10, 1)),
+                _ok_result(_data_with_totals(70, 7)),
+            ]
+        )
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        snap_reset = orch.get_modem_data()
+        snap_after = orch.get_modem_data()
+
+        assert snap_reset.modem_data is not None
+        reset_info = snap_reset.modem_data["system_info"]
+        assert "rate_corrected" not in reset_info
+        assert "rate_uncorrected" not in reset_info
+        assert snap_reset.stats_last_reset is not None
+
+        assert snap_after.modem_data is not None
+        after_info = snap_after.modem_data["system_info"]
+        assert after_info["rate_corrected"] == pytest.approx(60.0)
+        assert after_info["rate_uncorrected"] == pytest.approx(6.0)
 
 
 # ==================================================================
