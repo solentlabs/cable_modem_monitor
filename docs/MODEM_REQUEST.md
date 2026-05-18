@@ -27,13 +27,21 @@ WiFi settings, router configuration, device lists, account information.
 
 ## Step 1 — Capture
 
-Follow [har-capture's quickstart](https://github.com/solentlabs/har-capture#quick-start)
-to record the HTTP conversation between your browser and your modem.
-Use your modem's IP as the capture target (the default cable modem IP
-is `192.168.100.1`). If your modem requires HTTP Basic Auth, see the
-auth flags in har-capture's CLI reference.
+Install har-capture and run it against your modem's IP:
 
-A few cable-modem-specific tips on top of the upstream guide:
+```bash
+pip install "har-capture[full]"
+har-capture 192.168.100.1 --patterns network-device
+```
+
+`--patterns network-device` selects the PII rule set for routers and
+modems. Replace `192.168.100.1` with your modem's IP if it differs.
+If your modem requires HTTP Basic Auth, add `--username` and
+`--password` flags — see
+[har-capture's CLI reference](https://github.com/solentlabs/har-capture#quick-start)
+for details.
+
+A few cable-modem-specific tips:
 
 - **During capture**, log in if needed, visit all status pages, and
   wait 3–5 seconds per page for async data to load before closing the

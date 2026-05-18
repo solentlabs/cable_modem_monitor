@@ -327,6 +327,11 @@ is the only command guaranteed to mirror CI exactly.
 When that footer shows drift, propose a separate deps-update commit
 before pushing — visibility without action becomes wallpaper.
 
+**CI job coverage:** When verifying CI after a push, confirm every
+expected job ran. A missing job is not a pass — absence of failure is
+not success. If a job didn't trigger, check the workflow's path filters
+and fix them before declaring the push clean.
+
 ### Optional pre-push hook — opt-in, suggest at the right moment
 
 `make install-hooks` installs an opt-in `.git/hooks/pre-push` that

@@ -1,16 +1,24 @@
 name: Devcontainer CI
 
 on:
+  workflow_dispatch:
+    # Manual trigger available via Actions tab for branches that don't
+    # touch the path filters below (e.g. testing a devcontainer change
+    # bundled into a larger feature branch).
   push:
     paths:
       - ".devcontainer/**"
       - "docker-compose.test.yml"
       - "scripts/dev/**"
+      - "requirements-dev.txt"
+      - "tests/requirements.txt"
   pull_request:
     paths:
       - ".devcontainer/**"
       - "docker-compose.test.yml"
       - "scripts/dev/**"
+      - "requirements-dev.txt"
+      - "tests/requirements.txt"
 
 jobs:
   build:
@@ -28,7 +36,7 @@ jobs:
             docker info
             docker pull --quiet alpine:latest
             echo "Checking pytest can collect tests..."
-            pytest --collect-only -q
+            .venv/bin/pytest --collect-only -q
             echo "Checking ruff is installed..."
-            ruff --version
+            .venv/bin/ruff --version
             echo "=== All checks passed ==="
