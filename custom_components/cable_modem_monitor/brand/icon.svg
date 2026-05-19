@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Background -->
+  <rect width="256" height="256" fill="none"/>
+
+  <!-- Cable Modem Body -->
+  <rect x="40" y="80" width="176" height="96" rx="8" fill="#2c3e50" stroke="#34495e" stroke-width="3"/>
+
+  <!-- Front Panel -->
+  <rect x="48" y="88" width="160" height="80" rx="4" fill="#34495e"/>
+
+  <!-- LED Indicators -->
+  <circle cx="70" cy="110" r="6" fill="#27ae60"/>
+  <circle cx="90" cy="110" r="6" fill="#27ae60"/>
+  <circle cx="110" cy="110" r="6" fill="#27ae60"/>
+  <circle cx="130" cy="110" r="6" fill="#3498db"/>
+  <circle cx="150" cy="110" r="6" fill="#3498db"/>
+  <circle cx="170" cy="110" r="6" fill="#f39c12"/>
+  <circle cx="190" cy="110" r="6" fill="#f39c12"/>
+
+  <!-- Ventilation Slots -->
+  <rect x="60" y="135" width="40" height="3" rx="1.5" fill="#2c3e50"/>
+  <rect x="60" y="143" width="40" height="3" rx="1.5" fill="#2c3e50"/>
+  <rect x="60" y="151" width="40" height="3" rx="1.5" fill="#2c3e50"/>
+
+  <!-- Brand Text Area -->
+  <rect x="115" y="135" width="80" height="25" rx="3" fill="#2c3e50"/>
+  <text x="155" y="152" font-family="Arial, sans-serif" font-size="10" fill="#ecf0f1" text-anchor="middle" font-weight="bold">DOCSIS 3.0</text>
+
+  <!-- Ethernet Ports -->
+  <rect x="48" y="178" width="12" height="10" rx="1" fill="#f39c12" stroke="#e67e22" stroke-width="1"/>
+  <rect x="64" y="178" width="12" height="10" rx="1" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+  <rect x="80" y="178" width="12" height="10" rx="1" fill="#95a5a6" stroke="#7f8c8d" stroke-width="1"/>
+  <rect x="96" y="178" width="12" height="10" rx="1" fill="#95a5a6" stroke="#7f8c8d" stroke-width="1"/>
+
+  <!-- Coax Cable Port -->
+  <circle cx="190" cy="183" r="8" fill="#7f8c8d" stroke="#5d6d7e" stroke-width="2"/>
+  <circle cx="190" cy="183" r="3" fill="#34495e"/>
+
+  <!-- Power Button -->
+  <circle cx="220" cy="95" r="8" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
+  <path d="M 220 90 L 220 95 M 217 95 A 3 3 0 0 1 223 95" stroke="#ecf0f1" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>
