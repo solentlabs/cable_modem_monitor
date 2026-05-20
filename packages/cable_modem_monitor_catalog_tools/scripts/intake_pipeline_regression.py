@@ -101,6 +101,15 @@ def discover_modems(
     return results
 
 
+def _read_har_intake_info(har_path: Path) -> tuple[str, str]:
+    """Return (intake_status, intake_reason) from log._solentlabs, or ('', '') if absent."""
+    try:
+        sl = json.loads(har_path.read_text()).get("log", {}).get("_solentlabs") or {}
+        return sl.get("intake_status", ""), sl.get("intake_reason", "")
+    except Exception:
+        return "", ""
+
+
 # ---------------------------------------------------------------------------
 # File backup / restore
 # ---------------------------------------------------------------------------
@@ -138,14 +147,14 @@ def _diff_channel_list(
     """Diff two lists of channel dicts."""
     diffs: list[str] = []
     if len(gen_list) != len(com_list):
-        diffs.append(f"{section}: channel count {len(gen_list)} " f"vs committed {len(com_list)}")
+        diffs.append(f"{section}: channel count {len(gen_list)} vs committed {len(com_list)}")
         return diffs
     for i, (g, c) in enumerate(zip(gen_list, com_list, strict=True)):
         if not isinstance(g, dict) or not isinstance(c, dict):
             continue
         for key in sorted(set(g.keys()) | set(c.keys())):
             if g.get(key) != c.get(key):
-                diffs.append(f"{section}[{i}].{key}: " f"{g.get(key)!r} vs {c.get(key)!r}")
+                diffs.append(f"{section}[{i}].{key}: {g.get(key)!r} vs {c.get(key)!r}")
     return diffs
 
 
@@ -162,7 +171,7 @@ def _diff_section(
         diffs: list[str] = []
         for key in sorted(set(gen_val.keys()) | set(com_val.keys())):
             if gen_val.get(key) != com_val.get(key):
-                diffs.append(f"{section}.{key}: " f"{gen_val.get(key)!r} vs {com_val.get(key)!r}")
+                diffs.append(f"{section}.{key}: {gen_val.get(key)!r} vs {com_val.get(key)!r}")
         return diffs
 
     if gen_val is None and com_val is not None:
@@ -436,7 +445,7 @@ def _print_result(result: ModemResult) -> None:
     ds = result.channel_counts.get("downstream", 0)
     us = result.channel_counts.get("upstream", 0)
     if result.golden_diffs:
-        print(f"    DRIFT {pct}  ds={ds} us={us}: " f"{len(result.golden_diffs)} diffs")
+        print(f"    DRIFT {pct}  ds={ds} us={us}: {len(result.golden_diffs)} diffs")
         for d in result.golden_diffs[:5]:
             print(f"      {d}")
         if len(result.golden_diffs) > 5:
@@ -450,7 +459,72 @@ def _print_result(result: ModemResult) -> None:
             print(f"      {d}")
 
 
-def _print_summary(results: list[ModemResult]) -> None:
+def _print_auth_audit(catalog_root: Path) -> None:
+    """Run auth fixture audit and print any issues found."""
+    from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import audit_fleet_auth
+
+    issues = audit_fleet_auth(catalog_root)
+    if not issues:
+        return
+    print("AUTH FIXTURE ISSUES (report only — verify against hardware):")
+    for issue in issues:
+        print(f"  {issue.modem} ({issue.har}): {issue.issue}")
+    print()
+
+
+def _print_incomplete_section(incomplete: list[tuple[str, Path, str, str]]) -> None:
+    """Print the incomplete HARs block."""
+    if not incomplete:
+        return
+    print("INCOMPLETE HARS (excluded from accuracy — replace with clean capture):")
+    for modem_id, har_path, status, reason in incomplete:
+        suffix = f" — {reason}" if reason else ""
+        print(f"  {modem_id} ({har_path.name}): {status}{suffix}")
+    print()
+
+
+def _print_failures_section(failed_stage: list[ModemResult]) -> None:
+    """Print the pipeline failures block."""
+    if not failed_stage:
+        return
+    print("PIPELINE FAILURES:")
+    for r in failed_stage:
+        pct = f"  ({r.accuracy_pct:5.1f}%)" if r.total_fields else ""
+        print(f"  {r.modem} ({r.har_file}):{pct}  {r.stage_failed} — {r.error}")
+    print()
+
+
+def _print_drift_section(drifted: list[ModemResult]) -> None:
+    """Print the golden file drift block."""
+    if not drifted:
+        return
+    print("GOLDEN FILE DRIFT:")
+    for r in sorted(drifted, key=lambda r: r.accuracy_pct):
+        fld = f"{r.matching_fields}/{r.total_fields}" if r.total_fields else "n/a"
+        print(f"  {r.modem} ({r.har_file}):  {r.accuracy_pct:5.1f}% ({fld} fields)")
+        for d in r.golden_diffs[:3]:
+            print(f"    {d}")
+        if len(r.golden_diffs) > 3:
+            print(f"    ... and {len(r.golden_diffs) - 3} more")
+    print()
+
+
+def _print_passed_section(passed: list[ModemResult]) -> None:
+    """Print the clean modems block."""
+    if not passed:
+        return
+    print(f"CLEAN ({len(passed)}):")
+    for r in passed:
+        ds = r.channel_counts.get("downstream", 0)
+        us = r.channel_counts.get("upstream", 0)
+        print(f"  {r.modem}: ds={ds} us={us}")
+    print()
+
+
+def _print_summary(
+    results: list[ModemResult],
+    incomplete: list[tuple[str, Path, str, str]] | None = None,
+) -> None:
     """Print the final summary with accuracy metrics."""
     passed = [r for r in results if r.passed]
     failed_stage = [r for r in results if r.stage_failed]
@@ -458,42 +532,22 @@ def _print_summary(results: list[ModemResult]) -> None:
 
     matching_fields, total_fields, fleet_pct = _fleet_accuracy(results)
     pipeline_passed = len(results) - len(failed_stage)
+    incomplete = incomplete or []
 
     print(f"\n{'=' * 60}")
-    print(f"FLEET ACCURACY: {fleet_pct:.1f}%" f"  ({matching_fields} / {total_fields} fields)")
+    print(f"FLEET ACCURACY: {fleet_pct:.1f}%  ({matching_fields} / {total_fields} fields)")
     print(
         f"  Pipeline pass rate: {pipeline_passed}/{len(results)} HARs"
         f"  |  Clean: {len(passed)}"
         f"  Drift: {len(drifted)}"
-        f"  Failed: {len(failed_stage)}"
+        f"  Failed: {len(failed_stage)}" + (f"  Skipped: {len(incomplete)}" if incomplete else "")
     )
     print(f"{'=' * 60}\n")
 
-    if failed_stage:
-        print("PIPELINE FAILURES:")
-        for r in failed_stage:
-            pct = f"  ({r.accuracy_pct:5.1f}%)" if r.total_fields else ""
-            print(f"  {r.modem} ({r.har_file}):{pct}" f"  {r.stage_failed} — {r.error}")
-        print()
-
-    if drifted:
-        print("GOLDEN FILE DRIFT:")
-        for r in sorted(drifted, key=lambda r: r.accuracy_pct):
-            fld = f"{r.matching_fields}/{r.total_fields}" if r.total_fields else "n/a"
-            print(f"  {r.modem} ({r.har_file}):" f"  {r.accuracy_pct:5.1f}% ({fld} fields)")
-            for d in r.golden_diffs[:3]:
-                print(f"    {d}")
-            if len(r.golden_diffs) > 3:
-                print(f"    ... and {len(r.golden_diffs) - 3} more")
-        print()
-
-    if passed:
-        print(f"CLEAN ({len(passed)}):")
-        for r in passed:
-            ds = r.channel_counts.get("downstream", 0)
-            us = r.channel_counts.get("upstream", 0)
-            print(f"  {r.modem}: ds={ds} us={us}")
-        print()
+    _print_incomplete_section(incomplete)
+    _print_failures_section(failed_stage)
+    _print_drift_section(drifted)
+    _print_passed_section(passed)
 
 
 # ---------------------------------------------------------------------------
@@ -741,6 +795,16 @@ def main() -> None:
         print("No modems found.")
         sys.exit(1)
 
+    # Partition: HARs flagged as incomplete skip the pipeline entirely.
+    incomplete: list[tuple[str, Path, str, str]] = []
+    runnable: list[tuple[str, Path, Path]] = []
+    for modem_id, har_path, modem_dir in modems:
+        status, reason = _read_har_intake_info(har_path)
+        if status:
+            incomplete.append((modem_id, har_path, status, reason))
+        else:
+            runnable.append((modem_id, har_path, modem_dir))
+
     # Scan fleet patterns once — feeds into analyze_har and generate_config
     from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import scan_fleet
 
@@ -751,15 +815,20 @@ def main() -> None:
         f"{len(fleet.aggregate_fields)} aggregates"
     )
 
-    print(f"Running pipeline regression on {len(modems)} HAR files...\n")
+    print(f"Running pipeline regression on {len(runnable)} HAR files...")
+    if incomplete:
+        print(f"  ({len(incomplete)} HAR(s) skipped — incomplete capture)\n")
+    else:
+        print()
 
     results: list[ModemResult] = []
-    for modem_id, har_path, modem_dir in modems:
+    for modem_id, har_path, modem_dir in runnable:
         print(f"  {modem_id} ({har_path.name})")
         r = run_modem(modem_id, har_path, modem_dir, verbose=args.verbose, fleet=fleet)
         results.append(r)
 
-    _print_summary(results)
+    _print_summary(results, incomplete=incomplete)
+    _print_auth_audit(CATALOG_ROOT)
     _write_step_summary(results)
 
     if args.scorecard:

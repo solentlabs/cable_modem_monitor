@@ -41,20 +41,43 @@ fi
 echo ""
 
 # Check 3: Virtual environment
-echo -e "${CYAN}[3/4]${NC} Checking virtual environment..."
+echo -e "${CYAN}[3/6]${NC} Checking virtual environment..."
 if [ -d ".venv" ]; then
     echo -e "${GREEN}✓${NC} Virtual environment exists"
-    if [ -f ".venv/bin/activate" ]; then
-        echo -e "${GREEN}✓${NC} Activation script found"
-    fi
 else
     echo -e "${YELLOW}!${NC} Virtual environment not found"
-    echo "   Run: python3.12 -m venv .venv"
+    echo "   Run: python3.12 -m venv .venv && pip install -r requirements-dev.txt"
 fi
 echo ""
 
-# Check 4: Pre-commit hooks
-echo -e "${CYAN}[4/4]${NC} Checking pre-commit hooks..."
+# Check 4: Core package importable
+echo -e "${CYAN}[4/6]${NC} Checking packages installed..."
+if [ -f ".venv/bin/python" ] && .venv/bin/python -c "import solentlabs.cable_modem_monitor_core" 2>/dev/null; then
+    echo -e "${GREEN}✓${NC} Core package importable"
+else
+    echo -e "${YELLOW}!${NC} Core package not importable — packages may not be installed"
+    echo "   Run: .venv/bin/pip install -e packages/cable_modem_monitor_core"
+fi
+echo ""
+
+# Check 5: Dev tools functional
+echo -e "${CYAN}[5/6]${NC} Checking dev tools..."
+if [ -f ".venv/bin/pytest" ] && .venv/bin/pytest --version &>/dev/null; then
+    echo -e "${GREEN}✓${NC} pytest functional"
+else
+    echo -e "${YELLOW}!${NC} pytest not found in venv"
+    echo "   Run: .venv/bin/pip install -r requirements-dev.txt"
+fi
+if [ -f ".venv/bin/ruff" ] && .venv/bin/ruff --version &>/dev/null; then
+    echo -e "${GREEN}✓${NC} ruff functional"
+else
+    echo -e "${YELLOW}!${NC} ruff not found in venv"
+    echo "   Run: .venv/bin/pip install -r requirements-dev.txt"
+fi
+echo ""
+
+# Check 6: Pre-commit hooks
+echo -e "${CYAN}[6/6]${NC} Checking pre-commit hooks..."
 if [ -f ".git/hooks/pre-commit" ]; then
     echo -e "${GREEN}✓${NC} Pre-commit hooks installed"
 else

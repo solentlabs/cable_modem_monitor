@@ -201,9 +201,7 @@ def verify_diagnostics(
 
     modem_dir = catalog_root / _slug(manufacturer) / _slug(model)
     if not modem_dir.exists():
-        raise FileNotFoundError(
-            f"Modem package not found in catalog: {modem_dir}. " "Has the catalog entry been merged?"
-        )
+        raise FileNotFoundError(f"Modem package not found in catalog: {modem_dir}. Has the catalog entry been merged?")
 
     fixture_stem = f"modem-{variant}" if variant else "modem"
     verified_path = modem_dir / "test_data" / f"{fixture_stem}.verified.json"
@@ -296,7 +294,7 @@ def _collect_warnings(data: dict[str, Any]) -> list[str]:
 
     if "last_error" in data:
         warnings.append(
-            "diagnostics contains 'last_error' — most recent poll " "raised an exception. Confirm with caution."
+            "diagnostics contains 'last_error' — most recent poll raised an exception. Confirm with caution."
         )
 
     # Channel coverage
@@ -390,22 +388,22 @@ def _main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--manufacturer",
         default=None,
-        help="Force manufacturer name when the self-reported value " "doesn't match the catalog directory.",
+        help="Force manufacturer name when the self-reported value doesn't match the catalog directory.",
     )
     parser.add_argument(
         "--model",
         default=None,
-        help="Force model name when the catalog directory " "disambiguates hardware revisions (e.g. S33 vs s33v2).",
+        help="Force model name when the catalog directory disambiguates hardware revisions (e.g. S33 vs s33v2).",
     )
     parser.add_argument(
         "--variant",
         default=None,
-        help="Force variant slug for path resolution. Pass an empty " "string to force single-variant (no suffix).",
+        help="Force variant slug for path resolution. Pass an empty string to force single-variant (no suffix).",
     )
     parser.add_argument(
         "--write",
         action="store_true",
-        help="Write verified.json to its catalog location. " "Without this flag, the CLI runs read-only.",
+        help="Write verified.json to its catalog location. Without this flag, the CLI runs read-only.",
     )
     args = parser.parse_args(argv)
 

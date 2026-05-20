@@ -11,16 +11,16 @@ requires-python = ">=3.12,<3.13"  # Pin to Python 3.12 for compatibility and rep
 
 dependencies = [
     # Runtime dependencies
-    "requests>=2.31",     # HTTP client for modem polling
+    "requests>=2.34.2",   # HTTP client for modem polling
     "pydantic>=2.0",      # Data validation and modeling
-    "har-capture~=0.8.2", # HAR sanitization + enhanced PII validation; per-call custom_patterns API since 0.7.0
+    "har-capture~=0.9.0", # HAR sanitization + PII validation; library API (custom_patterns kwarg) used in catalog scripts
 ]
 
 [project.optional-dependencies]
 dev = [
     # Development tools
     "black>=26.0",        # Code formatter
-    "ruff>=0.15.0",       # Linter and import sorter
+    "ruff>=0.15.13",      # Linter and import sorter
     "mypy>=1.20",         # Static type checker
     "pytest>=8.0",        # Test runner
     "pytest-cov>=5.0",    # Coverage reporting

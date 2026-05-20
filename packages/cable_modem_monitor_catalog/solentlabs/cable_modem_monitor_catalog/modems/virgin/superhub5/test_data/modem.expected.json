@@ -114,6 +114,7 @@
     "docsis_status": "Operational",
     "docsis_version": "3.1",
     "downstream_channel_count": 9,
+    "rate_uncorrected": 0.0,
     "system_uptime": "17 days 00h:51m:30s",
     "total_corrected": 635,
     "total_uncorrected": 0,

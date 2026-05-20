@@ -24,6 +24,12 @@ The encouraged contribution path is **expanding modem support** — the catalog 
 - **Core code changes (`packages/cable_modem_monitor_core/`)** — start a Discussion regardless of size. Core is the shared substrate every supported modem depends on; a regression there breaks every modem at once. The bar is correspondingly high (regression tests, golden files, real-modem evidence).
 - **Refactors that touch more than two files** — start as a Discussion. Small, scoped fixes outside Core can go straight to PR.
 
+### Why scope-before-code matters
+
+Review is the bottleneck on any project, solo or team. Generation cost has dropped to near-zero with AI assistance; review cost is still bounded by human reading speed and judgment, with reviewer attention degrading measurably past 60–90 minutes per session ([Sadowski et al., *Modern Code Review: A Case Study at Google*, FSE 2018](https://sback.it/publications/icse2018seip.pdf)). The only way to keep the project from breaking under that asymmetry is to align on scope before code is written.
+
+This discipline predates AI. Rust requires an [RFC](https://github.com/rust-lang/rfcs) for substantial changes; Python uses [PEPs](https://peps.python.org/pep-0001/); Kubernetes uses [KEPs](https://github.com/kubernetes/enhancements); Home Assistant routes architectural changes through a dedicated [architecture repo](https://github.com/home-assistant/architecture). The cost of misaligned implementation has always exceeded the cost of a design discussion. AI just makes skipping the step more tempting, and more expensive when it happens.
+
 ---
 
 ## What Happens After You File
@@ -117,7 +123,43 @@ adapter declares them as dependencies in `manifest.json`.
 - Core + Catalog: `pytest` in each package's `tests/` directory (not from repo root)
 - HA integration: `pytest` at repo root (`tests/`)
 
+## AI-Assisted Contribution
+
+AI assistance — Claude Code, Cursor, Copilot, or similar — can lower the bar to contributing significantly, but it amplifies the review-capacity asymmetry described in [Why scope-before-code matters](#why-scope-before-code-matters). The rules below apply to all AI-assisted contributions to this repository.
+
+### Disclosure
+
+Disclose AI use on your first PR or issue. One sentence — which tool, what role it played. This isn't a barrier; it's calibration.
+
+### Read CONTRIBUTING.md alongside CLAUDE.md
+
+Most coding assistants auto-load project-instruction files (`CLAUDE.md` for Claude Code, `.cursorrules` for Cursor, `.github/copilot-instructions.md` for Copilot) but do **not** auto-load `CONTRIBUTING.md`. `CLAUDE.md` is a thin behavioral guide that points to the authoritative docs (`docs/CODE_REVIEW.md`, `packages/cable_modem_monitor_core/docs/ARCHITECTURE.md`, `packages/cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md`) — it is not a substitute for the contribution-flow rules here. Add `CONTRIBUTING.md` to your AI's context explicitly when working on this repository — otherwise your tool will produce work that follows the code rules but skips the process rules (PRs that should have been Discussions, Core changes that bypass scope review, refactors spanning many files without prior alignment).
+
+### One thread, one ask
+
+Multi-topic comments and PRs get redirected. If a comment carries three unrelated asks (a bug fix + a doc critique + a queued feature), they go in three separate threads. Pre-committing future output ("I'll also be writing X next") is discouraged — it pre-loads scope without alignment.
+
+### Read every diff line-by-line before committing
+
+Accepting AI-generated changes without reading them produces classic failure modes: merge-conflict markers leaking into commits, specs rewritten to match in-flight code instead of the other way around, multiple unrelated concerns bundled into one PR. Disclosure is not a substitute for inspection.
+
+### Review pace and volume
+
+> Project parameter — adjust for your context.
+
+I review on weekends, with ~2-week turnarounds typical. Multiple open PRs from one contributor are sequenced, not parallelized — one active work item at a time. This isn't gatekeeping; it reflects the review-capacity reality cited above.
+
+### Templated redirect
+
+When a contribution skips the process rules, the response is a short canned redirect, not a per-PR negotiation:
+
+> Thanks for the contribution. This needs scope discussion before code — please open a Discussion, and we can scope it together there. Closing this PR for now; reopen or refile after the Discussion lands.
+
+Depersonalized by design. Same message every time, applied consistently to everyone.
+
 ## AI-Assisted Catalog Contribution
+
+The general rules in [AI-Assisted Contribution](#ai-assisted-contribution) apply; this section adds catalog-specific guidance.
 
 The maintainer doesn't have access to most of the modems in the
 catalog. Catalog growth depends on contributors who have the hardware
@@ -191,9 +233,9 @@ Format the output exactly like this:
 ````
 
 **PASS** → continue to the intake pipeline. **RECAPTURE NEEDED** →
-recapture using an incognito/private browsing window so the modem
-forces a fresh login. **UNCERTAIN** → submit anyway with the audit
-output included.
+re-run har-capture and make sure the recording covers a full login
+flow (not just navigation after the modem already had a session).
+**UNCERTAIN** → submit anyway with the audit output included.
 
 A capture with no authentication evidence *and* a Cookie header on the
 first request is almost certainly post-auth and won't produce a working

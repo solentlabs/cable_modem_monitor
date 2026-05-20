@@ -143,6 +143,10 @@
           "name": "错误图表",
           "description": "已纠正和未纠正的错误计数（7 天视图）。"
         },
+        "include_error_rates": {
+          "name": "错误速率图表",
+          "description": "添加每分钟错误速率图表（错误/分钟，7 天视图）。默认关闭。速率随每次轮询波动。"
+        },
         "include_latency": {
           "name": "延迟图",
           "description": "Ping 和 HTTP 响应时间（6 小时视图）。"

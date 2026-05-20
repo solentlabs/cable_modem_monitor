@@ -222,9 +222,15 @@ def _is_safe_ip_finding(match: str) -> bool:
     """Check if an IP finding is a known false positive."""
     if is_safe_ip(match):
         return True
-    # DOCSIS/firmware version numbers (all octets < 10)
     octets = match.split(".")
-    return len(octets) == 4 and all(o.isdigit() and int(o) < 10 for o in octets)
+    if len(octets) != 4 or not all(o.isdigit() for o in octets):
+        return False
+    # DOCSIS/firmware version numbers (all octets < 10)
+    if all(int(o) < 10 for o in octets):
+        return True
+    # Browser/app version strings: N.0.0.0 (e.g. Chrome/148.0.0.0).
+    # Real public IPs never appear as host-zero network addresses in traffic.
+    return all(o == "0" for o in octets[1:])
 
 
 def _is_safe_serial_finding(match: str) -> bool:

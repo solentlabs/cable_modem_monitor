@@ -84,7 +84,42 @@ class TestListModems:
         assert summary.status == "confirmed"
         assert summary.default_host == "10.0.0.1"
         assert summary.auth_strategy == "cookie"
+        assert summary.transport == "http"
         assert summary.path == tmp_path / "solent" / "t100"
+        assert summary.sibling_dirs == []
+
+    def test_groups_same_model(self, tmp_path: Path) -> None:
+        """Directories sharing the same manufacturer+model collapse into one entry."""
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100",
+            {"manufacturer": "Solent Labs", "model": "T100", "transport": "http", "auth": {"strategy": "url_token"}},
+        )
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100-hnap",
+            {"manufacturer": "Solent Labs", "model": "T100", "transport": "hnap", "auth": {"strategy": "hnap"}},
+        )
+
+        results = list_modems(tmp_path)
+
+        assert len(results) == 1
+        assert results[0].model == "T100"
+        assert results[0].sibling_dirs == [tmp_path / "solent" / "t100-hnap"]
+
+    def test_case_insensitive_grouping(self, tmp_path: Path) -> None:
+        """Manufacturer case variations (ARRIS vs Arris) are treated as the same group."""
+        _write_modem_yaml(
+            tmp_path / "a" / "x",
+            {"manufacturer": "ARRIS", "model": "SB8200", "auth": {"strategy": "url_token"}},
+        )
+        _write_modem_yaml(
+            tmp_path / "b" / "x",
+            {"manufacturer": "Arris", "model": "SB8200", "auth": {"strategy": "hnap"}},
+        )
+
+        results = list_modems(tmp_path)
+
+        assert len(results) == 1
+        assert len(results[0].sibling_dirs) == 1
 
     def test_empty_catalog(self, tmp_path: Path) -> None:
         """Empty catalog returns empty list."""
@@ -148,6 +183,38 @@ class TestListModems:
         assert summary.status == "awaiting_verification"
         assert summary.default_host == "192.168.100.1"
         assert summary.auth_strategy == "none"
+        assert summary.transport == "http"
+        assert summary.sibling_dirs == []
+
+    def test_groups_same_model_primary_is_alphabetically_first(self, tmp_path: Path) -> None:
+        """First-encountered directory (sorted path) becomes the primary entry."""
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100",
+            {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": "url_token"}},
+        )
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100-hnap",
+            {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": "hnap"}},
+        )
+
+        results = list_modems(tmp_path)
+
+        # t100 sorts before t100-hnap, so it's primary
+        assert results[0].path == tmp_path / "solent" / "t100"
+        assert results[0].auth_strategy == "url_token"
+
+    def test_groups_three_way(self, tmp_path: Path) -> None:
+        """Three directories sharing the same model produce one entry with two siblings."""
+        for suffix, strategy in [("", "url_token"), ("-hnap", "hnap"), ("-v2", "basic")]:
+            _write_modem_yaml(
+                tmp_path / "solent" / f"t100{suffix}",
+                {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": strategy}},
+            )
+
+        results = list_modems(tmp_path)
+
+        assert len(results) == 1
+        assert len(results[0].sibling_dirs) == 2
 
 
 class TestModemSummary:
@@ -162,6 +229,8 @@ class TestModemSummary:
         assert summary.status == "awaiting_verification"
         assert summary.default_host == "192.168.100.1"
         assert summary.auth_strategy == "none"
+        assert summary.transport == "http"
+        assert summary.sibling_dirs == []
 
 
 # =====================================================================
@@ -258,8 +327,27 @@ class TestListVariants:
         _write_variant_yaml(tmp_path / "modem.yaml", {})
         results = list_variants(tmp_path)
         assert results[0].auth_strategy == "none"
+        assert results[0].hw_version is None
         assert results[0].isps == []
         assert results[0].notes is None
+
+    def test_hw_version_field_loaded(self, tmp_path: Path) -> None:
+        """hardware.hw_version is surfaced in VariantInfo."""
+        _write_variant_yaml(
+            tmp_path / "modem.yaml",
+            {"auth": {"strategy": "hnap"}, "hardware": {"docsis_version": "3.1", "hw_version": "v6"}},
+        )
+        results = list_variants(tmp_path)
+        assert results[0].hw_version == "v6"
+
+    def test_hw_version_top_level_ignored(self, tmp_path: Path) -> None:
+        """Top-level hw_version is not used — only hardware.hw_version is."""
+        _write_variant_yaml(
+            tmp_path / "modem.yaml",
+            {"hw_version": "WRONG", "hardware": {"docsis_version": "3.1", "hw_version": "v6"}},
+        )
+        results = list_variants(tmp_path)
+        assert results[0].hw_version == "v6"
 
     def test_ignores_non_modem_yaml(self, tmp_path: Path) -> None:
         """Files like parser.yaml are not picked up."""
@@ -274,6 +362,56 @@ class TestListVariants:
         results = list_variants(tmp_path)
         assert len(results) == 1
 
+    def test_sibling_dirs_combined(self, tmp_path: Path) -> None:
+        """Sibling directories contribute their variants to the combined list."""
+        main_dir = tmp_path / "main"
+        sibling_dir = tmp_path / "sibling"
+        _write_variant_yaml(main_dir / "modem.yaml", {"auth": {"strategy": "url_token"}})
+        _write_variant_yaml(sibling_dir / "modem.yaml", {"auth": {"strategy": "hnap"}})
+
+        results = list_variants(main_dir, sibling_dirs=[sibling_dir])
+
+        assert len(results) == 2
+        strategies = {v.auth_strategy for v in results}
+        assert strategies == {"url_token", "hnap"}
+
+    def test_sibling_dirs_default_first(self, tmp_path: Path) -> None:
+        """Primary directory's default variant sorts before sibling's default."""
+        main_dir = tmp_path / "main"
+        sibling_dir = tmp_path / "sibling"
+        _write_variant_yaml(main_dir / "modem.yaml", {"auth": {"strategy": "url_token"}})
+        _write_variant_yaml(sibling_dir / "modem.yaml", {"auth": {"strategy": "hnap"}})
+
+        results = list_variants(main_dir, sibling_dirs=[sibling_dir])
+
+        # Primary directory (main) comes first due to stable sort
+        assert results[0].path.parent == main_dir
+        assert results[1].path.parent == sibling_dir
+
+    def test_sibling_dirs_with_named_variants(self, tmp_path: Path) -> None:
+        """Named variants from both primary and sibling directories appear in result."""
+        main_dir = tmp_path / "main"
+        sibling_dir = tmp_path / "sibling"
+        _write_variant_yaml(main_dir / "modem.yaml", {"auth": {"strategy": "url_token"}})
+        _write_variant_yaml(main_dir / "modem-v7.yaml", {"auth": {"strategy": "url_token"}})
+        _write_variant_yaml(sibling_dir / "modem.yaml", {"auth": {"strategy": "hnap"}})
+
+        results = list_variants(main_dir, sibling_dirs=[sibling_dir])
+
+        assert len(results) == 3
+        # Two default variants (name=None) from different directories, one named
+        assert sum(1 for v in results if v.name is None) == 2
+        assert any(v.name == "v7" for v in results)
+
+    def test_sibling_dirs_none_treated_as_empty(self, tmp_path: Path) -> None:
+        """sibling_dirs=None behaves identically to sibling_dirs=[]."""
+        _write_variant_yaml(tmp_path / "modem.yaml", {"auth": {"strategy": "none"}})
+
+        results_none = list_variants(tmp_path, sibling_dirs=None)
+        results_empty = list_variants(tmp_path, sibling_dirs=[])
+
+        assert len(results_none) == len(results_empty) == 1
+
 
 class TestVariantInfo:
     """VariantInfo dataclass construction."""
@@ -282,5 +420,6 @@ class TestVariantInfo:
         """Default values for optional fields."""
         info = VariantInfo(name=None)
         assert info.auth_strategy == "none"
+        assert info.hw_version is None
         assert info.isps == []
         assert info.notes is None

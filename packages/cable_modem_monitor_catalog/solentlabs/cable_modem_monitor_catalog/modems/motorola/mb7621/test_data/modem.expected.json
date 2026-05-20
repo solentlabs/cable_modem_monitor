@@ -293,6 +293,7 @@
     "docsis_status": "Operational",
     "downstream_channel_count": 24,
     "hardware_version": "V1.0",
+    "rate_uncorrected": 0.0,
     "software_version": "7621-5.7.1.5",
     "system_uptime": "9 days 19h:29m:48s",
     "total_corrected": 32,

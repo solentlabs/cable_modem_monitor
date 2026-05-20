@@ -1,0 +1,10 @@
+{
+  "_description": "Basic modem fixture for write_modem_package standard tests",
+  "modem_yaml": "manufacturer: Solent Labs\nmodel: T100\n",
+  "parser_yaml": "downstream:\n  format: table\n  resource: /status.html\n",
+  "golden_file": {
+    "downstream": [{"channel_id": 1, "frequency": 507000000}],
+    "upstream": []
+  },
+  "parser_py": "class PostProcessor:\n    pass\n"
+}

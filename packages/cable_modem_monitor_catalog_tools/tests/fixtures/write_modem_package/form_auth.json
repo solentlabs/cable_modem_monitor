@@ -1,0 +1,5 @@
+{
+  "_description": "Form auth modem with login_page for fixture integrity tests",
+  "modem_yaml": "manufacturer: Solent Labs\nmodel: T200\nauth:\n  strategy: form\n  action: /goform/Login\n  login_page: /LoginPage.asp\n  username_field: user\n  password_field: pass\n  cookie_name: SessionID\n  success:\n    redirect: /Index.asp\n",
+  "login_page_html": "<html><body><form name=\"login\" method=\"POST\" action=\"/goform/Login\"><input type=\"hidden\" name=\"token\" value=\"abc\" /></form></body></html>"
+}

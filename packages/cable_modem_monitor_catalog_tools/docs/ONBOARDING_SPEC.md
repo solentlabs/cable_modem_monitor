@@ -1267,9 +1267,21 @@ golden file dict, HAR file path, optional parser.py string
 {
   "modem_dir": "modems/motorola/mb7621",
   "files_written": ["modem.yaml", "parser.yaml", "test_data/modem.har", "test_data/modem.expected.json"],
-  "files_skipped": []
+  "files_skipped": [],
+  "errors": []
 }
 ```
+
+**Validation gate — login_page fixture consistency:** Before writing any
+files, the tool checks that form-auth modems with `login_page` configured
+have a usable login page response in the HAR fixture. If the GET entry for
+`login_page` is missing, has an empty body, or its HTML does not reference
+`auth.action`, the tool returns an error in `errors` and writes nothing.
+This prevents a class of silent failures where the mock server test passes
+(it does not validate CSRF tokens) while real hardware authentication fails
+because `_discover_hidden_fields()` returned empty. The check only applies
+to `strategy: form` with a non-empty `login_page` — all other strategies
+are unaffected.
 
 **Creates standard catalog structure:**
 

@@ -1,0 +1,19 @@
+{
+  "_description": "Multiple rules can fire on the same channel — each contributes its own violation",
+  "_data": {
+    "downstream": [
+      {
+        "channel_number": 1,
+        "channel_id": 32,
+        "channel_type": "SC-QAM",
+        "lock_status": "Locked",
+        "modulation": "256QAM"
+      }
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].channel_type", "rule": "channel_type_enum"},
+    {"path": "downstream[0].lock_status", "rule": "lock_status_enum"},
+    {"path": "downstream[0].modulation", "rule": "modulation_canonical"}
+  ]
+}

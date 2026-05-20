@@ -56,9 +56,6 @@ upstream:
         - index: 1
           field: lock_status
           type: lock_status
-        - index: 2
-          field: channel_type
-          type: string
         - index: 3
           field: channel_id
           type: integer

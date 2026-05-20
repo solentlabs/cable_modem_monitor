@@ -1,0 +1,45 @@
+manufacturer: ARRIS
+model: SB8200
+transport: hnap
+default_host: "192.168.100.1"
+
+auth:
+  strategy: hnap
+  hmac_algorithm: md5
+
+hardware:
+  docsis_version: "3.1"
+  hw_version: v6
+  firmware: TB01
+  release_date: "2017"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "[#165 — SB8200 HW v6 TB01 firmware](https://github.com/solentlabs/cable_modem_monitor/issues/165)"
+  hardware: "[ARRIS SB8200 page](https://www.surfboard.com/products/cable-modems/sb8200/)"
+
+attribution:
+  contributors:
+    - github: https://github.com/inventor7777
+      contribution: "TB01 firmware HAR capture (Issue #165)"
+
+isps:
+  - Cox
+
+notes: |
+  TB01 firmware variant of the ARRIS SB8200 (Hardware Version 6, Cox provisioning).
+  Uses HNAP protocol with GetCustomer* actions, identical to the Arris S33 HNAP stack.
+
+  Path casing differs from AB01 variants: all HTML page paths start with a capital
+  letter (/Login.html, /Cmconnectionstatus.html). The server returns 404 on lowercase
+  paths — this is what causes AB01-style url_token auth to fail on this firmware.
+
+  TLS cert CN: localhost.localdomain (AB01 variants use a MAC-address CN).
+  Reboot capability: unknown — SB8200 series historically has reboot disabled by
+  ISP firmware. Needs verification on this firmware family before enabling.
+
+references:
+  issues:
+    - "[#165 — [Modem Request] Arris SB8200 v6](https://github.com/solentlabs/cable_modem_monitor/issues/165)"
+    - "[#81 — SB8200 AB01 firmware variants (separate entry)](https://github.com/solentlabs/cable_modem_monitor/issues/81)"

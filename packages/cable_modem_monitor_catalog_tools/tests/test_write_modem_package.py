@@ -2,6 +2,8 @@
 
 Covers: happy path, existing files skipped, missing HAR source,
 optional parser.py, golden file formatting.
+
+Fixture data lives in tests/fixtures/write_modem_package/.
 """
 
 from __future__ import annotations
@@ -11,18 +13,22 @@ from pathlib import Path
 from typing import Any
 
 from solentlabs.cable_modem_monitor_catalog_tools.write_modem_package import write_modem_package
+from tests._helpers import load_fixture
 
 # ---------------------------------------------------------------------------
-# Fixtures
+# Fixture data
 # ---------------------------------------------------------------------------
 
-_MODEM_YAML = "manufacturer: Solent Labs\nmodel: T100\n"
-_PARSER_YAML = "downstream:\n  format: table\n  resource: /status.html\n"
-_GOLDEN: dict[str, Any] = {
-    "downstream": [{"channel_id": 1, "frequency": 507000000}],
-    "upstream": [],
-}
-_PARSER_PY = "class PostProcessor:\n    pass\n"
+_FIXTURES_DIR = Path(__file__).parent / "fixtures" / "write_modem_package"
+_BASIC = load_fixture(_FIXTURES_DIR / "basic.json")
+_FORM_AUTH = load_fixture(_FIXTURES_DIR / "form_auth.json")
+
+_MODEM_YAML: str = _BASIC["modem_yaml"]
+_PARSER_YAML: str = _BASIC["parser_yaml"]
+_GOLDEN: dict[str, Any] = _BASIC["golden_file"]
+_PARSER_PY: str = _BASIC["parser_py"]
+_FORM_AUTH_YAML: str = _FORM_AUTH["modem_yaml"]
+_LOGIN_PAGE_HTML: str = _FORM_AUTH["login_page_html"]
 
 
 def _create_har(tmp_path: Path) -> Path:
@@ -296,3 +302,169 @@ class TestVariant:
 
         assert not (out_dir / "test_data" / "modem.har").exists()
         assert not (out_dir / "test_data" / "modem.expected.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# login_page / HAR fixture consistency check
+# ---------------------------------------------------------------------------
+
+
+def _create_form_auth_har(tmp_path: Path, login_page_body: str = _LOGIN_PAGE_HTML) -> Path:
+    """Create a HAR with a login page GET and login POST."""
+    har = tmp_path / "source.har"
+    har.write_text(
+        json.dumps(
+            {
+                "log": {
+                    "entries": [
+                        {
+                            "request": {"method": "GET", "url": "http://192.168.100.1/LoginPage.asp"},
+                            "response": {
+                                "status": 200,
+                                "headers": [],
+                                "content": {"mimeType": "text/html", "text": login_page_body},
+                            },
+                        },
+                        {
+                            "request": {
+                                "method": "POST",
+                                "url": "http://192.168.100.1/goform/Login",
+                                "postData": {
+                                    "mimeType": "application/x-www-form-urlencoded",
+                                    "text": "user=a&pass=b&token=abc",
+                                },
+                            },
+                            "response": {
+                                "status": 302,
+                                "headers": [{"name": "Location", "value": "/Index.asp"}],
+                                "content": {},
+                            },
+                        },
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    return har
+
+
+class TestLoginPageValidation:
+    """HAR fixture must contain the login page response when login_page is configured."""
+
+    def test_valid_har_passes(self, tmp_path: Path) -> None:
+        """Form auth HAR with correct login page entry is accepted."""
+        har_path = _create_form_auth_har(tmp_path)
+        out_dir = tmp_path / "out"
+
+        result = write_modem_package(
+            output_dir=str(out_dir),
+            modem_yaml=_FORM_AUTH_YAML,
+            parser_yaml=_PARSER_YAML,
+            golden_file=_GOLDEN,
+            har_path=str(har_path),
+        )
+
+        assert result.errors == []
+        assert (out_dir / "test_data" / "modem.har").is_file()
+
+    def test_missing_login_page_entry_blocked(self, tmp_path: Path) -> None:
+        """Form auth HAR missing the login page GET entry is rejected."""
+        har = tmp_path / "no_login_page.har"
+        har.write_text(
+            json.dumps(
+                {
+                    "log": {
+                        "entries": [
+                            {
+                                "request": {"method": "POST", "url": "http://192.168.100.1/goform/Login"},
+                                "response": {"status": 302, "headers": [], "content": {}},
+                            }
+                        ]
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        out_dir = tmp_path / "out"
+
+        result = write_modem_package(
+            output_dir=str(out_dir),
+            modem_yaml=_FORM_AUTH_YAML,
+            parser_yaml=_PARSER_YAML,
+            golden_file=_GOLDEN,
+            har_path=str(har),
+        )
+
+        assert result.errors
+        assert "no GET entry" in result.errors[0]
+        assert not (out_dir / "test_data" / "modem.har").exists()
+
+    def test_empty_login_page_body_blocked(self, tmp_path: Path) -> None:
+        """Form auth HAR with login page entry but empty body is rejected."""
+        har_path = _create_form_auth_har(tmp_path, login_page_body="")
+        out_dir = tmp_path / "out"
+
+        result = write_modem_package(
+            output_dir=str(out_dir),
+            modem_yaml=_FORM_AUTH_YAML,
+            parser_yaml=_PARSER_YAML,
+            golden_file=_GOLDEN,
+            har_path=str(har_path),
+        )
+
+        assert result.errors
+        assert "empty" in result.errors[0]
+
+    def test_wrong_login_page_action_blocked(self, tmp_path: Path) -> None:
+        """Login page HTML that doesn't reference auth.action is rejected."""
+        wrong_html = "<html><body><form action='/different/endpoint'></form></body></html>"
+        har_path = _create_form_auth_har(tmp_path, login_page_body=wrong_html)
+        out_dir = tmp_path / "out"
+
+        result = write_modem_package(
+            output_dir=str(out_dir),
+            modem_yaml=_FORM_AUTH_YAML,
+            parser_yaml=_PARSER_YAML,
+            golden_file=_GOLDEN,
+            har_path=str(har_path),
+        )
+
+        assert result.errors
+        assert "does not reference" in result.errors[0]
+
+    def test_non_form_auth_skips_check(self, tmp_path: Path) -> None:
+        """Non-form auth strategies skip the login_page check."""
+        har_path = _create_har(tmp_path)
+        out_dir = tmp_path / "out"
+        basic_yaml = "manufacturer: T\nmodel: T\nauth:\n  strategy: basic\n"
+
+        result = write_modem_package(
+            output_dir=str(out_dir),
+            modem_yaml=basic_yaml,
+            parser_yaml=_PARSER_YAML,
+            golden_file=_GOLDEN,
+            har_path=str(har_path),
+        )
+
+        assert result.errors == []
+
+    def test_form_auth_no_login_page_skips_check(self, tmp_path: Path) -> None:
+        """Form auth without login_page set skips the check."""
+        har_path = _create_har(tmp_path)
+        out_dir = tmp_path / "out"
+        no_prefetch_yaml = (
+            "manufacturer: T\nmodel: T\nauth:\n"
+            "  strategy: form\n  action: /login\n"
+            "  username_field: u\n  password_field: p\n"
+        )
+
+        result = write_modem_package(
+            output_dir=str(out_dir),
+            modem_yaml=no_prefetch_yaml,
+            parser_yaml=_PARSER_YAML,
+            golden_file=_GOLDEN,
+            har_path=str(har_path),
+        )
+
+        assert result.errors == []

@@ -28,8 +28,7 @@ def detect_hnap_auth(entries: list[dict[str, Any]], warnings: list[str]) -> Auth
     hmac_algorithm = _detect_hmac_algorithm(entries)
     if hmac_algorithm is None:
         warnings.append(
-            "HNAP hmac_algorithm could not be determined from HAR - "
-            "defaulting to md5. Verify with modem documentation."
+            "HNAP hmac_algorithm could not be determined from HAR - defaulting to md5. Verify with modem documentation."
         )
         hmac_algorithm = "md5"
 

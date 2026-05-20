@@ -16,6 +16,8 @@ class HardwareConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     docsis_version: Literal["3.0", "3.1"]
+    hw_version: str | None = None
+    firmware: str | None = None
     chipset: str = ""
     release_date: str = ""
     end_of_life: str = ""

@@ -70,9 +70,14 @@ def identify_data_pages(
 
     Returns entries with: status 200, non-static, has content,
     and data-bearing Content-Type.
+
+    When multiple entries share the same path (e.g., a login URL with a
+    query parameter followed by the same path without query), the entry
+    with the most content wins.  This handles auth flows where an
+    authentication acknowledgment (text/html, 31 bytes) appears before
+    the actual data page at the same base path.
     """
-    result: list[dict[str, Any]] = []
-    seen_paths: set[str] = set()
+    candidates: dict[str, dict[str, Any]] = {}
 
     for entry in entries:
         resp = entry.get("response", {})
@@ -91,13 +96,26 @@ def identify_data_pages(
         if not any(ct in content_type for ct in _DATA_CONTENT_TYPES):
             continue
 
-        # Deduplicate by path
         path = path_from_url(url)
-        if path in seen_paths:
-            continue
-        seen_paths.add(path)
+        existing = candidates.get(path)
+        if existing is None:
+            candidates[path] = entry
+        else:
+            # Prefer the entry with more content (real data page over auth ack)
+            existing_size = len(existing.get("response", {}).get("content", {}).get("text", ""))
+            new_size = len(resp.get("content", {}).get("text", ""))
+            if new_size > existing_size:
+                candidates[path] = entry
 
-        result.append(entry)
+    # Return in original HAR order
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+    for entry in entries:
+        url = entry.get("request", {}).get("url", "")
+        path = path_from_url(url)
+        if path in candidates and path not in seen and candidates[path] is entry:
+            result.append(entry)
+            seen.add(path)
 
     return result
 

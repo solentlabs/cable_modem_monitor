@@ -4,6 +4,23 @@ Distilled decisions and their rationale — the "why" behind the
 architecture. Grouped by theme. For the full design, see the spec
 files; this document explains the choices that shaped them.
 
+## Contents
+
+| Section | What it covers |
+|---------|----------------|
+| [Package Boundaries](#package-boundaries) | Runtime package split, dependency direction, where each piece lives |
+| [Core Schema Model](#core-schema-model) | What enters Core's schema vs what stays user-side |
+| [Transport and Constraint Model](#transport-and-constraint-model) | Transport as protocol identifier, implicit capabilities |
+| [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging |
+| [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
+| [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
+| [Recovery Architecture](#recovery-architecture) | Restart vs recovery, generic timing, reboot-signal vote, observer callback |
+| [Testing Strategy](#testing-strategy) | HAR replay, greenfield from specs |
+| [Onboarding](#onboarding) | MCP for deterministic steps, catalog_tools owns the spec |
+| [Config Flow](#config-flow) | Cross-directory grouping, variant label design |
+| [Extension Model](#extension-model) | How to add modems, formats, parsers, auth strategies, transports |
+| [References](#references) | Pointers to authoritative specs |
+
 ---
 
 ## Package Boundaries
@@ -143,6 +160,60 @@ declaration.
 receives pydantic as a transitive install. The `[mcp]` optional
 extra is removed; intake-pipeline heavy deps (ruamel.yaml and any
 future additions) live in `cable_modem_monitor_catalog_tools`.
+
+---
+
+## Core Schema Model
+
+### Core's schema tracks fleet-observed metrics, not user analytics
+
+**Decision:** Core ships data fields that are observed across the
+fleet of cable modems, normalized into a vendor-neutral schema.
+Derived fields are admitted when they re-present a fleet-observed
+datum in a more directly useful form (e.g., cumulative FEC counters
+exposed as per-minute rates) or fill in cardinality the fleet does
+not always report natively (e.g., channel counts). User-side
+analytics — spreads, deltas, composed health grades, threshold-based
+classification — do not enter the Core schema. They belong in HA-side
+blueprints distributed alongside the integration per
+[BLUEPRINT_DISTRIBUTION_SPEC.md](../../../custom_components/cable_modem_monitor/docs/BLUEPRINT_DISTRIBUTION_SPEC.md).
+
+**Rationale:** The catalog's authority comes from being a faithful
+record of what cable modems actually report. That authority
+underwrites two things: a defensible schema that contributors can
+validate against real captures, and a descriptive document of fleet
+behavior that could support standardization advocacy with the broader
+cable-modem industry. The moment Core invents metrics no modem
+exposes, the schema stops being documentation of the fleet and becomes
+opinion — and loses both forms of authority.
+
+This also resolves the recurring "where does derivation belong"
+question without case-by-case judgment. The error-rate sensors
+(`rate_corrected`, `rate_uncorrected`) are Core because they
+re-present a fleet-observed datum (FEC codeword counters) over time;
+the cumulative quantity exists on every DOCSIS modem. A signal-health
+grade is HA-blueprint because no modem exposes a "health" metric and
+the grade is composed from user-chosen thresholds. DS power spread,
+max-of-N aggregates, weighted scores, and tier classification all
+fall on the blueprint side for the same reason.
+
+**Constrains:**
+
+- A new Core field must be backed by evidence that the underlying
+  metric is exposed across vendors. The catalog itself is the evidence
+  base; `modem.verified.json` captures are the primary citations.
+- Re-presenting a fleet datum (rate from cumulative count, canonical
+  from non-canonical naming, count from list length) is admitted.
+  Inventing a new aggregation no modem reports is not.
+- Scoping decisions (e.g., SC-QAM-only error totals) must be
+  defensible from how the fleet reports the underlying quantities,
+  not from a downstream consumer's threshold preference. The FEC
+  chain argument in PARSING_SPEC § Aggregate is an example of a
+  fleet-observation justification.
+- Interpretation, grading, and threshold-based classification live in
+  HA blueprints, not in Core. PR proposals that require relaxing this
+  rule (e.g., a signal-health sensor inside Core) are out of scope by
+  this decision.
 
 ---
 
@@ -847,6 +918,48 @@ data the handshake needs. Discarding the response body is a bug.
 Add a new loader (new value type), new `BaseParser` implementation(s)
 that consume that type, a new row in the constraint table, and
 validator updates. No existing code changes.
+
+---
+
+## Config Flow
+
+### Cross-directory grouping for same-model, different-transport entries
+
+**Decision:** `list_modems()` groups catalog directories by
+`(manufacturer.lower(), model.lower())`. The first directory encountered
+in sorted path order becomes primary; additional matches are attached as
+`sibling_dirs`. The config flow passes `sibling_dirs` to `list_variants()`,
+which scans all directories and returns a flat combined list. Transport is
+a variant dimension, not a dropdown dimension.
+
+**Rationale:** The MODEM_YAML_SPEC rule "different transport = different
+directory" is correct and must not change — directories are independently
+testable. But users should not have to know the catalog directory structure.
+Grouping at the `list_modems()` layer keeps each directory self-contained
+while presenting a single logical entry in the UI.
+
+**Constrains:** Variant dropdown values use composite keys
+(`"{rel_dir}/{name|__default__}"`) to prevent collisions when multiple
+directories each contribute a default variant. The selected directory is
+stored as `_selected_modem_dir` on the config flow and used for all
+downstream steps (auth strategy resolution, connection validation, config
+entry storage).
+
+### Hardware version as the user-facing variant discriminator
+
+**Decision:** `hardware.hw_version` is the field shown in the variant
+dropdown when multiple entries share the same auth strategy. `hardware.firmware`
+is recorded as catalog metadata but not shown in the UI.
+
+**Rationale:** Hardware version is printed on the modem sticker — users can
+physically verify it without navigating the modem's web UI. Firmware codes
+(AB01, TB01) are meaningful to contributors and maintainers but opaque to
+users during setup.
+
+**Constrains:** `hw_version` must be omitted when the variant name (from the
+filename stem) already communicates the version to the user — duplication
+degrades the label. `firmware` should always be recorded when known as it is
+useful for future tooling and contributor reference.
 
 ---
 

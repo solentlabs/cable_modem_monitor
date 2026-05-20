@@ -72,6 +72,8 @@ def _transform_channel_section(section: dict[str, Any]) -> dict[str, Any] | None
         return _transform_transposed(section)
     if fmt == "javascript":
         return _transform_javascript(section)
+    if fmt == "javascript_json":
+        return _transform_javascript_json(section)
     if fmt == "hnap":
         return _transform_hnap(section)
     if fmt == "json":
@@ -148,18 +150,63 @@ def _transform_javascript(section: dict[str, Any]) -> dict[str, Any]:
     if section.get("filter"):
         func_def["filter"] = section["filter"]
 
+    # Fleet-matched additional functions (e.g., OFDM after QAM) carry their
+    # full committed definition and are appended verbatim.
+    additional = section.get("additional_js_functions", [])
+
     return {
         "format": "javascript",
         "resource": section.get("resource", ""),
-        "functions": [func_def],
+        "functions": [func_def] + additional,
     }
+
+
+def _transform_javascript_json(section: dict[str, Any]) -> dict[str, Any]:
+    """Transform javascript_json format from analysis to parser.yaml structure."""
+    mappings = [mapping_to_json_channel(m) for m in section.get("mappings", [])]
+
+    ct = section.get("channel_type")
+    if ct and "key" in ct:
+        # Inline the channel_type normalization map on the field entry,
+        # replacing the raw (map-less) entry that came from _extract_json_mappings.
+        mappings = [m for m in mappings if m.get("field") != "channel_type"]
+        mappings.append(
+            {
+                "key": ct["key"],
+                "field": "channel_type",
+                "type": "string",
+                "map": ct["map"],
+            }
+        )
+        ct = None
+
+    result: dict[str, Any] = {
+        "format": "javascript_json",
+        "resource": section.get("resource", ""),
+        "variable": section.get("variable", ""),
+        "mappings": mappings,
+    }
+    if section.get("filter"):
+        result["filter"] = section["filter"]
+    if ct:
+        result["channel_type"] = ct
+
+    return result
 
 
 def _transform_hnap(section: dict[str, Any]) -> dict[str, Any]:
     """Transform HNAP format from analysis to parser.yaml structure."""
-    fields = [mapping_to_channel(m) for m in section.get("mappings", [])]
-
     ct = section.get("channel_type")
+    mappings = section.get("mappings", [])
+
+    # When channel_type will be inlined with its normalization map,
+    # remove the raw (map-less) channel_type entry from mappings to
+    # avoid a duplicate field in the output.
+    if ct and "index" in ct:
+        mappings = [m for m in mappings if m.get("field") != "channel_type"]
+
+    fields = [mapping_to_channel(m) for m in mappings]
+
     if ct and "index" in ct:
         # Inline the channel_type mapping on the fields list
         fields.append(

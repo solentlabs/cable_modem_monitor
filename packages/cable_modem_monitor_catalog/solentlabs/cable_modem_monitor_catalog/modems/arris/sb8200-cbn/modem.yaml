@@ -1,5 +1,5 @@
 manufacturer: ARRIS
-model: SB8200v3
+model: SB8200
 model_aliases: []
 brands: []
 transport: cbn
@@ -21,6 +21,7 @@ actions:
 
 hardware:
   docsis_version: "3.1"
+  firmware: AC01
   release_date: "2023"
 
 status: awaiting_verification

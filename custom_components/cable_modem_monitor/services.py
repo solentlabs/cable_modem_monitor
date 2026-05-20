@@ -57,6 +57,7 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
         vol.Optional("include_upstream_power", default=True): cv.boolean,
         vol.Optional("include_upstream_frequency", default=False): cv.boolean,
         vol.Optional("include_errors", default=True): cv.boolean,
+        vol.Optional("include_error_rates", default=False): cv.boolean,
         vol.Optional("include_latency", default=True): cv.boolean,
         vol.Optional("include_status_card", default=True): cv.boolean,
         vol.Optional("graph_hours", default=24): cv.positive_int,
@@ -263,6 +264,8 @@ def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
             "us_freq": "US Frequency (MHz)",
             "corrected": "Corrected Errors",
             "uncorrected": "Uncorrected Errors",
+            "corrected_rate": "Corrected Error Rate",
+            "uncorrected_rate": "Uncorrected Error Rate",
         }
     return {
         "ds_power": "Downstream Power Levels (dBmV)",
@@ -272,6 +275,8 @@ def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
         "us_freq": "Upstream Frequency (MHz)",
         "corrected": "Corrected Errors (Total)",
         "uncorrected": "Uncorrected Errors (Total)",
+        "corrected_rate": "Corrected Error Rate (errors/min)",
+        "uncorrected_rate": "Uncorrected Error Rate (errors/min)",
     }
 
 
@@ -439,6 +444,11 @@ def _build_status_card_yaml(
             "        name: Upstream Channel Count",
         ]
     )
+    # Error totals only — the rate sensors exist as HA entities but
+    # are intentionally omitted from the status entities row. Rates
+    # are point-in-time MEASUREMENT values that jitter poll-to-poll;
+    # the summary row is for stable identity/state, the rate trend
+    # belongs in a history graph (see include_error_rates).
     if "total_corrected" in system_info:
         lines.extend(
             [
@@ -500,9 +510,21 @@ def _build_channel_graph_yaml(
     return yaml_parts
 
 
-def _build_error_graphs_yaml(entity_prefix: str, titles: dict[str, str]) -> list[str]:
-    """Build YAML for error history graphs."""
-    return [
+def _build_error_graphs_yaml(
+    entity_prefix: str,
+    titles: dict[str, str],
+    *,
+    include_rates: bool = False,
+) -> list[str]:
+    """Build YAML for error history graphs.
+
+    Count graphs are always emitted (caller gates this function on
+    ``total_corrected`` presence). Rate graphs are opt-in via
+    ``include_rates`` — rates are MEASUREMENT values that jitter
+    poll-to-poll, so they're off by default; users who want a rate
+    trend over time enable ``include_error_rates`` on the service call.
+    """
+    lines = [
         "  - type: history-graph",
         f"    title: {titles['corrected']}",
         "    hours_to_show: 168",
@@ -516,6 +538,24 @@ def _build_error_graphs_yaml(entity_prefix: str, titles: dict[str, str]) -> list
         f"      - entity: sensor.{entity_prefix}_total_uncorrected_errors",
         "        name: Uncorrected Error Count",
     ]
+    if include_rates:
+        lines.extend(
+            [
+                "  - type: history-graph",
+                f"    title: {titles['corrected_rate']}",
+                "    hours_to_show: 168",
+                "    entities:",
+                f"      - entity: sensor.{entity_prefix}_rate_corrected_errors",
+                "        name: Corrected Error Rate",
+                "  - type: history-graph",
+                f"    title: {titles['uncorrected_rate']}",
+                "    hours_to_show: 168",
+                "    entities:",
+                f"      - entity: sensor.{entity_prefix}_rate_uncorrected_errors",
+                "        name: Uncorrected Error Rate",
+            ]
+        )
+    return lines
 
 
 def _build_latency_graph_yaml(
@@ -694,6 +734,7 @@ def create_generate_dashboard_handler(
             "us_power": call.data.get("include_upstream_power", True),
             "us_freq": call.data.get("include_upstream_frequency", False),
             "errors": call.data.get("include_errors", True),
+            "error_rates": call.data.get("include_error_rates", False),
             "latency": call.data.get("include_latency", True),
             "status": call.data.get("include_status_card", True),
         }
@@ -708,7 +749,7 @@ def create_generate_dashboard_handler(
 
         yaml_parts = [
             "# Cable Modem Dashboard",
-            "# Copy from here, paste into:" " Dashboard > Add Card > Manual",
+            "# Copy from here, paste into: Dashboard > Add Card > Manual",
             "type: vertical-stack",
             "cards:",
         ]
@@ -747,7 +788,13 @@ def create_generate_dashboard_handler(
                 )
 
         if opts["errors"] and "total_corrected" in system_info:
-            yaml_parts.extend(_build_error_graphs_yaml(entity_prefix, titles))
+            yaml_parts.extend(
+                _build_error_graphs_yaml(
+                    entity_prefix,
+                    titles,
+                    include_rates=opts["error_rates"],
+                )
+            )
 
         if opts["latency"]:
             yaml_parts.extend(

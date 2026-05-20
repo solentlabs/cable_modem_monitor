@@ -1732,7 +1732,7 @@ sequenceDiagram
 | 7 | Immediate poll: orchestrator clears backoff | UNREACHABLE to ONLINE | Health RESPONSIVE + backoff active → reset_connectivity() |
 | 8 | Deferred listener: creates data entities | | Channel, system, LAN sensors appear |
 | 9 | Listener unsubscribes | | One-shot complete |
-| 9a | Re-notification fires (1s delay) | async_set_updated_data | Deferred entities receive _handle_coordinator_update() |
+| 9a | Re-notification fires (1s delay) | async_update_listeners | Deferred entities receive _handle_coordinator_update() |
 | 10 | Normal polling resumes | | All entities updating normally |
 
 **Assertions:**

@@ -1,8 +1,8 @@
 """Type conversion for parser field values.
 
 Handles field type conversion (integer, float, string, frequency, boolean,
-lock_status, uptime_seconds), unit suffix stripping, value mapping,
-scale multiplication, and frequency normalization.
+lock_status, modulation, uptime_seconds), unit suffix stripping, value
+mapping, scale multiplication, and frequency normalization.
 
 See PARSING_SPEC.md Field Types for the authoritative type definitions.
 """
@@ -12,6 +12,8 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any
+
+from ..spec_conformance import canonicalize_modulation
 
 _logger = logging.getLogger(__name__)
 
@@ -231,6 +233,23 @@ def _to_lock_status(value: str) -> str:
     return "locked" if value.lower() in _LOCKED_VALUES else "not_locked"
 
 
+def _to_modulation(value: str) -> str | None:
+    """Canonicalize a modulation value to its standard form.
+
+    Recognized variants (``256QAM``, ``256-QAM``, ``256qam``, etc.)
+    return canonical form (``QAM256``). Unrecognized strings pass
+    through unchanged so the spec-conformance gate surfaces them as
+    real violations rather than silently dropping data — a passthrough
+    here is preferable to opaque field omission for non-modulation
+    strings the modem might emit (channel-type sentinels, profile IDs,
+    IUC lists, etc.). Empty input returns ``None``.
+    """
+    if not value:
+        return None
+    canonical = canonicalize_modulation(value)
+    return canonical if canonical is not None else value
+
+
 def _to_uptime(value: str, input_format: str) -> str | None:
     """Convert raw uptime value to canonical ``"Nd HH:MM:SS"`` string.
 
@@ -275,25 +294,42 @@ def _compile_uptime_pattern(format_str: str) -> re.Pattern[str]:
 
     Replaces ``{days}``, ``{hours}``, ``{minutes}``, ``{seconds}`` with
     named capture groups. Whitespace in literal text is matched flexibly.
+    ``[...]`` brackets mark an optional segment — useful when a firmware
+    conditionally emits a component (e.g., Netgear omits the ``"N days "``
+    prefix below 24h).
     """
     cached = _uptime_pattern_cache.get(format_str)
     if cached is not None:
         return cached
 
-    # Split on placeholders, preserving the matched group names.
-    parts = re.split(r"\{(days|hours|minutes|seconds)\}", format_str)
+    # Split on bracketed optional segments. Odd-indexed entries are the
+    # contents of an optional segment; even-indexed are required.
+    segments = re.split(r"\[([^\[\]]*)\]", format_str)
     regex_parts: list[str] = []
-    for part in parts:
-        if part in _UPTIME_COMPONENTS:
-            regex_parts.append(f"\\s*(?P<{part}>\\d+)")
+    for idx, segment in enumerate(segments):
+        compiled = _compile_uptime_segment(segment)
+        if idx % 2 == 1:
+            regex_parts.append(f"(?:{compiled})?")
         else:
-            escaped = re.escape(part)
-            escaped = re.sub(r"\\ ", r"\\s*", escaped)
-            regex_parts.append(escaped)
+            regex_parts.append(compiled)
 
     pattern = re.compile("".join(regex_parts))
     _uptime_pattern_cache[format_str] = pattern
     return pattern
+
+
+def _compile_uptime_segment(segment: str) -> str:
+    """Compile one uptime format segment to its regex form."""
+    parts = re.split(r"\{(days|hours|minutes|seconds)\}", segment)
+    out: list[str] = []
+    for part in parts:
+        if part in _UPTIME_COMPONENTS:
+            out.append(f"\\s*(?P<{part}>\\d+)")
+        else:
+            escaped = re.escape(part)
+            escaped = re.sub(r"\\ ", r"\\s*", escaped)
+            out.append(escaped)
+    return "".join(out)
 
 
 def _uptime_from_pattern(value: str, format_str: str) -> str | None:
@@ -329,6 +365,7 @@ _TYPE_HANDLERS.update(
         "frequency": _to_frequency,
         "boolean": _to_boolean,
         "lock_status": _to_lock_status,
+        "modulation": _to_modulation,
         "uptime": _to_uptime,
     }
 )

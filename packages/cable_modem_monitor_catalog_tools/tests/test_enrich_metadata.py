@@ -435,9 +435,9 @@ class TestRoundTripPreservation:
 
         for key, expected in _COMPLETE_CONFIG.items():
             assert key in result.metadata, f"Field {key!r} dropped by enrichment"
-            assert result.metadata[key] == expected, (
-                f"Field {key!r} changed: expected {expected!r}, " f"got {result.metadata[key]!r}"
-            )
+            assert (
+                result.metadata[key] == expected
+            ), f"Field {key!r} changed: expected {expected!r}, got {result.metadata[key]!r}"
 
     def test_extraction_covers_generate_config_fields(self) -> None:
         """_extract_metadata_from_config extracts every field generate_config reads."""

@@ -55,6 +55,12 @@ class FleetPatterns:
             in the fleet's ``channel_type.map`` values.
         aggregate_fields: ``(source_field, aggregate_name)`` pairs
             observed in the fleet's ``aggregate`` sections.
+        js_function_layouts: JavaScript function name mapped to the
+            committed field layout (offsets, types, units). First
+            occurrence per function name wins.
+        hnap_response_layouts: HNAP response key mapped to the
+            committed field layout (positions, types). First occurrence
+            per response key wins.
     """
 
     selector_directions: dict[str, str] = field(default_factory=dict)
@@ -64,6 +70,8 @@ class FleetPatterns:
     delimiters: set[str] = field(default_factory=set)
     channel_type_values: set[str] = field(default_factory=set)
     aggregate_fields: list[tuple[str, str]] = field(default_factory=list)
+    js_function_layouts: dict[str, dict[str, Any]] = field(default_factory=dict)
+    hnap_response_layouts: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 # -----------------------------------------------------------------------

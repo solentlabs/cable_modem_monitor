@@ -1,0 +1,17 @@
+{
+  "_description": "channel_type must be one of qam/ofdm/atdma/ofdma — SC-QAM is a source-side label, must be normalized",
+  "_data": {
+    "downstream": [
+      {
+        "channel_number": 1,
+        "channel_id": 32,
+        "channel_type": "SC-QAM",
+        "lock_status": "locked",
+        "modulation": "QAM256"
+      }
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].channel_type", "rule": "channel_type_enum"}
+  ]
+}

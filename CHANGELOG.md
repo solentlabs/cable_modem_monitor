@@ -7,6 +7,120 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.4] - 2026-05-20
+
+### Added
+
+- **Per-minute error rate sensors (#164).** SC-QAM `rate_corrected`
+  and `rate_uncorrected` fields (errors/min) in `system_info`,
+  derived by the orchestrator from inter-poll deltas on a monotonic
+  clock. Two new HA sensors (`Rate Corrected Errors`, `Rate
+  Uncorrected Errors`, MEASUREMENT state class) materialize whenever
+  the modem reports SC-QAM error counters; a per-counter zero-floor
+  rule means a total of `0` produces rate `0.0` immediately, so a
+  fresh modem with no errors reads `0.0` rather than `unknown` from
+  the first poll. Otherwise the sensors read `unknown` until the
+  second poll fills the delta. Rate history graphs are opt-in via a
+  new `include_error_rates` service option (default `false`); the
+  default dashboard is unchanged. SC-QAM scope only; OFDM rates are
+  future work per the DOCS-IF31-MIB boundary rule in PARSING_SPEC
+  § Aggregate. Surfaces what users in #110, #144, and #161 were
+  assembling with HA's `derivative` integration.
+- **Modulation canonicalization elevated to core.** New
+  `type: modulation` field type auto-canonicalizes raw values
+  (`256QAM` → `QAM256`) via the shared helper — one source of
+  truth instead of per-modem map blocks. Paired with
+  `channel_type: derive: from_modulation`, the universal
+  direction-aware rule (DS `QAM*` → `qam`, US `QAM*` → `atdma`,
+  OFDM/OFDMA stand alone) replaces enumerated per-modem
+  channel-type maps. Catalog migrations: cm820b, tg3442de,
+  tm1602a, coda56 (DS keeps a source-code-to-value map layered
+  under the new type for the modem-specific 1→QAM64 / 2→QAM256
+  translation), ch7465mt. `XMLColumnMapping` gained `map:`
+  support along the way, closing a format gap.
+- **Spec-conformance gate against committed goldens.**
+  `validate_modem_data` runs against `modem.expected.json` for
+  every `status: confirmed` modem and asserts conformance with
+  `PARSING_SPEC`. 16 fixture-driven cases plus inline helper
+  coverage. Catches non-canonical modulation drift at PR time
+  rather than at runtime. `awaiting_verification` modems are
+  not enforced (parsers still iterating).
+- **Optional-segment uptime format.** Uptime parsers now accept
+  format strings with bracketed optional segments
+  (e.g., `[{days} days ]{hours}:{minutes}:{seconds}`), so a single
+  declarative format can match both `2 days 03:14:15` and `03:14:15`
+  when the modem omits days under one day. Unified the cm2000 and
+  cm3000 uptime declarations on this shared format.
+- **Config-flow variant picker groups cross-directory modem
+  variants.** SB8200 HTML, HNAP, and CBN variants now appear as a
+  single "Arris SB8200" entry in the picker; choosing one opens a
+  sub-picker for the variant. Hardware version (`hw_version`) read
+  from `hardware.hw_version` in the catalog appears as "(v6)" or
+  "(v7)" in the variant label so users can match against the modem
+  sticker. `firmware` moves to `hardware.firmware`; `hw_version`
+  removed from the top-level model config. Catalog README gains a
+  CBN badge column and shows `hw_version` in the model column to
+  disambiguate duplicate rows.
+
+### Fixed
+
+- **Netgear C7000v2 Basic Auth — 401 on every authenticated
+  request.** Firmware requires the `XSRF_TOKEN` cookie (set on
+  the initial `GET /`) to accompany every subsequent
+  `Authorization: Basic` header. Enabled `challenge_cookie: true`
+  in the C7000v2 `modem.yaml` — same pattern already shipping
+  for the CM1200 HTTPS variant. Addresses #163 (thanks to
+  @Anthranilic for the fresh HAR capture).
+- **Compal CH7465MT upstream `channel_type` miscoded as `qam`.**
+  Corrected to `atdma` as part of the modulation canonicalization
+  migration. Longstanding miscoding — upstream DOCSIS 3.0 SC-QAM
+  carriers are A-TDMA, not QAM.
+- **9 CodeQL code-scanning alerts.** Implicit string
+  concatenation in `services.py` and `generate_catalog_index.py`
+  converted to explicit `+`; ineffectual `await` in
+  `test_sensor_entities.py` marked explicit. Catalog README
+  byte-identical after regeneration; no behavior change.
+- **v1 to v2 migration: sibling variants missed; Ping and HTTP
+  Latency sensors absent post-upgrade.** `resolve_variant` only
+  walked the primary modem directory, missing variants defined in
+  sibling directories (SB8200 CBN, HNAP, url_token). `supports_icmp`
+  and `supports_head` were omitted from the migrated entry;
+  `sensor.py` gates Ping and HTTP Latency sensor creation on those
+  keys, so both were silently absent after upgrade. Both keys now
+  default `True`; runtime health probing corrects false positives.
+  Addresses #143.
+- **Error rate baseline not cleared on `reset_auth()`.** The
+  post-reset poll computed a rate across the auth-outage interval
+  rather than emitting no-baseline. `reset_auth()` now clears the
+  prior-state baseline. Related to #164.
+
+### Changed
+
+- **Catalog tools field registry expanded.** New vocabulary entries
+  map non-standard modem headers to canonical fields without pipeline
+  code changes: `Channel Index` to `channel_number`, `Received Level`
+  and `Transmit Level` to `power`, `SNR/MER Threshold Value` to
+  `snr`, and `Modulation/Profile ID` to `modulation`. HNAP
+  `_run_pass1` now skips degenerate all-counters rows. Fleet accuracy
+  improves from 72.3% to 74.0%; TC4400 per-modem accuracy from 60.8%
+  to 98.6%.
+- **Arris SB8200 CBN variant directory renamed from `sb8200v3` to
+  `sb8200-cbn`.** No confirmed installations. Directory name now
+  reflects transport rather than hardware revision, consistent with
+  `sb8200-hnap`.
+
+### Confirmed
+
+- **Arris S33** — verified on real hardware by @ccpk1 on
+  firmware `TB01.03.001.11_051722_212.S3` (32 DS + 4 US locked,
+  all signals nominal). `modem.har` refreshed from his sanitized
+  capture (114 entries, full reboot flow, all diagnostic
+  screens); `modem.expected.json` regenerated against the
+  existing curated `parser.yaml`; `modem.verified.json` added
+  from his diagnostics. S33v2 and S33v3 remain
+  `awaiting_verification` — each needs an independent
+  confirmation. Related to #146, #140.
+
 ## [3.14.0-beta.3] - 2026-05-01
 
 ### Added
@@ -503,7 +617,7 @@ new distribution mechanism on top of that work.
   and the trailing "What Happens Next?" sections. Also codified
   issue-label mutual-exclusivity (`needs-triage` / `in-development`
   / `needs-testing` / `needs-data` / `backlog` are exactly one) and
-  the `release:vX.Y` rule in `CLAUDE.md`.
+  the `release:vX.Y` rule in `CONTRIBUTING.md`.
 - **CHANGELOG hygiene** — internal roadmap references (Pxx codes,
   internal milestone names) stripped from prior alpha sections;
   user-facing entries cite GitHub issues only.

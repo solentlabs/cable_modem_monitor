@@ -4,13 +4,13 @@ This document defines the standards for code review in this project.
 
 ## Contents
 
-| Section                  | What it covers                                    |
-|--------------------------|---------------------------------------------------|
-| Design Principles        | DRY, SoC, SOLID                                   |
-| Source File Standards    | Docstrings, type hints, async patterns            |
-| Test File Standards      | Table-driven tests, coverage requirements         |
-| Error Handling           | Consistent patterns, meaningful messages          |
-| Naming Conventions       | Clear, descriptive, consistent                    |
+| Section                  | What it covers                                              |
+|--------------------------|-------------------------------------------------------------|
+| Design Principles        | DRY, SoC, SOLID, no shortcuts, quality gates are not negotiable |
+| Source File Standards    | Docstrings, type hints, async, forward refs, suppression discipline |
+| Test File Standards      | Table-driven tests, fixtures vs inline, no data blobs, test overrides as code smell |
+| Error Handling           | Consistent patterns, meaningful messages                    |
+| Naming Conventions       | Clear, descriptive, consistent                              |
 
 ---
 
@@ -69,6 +69,28 @@ Most relevant to this project:
 - **SRP**: Parsers only parse, auth strategies only authenticate
 - **OCP**: New modems added via new parser files, not modifying existing code
 - **DIP**: Core code depends on `ModemParser` ABC, not concrete parsers
+
+### No Shortcuts, No Deferred Structure
+
+If a better design is obvious — split by transport, shared types
+module, DRY utility — use it now. Don't optimise for speed of first
+draft. When a module grows past its natural boundary, restructure the
+whole module rather than bolting on the new thing and leaving the rest.
+
+Deferred structure becomes hidden tech debt; "we'll clean it up later"
+usually means "we won't." Pay the structural cost in the change that
+introduces the need.
+
+### Quality Gates Are Not Negotiable
+
+If mypy, ruff, black, pytest, or any other quality gate fails, fix the
+code. Don't exclude files, skip checks, or weaken thresholds. The only
+valid exclusions are generated code and vendored dependencies.
+
+This applies to all linters including markdownlint — fix the source
+files, don't silence rules that flag real issues. Only configure away
+rules that are genuinely inapplicable (e.g., line length for URLs,
+duplicate headings in changelogs).
 
 ---
 
@@ -168,6 +190,51 @@ exception is standalone scripts that intentionally avoid Core as a
 dependency (e.g., `check_fixture_pii.py`), which inline the LFS-pointer
 check themselves.
 
+### No Forward References
+
+Helper functions that reference a class must be defined **after** the
+class, not before it. `from __future__ import annotations` makes
+forward references parse, but the code reads wrong — a reader hitting
+the helper first has to scroll past it to find the class.
+
+```python
+# BAD - helper references Foo before Foo is defined
+def make_foo() -> Foo:
+    return Foo(...)
+
+class Foo: ...
+
+# GOOD - helper after the class
+class Foo: ...
+
+def make_foo() -> Foo:
+    return Foo(...)
+```
+
+### Suppression Discipline
+
+When a quality gate flags an issue, the default reach is the code fix.
+Suppression mechanisms (`# type: ignore`, `# pyright: ignore`, bare
+`# noqa`, schema-validator scaffolds, validator bypass flags) are last
+resorts.
+
+Any suppression added in a change must carry a same-line justification
+comment naming what's actually true and why suppression is the right
+shape:
+
+```python
+# BAD - silent suppression
+result = api.call()  # type: ignore
+
+# GOOD - same-line justification
+result = api.call()  # type: ignore[no-untyped-call]  # third-party SDK lacks stubs as of v2.10
+```
+
+`make suppression-check` (and the `Suppression Discipline` CI job)
+enforces this on lines added in your changes; existing suppressions
+are grandfathered. Never propose a suppression as the first answer to
+a quality-gate failure.
+
 ### Corresponding Test File
 
 Every source file should have a corresponding test file:
@@ -260,6 +327,69 @@ def test_validation(input: str, expected: bool, desc: str):
 - **Core components**: Target 100% where sensible
 - **Parsers**: Focus on parse logic, not every edge case
 - **Integration tests**: Cover happy path + critical error paths
+
+### Test Overrides Are a Code Smell
+
+If reaching coverage requires heavy mocking, monkeypatching, or test
+overrides, the code structure is wrong. Restructure the code (extract
+dependency, make injectable) — don't paper over it with test
+complexity.
+
+Signs you're papering over structure: more than one or two
+`monkeypatch.setattr` calls in a test, mocking internal helpers,
+overriding private attributes, or replacing whole modules with stubs.
+Any of these mean the seam belongs in the production code, not the
+test.
+
+### Schema Tests Use Fixtures, Behavioural Tests Stay Inline
+
+Two distinct test shapes:
+
+- **Schema tests** (valid/invalid configs, parse-or-reject inputs):
+  data lives in JSON fixture files. Adding a test case = adding a
+  file. Keeps the table of cases visible in the filesystem and avoids
+  inline-data bloat.
+- **Behavioural tests** (field defaults, access patterns, state
+  mutations): assertions stay inline. Each behavior is one test
+  function; the assertion shape *is* the test.
+
+Don't mix shapes. A behavioural test should not load a fixture; a
+schema test should not assert on field defaults.
+
+### No Inline Data Blobs in Test Files
+
+No inline JSON, HTML, or multi-line data in test methods. Data comes
+from fixture files (preferred) or named module-level constants:
+
+```python
+# BAD - inline JSON blob
+def test_parse():
+    raw = """{"channels": [
+        {"id": 1, "frequency": 100000000, ...},
+        ...20 more lines...
+    ]}"""
+
+# GOOD - fixture file
+def test_parse(load_fixture):
+    raw = load_fixture("channels_24down_8up.json")
+
+# ALSO GOOD - module-level constant (when data is short and used once)
+SAMPLE_CHANNEL = {"id": 1, "frequency": 100_000_000, "locked": True}
+
+def test_parse_single_channel():
+    result = parse(SAMPLE_CHANNEL)
+    assert result.frequency == 100_000_000
+```
+
+### No Modem-Specific References in Tests
+
+Use generic paths and names (`Solent Labs`, `T100`, `/status.html`).
+No cross-boundary imports — test data lives inside the package's own
+`tests/`. Modem-specific fixtures belong in the catalog package, not
+in core or HA-integration tests.
+
+This keeps Core and HA tests independent of catalog churn — a renamed
+modem doesn't ripple into Core's test suite.
 
 ---
 

@@ -1,13 +1,11 @@
 # Cable Modem Monitor for Home Assistant
 
-<!-- Status & Installation -->
-[![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor)](https://github.com/solentlabs/cable_modem_monitor/releases)
-[![HACS installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HACS&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<!-- Packages -->
+<!-- Versions & Install -->
+[![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor?include_prereleases)](https://github.com/solentlabs/cable_modem_monitor/releases)
 [![Core](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-core?label=core)](https://pypi.org/project/solentlabs-cable-modem-monitor-core/)
 [![Catalog](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-catalog?label=catalog)](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)
+[![HACS installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HACS&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <!-- Build Status -->
 [![GitHub Actions](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)
@@ -20,10 +18,12 @@
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
+<!-- markdownlint-disable MD033 -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/dashboard-screenshot-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard" width="500">
 </picture>
+<!-- markdownlint-enable MD033 -->
 
 Monitor your cable modem's signal quality, errors, and connection health in real-time.
 
@@ -75,34 +75,42 @@ Monitor your cable modem's signal quality, errors, and connection health in real
 Track your cable modem's health with comprehensive dashboards and real-time monitoring:
 
 <p align="center">
+  <!-- markdownlint-disable MD033 -->
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/downstream-power-levels-dark.png">
     <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/downstream-power-levels.png" alt="Downstream Power Levels" width="500">
-  </picture><br>
+  </picture>
+  <!-- markdownlint-enable MD033 --><br>
   <em>Real-time power level monitoring across all downstream channels</em>
 </p>
 
 <p align="center">
+  <!-- markdownlint-disable MD033 -->
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/signal-to-noise-ratio-dark.png">
     <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/signal-to-noise-ratio.png" alt="Signal-to-Noise Ratio" width="500">
-  </picture><br>
+  </picture>
+  <!-- markdownlint-enable MD033 --><br>
   <em>SNR tracking helps identify signal quality issues before they cause problems</em>
 </p>
 
 <p align="center">
+  <!-- markdownlint-disable MD033 -->
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/latency-dark.png">
     <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/latency.png" alt="Modem Latency Monitoring" width="500">
-  </picture><br>
+  </picture>
+  <!-- markdownlint-enable MD033 --><br>
   <em>Ping and HTTP latency monitoring for real-time health assessment</em>
 </p>
 
 <p align="center">
+  <!-- markdownlint-disable MD033 -->
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/corrected-errors-dark.png">
     <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/corrected-errors.png" alt="Corrected Errors" width="500">
-  </picture><br>
+  </picture>
+  <!-- markdownlint-enable MD033 --><br>
   <em>Track corrected errors over time to spot developing line issues</em>
 </p>
 
@@ -189,26 +197,32 @@ To return to stable: repeat the steps and pick the latest stable release.
 5. Enter your modem's IP address (typically `192.168.100.1`) and credentials if required
 
 <p align="center">
+  <!-- markdownlint-disable MD033 -->
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step1-manufacturer-dark.png">
     <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step1-manufacturer.png" alt="Setup step 1: pick a manufacturer" width="420">
-  </picture><br>
+  </picture>
+  <!-- markdownlint-enable MD033 --><br>
   <em>Step 3 — Pick a manufacturer (or All)</em>
 </p>
 
 <p align="center">
+  <!-- markdownlint-disable MD033 -->
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step2-modem-dark.png">
     <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step2-modem.png" alt="Setup step 2: select modem and channel naming" width="420">
-  </picture><br>
+  </picture>
+  <!-- markdownlint-enable MD033 --><br>
   <em>Step 4 — Select your modem and channel naming</em>
 </p>
 
 <p align="center">
+  <!-- markdownlint-disable MD033 -->
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step3-connection-dark.png">
     <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step3-connection.png" alt="Setup step 3: connection details" width="420">
-  </picture><br>
+  </picture>
+  <!-- markdownlint-enable MD033 --><br>
   <em>Step 5 — Enter connection details</em>
 </p>
 
@@ -224,10 +238,12 @@ After setup, configure via **Settings → Devices & Services → Cable Modem Mon
 Channel Identity and Modem Model are install-time choices. To change either, remove the integration and add it again.
 
 <p align="center">
+  <!-- markdownlint-disable MD033 -->
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/cable-modem-settings-dark.png">
     <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/cable-modem-settings.png" alt="Cable Modem Settings dialog" width="420">
   </picture>
+  <!-- markdownlint-enable MD033 -->
 </p>
 
 ---

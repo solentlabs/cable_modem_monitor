@@ -58,6 +58,7 @@ def protocol_to_badge(protocol: str) -> str:
     badges = {
         "HTML": '![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping")',
         "HNAP": '![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth")',
+        "CBN": '![CBN](https://img.shields.io/badge/-CBN-8B6914?style=flat-square "CBN SOAP-based protocol")',
         "REST_API": '![REST](https://img.shields.io/badge/-REST-5B9A5B?style=flat-square "JSON REST API")',
     }
     return badges.get(protocol, protocol)

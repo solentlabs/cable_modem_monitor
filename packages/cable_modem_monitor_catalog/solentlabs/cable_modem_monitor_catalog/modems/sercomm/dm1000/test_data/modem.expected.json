@@ -375,6 +375,7 @@
     "firmware_name": "DM1000-V1.21.04.025",
     "hardware_version": "1.0",
     "model": "DM1000",
+    "rate_uncorrected": 0.0,
     "software_version": "1.21.04.025",
     "total_corrected": 6,
     "total_uncorrected": 0,

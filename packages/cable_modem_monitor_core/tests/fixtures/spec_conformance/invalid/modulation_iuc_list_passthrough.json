@@ -1,0 +1,15 @@
+{
+  "_description": "TC4400-style IUC list bleed-through (raw '0,1,3,4' or '3, 4, 5...') in the modulation column",
+  "_data": {
+    "downstream": [
+      {"channel_number": 33, "channel_id": 159, "channel_type": "ofdm", "lock_status": "locked", "modulation": "0,1,3,4"}
+    ],
+    "upstream": [
+      {"channel_number": 5, "channel_id": 5, "channel_type": "ofdma", "lock_status": "locked", "modulation": "3, 4, 5, 6, 9, 10, 11, 12, 13"}
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].modulation", "rule": "modulation_canonical"},
+    {"path": "upstream[0].modulation", "rule": "modulation_canonical"}
+  ]
+}

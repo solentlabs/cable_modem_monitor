@@ -1,0 +1,17 @@
+{
+  "_description": "OFDM/OFDMA/ATDMA strings in the modulation field are channel-type restatements, not modulation values",
+  "_data": {
+    "downstream": [
+      {"channel_number": 33, "channel_id": 159, "channel_type": "ofdm", "lock_status": "locked", "modulation": "OFDM"},
+      {"channel_number": 1, "channel_id": 1, "channel_type": "qam", "lock_status": "locked", "modulation": "QAM"}
+    ],
+    "upstream": [
+      {"channel_number": 1, "channel_id": 1, "channel_type": "atdma", "lock_status": "locked", "modulation": "ATDMA"}
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].modulation", "rule": "modulation_canonical"},
+    {"path": "downstream[1].modulation", "rule": "modulation_canonical"},
+    {"path": "upstream[0].modulation", "rule": "modulation_canonical"}
+  ]
+}

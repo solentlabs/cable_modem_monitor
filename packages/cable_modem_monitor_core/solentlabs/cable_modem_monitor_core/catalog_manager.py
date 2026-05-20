@@ -37,7 +37,12 @@ class ModemSummary:
         auth_strategy: Auth strategy of the default variant. For
             multi-variant modems, the config flow loads variant-specific
             auth strategy in Step 2.
+        transport: Network transport protocol (``"http"`` or ``"hnap"``).
         path: Filesystem path to the modem directory in the catalog.
+        sibling_dirs: Paths of other catalog directories that share this
+            modem's ``(manufacturer, model)`` identity. Populated by
+            ``list_modems()`` when multiple directories represent the
+            same hardware under different transports.
     """
 
     manufacturer: str
@@ -48,7 +53,9 @@ class ModemSummary:
     status: str = "awaiting_verification"
     default_host: str = "192.168.100.1"
     auth_strategy: str = "none"
+    transport: str = "http"
     path: Path = field(default_factory=lambda: Path("."))
+    sibling_dirs: list[Path] = field(default_factory=list)
 
 
 def list_modems(catalog_path: Path) -> list[ModemSummary]:
@@ -57,6 +64,13 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
     Reads identity fields from each ``modem.yaml`` in the catalog
     directory. Returns a flat list suitable for config flow dropdowns,
     search, or filtering.
+
+    Directories that share the same ``(manufacturer, model)`` identity
+    (case-insensitive) are collapsed into a single summary — the first
+    found (alphabetically by path) becomes the primary entry, and the
+    rest are listed in its ``sibling_dirs``. The config flow uses
+    ``sibling_dirs`` to surface transport as a variant dimension in
+    Step 2 (see CONFIG_FLOW_SPEC.md § Known Gap).
 
     The consumer owns the UI pattern — dropdowns, typeahead, flat list.
     This API returns everything; the consumer filters client-side.
@@ -69,24 +83,41 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
             (e.g., ``catalog/modems/``).
 
     Returns:
-        List of ModemSummary, one per modem (default variant).
+        List of ModemSummary, one per unique (manufacturer, model) pair.
     """
-    results: list[ModemSummary] = []
+    raw_results: list[ModemSummary] = []
 
     if not catalog_path.is_dir():
         _logger.warning("Catalog path does not exist: %s", catalog_path)
-        return results
+        return raw_results
 
     for modem_yaml in sorted(catalog_path.rglob("modem.yaml")):
         try:
             summary = _load_summary(modem_yaml)
             if summary is not None:
-                results.append(summary)
+                raw_results.append(summary)
         except Exception:
             _logger.warning("Skipping invalid modem.yaml: %s", modem_yaml, exc_info=True)
 
-    _logger.info("Catalog discovery: %d modems found", len(results))
-    return results
+    # Group directories that share the same (manufacturer, model) identity.
+    # First occurrence (alphabetical path order) becomes the primary entry.
+    seen: dict[tuple[str, str], int] = {}
+    grouped: list[ModemSummary] = []
+
+    for s in raw_results:
+        key = (s.manufacturer.lower(), s.model.lower())
+        if key not in seen:
+            seen[key] = len(grouped)
+            grouped.append(s)
+        else:
+            grouped[seen[key]].sibling_dirs.append(s.path)
+
+    _logger.info(
+        "Catalog discovery: %d modems found (%d directories)",
+        len(grouped),
+        len(raw_results),
+    )
+    return grouped
 
 
 @dataclass
@@ -101,6 +132,10 @@ class VariantInfo:
             (``modem.yaml``), otherwise the suffix after ``modem-``
             (e.g., ``"form-nonce"`` for ``modem-form-nonce.yaml``).
         auth_strategy: Auth strategy string from the YAML file.
+        hw_version: Hardware version label shown in the variant dropdown
+            (e.g., ``"HW v6"``). Users can verify this against the sticker
+            on the modem. Used when multiple variants share the same auth
+            strategy and hw_version is the clearest user-facing discriminator.
         isps: ISP names associated with this variant.
         notes: Free-text notes from the YAML (may be multi-line).
         path: Filesystem path to the variant YAML file.
@@ -108,55 +143,70 @@ class VariantInfo:
 
     name: str | None
     auth_strategy: str = "none"
+    hw_version: str | None = None
     isps: list[str] = field(default_factory=list)
     notes: str | None = None
     path: Path = field(default_factory=lambda: Path("."))
 
 
-def list_variants(modem_dir: Path) -> list[VariantInfo]:
-    """List all variants for a modem directory.
+def list_variants(
+    modem_dir: Path,
+    sibling_dirs: list[Path] | None = None,
+) -> list[VariantInfo]:
+    """List all variants for a modem, including sibling transport directories.
 
-    Scans *modem_dir* for ``modem.yaml`` (default variant) and
-    ``modem-*.yaml`` (named variants).  Reads only the fields needed
-    for config flow display.
+    Scans *modem_dir* (and any *sibling_dirs*) for ``modem.yaml``
+    (default variant) and ``modem-*.yaml`` (named variants). Returns a
+    combined flat list suitable for the config flow variant dropdown.
 
-    Single-variant modems return a list with one entry whose
-    ``name`` is ``None``.
+    When sibling directories are present, each directory contributes its
+    variants to the list. This surfaces transport as a variant dimension
+    (see CONFIG_FLOW_SPEC.md § Known Gap): a user selecting "Arris SB8200"
+    sees all firmware variants from the ``http`` directory AND the HNAP
+    directory in a single dropdown.
+
+    Single-variant modems return a list with one entry whose ``name``
+    is ``None``. The ``path`` field on each entry points to the variant
+    YAML file; ``path.parent`` is the directory to use for loading.
 
     Args:
-        modem_dir: Path to a modem directory in the catalog
-            (e.g., ``catalog/modems/arris/sb6190/``).
+        modem_dir: Path to the primary modem directory in the catalog.
+        sibling_dirs: Additional directories that share the same
+            ``(manufacturer, model)`` identity under a different transport.
 
     Returns:
-        List of :class:`VariantInfo`, sorted with default first.
+        List of :class:`VariantInfo`, sorted with default variants first.
     """
     results: list[VariantInfo] = []
 
-    if not modem_dir.is_dir():
-        _logger.warning("Modem directory does not exist: %s", modem_dir)
-        return results
-
-    for yaml_path in sorted(modem_dir.glob("modem*.yaml")):
-        stem = yaml_path.stem
-        if stem == "modem":
-            variant_name: str | None = None
-        elif stem.startswith("modem-"):
-            variant_name = stem[len("modem-") :]
-        else:
+    for d in [modem_dir] + (sibling_dirs or []):
+        if not d.is_dir():
+            _logger.warning("Modem directory does not exist: %s", d)
             continue
 
-        try:
-            info = _load_variant(yaml_path, variant_name)
-            if info is not None:
-                results.append(info)
-        except Exception:
-            _logger.warning(
-                "Skipping invalid variant file: %s",
-                yaml_path,
-                exc_info=True,
-            )
+        for yaml_path in sorted(d.glob("modem*.yaml")):
+            stem = yaml_path.stem
+            if stem == "modem":
+                variant_name: str | None = None
+            elif stem.startswith("modem-"):
+                variant_name = stem[len("modem-") :]
+            else:
+                continue
 
-    # Default variant first, then alphabetical
+            try:
+                info = _load_variant(yaml_path, variant_name)
+                if info is not None:
+                    results.append(info)
+            except Exception:
+                _logger.warning(
+                    "Skipping invalid variant file: %s",
+                    yaml_path,
+                    exc_info=True,
+                )
+
+    # Default variants (name=None) first, then alphabetical by name.
+    # Stable sort preserves the primary-before-sibling insertion order
+    # within tied groups, so the primary directory's defaults come first.
     results.sort(key=lambda v: (v.name is not None, v.name or ""))
     return results
 
@@ -169,9 +219,11 @@ def _load_variant(yaml_path: Path, name: str | None) -> VariantInfo | None:
         return None
 
     auth = raw.get("auth") or {}
+    hardware = raw.get("hardware") or {}
     return VariantInfo(
         name=name,
         auth_strategy=auth.get("strategy", "none"),
+        hw_version=hardware.get("hw_version"),
         isps=raw.get("isps", []),
         notes=raw.get("notes"),
         path=yaml_path,
@@ -207,5 +259,6 @@ def _load_summary(modem_yaml: Path) -> ModemSummary | None:
         status=raw.get("status", "awaiting_verification"),
         default_host=raw.get("default_host", "192.168.100.1"),
         auth_strategy=auth.get("strategy", "none"),
+        transport=raw.get("transport", "http"),
         path=modem_yaml.parent,
     )

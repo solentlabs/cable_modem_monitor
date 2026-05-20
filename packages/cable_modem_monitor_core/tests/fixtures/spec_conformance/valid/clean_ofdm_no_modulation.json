@@ -1,0 +1,16 @@
+{
+  "_description": "OFDM downstream with modulation field absent (per-modem field publication rule)",
+  "_data": {
+    "downstream": [
+      {
+        "channel_number": 33,
+        "channel_id": 159,
+        "channel_type": "ofdm",
+        "lock_status": "locked",
+        "frequency": 738000000,
+        "power": 1.2,
+        "snr": 41.0
+      }
+    ]
+  }
+}

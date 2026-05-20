@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
-from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import scan_fleet
+from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import AuthAuditIssue, audit_fleet_auth, scan_fleet
 
 
 @pytest.fixture(scope="module")
@@ -46,6 +46,36 @@ class TestScanFleetStructure:
     def test_channel_type_values_non_empty(self, fleet: FleetPatterns) -> None:
         """Fleet has channel type values from parser.yaml maps."""
         assert len(fleet.channel_type_values) > 0
+
+    def test_js_function_layouts_non_empty(self, fleet: FleetPatterns) -> None:
+        """Fleet extracts JS function layouts from javascript-format sections."""
+        assert len(fleet.js_function_layouts) > 0
+
+    def test_js_function_layout_structure(self, fleet: FleetPatterns) -> None:
+        """JS function layouts include known Netgear/ARRIS function names with fields."""
+        assert "InitDsTableTagValue" in fleet.js_function_layouts
+        layout = fleet.js_function_layouts["InitDsTableTagValue"]
+        assert isinstance(layout.get("fields"), list)
+        assert len(layout["fields"]) > 0
+        assert all("offset" in f and "field" in f for f in layout["fields"])
+
+    def test_hnap_response_layouts_non_empty(self, fleet: FleetPatterns) -> None:
+        """Fleet extracts HNAP response key layouts from hnap-format sections."""
+        assert len(fleet.hnap_response_layouts) > 0
+
+    def test_hnap_response_layout_structure(self, fleet: FleetPatterns) -> None:
+        """HNAP response layouts include known ARRIS response keys with fields."""
+        assert "GetCustomerStatusDownstreamChannelInfoResponse" in fleet.hnap_response_layouts
+        layout = fleet.hnap_response_layouts["GetCustomerStatusDownstreamChannelInfoResponse"]
+        assert isinstance(layout.get("fields"), list)
+        assert len(layout["fields"]) > 0
+        assert all("index" in f and "field" in f for f in layout["fields"])
+
+    def test_hnap_response_layout_has_channel_number(self, fleet: FleetPatterns) -> None:
+        """HNAP downstream layout includes channel_number at index 0."""
+        layout = fleet.hnap_response_layouts.get("GetCustomerStatusDownstreamChannelInfoResponse", {})
+        fields = {f["index"]: f["field"] for f in layout.get("fields", []) if "index" in f}
+        assert fields.get(0) == "channel_number"
 
 
 # ┌─────────────────────────┬───────────────────┬──────────────────────────────────┐
@@ -129,6 +159,86 @@ class TestScanFleetContent:
         """All system_info label keys are normalized to lowercase."""
         for label in fleet.system_info_labels:
             assert label == label.lower()
+
+
+class TestAuditFleetAuth:
+    """audit_fleet_auth catches login_page / HAR fixture mismatches."""
+
+    def test_empty_directory_returns_no_issues(self, tmp_path: Path) -> None:
+        """Empty catalog directory returns empty issue list."""
+        assert audit_fleet_auth(tmp_path) == []
+
+    def test_missing_login_page_detected(self, tmp_path: Path) -> None:
+        """Modem with login_page set but no matching HAR entry is flagged."""
+        import json
+
+        modem_dir = tmp_path / "modems" / "acme" / "m1"
+        test_data = modem_dir / "test_data"
+        test_data.mkdir(parents=True)
+
+        (modem_dir / "modem.yaml").write_text(
+            "manufacturer: Acme\nmodel: M1\n"
+            "auth:\n  strategy: form\n  action: /goform/Login\n"
+            "  login_page: /Login.asp\n  username_field: u\n  password_field: p\n",
+            encoding="utf-8",
+        )
+        (test_data / "modem.har").write_text(
+            json.dumps(
+                {
+                    "log": {
+                        "entries": [
+                            {
+                                "request": {"method": "POST", "url": "http://192.168.0.1/goform/Login"},
+                                "response": {"status": 302, "headers": [], "content": {}},
+                            }
+                        ]
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        issues = audit_fleet_auth(tmp_path)
+        assert len(issues) == 1
+        assert issues[0].modem == "modems/acme/m1"
+        assert "no GET entry" in issues[0].issue
+
+    def test_non_form_auth_skipped(self, tmp_path: Path) -> None:
+        """Modems with non-form auth strategy produce no issues."""
+        modem_dir = tmp_path / "modems" / "acme" / "m2"
+        test_data = modem_dir / "test_data"
+        test_data.mkdir(parents=True)
+
+        (modem_dir / "modem.yaml").write_text(
+            "manufacturer: Acme\nmodel: M2\nauth:\n  strategy: basic\n",
+            encoding="utf-8",
+        )
+        (test_data / "modem.har").write_text('{"log": {"entries": []}}', encoding="utf-8")
+
+        assert audit_fleet_auth(tmp_path) == []
+
+    def test_audit_issue_fields(self, tmp_path: Path) -> None:
+        """AuthAuditIssue carries modem, har, and issue fields."""
+        import json
+
+        modem_dir = tmp_path / "modems" / "acme" / "m3"
+        test_data = modem_dir / "test_data"
+        test_data.mkdir(parents=True)
+
+        (modem_dir / "modem.yaml").write_text(
+            "manufacturer: Acme\nmodel: M3\n"
+            "auth:\n  strategy: form\n  action: /goform/Login\n"
+            "  login_page: /Login.asp\n  username_field: u\n  password_field: p\n",
+            encoding="utf-8",
+        )
+        (test_data / "modem.har").write_text(json.dumps({"log": {"entries": []}}), encoding="utf-8")
+
+        issues = audit_fleet_auth(tmp_path)
+        assert len(issues) == 1
+        issue = issues[0]
+        assert isinstance(issue, AuthAuditIssue)
+        assert issue.har == "modem.har"
+        assert issue.issue
 
 
 class TestScanFleetEdgeCases:

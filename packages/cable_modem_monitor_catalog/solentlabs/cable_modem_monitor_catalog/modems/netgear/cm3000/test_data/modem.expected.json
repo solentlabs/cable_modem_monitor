@@ -409,12 +409,18 @@
     "current_time": "Wed Mar 25 05:58:01 2026",
     "docsis_status": "Operational",
     "downstream_channel_count": 34,
+    "ds_partial_service": "No",
+    "ds_power_status": "Good",
+    "ds_snr_status": "Good",
     "hardware_version": "1.01",
+    "internet_access": "Down",
     "software_version": "V6.01.04",
     "system_uptime": "0 days 05h:07m:57s",
     "total_corrected": 1789,
     "total_uncorrected": 2516,
-    "upstream_channel_count": 5
+    "upstream_channel_count": 5,
+    "us_partial_service": "No",
+    "us_power_status": "Good"
   },
   "upstream": [
     {

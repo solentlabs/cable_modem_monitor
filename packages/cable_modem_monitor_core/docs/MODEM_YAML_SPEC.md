@@ -12,16 +12,63 @@ in a directory share the same `parser.yaml` (and optional `parser.py`).
 See [MODEM_DIRECTORY_SPEC.md](MODEM_DIRECTORY_SPEC.md) for the full
 directory layout and multi-variant assembly contract.
 
+## Principles
+
+Three principles govern modem.yaml. Every field in this spec is shaped
+by them, and any new field proposal must satisfy them.
+
+### Modem Behavior Is Data-Driven
+
+Core provides a fixed set of behaviours (auth strategies, session
+patterns, action executors, parser formats, extraction modes). Each
+modem selects from them via `modem.yaml`. No modem's configuration
+requires code changes; no modem's configuration affects another.
+
+When a new modem doesn't fit, the answer is either (a) it composes
+from existing behaviours and the YAML just hasn't been written, or
+(b) Core needs a new behaviour added — never (c) special-case logic
+for that one modem.
+
+### Config Fields Are Parameters, Not Implementations
+
+Every field in `modem.yaml` is a parameter to a Core behaviour, not
+a raw implementation. `auth.strategy: form` selects a strategy;
+`endpoint_pattern: "RouterStatus"` supplies a keyword to a Core
+extraction strategy.
+
+Contributors provide *what*, Core handles *how*. If a config field
+would require regex, code, or implementation knowledge from the
+contributor, the abstraction is wrong — the field should be a
+higher-level parameter that Core decodes, not a passthrough to an
+implementation detail.
+
+### Catalog Tools Intake Is the Onboarding Path
+
+New modems are added through the Catalog Tools pipeline
+(`/modem-intake` skill or the equivalent function calls), not by
+hand-constructing files. The pipeline validates against this spec
+end-to-end: HAR analysis → config generation → validation → trial
+parse → test fixtures. Manual construction bypasses that validation
+and is a recurring source of drift.
+
+The pipeline is plain Python; AI assistance helps with the judgment
+layer (which auth strategy fits, which fields map where). See
+[ONBOARDING_SPEC.md](../../cable_modem_monitor_catalog_tools/docs/ONBOARDING_SPEC.md)
+for the contract.
+
+---
+
 ## Contents
 
 | Section | What it covers |
 |---------|----------------|
+| [Principles](#principles) | The three rules every field obeys |
 | [Schema Overview](#schema-overview) | Complete YAML skeleton with annotations |
 | [Identity](#identity) | manufacturer, model, transport, default_host, aliases |
 | [Auth](#auth) | 9 strategy types with full config examples |
 | [Session](#session) | Cookie, single-session, SPA patterns |
 | [Actions](#actions) | Restart and logout — http and hnap types |
-| [Hardware](#hardware) | DOCSIS version, chipset |
+| [Hardware](#hardware) | DOCSIS version, hw_version, firmware, chipset |
 | [Timeout](#timeout) | Per-request override |
 | [Health](#health) | Health probe configuration (fragile modems) |
 | [Metadata](#metadata) | Status, attribution, sources, ISPs, notes |
@@ -1038,13 +1085,21 @@ actions:
 ```yaml
 hardware:
   docsis_version: "3.1"
+  hw_version: "v6"         # optional — shown in variant dropdown; users can verify on modem sticker
+  firmware: "TB01"         # optional — firmware family identifier (catalog metadata, not shown in UI)
   chipset: "Broadcom BCM3390"
+  release_date: "2017"     # optional — year or YYYY-MM-DD
+  end_of_life: "2024"      # optional — year or YYYY-MM-DD; omit if still current
 ```
 
 | Field | Type | Required | Description |
 |-------|------| :--------: |-------------|
 | `docsis_version` | string | yes | DOCSIS specification version ("3.0" or "3.1") |
+| `hw_version` | string | no | Hardware version label shown in the variant dropdown (e.g., `"v6"`). Users can verify this against the sticker on the modem. |
+| `firmware` | string | no | Firmware family identifier for catalog documentation (e.g., `"TB01"`). Not shown in the UI. |
 | `chipset` | string | no | Modem chipset (informational) |
+| `release_date` | string | no | Year or date the hardware was released (e.g., `"2017"` or `"2017-06"`). Used in the catalog timeline. |
+| `end_of_life` | string | no | Year or date the hardware reached end-of-life. Omit if still current. |
 
 ---
 
@@ -1122,13 +1177,20 @@ status: confirmed
 | Value | Meaning |
 |-------|---------|
 | `confirmed` | Full pipeline verified on real hardware (modem.verified.json present) |
-| `awaiting_verification` | Parser written, waiting for user confirmation |
+| `awaiting_verification` | Parser written or placeholder entry exists, awaiting user data or confirmation. Default for new modems and for entries blocked on missing HAR captures. |
 | `in_progress` | Work underway, not yet functional |
-| `unsupported` | Placeholder — awaiting user data |
+| `unsupported` | Modem cannot be monitored — no reachable channel-data endpoint (e.g., ISP firmware removed it, or the modem genuinely has no admin web interface). Reserved for permanent inability, not "we don't have data yet." |
+
+The distinction matters: an `awaiting_verification` modem could become
+`confirmed` once data lands. An `unsupported` modem can't — there's no
+data path the integration could use, even if the user provided HAR
+captures. If the channel data IS reachable but obscured by ISP firmware
+quirks (hidden URL, login-gated endpoint), that's
+`awaiting_verification`, not `unsupported`.
 
 `unsupported` modems have identity and hardware fields only — no auth,
 no pages, no parser. They document modems we know about but can't
-support yet.
+support.
 
 ### Attribution
 

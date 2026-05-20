@@ -83,7 +83,7 @@ async def async_migrate(
 
     # --- Resolve variant from v1 auth strategy ---
     v1_auth = old_data.get("auth_strategy", "")
-    variant = await hass.async_add_executor_job(resolve_variant, resolved.modem_dir, v1_auth)
+    variant = await hass.async_add_executor_job(resolve_variant, resolved.modem_dir, v1_auth, resolved.sibling_dirs)
 
     # --- Build v2 data (only v2 keys, no leftovers) ---
     # Use canonical catalog values, not raw v1 strings, so downstream
@@ -101,9 +101,11 @@ async def async_migrate(
         "password": old_data.get("password", ""),
         "protocol": protocol,
         "legacy_ssl": old_data.get("legacy_ssl", False),
-        # supports_icmp / supports_head intentionally omitted —
-        # v1 values are stale one-shot detections that may be wrong.
-        # Omitting lets modem.yaml HealthConfig defaults apply at startup.
+        # Optimistic defaults — runtime health probing corrects false positives.
+        # sensor.py gates sensor creation on these keys (default False when absent),
+        # so omitting them suppresses Ping/HTTP Latency sensors post-migration.
+        "supports_icmp": True,
+        "supports_head": True,
         "scan_interval": old_data.get("scan_interval", 600),
         "health_check_interval": DEFAULT_HEALTH_CHECK_INTERVAL,
     }
@@ -171,6 +173,7 @@ class ResolvedModem(NamedTuple):
     modem_dir: str
     manufacturer: str
     model: str
+    sibling_dirs: list[Path]
 
 
 def resolve_modem_dir(manufacturer: str, model: str) -> ResolvedModem | None:
@@ -196,23 +199,27 @@ def resolve_modem_dir(manufacturer: str, model: str) -> ResolvedModem | None:
     # Pass 1: exact manufacturer + model
     for s in summaries:
         if s.manufacturer.lower() == mfr_lower and s.model.lower() == model_lower:
-            return ResolvedModem(_relative_dir(s.path), s.manufacturer, s.model)
+            return ResolvedModem(_relative_dir(s.path), s.manufacturer, s.model, s.sibling_dirs)
 
     # Pass 2: exact manufacturer + model alias
     for s in summaries:
         if s.manufacturer.lower() == mfr_lower and _has_alias(s, model_lower):
-            return ResolvedModem(_relative_dir(s.path), s.manufacturer, s.model)
+            return ResolvedModem(_relative_dir(s.path), s.manufacturer, s.model, s.sibling_dirs)
 
     # Pass 3: model-only (handles manufacturer renames)
     matches = [s for s in summaries if s.model.lower() == model_lower or _has_alias(s, model_lower)]
     if len(matches) == 1:
         s = matches[0]
-        return ResolvedModem(_relative_dir(s.path), s.manufacturer, s.model)
+        return ResolvedModem(_relative_dir(s.path), s.manufacturer, s.model, s.sibling_dirs)
 
     return None
 
 
-def resolve_variant(modem_dir_relative: str, v1_auth_strategy: str) -> str | None:
+def resolve_variant(
+    modem_dir_relative: str,
+    v1_auth_strategy: str,
+    sibling_dirs: list[Path] | None = None,
+) -> str | None:
     """Resolve the correct variant name from the v1 auth strategy.
 
     Walks the variant list for the resolved modem directory and
@@ -234,7 +241,7 @@ def resolve_variant(modem_dir_relative: str, v1_auth_strategy: str) -> str | Non
         the default variant.
     """
     full_path = CATALOG_PATH / modem_dir_relative
-    variants = list_variants(full_path)
+    variants = list_variants(full_path, sibling_dirs=sibling_dirs)
 
     if len(variants) <= 1:
         return None

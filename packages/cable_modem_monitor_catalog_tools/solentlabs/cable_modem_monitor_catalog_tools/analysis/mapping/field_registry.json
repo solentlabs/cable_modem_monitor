@@ -3,8 +3,14 @@
     "channel_id": {
       "tier": 1,
       "type": "integer",
-      "headers": ["channel id", "channel", "ch", "dcid", "ucid", "ds channel id", "us channel id"],
+      "headers": ["channel id", "channel", "ch", "dcid", "ucid", "ds channel id", "us channel id", "ds_link_ds_ch_id", "ds_link_us_ch_id"],
       "json_keys": ["channelid", "channel_id"]
+    },
+    "channel_number": {
+      "tier": 1,
+      "type": "integer",
+      "headers": ["channel number", "channel index", "ch num", "channel no"],
+      "json_keys": ["channel_number", "channelnumber"]
     },
     "frequency": {
       "tier": 1,
@@ -15,11 +21,17 @@
         "freq. (mhz)": "MHz"
       }
     },
+    "width": {
+      "tier": 1,
+      "type": "frequency",
+      "headers": ["channel width", "width"],
+      "json_keys": []
+    },
     "power": {
       "tier": 1,
       "type": "float",
-      "headers": ["power", "power level", "pwr", "tx power", "ds power level", "us power level"],
-      "json_keys": ["power", "powerlevel", "power_level"],
+      "headers": ["power", "power level", "pwr", "tx power", "received level", "transmit level", "rx level", "tx level", "ds power level", "us power level", "ds_link_ds_pw_lv", "ds_link_us_pw_lv"],
+      "json_keys": ["power", "powerlevel", "power_level", "signalstrength", "signal_strength"],
       "header_units": {
         "pwr (dbmv)": "dBmV",
         "tx power(dbmv)": "dBmV"
@@ -28,8 +40,8 @@
     "snr": {
       "tier": 1,
       "type": "float",
-      "headers": ["snr", "snr/mer", "mer", "signal to noise", "signal to noise ratio"],
-      "json_keys": ["snr", "rxmer", "rx_mer"],
+      "headers": ["snr", "snr/mer", "snr / mer", "mer", "snr/mer threshold value", "snr mer threshold value", "signal to noise", "signal to noise ratio", "ds_link_ds_snr"],
+      "json_keys": ["snr", "rxmer", "rx_mer", "snrlevel"],
       "header_units": {
         "snr (db)": "dB"
       }
@@ -42,8 +54,8 @@
     },
     "modulation": {
       "tier": 1,
-      "type": "string",
-      "headers": ["modulation", "mod"],
+      "type": "modulation",
+      "headers": ["modulation", "mod", "modulation/profile id", "modulation profile id", "ds_link_ds_modu", "ds_link_us_modu"],
       "json_keys": ["modulation"]
     },
     "channel_type": {
@@ -55,14 +67,14 @@
     "corrected": {
       "tier": 1,
       "type": "integer",
-      "headers": ["corrected", "correctable", "total correctable codewords", "correcteds"],
-      "json_keys": ["corrected", "correctederrors", "corrected_errors"]
+      "headers": ["corrected", "correctable", "corrected codewords", "correctable codewords", "total correctable codewords", "correcteds"],
+      "json_keys": ["corrected", "correctederrors", "corrected_errors", "correcteds"]
     },
     "uncorrected": {
       "tier": 1,
       "type": "integer",
-      "headers": ["uncorrected", "uncorrectable", "total uncorrectable codewords", "uncorrectables"],
-      "json_keys": ["uncorrected", "uncorrectederrors", "uncorrected_errors"]
+      "headers": ["uncorrected", "uncorrectable", "uncorrectable codewords", "total uncorrectable codewords", "uncorrectables"],
+      "json_keys": ["uncorrected", "uncorrectederrors", "uncorrected_errors", "uncorrect"]
     },
     "symbol_rate": {
       "tier": 1,
@@ -76,7 +88,7 @@
     "channel_width": {
       "tier": 2,
       "type": "integer",
-      "headers": ["channel width", "bandwidth", "width"],
+      "headers": ["bandwidth"],
       "json_keys": ["channelwidth", "channel_width"]
     },
     "active_subcarriers": {

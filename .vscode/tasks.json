@@ -334,22 +334,6 @@
       },
       "problemMatcher": [],
       "detail": "Automate version bumping, tagging, and release creation"
-    },
-    {
-      "label": "📹 Capture Modem Traffic",
-      "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/har-capture get ${input:modemIP}",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true,
-        "focus": true
-      },
-      "problemMatcher": [],
-      "detail": "Launch browser to capture modem traffic (uses har-capture)"
     }
   ],
   "inputs": [
@@ -358,12 +342,6 @@
       "type": "promptString",
       "description": "Enter the version to release (e.g., 3.5.1)",
       "default": ""
-    },
-    {
-      "id": "modemIP",
-      "type": "promptString",
-      "description": "Enter modem IP address",
-      "default": "192.168.100.1"
     }
   ]
 }

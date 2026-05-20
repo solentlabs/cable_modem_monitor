@@ -23,6 +23,27 @@ from .types import DetectedLabelPair, DetectedTable
 # Regex patterns (label-value pairs and preceding text)
 # -----------------------------------------------------------------------
 
+# Some modem firmware emits malformed table HTML where column header
+# <td> cells appear *after* the title row's </tr> close tag, without a
+# wrapping <tr>.  html.parser silently drops these orphaned cells and
+# treats the first real data row as the header row, producing field
+# names like "locked", "qam256", "237000000_hz".  The pattern is:
+#
+#   <tr><th colspan=N>Title</th></tr>
+#         <td><strong>Header1</strong></td>   ← no enclosing <tr>
+#         <td><strong>Header2</strong></td>
+#      </tr>                                  ← rogue </tr>
+#   <tr>...</tr>                              ← first data row
+#
+# Fix: insert the missing <tr> before orphaned <td> cells so html.parser
+# receives valid HTML.  The pattern only fires when <td> appears
+# immediately after </tr> (never valid in well-formed HTML), so it
+# cannot silently corrupt correct tables.
+_ORPHANED_TD_RE = re.compile(
+    r"(</tr>)((?:\s*<td\b[^>]*>.*?</td>)+\s*)(</tr>)",
+    re.DOTALL | re.IGNORECASE,
+)
+
 _TAG_STRIP = re.compile(r"<[^>]+>")
 
 _LABEL_VALUE_PATTERN = re.compile(
@@ -238,6 +259,33 @@ def _find_heading_text(element: Tag) -> str:
     return ""
 
 
+def _extract_i18n_header_map(table: Tag) -> dict[str, str]:
+    """Map data-i18n keys to tag names for header cells with empty text.
+
+    Returns a dict of ``{i18n_key: tag_name}`` for every cell in the
+    first direct row whose visible text is empty but whose
+    ``data-i18n`` attribute supplies a semantic label.  Used by
+    ``detect_table_selector`` to generate a CSS attribute selector
+    instead of a ``header_text`` match that would never find the
+    table at runtime (because the actual text is injected by
+    JavaScript and is absent in the HAR capture).
+    """
+    i18n_map: dict[str, str] = {}
+    direct_rows = _get_direct_rows(table)
+    if not direct_rows:
+        return i18n_map
+    first_row = direct_rows[0]
+    for cell in first_row.find_all(["td", "th"], recursive=False):
+        if not isinstance(cell, Tag):
+            continue
+        text = cell.get_text(strip=True)
+        if not text:
+            i18n_key = cell.get("data-i18n", "")
+            if i18n_key:
+                i18n_map[str(i18n_key)] = str(cell.name)
+    return i18n_map
+
+
 def detect_tables(body: str) -> list[DetectedTable]:
     """Detect HTML tables in a page body.
 
@@ -249,6 +297,7 @@ def detect_tables(body: str) -> list[DetectedTable]:
     ``parsers.table_selector`` which applies the same wrapper-cell
     filtering.
     """
+    body = _ORPHANED_TD_RE.sub(r"\1<tr>\2\3", body)
     soup = BeautifulSoup(body, "html.parser")
     tables: list[DetectedTable] = []
 
@@ -282,6 +331,7 @@ def detect_tables(body: str) -> list[DetectedTable]:
                 preceding_text=_extract_preceding_text(table_el),
                 title_row_text=title_row_text,
                 table_index=idx,
+                i18n_header_map=_extract_i18n_header_map(table_el),
             )
         )
 

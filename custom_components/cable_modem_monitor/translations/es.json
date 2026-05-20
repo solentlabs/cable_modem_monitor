@@ -143,6 +143,10 @@
           "name": "Graficas de Errores",
           "description": "Conteo de errores corregidos y no corregidos (vista de 7 dias)."
         },
+        "include_error_rates": {
+          "name": "Graficas de Tasa de Errores",
+          "description": "Anade graficas de tasa de errores por minuto (errores/min, vista de 7 dias). Desactivado por defecto: las tasas fluctuan entre consultas."
+        },
         "include_latency": {
           "name": "Grafica de Latencia",
           "description": "Tiempos de respuesta de ping y HTTP (vista de 6 horas)."

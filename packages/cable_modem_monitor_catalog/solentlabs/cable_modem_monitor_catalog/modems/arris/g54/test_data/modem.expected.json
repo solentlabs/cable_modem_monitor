@@ -407,6 +407,8 @@
     "downstream_channel_count": 33,
     "hardware_version": "v0",
     "model_name": "G54",
+    "rate_corrected": 0.0,
+    "rate_uncorrected": 0.0,
     "software_version": "AC01.02.012_022625_G5X.04.20.122",
     "system_uptime": "0 days 13h:57m:01s",
     "total_corrected": 0,

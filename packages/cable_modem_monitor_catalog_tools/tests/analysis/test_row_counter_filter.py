@@ -96,18 +96,22 @@ def test_remove_row_counters_no_data_rows_passes_through() -> None:
     assert result is mappings
 
 
-def test_remove_row_counters_keeps_real_data_drops_counter() -> None:
-    """A row counter (1,2,3) and a real id column (101,102,103) → counter dropped."""
+def test_remove_row_counters_keeps_real_data_remaps_counter() -> None:
+    """A channel_id row counter (1,2,3) alongside a real id column (101,102,103)
+    is remapped to channel_number (not dropped) — it's the display row number."""
     mappings = [
-        # Column 0: counter values 1,2,3 → drop
+        # Column 0: counter values 1,2,3 → remapped to channel_number
         FieldMapping(field="channel_id", type="int", index=0),
-        # Column 1: real channel IDs 101,102,103 → keep
+        # Column 1: real channel IDs 101,102,103 → kept as channel_id
         FieldMapping(field="channel_id", type="int", index=1),
     ]
     table = _table([["1", "101"], ["2", "102"], ["3", "103"]])
     result = _remove_row_counters(mappings, table)
-    assert len(result) == 1
-    assert result[0].index == 1
+    assert len(result) == 2
+    assert result[0].field == "channel_number"
+    assert result[0].index == 0
+    assert result[1].field == "channel_id"
+    assert result[1].index == 1
 
 
 def test_remove_row_counters_all_counters_keeps_highest_index() -> None:

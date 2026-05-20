@@ -1,0 +1,15 @@
+{
+  "_description": "lock_status must be lowercase locked/not_locked",
+  "_data": {
+    "downstream": [
+      {"channel_number": 1, "channel_id": 1, "channel_type": "qam", "lock_status": "Locked", "modulation": "QAM256"},
+      {"channel_number": 2, "channel_id": 2, "channel_type": "qam", "lock_status": "Not Locked", "modulation": "QAM256"},
+      {"channel_number": 3, "channel_id": 3, "channel_type": "qam", "lock_status": "LOCKED", "modulation": "QAM256"}
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].lock_status", "rule": "lock_status_enum"},
+    {"path": "downstream[1].lock_status", "rule": "lock_status_enum"},
+    {"path": "downstream[2].lock_status", "rule": "lock_status_enum"}
+  ]
+}

@@ -13,6 +13,7 @@ from typing import Any
 
 from ..format.table_analysis import is_data_row
 from ..format.types import DetectedJsFunction, DetectedTable
+from ..types import FleetPatterns
 from .channel_detection import (
     detect_channel_type_fixed,
     detect_channel_type_json,
@@ -40,6 +41,7 @@ def extract_section_mappings(
     js_function: DetectedJsFunction | None = None,
     json_data: dict[str, Any] | None = None,
     warnings: list[str] | None = None,
+    fleet: FleetPatterns | None = None,
 ) -> SectionDetail | None:
     """Extract field mappings for a channel section.
 
@@ -56,7 +58,7 @@ def extract_section_mappings(
         return _extract_transposed_mappings(table, resource, direction, warnings)
 
     if fmt == "javascript" and js_function is not None:
-        return _extract_js_mappings(js_function, resource, direction, warnings)
+        return _extract_js_mappings(js_function, resource, direction, warnings, fleet=fleet)
 
     if fmt == "json" and json_data is not None:
         return _extract_json_mappings(json_data, resource, direction, warnings)
@@ -107,6 +109,13 @@ def _extract_table_mappings(
     channel_type = detect_channel_type_table(table, mappings, direction)
     row_filter = detect_filter_table(table, mappings)
     channel_count = _count_data_rows(table)
+
+    # When channel_type is expressed as an indexed column with a
+    # normalization map, the raw channel_type FieldMapping is redundant —
+    # _transform_table will emit the enriched version via the channel_type
+    # section.  Remove it here to avoid a duplicate column in parser.yaml.
+    if channel_type and "index" in channel_type:
+        mappings = [m for m in mappings if m.field != "channel_type"]
 
     return SectionDetail(
         format="table",
@@ -185,8 +194,15 @@ def _extract_js_mappings(
     resource: str,
     direction: str,
     warnings: list[str],
+    fleet: FleetPatterns | None = None,
 ) -> SectionDetail | None:
-    """Extract offset -> field mappings from JS delimited data."""
+    """Extract offset -> field mappings from JS delimited data.
+
+    When a fleet layout is available for this function name, uses the
+    proven field layout from committed configs instead of value-based
+    inference — this handles numeric fields (channel_id, power, snr,
+    corrected, uncorrected) that heuristic inference misses.
+    """
     values = js_func.values
     if not values:
         return None
@@ -200,7 +216,13 @@ def _extract_js_mappings(
     if record_count <= 0:
         return None
 
-    # Calculate fields per record
+    # Fleet-based layout: use proven field offsets from committed configs
+    if fleet and js_func.name in fleet.js_function_layouts:
+        return _extract_js_mappings_from_fleet(
+            js_func, resource, direction, fleet.js_function_layouts[js_func.name], record_count
+        )
+
+    # Inference-based layout (fallback)
     data_values = values[1:]
     if not data_values:
         return None
@@ -242,6 +264,51 @@ def _extract_js_mappings(
         function_name=js_func.name,
         delimiter=js_func.delimiter,
         fields_per_record=fields_per_record,
+        channel_type=channel_type,
+        channel_count=record_count,
+    )
+
+
+def _extract_js_mappings_from_fleet(
+    js_func: DetectedJsFunction,
+    resource: str,
+    direction: str,
+    layout: dict[str, Any],
+    record_count: int,
+) -> SectionDetail | None:
+    """Build JS section from a fleet-proven function layout.
+
+    Uses committed field definitions (offsets, types, units) instead of
+    value inference.  Channel count comes from the actual HAR data.
+    """
+    field_defs = layout.get("fields", [])
+    if not field_defs:
+        return None
+
+    mappings = [
+        FieldMapping(
+            field=f["field"],
+            type=f.get("type", "string"),
+            tier=1,
+            unit=f.get("unit", ""),
+            offset=f["offset"],
+        )
+        for f in field_defs
+        if isinstance(f, dict) and "field" in f and "offset" in f
+    ]
+    if not mappings:
+        return None
+
+    ct_value = layout.get("channel_type", "")
+    channel_type: dict[str, Any] = {"fixed": ct_value} if ct_value else (detect_channel_type_fixed(direction) or {})
+
+    return SectionDetail(
+        format="javascript",
+        resource=resource,
+        mappings=mappings,
+        function_name=js_func.name,
+        delimiter=js_func.delimiter or layout.get("delimiter", "|"),
+        fields_per_record=layout.get("fields_per_channel", 0),
         channel_type=channel_type,
         channel_count=record_count,
     )
@@ -327,6 +394,38 @@ def _count_data_rows(table: DetectedTable) -> int:
     return sum(1 for row in table.rows if is_data_row(row))
 
 
+def _classify_counter_indices(
+    field_counts: dict[str, int],
+    row_counter_indices: dict[str, list[int]],
+    mappings: list[FieldMapping],
+) -> tuple[set[int], set[int]]:
+    """Classify counter mapping positions into remove vs remap sets.
+
+    For each duplicated field: if all copies are counters, keep only the
+    highest-index one. Otherwise, remap channel_id counters to channel_number
+    and drop counters for all other fields.
+    """
+    remove_indices: set[int] = set()
+    # channel_id row counters become channel_number (display row position,
+    # not DOCSIS ID) when a real non-sequential channel_id column exists.
+    remap_to_channel_number: set[int] = set()
+    for field_name, counter_idxs in row_counter_indices.items():
+        total_for_field = field_counts[field_name]
+        if len(counter_idxs) == total_for_field:
+            # All are row counters — keep the one at the highest column index
+            best = max(counter_idxs, key=lambda i: mappings[i].index or 0)
+            remove_indices.update(i for i in counter_idxs if i != best)
+        else:
+            # Only some are row counters — remap channel_id row counters to
+            # channel_number; remove row counters for all other fields.
+            for i in counter_idxs:
+                if field_name == "channel_id":
+                    remap_to_channel_number.add(i)
+                else:
+                    remove_indices.add(i)
+    return remove_indices, remap_to_channel_number
+
+
 def _remove_row_counters(
     mappings: list[FieldMapping],
     table: DetectedTable,
@@ -362,23 +461,16 @@ def _remove_row_counters(
         if m.field in duplicated_fields and m.index is not None and _is_row_counter(m.index, data_rows, row_count):
             row_counter_indices.setdefault(m.field, []).append(i)
 
-    # For each duplicated field, determine which mappings to remove.
-    # If ALL mappings for a field look like row counters (e.g., real
-    # DOCSIS channel IDs happen to be sequential 1..N), keep the
-    # highest-index column — it's the explicit "Channel ID" column,
-    # not the display counter.
-    remove_indices: set[int] = set()
-    for field_name, counter_idxs in row_counter_indices.items():
-        total_for_field = field_counts[field_name]
-        if len(counter_idxs) == total_for_field:
-            # All are row counters — keep the one at the highest column index
-            best = max(counter_idxs, key=lambda i: mappings[i].index or 0)
-            remove_indices.update(i for i in counter_idxs if i != best)
-        else:
-            # Only some are row counters — remove those, keep the rest
-            remove_indices.update(counter_idxs)
+    remove_indices, remap_to_channel_number = _classify_counter_indices(field_counts, row_counter_indices, mappings)
 
-    return [m for i, m in enumerate(mappings) if i not in remove_indices]
+    result = []
+    for i, m in enumerate(mappings):
+        if i in remove_indices:
+            continue
+        if i in remap_to_channel_number:
+            m.field = "channel_number"
+        result.append(m)
+    return result
 
 
 def _is_row_counter(

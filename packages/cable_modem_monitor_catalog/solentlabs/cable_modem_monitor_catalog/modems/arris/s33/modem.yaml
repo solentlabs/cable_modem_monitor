@@ -27,7 +27,7 @@ hardware:
   chipset: Broadcom BCM3390
   release_date: "2020"
 
-status: awaiting_verification
+status: confirmed
 sources:
   auth_config:
     "[#32 Arris S33](https://github.com/solentlabs/cable_modem_monitor/issues/32),
@@ -41,6 +41,8 @@ attribution:
       contribution: "S33v2 HAR capture and issue #117 report"
     - github: https://github.com/gmogoody
       contribution: "S33 HAR capture and iterative testing (Issue #32, #87)"
+    - github: https://github.com/ccpk1
+      contribution: "Reboot fix (PR #148, #146), stale HNAP session recovery (PR #142, #140), beta.3 confirmation HAR + diagnostics"
 isps:
   - Comcast
   - Cox

@@ -18,6 +18,13 @@ class DetectedTable:
     Captures table location and raw content for format classification
     and field mapping. ``headers`` is the first row of ``<th>`` or
     ``<td>`` content; ``rows`` is all subsequent rows.
+
+    ``i18n_header_map`` maps each ``data-i18n`` key to the HTML tag
+    name (``"th"`` or ``"td"``) for header cells whose visible text
+    was empty and fell back to the ``data-i18n`` attribute. Used by
+    :func:`detect_table_selector` to emit a CSS attribute selector
+    instead of a ``header_text`` match that would fail at runtime
+    (because the visible text is injected by JavaScript).
     """
 
     table_id: str
@@ -27,6 +34,7 @@ class DetectedTable:
     preceding_text: str
     title_row_text: str
     table_index: int
+    i18n_header_map: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

@@ -15,6 +15,7 @@ auth:
 
 hardware:
   docsis_version: "3.1"
+  firmware: AB01
   chipset: "Broadcom BCM3390"
   release_date: "2017"
 

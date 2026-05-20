@@ -1,0 +1,17 @@
+{
+  "_description": "Each canonical modulation value passes (QAM16/32/64/256/1024/2048/4096, QPSK)",
+  "_data": {
+    "downstream": [
+      {"channel_number": 1, "channel_id": 1, "channel_type": "qam", "lock_status": "locked", "modulation": "QAM16"},
+      {"channel_number": 2, "channel_id": 2, "channel_type": "qam", "lock_status": "locked", "modulation": "QAM32"},
+      {"channel_number": 3, "channel_id": 3, "channel_type": "qam", "lock_status": "locked", "modulation": "QAM64"},
+      {"channel_number": 4, "channel_id": 4, "channel_type": "qam", "lock_status": "locked", "modulation": "QAM256"},
+      {"channel_number": 5, "channel_id": 5, "channel_type": "qam", "lock_status": "locked", "modulation": "QAM1024"},
+      {"channel_number": 6, "channel_id": 6, "channel_type": "qam", "lock_status": "locked", "modulation": "QAM2048"},
+      {"channel_number": 7, "channel_id": 7, "channel_type": "qam", "lock_status": "locked", "modulation": "QAM4096"}
+    ],
+    "upstream": [
+      {"channel_number": 1, "channel_id": 1, "channel_type": "atdma", "lock_status": "locked", "modulation": "QPSK"}
+    ]
+  }
+}

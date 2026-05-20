@@ -294,6 +294,7 @@
     "docsis_status": "Operational",
     "downstream_channel_count": 24,
     "hardware_version": "1.01B",
+    "rate_uncorrected": 0.0,
     "software_version": "V1.01.22",
     "system_uptime": "54 days 12h:19m:22s",
     "total_corrected": 428,

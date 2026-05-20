@@ -98,6 +98,7 @@ def detect_hnap_sections(
         channel_result = _detect_channel_data(
             response_key,
             response_data,
+            fleet=fleet,
         )
 
         if channel_result is not None:
@@ -140,11 +141,18 @@ def _collect_hnap_responses(
 def _detect_channel_data(
     response_key: str,
     response_data: dict[str, Any],
+    fleet: FleetPatterns | None = None,
 ) -> dict[str, Any] | None:
     """Detect delimited channel data in an HNAP action response.
 
     Looks for string values containing record delimiters. If found,
     analyzes the delimited structure and builds a section config.
+
+    When ``fleet`` contains a layout for ``response_key``, uses the
+    proven field positions from committed configs instead of heuristic
+    inference — this handles fields like ``channel_number`` that look
+    like row counters, and large error counters that would otherwise be
+    misclassified as ``frequency`` or ``symbol_rate``.
 
     Returns section dict or None if no delimited data found.
     """
@@ -172,8 +180,12 @@ def _detect_channel_data(
         # can miss OFDM channels at the tail of the list.
         sample_records = [r.split(field_delim) for r in records]
 
-        # Infer field mappings from positional values
-        mappings = _infer_field_mappings(sample_records)
+        # Fleet-based layout: use proven field positions from committed configs
+        if fleet and response_key in fleet.hnap_response_layouts:
+            mappings = _mappings_from_hnap_fleet(fleet.hnap_response_layouts[response_key])
+        else:
+            mappings = _infer_field_mappings(sample_records)
+
         if not mappings:
             continue
 
@@ -224,6 +236,27 @@ def _detect_field_delimiter(record: str) -> str | None:
         if len(parts) >= 3:
             return ","
     return None
+
+
+def _mappings_from_hnap_fleet(layout: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build field mappings from a fleet-proven HNAP response layout.
+
+    Uses committed field position definitions instead of heuristic
+    inference.  Channel_type map is still derived from actual HAR data
+    by ``_detect_channel_type``.
+    """
+    result = []
+    for f in layout.get("fields", []):
+        if not isinstance(f, dict) or "field" not in f or "index" not in f:
+            continue
+        result.append(
+            {
+                "field": f["field"],
+                "type": f.get("type", "string"),
+                "index": f["index"],
+            }
+        )
+    return result
 
 
 def _infer_field_mappings(
@@ -291,6 +324,11 @@ def _run_pass1(
 
     Also runs pass 1.5 to resolve provisional ``_large_int`` fields.
 
+    Row counters (sequential 1..N integers) are promoted to channel_number
+    only when the record contains other non-counter positions. If every
+    position looks like a row counter the data is degenerate and all
+    counters are skipped, preserving the empty-mappings return.
+
     Returns:
         Tuple of (skip_indices, definitive_mappings).
     """
@@ -298,12 +336,25 @@ def _run_pass1(
     definitive: dict[int, dict[str, Any]] = {}
     pass1_fields: set[str] = set()
 
+    # Pre-scan: determine whether ALL non-empty positions are row counters.
+    # If so, the record has no real data and counters stay as skips.
+    non_empty = [s for s in position_samples if s and not all(v == "" for v in s)]
+    all_counters = non_empty and all(_is_row_counter(s) for s in non_empty)
+
     for idx, samples in enumerate(position_samples):
         if not samples or all(s == "" for s in samples):
             skip_indices.add(idx)
             continue
         if _is_row_counter(samples):
-            skip_indices.add(idx)
+            if not all_counters and "channel_number" not in pass1_fields:
+                # Sequential 1..N in a record with real data fields →
+                # channel_number, not a display row counter.
+                definitive[idx] = {"field": "channel_number", "type": "integer", "index": idx}
+                pass1_fields.add("channel_number")
+            else:
+                # Degenerate all-counters record, or a subsequent counter after
+                # channel_number was already claimed — skip so pass 2 ignores it.
+                skip_indices.add(idx)
             continue
         result = _classify_definitive(idx, samples, pass1_fields)
         if result is not None:
@@ -551,19 +602,39 @@ def _detect_filter(
     sample_records: list[list[str]],
     mappings: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
-    """Detect filter rules for placeholder channels.
+    """Detect filter rules for placeholder channels (channel_id == 0).
 
-    HNAP modems sometimes include placeholder channels with
-    channel_id = 0 or frequency = 0. Detect and return a filter rule.
+    Only generates the filter when channel_id=0 records are genuinely
+    empty slots (no channel attempting to lock). Records with explicit
+    "Not Locked" or "Unlocked" status are real DOCSIS channels — they
+    report channel_id=0 because no channel ID was assigned, but they
+    represent real RF measurement points and must not be filtered.
     """
+    channel_id_idx: int | None = None
+    lock_status_idx: int | None = None
     for m in mappings:
         if m["field"] == "channel_id":
-            idx = m["index"]
-            for record in sample_records:
-                if idx < len(record) and record[idx].strip() == "0":
-                    return {"channel_id": {"not": 0}}
-            break
-    return None
+            channel_id_idx = m["index"]
+        elif m["field"] == "lock_status":
+            lock_status_idx = m["index"]
+
+    if channel_id_idx is None:
+        return None
+
+    zero_id_records = [r for r in sample_records if channel_id_idx < len(r) and r[channel_id_idx].strip() == "0"]
+    if not zero_id_records:
+        return None
+
+    # If any channel_id=0 record has explicit "Not Locked" status, these
+    # are real unlocked channels — don't filter them.
+    if lock_status_idx is not None:
+        for record in zero_id_records:
+            if lock_status_idx < len(record):
+                ls_val = record[lock_status_idx].strip().lower()
+                if "not locked" in ls_val or "unlocked" in ls_val:
+                    return None
+
+    return {"channel_id": {"not": 0}}
 
 
 def _detect_system_info_source(

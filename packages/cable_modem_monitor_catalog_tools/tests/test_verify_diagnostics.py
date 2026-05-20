@@ -13,7 +13,7 @@ Three test layers:
 
 All tests use a synthetic Solent Labs T100 / T200 catalog under
 ``fixtures/verify_diagnostics/catalog/`` to satisfy the no-modem-specific
-references rule (CLAUDE.md § Testing).
+references rule (docs/CODE_REVIEW.md § Test File Standards).
 """
 
 from __future__ import annotations

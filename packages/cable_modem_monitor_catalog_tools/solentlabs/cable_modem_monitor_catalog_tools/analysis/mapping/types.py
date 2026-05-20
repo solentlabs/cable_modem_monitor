@@ -7,7 +7,10 @@ system_info, and the format dispatcher.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import (
+    dataclass,
+    field as dataclass_field,
+)
 from typing import Any
 
 
@@ -18,6 +21,11 @@ class FieldMapping:
     The locator key varies by format: ``index`` (table column),
     ``offset`` (javascript/hnap), ``key`` (json), ``label``
     (table_transposed row label).
+
+    ``map`` carries optional value-canonicalization (raw → canonical
+    form) emitted when the analysis layer detects non-canonical
+    observed values for this field — e.g., modulation values like
+    ``256QAM`` that need rewriting to ``QAM256`` per PARSING_SPEC.
     """
 
     field: str
@@ -28,6 +36,7 @@ class FieldMapping:
     offset: int | None = None
     key: str = ""
     label: str = ""
+    map: dict[str, str] = dataclass_field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to the sections output format."""
@@ -42,6 +51,8 @@ class FieldMapping:
             result["key"] = self.key
         if self.label:
             result["label"] = self.label
+        if self.map:
+            result["map"] = self.map
         return result
 
     @classmethod
@@ -64,7 +75,7 @@ class SectionDetail:
     format: str
     resource: str
     mappings: list[FieldMapping]
-    selector: dict[str, str] = field(default_factory=dict)
+    selector: dict[str, str] = dataclass_field(default_factory=dict)
     row_start: int = 0
     channel_type: dict[str, Any] | None = None
     filter: dict[str, Any] | None = None

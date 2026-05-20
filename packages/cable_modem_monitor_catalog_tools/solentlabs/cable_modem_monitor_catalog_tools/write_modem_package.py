@@ -20,8 +20,12 @@ import json
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
+import yaml
 from solentlabs.cable_modem_monitor_core.validation.parser_sandbox import validate_parser_sandbox
+
+from .validation.fixture_integrity import check_login_page_in_har
 
 
 @dataclass
@@ -102,6 +106,12 @@ def write_modem_package(
         result.errors = [f"parser.py: {v}" for v in violations]
         return result
 
+    # HAR/config consistency check — login_page must be present in the fixture
+    auth_issue = _check_har_login_page(modem_yaml, har_path)
+    if auth_issue:
+        result.errors.append(auth_issue)
+        return result
+
     out = Path(output_dir)
     test_data = out / "test_data"
 
@@ -151,3 +161,48 @@ def _copy_file(src: Path, dest: Path, result: WriteResult) -> None:
         return
     shutil.copy2(src, dest)
     result.files_written.append(str(dest))
+
+
+def _check_har_login_page(modem_yaml: str, har_path: str) -> str:
+    """Return an issue string if the HAR fixture is inconsistent with login_page.
+
+    Only checks ``form`` auth strategy with a non-empty ``login_page``.
+    Returns empty string when the check is not applicable or passes.
+    """
+    try:
+        config: Any = yaml.safe_load(modem_yaml)
+    except yaml.YAMLError:
+        return ""
+
+    if not isinstance(config, dict):
+        return ""
+
+    auth = config.get("auth", {})
+    if not isinstance(auth, dict):
+        return ""
+    if auth.get("strategy") != "form":
+        return ""
+
+    login_page: str = auth.get("login_page", "") or ""
+    action: str = auth.get("action", "") or ""
+    if not login_page or not action:
+        return ""
+
+    har_file = Path(har_path)
+    if not har_file.is_file():
+        return ""
+
+    try:
+        import gzip as _gzip
+
+        opener = _gzip.open if har_file.suffix == ".gz" else open
+        with opener(har_file) as f:
+            har_data: Any = json.load(f)
+        entries: list[Any] = har_data.get("log", {}).get("entries", [])
+    except Exception:
+        return ""
+
+    issue = check_login_page_in_har(entries, login_page, action)
+    if issue:
+        return f"HAR fixture: {issue}"
+    return ""

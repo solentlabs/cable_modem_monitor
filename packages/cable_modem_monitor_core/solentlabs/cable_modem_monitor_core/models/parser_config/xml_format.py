@@ -30,6 +30,7 @@ class XMLColumnMapping(BaseModel):
     type: str
     format: str = ""
     scale: int | float | None = None
+    map: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> XMLColumnMapping:

@@ -1176,11 +1176,67 @@ The orchestrator computes these after a successful collection:
 | No DS channels (no signal) | `not_locked` |
 | No `lock_status` field on channels | `unknown` |
 
-**Channel counts and aggregate fields** are computed by the parser
-coordinator, not the orchestrator. By the time the orchestrator
+**Channel counts and aggregate `total_*` fields** are computed by the
+parser coordinator, not the orchestrator. By the time the orchestrator
 receives `modem_data`, `system_info` already contains channel counts
 and any declared aggregate fields. See
 [PARSING_SPEC.md](PARSING_SPEC.md#aggregate-derived-system_info-fields).
+
+**Error rates (`rate_corrected`, `rate_uncorrected`)** — the
+orchestrator computes per-minute error rates and writes them into
+`modem_data.system_info` before snapshot construction. Elapsed time is
+measured with `time.monotonic()` so a changed `scan_interval`, clock
+skew, or paused VM cannot poison the value. These are the first
+orchestrator-derived `system_info` fields and are distinct from
+parser-coordinator-derived fields (aggregate, computed): those are
+stateless single-poll transformations; rates are stateful inter-poll
+computations.
+
+**Each rate field is decided independently per counter.** There are
+two ways a rate field can be reported on a given poll:
+
+- **Zero floor.** When the current total is `0`, the rate is `0.0` by
+  definition — no errors observed means no rate of errors. This is
+  true regardless of poll number, baseline state, or clock state. A
+  counter at zero produces a zero rate on the first poll, after a
+  counter reset that lands at zero, or under any clock anomaly.
+- **Inter-poll delta.** For a non-zero current total, the rate is
+  `Δ count / Δ seconds × 60`. Requires a prior baseline and a
+  positive monotonic elapsed time.
+
+Otherwise the rate field is omitted from `system_info` (HA renders
+`unknown`). The two counters can land in different states on the same
+poll — for example, `total_corrected = 0` and `total_uncorrected = 5`
+on the first poll produces `rate_corrected = 0.0` (zero floor) and
+omits `rate_uncorrected` (no baseline yet).
+
+| Field | When emitted | Value |
+|-------|--------------|-------|
+| `rate_corrected` | `total_corrected == 0` | `0.0` |
+| `rate_corrected` | baseline + positive Δt + no reset on this counter | `Δ total_corrected / Δ seconds × 60` |
+| `rate_uncorrected` | `total_uncorrected == 0` | `0.0` |
+| `rate_uncorrected` | baseline + positive Δt + no reset on this counter | `Δ total_uncorrected / Δ seconds × 60` |
+
+**Omission cases** (field absent from `system_info` for the
+corresponding counter):
+
+- First poll since orchestrator construction or `reset_auth()`, with
+  a non-zero current total (no prior baseline).
+- A counter reset is detected on this poll — *either* total
+  decreased, which marks the interval as spanning a modem reboot or
+  stats wipe. Both counters omit the inter-poll delta; counters at
+  zero post-reset still emit `0.0` via the zero floor.
+- `Δ seconds <= 0` (defensive guard against clock skew or paused VM),
+  and the current total is non-zero.
+- The modem has no SC-QAM error counters at all
+  (`total_corrected` / `total_uncorrected` absent from `system_info`).
+
+Zero-delta counts (counter stable across an interval) produce `0.0`
+via the inter-poll formula, matching the zero-floor result. Scope is
+inherited from the aggregate totals: SC-QAM only. OFDM rates are out
+of scope; see
+[PARSING_SPEC.md § Aggregate](PARSING_SPEC.md#aggregate-derived-system_info-fields)
+for the MIB-cited boundary rule.
 
 ### Logging Contract
 

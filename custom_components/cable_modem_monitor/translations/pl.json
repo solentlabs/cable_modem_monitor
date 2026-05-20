@@ -143,6 +143,10 @@
           "name": "Wykresy błędów",
           "description": "Skorygowane i nieskorygowane liczniki błędów (widok 7-dniowy)."
         },
+        "include_error_rates": {
+          "name": "Wykresy częstości błędów",
+          "description": "Dodaj wykresy częstości błędów na minutę (błędy/min, widok 7-dniowy). Domyślnie wyłączone. Częstości zmieniają się między odpytywaniami."
+        },
         "include_latency": {
           "name": "Wykres latencji",
           "description": "Czasy odpowiedzi ping i HTTP (widok 6-godzinny)."

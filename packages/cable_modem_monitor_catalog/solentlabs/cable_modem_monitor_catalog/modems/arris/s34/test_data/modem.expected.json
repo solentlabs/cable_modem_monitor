@@ -365,6 +365,7 @@
     "docsis_status": "Operational",
     "downstream_channel_count": 32,
     "model_name": "S34",
+    "rate_uncorrected": 0.0,
     "software_version": "AT01.01.010.042324_S3.04.735",
     "total_corrected": 442,
     "total_uncorrected": 0,

@@ -10,8 +10,8 @@ grandfathered.
 The check exists to prevent the AI antipattern of reaching for a
 suppression as the first answer to a quality-gate failure when a
 code-level fix was available. Justification comments force the
-choice to be considered, named, and reviewable. See CLAUDE.md
-section Code Discipline (Suppression discipline).
+choice to be considered, named, and reviewable. See
+docs/CODE_REVIEW.md § Suppression Discipline.
 
 Detection uses Python's tokenize module so only real source-level
 COMMENT tokens are considered — the same suppression text appearing
@@ -256,7 +256,7 @@ def main() -> int:
         print(f"  {v}", file=sys.stderr)
     print(
         "\nSuppressions added in your changes must carry a same-line justification.\n"
-        "See CLAUDE.md section Code Discipline (Suppression discipline).",
+        "See docs/CODE_REVIEW.md § Suppression Discipline.",
         file=sys.stderr,
     )
     return 1

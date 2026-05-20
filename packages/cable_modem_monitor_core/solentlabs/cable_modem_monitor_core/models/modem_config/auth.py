@@ -204,7 +204,7 @@ class FormCbnAuth(AuthStrategyBase):
     username_value: str = "NULL"
     login_fun: int = 15
 
-    display_name: ClassVar[str] = "Form Login (CBN)"
+    display_name: ClassVar[str] = "Form Login CBN"
     transport: ClassVar[str] = "cbn"
 
 

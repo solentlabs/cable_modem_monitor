@@ -1,0 +1,13 @@
+{
+  "_description": "Number-prefix modulation form (256QAM) is the most common drift; canonical is QAM256",
+  "_data": {
+    "downstream": [
+      {"channel_number": 1, "channel_id": 1, "channel_type": "qam", "lock_status": "locked", "modulation": "256QAM"},
+      {"channel_number": 2, "channel_id": 2, "channel_type": "qam", "lock_status": "locked", "modulation": "64QAM"}
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].modulation", "rule": "modulation_canonical"},
+    {"path": "downstream[1].modulation", "rule": "modulation_canonical"}
+  ]
+}

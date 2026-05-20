@@ -1,0 +1,104 @@
+downstream:
+  format: hnap
+  data_key: CustomerConnDownstreamChannel
+  field_delimiter: "^"
+  fields:
+    - index: 0
+      field: channel_number
+      type: integer
+    - index: 1
+      field: lock_status
+      type: lock_status
+    - index: 2
+      field: channel_type
+      type: string
+      map:
+        "OFDM PLC": "ofdm"
+        "QAM256": "qam"
+    - index: 3
+      field: channel_id
+      type: integer
+    - index: 4
+      field: frequency
+      type: frequency
+    - index: 5
+      field: power
+      type: float
+    - index: 6
+      field: snr
+      type: float
+    - index: 7
+      field: corrected
+      type: integer
+    - index: 8
+      field: uncorrected
+      type: integer
+  record_delimiter: "|+|"
+  response_key: GetCustomerStatusDownstreamChannelInfoResponse
+upstream:
+  format: hnap
+  data_key: CustomerConnUpstreamChannel
+  field_delimiter: "^"
+  fields:
+    - index: 0
+      field: channel_number
+      type: integer
+    - index: 1
+      field: lock_status
+      type: lock_status
+    - index: 2
+      field: channel_type
+      type: string
+      map:
+        "OFDMA": "ofdma"
+        "SC-QAM": "qam"
+    - index: 3
+      field: channel_id
+      type: integer
+    - index: 4
+      field: symbol_rate
+      type: frequency
+    - index: 5
+      field: frequency
+      type: frequency
+    - index: 6
+      field: power
+      type: float
+  record_delimiter: "|+|"
+  response_key: GetCustomerStatusUpstreamChannelInfoResponse
+system_info:
+  sources:
+    - format: hnap
+      fields:
+        - field: system_uptime
+          source: CustomerConnSystemUpTime
+          type: uptime
+          format: "{days} days {hours}h:{minutes}m:{seconds}s"
+        - field: model_name
+          source: StatusSoftwareModelName
+          type: string
+      response_key: GetCustomerStatusConnectionInfoResponse
+    - format: hnap
+      fields:
+        - field: software_version
+          source: FirmwareVersion
+          type: string
+        - field: docsis_status
+          source: InternetConnection
+          type: string
+          map:
+            "Connected": "Operational"
+      response_key: GetArrisDeviceStatusResponse
+    - format: hnap
+      fields:
+        - field: hardware_version
+          source: StatusSoftwareHdVer
+          type: string
+      response_key: GetCustomerStatusSoftwareResponse
+aggregate:
+  total_corrected:
+    channels: downstream.qam
+    sum: corrected
+  total_uncorrected:
+    channels: downstream.qam
+    sum: uncorrected

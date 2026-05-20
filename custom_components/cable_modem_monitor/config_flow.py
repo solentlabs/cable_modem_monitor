@@ -22,6 +22,7 @@ import asyncio
 import logging
 import time
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
@@ -185,6 +186,9 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         self._selected_summary: ModemSummary | None = None
         self._variants: list[VariantInfo] = []
         self._selected_variant: str | None = None
+        # Directory of the selected variant — may differ from summary.path
+        # when a sibling transport directory was chosen in Step 2.
+        self._selected_modem_dir: Path | None = None
         self._progress = _ValidationProgress()
         # Carried from connection step for retry on error
         self._connection_input: dict[str, Any] | None = None
@@ -252,8 +256,12 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             if self._selected_summary is None:
                 return self.async_abort(reason="unknown_model")
 
-            # Check for variants
-            self._variants = await load_variant_list(self.hass, self._selected_summary.path)
+            # Check for variants — includes sibling transport directories
+            self._variants = await load_variant_list(
+                self.hass,
+                self._selected_summary.path,
+                self._selected_summary.sibling_dirs or None,
+            )
 
             # Store entity prefix and channel identity for later
             self._connection_input = {
@@ -265,7 +273,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                 return await self.async_step_variant()
 
             # Single variant — skip Step 2
-            self._selected_variant = None
+            self._selected_variant = self._variants[0].name if self._variants else None
+            self._selected_modem_dir = self._variants[0].path.parent if self._variants else self._selected_summary.path
             return await self.async_step_connection()
 
         # Build model dropdown
@@ -343,12 +352,27 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         """Step 2 — Select variant (only shown for multi-variant modems)."""
         if user_input is not None:
             raw = user_input["variant"]
-            self._selected_variant = None if raw == _DEFAULT_VARIANT else raw
+            # Values are composite keys: "{rel_dir}/{variant_name|__default__}"
+            selected_v = next(
+                (
+                    v
+                    for v in self._variants
+                    if f"{v.path.parent.relative_to(CATALOG_PATH)}/{v.name or _DEFAULT_VARIANT}" == raw
+                ),
+                None,
+            )
+            if selected_v is None:
+                return self.async_abort(reason="unknown_variant")
+            self._selected_variant = selected_v.name
+            self._selected_modem_dir = selected_v.path.parent
             return await self.async_step_connection()
 
         variant_options = []
         for v in self._variants:
-            value = v.name or _DEFAULT_VARIANT
+            # Composite key prevents collision when multiple directories
+            # contribute a default variant (name=None) to the same list.
+            rel = str(v.path.parent.relative_to(CATALOG_PATH))
+            value = f"{rel}/{v.name or _DEFAULT_VARIANT}"
             label = format_variant_label(v)
             variant_options.append(selector.SelectOptionDict(value=value, label=label))
 
@@ -413,9 +437,28 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
         return vol.Schema(fields)
 
+    def _get_selected_modem_dir(self) -> Path:
+        """Return the modem directory for the currently selected variant.
+
+        Uses ``_selected_modem_dir`` when set (Step 2 result), which may
+        differ from ``summary.path`` when a sibling transport directory was
+        chosen. Falls back to ``summary.path`` before Step 2 runs.
+        """
+        if self._selected_modem_dir is not None:
+            return self._selected_modem_dir
+        if self._selected_summary is not None:
+            return self._selected_summary.path
+        raise ValueError("No modem directory selected")
+
     def _get_selected_auth_strategy(self) -> str:
         """Return the auth strategy for the currently selected variant."""
-        if self._selected_variant is not None:
+        if self._selected_modem_dir is not None:
+            # Match by both directory and name — needed when multiple
+            # sibling directories contribute name=None variants.
+            for v in self._variants:
+                if v.path.parent == self._selected_modem_dir and v.name == self._selected_variant:
+                    return v.auth_strategy
+        elif self._selected_variant is not None:
             for v in self._variants:
                 if v.name == self._selected_variant:
                     return v.auth_strategy
@@ -446,7 +489,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                     host=self._connection_input[CONF_HOST],
                     username=self._connection_input.get(CONF_USERNAME, ""),
                     password=self._connection_input.get(CONF_PASSWORD, ""),
-                    modem_dir=self._selected_summary.path,
+                    modem_dir=self._get_selected_modem_dir(),
                     variant=self._selected_variant,
                 ),
             )
@@ -491,7 +534,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         display_name = build_model_display_name(summary)
         title = f"{summary.manufacturer} {summary.model} ({hostname})"
 
-        modem_dir = str(summary.path.relative_to(CATALOG_PATH))
+        modem_dir = str(self._get_selected_modem_dir().relative_to(CATALOG_PATH))
 
         entry_data: dict[str, Any] = {
             # User selections (Steps 1-2)
@@ -580,13 +623,14 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             if summary is None:
                 return self.async_abort(reason="reauth_failed")
 
+            modem_dir = CATALOG_PATH / entry.data[CONF_MODEM_DIR] if CONF_MODEM_DIR in entry.data else summary.path
             try:
                 result = await validate_connection(
                     self.hass,
                     host=user_input[CONF_HOST],
                     username=user_input.get(CONF_USERNAME, ""),
                     password=user_input.get(CONF_PASSWORD, ""),
-                    modem_dir=summary.path,
+                    modem_dir=modem_dir,
                     variant=entry.data.get(CONF_VARIANT),
                 )
             except (ConnectionError, PermissionError, RuntimeError) as exc:
@@ -738,7 +782,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     host=self._user_input[CONF_HOST],
                     username=self._user_input.get(CONF_USERNAME, ""),
                     password=self._user_input.get(CONF_PASSWORD, ""),
-                    modem_dir=summary.path,
+                    modem_dir=CATALOG_PATH / entry.data[CONF_MODEM_DIR],
                     variant=entry.data.get(CONF_VARIANT),
                 ),
             )

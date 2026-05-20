@@ -9,10 +9,12 @@ Per docs/ONBOARDING_SPEC.md Phases 5-6.
 
 from __future__ import annotations
 
+import posixpath
 from typing import Any
 
 from ...validation.har_utils import WARNING_PREFIX
 from ..mapping import extract_section_mappings
+from ..mapping.channel_detection import detect_channel_type_fixed
 from ..mapping.system_info import detect_system_info
 from ..types import FleetPatterns
 from .hnap import detect_hnap_sections
@@ -71,7 +73,7 @@ def _detect_http_sections(
     """
     data_pages = identify_data_pages(entries)
     if not data_pages:
-        warnings.append(f"{WARNING_PREFIX} No data pages found in HAR. " "Cannot detect format or field mappings.")
+        warnings.append(f"{WARNING_PREFIX} No data pages found in HAR. Cannot detect format or field mappings.")
         return {}
 
     # Phase 5: Analyze each data page
@@ -108,7 +110,16 @@ def _assemble_channel_sections(
         elif fmt == "javascript_json":
             _assemble_js_json_sections(page, sections, warnings)
         elif fmt == "javascript":
-            _assemble_js_sections(page, sections, warnings)
+            # For pages that have both JavaScript functions and HTML
+            # channel tables, try the tables first. Tables provide more
+            # complete and field-labelled channel data (DOCSIS 3.1 modems
+            # like the Netgear CM1100 expose both a JS tagValueList and
+            # full-detail HTML tables on the same page). The "first wins"
+            # guard in _assemble_table_sections and _assemble_js_sections
+            # ensures JS only fills sections not already populated by tables.
+            if page.tables:
+                _assemble_table_sections(page, "table", sections, warnings, fleet=fleet)
+            _assemble_js_sections(page, sections, warnings, fleet=fleet)
         elif fmt in ("table", "table_transposed"):
             _assemble_table_sections(page, fmt, sections, warnings, fleet=fleet)
 
@@ -165,21 +176,33 @@ def _assemble_js_sections(
     page: PageAnalysis,
     sections: dict[str, Any],
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> None:
-    """Assemble channel sections from JavaScript-embedded data."""
+    """Assemble channel sections from JavaScript-embedded data.
+
+    Collects all JS functions per direction.  When the primary (first)
+    function for a direction is processed, subsequent functions are
+    appended as ``additional_js_functions`` on the section dict when a
+    fleet layout exists for them — enabling DOCSIS 3.1 modems that expose
+    separate QAM and OFDM functions to emit both in a single section.
+    """
     for js_func in page.js_functions:
         # Infer direction from function name
         direction = _direction_from_js_name(js_func.name)
         if direction == "unknown":
             warnings.append(
-                f"{WARNING_PREFIX} Cannot determine direction for JS function " f"'{js_func.name}' on {page.resource}."
+                f"{WARNING_PREFIX} Cannot determine direction for JS function '{js_func.name}' on {page.resource}."
             )
             continue
 
-        # Skip if section already populated
         if direction in sections:
-            # Append as additional function (e.g., OFDM after QAM)
-            # For now, only the first function per direction is used
+            # Additional function for an already-populated direction —
+            # append via fleet layout when available (e.g., OFDM after QAM).
+            if fleet and js_func.name in fleet.js_function_layouts:
+                existing = sections[direction]
+                additional = existing.setdefault("additional_js_functions", [])
+                additional.append(fleet.js_function_layouts[js_func.name])
             continue
 
         section = extract_section_mappings(
@@ -188,6 +211,7 @@ def _assemble_js_sections(
             resource=page.resource,
             direction=direction,
             warnings=warnings,
+            fleet=fleet,
         )
 
         if section is None:
@@ -242,6 +266,8 @@ def _assemble_js_json_sections(
             continue
 
         if direction not in sections:
+            if section.channel_type is None:
+                section.channel_type = detect_channel_type_fixed(direction)
             sections[direction] = section.to_dict()
 
 
@@ -271,11 +297,15 @@ def _assemble_json_sections(
 
     if direction == "unknown":
         warnings.append(
-            f"{WARNING_PREFIX} Cannot determine direction for JSON data " f"on {page.resource}. Manual review required."
+            f"{WARNING_PREFIX} Cannot determine direction for JSON data on {page.resource}. Manual review required."
         )
         return
 
     if direction not in sections:
+        # DOCSIS 3.0 JSON APIs rarely embed channel type; apply fixed
+        # fallback when no channelType key was found in the JSON data.
+        if section.channel_type is None:
+            section.channel_type = detect_channel_type_fixed(direction)
         sections[direction] = section.to_dict()
 
 
@@ -290,12 +320,26 @@ def _direction_from_js_name(name: str) -> str:
 
 
 def _direction_from_resource(resource: str) -> str:
-    """Infer downstream/upstream from resource path."""
+    """Infer downstream/upstream from resource path.
+
+    Checks full keywords first, then DOCSIS abbreviation prefixes
+    (``ds``/``us``) in path segments and filenames — handles URLs like
+    ``/data/dsinfo.asp`` or ``/data/usinfo.asp`` that omit the full word.
+    """
     lower = resource.lower()
     if "downstream" in lower:
         return "downstream"
     if "upstream" in lower:
         return "upstream"
+
+    # Check path segments for ds/us prefixes (e.g. /data/dsinfo.asp)
+    segments = [posixpath.splitext(s)[0] for s in lower.split("/") if s]
+    for seg in segments:
+        if _has_direction_prefix(seg, ("ds",)):
+            return "downstream"
+        if _has_direction_prefix(seg, ("us",)):
+            return "upstream"
+
     return "unknown"
 
 

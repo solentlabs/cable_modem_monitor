@@ -1,0 +1,19 @@
+{
+  "_description": "QAM downstream channel with all canonical values",
+  "_data": {
+    "downstream": [
+      {
+        "channel_number": 1,
+        "channel_id": 32,
+        "channel_type": "qam",
+        "lock_status": "locked",
+        "modulation": "QAM256",
+        "frequency": 579000000,
+        "power": 0.1,
+        "snr": 38.5,
+        "corrected": 100,
+        "uncorrected": 0
+      }
+    ]
+  }
+}

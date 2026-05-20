@@ -143,6 +143,10 @@
           "name": "Feldiagram",
           "description": "Korrigerade och okorrigerade felräknare (7-dagarsvy)."
         },
+        "include_error_rates": {
+          "name": "Felfrekvensdiagram",
+          "description": "Lägger till diagram över felfrekvens per minut (fel/min, 7-dagarsvy). Avstängt som standard. Frekvenser varierar mellan pollningar."
+        },
         "include_latency": {
           "name": "Latensdiagram",
           "description": "Ping- och HTTP-svarstider (6-timmarsvy)."

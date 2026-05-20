@@ -88,12 +88,11 @@ VS Code tasks (`Ctrl+Shift+P` → **Tasks: Run Task**):
 
 | Task | Purpose |
 |------|---------|
-| **HA: Start (Fresh)** | Clean state, no old data |
-| **HA: Start (Keep Data)** | Preserves users/config from last session |
-| **HA: Restart (Reload Integration)** | Picks up code changes; preserves state |
-| **HA: Stop** | Stop the HA container |
-| **HA: View Logs** | Tail HA logs in real time |
-| **HA: Clean All Data (Reset)** | Wipe HA's local test config (users, integrations, settings) |
+| **🚀 HA: Start** | Start HA with info logging (restarts if already running) |
+| **🚀 HA: Start (Debug)** | Start HA with debug logging for all integration namespaces |
+| **⏹️ HA: Stop** | Stop the HA container |
+| **📋 HA: View Logs** | Tail HA logs in real time |
+| **🗑️ HA: Clean All Data (Reset)** | Wipe HA's local test config (users, integrations, settings) |
 
 After starting, open <http://localhost:8123>.
 
@@ -197,7 +196,7 @@ docker ps
 docker stop ha-cable-modem-test
 ```
 
-Or run the **HA: Stop** task.
+Or run the **⏹️ HA: Stop** task.
 
 ### HAR files appear empty / `JSONDecodeError`
 

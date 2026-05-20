@@ -70,6 +70,15 @@ CONVERT_VALUE_CASES = [
     ("Unlocked",        "lock_status", "not_locked", "lock_status Unlocked"),
     ("0",               "lock_status", "not_locked", "lock_status numeric 0"),
     ("no",              "lock_status", "not_locked", "lock_status no"),
+    ("QAM256",          "modulation", "QAM256",     "modulation canonical pass-through"),
+    ("256QAM",          "modulation", "QAM256",     "modulation number-prefix canonicalized"),
+    ("256-QAM",         "modulation", "QAM256",     "modulation hyphen separator canonicalized"),
+    ("256qam",          "modulation", "QAM256",     "modulation lowercase canonicalized"),
+    ("256 QAM",         "modulation", "QAM256",     "modulation space separator canonicalized"),
+    ("qpsk",            "modulation", "QPSK",       "modulation QPSK case normalized"),
+    ("OFDM",            "modulation", "OFDM",       "modulation unrecognized passes through (validator catches)"),
+    ("0,1,3,4",         "modulation", "0,1,3,4",    "modulation IUC list passes through (validator catches)"),
+    ("",                "modulation", None,         "modulation empty returns None"),
 ]
 # fmt: on
 
@@ -312,6 +321,22 @@ UPTIME_CASES = [
     ("479h:40m:38s",
      "{hours}h:{minutes}m:{seconds}s",
      "19 days 23h:40m:38s", "hours-only custom format"),
+    # Netgear CM2000/CM3000: firmware omits the "N days " prefix below 24h.
+    # Bracketed segment is optional — same parser config handles both.
+    ("10 days 01:41:16",
+     "[{days} days ]{hours}:{minutes}:{seconds}",
+     "10 days 01h:41m:16s", "Netgear uptime with days prefix"),
+    ("05:07:57",
+     "[{days} days ]{hours}:{minutes}:{seconds}",
+     "0 days 05h:07m:57s", "Netgear uptime without days prefix"),
+    # Optional segment in trailing position — proves the bracket syntax
+    # works anywhere in the format, not only as a leading prefix.
+    ("02h:30m:15s",
+     "{hours}h:{minutes}m[:{seconds}s]",
+     "0 days 02h:30m:15s", "optional trailing seconds — present"),
+    ("02h:30m",
+     "{hours}h:{minutes}m[:{seconds}s]",
+     "0 days 02h:30m:00s", "optional trailing seconds — absent"),
 ]
 # fmt: on
 

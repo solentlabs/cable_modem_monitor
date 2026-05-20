@@ -260,17 +260,29 @@ def detect_table_selector(
     When ``all_tables`` is provided, a unique column header is one
     that appears in this table but not in any other table on the page.
     Headers from the field registry are preferred as discriminators.
+
+    When a header candidate was extracted from a ``data-i18n``
+    attribute (visible text was empty, filled by JavaScript at
+    runtime), a CSS attribute selector is emitted instead of
+    ``header_text``.  A ``header_text`` match would fail at runtime
+    because the visible text remains empty in the live response.
     """
     if table.table_id:
         return {"type": "id", "match": table.table_id}
 
     if table.title_row_text:
+        if table.title_row_text in table.i18n_header_map:
+            tag = table.i18n_header_map[table.title_row_text]
+            return {"type": "css", "match": f"{tag}[data-i18n='{table.title_row_text}']"}
         return {"type": "header_text", "match": table.title_row_text}
 
     # Unique column header (requires knowing sibling tables)
     if all_tables is not None:
         unique = _find_unique_column_header(table, all_tables)
         if unique:
+            if unique in table.i18n_header_map:
+                tag = table.i18n_header_map[unique]
+                return {"type": "css", "match": f"{tag}[data-i18n='{unique}']"}
             return {"type": "header_text", "match": unique}
 
     if table.preceding_text:

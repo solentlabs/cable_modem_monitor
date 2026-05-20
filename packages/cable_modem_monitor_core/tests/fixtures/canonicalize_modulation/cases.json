@@ -1,0 +1,42 @@
+{
+  "_description": "canonicalize_modulation: input → expected canonical (or null when not a modulation)",
+  "_cases": [
+    {"input": "QAM16",    "expected": "QAM16",   "note": "canonical pass-through"},
+    {"input": "QAM32",    "expected": "QAM32",   "note": "canonical pass-through"},
+    {"input": "QAM64",    "expected": "QAM64",   "note": "canonical pass-through"},
+    {"input": "QAM256",   "expected": "QAM256",  "note": "canonical pass-through"},
+    {"input": "QAM1024",  "expected": "QAM1024", "note": "canonical pass-through"},
+    {"input": "QAM2048",  "expected": "QAM2048", "note": "canonical pass-through"},
+    {"input": "QAM4096",  "expected": "QAM4096", "note": "canonical pass-through"},
+    {"input": "QPSK",     "expected": "QPSK",    "note": "canonical pass-through"},
+
+    {"input": "256QAM",   "expected": "QAM256",  "note": "number-prefix → suffix"},
+    {"input": "64QAM",    "expected": "QAM64",   "note": "number-prefix → suffix"},
+    {"input": "16QAM",    "expected": "QAM16",   "note": "number-prefix → suffix"},
+    {"input": "1024QAM",  "expected": "QAM1024", "note": "number-prefix → suffix"},
+
+    {"input": "256-QAM",  "expected": "QAM256",  "note": "hyphen separator stripped"},
+    {"input": "256 QAM",  "expected": "QAM256",  "note": "space separator stripped"},
+    {"input": "256_QAM",  "expected": "QAM256",  "note": "underscore separator stripped"},
+    {"input": "qam_256",  "expected": "QAM256",  "note": "case + underscore"},
+    {"input": "256qam",   "expected": "QAM256",  "note": "lowercase prefix form"},
+    {"input": "qam256",   "expected": "QAM256",  "note": "lowercase suffix form"},
+
+    {"input": "qpsk",     "expected": "QPSK",    "note": "case-only normalization"},
+    {"input": "QPsK",     "expected": "QPSK",    "note": "mixed case"},
+
+    {"input": "  256QAM  ", "expected": "QAM256", "note": "trims leading/trailing whitespace"},
+
+    {"input": "OFDM",     "expected": null,      "note": "channel-type restatement is not modulation"},
+    {"input": "OFDMA",    "expected": null,      "note": "channel-type restatement is not modulation"},
+    {"input": "OFDM PLC", "expected": null,      "note": "channel-type restatement is not modulation"},
+    {"input": "ATDMA",    "expected": null,      "note": "channel-type restatement is not modulation"},
+    {"input": "Other",    "expected": null,      "note": "generic label is not modulation"},
+    {"input": "QAM",      "expected": null,      "note": "bare QAM with no constellation"},
+    {"input": "QAM128",   "expected": null,      "note": "constellation outside canonical set"},
+    {"input": "0,1,3,4",  "expected": null,      "note": "IUC list bleed-through"},
+    {"input": "3, 4, 5, 6, 9", "expected": null, "note": "IUC list bleed-through"},
+    {"input": "",         "expected": null,      "note": "empty input"},
+    {"input": "   ",      "expected": null,      "note": "whitespace-only input"}
+  ]
+}

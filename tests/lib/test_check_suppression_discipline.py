@@ -1,11 +1,12 @@
 """Tests for scripts/check_suppression_discipline.py.
 
-Coverage breakdown per CLAUDE.md section Testing:
-- Comment-token scan logic — table-driven inline (#16, #17).
+Coverage breakdown per docs/CODE_REVIEW.md § Test File Standards:
+- Comment-token scan logic — table-driven inline (Table-driven tests,
+  Schema tests use fixtures).
 - Diff-parser shapes — fixture-driven JSON bundles
   (tests/lib/fixtures/suppression_diffs/*.json) so adding a case is
-  adding one file (#17, #18). Mirrors the parser-coordinator fixture
-  pattern.
+  adding one file (Schema tests use fixtures, No inline data blobs).
+  Mirrors the parser-coordinator fixture pattern.
 - File-level scan, audit, and main() modes — behavioural with tmp_path
   files and mocked subprocess (no real git invocation needed).
 
@@ -39,7 +40,7 @@ _FIXTURES = Path(__file__).parent / "fixtures" / "suppression_diffs"
 
 
 # ---------------------------------------------------------------------------
-# _scan_comment — table-driven (per CLAUDE.md #16)
+# _scan_comment — table-driven (per docs/CODE_REVIEW.md § Test File Standards)
 # ---------------------------------------------------------------------------
 
 # Inputs are COMMENT-token text (the leading `#` plus everything after it
@@ -101,7 +102,7 @@ def test_has_justification_rejects_free_text_without_hash() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _parse_diff_added_lines — fixture-driven (per CLAUDE.md #17)
+# _parse_diff_added_lines — fixture-driven (per docs/CODE_REVIEW.md § Test File Standards)
 # ---------------------------------------------------------------------------
 
 _DIFF_FIXTURES = sorted(_FIXTURES.glob("*.json"))

@@ -44,7 +44,7 @@ downstream:
       type: float
     - key: Modulation
       field: modulation
-      type: string
+      type: modulation
     - key: LockStatus
       field: lock_status
       type: lock_status
@@ -87,7 +87,7 @@ upstream:
       range: span
     - key: Modulation
       field: modulation
-      type: string
+      type: modulation
     - key: LockStatus
       field: lock_status
       type: lock_status

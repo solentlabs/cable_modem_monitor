@@ -143,6 +143,10 @@
           "name": "Fehlerdiagramme",
           "description": "Korrigierte und unkorrigierte Fehlerzähler (7-Tage-Ansicht)."
         },
+        "include_error_rates": {
+          "name": "Fehlerratendiagramme",
+          "description": "Diagramme der Fehlerrate pro Minute hinzufügen (Fehler/Min., 7-Tage-Ansicht). Standardmäßig aus. Raten schwanken bei jeder Abfrage."
+        },
         "include_latency": {
           "name": "Latenzdiagramm",
           "description": "Ping- und HTTP-Antwortzeiten (6-Stunden-Ansicht)."

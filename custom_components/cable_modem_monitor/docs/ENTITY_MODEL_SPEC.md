@@ -6,10 +6,20 @@ Core produces `ModemData` (channels + system_info) and health-check
 results (latency + status). This spec defines how those map to HA
 platforms, entities, attributes, and availability.
 
-**Design principle:** The integration exposes what the modem provides,
-in standard HA format. Users derive additional entities (template
-sensors, binary_sensors) from attributes as needed. The integration
-does not create entities for every possible use case.
+**Design principle:** The integration exposes a vendor-neutral
+schema of metrics observed across the cable-modem fleet, in standard
+HA format. Core admits derived fields when they re-present a
+fleet-observed datum more directly (e.g., per-minute error rates
+from cumulative FEC counters) or fill in cardinality the fleet does
+not always report natively (e.g., channel counts). User-side
+analytics — spreads, deltas, composed health grades, threshold-based
+classification — are out of scope for Core and the HA adapter; they
+belong in HA blueprints distributed alongside the integration. See
+[ARCHITECTURE_DECISIONS.md § Core's schema tracks fleet-observed
+metrics](../../../packages/cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md#cores-schema-tracks-fleet-observed-metrics-not-user-analytics)
+for the full decision and
+[BLUEPRINT_DISTRIBUTION_SPEC.md](BLUEPRINT_DISTRIBUTION_SPEC.md) for
+the user-analytics distribution path.
 
 ---
 
@@ -60,6 +70,8 @@ output (some gated by config).
 | US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
 | Total Uncorrected | `_total_uncorrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
+| Rate Corrected | `_rate_corrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
+| Rate Uncorrected | `_rate_uncorrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
 | System Info Field³ | `_{field}` | pass-through | — | — | — | Dynamic per-field sensor for non-consumed system_info fields |
 
 ¹ See [Status Sensor](#status-sensor) for the priority cascade that
@@ -78,6 +90,18 @@ channel data. Channel counts (`len(channels)`) are always computed
 by the parser coordinator if not natively mapped. Consumers read from one
 place regardless of source. See
 [PARSING_SPEC.md](../../../packages/cable_modem_monitor_core/docs/PARSING_SPEC.md#aggregate-derived-system_info-fields).
+
+⁴ Error-rate sensors are gated by SC-QAM **capability** (the
+presence of `total_corrected` in `system_info`), not by immediate
+rate-field presence. HA's data-dependent entity creation is one-shot
+at first-data-available, and the orchestrator deliberately omits
+`rate_corrected` / `rate_uncorrected` on the first poll (no prior
+baseline), across counter resets, and when monotonic elapsed time
+is non-positive. Gating on rate-field presence would leave the
+sensors permanently absent. Instead, the rate sensors are created
+alongside the totals; `native_value` returns `None` (HA renders
+`unknown`) on polls where the orchestrator omits the field. See
+[ORCHESTRATION_SPEC.md § Derived Fields](../../../packages/cable_modem_monitor_core/docs/ORCHESTRATION_SPEC.md#derived-fields).
 
 **Implicit capabilities:** Capabilities are not declared — they are
 implicit from parser.yaml mappings (see
@@ -381,6 +405,22 @@ over with its own unique_id.
 Core owns the data model. HA owns the presentation. The HA adapter
 passes `ModemIdentity` fields through to the Modem Info sensor — no
 derivation, no URL construction, no string comparison.
+
+**What does not cross this boundary into Core:** user-side analytics
+that compose, aggregate, or evaluate Core fields against
+user-chosen thresholds. DS power spreads, max-of-N aggregates,
+weighted health scores, Good/Fair/Poor tier classification, and any
+"is this metric acceptable" judgment live in HA blueprints, not in
+Core or the HA adapter. The principle is that Core's schema
+documents what the fleet of modems reports; interpretation on top
+of that schema is the user's choice and belongs in a distribution
+surface designed for user customization. See
+[BLUEPRINT_DISTRIBUTION_SPEC.md](BLUEPRINT_DISTRIBUTION_SPEC.md) for
+how those user-analytics blueprints ship alongside the integration,
+and
+[ARCHITECTURE_DECISIONS.md § Core's schema tracks fleet-observed
+metrics](../../../packages/cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md#cores-schema-tracks-fleet-observed-metrics-not-user-analytics)
+for the underlying decision.
 
 ---
 

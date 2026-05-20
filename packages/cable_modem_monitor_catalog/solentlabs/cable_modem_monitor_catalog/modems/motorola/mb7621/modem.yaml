@@ -46,6 +46,7 @@ sources:
   detection_hints: "Maintainer verified"
   isps: "https://www.amazon.com/MOTOROLA-MB7621-Approved-Spectrum-Downloads/dp/B077BL65HS"
   restart: "HAR verified — all form fields from MotoSecurity.asp (2026-03-26 capture)"
+  field_observations: "Maintainer dual-HA soak (2026-05-14/15): two HA instances at 30s poll intervals drove the web stack to read timeout while ICMP remained sub-5ms"
 
 attribution:
   contributors:
@@ -74,3 +75,11 @@ notes: |
   NewUserId, Password, PasswordReEnter, MotoSecurityAction=1). The form is
   dual-purpose (password change + restart); browser submits all fields on reboot.
   Requires authenticated session (POST is silently ignored without auth).
+  Web management stack has limited concurrency. Any successful login
+  invalidates an existing session regardless of the originating client, so
+  multiple HA instances polling the same modem will repeatedly invalidate
+  each other's sessions. Sustained sub-minute polling from two or more
+  clients can overrun the web server and produce read timeouts on auth and
+  data fetches. The DOCSIS data plane is independent of the management
+  plane: ICMP and pass-through traffic continue normally even while the web
+  interface is unresponsive.

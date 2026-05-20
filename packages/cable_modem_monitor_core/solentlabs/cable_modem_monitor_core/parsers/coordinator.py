@@ -18,7 +18,9 @@ import logging
 from collections import defaultdict
 from typing import Any, TypeVar
 
+from ..models.parser_config.common import ChannelTypeDerive
 from ..models.parser_config.config import ParserConfig
+from ..spec_conformance import derive_channel_type_from_modulation
 from .diagnostics import AnchorCount, ParseDiagnostics
 from .registries import CHANNEL_PARSERS, SYSINFO_PARSERS
 
@@ -83,6 +85,16 @@ class ModemParserCoordinator:
             result[section_name] = channels
             if resource is not None:
                 per_resource[resource] = per_resource[resource] + count
+
+        # Apply direction-aware channel_type derivation for sections
+        # configured with ``channel_type: { derive: from_modulation }``.
+        # Format parsers no-op on ChannelTypeDerive because they don't
+        # know whether they're processing the DS or US section; the
+        # coordinator does, so derivation lives here.
+        for section_name in _CHANNEL_SECTIONS:
+            section = getattr(self._config, section_name, None)
+            if _section_uses_channel_type_derive(section):
+                _apply_derive_channel_type(result[section_name], section_name)
 
         # Null metrics on unlocked channels before aggregation.
         # See CHANNEL_IDENTIFICATION_SPEC.md §6.
@@ -236,6 +248,39 @@ class ModemParserCoordinator:
 
 # Fields preserved on unlocked channels. Everything else is stripped.
 _UNLOCKED_KEEP_FIELDS = frozenset({"channel_number", "lock_status"})
+
+
+def _section_uses_channel_type_derive(section: Any) -> bool:
+    """True if the section config carries a ``ChannelTypeDerive`` directive.
+
+    Checks both section-level ``channel_type`` (json/javascript/hnap)
+    and per-table ``channel_type`` (xml/html_table). One match anywhere
+    flags the section.
+    """
+    if section is None:
+        return False
+    if isinstance(getattr(section, "channel_type", None), ChannelTypeDerive):
+        return True
+    tables = getattr(section, "tables", None)
+    if tables:
+        return any(isinstance(getattr(t, "channel_type", None), ChannelTypeDerive) for t in tables)
+    return False
+
+
+def _apply_derive_channel_type(channels: list[dict[str, Any]], direction: str) -> None:
+    """Fill in ``channel_type`` per channel from modulation + direction.
+
+    Skips channels that already have a non-empty ``channel_type`` —
+    per-table derivation may set some channels' types directly while
+    others fall through to this helper.
+    """
+    for ch in channels:
+        existing = ch.get("channel_type")
+        if existing:
+            continue
+        derived = derive_channel_type_from_modulation(ch.get("modulation"), direction)
+        if derived is not None:
+            ch["channel_type"] = derived
 
 
 def _null_unlocked_channels(channels: list[dict[str, Any]]) -> None:

@@ -522,7 +522,7 @@ derivation, device info, uptime sensors).
 **Tier 2 — Dedicated sensor classes:** Fields with specialized HA
 entity behavior (device_class, state_class, unit conversion).
 Currently: software_version, system_uptime, channel counts, error
-totals. Elevation criteria:
+totals, error rates. Elevation criteria:
 
 - Natural HA device_class (temperature, data_size, percentage)
 - Multiple modems expose it
@@ -530,8 +530,15 @@ totals. Elevation criteria:
 - Users would expect it as a first-class entity
 
 Currently Tier 2: software_version, system_uptime, channel counts,
-error totals, provisioned_speed_down/up (Mbit/s, DATA_RATE),
-provisioned_burst_down/up (B, DATA_SIZE).
+error totals, error rates (`rate_corrected`, `rate_uncorrected`,
+errors/min, MEASUREMENT), provisioned_speed_down/up (Mbit/s,
+DATA_RATE), provisioned_burst_down/up (B, DATA_SIZE).
+
+**Source of value.** Most Tier 2 fields are populated by the parser
+coordinator (native mapping, aggregate, or computed). Error rates are
+the exception: they are written by the orchestrator from inter-poll
+deltas, since rate is stateful and the parser layer is stateless. See
+[ORCHESTRATION_SPEC.md § Derived Fields](ORCHESTRATION_SPEC.md#derived-fields).
 
 **Tier 3 — Pass-through:** All remaining fields. Each gets a generic
 `SystemInfoFieldSensor` (icon: `mdi:information-outline`, value as-is).

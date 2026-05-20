@@ -6,7 +6,7 @@ default_host: "192.168.100.1"
 auth:
   strategy: form
   action: "/goform/GenieLogin"
-  login_page: "/"
+  login_page: "/GenieLogin.asp"
   username_field: loginUsername
   password_field: loginPassword
   cookie_name: "SessionID"

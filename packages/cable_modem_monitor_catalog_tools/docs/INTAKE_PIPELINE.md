@@ -144,10 +144,52 @@ Both files live in Catalog Tools (`solentlabs/cable_modem_monitor_catalog_tools/
 | Pipeline tools (validate, analyze, enrich, generate, test) | `packages/cable_modem_monitor_catalog_tools/solentlabs/cable_modem_monitor_catalog_tools/` |
 | Pattern files (auth, actions) | `.../catalog_tools/analysis/auth/` and `.../catalog_tools/analysis/actions/` |
 | Fleet scanner | `packages/cable_modem_monitor_catalog_tools/solentlabs/cable_modem_monitor_catalog_tools/fleet_scanner.py` |
+| Intake pipeline regression (accuracy tracking + auth audit) | `packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py` |
 | Test harness (HAR replay, golden file comparison) | `packages/cable_modem_monitor_core/solentlabs/cable_modem_monitor_core/test_harness/` |
 | Modem catalog entries (output) | `packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/{manufacturer}/{model}/` |
 | Authoritative spec | `packages/cable_modem_monitor_catalog_tools/docs/ONBOARDING_SPEC.md` |
 | Runnable workflow | [MODEM_INTAKE_WORKFLOW.md](MODEM_INTAKE_WORKFLOW.md) |
+
+---
+
+---
+
+## Intake Pipeline Regression
+
+`scripts/intake_pipeline_regression.py` measures how well the pipeline
+reproduces committed catalog configs when run against the same HAR as a
+fresh submission. It is a **reporting tool**, not a CI gate — findings
+indicate where the intake pipeline can improve, not regressions in Core.
+
+```bash
+python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py
+python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --modem arris/sb8200 -v
+python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --scorecard scorecard.json
+python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --baseline baseline.json
+```
+
+**What it reports:**
+
+| Status | Meaning |
+|--------|---------|
+| `CLEAN` | Generated golden file matches committed golden file exactly |
+| `DRIFT` | Pipeline ran but generated output differs from committed golden file |
+| `FAILURE` | Pipeline stage failed (validate_har, analyze_har, generate_config) |
+
+Fleet-wide **field accuracy** is reported as a percentage of committed
+golden file fields correctly reproduced by the pipeline. This tracks
+improvement over time as the pipeline gains new pattern recognition.
+
+**Auth fixture audit** runs at the end of every sweep. For each form-auth
+modem with `login_page` configured, it verifies that the committed HAR
+fixture contains a usable login page response. Issues are printed as
+advisory — they indicate catalog gaps to investigate, not CI failures.
+Hardware is required to confirm whether a fixture gap actually causes a
+runtime problem.
+
+**Regression baseline mode** (`--baseline`) fails only when a modem's
+status gets worse than the recorded baseline. Use `--update-baseline` to
+lock in improvements after pipeline changes.
 
 ---
 

@@ -210,7 +210,7 @@ def _detect_conflicts(
         existing_val = existing_config.get(key)
         enriched_val = metadata.get(key)
         if existing_val and enriched_val and existing_val != enriched_val:
-            result.warnings.append(f"existing {key} {existing_val!r} differs from " f"enriched value {enriched_val!r}")
+            result.warnings.append(f"existing {key} {existing_val!r} differs from enriched value {enriched_val!r}")
 
 
 def _check_missing(

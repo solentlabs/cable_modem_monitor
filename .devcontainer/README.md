@@ -10,7 +10,6 @@ Configuration files for VS Code Dev Container development.
 | `Dockerfile` | Container image (Python 3.12, dependencies) |
 | `post-create.sh` | Runs after container creation (install deps) |
 | `post-start.sh` | Runs on each container start |
-| `setup.sh` | Environment setup inside container |
 
 ## Usage
 

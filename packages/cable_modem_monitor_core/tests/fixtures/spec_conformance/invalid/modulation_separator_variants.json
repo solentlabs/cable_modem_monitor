@@ -1,0 +1,17 @@
+{
+  "_description": "Separator variants (256-QAM, 256 QAM, 256_qam, qam_256) are all non-canonical",
+  "_data": {
+    "downstream": [
+      {"channel_number": 1, "channel_id": 1, "channel_type": "qam", "lock_status": "locked", "modulation": "256-QAM"},
+      {"channel_number": 2, "channel_id": 2, "channel_type": "qam", "lock_status": "locked", "modulation": "256 QAM"},
+      {"channel_number": 3, "channel_id": 3, "channel_type": "qam", "lock_status": "locked", "modulation": "qam_256"},
+      {"channel_number": 4, "channel_id": 4, "channel_type": "qam", "lock_status": "locked", "modulation": "256qam"}
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].modulation", "rule": "modulation_canonical"},
+    {"path": "downstream[1].modulation", "rule": "modulation_canonical"},
+    {"path": "downstream[2].modulation", "rule": "modulation_canonical"},
+    {"path": "downstream[3].modulation", "rule": "modulation_canonical"}
+  ]
+}

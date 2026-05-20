@@ -145,8 +145,8 @@ class TestDeriveProtocol:
 # =============================================================================
 #
 # Expected ResolvedModem values (extracted for line length)
-_R_TPS2000 = ResolvedModem("solentlabs/tps-2000", "Solent Labs", "TPS-2000")
-_R_TPS3000 = ResolvedModem("solentlabs/tps-3000", "Solent Labs", "TPS-3000")
+_R_TPS2000 = ResolvedModem("solentlabs/tps-2000", "Solent Labs", "TPS-2000", [])
+_R_TPS3000 = ResolvedModem("solentlabs/tps-3000", "Solent Labs", "TPS-3000", [])
 
 # ┌──────────────────┬─────────────────┬─────────────┬───────────────────────────┐
 # │ manufacturer     │ model           │ expected    │ description               │
@@ -289,14 +289,28 @@ class TestResolveVariant:
             result = resolve_variant("mfr/m1", v1_auth)
         assert result == expected
 
+    def test_sibling_dirs_forwarded_to_list_variants(self):
+        """sibling_dirs are passed through to list_variants for cross-dir variant lookup."""
+        sibling = Path("/fake/catalog/mfr/m1-sibling")
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.list_variants",
+                return_value=_TWO_VARIANTS,
+            ) as mock_lv,
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.CATALOG_PATH",
+                _FAKE_CATALOG,
+            ),
+        ):
+            resolve_variant("mfr/m1", "basic", sibling_dirs=[sibling])
+        mock_lv.assert_called_once_with(_FAKE_CATALOG / "mfr/m1", sibling_dirs=[sibling])
+
 
 # =============================================================================
 # Full migration data transform — verify v2 shape (generic names)
 # =============================================================================
 
 # v2 schema: the complete set of keys that must exist after migration
-# supports_icmp / supports_head are intentionally omitted — stale
-# one-shot detections are not carried forward; modem.yaml defaults apply.
 V2_REQUIRED_KEYS = frozenset(
     {
         "manufacturer",
@@ -311,6 +325,8 @@ V2_REQUIRED_KEYS = frozenset(
         "password",
         "protocol",
         "legacy_ssl",
+        "supports_icmp",
+        "supports_head",
         "scan_interval",
         "health_check_interval",
     }
@@ -370,7 +386,8 @@ def _transform_v1_to_v2(v1: dict, modem_dir: str, variant: str | None = None) ->
         "password": v1["password"],
         "protocol": protocol,
         "legacy_ssl": v1.get("legacy_ssl", False),
-        # supports_icmp / supports_head intentionally omitted
+        "supports_icmp": True,
+        "supports_head": True,
         "scan_interval": v1.get("scan_interval", 600),
         "health_check_interval": 30,
     }
@@ -402,8 +419,8 @@ class TestFullMigrationShape:
         assert v2["protocol"] == "http"
         assert v2["modem_dir"] == "vendor/model"
         assert v2["host"] == "192.168.100.1"
-        assert "supports_icmp" not in v2
-        assert "supports_head" not in v2
+        assert v2["supports_icmp"] is True
+        assert v2["supports_head"] is True
         assert v2["health_check_interval"] == 30
 
     def test_defaults_when_optional_keys_missing(self):
@@ -419,8 +436,8 @@ class TestFullMigrationShape:
 
         assert v2["entity_prefix"] == "none"
         assert v2["legacy_ssl"] is False
-        assert "supports_icmp" not in v2
-        assert "supports_head" not in v2
+        assert v2["supports_icmp"] is True
+        assert v2["supports_head"] is True
         assert v2["scan_interval"] == 600
         assert v2["health_check_interval"] == 30
 
@@ -448,7 +465,7 @@ class TestAsyncMigrate:
         with (
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
-                return_value=ResolvedModem("vendor/model", "Vendor", "Model"),
+                return_value=ResolvedModem("vendor/model", "Vendor", "Model", []),
             ),
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_variant",
@@ -486,7 +503,7 @@ class TestAsyncMigrate:
         with (
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
-                return_value=ResolvedModem("vendor/model", "Vendor", "Model"),
+                return_value=ResolvedModem("vendor/model", "Vendor", "Model", []),
             ),
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_variant",
@@ -516,7 +533,7 @@ class TestAsyncMigrate:
         with (
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
-                return_value=ResolvedModem("vendor/model", "Vendor", "Model"),
+                return_value=ResolvedModem("vendor/model", "Vendor", "Model", []),
             ),
             patch(
                 "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_variant",

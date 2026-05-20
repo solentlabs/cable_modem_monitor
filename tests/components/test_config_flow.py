@@ -324,10 +324,10 @@ async def test_step_variant_advances_to_connection(hass: HomeAssistant):
             result["flow_id"],
             user_input={"model": "Solent Labs/TPS-3000", "entity_prefix": "none"},
         )
-        # Step 2 — select variant
+        # Step 2 — select variant (composite key: {rel_dir}/{name|__default__})
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
-            user_input={"variant": "v2"},
+            user_input={"variant": "solentlabs/tps-3000/v2"},
         )
 
     assert result["type"] is FlowResultType.FORM
@@ -423,6 +423,86 @@ async def test_full_flow_creates_entry(hass: HomeAssistant):
     assert result["data"]["channel_identity"] == "number"
     # ICMP + HEAD both detected — standard 30s default.
     assert result["data"]["health_check_interval"] == 30
+
+
+async def test_full_flow_sibling_variant_uses_sibling_modem_dir(hass: HomeAssistant):
+    """Config entry modem_dir reflects the sibling directory when a sibling variant is chosen.
+
+    This is the core correctness guarantee of the cross-directory grouping feature:
+    if the user selects HNAP (from sb8200-hnap/) rather than URL Token (from sb8200/),
+    the stored modem_dir must point to sb8200-hnap/, not sb8200/.
+    """
+    from solentlabs.cable_modem_monitor_core.catalog_manager import ModemSummary, VariantInfo
+
+    sibling_dir = FAKE_CATALOG / "solentlabs" / "tps-3000-hnap"
+    primary_dir = FAKE_CATALOG / "solentlabs" / "tps-3000"
+
+    # Summary with a sibling — simulates grouped catalog entry
+    summary_with_sibling = ModemSummary(
+        manufacturer="Solent Labs",
+        model="TPS-3000",
+        default_host="192.168.100.1",
+        auth_strategy="url_token",
+        status="confirmed",
+        path=primary_dir,
+        sibling_dirs=[sibling_dir],
+    )
+
+    # Two variants: one from primary dir (url_token), one from sibling dir (hnap)
+    multi_transport_variants = [
+        VariantInfo(name=None, auth_strategy="url_token", path=primary_dir / "modem.yaml"),
+        VariantInfo(name=None, auth_strategy="hnap", path=sibling_dir / "modem.yaml"),
+    ]
+
+    # Composite key for the sibling's default variant
+    sibling_key = "solentlabs/tps-3000-hnap/__default__"
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=[summary_with_sibling],
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=multi_transport_variants,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            return_value=MOCK_VALIDATION_RESULT,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.async_setup_entry",
+            return_value=True,
+        ),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"manufacturer": "__all__"},
+        )
+        # Step 1b — select TPS-3000 (has two transport variants)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"model": "Solent Labs/TPS-3000", "entity_prefix": "none"},
+        )
+        # Step 2 — select the sibling HNAP variant
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"variant": sibling_key},
+        )
+        # Step 3 — connection details
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"host": "192.168.100.1"},
+        )
+        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
+            result = await hass.config_entries.flow.async_configure(result["flow_id"])
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    # modem_dir must point to the sibling directory, not the primary summary path
+    assert result["data"]["modem_dir"] == "solentlabs/tps-3000-hnap"
+    assert result["data"]["variant"] is None  # default variant within that dir
 
 
 async def test_full_flow_get_only_modem_uses_default_cadence(hass: HomeAssistant):

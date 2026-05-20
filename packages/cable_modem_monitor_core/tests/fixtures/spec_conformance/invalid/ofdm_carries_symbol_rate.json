@@ -1,0 +1,29 @@
+{
+  "_description": "OFDM/OFDMA channels must not carry symbol_rate — that's QAM/ATDMA only (CM3500B-style artifact)",
+  "_data": {
+    "downstream": [
+      {
+        "channel_number": 33,
+        "channel_id": 159,
+        "channel_type": "ofdm",
+        "lock_status": "locked",
+        "frequency": 738000000,
+        "symbol_rate": 0
+      }
+    ],
+    "upstream": [
+      {
+        "channel_number": 5,
+        "channel_id": 5,
+        "channel_type": "ofdma",
+        "lock_status": "locked",
+        "frequency": 36000000,
+        "symbol_rate": 0
+      }
+    ]
+  },
+  "_expected_violations": [
+    {"path": "downstream[0].symbol_rate", "rule": "ofdm_stripped_field"},
+    {"path": "upstream[0].symbol_rate", "rule": "ofdm_stripped_field"}
+  ]
+}

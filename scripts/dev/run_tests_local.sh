@@ -124,3 +124,15 @@ echo ""
 echo "To deactivate virtual environment:"
 echo "  deactivate"
 echo ""
+
+# Propagate failure as a non-zero exit so `make validate-ci` and any CI mirror
+# actually fails when any pytest invocation fails. Without this, the script's
+# `if pytest...; then ...; else TEST_PASSED=false; fi` blocks swallow the
+# pytest exit code and the script exits 0 even with failing tests — making
+# the "Safe to commit and push." banner misleading and breaking the CLAUDE.md
+# Pre-Push Verification contract ("if make validate-ci is green, CI will be
+# green"). Found in #164 post-mortem: 12 catalog HAR-replay tests were
+# failing locally while the runner reported success.
+if [ "$TEST_PASSED" != true ]; then
+    exit 1
+fi

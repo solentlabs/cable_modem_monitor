@@ -53,53 +53,64 @@ _CONTRACT_METHODS: list[tuple[str, tuple[Any, ...], type]] = [
 # fmt: on
 
 
+def _discover_implemented_methods() -> list[tuple[str, Any, str, tuple[Any, ...], type]]:
+    """Yield only (modem, pp, method, args, expected_type) combinations that
+    actually exist on the PostProcessor — pre-filter so absent methods
+    don't generate skip lines at runtime.
+    """
+    out: list[tuple[str, Any, str, tuple[Any, ...], type]] = []
+    for modem_id, pp in _POST_PROCESSORS:
+        for method_name, empty_args, expected_type in _CONTRACT_METHODS:
+            if hasattr(pp, method_name):
+                out.append((modem_id, pp, method_name, empty_args, expected_type))
+    return out
+
+
+_IMPLEMENTED_METHODS = _discover_implemented_methods()
+
+
+@pytest.mark.skipif(not _IMPLEMENTED_METHODS, reason="No PostProcessor methods in catalog")
+@pytest.mark.parametrize(
+    "modem_id,pp,method_name,empty_args,expected_type",
+    _IMPLEMENTED_METHODS,
+    ids=[f"{mid}::{name}" for mid, _, name, _, _ in _IMPLEMENTED_METHODS],
+)
+def test_empty_inputs_return_correct_type(
+    modem_id: str,
+    pp: Any,
+    method_name: str,
+    empty_args: tuple[Any, ...],
+    expected_type: type,
+) -> None:
+    """Each implemented contract method returns its declared type for empty inputs."""
+    method = getattr(pp, method_name)
+    result = method(*empty_args)
+    assert isinstance(result, expected_type), (
+        f"{modem_id}.{method_name}{empty_args} returned " f"{type(result).__name__}, expected {expected_type.__name__}"
+    )
+
+
 @pytest.mark.skipif(not _POST_PROCESSORS, reason="No parser.py files in catalog")
 @pytest.mark.parametrize(
     "modem_id,pp",
     _POST_PROCESSORS,
     ids=[mid for mid, _ in _POST_PROCESSORS],
 )
-class TestPostProcessorContract:
-    """Every PostProcessor must honor the Core pipeline contract."""
+def test_unknown_resource_keys_do_not_crash(modem_id: str, pp: Any) -> None:
+    """Unexpected resource entries don't crash any contract method.
 
-    @pytest.mark.parametrize(
-        "method_name,empty_args,expected_type",
-        _CONTRACT_METHODS,
-        ids=[m[0] for m in _CONTRACT_METHODS],
-    )
-    def test_empty_inputs_return_correct_type(
-        self,
-        modem_id: str,
-        pp: Any,
-        method_name: str,
-        empty_args: tuple[Any, ...],
-        expected_type: type,
-    ) -> None:
-        """Each defined contract method returns its declared type for empty inputs."""
+    Defensive against firmware drift — a future firmware revision may
+    add or remove endpoints; the post-processor must not raise.
+    """
+    garbage_resources: dict[str, Any] = {
+        "/unexpected/endpoint": {"nodes": []},
+        "/another/unknown": None,
+        "/garbage": "not even a dict",
+    }
+    for method_name, empty_args, _ in _CONTRACT_METHODS:
         method = getattr(pp, method_name, None)
         if method is None:
-            pytest.skip(f"{modem_id} does not implement {method_name}")
-        result = method(*empty_args)
-        assert isinstance(result, expected_type), (
-            f"{modem_id}.{method_name}{empty_args} returned "
-            f"{type(result).__name__}, expected {expected_type.__name__}"
-        )
-
-    def test_unknown_resource_keys_do_not_crash(self, modem_id: str, pp: Any) -> None:
-        """Unexpected resource entries don't crash any contract method.
-
-        Defensive against firmware drift — a future firmware revision may
-        add or remove endpoints; the post-processor must not raise.
-        """
-        garbage_resources: dict[str, Any] = {
-            "/unexpected/endpoint": {"nodes": []},
-            "/another/unknown": None,
-            "/garbage": "not even a dict",
-        }
-        for method_name, empty_args, _ in _CONTRACT_METHODS:
-            method = getattr(pp, method_name, None)
-            if method is None:
-                continue
-            # Replace the resources arg (always last) with garbage.
-            args = (*empty_args[:-1], garbage_resources)
-            method(*args)
+            continue
+        # Replace the resources arg (always last) with garbage.
+        args = (*empty_args[:-1], garbage_resources)
+        method(*args)

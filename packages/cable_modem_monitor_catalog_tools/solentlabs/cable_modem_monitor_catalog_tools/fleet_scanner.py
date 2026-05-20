@@ -1,11 +1,15 @@
-"""Fleet scanner — builds FleetPatterns from the modem catalog.
+"""Fleet scanner — fleet pattern extraction and catalog health audit.
 
-Reads all ``parser.yaml`` files in the catalog and extracts proven
-patterns: selector→direction mappings, system_info label/ID/JSON-key
-mappings, delimiters, channel type values, and aggregate patterns.
+Two responsibilities:
 
-The result is a ``FleetPatterns`` instance that Core's analyzer uses
-to augment its baseline detection.
+**Pattern extraction** (``scan_fleet``): reads all ``parser.yaml`` files
+and builds a ``FleetPatterns`` instance used by Core's analyzer to augment
+baseline detection with proven patterns from the existing catalog.
+
+**Catalog health audit** (``audit_fleet_auth``): sweeps all ``modem.yaml``
+files and checks that form-auth fixtures contain the login page responses
+the runtime auth manager needs. Used by the intake pipeline regression
+script to surface fixture gaps without blocking CI.
 
 Usage::
 
@@ -18,10 +22,14 @@ Usage::
 
 from __future__ import annotations
 
+import json
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import yaml
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
+from solentlabs.cable_modem_monitor_catalog_tools.validation.fixture_integrity import check_login_page_in_har
 
 
 def scan_fleet(catalog_path: Path) -> FleetPatterns:
@@ -42,6 +50,8 @@ def scan_fleet(catalog_path: Path) -> FleetPatterns:
     channel_type_values: set[str] = set()
     aggregate_fields: list[tuple[str, str]] = []
     seen_aggregates: set[tuple[str, str]] = set()
+    js_function_layouts: dict[str, dict[str, Any]] = {}
+    hnap_response_layouts: dict[str, dict[str, Any]] = {}
 
     for parser_path in sorted(catalog_path.rglob("parser.yaml")):
         try:
@@ -59,6 +69,8 @@ def scan_fleet(catalog_path: Path) -> FleetPatterns:
         _extract_delimiters(data, delimiters)
         _extract_channel_type_values(data, channel_type_values)
         _extract_aggregates(data, aggregate_fields, seen_aggregates)
+        _extract_js_function_layouts(data, js_function_layouts)
+        _extract_hnap_response_layouts(data, hnap_response_layouts)
 
     return FleetPatterns(
         selector_directions=selector_directions,
@@ -68,7 +80,87 @@ def scan_fleet(catalog_path: Path) -> FleetPatterns:
         delimiters=delimiters,
         channel_type_values=channel_type_values,
         aggregate_fields=aggregate_fields,
+        js_function_layouts=js_function_layouts,
+        hnap_response_layouts=hnap_response_layouts,
     )
+
+
+# ---------------------------------------------------------------------------
+# Fleet auth audit
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class AuthAuditIssue:
+    """A login_page fixture-integrity issue found in the catalog.
+
+    Attributes:
+        modem: Relative modem path (e.g. ``netgear/cm1100``).
+        har: Name of the HAR fixture file (e.g. ``modem.har``).
+        issue: Human-readable description of what's wrong.
+    """
+
+    modem: str
+    har: str
+    issue: str
+
+
+def audit_fleet_auth(catalog_path: Path) -> list[AuthAuditIssue]:
+    """Scan the catalog for login_page / HAR fixture mismatches.
+
+    For every ``form`` auth modem with ``login_page`` set, checks that each
+    ``test_data/*.har`` fixture contains a GET response for that path with a
+    non-empty HTML body referencing the configured login action.
+
+    This surfaces gaps that the intake pipeline would have prevented but that
+    manual fixture assembly can introduce — the same check enforced by
+    ``write_modem_package`` at intake time.
+
+    Args:
+        catalog_path: Root of the modem catalog directory.
+
+    Returns:
+        List of ``AuthAuditIssue`` entries.  Empty list means no issues.
+    """
+    issues: list[AuthAuditIssue] = []
+
+    for modem_yaml_path in sorted(catalog_path.rglob("modem.yaml")):
+        try:
+            config: Any = yaml.safe_load(modem_yaml_path.read_text(encoding="utf-8"))
+        except (yaml.YAMLError, OSError):
+            continue
+
+        if not isinstance(config, dict):
+            continue
+
+        auth = config.get("auth", {})
+        if not isinstance(auth, dict):
+            continue
+        if auth.get("strategy") != "form":
+            continue
+
+        login_page: str = auth.get("login_page", "") or ""
+        action: str = auth.get("action", "") or ""
+        if not login_page or not action:
+            continue
+
+        modem_dir = modem_yaml_path.parent
+        test_data = modem_dir / "test_data"
+        modem_rel = str(modem_dir.relative_to(catalog_path))
+
+        for har_path in sorted(test_data.glob("*.har")):
+            try:
+                with open(har_path, encoding="utf-8") as f:
+                    har_data: Any = json.load(f)
+                entries: list[Any] = har_data.get("log", {}).get("entries", [])
+            except (OSError, json.JSONDecodeError):
+                continue
+
+            issue = check_login_page_in_har(entries, login_page, action)
+            if issue:
+                issues.append(AuthAuditIssue(modem=modem_rel, har=har_path.name, issue=issue))
+
+    return issues
 
 
 # -----------------------------------------------------------------------
@@ -273,3 +365,83 @@ def _extract_aggregates(
             if pair not in seen:
                 seen.add(pair)
                 result.append(pair)
+
+
+# -----------------------------------------------------------------------
+# JS function layouts
+# -----------------------------------------------------------------------
+
+
+def _extract_js_function_layouts(
+    data: dict[str, object],
+    result: dict[str, Any],
+) -> None:
+    """Extract JS function field layouts from javascript-format sections.
+
+    Populates ``result`` with ``function_name → function_dict`` entries
+    from the fleet's committed ``functions[]`` lists.  Only functions with
+    a non-empty name and at least one field entry are stored.  First
+    occurrence wins — the fleet is expected to be consistent across modems
+    using the same firmware.
+    """
+    for direction in ("downstream", "upstream"):
+        section = data.get(direction)
+        if not isinstance(section, dict):
+            continue
+        if section.get("format") != "javascript":
+            continue
+
+        functions = section.get("functions")
+        if not isinstance(functions, list):
+            continue
+
+        for func in functions:
+            if not isinstance(func, dict):
+                continue
+            name = func.get("name", "")
+            if not isinstance(name, str) or not name.strip():
+                continue
+            fields = func.get("fields")
+            if not isinstance(fields, list) or not fields:
+                continue
+            if name not in result:
+                result[name] = func
+
+
+# -----------------------------------------------------------------------
+# HNAP response layouts
+# -----------------------------------------------------------------------
+
+
+def _extract_hnap_response_layouts(
+    data: dict[str, object],
+    result: dict[str, Any],
+) -> None:
+    """Extract HNAP response_key → field layout from hnap-format sections.
+
+    Populates ``result`` with ``response_key → layout`` entries from the
+    fleet's committed ``fields[]`` lists.  Only stores entries with a
+    non-empty name and at least one field.  First occurrence wins — the
+    fleet is expected to be consistent across modems using the same
+    firmware.
+    """
+    for direction in ("downstream", "upstream"):
+        section = data.get(direction)
+        if not isinstance(section, dict):
+            continue
+        if section.get("format") != "hnap":
+            continue
+        response_key = section.get("response_key", "")
+        if not isinstance(response_key, str) or not response_key.strip():
+            continue
+        if response_key in result:
+            continue
+        fields = section.get("fields")
+        if not isinstance(fields, list) or not fields:
+            continue
+        result[response_key] = {
+            "data_key": section.get("data_key", ""),
+            "record_delimiter": section.get("record_delimiter", "|+|"),
+            "field_delimiter": section.get("field_delimiter", "^"),
+            "fields": fields,
+        }

@@ -143,6 +143,10 @@
           "name": "Grafici Errori",
           "description": "Conteggio errori corretti e non corretti (vista a 7 giorni)."
         },
+        "include_error_rates": {
+          "name": "Grafici Tasso di Errore",
+          "description": "Aggiungi grafici di tasso di errore al minuto (errori/min, vista a 7 giorni). Disattivato per impostazione predefinita: i tassi fluttuano ad ogni rilevamento."
+        },
         "include_latency": {
           "name": "Grafico Latenza",
           "description": "Tempi di risposta ping e HTTP (vista a 6 ore)."

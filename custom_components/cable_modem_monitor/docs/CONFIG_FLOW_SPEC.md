@@ -119,28 +119,39 @@ see brands and aliases without needing to know the directory structure.
 
 ### Step 2: Variant (conditional)
 
-**Shown when:** The selected model directory contains multiple
-`modem-{variant}.yaml` files.
+**Shown when:** The selected model entry has more than one variant. Variants
+come from two sources: multiple `modem-{variant}.yaml` files within the primary
+directory, and sibling directories that share the same `(manufacturer, model)`
+identity under a different transport. All are flattened into a single list.
 
-**Skipped when:** The directory contains only `modem.yaml` (single
-variant). Flow proceeds directly to Step 3 with that config.
+**Skipped when:** Exactly one variant exists across the primary directory and
+any siblings. Flow proceeds directly to Step 3 with that config.
 
-**Source:** `modem-{variant}.yaml` files in the model directory. Reads
-auth type, ISPs, and variant description for display.
+**Source:** `list_variants(modem_dir, sibling_dirs)` in the catalog manager.
+Scans all directories, returns a combined flat list sorted with default variants
+first.
 
-**Display format:** User-friendly description of each variant, not
-internal auth strategy names.
+**Display format:** Auth strategy label with hardware version qualifier when set.
+Hardware version is shown in parentheses — users can verify it against the sticker
+on the modem.
 
 ```text
-No Authentication (Spectrum LA firmware)
-URL Token (Comcast, Cox firmware)
+URL Token
+URL Token (v7)
+HNAP (v6)
+Form Login CBN
 ```
 
-The variant description comes from fields in `modem-{variant}.yaml`:
+The variant label comes from fields in each variant's YAML:
 
-- `auth.strategy` → mapped to user-facing label
-- `isps` → shown as context ("used by Comcast, Cox")
-- `notes` → optional description shown as help text
+- `auth.strategy` → mapped to user-facing label via `AUTH_STRATEGY_LABELS`
+- `hardware.hw_version` → shown in parentheses when present
+- variant name (from filename stem) → shown in parentheses when present
+
+**Composite variant keys:** To prevent collisions when multiple directories each
+contribute a default variant (`name=None`), the dropdown value is
+`"{rel_dir}/{name|__default__}"`. The selected directory is stored as
+`_selected_modem_dir` and used for all downstream steps.
 
 ### Step 3: Connection
 

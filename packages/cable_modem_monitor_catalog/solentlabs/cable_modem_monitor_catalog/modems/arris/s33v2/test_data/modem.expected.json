@@ -291,6 +291,8 @@
     "docsis_status": "Operational",
     "downstream_channel_count": 26,
     "model_name": "S33v2",
+    "rate_corrected": 0.0,
+    "rate_uncorrected": 0.0,
     "software_version": "TB01.03.001.10_012022_212.S3",
     "system_uptime": "0 days 11h:48m:44s",
     "total_corrected": 0,

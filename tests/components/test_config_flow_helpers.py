@@ -103,35 +103,43 @@ def _setup_modem_dir(tmp_path: Path) -> Path:
 # Pure-function helpers — format_variant_label
 # =====================================================================
 
-# ┌───────────────┬──────────┬──────────────────────────────────────┬──────────────────────┐
-# │ auth_strategy │ name     │ expected                             │ description          │
-# ├───────────────┼──────────┼──────────────────────────────────────┼──────────────────────┤
-# │ "none"        │ None     │ "No Authentication"                  │ default_no_auth      │
-# │ "basic"       │ None     │ "Basic Authentication"               │ default_basic        │
-# │ "form_nonce"  │ None     │ "Form Login (Nonce)"                 │ default_nonce        │
-# │ "url_token"   │ "v7"     │ "URL Token — v7"                     │ named_variant        │
-# │ "unknown_x"   │ None     │ "unknown_x"                          │ unlisted_strategy    │
-# └───────────────┴──────────┴──────────────────────────────────────┴──────────────────────┘
-#
 # fmt: off
+# ┌───────────────┬──────┬───────────┬──────────────────────────────┬──────────────────────┐
+# │ auth_strategy │ name │ hw_version│ expected                     │ description          │
+# ├───────────────┼──────┼───────────┼──────────────────────────────┼──────────────────────┤
+# │ "none"        │ None │ None      │ "No Authentication"          │ default_no_auth      │
+# │ "basic"       │ None │ None      │ "Basic Authentication"       │ default_basic        │
+# │ "form_nonce"  │ None │ None      │ "Form Login (Nonce)"         │ default_nonce        │
+# │ "url_token"   │ "v7" │ None      │ "URL Token (v7)"             │ named_no_hw_version  │
+# │ "unknown_x"   │ None │ None      │ "unknown_x"                  │ unlisted_strategy    │
+# │ "url_token"   │ None │ "v5"      │ "URL Token (v5)"             │ default_with_hw_ver  │
+# │ "url_token"   │ "v7" │ "v7"      │ "URL Token (v7)"             │ named_with_hw_ver    │
+# │ "hnap"        │ None │ "v6"      │ "HNAP (v6)"                  │ hnap_with_hw_version │
+# │ "form_cbn"    │ None │ None      │ "Form Login CBN"             │ cbn_no_hw_version    │
+# └───────────────┴──────┴───────────┴──────────────────────────────┴──────────────────────┘
+#
 VARIANT_LABEL_CASES = [
-    ("none",       None,  "No Authentication",       "default_no_auth"),
-    ("basic",      None,  "Basic Authentication",    "default_basic"),
-    ("form_nonce", None,  "Form Login (Nonce)",      "default_nonce"),
-    ("url_token",  "v7",  "URL Token — v7",          "named_variant"),
-    ("unknown_x",  None,  "unknown_x",               "unlisted_strategy"),
+    ("none",       None,  None,        "No Authentication",          "default_no_auth"),
+    ("basic",      None,  None,        "Basic Authentication",       "default_basic"),
+    ("form_nonce", None,  None,        "Form Login (Nonce)",         "default_nonce"),
+    ("url_token",  "v7",  None,        "URL Token (v7)",             "named_no_hw_version"),
+    ("unknown_x",  None,  None,        "unknown_x",                  "unlisted_strategy"),
+    ("url_token",  None,  "v5",        "URL Token (v5)",             "default_with_hw_version"),
+    ("url_token",  "v7",  "v7",        "URL Token (v7)",             "named_with_hw_version"),
+    ("hnap",       None,  "v6",        "HNAP (v6)",                  "hnap_with_hw_version"),
+    ("form_cbn",   None,  None,        "Form Login CBN",             "cbn_no_hw_version"),
 ]
 # fmt: on
 
 
 @pytest.mark.parametrize(
-    "auth_strategy,name,expected,desc",
+    "auth_strategy,name,hw_version,expected,desc",
     VARIANT_LABEL_CASES,
-    ids=[c[3] for c in VARIANT_LABEL_CASES],
+    ids=[c[4] for c in VARIANT_LABEL_CASES],
 )
-def test_format_variant_label(auth_strategy, name, expected, desc):
-    """format_variant_label builds correct label from strategy + variant name."""
-    variant = VariantInfo(name=name, auth_strategy=auth_strategy, isps=[])
+def test_format_variant_label(auth_strategy, name, hw_version, expected, desc):
+    """format_variant_label builds label from auth strategy, variant name, and hw_version."""
+    variant = VariantInfo(name=name, auth_strategy=auth_strategy, hw_version=hw_version)
     assert format_variant_label(variant) == expected
 
 

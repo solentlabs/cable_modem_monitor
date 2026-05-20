@@ -37,8 +37,8 @@
         // CodeQL security testing (extensions removed, tests run via pre-commit)
       ],
       "settings": {
-        // Use Python 3.12 inside the container
-        "python.defaultInterpreterPath": "/usr/local/bin/python3.12",
+        // Use the project venv (created by post-create.sh)
+        "python.defaultInterpreterPath": "/workspaces/cable_modem_monitor/.venv/bin/python",
 
         // Enable linting and configure Ruff
         "python.linting.enabled": true,
@@ -74,10 +74,10 @@
 
         // Configure Black formatter path and interpreter
         "black-formatter.interpreter": [
-          "/usr/local/bin/python3.12"
+          "/workspaces/cable_modem_monitor/.venv/bin/python"
         ],
         "black-formatter.path": [
-          "black"
+          "/workspaces/cable_modem_monitor/.venv/bin/black"
         ]
       }
     }

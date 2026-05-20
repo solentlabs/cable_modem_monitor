@@ -369,6 +369,7 @@
     "downstream_channel_count": 33,
     "hardware_version": "3",
     "model_name": "S33v3",
+    "rate_uncorrected": 0.0,
     "software_version": "AT01.01.018.042324_S3.03.735",
     "system_uptime": "16 days 05h:23m:42s",
     "total_corrected": 36,

@@ -262,5 +262,5 @@ def _infer_max_concurrent(
         )
     else:
         warnings.append(
-            "max_concurrent cannot be determined from HAR for " "cookie-based sessions — verify with contributor."
+            "max_concurrent cannot be determined from HAR for cookie-based sessions — verify with contributor."
         )

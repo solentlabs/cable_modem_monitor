@@ -111,10 +111,10 @@ def test_failed_server_capture(
     """
     modem_config = load_modem_config(modem_yaml_path)
 
-    # 'none' auth never reaches the failure-log path — there is no
-    # auth call to fail.
-    if modem_config.auth is None or modem_config.auth.strategy == "none":
-        pytest.skip("none auth has no failure-log surface")
+    # Modems with no auth block at all (placeholder/unsupported entries
+    # awaiting HAR data) skip — there's nothing to validate.
+    if modem_config.auth is None:
+        pytest.skip("no auth block configured")
 
     modem_dir = modem_yaml_path.parent
     parser_yaml = modem_dir / "parser.yaml"

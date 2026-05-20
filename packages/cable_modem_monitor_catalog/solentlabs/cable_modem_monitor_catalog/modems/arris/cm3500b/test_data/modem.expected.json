@@ -292,6 +292,7 @@
     "docsis_status": "Operational",
     "downstream_channel_count": 26,
     "hardware_version": "CM3500B",
+    "rate_uncorrected": 0.0,
     "system_uptime": "0 days 07h:40m:00s",
     "total_corrected": 66421,
     "total_uncorrected": 0,

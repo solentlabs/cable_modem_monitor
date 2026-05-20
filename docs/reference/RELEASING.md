@@ -23,8 +23,8 @@ Releases follow a PR-based workflow:
 
 ### 1. Prepare the Release (on feature branch)
 
-Before running the release script, run `.venv/bin/pip list --outdated`
-and batch-update anything safe — releases shouldn't ship with stale deps.
+Run `scripts/check_owned_deps.py` and batch-update anything shown —
+releases shouldn't ship with stale declared deps.
 
 ```bash
 # Ensure you're on your feature branch with all changes committed

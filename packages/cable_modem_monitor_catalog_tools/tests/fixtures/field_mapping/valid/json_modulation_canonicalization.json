@@ -1,0 +1,17 @@
+{
+  "_description": "JSON channel array with non-canonical modulation triggers canonicalization map (key-based path)",
+  "_json_data": {
+    "channels": [
+      {"channelId": 1, "frequency": 507000000, "modulation": "256QAM", "power": 3.2, "snr": 38.5},
+      {"channelId": 2, "frequency": 513000000, "modulation": "256QAM", "power": 3.1, "snr": 37.8},
+      {"channelId": 3, "frequency": 519000000, "modulation": "64QAM",  "power": 3.0, "snr": 37.4}
+    ]
+  },
+  "_format": "json",
+  "_direction": "downstream",
+  "_expected_array_path": "channels",
+  "_expected_modulation_map": {
+    "256QAM": "QAM256",
+    "64QAM": "QAM64"
+  }
+}

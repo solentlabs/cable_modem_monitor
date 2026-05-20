@@ -209,7 +209,7 @@
     {
       "channel_id": 52,
       "channel_number": 1,
-      "channel_type": "ATDMA",
+      "channel_type": "atdma",
       "frequency": 35600000,
       "lock_status": "locked",
       "power": 46.3
@@ -217,7 +217,7 @@
     {
       "channel_id": 49,
       "channel_number": 2,
-      "channel_type": "ATDMA",
+      "channel_type": "atdma",
       "frequency": 16400000,
       "lock_status": "locked",
       "power": 44.5
@@ -225,7 +225,7 @@
     {
       "channel_id": 50,
       "channel_number": 3,
-      "channel_type": "ATDMA",
+      "channel_type": "atdma",
       "frequency": 22800000,
       "lock_status": "locked",
       "power": 44.8
@@ -233,7 +233,7 @@
     {
       "channel_id": 51,
       "channel_number": 4,
-      "channel_type": "ATDMA",
+      "channel_type": "atdma",
       "frequency": 29200000,
       "lock_status": "locked",
       "power": 45.5

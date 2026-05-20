@@ -67,22 +67,27 @@ AUTH_STRATEGY_LABELS: dict[str, str] = get_strategy_display_labels()
 def format_variant_label(variant: VariantInfo) -> str:
     """Build a human-readable label for a variant dropdown entry.
 
-    Format: ``{auth label}`` for default variants,
-    ``{auth label} — {variant name}`` for named variants.
+    Format: ``{auth label}`` with qualifiers in parentheses.
+    Hardware version and variant name both use parens for consistency.
+    Hardware version is the primary disambiguator — users can verify it
+    against the sticker on the bottom of the modem.
 
     Examples::
 
         "No Authentication"
         "URL Token"
-        "URL Token — v7"
-        "Form Login (Nonce)"
+        "URL Token (v7)"
+        "HNAP (v6)"
+        "Form Login CBN"
 
     Args:
         variant: Variant info from the catalog manager.
     """
     label = AUTH_STRATEGY_LABELS.get(variant.auth_strategy, variant.auth_strategy)
-    if variant.name:
-        return f"{label} — {variant.name}"
+    if variant.hw_version:
+        label = f"{label} ({variant.hw_version})"
+    if variant.name and variant.name != variant.hw_version:
+        label = f"{label} ({variant.name})"
     return label
 
 
@@ -102,12 +107,19 @@ async def load_modem_catalog(hass: HomeAssistant) -> list[ModemSummary]:
 async def load_variant_list(
     hass: HomeAssistant,
     modem_dir: Path,
+    sibling_dirs: list[Path] | None = None,
 ) -> list[VariantInfo]:
-    """Load variant info for a modem directory.
+    """Load variant info for a modem directory, including sibling transports.
 
     Runs in executor — reads YAML files from disk.
+
+    Args:
+        hass: Home Assistant instance.
+        modem_dir: Primary modem directory.
+        sibling_dirs: Additional directories sharing the same model identity
+            under a different transport. Passed through to ``list_variants()``.
     """
-    return await hass.async_add_executor_job(list_variants, modem_dir)
+    return await hass.async_add_executor_job(list_variants, modem_dir, sibling_dirs)
 
 
 def _normalize_manufacturer(name: str) -> str:
