@@ -352,7 +352,8 @@ Check HAR entries for login flow:
   │   │   └── strategy: form_pbkdf2
   │   │       Extract: login_endpoint, salt_trigger,
   │   │                pbkdf2_iterations, pbkdf2_key_length,
-  │   │                double_hash, csrf_init_endpoint, csrf_header
+  │   │                double_hash, csrf_init_endpoint, csrf_header,
+  │   │                login_success (see below)
   │   │
   │   └── Single POST login?
   │       └── strategy: form
@@ -369,6 +370,42 @@ Check HAR entries for login flow:
   │
   └── Cannot determine → HARD STOP
 ```
+
+#### `form_pbkdf2` — detecting `login_success`
+
+Most firmware signals a failed login via a truthy `error` field in the
+response JSON. Some firmware (e.g., the Technicolor REST platform) instead
+uses `"error": "ok"` on success — treating `error` as a general status
+field rather than a strict failure indicator. The default check
+("no truthy `error` = success") breaks for these modems.
+
+**Detection rule:** Inspect the response body of the *login* POST (the
+second POST to `login_endpoint`, where the password field carries the
+derived hash — not the salt-trigger POST). Parse the response JSON.
+
+- If a field is present with a value that is non-null, non-false, and reads
+  as a sentinel (short string like `"ok"`, integer `0` meaning "no error",
+  boolean `true`) rather than an error description, emit `login_success`
+  with that key-value pair.
+- If the response has no `error` field, or `error` is null/false/absent,
+  omit `login_success` — the default behaviour handles it.
+
+**Examples:**
+
+```yaml
+# Technicolor CGA6444VF — {"error": "ok", "message": "MSG_LOGIN_1", ...}
+login_success:
+  error: "ok"
+
+# Hypothetical — {"result": 0, ...} where 0 means no error
+login_success:
+  result: 0
+```
+
+Values may be string, integer, or boolean — matched by equality against
+the parsed JSON response. If the login response body is absent from the
+HAR or encrypted, omit `login_success` and flag for contributor
+verification.
 
 ### Phase 3: Session Detection
 

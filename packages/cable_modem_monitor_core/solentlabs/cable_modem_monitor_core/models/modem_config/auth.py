@@ -11,7 +11,7 @@ constraint model.
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal, get_args
+from typing import Annotated, Any, ClassVar, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, field_validator
 
@@ -146,6 +146,7 @@ class FormPbkdf2Auth(AuthStrategyBase):
     csrf_init_endpoint: str = ""
     csrf_header: str = ""
     cookie_name: str = ""
+    login_success: dict[str, Any] = Field(default_factory=dict)
 
     display_name: ClassVar[str] = "Form Login (PBKDF2)"
     transport: ClassVar[str] = "http"

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from typing import Any
 
 import requests
 
@@ -94,7 +95,7 @@ class FormPbkdf2AuthManager(BaseAuthManager):
             derived = _derive_key(derived, salt_webui, config.pbkdf2_iterations, config.pbkdf2_key_length)
 
         # Step 5: Login with derived hash
-        login_result = _submit_login(session, login_url, username, derived, timeout)
+        login_result = _submit_login(session, login_url, username, derived, timeout, login_success=config.login_success)
         if isinstance(login_result, AuthResult):
             return login_result
         response = login_result
@@ -185,6 +186,8 @@ def _submit_login(
     username: str,
     derived_key: str,
     timeout: int,
+    *,
+    login_success: dict[str, Any] | None = None,
 ) -> requests.Response | AuthResult:
     """POST the derived key and validate the login response.
 
@@ -207,12 +210,23 @@ def _submit_login(
     if isinstance(result_json, AuthResult):
         return result_json
 
-    if result_json.get("error"):
-        return AuthResult(
-            success=False,
-            error=f"Login rejected: {result_json.get('message', 'unknown error')}",
-            response=response,
-        )
+    if login_success:
+        # Firmware signals success via a specific key-value pair (e.g. {"error": "ok"}).
+        # Fail if any required field is absent or has a different value.
+        if not all(result_json.get(k) == v for k, v in login_success.items()):
+            return AuthResult(
+                success=False,
+                error=f"Login rejected: {result_json.get('message', 'unknown error')}",
+                response=response,
+            )
+    else:
+        # Default: any truthy "error" field means login failed.
+        if result_json.get("error"):
+            return AuthResult(
+                success=False,
+                error=f"Login rejected: {result_json.get('message', 'unknown error')}",
+                response=response,
+            )
 
     return response
 

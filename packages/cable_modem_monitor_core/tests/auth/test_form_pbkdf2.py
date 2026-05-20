@@ -180,6 +180,12 @@ def _setup_login_error_json(session: requests.Session) -> None:
     _mock_post(session, salt, login)
 
 
+def _setup_login_error_ok_no_login_success(session: requests.Session) -> None:
+    salt = _resp(json_value={"salt": "s"})
+    login = _resp(json_value={"error": "ok", "message": "MSG_LOGIN_1"})
+    _mock_post(session, salt, login)
+
+
 def _setup_login_not_dict_string(session: requests.Session) -> None:
     salt = _resp(json_value={"salt": "s"})
     login = _resp(json_value="ok")
@@ -232,6 +238,8 @@ _FAILURE_CASES = [
     ("login_not_dict_list",    _setup_login_not_dict_list,     "expected json object", True),
     ("login_not_dict_int",     _setup_login_not_dict_int,      "expected json object", True),
     ("login_request_error",    _setup_login_request_exception, "Login POST failed",    False),
+    # Without login_success set, {"error": "ok"} is truthy and must fail.
+    ("login_error_ok_no_login_success", _setup_login_error_ok_no_login_success, "MSG_LOGIN_1", True),
 ]
 # fmt: on
 
@@ -316,6 +324,45 @@ class TestFormPbkdf2AuthManager:
                 result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
             assert session.headers.get("X-CSRF-TOKEN") == "csrf_abc123"
+
+    def test_login_success_dict_matches_response(self, session: requests.Session) -> None:
+        """login_success={error: ok} accepts {"error": "ok"} as a successful login."""
+        config = self._make_config(double_hash=False, login_success={"error": "ok"})
+        manager = FormPbkdf2AuthManager(config)
+        manager.configure_session(session, {})
+
+        with patch.object(session, "post") as mock_post:
+            salt_resp = MagicMock()
+            salt_resp.json.return_value = {"salt": "s", "saltwebui": "sw"}
+            login_resp = MagicMock()
+            login_resp.status_code = 200
+            login_resp.json.return_value = {
+                "error": "ok",
+                "message": "MSG_LOGIN_1",
+                "data": {"user": "admin", "uid": "1"},
+            }
+            mock_post.side_effect = [salt_resp, login_resp]
+
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+            assert result.success is True
+
+    def test_login_success_dict_mismatch_fails(self, session: requests.Session) -> None:
+        """login_success={error: ok} does not suppress a different error string."""
+        config = self._make_config(double_hash=False, login_success={"error": "ok"})
+        manager = FormPbkdf2AuthManager(config)
+        manager.configure_session(session, {})
+
+        with patch.object(session, "post") as mock_post:
+            salt_resp = MagicMock()
+            salt_resp.json.return_value = {"salt": "s"}
+            login_resp = MagicMock()
+            login_resp.status_code = 200
+            login_resp.json.return_value = {"error": "session_limit", "message": "MSG_LOGIN_150"}
+            mock_post.side_effect = [salt_resp, login_resp]
+
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+            assert result.success is False
+            assert "MSG_LOGIN_150" in result.error
 
     def test_salt_request_connection_error_propagates(self, session: requests.Session) -> None:
         """ConnectionError on salt request propagates for collector."""

@@ -614,15 +614,17 @@ actions:
 | `csrf_init_endpoint` | string | `""` | Endpoint to fetch a fresh CSRF token (e.g., `/api/v1/session/init_page`). Called before each POST that requires CSRF (login, logout). If empty, CSRF token is extracted from the login response and reused for all POSTs. |
 | `csrf_header` | string | `""` | Header name for the CSRF token (e.g., `X-CSRF-TOKEN`). The `form_pbkdf2` strategy fetches the token value (via `csrf_init_endpoint` or login response) and attaches it as this header. Which requests carry the token and how the token is obtained are strategy-specific — other strategies that need CSRF may define their own fields. |
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
+| `login_success` | dict | `{}` | When set, login is considered successful only when every key-value pair in this dict matches the response JSON. Values may be string, integer, or boolean — matched by equality against the parsed JSON response. Use when the firmware signals success with a specific field rather than absence of an error (e.g., Technicolor CGA6444VF returns `{"error": "ok", ...}` — set `login_success: {error: "ok"}`). |
 
 Session-wide headers and logout are declared in their respective
 sections. See [Session](#session) and [Actions](#actions).
 
-**Success detection:** The login response JSON is checked for an
-`error` key — if present and truthy, login failed (the `message`
-key provides the error detail). HTTP 401 is also treated as failure.
-Any other response is treated as success. These checks are
-hardcoded — not configurable per modem.
+**Success detection:** HTTP 401 is always treated as failure. If
+`login_success` is set, login succeeds only when every key-value
+pair in the dict matches the response JSON; any mismatch is treated
+as failure (the `message` field provides the error detail). If
+`login_success` is empty (the default), any truthy `"error"` field
+in the response is treated as failure; absent or falsy is success.
 
 Evidence: modems with JavaScript SPA interfaces that use PBKDF2
 key derivation for login. Parameters are typically derived from the

@@ -44,7 +44,7 @@ These modems use the SJCL JavaScript library for PBKDF2 computation, but unlike 
 5. POST login (form-encoded):
    POST login_endpoint  username=<user>&password=<derived_hex>
    Content-Type: application/x-www-form-urlencoded
-   Success: HTTP != 401 AND no "error" key in JSON response
+   Success: HTTP != 401 AND ("error" field absent/falsy, OR login_success dict matches response)
    Sets PHPSESSID cookie
 
 6. Subsequent requests:
@@ -61,7 +61,7 @@ What's hardcoded in `auth/form_pbkdf2.py` that is specific to the Technicolor RE
 | POST field names | `"username"`, `"password"` | Technicolor login.js | Other vendors may use different field names |
 | Salt response fields | `"salt"`, `"saltwebui"` | Technicolor login.js, HAR | Different API may use different key names |
 | Salt trigger value | default `"seeksalthash"` | Technicolor login.js | Other firmware may use different trigger |
-| Success criteria | HTTP != 401 AND no `"error"` key | HAR response analysis | Other APIs may signal failure differently |
+| Success criteria | HTTP != 401 AND (`login_success` dict matches response, OR `"error"` is falsy/absent) | HAR response analysis; CGA6444VF confirmed `{"error":"ok"}` on success | Configurable via `login_success` in modem.yaml |
 | Error detail field | `"message"` key in error response | HAR response analysis | Firmware-specific |
 | Form-encoded POST | `application/x-www-form-urlencoded` | HAR request headers, login.js jQuery `$.ajax({data})` | All known Technicolor REST modems use form-encoded |
 | Same endpoint for salt and login | Single `login_endpoint` for both rounds | Technicolor API design | Other designs may separate these |

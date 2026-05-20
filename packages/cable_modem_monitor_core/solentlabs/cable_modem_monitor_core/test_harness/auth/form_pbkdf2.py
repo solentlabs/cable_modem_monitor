@@ -54,6 +54,11 @@ class FormPbkdf2AuthHandler(FormAuthHandler):
         logout_path: Logout endpoint path (empty if no logout).
         restart_path: Restart endpoint path (empty if no restart).
         restart_method: HTTP method for restart.
+        login_success: Key-value pairs the firmware returns on success
+            (e.g., ``{"error": "ok"}``). When set, the mock success
+            response body mirrors these pairs so the auth manager's
+            ``login_success`` check passes. Empty means the default
+            ``{"success": true}`` body is returned.
     """
 
     _TEST_PASSWORD = "pw"
@@ -74,6 +79,7 @@ class FormPbkdf2AuthHandler(FormAuthHandler):
         logout_path: str = "",
         restart_path: str = "",
         restart_method: str = "POST",
+        login_success: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(
             login_path=login_endpoint,
@@ -88,6 +94,7 @@ class FormPbkdf2AuthHandler(FormAuthHandler):
         self._double_hash = double_hash
         self._csrf_init_path = normalize_path(csrf_init_endpoint) if csrf_init_endpoint else ""
         self._csrf_header = csrf_header
+        self._login_success = login_success or {}
 
         # Pre-compute expected derived key from test password + test salts
         self._expected_derived = self._compute_expected_key()
@@ -203,11 +210,16 @@ class FormPbkdf2AuthHandler(FormAuthHandler):
         return RouteEntry(status=200, headers=response_headers, body=body)
 
     def _login_success_response(self) -> RouteEntry:
-        """Return login success response."""
+        """Return login success response.
+
+        When login_success is configured, the response body mirrors those
+        key-value pairs so the auth manager's success check passes.
+        Otherwise returns a generic {"success": true} body.
+        """
         response_headers: list[tuple[str, str]] = [("Content-Type", "application/json")]
         if self._cookie_name:
             response_headers.append(("Set-Cookie", f"{self._cookie_name}={self._SESSION_TOKEN}; Path=/"))
-        body = json.dumps({"success": True})
+        body = json.dumps(self._login_success if self._login_success else {"success": True})
         return RouteEntry(status=200, headers=response_headers, body=body)
 
 
@@ -246,4 +258,5 @@ def create_handler(
         logout_path=action_cfg.logout_path,
         restart_path=action_cfg.restart_path,
         restart_method=action_cfg.restart_method,
+        login_success=auth.login_success or None,
     )
