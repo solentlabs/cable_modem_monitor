@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.5] - 2026-05-20
+
+### Fixed
+
+- **HA install failure: Core dependency floors exceeded HA's pinned versions.**
+  `requests>=2.34.2` and `pyyaml>=6.0.3` in Core's `pyproject.toml` both
+  exceeded HA 2025.1.x pins (`requests==2.32.3`, `PyYAML==6.0.2`), causing uv
+  to fail with "No solution found" on every fresh install. Floors lowered to
+  `requests>=2.31.0` and `pyyaml>=6.0.0`. Addresses beta.4 install regression.
+
+### Added
+
+- **HA dependency compatibility gate.** `scripts/check_ha_compat.py` validates
+  that every floor declared in Core and Catalog `pyproject.toml` is satisfiable
+  under HA's `package_constraints.txt`. Wired into `make validate-ci` and the
+  `ha-compat-check` CI job so this class of regression is caught before push.
+
 ## [3.14.0-beta.4] - 2026-05-20
 
 ### Added
