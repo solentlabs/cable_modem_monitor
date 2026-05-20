@@ -17,10 +17,10 @@ aiohttp>=3.9.0                              # Async HTTP client (HA determines v
 # -------------------------------
 # 🧪 Testing framework and plugins
 # -------------------------------
-pytest>=8.0.0                               # Core test runner
-pytest-cov>=5.0.0                           # Coverage reporting
-pytest-asyncio>=0.23.0                      # Async test support
-pytest-homeassistant-custom-component>=0.13.0,<1.0  # HA integration test harness
+pytest-homeassistant-custom-component>=0.13.0,<1.0  # HA integration test harness (pins pytest, pytest-asyncio, syrupy, and all pytest plugins to exact versions)
+pytest>=8.3.4                               # pinned by pytest-homeassistant-custom-component
+pytest-cov>=6.0.0                           # pinned by pytest-homeassistant-custom-component
+pytest-asyncio>=0.24.0                      # pinned by pytest-homeassistant-custom-component
 pytest-mock>=3.12.0                         # Mocking utilities
 pytest-socket>=0.7.0                        # Network access control for tests
 
@@ -35,8 +35,8 @@ pylint>=3.0.0                               # Optional static analysis
 # -------------------------------
 # 🔍 Type checking
 # -------------------------------
-mypy>=1.10.0                                # Static type checker
-types-requests>=2.31.0                      # Type stubs for requests
+mypy>=2.1.0                                 # Static type checker
+types-requests>=2.33.0                      # Type stubs for requests
 
 # -------------------------------
 # 🔐 Security scanning
@@ -48,4 +48,4 @@ defusedxml>=0.7.1                           # Safer XML parsing
 # 🧪 Additional testing utilities
 # -------------------------------
 freezegun>=1.5.0                            # Time-freezing for deterministic tests
-responses>=0.25.0                           # Mock HTTP responses
+responses>=0.26.0                           # Mock HTTP responses
