@@ -23,7 +23,7 @@
     },
     {
       "root": "packages/cable_modem_monitor_catalog_tools",
-      "extraPaths": ["."]
+      "extraPaths": [".", "packages/cable_modem_monitor_core"]
     }
   ]
 }
