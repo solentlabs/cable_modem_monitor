@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "beautifulsoup4>=4.12",
-    "pyyaml>=6.0.3",
+    "pyyaml>=6.0.0",
     "defusedxml>=0.7.1",
     "pydantic>=2.0",
-    "requests>=2.34.2",
+    "requests>=2.31.0",
 ]
 license = "MIT"
 authors = [

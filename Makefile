@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression pii-check catalog-readme-check suppression-check install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
+.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression pii-check catalog-readme-check suppression-check ha-compat-check install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
 
 # Pin tool invocations to the project venv so that subprocesses
 # without venv on PATH (release.py shelling out, fresh clones, CI
@@ -29,7 +29,7 @@ help:
 	@echo "  make check        - Run all code quality checks (lint, format, type)"
 	@echo "  make quick-check  - Quick checks (lint + format, skip type-check)"
 	@echo "  make validate-host - Cross-platform validation (auto-installs tools)"
-	@echo "  make validate-ci   - Full CI-like validation (lint + tests)"
+	@echo "  make validate-ci   - Full CI-like validation (lint + tests + ha-compat)"
 	@echo "  make install-hooks - Install optional pre-push hook (runs validate-ci)"
 	@echo ""
 	@echo "Docker Development:"
@@ -118,7 +118,7 @@ validate:
 # hacs/action@main, which runs in a GitHub-hosted Docker context with
 # external network checks against home-assistant/brands and HACS APIs;
 # not reasonably reproducible locally — same exception class as hassfest).
-validate-ci: check test intake-regression pii-check catalog-readme-check suppression-check
+validate-ci: check test intake-regression pii-check catalog-readme-check suppression-check ha-compat-check
 	@echo "✅ Full CI validation passed!"
 	@echo "🔍 Checking declared dependencies for available updates..."
 	@$(VENV_BIN)/python scripts/check_owned_deps.py
@@ -141,6 +141,14 @@ pii-check:
 suppression-check:
 	@echo "🔍 Scanning for unjustified suppressions..."
 	@$(VENV_BIN)/python scripts/check_suppression_discipline.py --branch origin/main
+
+# HA dependency compatibility — mirrors CI ha-compat-check job.
+# Validates that Core/Catalog declared dep floors are satisfiable under
+# HA's package_constraints.txt. Catches cases where a deps-bump sets a
+# floor above what HA pins (e.g., requests or pyyaml). Exit non-zero = gate.
+ha-compat-check:
+	@echo "🔍 Checking Core/Catalog deps against HA package constraints..."
+	@$(VENV_BIN)/python scripts/check_ha_compat.py
 
 # Catalog README freshness — mirrors CI catalog-readme job.
 catalog-readme-check:

@@ -328,6 +328,14 @@ which reports only packages declared in our requirements files and
 pyproject.toml — not the transitive HA or test-harness tree. When it
 shows drift, propose a separate deps-update commit before pushing.
 
+**HA compatibility gate:** `validate-ci` runs `scripts/check_ha_compat.py`
+(mirrored by the `ha-compat-check` CI job), which validates that every floor
+declared in Core and Catalog's `pyproject.toml` is satisfiable under HA's
+`package_constraints.txt`. This is a hard gate — exit non-zero blocks the
+push. Never bump a floor in a published package's pyproject.toml above what
+HA constrains without first verifying compatibility (the beta.4 incident:
+`requests>=2.34.2` and `pyyaml>=6.0.3` both exceeded HA's pins).
+
 **CI job coverage:** When verifying CI after a push, confirm every
 expected job ran. A missing job is not a pass — absence of failure is
 not success. If a job didn't trigger, check the workflow's path filters
