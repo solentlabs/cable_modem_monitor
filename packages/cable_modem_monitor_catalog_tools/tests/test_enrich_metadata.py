@@ -87,12 +87,12 @@ class TestNewOnboarding:
         assert result.metadata["hardware"]["docsis_version"] == "3.0"
         assert "hardware.docsis_version" in result.inferred
 
-    def test_infers_status_in_progress(self) -> None:
-        """New modem defaults to in_progress status."""
+    def test_infers_status_awaiting_verification(self) -> None:
+        """New modem defaults to awaiting_verification status."""
         analysis = _minimal_analysis()
         result = enrich_metadata(analysis)
 
-        assert result.metadata["status"] == "in_progress"
+        assert result.metadata["status"] == "awaiting_verification"
         assert "status" in result.inferred
 
     def test_missing_manufacturer_model(self) -> None:
@@ -182,7 +182,7 @@ class TestStatusUpgrade:
             "model": "T100",
             "default_host": "192.168.100.1",
             "hardware": {"docsis_version": "3.0"},
-            "status": "in_progress",
+            "status": "awaiting_verification",
         }
         result = enrich_metadata(analysis, existing_config=existing)
 
@@ -197,7 +197,7 @@ class TestStatusUpgrade:
             "manufacturer": "Solent Labs",
             "model": "T100",
             "default_host": "192.168.100.1",
-            "status": "in_progress",
+            "status": "awaiting_verification",
         }
         # User overrides to use the analysis host
         user_input = {"default_host": "10.0.0.1"}
@@ -216,7 +216,7 @@ class TestStatusUpgrade:
             "manufacturer": "Solent Labs",
             "model": "T100",
             "default_host": "192.168.100.1",
-            "status": "in_progress",
+            "status": "awaiting_verification",
         }
         result = enrich_metadata(analysis, existing_config=existing)
 
@@ -231,7 +231,7 @@ class TestStatusUpgrade:
             "model": "T100",
             "default_host": "192.168.100.1",
             "hardware": {"docsis_version": "3.0"},
-            "status": "in_progress",
+            "status": "awaiting_verification",
         }
         result = enrich_metadata(analysis, existing_config=existing)
 
@@ -327,7 +327,7 @@ class TestTransportFlow:
             "model": "T100",
             "transport": "hnap",
             "default_host": "192.168.100.1",
-            "status": "in_progress",
+            "status": "awaiting_verification",
         }
         result = enrich_metadata(analysis, existing_config=existing)
 
@@ -342,7 +342,7 @@ class TestTransportFlow:
             "model": "T100",
             "transport": "hnap",
             "default_host": "192.168.100.1",
-            "status": "in_progress",
+            "status": "awaiting_verification",
         }
         user_input = {"transport": "http"}
         result = enrich_metadata(
@@ -362,7 +362,7 @@ class TestTransportFlow:
             "model": "T100",
             "transport": "hnap",
             "default_host": "192.168.100.1",
-            "status": "in_progress",
+            "status": "awaiting_verification",
         }
         result = enrich_metadata(analysis={}, existing_config=existing)
 
@@ -495,7 +495,7 @@ _ENRICH_GENERATE_CASES: list[_EnrichGenerateCase] = [
         {},
         {
             "manufacturer": "Solent Labs", "model": "T100", "transport": "hnap",
-            "default_host": "192.168.100.1", "status": "in_progress",
+            "default_host": "192.168.100.1", "status": "awaiting_verification",
             "hardware": {"docsis_version": "3.1"},
         },
         {

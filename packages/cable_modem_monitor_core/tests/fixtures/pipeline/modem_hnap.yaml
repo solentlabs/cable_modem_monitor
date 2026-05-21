@@ -7,4 +7,10 @@ auth:
   hmac_algorithm: md5
 hardware:
   docsis_version: "3.1"
-status: in_progress
+status: awaiting_verification
+attribution:
+  contributors:
+    - github: test-user
+      contribution: Initial capture
+isps:
+  - Various

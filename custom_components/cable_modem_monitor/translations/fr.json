@@ -29,7 +29,7 @@
           "variant": "Variante"
         },
         "data_description": {
-          "variant": "En cas de doute, essayez la première option. Vous pouvez reconfigurer plus tard."
+          "variant": "En cas de doute, essayez la première option. Les options marquées d'un * n'ont pas encore été vérifiées sur du matériel réel."
         }
       },
       "connection": {

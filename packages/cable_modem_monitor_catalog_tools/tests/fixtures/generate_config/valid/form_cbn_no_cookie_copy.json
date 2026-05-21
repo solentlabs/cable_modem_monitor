@@ -28,6 +28,10 @@
     "manufacturer": "Solent Labs",
     "model": "T100",
     "default_host": "192.168.0.1",
-    "transport": "cbn"
+    "transport": "cbn",
+    "hardware": {"docsis_version": "3.0"},
+    "status": "awaiting_verification",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Initial capture"}]},
+    "isps": ["Various"]
   }
 }

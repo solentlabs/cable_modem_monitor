@@ -51,7 +51,7 @@
     "model": "T300",
     "default_host": "192.168.0.1",
     "hardware": {"docsis_version": "3.1"},
-    "status": "in_progress",
+    "status": "awaiting_verification",
     "attribution": {"contributors": [{"github": "tester", "contribution": "Initial capture"}]},
     "isps": ["Various"]
   }

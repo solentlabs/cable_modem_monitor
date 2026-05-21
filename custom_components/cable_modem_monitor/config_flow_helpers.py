@@ -88,6 +88,8 @@ def format_variant_label(variant: VariantInfo) -> str:
         label = f"{label} ({variant.hw_version})"
     if variant.name and variant.name != variant.hw_version:
         label = f"{label} ({variant.name})"
+    if variant.status != "confirmed":
+        label = f"{label} *"
     return label
 
 

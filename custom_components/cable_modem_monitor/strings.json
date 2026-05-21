@@ -29,7 +29,7 @@
           "variant": "Variant"
         },
         "data_description": {
-          "variant": "If unsure, try the first option. You can reconfigure later."
+          "variant": "If unsure, try the first option. Options marked * have not yet been verified on real hardware."
         }
       },
       "connection": {

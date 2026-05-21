@@ -216,6 +216,66 @@ class TestListModems:
         assert len(results) == 1
         assert len(results[0].sibling_dirs) == 2
 
+    def test_aggregate_status_named_variant_promotes_model(self, tmp_path: Path) -> None:
+        """Named variant confirmed → aggregate is confirmed even if base modem.yaml is not."""
+        modem_dir = tmp_path / "solent" / "t100"
+        _write_modem_yaml(
+            modem_dir,
+            {"manufacturer": "Solent Labs", "model": "T100", "status": "awaiting_verification"},
+        )
+        (modem_dir / "modem-form.yaml").write_text(
+            yaml.dump({"manufacturer": "Solent Labs", "model": "T100", "status": "confirmed"})
+        )
+
+        results = list_modems(tmp_path)
+
+        assert results[0].status == "confirmed"
+
+    def test_aggregate_status_all_unconfirmed_stays_unconfirmed(self, tmp_path: Path) -> None:
+        """All variants unconfirmed → model aggregate remains unconfirmed."""
+        modem_dir = tmp_path / "solent" / "t100"
+        _write_modem_yaml(
+            modem_dir,
+            {"manufacturer": "Solent Labs", "model": "T100", "status": "awaiting_verification"},
+        )
+        (modem_dir / "modem-form.yaml").write_text(
+            yaml.dump({"manufacturer": "Solent Labs", "model": "T100", "status": "awaiting_verification"})
+        )
+
+        results = list_modems(tmp_path)
+
+        assert results[0].status != "confirmed"
+
+    def test_aggregate_status_sibling_confirmed_promotes_model(self, tmp_path: Path) -> None:
+        """Sibling directory has confirmed variant → model aggregate is confirmed."""
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100",
+            {"manufacturer": "Solent Labs", "model": "T100", "status": "awaiting_verification"},
+        )
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100-hnap",
+            {"manufacturer": "Solent Labs", "model": "T100", "status": "confirmed"},
+        )
+
+        results = list_modems(tmp_path)
+
+        assert results[0].status == "confirmed"
+
+    def test_aggregate_status_primary_confirmed_sibling_unconfirmed(self, tmp_path: Path) -> None:
+        """Primary confirmed + sibling unconfirmed → model confirmed (at least one confirmed)."""
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100",
+            {"manufacturer": "Solent Labs", "model": "T100", "status": "confirmed"},
+        )
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100-hnap",
+            {"manufacturer": "Solent Labs", "model": "T100", "status": "awaiting_verification"},
+        )
+
+        results = list_modems(tmp_path)
+
+        assert results[0].status == "confirmed"
+
 
 class TestModemSummary:
     """ModemSummary dataclass construction."""
@@ -412,6 +472,37 @@ class TestListVariants:
 
         assert len(results_none) == len(results_empty) == 1
 
+    def test_status_loaded_from_yaml(self, tmp_path: Path) -> None:
+        """Variant status is read from the YAML status field."""
+        _write_variant_yaml(
+            tmp_path / "modem.yaml",
+            {"auth": {"strategy": "none"}, "status": "confirmed"},
+        )
+        results = list_variants(tmp_path)
+        assert results[0].status == "confirmed"
+
+    def test_status_defaults_to_awaiting_verification(self, tmp_path: Path) -> None:
+        """Variant status defaults to awaiting_verification when absent from YAML."""
+        _write_variant_yaml(tmp_path / "modem.yaml", {"auth": {"strategy": "none"}})
+        results = list_variants(tmp_path)
+        assert results[0].status == "awaiting_verification"
+
+    def test_per_variant_status_independent(self, tmp_path: Path) -> None:
+        """Each variant carries its own status independently."""
+        _write_variant_yaml(
+            tmp_path / "modem.yaml",
+            {"auth": {"strategy": "none"}, "status": "awaiting_verification"},
+        )
+        _write_variant_yaml(
+            tmp_path / "modem-form.yaml",
+            {"auth": {"strategy": "form"}, "status": "confirmed"},
+        )
+        results = list_variants(tmp_path)
+        default = next(v for v in results if v.name is None)
+        named = next(v for v in results if v.name == "form")
+        assert default.status == "awaiting_verification"
+        assert named.status == "confirmed"
+
 
 class TestVariantInfo:
     """VariantInfo dataclass construction."""
@@ -423,3 +514,4 @@ class TestVariantInfo:
         assert info.hw_version is None
         assert info.isps == []
         assert info.notes is None
+        assert info.status == "awaiting_verification"

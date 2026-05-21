@@ -29,7 +29,7 @@
           "variant": "Variant"
         },
         "data_description": {
-          "variant": "Bij twijfel de eerste optie proberen. U kunt later herconfigureren."
+          "variant": "Bij twijfel de eerste optie proberen. Opties gemarkeerd met * zijn nog niet geverifieerd op echte hardware."
         }
       },
       "connection": {

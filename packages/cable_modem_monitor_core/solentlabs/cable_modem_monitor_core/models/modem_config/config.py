@@ -6,6 +6,7 @@ transport constraints, auth-session-action consistency, required fields by statu
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -15,6 +16,14 @@ from .auth import AuthConfig, get_transport_strategy_sets
 from .health import HealthConfig
 from .metadata import AttributionConfig, HardwareConfig, ReferencesConfig
 from .session import SessionConfig
+
+
+class ModemStatus(StrEnum):
+    """Valid values for modem.yaml ``status``."""
+
+    CONFIRMED = "confirmed"
+    AWAITING_VERIFICATION = "awaiting_verification"
+    UNSUPPORTED = "unsupported"
 
 
 class ModemConfig(BaseModel):
@@ -53,7 +62,7 @@ class ModemConfig(BaseModel):
     timeout: int = 10
 
     # Metadata
-    status: Literal["confirmed", "awaiting_verification", "in_progress", "unsupported"]
+    status: ModemStatus
     sources: dict[str, str] = Field(default_factory=dict)
     attribution: AttributionConfig | None = None
     isps: list[str] = Field(default_factory=list)
@@ -98,8 +107,6 @@ class ModemConfig(BaseModel):
         errors: list[str] = []
 
         if self.status in ("confirmed", "awaiting_verification"):
-            # Confirmed in the wild with successful diagnostics —
-            # full metadata required.
             if self.auth is None:
                 errors.append(f"status '{self.status}' requires auth config")
             if self.hardware is None:
@@ -108,11 +115,6 @@ class ModemConfig(BaseModel):
                 errors.append(f"status '{self.status}' requires attribution")
             if not self.isps:
                 errors.append(f"status '{self.status}' requires isps")
-        elif self.status == "in_progress":
-            # Being built up — auth is known from the HAR, but hardware
-            # and attribution come later via enrich_metadata or user input.
-            if self.auth is None:
-                errors.append("status 'in_progress' requires auth config")
 
         # 'unsupported' has minimal requirements — identity fields only
         # (enforced by required fields on the model itself)

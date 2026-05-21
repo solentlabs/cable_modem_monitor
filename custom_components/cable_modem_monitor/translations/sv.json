@@ -29,7 +29,7 @@
           "variant": "Variant"
         },
         "data_description": {
-          "variant": "Om du är osäker, prova det första alternativet. Du kan konfigurera om senare."
+          "variant": "Om du är osäker, prova det första alternativet. Alternativ markerade med * har ännu inte verifierats på riktig hårdvara."
         }
       },
       "connection": {

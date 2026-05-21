@@ -147,9 +147,9 @@ def _apply_inferences(
         hw["docsis_version"] = docsis
         result.inferred.append("hardware.docsis_version")
 
-    # status — default to in_progress for new modems
+    # status — default to awaiting_verification for new modems
     if "status" not in metadata:
-        metadata["status"] = "in_progress"
+        metadata["status"] = "awaiting_verification"
         result.inferred.append("status")
 
 
@@ -219,7 +219,7 @@ def _check_missing(
 ) -> None:
     """Check for fields still missing based on target status.
 
-    ``in_progress`` needs: manufacturer, model, auth (from analysis).
+    All statuses need: manufacturer, model, auth (from analysis).
     ``confirmed`` / ``awaiting_verification`` also needs: hardware,
     attribution, isps.
     """
@@ -229,7 +229,7 @@ def _check_missing(
     if not metadata.get("model"):
         result.missing.append("model")
 
-    status = metadata.get("status", "in_progress")
+    status = metadata.get("status", "awaiting_verification")
     if status in ("confirmed", "awaiting_verification"):
         hw = metadata.get("hardware") or {}
         if not isinstance(hw, dict) or not hw.get("docsis_version"):

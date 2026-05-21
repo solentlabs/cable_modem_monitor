@@ -6,4 +6,10 @@ auth:
   strategy: none
 hardware:
   docsis_version: "3.0"
-status: in_progress
+status: awaiting_verification
+attribution:
+  contributors:
+    - github: test-user
+      contribution: Initial capture
+isps:
+  - Various

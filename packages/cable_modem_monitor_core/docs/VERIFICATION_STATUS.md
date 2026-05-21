@@ -8,26 +8,27 @@ Parsers use a `ParserStatus` enum to track their verification state:
 from enum import StrEnum
 
 class ParserStatus(StrEnum):
-    IN_PROGRESS = "in_progress"                   # Actively being developed
     AWAITING_VERIFICATION = "awaiting_verification"  # Released, needs user confirmation
-    CONFIRMED = "confirmed"                         # Confirmed working by real user
-    UNSUPPORTED = "unsupported"                   # Modem locked down, kept for documentation
+    CONFIRMED = "confirmed"                          # Confirmed working by real user
+    UNSUPPORTED = "unsupported"                      # Modem locked down, kept for documentation
 ```
 
 ### Status Definitions
 
 | Status | Meaning | Next Steps |
 |--------|---------|------------|
-| **IN_PROGRESS** | Parser actively being developed (feature branch/WIP PR) | Complete development |
 | **AWAITING_VERIFICATION** | Parser released but awaiting first user confirmation | Needs community testing |
 | **CONFIRMED** | User with real modem confirmed parser works correctly | Stable for use |
 | **UNSUPPORTED** | Modem locked down or no exposed status pages, kept for documentation | Awaiting user data |
 
 ### Using Status in Parsers
 
-Status is declared in each modem's `modem.yaml` under `status`. Promotion
-from `awaiting_verification` to `confirmed` follows the ingest procedure
-in [MODEM_DIRECTORY_SPEC.md](MODEM_DIRECTORY_SPEC.md#verification-artifact).
+Status is declared under `status` in each modem's variant file (`modem.yaml`
+or `modem-{variant}.yaml`). For multi-variant modems, each variant carries its
+own status independently — one variant can be `confirmed` while another is
+`awaiting_verification`. Promotion from `awaiting_verification` to `confirmed`
+follows the ingest procedure in
+[MODEM_DIRECTORY_SPEC.md](MODEM_DIRECTORY_SPEC.md#verification-artifact).
 
 ---
 

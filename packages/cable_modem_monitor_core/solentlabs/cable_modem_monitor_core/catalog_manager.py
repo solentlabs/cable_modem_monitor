@@ -112,12 +112,34 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
         else:
             grouped[seen[key]].sibling_dirs.append(s.path)
 
+    # Post-grouping: recompute status as aggregate across all variant files in
+    # the primary directory and every sibling directory. A model is confirmed
+    # when at least one variant anywhere is confirmed; otherwise the base status
+    # from modem.yaml is preserved.
+    for summary in grouped:
+        all_dirs = [summary.path] + summary.sibling_dirs
+        if _any_variant_confirmed(all_dirs):
+            summary.status = "confirmed"
+
     _logger.info(
         "Catalog discovery: %d modems found (%d directories)",
         len(grouped),
         len(raw_results),
     )
     return grouped
+
+
+def _any_variant_confirmed(dirs: list[Path]) -> bool:
+    """Return True if any modem*.yaml file in the given directories has status: confirmed."""
+    for d in dirs:
+        for yaml_path in d.glob("modem*.yaml"):
+            try:
+                raw: dict[str, Any] = yaml.safe_load(yaml_path.read_text())
+                if isinstance(raw, dict) and raw.get("status") == "confirmed":
+                    return True
+            except Exception:
+                pass
+    return False
 
 
 @dataclass
@@ -147,6 +169,7 @@ class VariantInfo:
     isps: list[str] = field(default_factory=list)
     notes: str | None = None
     path: Path = field(default_factory=lambda: Path("."))
+    status: str = "awaiting_verification"
 
 
 def list_variants(
@@ -227,6 +250,7 @@ def _load_variant(yaml_path: Path, name: str | None) -> VariantInfo | None:
         isps=raw.get("isps", []),
         notes=raw.get("notes"),
         path=yaml_path,
+        status=raw.get("status", "awaiting_verification"),
     )
 
 

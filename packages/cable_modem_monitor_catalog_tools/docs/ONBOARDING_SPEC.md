@@ -1230,7 +1230,7 @@ clear guidance on what's missing.
    `inferred` / `missing` / `warnings` output, fills gaps via web search,
    passes complete metadata to `generate_config`.
 
-3. **Status upgrade:** Existing modem moves from `in_progress` → `confirmed`.
+3. **Status upgrade:** Existing modem moves from `awaiting_verification` → `confirmed`.
    Tool merges new metadata (ISPs, attribution) with existing config.
 
 **Input:** Analysis result + optional existing config + optional user input
@@ -1250,7 +1250,7 @@ clear guidance on what's missing.
 - `default_host` — most common host in HAR request URLs
 - `hardware.docsis_version` — OFDM/OFDMA channels in analysis → 3.1, else 3.0
 - `transport` — from analysis
-- `status` — defaults to `in_progress` for new, unchanged for existing
+- `status` — defaults to `awaiting_verification` for new, unchanged for existing
 
 ### `generate_config`
 

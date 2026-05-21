@@ -9,7 +9,7 @@
       "strategy": "form_cbn"
     },
     "hardware": {"docsis_version": "3.0"},
-    "status": "in_progress",
+    "status": "awaiting_verification",
     "attribution": {"contributors": [{"github": "test-user", "contribution": "HAR capture"}]},
     "isps": ["Various"]
   }

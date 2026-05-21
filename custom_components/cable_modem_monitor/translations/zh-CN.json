@@ -29,7 +29,7 @@
           "variant": "变体"
         },
         "data_description": {
-          "variant": "如果不确定，请尝试第一个选项。您可以稍后重新配置。"
+          "variant": "如果不确定，请尝试第一个选项。标有 * 的选项尚未在真实硬件上验证。"
         }
       },
       "connection": {

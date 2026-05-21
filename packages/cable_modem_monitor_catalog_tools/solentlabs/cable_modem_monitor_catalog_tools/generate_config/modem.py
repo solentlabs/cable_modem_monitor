@@ -77,7 +77,7 @@ def _add_metadata_fields(result: dict[str, Any], metadata: dict[str, Any]) -> No
     if metadata.get("timeout"):
         result["timeout"] = metadata["timeout"]
 
-    result["status"] = metadata.get("status", "in_progress")
+    result["status"] = metadata.get("status", "awaiting_verification")
     if metadata.get("sources"):
         result["sources"] = metadata["sources"]
     if metadata.get("attribution"):

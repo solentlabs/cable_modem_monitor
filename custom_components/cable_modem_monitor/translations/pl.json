@@ -29,7 +29,7 @@
           "variant": "Wariant"
         },
         "data_description": {
-          "variant": "W razie wątpliwości wybierz pierwszą opcję. Możesz zmienić konfigurację później."
+          "variant": "W razie wątpliwości wybierz pierwszą opcję. Opcje oznaczone * nie zostały jeszcze zweryfikowane na prawdziwym sprzęcie."
         }
       },
       "connection": {

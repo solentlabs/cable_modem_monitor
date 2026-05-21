@@ -11,7 +11,7 @@ from .field_registry import (
     UPSTREAM_CHANNEL_TYPES,
     UPSTREAM_FIELDS,
 )
-from .modem_config import ModemConfig
+from .modem_config import ModemConfig, ModemStatus
 from .modem_data import (
     ChannelValidator,
     DownstreamChannel,
@@ -24,6 +24,7 @@ from .parser_config import ParserConfig
 __all__ = [
     # Config models
     "ModemConfig",
+    "ModemStatus",
     "ParserConfig",
     # Output contract
     "ModemData",

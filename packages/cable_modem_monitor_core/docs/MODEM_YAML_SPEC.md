@@ -1180,7 +1180,6 @@ status: confirmed
 |-------|---------|
 | `confirmed` | Full pipeline verified on real hardware (modem.verified.json present) |
 | `awaiting_verification` | Parser written or placeholder entry exists, awaiting user data or confirmation. Default for new modems and for entries blocked on missing HAR captures. |
-| `in_progress` | Work underway, not yet functional |
 | `unsupported` | Modem cannot be monitored — no reachable channel-data endpoint (e.g., ISP firmware removed it, or the modem genuinely has no admin web interface). Reserved for permanent inability, not "we don't have data yet." |
 
 The distinction matters: an `awaiting_verification` modem could become
@@ -1273,18 +1272,18 @@ failures.
 
 ### Required fields by status
 
-| Field | `confirmed` / `awaiting_verification` | `in_progress` | `unsupported` |
-|-------| :------------------------------------: | :--------------: | :-------------: |
-| `manufacturer` | required | required | required |
-| `model` | required | required | required |
-| `transport` | required | required | required |
-| `default_host` | required | required | required |
-| `auth` | required | required | — |
-| `session` | optional | optional | — |
-| `hardware` | required | required | optional |
-| `status` | required | required | required |
-| `attribution` | required | optional | optional |
-| `isps` | required | optional | optional |
+| Field | `confirmed` / `awaiting_verification` | `unsupported` |
+|-------| :------------------------------------: | :-------------: |
+| `manufacturer` | required | required |
+| `model` | required | required |
+| `transport` | required | required |
+| `default_host` | required | required |
+| `auth` | required | — |
+| `session` | optional | — |
+| `hardware` | required | optional |
+| `status` | required | required |
+| `attribution` | required | optional |
+| `isps` | required | optional |
 
 ### Auth-session-action consistency
 

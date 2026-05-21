@@ -161,7 +161,6 @@ def generate_timeline(modems: list[dict]) -> list[str]:
 _STATUS_ICONS = {
     "confirmed": "✅ Confirmed",
     "verified": "✅ Verified",
-    "in_progress": "🔧 In Progress",
     "awaiting_verification": "⏳ Awaiting",
     "unsupported": "🚫 Unsupported",
 }
@@ -179,8 +178,6 @@ def _build_summary(supported: list[dict]) -> tuple[str, str]:
         status_parts.append(f"{counts['confirmed']} ✅ confirmed")
     if counts.get("awaiting_verification"):
         status_parts.append(f"{counts['awaiting_verification']} ⏳ awaiting")
-    if counts.get("in_progress"):
-        status_parts.append(f"{counts['in_progress']} 🔧 in progress")
     summary = f" ({', '.join(status_parts)})" if status_parts else ""
 
     auth_counts: dict[str, int] = {}
