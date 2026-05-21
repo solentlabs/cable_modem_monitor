@@ -233,7 +233,7 @@ After setup, configure via **Settings → Devices & Services → Cable Modem Mon
 - **Host**: Update modem IP / URL
 - **Credentials**: Update username/password if your modem requires authentication
 - **Polling Interval**: How often to fetch full modem status (30 seconds – 24 hours, default: 10 minutes)
-- **Health Check Interval**: How often to run lightweight reachability probes (default depends on probe support: 30 seconds with ICMP/HEAD, 60 seconds with HTTP-GET only)
+- **Health Check Interval**: How often to run lightweight reachability probes (default: 30 seconds; uses ICMP ping and TCP connect — no HTTP requests between data polls)
 
 Channel Identity and Modem Model are install-time choices. To change either, remove the integration and add it again.
 
@@ -278,7 +278,7 @@ Channel Identity is set when you add the integration. To switch, remove and re-a
   - **Partial Lock**: Some downstream channels not locked
   - **Not Locked**: DOCSIS not locked to ISP
   - **Parser Error**: Modem reachable but data couldn't be parsed
-  - **Unresponsive**: Can't reach modem via HTTP
+  - **Unresponsive**: Can't reach modem via ICMP or TCP
 
 ### System Information
 

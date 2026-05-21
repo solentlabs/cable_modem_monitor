@@ -1008,7 +1008,7 @@ automation:
 
 ### `request_health_check`
 
-Triggers an immediate health check (ICMP + HTTP probes).
+Triggers an immediate health check (ICMP + TCP probes, plus HEAD if supported).
 
 **Fields:** Optional `device_id` (device selector filtered to
 `cable_modem_monitor`). Falls back to all loaded entries when no

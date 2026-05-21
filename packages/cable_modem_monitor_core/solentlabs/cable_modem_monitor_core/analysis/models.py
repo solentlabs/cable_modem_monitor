@@ -44,14 +44,14 @@ class HealthEvent:
         status: One of ``"responsive"``, ``"unresponsive"``,
             ``"degraded"``.
         icmp_ms: ICMP round-trip time (0.0 when not measured).
-        http_ms: HTTP GET latency (0.0 when not measured).
+        tcp_ms: TCP connect time (0.0 when not measured).
     """
 
     timestamp: datetime
     model: str
     status: str
     icmp_ms: float = 0.0
-    http_ms: float = 0.0
+    tcp_ms: float = 0.0
 
 
 @dataclass

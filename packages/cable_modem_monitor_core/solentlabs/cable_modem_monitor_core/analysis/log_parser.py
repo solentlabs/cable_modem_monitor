@@ -59,9 +59,7 @@ CORE_PATTERNS: dict[str, re.Pattern[str]] = {
     "auth_success": re.compile(_TS + r" .+Auth succeeded \[(.+?)\]: status=(\d+), url=(.+)"),
     "auth_fail": re.compile(_TS + r" .+Connection failed during auth \[(.+?)\]"),
     "parse_complete": re.compile(_TS + r" .+Parse complete \[(.+?)\]: (\d+) DS, (\d+) US"),
-    "health_responsive": re.compile(
-        _TS + r" .+Health check \[(.+?)\]: responsive " + r"\(ICMP ([\d.]+)ms, HTTP GET ([\d.]+)ms, (\d+) bytes\)"
-    ),
+    "health_responsive": re.compile(_TS + r" .+Health check \[(.+?)\]: responsive \((.+?)\)"),
     "health_unresponsive": re.compile(_TS + r" .+Health check \[(.+?)\]: unresponsive"),
     "health_degraded": re.compile(_TS + r" .+Health check \[(.+?)\]: degraded"),
     "status_transition": re.compile(_TS + r" .+Status transition \[(.+?)\]: (.+)"),
@@ -112,13 +110,22 @@ def _handle_health(line: str, analysis: CoreAnalysis) -> bool:
     """Try health-check patterns.  Return True if matched."""
     m = CORE_PATTERNS["health_responsive"].search(line)
     if m:
+        detail = m.group(3)
+        icmp_ms = 0.0
+        tcp_ms = 0.0
+        icmp_match = re.search(r"ICMP ([\d.]+)ms", detail)
+        if icmp_match:
+            icmp_ms = float(icmp_match.group(1))
+        tcp_match = re.search(r"TCP ([\d.]+)ms", detail)
+        if tcp_match:
+            tcp_ms = float(tcp_match.group(1))
         analysis.health_checks.append(
             HealthEvent(
                 timestamp=parse_ts(m.group(1)),
                 model=m.group(2),
                 status="responsive",
-                icmp_ms=float(m.group(3)),
-                http_ms=float(m.group(4)),
+                icmp_ms=icmp_ms,
+                tcp_ms=tcp_ms,
             )
         )
         return True

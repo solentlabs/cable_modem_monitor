@@ -765,7 +765,7 @@ class ResourceFetch:
 
     Resource fetch metrics are distinct from health probe latency:
 
-    - Health probe latency (ICMP, HTTP HEAD/GET): baseline
+    - Health probe latency (ICMP, TCP): baseline
       responsiveness — "how quickly does the modem respond to a
       lightweight request?"
     - Resource fetch timing: data page performance — "how long do
@@ -1755,10 +1755,10 @@ based — the same status at the same level would flood logs every 30s:
 
 | Event | Level | Example |
 |-------|-------|---------|
-| Transition to responsive (recovery) | INFO | `"Health check [MODEL]: responsive (ICMP 3ms, HTTP GET 110ms)"` |
-| Transition to degraded | WARNING | `"Health check [MODEL]: degraded (ICMP 2ms, HTTP HEAD timeout)"` |
-| Transition to unresponsive | WARNING | `"Health check [MODEL]: unresponsive (ICMP timeout, HTTP HEAD timeout)"` |
-| HTTP skipped (collection evidence) | DEBUG | `"Health check [MODEL]: responsive (ICMP 1.5ms, HTTP skipped (collection active\|recent collection))"` |
+| Transition to responsive (recovery) | INFO | `"Health check [MODEL]: responsive (ICMP 3ms, TCP 2ms)"` |
+| Transition to degraded | WARNING | `"Health check [MODEL]: degraded (ICMP 2ms, TCP timeout)"` |
+| Transition to unresponsive | WARNING | `"Health check [MODEL]: unresponsive (ICMP timeout, TCP timeout)"` |
+| TCP/HEAD skipped (collection evidence) | DEBUG | `"Health check [MODEL]: responsive (ICMP 1.5ms, TCP/HEAD skipped (collection active\|recent collection))"` |
 | First check (UNKNOWN → any) | INFO or WARNING | Depending on the target status |
 | Steady-state (no change) | DEBUG | Same format, but only visible with debug logging enabled |
 

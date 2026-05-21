@@ -1315,7 +1315,7 @@ health check interval at 30s. Initial poll completed during setup.
 | 1 | Setup completes with first poll | Consumer has data | UI shows initial data |
 | 2 | No data polling timer scheduled | | No scheduled polls |
 | 3 | Health timer fires (30s) | | |
-| 4 | health_monitor.ping() runs in thread | | ICMP + HTTP probes |
+| 4 | health_monitor.ping() runs in thread | | ICMP + TCP + HEAD probes |
 | 5 | HealthInfo updated | | Health indicators show latency |
 | 6 | User triggers manual refresh | | |
 | 7 | get_modem_data() runs in thread | | ModemSnapshot returned |
@@ -1727,7 +1727,7 @@ sequenceDiagram
 | 3 | Consumer creates always-available entities | | Status: "Unreachable", Health: "Unresponsive" |
 | 4 | Consumer registers deferred entity listener | | Data-dependent entities pending |
 | 5 | Subsequent polls: modem still down | connectivity backoff grows | Listener fires, modem_data=None, no-op |
-| 6 | Health detects modem responsive | UNRESPONSIVE→RESPONSIVE | Health: "Responsive" (ICMP + HTTP OK) |
+| 6 | Health detects modem responsive | UNRESPONSIVE→RESPONSIVE | Health: "Responsive" (ICMP + TCP) |
 | 6a | Health recovery listener fires | schedules immediate poll | Recovery latency bounded by health interval, not scan interval |
 | 7 | Immediate poll: orchestrator clears backoff | UNREACHABLE to ONLINE | Health RESPONSIVE + backoff active → reset_connectivity() |
 | 8 | Deferred listener: creates data entities | | Channel, system, LAN sensors appear |

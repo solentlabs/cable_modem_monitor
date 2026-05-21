@@ -287,17 +287,17 @@ def _report_health(results: HAAnalysis) -> list[str]:
 
     if responsive:
         icmp_vals = [h.icmp_ms for h in responsive]
-        http_vals = [h.http_ms for h in responsive]
+        http_vals = [h.tcp_ms for h in responsive]
         lines.append("")
         lines.append(f"  ICMP (avg):      {mean(icmp_vals):.1f}ms")
         lines.append(f"  ICMP (p95):      {_percentile(icmp_vals, 95):.1f}ms")
         lines.append(f"  ICMP (max):      {max(icmp_vals):.1f}ms")
-        lines.append(f"  HTTP GET (avg):  {mean(http_vals):.1f}ms")
-        lines.append(f"  HTTP GET (p95):  {_percentile(http_vals, 95):.1f}ms")
-        lines.append(f"  HTTP GET (max):  {max(http_vals):.1f}ms")
+        lines.append(f"  TCP (avg):  {mean(http_vals):.1f}ms")
+        lines.append(f"  TCP (p95):  {_percentile(http_vals, 95):.1f}ms")
+        lines.append(f"  TCP (max):  {max(http_vals):.1f}ms")
 
         http_med = median(http_vals)
-        spikes = [(h.timestamp, h.http_ms) for h in responsive if h.http_ms > http_med * 3]
+        spikes = [(h.timestamp, h.tcp_ms) for h in responsive if h.tcp_ms > http_med * 3]
         if spikes:
             lines.append("")
             lines.append(f"  Latency spikes (>{http_med * 3:.0f}ms):")
@@ -433,7 +433,7 @@ def _report_verdict(results: HAAnalysis) -> list[str]:
 
     responsive = [h for h in results.core.health_checks if h.status == "responsive"]
     if responsive:
-        http_vals = [h.http_ms for h in responsive]
+        http_vals = [h.tcp_ms for h in responsive]
         http_med = median(http_vals)
         spike_count = sum(1 for v in http_vals if v > http_med * 3)
         if spike_count > 0:

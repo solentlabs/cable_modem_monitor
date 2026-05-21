@@ -114,7 +114,7 @@ class TestHealthFields:
 
         assert h.status == "responsive"
         assert h.icmp_ms == pytest.approx(1.2)
-        assert h.http_ms == pytest.approx(45.6)
+        assert h.tcp_ms == pytest.approx(45.6)
 
     def test_unresponsive_zero_latencies(self) -> None:
         lines = (FIXTURES_DIR / "health_mixed.txt").read_text().splitlines()
@@ -123,7 +123,7 @@ class TestHealthFields:
 
         assert len(unresp) == 1
         assert unresp[0].icmp_ms == 0.0
-        assert unresp[0].http_ms == 0.0
+        assert unresp[0].tcp_ms == 0.0
 
     def test_degraded_status(self) -> None:
         lines = (FIXTURES_DIR / "health_mixed.txt").read_text().splitlines()

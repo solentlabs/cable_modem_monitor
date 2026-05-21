@@ -508,9 +508,9 @@ async def test_full_flow_sibling_variant_uses_sibling_modem_dir(hass: HomeAssist
 async def test_full_flow_get_only_modem_uses_default_cadence(hass: HomeAssistant):
     """GET-only modems (no ICMP, no HEAD) use the same default cadence.
 
-    The per-capability cadence differentiation was removed when fast-poll
-    HTTP GET was dropped — TCP and ICMP probes are lightweight, so a
-    single 30s default applies regardless of HEAD support.
+    The per-capability cadence differentiation was removed when the HTTP GET
+    probe was replaced with TCP connect — TCP and ICMP probes are lightweight,
+    so a single 30s default applies regardless of HEAD support.
     """
     get_only_validation = {
         **MOCK_VALIDATION_RESULT,
