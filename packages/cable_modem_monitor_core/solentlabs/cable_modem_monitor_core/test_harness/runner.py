@@ -40,7 +40,7 @@ from ..orchestration.factory import create_orchestrator
 from ..orchestration.signals import ConnectionStatus
 from ..parsers.coordinator import ModemParserCoordinator
 from ..post_processor import load_post_processor
-from .discovery import ModemTestCase
+from .discovery import ModemTestCase, RestartTestCase
 from .golden_file import ComparisonResult, compare_golden_file
 from .server import HARMockServer
 
@@ -66,6 +66,85 @@ class TestResult:
     passed: bool
     error: str = ""
     comparison: ComparisonResult | None = None
+
+
+@dataclass
+class ActionTestResult:
+    """Result of a restart action test case.
+
+    Attributes:
+        test_name: Human-readable test ID from ``RestartTestCase.name``.
+        passed: ``True`` only if the action pipeline completed successfully.
+        error: Error message if the action failed. Empty string on pass.
+    """
+
+    test_name: str
+    passed: bool
+    error: str = ""
+
+
+def run_modem_restart_test(test_case: RestartTestCase) -> ActionTestResult:
+    """Run the restart action pipeline for a single test case against a HAR mock server.
+
+    Loads the modem config and restart HAR, starts a ``HARMockServer``,
+    creates a collector, and dispatches the restart action via
+    ``execute_action``. Passes if ``ActionResult.success`` is True.
+
+    Args:
+        test_case: Discovered restart test case with all file paths resolved.
+
+    Returns:
+        ``ActionTestResult`` with pass/fail and error detail.
+        Never raises — all pipeline errors are captured in the result.
+    """
+    try:
+        modem_config = load_modem_config(test_case.modem_config_path)
+    except Exception as e:
+        return ActionTestResult(test_name=test_case.name, passed=False, error=f"Config load failed: {e}")
+
+    if modem_config.actions is None or modem_config.actions.restart is None:
+        return ActionTestResult(
+            test_name=test_case.name,
+            passed=False,
+            error="No actions.restart in modem config",
+        )
+
+    try:
+        har_data = load_har_json(test_case.har_path)
+        entries = har_data["log"]["entries"]
+    except Exception as e:
+        return ActionTestResult(test_name=test_case.name, passed=False, error=f"Failed to load HAR: {e}")
+
+    try:
+        from ..orchestration.actions import execute_action
+        from ..orchestration.collector import ModemDataCollector
+
+        with HARMockServer(entries, modem_config=modem_config) as server:
+            collector = ModemDataCollector(
+                modem_config=modem_config,
+                parser_config=None,
+                post_processor=None,
+                base_url=server.base_url,
+                username="admin",
+                password="pw",
+            )
+            auth_result = collector.authenticate()
+            if not auth_result.success:
+                return ActionTestResult(
+                    test_name=test_case.name,
+                    passed=False,
+                    error=f"Auth failed: {auth_result.error}",
+                )
+            result = execute_action(collector, modem_config, modem_config.actions.restart)
+    except Exception as e:
+        return ActionTestResult(test_name=test_case.name, passed=False, error=f"Action execution error: {e}")
+
+    if not result.success:
+        return ActionTestResult(
+            test_name=test_case.name, passed=False, error=result.message or "Action returned failure"
+        )
+
+    return ActionTestResult(test_name=test_case.name, passed=True)
 
 
 def run_modem_test(test_case: ModemTestCase) -> TestResult:

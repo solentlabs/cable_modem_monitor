@@ -185,6 +185,43 @@ numbers, IP addresses.
 5. Reviewed output is committed as `{name}.expected.json`
 6. All future runs are regression tests against the golden file
 
+**Action test fixtures** use the same `test_data/` directory and naming
+convention. `discover_restart_tests` resolves the HAR for restart tests
+using a first-match rule:
+
+1. `modem-restart.har` — dedicated restart capture (contributor captured
+   the restart sequence separately from data collection)
+2. `modem.har` — combined capture, when `modem.yaml` declares
+   `actions.restart` (contributor captured both in the same session)
+
+`modem-restart.har` is excluded from data collection discovery — it has
+no paired `modem-restart.expected.json`. Pass/fail for restart tests is
+determined by `ActionResult.success`, not golden file comparison.
+
+**`modem-restart.har` / restart entries in `modem.har` structure:**
+
+For **HTTP transport** (e.g., `action_auth: bearer`), two entries in order:
+
+1. `POST {login_endpoint}` — response contains the token at `token_path`
+2. `POST {restart.endpoint}` — 200 response (body ignored)
+
+For **HNAP transport**, entries covering:
+
+1. HNAP login exchange (phase 1 challenge + phase 2 login POSTs to `/HNAP1/`)
+2. Pre-fetch action response (POST `/HNAP1/`, if `pre_fetch_action` is declared)
+3. Main action response (POST `/HNAP1/`, with the `{action_name}Response` key
+   and `{result_key}: {success_value}` in the body)
+
+The mock server merges all HNAP data responses into one combined response, so the
+pre-fetch and action responses can be captured in any order — the test runner will
+find the expected keys regardless of call order.
+
+**Synthesized HARs** are acceptable when the real exchange has not been
+captured yet — document the synthesis in `log.creator.comment` and cite
+the source of the response shapes. Replace with a real capture once a
+contributor provides one. Synthesized files still exercise the full
+action pipeline: config parsing, token extraction, and HTTP dispatch.
+
 ---
 
 ## Verification Status

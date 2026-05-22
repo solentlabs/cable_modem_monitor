@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from solentlabs.cable_modem_monitor_core.test_harness import discover_modem_tests
+from solentlabs.cable_modem_monitor_core.test_harness import discover_modem_tests, discover_restart_tests
 
 # Catalog modems root: solentlabs/cable_modem_monitor_catalog/modems/
 CATALOG_MODEMS_PATH = Path(__file__).parent.parent / "solentlabs" / "cable_modem_monitor_catalog" / "modems"
@@ -41,3 +41,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "modem_yaml_path" in metafunc.fixturenames:
         paths = _discover_modem_yamls()
         metafunc.parametrize("modem_yaml_path", paths, ids=lambda p: str(p.relative_to(CATALOG_MODEMS_PATH)))
+    if "restart_test_case" in metafunc.fixturenames:
+        cases = discover_restart_tests(CATALOG_MODEMS_PATH)
+        metafunc.parametrize("restart_test_case", cases, ids=lambda c: c.name)

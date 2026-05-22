@@ -25,6 +25,8 @@ from solentlabs.cable_modem_monitor_core.config_loader import load_modem_config
 from solentlabs.cable_modem_monitor_core.spec_conformance import validate_modem_data
 from solentlabs.cable_modem_monitor_core.test_harness import (
     ModemTestCase,
+    RestartTestCase,
+    run_modem_restart_test,
     run_modem_test_orchestrated,
 )
 
@@ -68,3 +70,13 @@ def test_confirmed_modem_golden_spec_conformance(modem_test_case: ModemTestCase)
             f"status to awaiting_verification."
         )
         raise AssertionError(msg)
+
+
+def test_modem_restart_action(restart_test_case: RestartTestCase) -> None:
+    """Each modem with a restart HAR fixture exercises the action pipeline against a mock server.
+
+    Adding restart action coverage for a modem = adding test_data/modem-restart.har.
+    No test code changes needed.
+    """
+    result = run_modem_restart_test(restart_test_case)
+    assert result.passed, f"{result.test_name}: {result.error}"
