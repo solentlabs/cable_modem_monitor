@@ -716,3 +716,224 @@ class TestExecuteAction:
         assert result.success is False
         assert "Unknown action type" in result.message
         assert "Unknown action type" in caplog.text
+
+
+# ------------------------------------------------------------------
+# Tests — HttpAction json_body field
+# ------------------------------------------------------------------
+
+
+class TestHttpActionJsonBody:
+    """json_body passes application/json body; mutually exclusive with params."""
+
+    def test_json_body_sends_json_kwarg(self) -> None:
+        """When json_body is set, session.request receives json= kwarg."""
+        session = MagicMock(spec=requests.Session)
+        resp = MagicMock()
+        resp.status_code = 200
+        session.request.return_value = resp
+
+        action = HttpAction(
+            type="http",
+            method="POST",
+            endpoint="/rest/v1/system/reboot",
+            json_body={"reboot": {"enable": True}},
+        )
+
+        execute_http_action(session, "http://192.168.100.1", action)
+
+        session.request.assert_called_once_with(
+            "POST",
+            "http://192.168.100.1/rest/v1/system/reboot",
+            json={"reboot": {"enable": True}},
+            headers=None,
+            timeout=10,
+        )
+
+    def test_json_body_does_not_send_data_kwarg(self) -> None:
+        """When json_body is set, data= kwarg is not passed."""
+        session = MagicMock(spec=requests.Session)
+        resp = MagicMock()
+        resp.status_code = 200
+        session.request.return_value = resp
+
+        action = HttpAction(
+            type="http",
+            method="POST",
+            endpoint="/rest/v1/system/reboot",
+            json_body={"reboot": {"enable": True}},
+        )
+
+        execute_http_action(session, "http://192.168.100.1", action)
+
+        call_kwargs = session.request.call_args[1]
+        assert "data" not in call_kwargs
+
+    def test_params_sends_data_kwarg(self) -> None:
+        """When params is set (no json_body), session.request receives data= kwarg."""
+        session = MagicMock(spec=requests.Session)
+        resp = MagicMock()
+        resp.status_code = 200
+        session.request.return_value = resp
+
+        action = HttpAction(
+            type="http",
+            method="POST",
+            endpoint="/goform/restart",
+            params={"restart": "1"},
+        )
+
+        execute_http_action(session, "http://192.168.100.1", action)
+
+        session.request.assert_called_once_with(
+            "POST",
+            "http://192.168.100.1/goform/restart",
+            data={"restart": "1"},
+            headers=None,
+            timeout=10,
+        )
+
+    def test_json_body_and_params_mutual_exclusion(self) -> None:
+        """Setting both json_body and params raises a validation error."""
+        import pydantic
+
+        with pytest.raises(pydantic.ValidationError):
+            HttpAction(
+                type="http",
+                method="POST",
+                endpoint="/rest/v1/system/reboot",
+                params={"restart": "1"},
+                json_body={"reboot": {"enable": True}},
+            )
+
+
+# ------------------------------------------------------------------
+# Tests — execute_action with action_auth (per-action auth)
+# ------------------------------------------------------------------
+
+
+class TestHttpActionWithActionAuth:
+    """Per-action auth: fresh session, token injected, original session untouched."""
+
+    def _make_action(self) -> HttpAction:
+        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import BearerAuth
+
+        return HttpAction(
+            type="http",
+            method="POST",
+            endpoint="/rest/v1/system/reboot",
+            json_body={"reboot": {"enable": True}},
+            action_auth=BearerAuth(
+                strategy="bearer",
+                login_endpoint="/rest/v1/user/login",
+                token_path="created.token",
+            ),
+        )
+
+    def _make_collector(self, session: MagicMock) -> MagicMock:
+        collector = MagicMock()
+        collector._session = session
+        collector._base_url = "http://192.168.100.1"
+        collector._username = "admin"
+        collector._password = "secret"
+        return collector
+
+    def _make_modem_config(self) -> MagicMock:
+        config = MagicMock()
+        config.timeout = 10
+        config.model = "Hub5"
+        config.session = None
+        return config
+
+    def _make_fresh_session_success(self, token: str = "tok") -> MagicMock:
+        fresh = MagicMock(spec=requests.Session)
+        fresh.headers = {}
+        login_resp = MagicMock()
+        login_resp.status_code = 200
+        login_resp.json.return_value = {"created": {"token": token}}
+        action_resp = MagicMock()
+        action_resp.status_code = 200
+        fresh.post.return_value = login_resp
+        fresh.request.return_value = action_resp
+        return fresh
+
+    def _make_fresh_session_failure(self, status_code: int = 401) -> MagicMock:
+        fresh = MagicMock(spec=requests.Session)
+        fresh.headers = {}
+        login_resp = MagicMock()
+        login_resp.status_code = status_code
+        login_resp.json.side_effect = ValueError("not json")
+        fresh.post.return_value = login_resp
+        return fresh
+
+    _PATCH = "solentlabs.cable_modem_monitor_core.orchestration.actions.create_session"
+
+    def test_original_session_not_used_for_request(self) -> None:
+        """When action_auth is set, the original session is not used for the action request."""
+        original_session = MagicMock(spec=requests.Session)
+        original_session.headers = {}
+        fresh_session = self._make_fresh_session_success()
+
+        with patch(self._PATCH, return_value=fresh_session):
+            result = execute_action(
+                self._make_collector(original_session), self._make_modem_config(), self._make_action()
+            )
+
+        assert result.success is True
+        original_session.request.assert_not_called()
+        fresh_session.request.assert_called_once()
+
+    def test_bearer_token_injected_into_fresh_session(self) -> None:
+        """Bearer token from login is injected into the fresh session's headers."""
+        original_session = MagicMock(spec=requests.Session)
+        original_session.headers = {}
+        fresh_session = self._make_fresh_session_success(token="tok_abc")
+
+        with patch(self._PATCH, return_value=fresh_session):
+            execute_action(self._make_collector(original_session), self._make_modem_config(), self._make_action())
+
+        assert fresh_session.headers.get("Authorization") == "Bearer tok_abc"
+
+    def test_original_session_headers_unchanged(self) -> None:
+        """The original session's headers are not modified by per-action auth."""
+        original_session = MagicMock(spec=requests.Session)
+        original_headers: dict[str, str] = {}
+        original_session.headers = original_headers
+        fresh_session = self._make_fresh_session_success()
+
+        with patch(self._PATCH, return_value=fresh_session):
+            execute_action(self._make_collector(original_session), self._make_modem_config(), self._make_action())
+
+        assert original_headers == {}
+
+    def test_auth_failure_returns_action_failure(self) -> None:
+        """If per-action auth fails, execute_action returns failure."""
+        original_session = MagicMock(spec=requests.Session)
+        original_session.headers = {}
+        fresh_session = self._make_fresh_session_failure()
+
+        with patch(self._PATCH, return_value=fresh_session):
+            result = execute_action(
+                self._make_collector(original_session), self._make_modem_config(), self._make_action()
+            )
+
+        assert result.success is False
+        fresh_session.request.assert_not_called()
+
+    def test_no_action_auth_uses_original_session(self) -> None:
+        """Without action_auth, the original session is used for the request."""
+        original_session = MagicMock(spec=requests.Session)
+        resp = MagicMock()
+        resp.status_code = 200
+        original_session.request.return_value = resp
+
+        action = HttpAction(
+            type="http",
+            method="POST",
+            endpoint="/goform/restart",
+        )
+        collector = self._make_collector(original_session)
+
+        execute_action(collector, self._make_modem_config(), action)
+
+        original_session.request.assert_called_once()

@@ -170,12 +170,22 @@ contribute a default variant (`name=None`), the dropdown value is
 |---------------|-------------|
 | `none` | Host only |
 | `basic` | Host, Username, Password |
+| `bearer` | Host, Username, Password |
 | `form` | Host, Username, Password |
+| `form_cbn` | Host, Username, Password |
 | `form_nonce` | Host, Username, Password |
 | `form_pbkdf2` | Host, Username, Password |
 | `form_sjcl` | Host, Username, Password |
 | `url_token` | Host, Username, Password |
 | `hnap` | Host, Username, Password |
+
+**Exception — `none` with per-action auth:** when the top-level strategy
+is `none` but the restart action has `action_auth` set, credential fields
+are still shown so the user can supply credentials for the restart action.
+
+The credential-visibility check loads the selected modem's variant YAML
+synchronously at form-build time. The `restart_requires_credentials(modem_dir, variant)`
+helper in `config_flow_helpers.py` performs this check.
 
 **Host default:** From `default_host` in the selected modem/variant YAML
 (typically `192.168.100.1`).

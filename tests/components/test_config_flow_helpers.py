@@ -35,6 +35,7 @@ from custom_components.cable_modem_monitor.config_flow_helpers import (
     filter_by_manufacturer,
     format_variant_label,
     get_manufacturers,
+    restart_requires_credentials,
 )
 
 # =====================================================================
@@ -826,3 +827,115 @@ class TestRaiseValidationFailure:
 
         with pytest.raises(RuntimeError, match=r"^collection_error:"):
             _raise_validation_failure(_parse_error_result(), self._auth_signals())
+
+
+# =====================================================================
+# restart_requires_credentials
+# =====================================================================
+
+_RRC_MODULE = "custom_components.cable_modem_monitor.config_flow_helpers"
+
+
+def _make_restart_action(*, has_action_auth: bool) -> MagicMock:
+    """Build a mock HttpAction with or without action_auth."""
+    from solentlabs.cable_modem_monitor_core.models.modem_config.actions import HttpAction
+
+    action = MagicMock(spec=HttpAction)
+    action.action_auth = MagicMock() if has_action_auth else None
+    return action
+
+
+def _make_modem_config(
+    *,
+    has_actions: bool = True,
+    has_restart: bool = True,
+    restart_has_action_auth: bool = False,
+    restart_is_http: bool = True,
+) -> MagicMock:
+    """Build a mock ModemConfig for restart_requires_credentials tests."""
+    from solentlabs.cable_modem_monitor_core.models.modem_config.actions import HnapAction, HttpAction
+
+    config = MagicMock()
+
+    if not has_actions:
+        config.actions = None
+        return config
+
+    config.actions = MagicMock()
+
+    if not has_restart:
+        config.actions.restart = None
+        return config
+
+    if restart_is_http:
+        action = MagicMock(spec=HttpAction)
+        action.action_auth = MagicMock() if restart_has_action_auth else None
+    else:
+        action = MagicMock(spec=HnapAction)
+
+    config.actions.restart = action
+    return config
+
+
+class TestRestartRequiresCredentials:
+    """restart_requires_credentials returns True only when action_auth is set on restart."""
+
+    @patch(f"{_RRC_MODULE}.load_modem_config")
+    def test_returns_true_when_action_auth_set(self, mock_load: MagicMock, tmp_path: Path) -> None:
+        """True when restart HttpAction has action_auth configured."""
+        mock_load.return_value = _make_modem_config(has_restart=True, restart_has_action_auth=True)
+
+        assert restart_requires_credentials(tmp_path, None) is True
+        mock_load.assert_called_once_with(tmp_path / "modem.yaml")
+
+    @patch(f"{_RRC_MODULE}.load_modem_config")
+    def test_returns_false_when_no_actions(self, mock_load: MagicMock, tmp_path: Path) -> None:
+        """False when modem.yaml has no actions block."""
+        mock_load.return_value = _make_modem_config(has_actions=False)
+
+        assert restart_requires_credentials(tmp_path, None) is False
+
+    @patch(f"{_RRC_MODULE}.load_modem_config")
+    def test_returns_false_when_no_restart(self, mock_load: MagicMock, tmp_path: Path) -> None:
+        """False when actions block exists but restart is None."""
+        mock_load.return_value = _make_modem_config(has_restart=False)
+
+        assert restart_requires_credentials(tmp_path, None) is False
+
+    @patch(f"{_RRC_MODULE}.load_modem_config")
+    def test_returns_false_when_restart_has_no_action_auth(self, mock_load: MagicMock, tmp_path: Path) -> None:
+        """False when restart action exists but action_auth is None."""
+        mock_load.return_value = _make_modem_config(has_restart=True, restart_has_action_auth=False)
+
+        assert restart_requires_credentials(tmp_path, None) is False
+
+    @patch(f"{_RRC_MODULE}.load_modem_config")
+    def test_returns_false_for_non_http_restart(self, mock_load: MagicMock, tmp_path: Path) -> None:
+        """False when restart action is not an HttpAction (HNAP, CBN)."""
+        mock_load.return_value = _make_modem_config(has_restart=True, restart_is_http=False)
+
+        assert restart_requires_credentials(tmp_path, None) is False
+
+    @patch(f"{_RRC_MODULE}.load_modem_config")
+    def test_variant_yaml_loaded(self, mock_load: MagicMock, tmp_path: Path) -> None:
+        """variant='v2' causes modem-v2.yaml path to be passed to load_modem_config."""
+        mock_load.return_value = _make_modem_config(has_restart=True, restart_has_action_auth=True)
+
+        assert restart_requires_credentials(tmp_path, "v2") is True
+        mock_load.assert_called_once_with(tmp_path / "modem-v2.yaml")
+
+    @patch(f"{_RRC_MODULE}.load_modem_config")
+    def test_load_failure_returns_false(self, mock_load: MagicMock, tmp_path: Path) -> None:
+        """Any load/parse failure returns False (no crash)."""
+        mock_load.side_effect = FileNotFoundError("no such file")
+
+        assert restart_requires_credentials(tmp_path, None) is False
+
+    @patch(f"{_RRC_MODULE}.load_modem_config")
+    def test_default_yaml_not_used_when_variant_given(self, mock_load: MagicMock, tmp_path: Path) -> None:
+        """When variant is specified, modem.yaml path is NOT passed — modem-v2.yaml is."""
+        mock_load.return_value = _make_modem_config(has_restart=True, restart_has_action_auth=False)
+
+        restart_requires_credentials(tmp_path, "v2")
+
+        mock_load.assert_called_once_with(tmp_path / "modem-v2.yaml")

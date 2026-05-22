@@ -1784,7 +1784,11 @@ recovery)`, called by `Orchestrator.restart()`.
 Procedure:
 
 1. Raise `RestartNotSupportedError` if `actions.restart` is None.
-2. Authenticate against the modem.
+2. Authenticate against the modem — **unless** `actions.restart` is an
+   `HttpAction` with `action_auth` set (per-action auth). When
+   `action_auth` is present, `execute_action` creates a fresh session,
+   authenticates, and executes the action on it;
+   `collector.authenticate()` is skipped entirely.
 3. Execute the `actions.restart` executor (`HTTP` or `HNAP` — see
    § Action Executors).
 4. Clear the collector session (forces fresh auth on the next poll;
@@ -1794,6 +1798,13 @@ Procedure:
    recovery module owns what happens next.
 6. Return a `RestartResult` — success iff steps 2–5 completed
    without raising.
+
+**Per-action auth (`action_auth` on `HttpAction`):** when
+`actions.restart.action_auth` is set, `execute_action` creates a
+fresh `requests.Session`, authenticates using the configured strategy,
+and executes the action on that temporary session. The collector's
+monitoring session is not needed and `collector.authenticate()` (step
+2) is skipped. Any auth strategy is valid in `action_auth`.
 
 Typical call duration: 2–5 seconds (auth + POST + session clear).
 The caller does not block on the reboot itself.

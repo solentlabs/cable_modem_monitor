@@ -65,7 +65,7 @@ for the contract.
 | [Principles](#principles) | The three rules every field obeys |
 | [Schema Overview](#schema-overview) | Complete YAML skeleton with annotations |
 | [Identity](#identity) | manufacturer, model, transport, default_host, aliases |
-| [Auth](#auth) | 9 strategy types with full config examples |
+| [Auth](#auth) | 10 strategy types with full config examples |
 | [Session](#session) | Cookie, single-session, SPA patterns |
 | [Actions](#actions) | Restart and logout — http and hnap types |
 | [Hardware](#hardware) | DOCSIS version, hw_version, firmware, chipset |
@@ -715,6 +715,59 @@ Evidence: Arris Touchstone gateway firmwares (e.g., TG3442DE) that
 embed the SJCL library in their web interface. Constants are found
 in `base_95x.js` or similar JS files in HAR captures.
 
+### `bearer`
+
+Bearer token auth for REST APIs (RFC 6750). The strategy POSTs a JSON
+body to a login endpoint, extracts a token from the JSON response by
+walking a dot-separated path, and injects
+`Authorization: Bearer <token>` into the session headers for
+subsequent requests.
+
+The login request sends `{"username": "<username>", "password": "<password>"}` as the
+JSON body.
+
+```yaml
+auth:
+  strategy: bearer
+  login_endpoint: "/api/v1/login"
+  token_path: "data.token"
+```
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `strategy` | string | yes | Always `"bearer"` |
+| `login_endpoint` | string | yes | Path to POST the JSON login body to |
+| `token_path` | string | yes | Dot-separated JSON path to the token in the response (e.g., `"created.token"` extracts `response["created"]["token"]`) |
+
+**Login request:**
+
+```http
+POST <base_url><login_endpoint>
+Content-Type: application/json
+{"username": "<username>", "password": "<password>"}
+```
+
+**Token extraction:** the `token_path` value is split on `.` and used
+to walk the parsed JSON response. For example, `"created.token"` with
+response `{"created": {"token": "abc", "userLevel": "regular"}}`
+extracts `"abc"`. Returns an error if any key in the path is missing
+or the response is not valid JSON.
+
+**Success detection:** HTTP non-200 → `AuthResult(success=False)`.
+Missing token path → `AuthResult(success=False)`. Non-JSON response →
+`AuthResult(success=False)`.
+
+**Transport:** `http` only.
+
+**Header injected:** `Authorization: Bearer <token>`. The strategy's
+`headers()` method returns `frozenset({"authorization", "cookie"})`.
+
+Evidence: Virgin Media Hub 5 REST API — monitoring endpoints are
+public (no auth), but the restart endpoint at `/rest/v1/system/reboot`
+requires a Bearer token from `/rest/v1/user/login`. See issue #82.
+
+---
+
 ### `form_cbn`
 
 See [AUTH_CBN_SPEC.md](AUTH_CBN_SPEC.md) for the full protocol,
@@ -941,10 +994,12 @@ actions:
 | `type` | enum | yes | `http`, `hnap`, or `cbn` |
 | `method` | string | yes | HTTP method (`GET`, `POST`, etc.). No default — must be explicit. |
 | `endpoint` | string | yes | URL path to send the request to |
-| `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`. If absent, no request body. |
+| `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`. Mutually exclusive with `json_body`. |
+| `json_body` | map | no | JSON request body. If present, body is `application/json`. Mutually exclusive with `params`. Use for REST APIs that accept JSON. |
 | `headers` | map | no | Per-action headers. Merged with session-level `headers` (action wins on conflict). |
 | `pre_fetch_url` | string | no | URL to fetch before the action (establish session state or extract dynamic endpoint) |
 | `endpoint_pattern` | string | no | Keyword to match within form action attributes on the pre-fetch page. Core wraps this in a form-action regex — not a raw regex. See Architecture Decision below. |
+| `action_auth` | AuthConfig | no | Per-action auth config. When present, a fresh session is created, authenticated with the given strategy, the action is executed on that temporary session, and the session is discarded. The collector's session is untouched. Any auth strategy is valid. |
 
 ### Action schema — `type: hnap`
 
@@ -1257,7 +1312,7 @@ rules below.
 
 | Transport | Valid auth strategies | Valid session | Valid formats | Valid action types |
 |-----------|---------------------|--------------|---------------|-------------------|
-| `http` | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2`, `form_sjcl` | stateless, cookie, CSRF, url_token | `table`, `table_transposed`, `html_fields`, `javascript`, `javascript_json`, `json`, `json_transposed` | `http` |
+| `http` | `none`, `basic`, `bearer`, `form`, `form_nonce`, `url_token`, `form_pbkdf2`, `form_sjcl` | stateless, cookie, CSRF, url_token | `table`, `table_transposed`, `html_fields`, `javascript`, `javascript_json`, `json`, `json_transposed` | `http` (with optional `action_auth` on `HttpAction`) |
 | `hnap` | `hnap` | implicit (uid + HNAP_AUTH) | `hnap` | `hnap` |
 | `cbn` | `form_cbn` | cookie (rotating sessionToken + stable SID) | `xml` | `cbn` |
 

@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from ...connectivity import create_session
 from .base import ActionResult
 from .cbn_action import execute_cbn_action
 from .hnap_action import execute_hnap_action
@@ -57,8 +58,28 @@ def execute_action(
         query_params: dict[str, str] = {}
         if modem_config.session and modem_config.session.query_params:
             query_params = dict(modem_config.session.query_params)
+        session = collector._session
+        if action.action_auth is not None:
+            from ...auth.factory import create_auth_manager_for_action
+
+            fresh = create_session()
+            manager = create_auth_manager_for_action(action.action_auth)
+            auth_result = manager.authenticate(
+                fresh,
+                collector._base_url,
+                collector._username,
+                collector._password,
+                timeout=modem_config.timeout,
+                log_level=log_level,
+            )
+            if not auth_result.success:
+                return ActionResult(
+                    success=False,
+                    message=f"Per-action auth failed: {auth_result.error}",
+                )
+            session = fresh
         return execute_http_action(
-            collector._session,
+            session,
             collector._base_url,
             action,
             timeout=modem_config.timeout,

@@ -1,6 +1,6 @@
 """Auth strategy models for modem.yaml.
 
-Nine strategies as a discriminated union on the 'strategy' field.
+Ten strategies as a discriminated union on the 'strategy' field.
 Each model carries ``display_name`` and ``transport`` ClassVars so
 display labels, transport validation sets, and factory dispatch can
 derive from the models themselves.
@@ -209,34 +209,49 @@ class FormCbnAuth(AuthStrategyBase):
     transport: ClassVar[str] = "cbn"
 
 
+class BearerAuth(AuthStrategyBase):
+    """Bearer token auth for REST JSON APIs (RFC 6750). See MODEM_YAML_SPEC.md § bearer."""
+
+    model_config = ConfigDict(extra="forbid")
+    strategy: Literal["bearer"]
+    login_endpoint: str
+    token_path: str
+
+    display_name: ClassVar[str] = "Bearer Token"
+    transport: ClassVar[str] = "http"
+
+
 AuthConfig = Annotated[
-    Annotated[NoneAuth, Tag("none")]
-    | Annotated[BasicAuth, Tag("basic")]
+    Annotated[BasicAuth, Tag("basic")]
+    | Annotated[BearerAuth, Tag("bearer")]
     | Annotated[FormAuth, Tag("form")]
+    | Annotated[FormCbnAuth, Tag("form_cbn")]
     | Annotated[FormNonceAuth, Tag("form_nonce")]
-    | Annotated[UrlTokenAuth, Tag("url_token")]
-    | Annotated[HnapAuth, Tag("hnap")]
     | Annotated[FormPbkdf2Auth, Tag("form_pbkdf2")]
     | Annotated[FormSjclAuth, Tag("form_sjcl")]
-    | Annotated[FormCbnAuth, Tag("form_cbn")],
+    | Annotated[HnapAuth, Tag("hnap")]
+    | Annotated[NoneAuth, Tag("none")]
+    | Annotated[UrlTokenAuth, Tag("url_token")],
     Discriminator("strategy"),
 ]
 
 # ---------------------------------------------------------------------------
 # Registry — co-located with the AuthConfig union.  Adding a new
 # strategy requires adding the model class here AND to the union above.
+# Both lists are sorted alphabetically by strategy literal.
 # ---------------------------------------------------------------------------
 
 _AUTH_MODELS: list[type[AuthStrategyBase]] = [
-    NoneAuth,
     BasicAuth,
+    BearerAuth,
     FormAuth,
+    FormCbnAuth,
     FormNonceAuth,
-    UrlTokenAuth,
-    HnapAuth,
     FormPbkdf2Auth,
     FormSjclAuth,
-    FormCbnAuth,
+    HnapAuth,
+    NoneAuth,
+    UrlTokenAuth,
 ]
 
 

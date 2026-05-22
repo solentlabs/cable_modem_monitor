@@ -16,7 +16,7 @@ Use case coverage:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
@@ -60,6 +60,20 @@ def _collector(auth_success: bool = True) -> MagicMock:
 def _recovery(config: MagicMock, collector: MagicMock) -> Recovery:
     """Build a real Recovery instance bound to the mocks."""
     return Recovery(collector=collector, modem_config=config)
+
+
+def _make_fresh_session_success(token: str = "tok") -> MagicMock:
+    """Fresh session mock that completes login and the action request successfully."""
+    fresh = MagicMock()
+    fresh.headers = {}
+    login_resp = MagicMock()
+    login_resp.status_code = 200
+    login_resp.json.return_value = {"created": {"token": token}}
+    action_resp = MagicMock()
+    action_resp.status_code = 200
+    fresh.post.return_value = login_resp
+    fresh.request.return_value = action_resp
+    return fresh
 
 
 # ------------------------------------------------------------------
@@ -180,3 +194,83 @@ def test_restart_while_recovery_active_is_allowed() -> None:
     result_second = run_restart(collector, config, recovery)
     assert result_second.success is True
     assert recovery.active is True
+
+
+# ------------------------------------------------------------------
+# Per-action auth path (action_auth on HttpAction)
+# ------------------------------------------------------------------
+
+
+def _config_with_action_auth() -> MagicMock:
+    """Build a mock ModemConfig with per-action auth on restart."""
+    from solentlabs.cable_modem_monitor_core.models.modem_config.auth import BearerAuth
+
+    config = MagicMock()
+    config.model = "Hub5"
+    config.timeout = 10
+    config.actions.restart = HttpAction(
+        type="http",
+        method="POST",
+        endpoint="/rest/v1/system/reboot",
+        json_body={"reboot": {"enable": True}},
+        action_auth=BearerAuth(
+            strategy="bearer",
+            login_endpoint="/rest/v1/user/login",
+            token_path="created.token",
+        ),
+    )
+    config.actions.logout = None
+    return config
+
+
+_ACTION_AUTH_PATCH = "solentlabs.cable_modem_monitor_core.orchestration.actions.create_session"
+
+
+def test_action_auth_skips_collector_authenticate() -> None:
+    """When action_auth is set, collector.authenticate() is never called."""
+    config = _config_with_action_auth()
+    collector = _collector()
+    recovery = _recovery(config, collector)
+
+    with patch(_ACTION_AUTH_PATCH, return_value=_make_fresh_session_success()):
+        result = run_restart(collector, config, recovery)
+
+    assert result.success is True
+    collector.authenticate.assert_not_called()
+
+
+def test_action_auth_still_clears_collector_session() -> None:
+    """Session clear still happens even when action_auth skips collector.authenticate."""
+    config = _config_with_action_auth()
+    collector = _collector()
+    recovery = _recovery(config, collector)
+
+    with patch(_ACTION_AUTH_PATCH, return_value=_make_fresh_session_success()):
+        run_restart(collector, config, recovery)
+
+    collector.clear_session.assert_called_once()
+
+
+def test_action_auth_opens_recovery_window() -> None:
+    """Per-action auth path still opens a recovery window after success."""
+    config = _config_with_action_auth()
+    collector = _collector()
+    recovery = _recovery(config, collector)
+
+    with patch(_ACTION_AUTH_PATCH, return_value=_make_fresh_session_success()):
+        result = run_restart(collector, config, recovery)
+
+    assert result.success is True
+    assert recovery.active is True
+
+
+def test_no_action_auth_calls_collector_authenticate() -> None:
+    """Without action_auth, collector.authenticate() is called as normal."""
+    config = _config()
+    collector = _collector()
+    recovery = _recovery(config, collector)
+
+    result = run_restart(collector, config, recovery)
+
+    assert result.success is True
+    collector.authenticate.assert_called_once()

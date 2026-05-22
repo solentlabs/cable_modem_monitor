@@ -31,7 +31,7 @@
 | Decision Discipline           | Sequencing, no shortcuts, no speculation                            |
 | Verification Discipline       | Ground-truth checks before claims                                   |
 | Catalog & Data Discipline     | YAML scope, recovery genericity, HAR-first intake                   |
-| Code Discipline               | Type-safety, isolation, no infra for hypotheticals                  |
+| Code Discipline               | Docstrings, WHY comments, type-safety, isolation, no infra for hypotheticals |
 | Shell Command Generation      | Avoid permission-check triggers                                     |
 | Pre-Push Verification         | Always run `make validate-ci` before pushing                        |
 | Irreversible Operations       | Stop and verify before destructive git ops                          |
@@ -183,6 +183,18 @@ propose fixes first.
   pipeline (mock-server / golden-file / channel counts) — don't
   just check tests pass. Tests passing doesn't mean the right
   things are being tested.
+- **After any context hand-off, audit the full diff before touching
+  anything.** Run `git diff HEAD --stat` and review every changed
+  file. The gitStatus snapshot in the session header can be stale
+  if the previous session modified files after it was taken.
+- **Never spawn a sub-agent to implement a feature that touches
+  existing code, specs, or tests.** Sub-agents lack project history
+  and make unsolicited "cleanup" decisions — removing fields,
+  dropping test coverage, stripping documentation — on things they
+  don't understand. The only safe scope for a sub-agent is narrowly
+  bounded read-only research. If context window pressure makes
+  direct implementation feel necessary, break the task into smaller
+  sessions instead.
 - **Recurring problem = root cause unfixed.** If a fix has to be
   re-applied within one session, stop fixing the symptom and find
   what's recreating the failure.
@@ -207,6 +219,10 @@ propose fixes first.
   into "we told X about Y" (or vice versa) misrepresents the record
   even when the surrounding argument is sound. Re-read load-bearing
   sentences against the actual exchange before submitting.
+- **Verify factual claims before posting externally, even when
+  user-supplied.** The claim originating from the user doesn't exempt
+  it. Public channels (GitHub issues, PR comments) require the same
+  ground-truth check as claims generated here.
 
 ## Catalog & Data Discipline
 
@@ -254,6 +270,14 @@ propose fixes first.
 - **TDD for non-trivial bug fixes.** (1) Read relevant specs.
   (2) Document the use case if missing. (3) Write tests that fail.
   (4) Implement. (5) Verify tests pass.
+- **One-line docstrings only.** Never multi-paragraph docstrings
+  with Args/Returns/Raises sections — the signature and type
+  annotations carry that information. One short line max. Non-obvious
+  WHY (hidden constraints, caller contracts, mutation side effects)
+  goes to inline comments co-located with the relevant code.
+  Behavioral contracts and design decisions belong in the spec docs
+  (ORCHESTRATION_SPEC, MODEM_YAML_SPEC, etc.) — they are the
+  durable documentation layer, not docstrings.
 - **Keep WHY comments on refactor.** Don't strip section markers
   (`# Phase 1 — auth`), rationale notes, or numbered-procedure
   markers during a rewrite. The "default to no comments" rule

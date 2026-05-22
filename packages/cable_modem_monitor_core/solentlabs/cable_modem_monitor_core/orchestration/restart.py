@@ -29,6 +29,13 @@ class RestartNotSupportedError(Exception):
     """Modem does not declare actions.restart in modem.yaml."""
 
 
+def _has_action_auth(restart_action: object) -> bool:
+    """Return True if the restart action is an HttpAction with action_auth set."""
+    from ..models.modem_config.actions import HttpAction
+
+    return isinstance(restart_action, HttpAction) and restart_action.action_auth is not None
+
+
 def run_restart(
     collector: ModemDataCollector,
     modem_config: ModemConfig,
@@ -40,7 +47,10 @@ def run_restart(
 
     1. Raise ``RestartNotSupportedError`` if ``actions.restart`` is
        None.
-    2. Authenticate against the modem.
+    2. Establish the monitoring session via ``collector.authenticate()``
+       — unless ``actions.restart`` has ``action_auth`` set, in which
+       case ``execute_action`` authenticates on a separate fresh session
+       and the monitoring session is not needed for the restart command.
     3. Execute the restart action.
     4. Clear the collector session (forces fresh auth on the next
        poll — some firmware invalidates sessions after a reboot).
@@ -70,19 +80,25 @@ def run_restart(
         # Step 2 — authenticate. Bypass the circuit breaker: the user
         # asked for a restart, so a recent bad-credentials streak
         # shouldn't block the command.
-        auth_result = collector.authenticate()
-        if not auth_result.success:
-            elapsed = time.monotonic() - start
-            _logger.error(
-                "Restart command failed [%s]: auth failed — %s",
-                model,
-                auth_result.error,
-            )
-            return RestartResult(
-                success=False,
-                elapsed_seconds=elapsed,
-                error="command_failed",
-            )
+        #
+        # Skip when action_auth is set — execute_action will authenticate
+        # on a separate fresh session for the action. Establishing the
+        # monitoring session here is unnecessary: it is not used for the
+        # restart command (e.g., Hub 5 has no monitoring auth at all).
+        if not _has_action_auth(actions.restart):
+            auth_result = collector.authenticate()
+            if not auth_result.success:
+                elapsed = time.monotonic() - start
+                _logger.error(
+                    "Restart command failed [%s]: auth failed — %s",
+                    model,
+                    auth_result.error,
+                )
+                return RestartResult(
+                    success=False,
+                    elapsed_seconds=elapsed,
+                    error="command_failed",
+                )
 
         # Step 3 — execute the reboot action. Connection errors /
         # timeouts inside the HTTP executor are already swallowed

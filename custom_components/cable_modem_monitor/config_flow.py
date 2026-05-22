@@ -44,6 +44,7 @@ from .config_flow_helpers import (
     get_manufacturers,
     load_modem_catalog,
     load_variant_list,
+    restart_requires_credentials,
     validate_connection,
 )
 from .const import (
@@ -434,6 +435,17 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         if auth_strategy != "none":
             fields[vol.Optional(CONF_USERNAME, default=d.get(CONF_USERNAME, ""))] = str
             fields[vol.Optional(CONF_PASSWORD, default=d.get(CONF_PASSWORD, ""))] = str
+        else:
+            # auth_strategy == "none" — still check whether the restart action
+            # needs per-action auth (action_auth set). If so, show credentials
+            # so the user can enable restart from the HA UI.
+            try:
+                modem_dir = self._get_selected_modem_dir()
+            except ValueError:
+                modem_dir = None
+            if modem_dir is not None and restart_requires_credentials(modem_dir, self._selected_variant):
+                fields[vol.Optional(CONF_USERNAME, default=d.get(CONF_USERNAME, ""))] = str
+                fields[vol.Optional(CONF_PASSWORD, default=d.get(CONF_PASSWORD, ""))] = str
 
         return vol.Schema(fields)
 

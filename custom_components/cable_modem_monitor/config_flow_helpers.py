@@ -65,24 +65,7 @@ AUTH_STRATEGY_LABELS: dict[str, str] = get_strategy_display_labels()
 
 
 def format_variant_label(variant: VariantInfo) -> str:
-    """Build a human-readable label for a variant dropdown entry.
-
-    Format: ``{auth label}`` with qualifiers in parentheses.
-    Hardware version and variant name both use parens for consistency.
-    Hardware version is the primary disambiguator — users can verify it
-    against the sticker on the bottom of the modem.
-
-    Examples::
-
-        "No Authentication"
-        "URL Token"
-        "URL Token (v7)"
-        "HNAP (v6)"
-        "Form Login CBN"
-
-    Args:
-        variant: Variant info from the catalog manager.
-    """
+    """Build a human-readable dropdown label: auth strategy + hw_version/name qualifiers + ``*`` if unconfirmed."""
     label = AUTH_STRATEGY_LABELS.get(variant.auth_strategy, variant.auth_strategy)
     if variant.hw_version:
         label = f"{label} ({variant.hw_version})"
@@ -99,10 +82,7 @@ def format_variant_label(variant: VariantInfo) -> str:
 
 
 async def load_modem_catalog(hass: HomeAssistant) -> list[ModemSummary]:
-    """Load all modem summaries from the catalog package.
-
-    Runs in executor — reads YAML files from disk.
-    """
+    """Load all modem summaries from the catalog package (runs in executor)."""
     return await hass.async_add_executor_job(list_modems, CATALOG_PATH)
 
 
@@ -111,36 +91,19 @@ async def load_variant_list(
     modem_dir: Path,
     sibling_dirs: list[Path] | None = None,
 ) -> list[VariantInfo]:
-    """Load variant info for a modem directory, including sibling transports.
-
-    Runs in executor — reads YAML files from disk.
-
-    Args:
-        hass: Home Assistant instance.
-        modem_dir: Primary modem directory.
-        sibling_dirs: Additional directories sharing the same model identity
-            under a different transport. Passed through to ``list_variants()``.
-    """
+    """Load variant info for a modem directory, including sibling transports (runs in executor)."""
     return await hass.async_add_executor_job(list_variants, modem_dir, sibling_dirs)
 
 
 def _normalize_manufacturer(name: str) -> str:
-    """Normalize manufacturer name to title case for display.
-
-    modem.yaml stores the manufacturer as seen in the wild (e.g.,
-    ``ARRIS``, ``Arris``). The UI presents a normalized form so
-    case variations don't appear as separate entries.
-    """
+    """Normalize manufacturer name to title case for display."""
+    # modem.yaml stores the manufacturer as seen in the wild (ARRIS, Arris, etc.);
+    # normalization is presentation-only — raw catalog values are preserved.
     return name.title()
 
 
 def get_manufacturers(summaries: list[ModemSummary]) -> list[str]:
-    """Extract sorted unique manufacturer names, normalized for display.
-
-    Case variations (e.g., ``ARRIS`` and ``Arris``) are consolidated
-    into a single title-case entry. The raw modem.yaml values are
-    preserved — normalization is presentation-only.
-    """
+    """Sorted unique manufacturer names, title-cased and deduplicated across modem.yaml case variants."""
     return sorted({_normalize_manufacturer(s.manufacturer) for s in summaries})
 
 
@@ -153,21 +116,7 @@ def filter_by_manufacturer(
 
 
 def build_model_display_name(summary: ModemSummary) -> str:
-    """Build the display string for the model dropdown.
-
-    Format: ``{manufacturer} {model}`` with aliases in parentheses
-    and ``*`` for unverified.
-
-    Remaining aliases are internal/OEM names and manufacturer rebrands
-    (not distinct products). See ``MODEM_YAML_SPEC.md`` § Aliases vs
-    Separate Entries for the rules.
-
-    Examples::
-
-        "Arris SB8200"
-        "Motorola MB8611 (MB8600, MB8612)"
-        "Netgear CM1100 *"
-    """
+    """Build the ``{Manufacturer} {Model} (aliases) *`` label (see MODEM_YAML_SPEC.md § Aliases)."""
     parts = [_normalize_manufacturer(summary.manufacturer), summary.model]
 
     if summary.model_aliases:
@@ -177,6 +126,24 @@ def build_model_display_name(summary: ModemSummary) -> str:
         parts.append("*")
 
     return " ".join(parts)
+
+
+def restart_requires_credentials(modem_dir: Path, variant: str | None) -> bool:
+    """True when restart needs per-action auth despite top-level ``auth.strategy: none``."""
+    from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
+        HttpAction,
+    )
+
+    try:
+        modem_yaml = (modem_dir / f"modem-{variant}.yaml") if variant else (modem_dir / "modem.yaml")
+        modem_config = load_modem_config(modem_yaml)
+    except Exception:  # noqa: BLE001
+        return False
+
+    if modem_config.actions is None or modem_config.actions.restart is None:
+        return False
+
+    return isinstance(modem_config.actions.restart, HttpAction) and modem_config.actions.restart.action_auth is not None
 
 
 # ---------------------------------------------------------------------------
@@ -197,15 +164,7 @@ _SIGNAL_ERROR_MAP: dict[CollectorSignal, str] = {
 
 
 def classify_error(error: str | None, signal: CollectorSignal | None = None) -> str:
-    """Classify a validation failure into a strings.json error key.
-
-    Args:
-        error: Human-readable error message (for logging).
-        signal: CollectorSignal from ModemResult, if available.
-
-    Returns:
-        Error key string for HA form display.
-    """
+    """Map a CollectorSignal to a strings.json error key for HA form display."""
     if signal is not None:
         return _SIGNAL_ERROR_MAP.get(signal, "unknown")
     return "unknown"
@@ -217,14 +176,9 @@ def classify_error(error: str | None, signal: CollectorSignal | None = None) -> 
 
 
 def default_health_check_interval(supports_icmp: bool, supports_head: bool) -> int:
-    """Pick the initial health-check interval.
-
-    All probes (ICMP, TCP, HEAD) are lightweight and run independently —
-    HEAD is skipped on GET-only modems rather than falling back to a
-    full-page GET. The single default cadence applies regardless of
-    detected capabilities. Both arguments are accepted for API
-    compatibility but no longer affect the result.
-    """
+    """Return the single default health-check interval."""
+    # Both args accepted for API compatibility; per-capability cadence
+    # differentiation was removed when HEAD probes became lightweight.
     return DEFAULT_HEALTH_CHECK_INTERVAL
 
 
@@ -235,21 +189,7 @@ def detect_probes(
     *,
     legacy_ssl: bool = False,
 ) -> dict[str, bool]:
-    """Detect ICMP and HTTP HEAD probe support.
-
-    Respects modem.yaml ``health.supports_head`` as a ceiling — if the
-    modem is known to reject HEAD, the test is skipped and GET is used.
-    ICMP is always tested (network-dependent, modem.yaml is only a hint).
-
-    Args:
-        host: Bare hostname/IP for ICMP test.
-        base_url: Full URL for HTTP HEAD test.
-        modem_config: Loaded modem config (provides health defaults).
-        legacy_ssl: Whether to use legacy SSL ciphers for HEAD test.
-
-    Returns:
-        Dict with ``supports_icmp`` and ``supports_head`` booleans.
-    """
+    """Test ICMP and HTTP HEAD, using modem.yaml ``health.supports_head`` as a ceiling."""
     health_cfg = modem_config.health
     supports_icmp = test_icmp(host)
     if health_cfg and not health_cfg.supports_head:
@@ -270,33 +210,10 @@ def _detect_and_inject_form_nonce_encoding(
     *,
     legacy_ssl: bool = False,
 ) -> tuple[str, str]:
-    """Detect form_nonce credential encoding and inject into config.
-
-    For form_nonce auth, pre-fetches the login page (GET to the
-    ``action`` URL) and inspects the form structure to determine
-    whether credentials should be sent as plain form fields or
-    base64-packed into a hidden field. Sets the result on the
-    modem config so the collector uses the correct encoding.
-
-    No-op for non-form_nonce auth strategies — returns defaults.
-
-    Raises ``ConnectionError`` if the login page is unreachable
-    (connectivity failure) — caller should surface this rather than
-    proceeding to a doomed auth attempt.  Falls back to
-    ``("plain", "")`` for non-connectivity errors (malformed HTML,
-    unexpected response, etc.).
-
-    Args:
-        base_url: Full URL including protocol.
-        modem_config: Modem config (auth may be any strategy).
-        legacy_ssl: Whether to use legacy SSL ciphers.
-
-    Returns:
-        Tuple of ``(encoding, credential_field)``.
-
-    Raises:
-        ConnectionError: Login page unreachable (modem not responding).
-    """
+    """Pre-fetch the login page for form_nonce auth and detect credential encoding; no-op for other strategies."""
+    # Raises ConnectionError on connectivity failure — caller must surface it
+    # rather than proceeding to a doomed auth attempt.
+    # Falls back to ("plain", "") for non-connectivity errors (malformed HTML, etc.).
     from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
         FormNonceAuth,
     )
@@ -351,14 +268,9 @@ def _raise_validation_failure(
     result: ModemResult,
     auth_signals: tuple[CollectorSignal, ...],
 ) -> None:
-    """Log the validation failure and raise the appropriate exception.
-
-    Never returns — raises ``PermissionError`` for auth-phase
-    failures and ``RuntimeError`` for collection-phase failures.
-    Wire-level detail for the failed attempt has already been
-    emitted at WARNING by the collector's auth-failure log; what
-    reaches HA from here is the error-key for the form UI.
-    """
+    """Raise ``PermissionError`` for auth signals or ``RuntimeError`` for collection signals."""
+    # Wire-level detail is already at WARNING from the collector; ERROR here
+    # carries only the signal/key summary for the HA form UI.
     _LOGGER.error("Validation failed: signal=%s, error=%s", result.signal, result.error)
     error_key = classify_error(result.error, result.signal)
     if result.signal in auth_signals:
@@ -376,14 +288,9 @@ def _attempt_validation(
     password: str,
     legacy_ssl: bool,
 ) -> ModemResult:
-    """Run one validation attempt.
-
-    Same pipeline used for initial setup, reauth, and options-flow
-    re-validation — there is no per-flow variation. The collector's
-    auth-failure log emits a single sanitized WARNING with wire
-    detail when authentication fails, regardless of which HA flow
-    invoked it.
-    """
+    """Run one validation attempt."""
+    # Shared by initial setup, reauth, and options-flow re-validation —
+    # no per-flow variation; the collector's sanitized WARNING covers all paths.
     collector = create_collector(
         modem_config=modem_config,
         parser_config=parser_config,
@@ -404,40 +311,7 @@ def _run_validation(
     modem_dir: Path,
     variant: str | None,
 ) -> dict[str, Any]:
-    """Execute the full validation pipeline (sync — runs in executor).
-
-    Pipeline:
-        1. Protocol detection (TCP probe :80 and :443; TLS handshake
-           on :443 picks ``legacy_ssl`` from the negotiated version)
-        2. Load modem + parser config from catalog
-        2a. Detect form_nonce credential encoding (pre-fetch)
-        3. Test data collection (one poll)
-        4. Health-probe discovery (ICMP, HTTP HEAD)
-        5. Build and return config entry dict
-
-    Authentication runs exactly once. If it fails, the collector's
-    sanitized WARNING records the modem's response and the failure
-    is surfaced to the user — there is no protocol-retry chain
-    (see UC-86: credential failure means immediate stop). Reauth
-    and options flows run through this same pipeline and benefit
-    from the same log.
-
-    Args:
-        host: Bare hostname/IP (no protocol prefix).
-        protocol: User-specified protocol, or None for auto-detect.
-        username: Modem username (empty string if no auth).
-        password: Modem password (empty string if no auth).
-        modem_dir: Path to modem directory in catalog.
-        variant: Variant name, or None for default.
-
-    Returns:
-        Dict with all fields needed for the config entry.
-
-    Raises:
-        ConnectionError: Protocol detection failed (modem unreachable).
-        PermissionError: Authentication failed.
-        RuntimeError: Parse/collection failed.
-    """
+    """Full validation pipeline (sync — runs in executor): protocol detect → load config → collect → probe discovery."""
     # -- Step 1: Protocol detection -------------------------------------------
     # Probe both ports; let detect_protocol's TLS handshake observe
     # whether the modem speaks legacy TLS. User-specified protocols
@@ -512,29 +386,7 @@ async def validate_connection(
     modem_dir: Path,
     variant: str | None,
 ) -> dict[str, Any]:
-    """Run the full validation pipeline for the config flow.
-
-    Decomposes the raw host input, then delegates to
-    :func:`_run_validation` in an executor thread. On auth failure
-    the collector emits a single WARNING with the modem's response;
-    no per-flow capture wiring needed.
-
-    Args:
-        hass: Home Assistant instance.
-        host: Raw host input from the user (may include protocol).
-        username: Modem username.
-        password: Modem password.
-        modem_dir: Path to modem directory in catalog.
-        variant: Variant name, or None for default.
-
-    Returns:
-        Dict with protocol, legacy_ssl, supports_icmp, supports_head.
-
-    Raises:
-        ConnectionError: Modem unreachable.
-        PermissionError: Authentication failed.
-        RuntimeError: Collection/parse failed.
-    """
+    """Async wrapper around ``_run_validation`` — decomposes the raw host input and runs in an executor thread."""
     hostname, user_protocol = parse_host_input(host)
 
     return await hass.async_add_executor_job(

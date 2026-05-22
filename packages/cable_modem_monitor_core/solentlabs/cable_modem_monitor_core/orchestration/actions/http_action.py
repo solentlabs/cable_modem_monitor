@@ -40,32 +40,7 @@ def execute_http_action(
     model: str = "",
     query_params: dict[str, str] | None = None,
 ) -> ActionResult:
-    """Execute an HTTP action (logout or restart).
-
-    Phases:
-    1. Pre-fetch (optional): GET ``pre_fetch_url`` to establish session
-       state (CSRF tokens, nonces).
-    2. Endpoint extraction (optional): extract dynamic endpoint from
-       the pre-fetch response using form-action keyword matching.
-    3. Main request: send the action request to the resolved endpoint.
-
-    Connection errors are expected during restart (the modem is
-    rebooting) and treated as success.
-
-    Args:
-        session: Authenticated session with cookies/headers.
-        base_url: Modem base URL (e.g., ``"http://192.168.100.1"``).
-        action: HTTP action config from modem.yaml.
-        timeout: Per-request timeout in seconds.
-        log_level: Log level for action messages. Use ``logging.DEBUG``
-            for routine operations (logout) to reduce noise.
-        model: Modem model name for log context.
-        query_params: Session-level query parameters from modem.yaml
-            (e.g., ``{"_n": "12345"}``). Appended to action URLs.
-
-    Returns:
-        ActionResult with success status and details.
-    """
+    """Execute an HTTP action (logout, restart); connection errors on restart are treated as success."""
     stripped_base = base_url.rstrip("/")
 
     # Phase 1 + 2: Pre-fetch and endpoint extraction
@@ -87,18 +62,27 @@ def execute_http_action(
         qs = "&".join(f"{k}={v}" for k, v in query_params.items())
         url = f"{url}{sep}{qs}"
     headers = dict(action.headers) if action.headers else None
-    data = dict(action.params) if action.params else None
 
     _logger.log(log_level, "Action [%s]: %s %s", model, action.method, endpoint)
 
     try:
-        resp = session.request(
-            action.method,
-            url,
-            data=data,
-            headers=headers,
-            timeout=timeout,
-        )
+        if action.json_body is not None:
+            resp = session.request(
+                action.method,
+                url,
+                json=action.json_body,
+                headers=headers,
+                timeout=timeout,
+            )
+        else:
+            data = dict(action.params) if action.params else None
+            resp = session.request(
+                action.method,
+                url,
+                data=data,
+                headers=headers,
+                timeout=timeout,
+            )
         _logger.log(log_level, "Action response [%s]: %d", model, resp.status_code)
         return ActionResult(
             success=True,
@@ -128,21 +112,7 @@ def _resolve_endpoint(
     log_level: int = logging.INFO,
     model: str = "",
 ) -> str | None:
-    """Resolve the action endpoint — static or dynamic extraction.
-
-    Args:
-        session: Authenticated HTTP session.
-        base_url: Modem base URL (already stripped of trailing slash).
-        action: Action config with optional pre_fetch_url and
-            endpoint_pattern.
-        timeout: Per-request timeout in seconds.
-        log_level: Log level for informational messages.
-        model: Modem model name for log context.
-
-    Returns:
-        Endpoint path to use for the main request, or ``None`` if
-        extraction failed and no static fallback exists.
-    """
+    """Return the resolved action endpoint; ``None`` if keyword extraction fails with no static fallback."""
     if not action.pre_fetch_url:
         return action.endpoint
 
@@ -206,18 +176,7 @@ def _resolve_endpoint(
 
 
 def _extract_form_action(page_html: str, keyword: str) -> str | None:
-    """Extract a form action URL containing the keyword.
-
-    Core-provided extraction strategy: finds the first ``<form>``
-    element whose ``action`` attribute contains the keyword.
-
-    Args:
-        page_html: Full HTML page content from pre-fetch.
-        keyword: Substring to match within form action values.
-
-    Returns:
-        The matched form action URL, or ``None`` if no match.
-    """
+    """Return the first ``<form action>`` URL containing ``keyword``, or ``None``."""
     if not page_html:
         return None
 

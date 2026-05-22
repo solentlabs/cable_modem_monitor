@@ -5,9 +5,11 @@ Per MODEM_YAML_SPEC.md Actions section.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, model_validator
+
+from .auth import AuthConfig
 
 
 class HttpAction(BaseModel):
@@ -18,9 +20,17 @@ class HttpAction(BaseModel):
     method: str
     endpoint: str
     params: dict[str, str] = Field(default_factory=dict)
+    json_body: dict[str, Any] | None = None
     headers: dict[str, str] = Field(default_factory=dict)
     pre_fetch_url: str = ""
     endpoint_pattern: str = ""
+    action_auth: AuthConfig | None = None
+
+    @model_validator(mode="after")
+    def _params_and_json_body_exclusive(self) -> HttpAction:
+        if self.params and self.json_body is not None:
+            raise ValueError("params and json_body are mutually exclusive — set one or neither")
+        return self
 
 
 class HnapAction(BaseModel):

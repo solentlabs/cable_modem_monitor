@@ -20,46 +20,44 @@ from __future__ import annotations
 
 import importlib
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .base import BaseAuthManager
 from .none import NoneAuthManager
 
 if TYPE_CHECKING:
     from ..models.modem_config import ModemConfig
+    from ..models.modem_config.auth import AuthConfig
 
 _logger = logging.getLogger(__name__)
 
 _AUTH_PACKAGE = "solentlabs.cable_modem_monitor_core.auth"
 
 
+def _load_module(strategy: str) -> Any:
+    return importlib.import_module(f".{strategy}", package=_AUTH_PACKAGE)
+
+
 def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
-    """Create the appropriate auth manager from modem config.
-
-    Dynamically imports the manager module matching the strategy
-    literal (e.g., ``"form_nonce"`` → ``auth.form_nonce``) and
-    calls its ``create_manager()`` entry point.
-
-    Args:
-        config: Validated ``ModemConfig`` instance.
-
-    Returns:
-        Auth manager ready for ``authenticate()``.
-    """
+    """Dynamically import the strategy module and call its ``create_manager()`` entry point."""
     auth = config.auth
-
     if auth is None:
         return NoneAuthManager()
 
     strategy = auth.strategy
-
     try:
-        module = importlib.import_module(f".{strategy}", package=_AUTH_PACKAGE)
+        module = _load_module(strategy)
     except ModuleNotFoundError:
         _logger.warning(
             "No auth module for strategy '%s', falling back to NoneAuthManager",
             strategy,
         )
         return NoneAuthManager()
-
     return module.create_manager(auth)  # type: ignore[no-any-return]
+
+
+def create_auth_manager_for_action(auth_config: AuthConfig) -> BaseAuthManager:
+    """Create an auth manager from a standalone auth config; raises ``ModuleNotFoundError`` on missing module."""
+    strategy = auth_config.strategy
+    module = _load_module(strategy)
+    return module.create_manager(auth_config)  # type: ignore[no-any-return]  # importlib returns Any; all auth modules provide create_manager() → BaseAuthManager
