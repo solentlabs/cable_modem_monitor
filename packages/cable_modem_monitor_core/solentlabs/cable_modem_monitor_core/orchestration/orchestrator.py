@@ -214,6 +214,7 @@ class Orchestrator:
             session_reuse_disabled=self._policy.session_reuse_disabled,
             resource_fetches=self._collector.last_resource_fetches,
             last_poll_at=self._last_poll_at,
+            last_stub_body=self._collector.last_stub_bodies,
         )
 
     @property

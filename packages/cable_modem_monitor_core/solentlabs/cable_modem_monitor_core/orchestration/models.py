@@ -199,6 +199,12 @@ class OrchestratorDiagnostics:
             successful collection.
         last_poll_at: ISO 8601 wall-clock timestamp (UTC) of the last
             ``get_modem_data()`` call. None if never polled.
+        last_stub_body: Response body snippets from the last
+            LOAD_INTEGRITY event, keyed by resource path. Empty dict
+            if no stub-page failure has occurred. Retained until the
+            next LOAD_INTEGRITY event — survives successful polls so
+            it is present in bug-report diagnostics downloads even after
+            the modem recovers. Full body stored; no truncation.
     """
 
     poll_duration: float | None
@@ -212,6 +218,7 @@ class OrchestratorDiagnostics:
     session_reuse_disabled: bool = False
     resource_fetches: list[ResourceFetch] = field(default_factory=list)
     last_poll_at: str | None = None
+    last_stub_body: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict for diagnostics output."""
@@ -227,6 +234,7 @@ class OrchestratorDiagnostics:
             "session_reuse_disabled": self.session_reuse_disabled,
             "resource_fetches": [f.to_dict() for f in self.resource_fetches],
             "last_poll_at": self.last_poll_at,
+            "last_stub_body": self.last_stub_body,
         }
 
 

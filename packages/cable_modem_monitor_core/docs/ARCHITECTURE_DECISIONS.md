@@ -396,6 +396,45 @@ left intact in the snippet — they are protocol-shaped, not the
 user's secret, and they're often the diagnostic signal a
 maintainer needs to confirm the strategy ran.
 
+### LOAD_INTEGRITY failure detail via diagnostics download
+
+**Decision:** When the collector's parse phase returns a
+``LOAD_INTEGRITY`` signal (zero fulfilled anchors for an expected
+resource), the stub response body is captured in
+``OrchestratorDiagnostics.last_stub_body`` — a ``dict[str, str]``
+keyed by resource path, value truncated to ≤500 characters. It
+persists across successful polls until the next ``LOAD_INTEGRITY``
+event.
+
+**Rationale:** ``LOAD_INTEGRITY`` means the session expired and the
+modem returned a JS redirect stub instead of channel data. This
+failure is intermittent and self-healing — the recovery cycle clears
+the session and re-auths, leaving no trace in steady-state. Bug
+reports arrive as a diagnostics download (``diagnostics.json``
+shared in a GitHub issue), not as live log snippets. A WARNING log
+fires once and is gone by the time the user generates the download.
+Placing the stub body in the structured download is the only path
+that ensures the diagnostic artifact is present when the user shares
+it.
+
+This is intentionally different from the auth-failure detail
+decision (which chose a WARNING log). Auth failures are observable
+in real time by the user performing initial setup; they are
+logged for that audience. ``LOAD_INTEGRITY`` failures occur in
+steady-state polling and are recovered automatically — the user
+who files a bug report may not know they happened. The diagnostics
+download is the correct artifact for that audience.
+
+**Constrains:** Body is stored in full — no truncation. Unlike the
+auth-failure log (500-character limit, log-line budget), the
+diagnostics download has no verbosity constraint and the full stub
+body is the diagnostic signal. ``last_stub_body`` is
+overwritten on each ``LOAD_INTEGRITY`` event and is never cleared
+on successful polls — it must survive into the next diagnostics
+download even after recovery. Only resources that returned zero
+fulfilled anchors contribute entries; resources that were simply
+absent from the resource dict do not.
+
 ### Resource-load failure detail via request-shape log
 
 **Decision:** When a loader (HTTP, HNAP, CBN) raises or warns on a

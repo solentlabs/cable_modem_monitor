@@ -825,6 +825,13 @@ class OrchestratorDiagnostics:
             compute aggregates (min/max/avg) from this raw data.
         last_poll_at: ISO 8601 wall-clock timestamp (UTC) of the last
             ``get_modem_data()`` call. None if never polled.
+        last_stub_body: Response body snippets from the last
+            LOAD_INTEGRITY event, keyed by resource path. Empty dict
+            if no stub-page failure has occurred. Retained across
+            successful polls so it is present in user-shared diagnostics
+            downloads even after the modem recovers. Full body stored;
+            no truncation (stub pages are small, and the full body is
+            the diagnostic signal).
 
     Note: auth-failure wire detail is not stored on this dataclass.
     The collector emits a single sanitized ``WARNING`` log when
@@ -843,6 +850,7 @@ class OrchestratorDiagnostics:
     session_reuse_disabled: bool = False
     resource_fetches: list[ResourceFetch] = field(default_factory=list)
     last_poll_at: str | None = None
+    last_stub_body: dict[str, str] = field(default_factory=dict)
 
 
 class ConnectionStatus(Enum):

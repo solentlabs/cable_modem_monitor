@@ -222,6 +222,7 @@ class TestOrchestratorDiagnostics:
             "session_reuse_disabled": False,
             "resource_fetches": [],
             "last_poll_at": None,
+            "last_stub_body": {},
         }
 
     def test_to_dict_with_fetches(self) -> None:

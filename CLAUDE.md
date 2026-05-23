@@ -251,6 +251,10 @@ propose fixes first.
   must include a reference URL or citation. Without a source, the
   claim is indistinguishable from fabricated data. If a source
   can't be found, leave the field empty rather than guessing.
+- **`packages/cable_modem_monitor_catalog/README.md` is auto-generated.**
+  Never edit it directly or regenerate it as a side effect of another
+  change. Run `python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py`
+  only when the intent is a standalone README update commit.
 - **Catalog data stays true to source; normalization happens at
   presentation.** This project is a universal translator — the
   catalog is the authoritative record of what each modem reports

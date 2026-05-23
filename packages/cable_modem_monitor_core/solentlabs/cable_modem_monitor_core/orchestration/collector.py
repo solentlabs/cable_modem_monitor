@@ -36,7 +36,7 @@ _logger = logging.getLogger(__name__)
 _LOGOUT_LOG_LEVEL: Final[int] = logging.DEBUG
 _DEFAULT_AUTH_LOG_LEVEL: Final[int] = logging.DEBUG
 
-# Maximum response body characters included in the auth-failure log.
+# Maximum response body characters stored in auth-failure logs (log-line budget).
 _FAILURE_BODY_SNIPPET_MAX: Final[int] = 500
 _REDACTED: Final[str] = "[REDACTED]"
 
@@ -109,6 +109,9 @@ class ModemDataCollector:
 
         # Per-resource timing from last successful collection
         self._last_resource_fetches: list[ResourceFetch] = []
+
+        # Stub body from last LOAD_INTEGRITY failure — kept until next event
+        self._last_stub_bodies: dict[str, str] = {}
 
     def execute(self) -> ModemResult:
         """Execute one data collection.
@@ -272,6 +275,11 @@ class ModemDataCollector:
         return self._last_resource_fetches
 
     @property
+    def last_stub_bodies(self) -> dict[str, str]:
+        """Response body snippets from the last LOAD_INTEGRITY event, keyed by resource path."""
+        return self._last_stub_bodies
+
+    @property
     def session(self) -> requests.Session:
         """The underlying ``requests.Session`` used for auth and loading."""
         return self._session
@@ -356,9 +364,7 @@ class ModemDataCollector:
     ) -> tuple[dict[str, Any], list[ResourceFetch]]:
         """Fetch all resources using the authenticated session."""
         if self._parser_config is None:
-            raise RuntimeError(
-                "Modem requires custom parser.py — " "parser.yaml alone insufficient for resource loading"
-            )
+            raise RuntimeError("Modem requires custom parser.py — parser.yaml alone insufficient for resource loading")
 
         if self._modem_config.transport == "hnap":
             return self._load_hnap_resources()
@@ -527,17 +533,11 @@ class ModemDataCollector:
                 error=str(exc),
             )
         if diagnostics.has_zero_fulfillment:
-            return self._build_load_integrity_result(diagnostics)
+            return self._build_load_integrity_result(diagnostics, resources)
         return data
 
-    def _build_load_integrity_result(self, diagnostics: ParseDiagnostics) -> ModemResult:
-        """Build a LOAD_INTEGRITY result for a stub-page response.
-
-        Triggered when the parser found 0 of N expected anchors on any
-        resource — the response arrived as HTTP 200 but is structurally
-        not a data page. The orchestrator clears the session and
-        re-authenticates per UC-19a.
-        """
+    def _build_load_integrity_result(self, diagnostics: ParseDiagnostics, resources: dict[str, Any]) -> ModemResult:
+        """Build a LOAD_INTEGRITY result when 0 of N expected anchors were found (UC-19a)."""
         affected = ", ".join(diagnostics.zero_fulfillment_resources)
         counts = "; ".join(
             f"{path} ({c.fulfilled}/{c.expected})"
@@ -551,6 +551,11 @@ class ModemDataCollector:
             self._modem_config.model,
             counts,
         )
+        self._last_stub_bodies = {
+            path: str(body)
+            for path in diagnostics.zero_fulfillment_resources
+            if (body := resources.get(path)) is not None
+        }
         return ModemResult(
             success=False,
             signal=CollectorSignal.LOAD_INTEGRITY,
@@ -662,7 +667,7 @@ def _log_auth_failure_detail(
         body_snippet = body_snippet + "... (truncated)"
 
     _logger.warning(
-        "Auth failed [%s] strategy=%s\n" "  request: %s %s\n" "  response: %d %s\n" "  body: %s",
+        "Auth failed [%s] strategy=%s\n  request: %s %s\n  response: %d %s\n  body: %s",
         model,
         strategy,
         method,

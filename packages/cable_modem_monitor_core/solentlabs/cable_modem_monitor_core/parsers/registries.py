@@ -64,6 +64,7 @@ from .formats.json_system_info import JSONSystemInfoParser
 from .formats.json_transposed import JSONTransposedParser
 from .formats.xml_parser import XMLChannelParser
 from .formats.xml_system_info import XMLSystemInfoParser
+from .table_selector import find_table
 
 # ---------------------------------------------------------------------------
 # Anchor presence detection
@@ -74,6 +75,9 @@ from .formats.xml_system_info import XMLSystemInfoParser
 # without ever flagging stub-detection. Formats opt in by replacing this
 # with a real count when they observe the same failure shape #151 hit on
 # JS-format parsers.
+# Opted in: javascript (#151), javascript_json, table (issue #104).
+# Remaining: table_transposed, xml, hnap (HNAP failures are caught as
+# LOAD_AUTH before reaching the parser, so LOAD_INTEGRITY is redundant).
 _ANCHOR_TRIVIAL = AnchorCount(expected=1, fulfilled=1)
 
 
@@ -145,11 +149,19 @@ def _parse_html_table_channels(
     primary_channels: list[dict[str, Any]] = []
     companion_tables: list[tuple[list[dict[str, Any]], list[str]]] = []
 
+    soup = resources.get(section.resource)
+    fulfilled = 0
+
     for table_def in section.tables:
         parser = HTMLTableParser(section.resource, table_def)
         channels = parser.parse(resources)
         if not isinstance(channels, list):
             continue
+
+        # A stub page (JS redirect on session expiry) has soup but no tables —
+        # fulfilled stays 0, triggering LOAD_INTEGRITY per UC-19a.
+        if soup is not None and find_table(soup, table_def.selector) is not None:
+            fulfilled += 1
 
         if table_def.merge_by is not None:
             companion_tables.append((channels, table_def.merge_by))
@@ -165,7 +177,7 @@ def _parse_html_table_channels(
         if "channel_number" not in channel:
             channel["channel_number"] = idx
 
-    return primary_channels, _resource_present(resources, section.resource)
+    return primary_channels, AnchorCount(expected=len(section.tables), fulfilled=fulfilled)
 
 
 def _parse_transposed_channels(

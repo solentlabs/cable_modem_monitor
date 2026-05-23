@@ -86,6 +86,65 @@ class TestChannelTypeGuards:
 
 
 # ------------------------------------------------------------------
+# HTML table anchor counting — stub-page detection (UC-19a)
+# ------------------------------------------------------------------
+
+# ┌─────────────────────────────────┬──────────┬───────────┐
+# │ scenario                        │ expected │ fulfilled │
+# ├─────────────────────────────────┼──────────┼───────────┤
+# │ resource missing from dict      │ 2        │ 0         │
+# │ stub page (no tables in body)   │ 2        │ 0         │
+# │ all tables present              │ 2        │ 2         │
+# │ one of two tables present       │ 2        │ 1         │
+# └─────────────────────────────────┴──────────┴───────────┘
+
+_HTML_STUB = "<html><script>window.location.href='/login.asp'</script></html>"
+_HTML_BOTH = (
+    "<html><body>"
+    '<table id="table1"><tr><td>1</td></tr></table>'
+    '<table id="table2"><tr><td>1</td></tr></table>'
+    "</body></html>"
+)
+_HTML_ONE = '<html><body><table id="table1"><tr><td>1</td></tr></table></body></html>'
+
+# fmt: off
+_HTML_TABLE_ANCHOR_CASES = [
+    # (html,       expected, fulfilled, id)
+    (None,         2,        0,         "resource-missing"),
+    (_HTML_STUB,   2,        0,         "stub-page"),
+    (_HTML_BOTH,   2,        2,         "all-tables"),
+    (_HTML_ONE,    2,        1,         "one-of-two"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "html,expected,fulfilled,_id",
+    _HTML_TABLE_ANCHOR_CASES,
+    ids=[c[3] for c in _HTML_TABLE_ANCHOR_CASES],
+)
+def test_html_table_anchor_counting(html: str | None, expected: int, fulfilled: int, _id: str) -> None:
+    """HTML table anchor count reflects table presence, not just resource presence."""
+    from bs4 import BeautifulSoup
+    from solentlabs.cable_modem_monitor_core.models.parser_config.common import ColumnMapping
+    from solentlabs.cable_modem_monitor_core.models.parser_config.table import HTMLTableSection, TableDefinition
+
+    col = ColumnMapping(index=0, field="channel_number", type="integer")
+    section = HTMLTableSection(
+        format="table",
+        resource="/data.htm",
+        tables=[
+            TableDefinition(selector=TableSelector(type="id", match="table1"), columns=[col]),
+            TableDefinition(selector=TableSelector(type="id", match="table2"), columns=[col]),
+        ],
+    )
+    resources = {} if html is None else {"/data.htm": BeautifulSoup(html, "html.parser")}
+    _, count = _parse_html_table_channels(section, resources)
+    assert count.expected == expected
+    assert count.fulfilled == fulfilled
+
+
+# ------------------------------------------------------------------
 # System info type guards
 # ------------------------------------------------------------------
 
