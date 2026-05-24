@@ -251,6 +251,8 @@ packages/cable_modem_monitor_catalog/.../registry.py
 # HA adapter
 custom_components/cable_modem_monitor/services.py
     → tests/components/test_services.py
+custom_components/cable_modem_monitor/dev_tools.py
+    → tests/components/test_services.py
 ```
 
 ---

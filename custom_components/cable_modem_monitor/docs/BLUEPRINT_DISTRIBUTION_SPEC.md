@@ -264,8 +264,9 @@ This spec does NOT address:
 
 - **Static Lovelace dashboards via HACS dashboard category.** Separate
   concern with no documented current demand. The existing
-  `cable_modem_monitor.generate_dashboard` service in
-  [`services.py`](../services.py) covers most dashboard use cases via the
+  `cable_modem_monitor.generate_dashboard` service (implemented in
+  [`dev_tools.py`](../dev_tools.py), registered in
+  [`services.py`](../services.py)) covers most dashboard use cases via the
   copy-paste developer-tool pattern.
 - **Dashboard generator productization or JS dashboard strategies.**
   Separate concern, documented in a separate forthcoming spec.

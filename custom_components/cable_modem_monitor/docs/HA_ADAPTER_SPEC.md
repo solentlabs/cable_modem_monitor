@@ -1228,7 +1228,8 @@ The HA adapter layer consists of these modules:
 | `config_flow_helpers.py` | Validation pipeline, probe detection, encoding detection — async wrappers around Core I/O |
 | `diagnostics.py` | Diagnostics download combining Core + HA-side data |
 | `const.py` | Domain constants, config keys, defaults |
-| `services.py` | `generate_dashboard` service handler |
+| `services.py` | Service registration wiring — constants, schemas, `async_request_modem_refresh`, `request_refresh` / `request_health_check` handler factories, `async_register/unregister_services` |
+| `dev_tools.py` | Dev tool implementations — dashboard YAML generator (`_build_*` / `_format_*` / channel helpers / `create_generate_dashboard_handler`) and channel identity converter (`_plan_stat_renames_*` / `_migrate_statistics` / `create_convert_channel_identity_handler`) |
 | `migrations/` | Version-keyed config entry migration handlers |
 | `core/log_buffer.py` | Log capture for diagnostics (HA adapter + Core package loggers) |
 | `lib/host_validation.py` | URL building, host input parsing |

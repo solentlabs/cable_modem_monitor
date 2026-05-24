@@ -17,7 +17,7 @@ from custom_components.cable_modem_monitor.const import DOMAIN
 from custom_components.cable_modem_monitor.coordinator import (
     CableModemRuntimeData,
 )
-from custom_components.cable_modem_monitor.services import (
+from custom_components.cable_modem_monitor.dev_tools import (
     _add_channel_graphs,
     _build_channel_graph_yaml,
     _build_channel_lookup,
@@ -25,7 +25,6 @@ from custom_components.cable_modem_monitor.services import (
     _build_latency_graph_yaml,
     _build_restart_button_card_yaml,
     _build_status_card_yaml,
-    _find_loaded_entries,
     _find_loaded_entry,
     _format_channel_label,
     _format_title_with_type,
@@ -37,13 +36,16 @@ from custom_components.cable_modem_monitor.services import (
     _plan_stat_renames_to_id,
     _plan_stat_renames_to_number,
     _resolve_config_entry_for_device,
-    _resolve_target_entries,
     _unique_types,
+    create_convert_channel_identity_handler,
+    create_generate_dashboard_handler,
+)
+from custom_components.cable_modem_monitor.services import (
+    _find_loaded_entries,
+    _resolve_target_entries,
     async_register_services,
     async_request_modem_refresh,
     async_unregister_services,
-    create_convert_channel_identity_handler,
-    create_generate_dashboard_handler,
     create_request_health_check_handler,
     create_request_refresh_handler,
 )
@@ -541,7 +543,7 @@ RESOLVE_DEVICE_CASES = [
     RESOLVE_DEVICE_CASES,
     ids=[c[5] for c in RESOLVE_DEVICE_CASES],
 )
-@patch("custom_components.cable_modem_monitor.services.dr")
+@patch("custom_components.cable_modem_monitor.dev_tools.dr")
 def test_resolve_config_entry_for_device(
     mock_dr: MagicMock,
     device_id: str,
@@ -584,7 +586,7 @@ def test_resolve_config_entry_for_device(
 # -----------------------------------------------------------------------
 
 
-@patch("custom_components.cable_modem_monitor.services.dr")
+@patch("custom_components.cable_modem_monitor.dev_tools.dr")
 def test_resolve_target_with_device_id(mock_dr: MagicMock) -> None:
     """Resolves device_id to matching config entry."""
     hass = MagicMock()
@@ -619,7 +621,7 @@ def test_resolve_target_no_device_id_returns_all_loaded() -> None:
     assert result == [loaded]
 
 
-@patch("custom_components.cable_modem_monitor.services.dr")
+@patch("custom_components.cable_modem_monitor.dev_tools.dr")
 def test_resolve_target_unknown_device_returns_empty(mock_dr: MagicMock) -> None:
     """Unknown device_id returns empty list, not fallback."""
     hass = MagicMock()
@@ -633,7 +635,7 @@ def test_resolve_target_unknown_device_returns_empty(mock_dr: MagicMock) -> None
     assert result == []
 
 
-@patch("custom_components.cable_modem_monitor.services.dr")
+@patch("custom_components.cable_modem_monitor.dev_tools.dr")
 def test_resolve_target_string_device_id(mock_dr: MagicMock) -> None:
     """Single string device_id is handled (not just list)."""
     hass = MagicMock()
@@ -1281,7 +1283,7 @@ async def test_convert_with_device_id_resolves_entry(mock_runtime_data) -> None:
 
     with (
         patch(
-            "custom_components.cable_modem_monitor.services." "_resolve_config_entry_for_device",
+            "custom_components.cable_modem_monitor.dev_tools." "_resolve_config_entry_for_device",
             return_value=entry,
         ) as mock_resolve,
         patch(
@@ -1305,7 +1307,7 @@ async def test_convert_with_device_id_resolves_entry(mock_runtime_data) -> None:
 
 def test_get_channel_info_number_mode_filters_unlocked() -> None:
     """_get_channel_info_number_mode returns only locked channels, sorted."""
-    from custom_components.cable_modem_monitor.services import (
+    from custom_components.cable_modem_monitor.dev_tools import (
         _get_channel_info_number_mode,
     )
 
@@ -1322,7 +1324,7 @@ def test_get_channel_info_number_mode_filters_unlocked() -> None:
 def test_get_channel_info_number_mode_dispatched_when_identity_is_number() -> None:
     """_get_channel_info routes to _get_channel_info_number_mode when in NUMBER mode."""
     from custom_components.cable_modem_monitor.const import ChannelIdentity
-    from custom_components.cable_modem_monitor.services import _get_channel_info
+    from custom_components.cable_modem_monitor.dev_tools import _get_channel_info
 
     modem_data = {
         "downstream": [{"channel_number": 1, "lock_status": "locked"}],
@@ -1336,7 +1338,7 @@ def test_get_channel_info_number_mode_dispatched_when_identity_is_number() -> No
 
 def test_format_channel_label_position_mode() -> None:
     """Empty ch_type → 'Ch <n>' with no type prefix."""
-    from custom_components.cable_modem_monitor.services import _format_channel_label
+    from custom_components.cable_modem_monitor.dev_tools import _format_channel_label
 
     assert _format_channel_label("", 5, "full") == "Ch 5"
     # The format param is ignored in position mode
@@ -1370,7 +1372,7 @@ _HARDWARE_DIAG_CASES = [
 )
 def test_build_hardware_diag_entities(system_info: dict[str, Any], expected: list[str]) -> None:
     """One entity emitted per present hardware-diagnostics field; empty input → no lines."""
-    from custom_components.cable_modem_monitor.services import (
+    from custom_components.cable_modem_monitor.dev_tools import (
         _build_hardware_diag_entities,
     )
 
@@ -1415,7 +1417,7 @@ _PROVISIONED_SPEED_CASES = [
 )
 def test_build_provisioned_speed_entities(system_info: dict[str, Any], expected: list[str]) -> None:
     """One entity emitted per present provisioned-speed/burst field."""
-    from custom_components.cable_modem_monitor.services import (
+    from custom_components.cable_modem_monitor.dev_tools import (
         _build_provisioned_speed_entities,
     )
 
@@ -1442,7 +1444,7 @@ def test_build_status_card_includes_docsis_status_when_present() -> None:
 def test_build_channel_graph_defs_number_mode_omits_channel_type() -> None:
     """NUMBER-mode entity patterns omit the {ch_type} segment."""
     from custom_components.cable_modem_monitor.const import ChannelIdentity
-    from custom_components.cable_modem_monitor.services import (
+    from custom_components.cable_modem_monitor.dev_tools import (
         _build_channel_graph_defs,
     )
 
