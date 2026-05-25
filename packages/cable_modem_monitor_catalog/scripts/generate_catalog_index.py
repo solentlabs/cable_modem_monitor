@@ -154,6 +154,17 @@ def generate_timeline(modems: list[dict]) -> list[str]:
     return lines
 
 
+def _display_manufacturer(raw: str) -> str:
+    """Normalize manufacturer string for README display.
+
+    Catalog data stores the self-reported manufacturer name verbatim (ARRIS
+    from HTML firmware pages, Arris from HNAP responses). All-caps values are
+    title-cased for readability; mixed-case values (CommScope, Virgin Media)
+    are left unchanged.
+    """
+    return raw.title() if raw == raw.upper() else raw
+
+
 _STATUS_ICONS = {
     "confirmed": "✅ Confirmed",
     "verified": "✅ Verified",
@@ -214,7 +225,7 @@ def _modem_table_row(m: dict) -> str:
         badge_str = ""
 
     return (
-        f"| {m['manufacturer']} | "
+        f"| {_display_manufacturer(m['manufacturer'])} | "
         f"{model_link} | "
         f"{m['docsis']} | "
         f"{protocol} | "

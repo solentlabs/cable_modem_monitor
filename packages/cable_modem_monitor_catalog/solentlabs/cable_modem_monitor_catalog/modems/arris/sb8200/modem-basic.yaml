@@ -1,0 +1,55 @@
+manufacturer: ARRIS
+model: SB8200
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: url_token
+  login_page: "/cmconnectionstatus.html"
+  login_prefix: ""
+  ajax_login: true
+  auth_header_data: true
+  cookie_name: "credential"
+  success_indicator: "Downstream Bonded Channels"
+
+hardware:
+  docsis_version: "3.1"
+  hw_version: v6
+  firmware: AB01.01
+  chipset: "Broadcom BCM3390"
+  release_date: "2017"
+
+status: awaiting_verification
+
+attribution:
+  contributors:
+    - github: https://github.com/bmn001
+      contribution: "HW v6 HAR capture (Issue #170)"
+
+sources:
+  auth_config: "[#170 — SB8200 v6 Basic auth variant (Spectrum)](https://github.com/solentlabs/cable_modem_monitor/issues/170)"
+  chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
+  hardware: "[ARRIS SB8200 page](https://www.arris.com/surfboard/products/cable-modems/sb8200/)"
+
+isps:
+  - Spectrum
+
+notes: |
+  HW v6 firmware variant (AB01.01.009.51_080720_183.0A.NSH). Differs from
+  modem-cookie.yaml (v7) in one functional way: the server does not issue a
+  credential cookie via Set-Cookie on the login response. The browser sets the
+  credential cookie client-side via JavaScript; Core cannot replicate that.
+  Instead, auth_header_data: true causes Core to attach Authorization: Basic
+  <base64_credential> to every data request, which the server accepts.
+
+  Same page structure and parser as all other SB8200 variants.
+
+  Quirk — BCM3390 OFDM duplicate corrected counts: the two OFDM downstream
+  channels report identical corrected error counts despite different
+  frequencies. Same pattern observed on other BCM3390-based modems (see
+  modem-url-token.yaml). Does not affect aggregates (OFDM excluded from
+  downstream.qam scope).
+
+references:
+  issues:
+    - "[#170 — [Modem Request] Arris SB8200 v6 - Spectrum](https://github.com/solentlabs/cable_modem_monitor/issues/170)"

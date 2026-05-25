@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**40 configurations supported** — 14 confirmed on real hardware, 26 awaiting verification.
+**41 configurations supported** — 14 confirmed on real hardware, 27 awaiting verification.
 
 ---
 
@@ -20,6 +20,7 @@ and share a diagnostics snapshot.
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity |  |
 | SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom |  |
 | SB6183 | HTML | Comcast, Cox, Spectrum, Xfinity, Mediacom |  |
+| SB8200 (v6, basic) | HTML | Spectrum |  |
 | SB8200 (v7, cookie) | HTML | Spectrum |  |
 | SB8200 (v7, url-token) | HTML | Comcast, Cox, Spectrum, Xfinity |  |
 | SB8200 (v7) | HTML | Service Electric Cablevision | synthetic fixture — real capture also welcome |
