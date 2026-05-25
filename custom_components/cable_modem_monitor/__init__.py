@@ -194,6 +194,14 @@ def _rebuild_channel_map(
     )
 
 
+def _build_snapshot_payload(snapshot: ModemSnapshot) -> dict[str, Any]:
+    """Build the event bus payload from a ModemSnapshot.
+
+    Full snapshot — PII stripping is the consumer's responsibility (CMMT).
+    """
+    return snapshot.to_event_payload().model_dump()
+
+
 async def async_migrate_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -306,6 +314,10 @@ async def async_setup_entry(
             )
         _rebuild_channel_map(entry, snapshot, identity_mode)
         await _check_channel_bond_change(hass, entry, snapshot, orchestrator, model)
+        hass.bus.async_fire(
+            "cable_modem_monitor_data_updated",
+            _build_snapshot_payload(snapshot),
+        )
         return snapshot
 
     data_coordinator = DataUpdateCoordinator[ModemSnapshot](
@@ -427,7 +439,7 @@ def _log_operational_summary(
     health_msg = _format_interval(health_check_interval) if health_check_interval > 0 else "disabled"
 
     _LOGGER.info(
-        "Initialized [%s] — Polling %s, health checks %s. " "Enable debug logging for per-poll details.",
+        "Initialized [%s] — Polling %s, health checks %s. Enable debug logging for per-poll details.",
         model,
         poll_msg,
         health_msg,

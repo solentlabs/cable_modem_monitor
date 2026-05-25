@@ -1,0 +1,7 @@
+{
+  "_description": "System-wide PII field defaults for cable_modem_monitor. Fields listed here are stripped by consumers (e.g., CMMT) before telemetry submission. Per-modem additions are declared in pii_fields in each modem's modem.yaml. The consumer strips the union of this list and any modem-specific pii_fields.",
+  "fields": [
+    "mac_address",
+    "serial_number"
+  ]
+}

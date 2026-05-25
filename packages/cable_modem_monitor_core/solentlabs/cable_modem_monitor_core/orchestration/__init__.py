@@ -15,6 +15,13 @@ from __future__ import annotations
 
 from .actions import ActionResult, execute_action, execute_hnap_action, execute_http_action
 from .collector import LoginLockoutError, ModemDataCollector
+from .event_payload import (
+    SCHEMA_VERSION,
+    ChannelPayload,
+    HealthInfoPayload,
+    ModemDataPayload,
+    SnapshotEventPayload,
+)
 from .factory import (
     apply_credential_encoding,
     create_collector,
@@ -43,6 +50,11 @@ from .status import derive_connection_status, enrich_docsis_status
 
 __all__ = [
     "ActionResult",
+    "ChannelPayload",
+    "HealthInfoPayload",
+    "ModemDataPayload",
+    "SCHEMA_VERSION",
+    "SnapshotEventPayload",
     "CollectorSignal",
     "ConnectionStatus",
     "DocsisStatus",

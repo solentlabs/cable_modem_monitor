@@ -141,6 +141,8 @@ attribution:
 isps:
   - "Comcast"
   - "Spectrum"
+pii_fields:                  # optional — system_info keys with PII beyond global defaults
+  - home_ssid
 notes: |
   SB8200 HTTPS variant with URL token auth.
 references:
@@ -1280,6 +1282,29 @@ and where to look if something seems wrong.
 
 Common source fields: `auth_config`, `chipset`, `detection_hints`,
 `release_date`. Any key is valid — use whatever describes the source.
+
+### PII Fields
+
+```yaml
+pii_fields:
+  - home_ssid
+```
+
+Declares `system_info` keys reported by this modem that contain
+personally identifiable information beyond the global defaults.
+Consumers (e.g., CMMT) strip the union of
+`pii_fields_global.json` and any modem-specific `pii_fields`
+before telemetry submission.
+
+The global defaults
+(`packages/cable_modem_monitor_catalog/scripts/data/pii_fields_global.json`)
+cover `mac_address` and `serial_number` — the only PII fields
+observed across the catalog. Add `pii_fields` to a modem's YAML
+only for fields not already in the global list. Omit the key if
+the modem reports no PII beyond the global defaults.
+
+Currently no modem reports PII outside the global defaults, so no
+modem.yaml in the catalog carries this key.
 
 ### ISPs and notes
 

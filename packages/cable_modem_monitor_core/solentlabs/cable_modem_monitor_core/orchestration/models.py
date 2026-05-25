@@ -10,13 +10,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .signals import (
     CollectorSignal,
     ConnectionStatus,
     HealthStatus,
 )
+
+if TYPE_CHECKING:
+    from .event_payload import SnapshotEventPayload
 
 
 @dataclass
@@ -166,6 +169,46 @@ class ModemSnapshot:
     collector_signal: CollectorSignal = CollectorSignal.OK
     error: str = ""
     stats_last_reset: datetime | None = None
+
+    def to_event_payload(self) -> SnapshotEventPayload:
+        """Build the HA event bus payload from this snapshot."""
+        from .event_payload import (
+            SCHEMA_VERSION,
+            HealthInfoPayload,
+            ModemDataPayload,
+            SnapshotEventPayload,
+        )
+
+        health_info = None
+        if self.health_info:
+            health_info = HealthInfoPayload(
+                health_status=self.health_info.health_status.value,
+                icmp_latency_ms=self.health_info.icmp_latency_ms,
+                tcp_latency_ms=self.health_info.tcp_latency_ms,
+                http_latency_ms=self.health_info.http_latency_ms,
+            )
+
+        modem_data = None
+        if self.modem_data:
+            # docsis_status lives at the top level of SnapshotEventPayload;
+            # strip it from system_info to avoid duplication in the emitted payload.
+            payload_data = dict(self.modem_data)
+            if "system_info" in payload_data and "docsis_status" in payload_data["system_info"]:
+                payload_data["system_info"] = {
+                    k: v for k, v in payload_data["system_info"].items() if k != "docsis_status"
+                }
+            modem_data = ModemDataPayload.model_validate(payload_data)
+
+        return SnapshotEventPayload(
+            schema_version=SCHEMA_VERSION,
+            connection_status=self.connection_status.value,
+            docsis_status=self.docsis_status,
+            collector_signal=self.collector_signal.value,
+            error=self.error,
+            stats_last_reset=self.stats_last_reset.isoformat() if self.stats_last_reset else None,
+            health_info=health_info,
+            modem_data=modem_data,
+        )
 
 
 @dataclass

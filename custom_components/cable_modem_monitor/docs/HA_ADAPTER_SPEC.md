@@ -938,6 +938,106 @@ not exposed as a sensor).
 
 ---
 
+## Event Bus
+
+After every poll (success or failure), the data coordinator fires:
+
+```
+cable_modem_monitor_data_updated
+```
+
+CMM fires unconditionally — it does not know or care whether any consumer is
+listening. Data never leaves the user's HA instance unless a subscriber
+(e.g., CMMT) explicitly transmits it.
+
+### Listening in Developer Tools
+
+Developer Tools → Events → enter `cable_modem_monitor_data_updated` →
+Start Listening. The next poll will show the full payload.
+
+The raw event from Developer Tools includes HA-injected wrapper fields
+(`origin`, `time_fired`, `context`) that are not part of the CMM
+payload. The CMM payload is the `data:` block only. `context.user_id`
+and `context.parent_id` are always null — CMM fires unconditionally on
+the poll cycle, not in response to a user action.
+
+### Payload schema
+
+Defined in `SnapshotEventPayload` in
+`cable_modem_monitor_core.orchestration.event_payload`. Consumers validate
+with:
+
+```python
+from solentlabs.cable_modem_monitor_core.orchestration import SnapshotEventPayload
+
+payload = SnapshotEventPayload.model_validate(event.data)
+```
+
+### Payload shape
+
+```yaml
+schema_version: 1         # increment on breaking changes
+connection_status: online # ConnectionStatus enum value
+docsis_status: Operational  # present even when modem_data is null (failure case)
+collector_signal: ok      # CollectorSignal enum value
+error: ""                 # human-readable error, empty on success
+stats_last_reset: null    # ISO 8601 datetime or null
+
+health_info:              # null if no health monitor configured
+  health_status: responsive
+  icmp_latency_ms: 3.003
+  tcp_latency_ms: 4.128
+  http_latency_ms: null   # non-null only when supports_head=True and no recent collection
+
+modem_data:               # null on collection failure
+  downstream:
+    - channel_number: 1
+      lock_status: locked
+      modulation: QAM256
+      channel_id: 21
+      frequency: 237000000
+      power: -0.2
+      snr: 41.1
+      corrected: 0
+      uncorrected: 0
+      channel_type: qam
+    # ... one entry per downstream channel
+  upstream:
+    - channel_number: 1
+      lock_status: locked
+      channel_type: atdma
+      channel_id: 1
+      frequency: 17600000
+      power: 37.2
+    # ... one entry per upstream channel
+  system_info:
+    system_uptime: 1 days 05h:37m:15s
+    hardware_version: V1.0
+    software_version: 7621-5.7.1.5
+    downstream_channel_count: 24
+    upstream_channel_count: 4
+    total_corrected: 0
+    total_uncorrected: 0
+    rate_corrected: 0
+    rate_uncorrected: 0
+    # modem-specific fields may appear here; see FIELD_REGISTRY.md
+```
+
+Channel fields are sparse — not all modems report all fields. All channel
+fields except `channel_number` are optional. `system_info` keys vary by
+modem; see FIELD_REGISTRY.md § system_info for the baseline set.
+
+### PII
+
+CMM fires the full snapshot. Consumers are responsible for stripping PII
+before any external transmission. Known PII fields in `system_info`:
+`mac_address`, `serial_number`. The global denylist lives in
+`packages/cable_modem_monitor_catalog/scripts/data/pii_fields_global.json`.
+Per-modem additions are declared in `pii_fields` in each modem's
+`modem.yaml`.
+
+---
+
 ## Services
 
 All services are registered once on first entry setup and unregistered
@@ -1244,138 +1344,6 @@ files or parser code directly.
 
 ## Distribution
 
-Three packages, three delivery mechanisms. Lock-step versioning —
-all three always share the same version number.
-
-### What ships where
-
-| Package | Delivery | Contains |
-|---------|----------|----------|
-| HACS zip (`cable_modem_monitor.zip`) | GitHub release asset | HA adapter: config flow, coordinator, sensors, buttons, services, translations, icons |
-| Core (`solentlabs-cable-modem-monitor-core`) | PyPI wheel | Auth, parsers, orchestration, loaders, protocol, MCP tools |
-| Catalog (`solentlabs-cable-modem-monitor-catalog`) | PyPI wheel | modem.yaml, parser.yaml for each supported modem |
-
-The HACS zip contains only runtime files — `docs/` is excluded from
-the zip build. Spec files stay in the repo for contributors but don't
-ship to users.
-
-### HACS configuration
-
-`hacs.json` uses release-asset distribution. Each release tag
-attaches a `cable_modem_monitor.zip` built by `release.yml`; HACS
-downloads that asset for fresh installs and updates.
-
-```json
-{
-  "name": "Cable Modem Monitor",
-  "render_readme": true,
-  "homeassistant": "2024.12.0",
-  "hacs": "2.0.0",
-  "zip_release": true,
-  "filename": "cable_modem_monitor.zip",
-  "hide_default_branch": true
-}
-```
-
-**Field rationale:**
-
-- `zip_release: true` + `filename: "cable_modem_monitor.zip"` — HACS
-  fetches the zip asset rather than the full source archive. Smaller
-  download (~120 KB vs ~3.4 MB) containing only runtime files; the
-  `release.yml` zip step excludes `docs/` and bytecode.
-- `hide_default_branch: true` — hides the default branch from HACS's
-  version selector. Without it, users can pick the branch and
-  trigger a silent downgrade.
-- `hacs: "2.0.0"` — minimum HACS version. Defensive — establishes
-  the floor below which behavior is undefined.
-- `homeassistant: "2024.12.0"` — minimum HA version. Bump only when
-  cmm depends on something newer.
-
-**Lesson: alpha.11 (zip_release vs. branch installs).** With
-`zip_release: true` on the default branch, HACS rejects branch
-installs by design. From `hacs/integration#3513` (HACS maintainer):
-*"When a repository uses release assets (`zip_release`), only those
-assets are valid."* This is the one-way change at the alpha→beta
-cut — branch tracking dies the moment this lands on `main`.
-
-**Lesson: alpha.17 (hide_default_branch mandatory).** Without
-`hide_default_branch: true`, the version selector keeps the default
-branch as a pickable option. Users can pick it, expecting an
-update, and silently land on the latest GitHub release zip — which
-can be older than what they had. The pair `zip_release: true` +
-`hide_default_branch: true` is mandatory.
-
-### Manifest loggers
-
-`manifest.json` declares `loggers` for both PyPI packages:
-
-```json
-"loggers": [
-    "solentlabs.cable_modem_monitor_core",
-    "solentlabs.cable_modem_monitor_catalog"
-]
-```
-
-This tells HA to include Core and Catalog log output when a user
-enables debug logging for the integration. Without this field, only
-the `custom_components.cable_modem_monitor` logger is captured.
-
-### Install flow
-
-1. HACS downloads `cable_modem_monitor.zip` from the GitHub release
-2. HACS extracts the zip into `custom_components/cable_modem_monitor/`
-3. HA reads `manifest.json` → sees `requirements` pins
-4. HA pip-installs Core and Catalog from PyPI (exact `==` pins)
-5. Integration loads
-
-### Version pinning
-
-`manifest.json` pins both PyPI packages with exact `==` specifiers.
-This is deliberate — HA only checks whether the installed version
-satisfies the specifier. It never queries PyPI for newer versions
-within a range. A `>=` pin would leave users permanently on the
-version installed at first setup. The `==` pin forces HA to upgrade
-when the manifest changes.
-
-All three packages are released in lock-step. `scripts/release.py`
-bumps all version files atomically. Independent versioning is not
-supported — even a catalog-only change (new modem config) triggers a
-full release, because the user needs a HACS update (new manifest pin)
-to receive the new catalog version.
-
-### Release tiers
-
-Two tiers ship: beta and stable. Alpha is a local-source-only
-development concept and never tags.
-
-| Tag pattern       | PyPI (publish.yml) | GitHub release (release.yml) | HACS visibility                                |
-|-------------------|--------------------|------------------------------|------------------------------------------------|
-| `v*.*.*-beta.*`   | Published          | Pre-release + zip asset      | Manual install via Redownload → version picker |
-| `v*.*.*` (stable) | Published          | Release + zip asset          | Default — auto-update offer to all users       |
-
-**Decision (2026-04-28): no auto-update on betas.** Each beta is a
-deliberate per-version install by the tester. HACS exposes a
-per-integration "Pre-release" switch entity that gates auto-update
-offers; it is intentionally not documented for cmm users because
-auto-update opts out of the "you are explicitly testing this
-version" model and tends to surface silent installs of stale or
-broken intermediate betas. The manual picker (Redownload → "Need a
-different version?" → Release) shows all releases regardless of
-switch state, so testers pick explicitly without any switch setup.
-
-**Decision (2026-04-28): no alpha tier.** Post-alpha.17, alpha
-exists only as a working-tree state for developers running from a
-local clone. Alpha tags are not pushed; `release.py` rejects alpha
-versions; `release.yml` and `publish.yml` neither expect nor handle
-them. This supersedes the prior `BETA_ROADMAP` "Future Alphas"
-plan that proposed alphas as opt-in HACS pre-releases.
-
-### Rollback safety
-
-`zip_release: true` means HACS expects a `cable_modem_monitor.zip`
-asset on every release a user might roll back to. Older stable
-releases (v3.13.x and earlier) lack this asset because the zip
-wasn't built before the beta cut. Backfilling older releases is a
-separate cleanup task. Without that backfill, rollback to a pre-beta
-release fails with a HACS asset-not-found error; forward-only
-updates work fine.
+See [RELEASING.md](../../../docs/reference/RELEASING.md) for package
+architecture, install flow, version pinning, release tiers, and
+rollback safety.

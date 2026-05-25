@@ -101,6 +101,83 @@ class TestModemSnapshot:
         assert snap.modem_data is not None
 
 
+class TestModemSnapshotToEventPayload:
+    """ModemSnapshot.to_event_payload() serialization."""
+
+    def test_top_level_fields(self) -> None:
+        """Core status fields are present at the top level."""
+        snap = ModemSnapshot(
+            connection_status=ConnectionStatus.ONLINE,
+            docsis_status=DocsisStatus.OPERATIONAL,
+            collector_signal=CollectorSignal.OK,
+            error="",
+        )
+        payload = snap.to_event_payload()
+        assert payload.connection_status == "online"
+        assert payload.docsis_status == "Operational"
+        assert payload.collector_signal == "ok"
+        assert payload.error == ""
+        assert payload.modem_data is None
+        assert payload.health_info is None
+
+    def test_docsis_status_stripped_from_system_info(self) -> None:
+        """docsis_status is removed from system_info in the emitted payload."""
+        snap = ModemSnapshot(
+            connection_status=ConnectionStatus.ONLINE,
+            docsis_status=DocsisStatus.OPERATIONAL,
+            modem_data={
+                "downstream": [],
+                "upstream": [],
+                "system_info": {
+                    "docsis_status": "Operational",
+                    "system_uptime": "1 days 00h:00m:00s",
+                },
+            },
+        )
+        payload = snap.to_event_payload()
+        assert payload.modem_data is not None
+        assert "docsis_status" not in payload.modem_data.system_info
+        assert payload.modem_data.system_info["system_uptime"] == "1 days 00h:00m:00s"
+
+    def test_original_modem_data_not_mutated(self) -> None:
+        """to_event_payload() does not modify the snapshot's modem_data dict."""
+        system_info = {"docsis_status": "Operational", "system_uptime": "0 days"}
+        snap = ModemSnapshot(
+            connection_status=ConnectionStatus.ONLINE,
+            docsis_status=DocsisStatus.OPERATIONAL,
+            modem_data={"downstream": [], "upstream": [], "system_info": system_info},
+        )
+        snap.to_event_payload()
+        assert "docsis_status" in system_info
+
+    def test_failure_snapshot_no_modem_data(self) -> None:
+        """Top-level docsis_status is present even when modem_data is null."""
+        snap = ModemSnapshot(
+            connection_status=ConnectionStatus.UNREACHABLE,
+            docsis_status=DocsisStatus.UNKNOWN,
+            collector_signal=CollectorSignal.CONNECTIVITY,
+            error="timed out",
+        )
+        payload = snap.to_event_payload()
+        assert payload.docsis_status == "unknown"
+        assert payload.modem_data is None
+
+    def test_system_info_without_docsis_status(self) -> None:
+        """system_info that never had docsis_status is left unchanged."""
+        snap = ModemSnapshot(
+            connection_status=ConnectionStatus.ONLINE,
+            docsis_status=DocsisStatus.OPERATIONAL,
+            modem_data={
+                "downstream": [],
+                "upstream": [],
+                "system_info": {"system_uptime": "2 days"},
+            },
+        )
+        payload = snap.to_event_payload()
+        assert payload.modem_data is not None
+        assert payload.modem_data.system_info == {"system_uptime": "2 days"}
+
+
 class TestResourceFetch:
     """ResourceFetch timing, size, and response metadata."""
 

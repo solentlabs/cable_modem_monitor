@@ -188,6 +188,15 @@ References:
 - [HACS docs — Publish: General](https://hacs.xyz/docs/publish/start/) — `zip_release` field documented as "only supported for integrations"
 - [hacs/integration#3513](https://github.com/hacs/integration/issues/3513) — definitive answer on `zip_release` + branch tracking incompatibility
 
+### Rollback safety
+
+`zip_release: true` means HACS expects a `cable_modem_monitor.zip`
+asset on every release a user might roll back to. Older stable
+releases (v3.13.x and earlier) lack this asset because the zip
+wasn't built before the beta cut. Without a backfill of those older
+releases, rollback to a pre-beta release fails with a HACS
+asset-not-found error. Forward-only updates work fine.
+
 ## Version Numbering
 
 We follow [Semantic Versioning](https://semver.org/):
@@ -195,6 +204,58 @@ We follow [Semantic Versioning](https://semver.org/):
 - **MAJOR** (X.0.0): Breaking changes
 - **MINOR** (0.X.0): New features, backward compatible
 - **PATCH** (0.0.X): Bug fixes, backward compatible
+
+### Version pinning in manifest.json
+
+`manifest.json` pins both PyPI packages with exact `==` specifiers.
+This is deliberate — HA only checks whether the installed version
+satisfies the specifier; it never queries PyPI for newer versions
+within a range. A `>=` pin would leave users permanently on the
+version installed at first setup. The `==` pin forces HA to upgrade
+when the manifest changes.
+
+All three packages are released in lock-step. `scripts/release.py`
+bumps all version files atomically. Independent versioning is not
+supported — even a catalog-only change (new modem config) triggers a
+full release, because the user needs a HACS update (new manifest pin)
+to receive the new catalog version.
+
+## Package Architecture
+
+### What ships where
+
+| Package | Delivery | Contents |
+|---------|----------|----------|
+| HACS zip (`cable_modem_monitor.zip`) | GitHub release asset | HA adapter: config flow, coordinator, sensors, buttons, services, translations, icons |
+| Core (`solentlabs-cable-modem-monitor-core`) | PyPI wheel | Auth, parsers, orchestration, loaders, protocol, MCP tools |
+| Catalog (`solentlabs-cable-modem-monitor-catalog`) | PyPI wheel | modem.yaml, parser.yaml for each supported modem |
+
+The HACS zip contains only runtime files — `docs/` is excluded from
+the zip build. Spec files stay in the repo for contributors but don't
+ship to users.
+
+### Install flow
+
+1. HACS downloads `cable_modem_monitor.zip` from the GitHub release
+2. HACS extracts the zip into `custom_components/cable_modem_monitor/`
+3. HA reads `manifest.json` → sees `requirements` pins
+4. HA pip-installs Core and Catalog from PyPI (exact `==` pins)
+5. Integration loads
+
+### Manifest loggers
+
+`manifest.json` declares `loggers` for both PyPI packages:
+
+```json
+"loggers": [
+    "solentlabs.cable_modem_monitor_core",
+    "solentlabs.cable_modem_monitor_catalog"
+]
+```
+
+This tells HA to include Core and Catalog log output when a user
+enables debug logging for the integration. Without this field, only
+the `custom_components.cable_modem_monitor` logger is captured.
 
 ## Branching and Merging
 

@@ -326,9 +326,16 @@ def _run_generate(
     enriched = enrich_metadata(analysis_data, user_input=user_meta)
     config = generate_config(analysis_data, enriched.metadata, fleet=fleet)
     if config.validation and not config.validation.valid:
-        result.stage_failed = "generate_config"
-        result.error = "; ".join(config.validation.errors)
-        return None, None
+        # attribution and isps are catalog-completeness requirements — a freshly
+        # generated config legitimately lacks them (both require human input).
+        # Filter them out before deciding whether to block the regression run.
+        pipeline_errors = [
+            e for e in config.validation.errors if "requires attribution" not in e and "requires isps" not in e
+        ]
+        if pipeline_errors:
+            result.stage_failed = "generate_config"
+            result.error = "; ".join(pipeline_errors)
+            return None, None
     return config.modem_yaml, config.parser_yaml
 
 
