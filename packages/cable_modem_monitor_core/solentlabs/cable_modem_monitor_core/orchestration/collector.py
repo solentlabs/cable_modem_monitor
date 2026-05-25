@@ -10,6 +10,7 @@ See ORCHESTRATION_SPEC.md ModemDataCollector section.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Final
 from urllib.parse import urlparse, urlunparse
 
@@ -29,6 +30,27 @@ from ..models.modem_config.auth import BasicAuth, NoneAuth
 from ..parsers.coordinator import ModemParserCoordinator
 from ..parsers.diagnostics import ParseDiagnostics
 from .actions import execute_action
+from .events import (
+    AuthFailed,
+    AuthSucceeded,
+    CollectionComplete,
+    ConnectionFailedDuringLoad,
+    EventLevel,
+    HnapConnectionFailed,
+    HnapLoadError as HnapLoadErrorEvent,
+    HnapSessionExpired,
+    HttpStatusError,
+    LogoutExecuted,
+    LogoutFailed,
+    ParseError,
+    ResourceDecodeError,
+    ResourceFetched,
+    ResourceLoadError as ResourceLoadErrorEvent,
+    SessionCleared,
+    SessionReused,
+    StubPageDetected,
+)
+from .logging import log_event
 from .models import ModemResult, ResourceFetch
 from .signals import CollectorSignal
 
@@ -51,24 +73,7 @@ class LoginLockoutError(Exception):
 
 
 class ModemDataCollector:
-    """Execute a single data collection cycle.
-
-    Wires together auth manager, resource loader, parser coordinator,
-    and optional logout action. The collector is reusable across polls
-    -- the auth manager maintains session state between calls.
-
-    Args:
-        modem_config: Parsed modem.yaml config.
-        parser_config: Parsed parser.yaml config. None if parser.py
-            handles all extraction.
-        post_processor: Optional PostProcessor from parser.py.
-        base_url: Modem URL (e.g., "http://192.168.100.1").
-        username: Login credential.
-        password: Login credential.
-        legacy_ssl: Whether HTTPS requires legacy (SECLEVEL=0)
-            ciphers. Discovered during setup by detect_protocol().
-            Passed to create_session(). Defaults to False.
-    """
+    """Execute a single data collection cycle."""
 
     def __init__(
         self,
@@ -114,17 +119,9 @@ class ModemDataCollector:
         self._last_stub_bodies: dict[str, str] = {}
 
     def execute(self) -> ModemResult:
-        """Execute one data collection.
+        """Execute one data collection."""
+        start = time.monotonic()
 
-        Sequence:
-        1. Auth Manager: validate session -> reuse or authenticate
-        2. Resource Loader: fetch all resources (all-or-nothing)
-        3. Parser: extract channels + system_info -> ModemData
-        4. Logout: execute actions.logout if single-session modem
-
-        Returns:
-            ModemResult with modem data or failure signal.
-        """
         # Phase 1: Auth
         try:
             auth_result = self.authenticate()
@@ -137,12 +134,15 @@ class ModemDataCollector:
             )
         except (requests.ConnectionError, requests.Timeout) as exc:
             error_with_type = f"{type(exc).__name__}: {exc}"
-            _log_auth_failure_detail(
-                model=self._modem_config.model,
-                strategy=_strategy_name(self._modem_config),
-                response=None,
-                error=error_with_type,
-                password=self._password,
+            log_event(
+                _logger,
+                _build_auth_failed_event(
+                    model=self._modem_config.model,
+                    strategy=_strategy_name(self._modem_config),
+                    response=None,
+                    error=error_with_type,
+                    password=self._password,
+                ),
             )
             return ModemResult(
                 success=False,
@@ -151,12 +151,15 @@ class ModemDataCollector:
             )
 
         if not auth_result.success:
-            _log_auth_failure_detail(
-                model=self._modem_config.model,
-                strategy=_strategy_name(self._modem_config),
-                response=auth_result.response,
-                error=auth_result.error,
-                password=self._password,
+            log_event(
+                _logger,
+                _build_auth_failed_event(
+                    model=self._modem_config.model,
+                    strategy=_strategy_name(self._modem_config),
+                    response=auth_result.response,
+                    error=auth_result.error,
+                    password=self._password,
+                ),
             )
             return ModemResult(
                 success=False,
@@ -178,31 +181,51 @@ class ModemDataCollector:
         except ResourceLoadError as exc:
             if exc.status_code in (401, 403):
                 hint = _auth_failure_hint(self._modem_config)
-                _logger.warning(
-                    "%s on %s [%s] — %s",
-                    exc.status_code,
-                    exc.path,
-                    self._modem_config.model,
-                    hint,
+                log_event(
+                    _logger,
+                    HttpStatusError(
+                        model=self._modem_config.model,
+                        path=exc.path,
+                        status_code=exc.status_code,
+                        reason=hint,
+                    ),
                 )
                 return ModemResult(
                     success=False,
                     signal=CollectorSignal.LOAD_AUTH,
                     error=f"{exc.status_code} on {exc.path} — {hint}",
                 )
-            _logger.warning("Resource load error [%s]: %s", self._modem_config.model, exc)
+            log_event(
+                _logger,
+                ResourceLoadErrorEvent(
+                    model=self._modem_config.model,
+                    path=exc.path,
+                    status_code=exc.status_code,
+                    reason=str(exc),
+                ),
+            )
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.LOAD_ERROR,
                 error=str(exc),
             )
         except (requests.ConnectionError, requests.Timeout) as exc:
-            _logger.warning("Connection failed during resource loading [%s]", self._modem_config.model)
+            log_event(
+                _logger,
+                ConnectionFailedDuringLoad(
+                    model=self._modem_config.model,
+                    path="",
+                    status_code=None,
+                    reason=str(exc),
+                ),
+            )
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.CONNECTIVITY,
                 error=str(exc),
             )
+
+        self._emit_resource_fetched_events(fetches)
 
         # Phase 3: Parse + stub-page integrity check (UC-19a)
         parse_outcome = self._run_parse_phase(resources)
@@ -217,11 +240,16 @@ class ModemDataCollector:
 
         ds_count = len(data.get("downstream", []))
         us_count = len(data.get("upstream", []))
-        _logger.debug(
-            "Collection complete [%s]: %d downstream, %d upstream channels",
-            self._modem_config.model,
-            ds_count,
-            us_count,
+        elapsed_ms = (time.monotonic() - start) * 1000
+        log_event(
+            _logger,
+            CollectionComplete(
+                model=self._modem_config.model,
+                ds_count=ds_count,
+                us_count=us_count,
+                elapsed_ms=elapsed_ms,
+                level=EventLevel.DEBUG,
+            ),
         )
 
         return ModemResult(
@@ -285,14 +313,11 @@ class ModemDataCollector:
         return self._session
 
     def clear_session(self) -> None:
-        """Invalidate the current session.
-
-        Called by the orchestrator when it has external evidence that
-        the session is dead: LOAD_AUTH signal or connectivity transition.
-        """
+        """Invalidate the current session."""
         self._session.cookies.clear()
         self._auth_context = None
         self._last_auth_result = None
+        log_event(_logger, SessionCleared(model=self._modem_config.model))
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -319,20 +344,10 @@ class ModemDataCollector:
         *,
         log_level: int = _DEFAULT_AUTH_LOG_LEVEL,
     ) -> AuthResult:
-        """Authenticate the session if not already valid.
-
-        Short-circuits if the session is already valid. Called internally
-        before data collection and externally by the orchestrator before
-        restart actions.
-
-        Args:
-            log_level: Log level for auth manager non-error messages.
-                Config flow passes ``logging.INFO`` for visibility;
-                polling uses the default ``logging.DEBUG``.
-        """
+        """Authenticate the session if not already valid."""
         if self.session_is_valid:
             self._session_reused = True
-            _logger.debug("Session valid [%s] — reusing", self._modem_config.model)
+            log_event(_logger, SessionReused(model=self._modem_config.model))
             return self._last_auth_result or AuthResult(success=True)
 
         self._session_reused = False
@@ -349,11 +364,14 @@ class ModemDataCollector:
         if result.success:
             self._auth_context = result.auth_context
             self._last_auth_result = result
-            _logger.debug(
-                "Auth succeeded [%s]: status=%d, url=%s",
-                self._modem_config.model,
-                result.response.status_code if result.response is not None else 0,
-                result.response_url or "(none)",
+            log_event(
+                _logger,
+                AuthSucceeded(
+                    model=self._modem_config.model,
+                    strategy=_strategy_name(self._modem_config),
+                    status_code=result.response.status_code if result.response is not None else 0,
+                    level=EventLevel.DEBUG,
+                ),
             )
 
         return result
@@ -412,6 +430,16 @@ class ModemDataCollector:
         # login response to reuse.
         effective_auth = auth_result if self._auth_context else None
         resources = loader.fetch(targets, effective_auth)
+        for path, fmt, reason in loader.decode_errors:
+            log_event(
+                _logger,
+                ResourceDecodeError(
+                    model=self._modem_config.model,
+                    path=path,
+                    fmt=fmt,
+                    reason=reason,
+                ),
+            )
         return resources, _to_resource_fetches(loader.resource_fetches)
 
     def _load_hnap_resources(self) -> tuple[dict[str, Any], list[ResourceFetch]]:
@@ -464,22 +492,12 @@ class ModemDataCollector:
         return resources, _to_resource_fetches(loader.resource_fetches)
 
     def _classify_hnap_error(self, exc: HNAPLoadError) -> ModemResult:
-        """Route an HNAP load failure to the correct signal.
-
-        HNAP uses a single fixed endpoint (/HNAP1/) so HTTP errors
-        are never "page not found." The session-reuse context determines
-        whether the error is a stale session (LOAD_AUTH) or a genuine
-        server problem (LOAD_ERROR). See UC-21 and UC-22.
-        """
+        """Route an HNAP load failure to the correct signal."""
         cause = exc.__cause__
 
         # Connection/timeout — modem unreachable (UC-30/UC-31)
         if exc.status_code is None and isinstance(cause, requests.ConnectionError | requests.Timeout):
-            _logger.warning(
-                "HNAP connection failed [%s]: %s",
-                self._modem_config.model,
-                exc,
-            )
+            log_event(_logger, HnapConnectionFailed(model=self._modem_config.model, reason=str(exc)))
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.CONNECTIVITY,
@@ -488,10 +506,12 @@ class ModemDataCollector:
 
         # HTTP error on reused session — stale (UC-21)
         if exc.status_code is not None and self._session_reused:
-            _logger.warning(
-                "HNAP HTTP %s on reused session [%s] — session likely expired",
-                exc.status_code,
-                self._modem_config.model,
+            log_event(
+                _logger,
+                HnapSessionExpired(
+                    model=self._modem_config.model,
+                    status_code=exc.status_code,
+                ),
             )
             return ModemResult(
                 success=False,
@@ -500,11 +520,7 @@ class ModemDataCollector:
             )
 
         # Fresh session HTTP error or JSON parse — genuine problem (UC-22)
-        _logger.warning(
-            "HNAP load error [%s]: %s",
-            self._modem_config.model,
-            exc,
-        )
+        log_event(_logger, HnapLoadErrorEvent(model=self._modem_config.model, reason=str(exc)))
         return ModemResult(
             success=False,
             signal=CollectorSignal.LOAD_ERROR,
@@ -517,16 +533,26 @@ class ModemDataCollector:
             raise RuntimeError("No parser coordinator configured")
         return self._coordinator.parse(resources)
 
-    def _run_parse_phase(self, resources: dict[str, Any]) -> dict[str, Any] | ModemResult:
-        """Run parse + stub-page integrity check.
+    def _emit_resource_fetched_events(self, fetches: list[ResourceFetch]) -> None:
+        """Emit one ResourceFetched event per successfully loaded page."""
+        for f in fetches:
+            log_event(
+                _logger,
+                ResourceFetched(
+                    model=self._modem_config.model,
+                    path=f.path,
+                    status_code=f.status_code,
+                    size_bytes=f.size_bytes,
+                    elapsed_ms=f.duration_ms,
+                ),
+            )
 
-        Returns ModemData on success or a failure ModemResult for
-        PARSE_ERROR / LOAD_INTEGRITY paths. Keeps execute() readable.
-        """
+    def _run_parse_phase(self, resources: dict[str, Any]) -> dict[str, Any] | ModemResult:
+        """Run parse + stub-page integrity check."""
         try:
             data, diagnostics = self._parse(resources)
         except Exception as exc:
-            _logger.warning("Parse error [%s]: %s", self._modem_config.model, exc)
+            log_event(_logger, ParseError(model=self._modem_config.model, reason=str(exc)))
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.PARSE_ERROR,
@@ -539,18 +565,17 @@ class ModemDataCollector:
     def _build_load_integrity_result(self, diagnostics: ParseDiagnostics, resources: dict[str, Any]) -> ModemResult:
         """Build a LOAD_INTEGRITY result when 0 of N expected anchors were found (UC-19a)."""
         affected = ", ".join(diagnostics.zero_fulfillment_resources)
-        counts = "; ".join(
-            f"{path} ({c.fulfilled}/{c.expected})"
-            for path, c in diagnostics.by_resource.items()
-            if c.expected > 0 and c.fulfilled == 0
-        )
-        _logger.warning(
-            "Stub response on %s [%s] — 0 of N expected parser anchors found, "
-            "treating as session integrity failure (%s)",
-            affected,
-            self._modem_config.model,
-            counts,
-        )
+        for path, c in diagnostics.by_resource.items():
+            if c.expected > 0 and c.fulfilled == 0:
+                log_event(
+                    _logger,
+                    StubPageDetected(
+                        model=self._modem_config.model,
+                        path=path,
+                        anchors_found=c.fulfilled,
+                        anchors_expected=c.expected,
+                    ),
+                )
         self._last_stub_bodies = {
             path: str(body)
             for path in diagnostics.zero_fulfillment_resources
@@ -563,12 +588,7 @@ class ModemDataCollector:
         )
 
     def _execute_logout_if_needed(self) -> None:
-        """Execute logout action for single-session modems.
-
-        Best-effort — logout failure does not affect the collection
-        result. The session is released so users can access the
-        modem's web UI between polls.
-        """
+        """Execute logout action for single-session modems."""
         actions = self._modem_config.actions
         if actions is None or actions.logout is None:
             return
@@ -576,17 +596,16 @@ class ModemDataCollector:
         if self._modem_config.session is None or self._modem_config.session.max_concurrent != 1:
             return
 
-        _logger.debug("Executing logout [%s]", self._modem_config.model)
+        log_event(_logger, LogoutExecuted(model=self._modem_config.model))
         try:
             execute_action(self, self._modem_config, actions.logout, log_level=_LOGOUT_LOG_LEVEL)
-        except Exception:
-            _logger.debug("Logout failed (best-effort) [%s]", self._modem_config.model, exc_info=True)
+        except Exception as exc:
+            log_event(_logger, LogoutFailed(model=self._modem_config.model, reason=str(exc)))
         else:
             # Session is dead server-side after logout — clear local
             # state so next poll re-authenticates instead of reusing
             # a stale session.
             self.clear_session()
-            _logger.debug("Session cleared after logout [%s]", self._modem_config.model)
 
 
 def _auth_failure_hint(modem_config: Any) -> str:
@@ -629,34 +648,29 @@ def _to_resource_fetches(
 
 
 # ---------------------------------------------------------------------------
-# Auth-failure detail log
+# Auth-failure event builder
 # ---------------------------------------------------------------------------
 
 
-def _log_auth_failure_detail(
+def _build_auth_failed_event(
     model: str,
     strategy: str,
     response: requests.Response | None,
     error: str,
     password: str,
-) -> None:
-    """Emit one WARNING with sanitized wire detail for an auth failure.
-
-    Replaces the older session-adapter capture machinery: a
-    maintainer triaging a stuck-setup user only needs to see what
-    the modem returned. Here it is in one log line — strategy,
-    request line, response status + Content-Type, and a short body
-    snippet with the user's password scrubbed if it appears
-    literally.
-
-    The URL has its query string stripped (some strategies — Arris
-    ``url_token`` notably — put credentials in the query). The body
-    snippet is truncated to keep logs tractable.
-    """
+) -> AuthFailed:
+    """Build a sanitized AuthFailed event from raw auth result data."""
     if response is None:
-        # ConnectionError / Timeout — no response to dump.
-        _logger.warning("Auth failed [%s] strategy=%s — %s", model, strategy, error)
-        return
+        return AuthFailed(
+            model=model,
+            strategy=strategy,
+            error=error,
+            method=None,
+            url=None,
+            status_code=None,
+            content_type=None,
+            response_body=None,
+        )
 
     method = response.request.method if response.request else "?"
     url = _strip_url_query(response.url)
@@ -666,15 +680,15 @@ def _log_auth_failure_detail(
     if len(response.text) > _FAILURE_BODY_SNIPPET_MAX:
         body_snippet = body_snippet + "... (truncated)"
 
-    _logger.warning(
-        "Auth failed [%s] strategy=%s\n  request: %s %s\n  response: %d %s\n  body: %s",
-        model,
-        strategy,
-        method,
-        url,
-        status,
-        content_type,
-        body_snippet,
+    return AuthFailed(
+        model=model,
+        strategy=strategy,
+        error=error,
+        method=method,
+        url=url,
+        status_code=status,
+        content_type=content_type,
+        response_body=body_snippet,
     )
 
 

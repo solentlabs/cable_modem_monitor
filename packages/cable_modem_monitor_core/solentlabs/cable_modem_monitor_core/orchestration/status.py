@@ -12,12 +12,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from .events import ZeroChannelsNoSystemInfo
+from .logging import log_event
 from .signals import ConnectionStatus, DocsisStatus
 
 _logger = logging.getLogger(__name__)
 
 
-def derive_connection_status(modem_data: dict[str, Any]) -> ConnectionStatus:
+def derive_connection_status(modem_data: dict[str, Any], model: str = "") -> ConnectionStatus:
     """Derive connection status from a successful collection.
 
     Maps channel data and system_info to a ConnectionStatus value.
@@ -37,10 +39,7 @@ def derive_connection_status(modem_data: dict[str, Any]) -> ConnectionStatus:
     if system_info:
         return ConnectionStatus.NO_SIGNAL
 
-    _logger.warning(
-        "Zero channels and no system_info — cannot confirm parser "
-        "health. Verify modem model matches the configured parser."
-    )
+    log_event(_logger, ZeroChannelsNoSystemInfo(model=model))
     return ConnectionStatus.NO_SIGNAL
 
 

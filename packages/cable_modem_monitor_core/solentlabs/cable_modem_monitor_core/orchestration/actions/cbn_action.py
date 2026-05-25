@@ -17,6 +17,14 @@ import logging
 import requests
 
 from ...models.modem_config.actions import CbnAction
+from ..events import (
+    ActionCompleted,
+    ActionConnectionLost,
+    ActionFailed,
+    ActionStarted,
+    EventLevel,
+)
+from ..logging import log_event
 from .base import ActionResult
 
 _logger = logging.getLogger(__name__)
@@ -33,27 +41,14 @@ def execute_cbn_action(
     log_level: int = logging.INFO,
     model: str = "",
 ) -> ActionResult:
-    """Execute a CBN XML POST action.
-
-    Args:
-        session: Authenticated session with session cookies.
-        base_url: Modem base URL.
-        action: CbnAction config with ``fun`` parameter.
-        setter_endpoint: URL path for the setter POST.
-        session_cookie_name: Cookie name for the rotating token.
-        timeout: Per-request timeout in seconds.
-        log_level: Log level for action messages.
-        model: Modem model name for log messages.
-
-    Returns:
-        ActionResult with success status.
-    """
-    log = _logger.log
+    """Execute a CBN XML POST action."""
+    action_name = f"fun={action.fun}"
+    level = EventLevel(log_level)
     setter_url = f"{base_url}{setter_endpoint}"
     token = session.cookies.get(session_cookie_name) or ""
     post_body = f"token={token}&fun={action.fun}"
 
-    log(log_level, "CBN action fun=%d [%s]: posting to %s", action.fun, model, setter_url)
+    log_event(_logger, ActionStarted(model=model, transport="cbn", action_name=action_name, level=level))
 
     try:
         response = session.post(
@@ -64,36 +59,30 @@ def execute_cbn_action(
         )
     except requests.ConnectionError:
         # Expected for restart — modem drops connection as it reboots
-        log(
-            log_level,
-            "CBN action fun=%d [%s]: connection lost (expected for restart)",
-            action.fun,
-            model,
-        )
+        log_event(_logger, ActionConnectionLost(model=model, transport="cbn", action_name=action_name, level=level))
         return ActionResult(
             success=True,
             message=f"CBN action fun={action.fun} sent (connection lost — modem rebooting)",
             details={"fun": action.fun, "connection_lost": True},
         )
     except requests.RequestException as exc:
-        _logger.warning(
-            "CBN action fun=%d failed [%s]: %s",
-            action.fun,
-            model,
-            exc,
-        )
+        log_event(_logger, ActionFailed(model=model, transport="cbn", action_name=action_name, reason=str(exc)))
         return ActionResult(
             success=False,
             message=f"CBN action fun={action.fun} failed: {exc}",
             details={"fun": action.fun},
         )
 
-    log(
-        log_level,
-        "CBN action fun=%d [%s]: HTTP %d",
-        action.fun,
-        model,
-        response.status_code,
+    log_event(
+        _logger,
+        ActionCompleted(
+            model=model,
+            transport="cbn",
+            action_name=action_name,
+            status_code=response.status_code,
+            result="ok" if response.ok else "error",
+            level=level,
+        ),
     )
     return ActionResult(
         success=response.ok,

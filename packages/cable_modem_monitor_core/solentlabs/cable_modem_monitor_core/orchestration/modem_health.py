@@ -38,6 +38,8 @@ import time
 import requests
 
 from ..connectivity import create_session
+from .events import HealthStatusReport
+from .logging import log_event
 from .models import HealthInfo
 from .signals import HealthStatus
 
@@ -493,19 +495,17 @@ class HealthMonitor:
             http_bytes=http_bytes,
             skip_reason=skip_reason,
         )
-        status = info.health_status.value
         changed = info.health_status != self._previous_status
         self._previous_status = info.health_status
-
-        if changed and info.health_status in (
-            HealthStatus.DEGRADED,
-            HealthStatus.UNRESPONSIVE,
-        ):
-            _logger.warning("Health check [%s]: %s (%s)", self._model, status, detail)
-        elif changed:
-            _logger.info("Health check [%s]: %s (%s)", self._model, status, detail)
-        else:
-            _logger.debug("Health check [%s]: %s (%s)", self._model, status, detail)
+        log_event(
+            _logger,
+            HealthStatusReport(
+                model=self._model,
+                status=info.health_status.value,
+                changed=changed,
+                detail=detail,
+            ),
+        )
 
     def _probe_detail(
         self,

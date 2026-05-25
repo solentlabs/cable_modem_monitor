@@ -28,6 +28,8 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
+from .events import RecoveryObserverException, RecoveryWindowClosed, RecoveryWindowOpened
+from .logging import log_event
 from .signals import CollectorSignal
 
 if TYPE_CHECKING:
@@ -129,10 +131,13 @@ class Recovery:
         self._active = True
         self._started_at = time.monotonic()
         self._reason = reason
-        _logger.info(
-            "Recovery window open [%s] — reason: %s",
-            self._modem_config.model,
-            reason,
+        log_event(
+            _logger,
+            RecoveryWindowOpened(
+                model=self._modem_config.model,
+                reason=reason,
+                window_seconds=float(self.WINDOW_SECONDS),
+            ),
         )
         # Fire even on re-entry so HA's cadence listener gets a kick
         # to refresh async_request_refresh timing.
@@ -225,11 +230,13 @@ class Recovery:
         # stale if the window spanned a long outage with no successful
         # polls. The current modem state lives in the snapshot stream,
         # not here.
-        _logger.info(
-            "Recovery window closed [%s] — elapsed: %ds, last snapshot docsis: %s",
-            self._modem_config.model,
-            int(elapsed),
-            self._last_docsis_status,
+        log_event(
+            _logger,
+            RecoveryWindowClosed(
+                model=self._modem_config.model,
+                elapsed_seconds=elapsed,
+                last_docsis_status=self._last_docsis_status,
+            ),
         )
         self._active = False
         self._started_at = None
@@ -247,10 +254,13 @@ class Recovery:
         self._active = True
         self._started_at = time.monotonic()
         self._reason = reason
-        _logger.info(
-            "Recovery window open [%s] — reason: %s",
-            self._modem_config.model,
-            reason,
+        log_event(
+            _logger,
+            RecoveryWindowOpened(
+                model=self._modem_config.model,
+                reason=reason,
+                window_seconds=float(self.WINDOW_SECONDS),
+            ),
         )
         self._fire_observer()
 
@@ -357,8 +367,11 @@ class Recovery:
             return
         try:
             self._on_state_change()
-        except Exception:  # noqa: BLE001
-            _logger.exception(
-                "Recovery state-change observer raised [%s]",
-                self._modem_config.model,
+        except Exception as exc:  # noqa: BLE001
+            log_event(
+                _logger,
+                RecoveryObserverException(
+                    model=self._modem_config.model,
+                    exc_type=type(exc).__name__,
+                ),
             )

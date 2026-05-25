@@ -22,6 +22,15 @@ from typing import TYPE_CHECKING
 
 import requests
 
+from ..events import (
+    ActionCompleted,
+    ActionConnectionLost,
+    ActionPreFetchCompleted,
+    ActionPreFetchFailed,
+    ActionStarted,
+    EventLevel,
+)
+from ..logging import log_event
 from .base import ActionResult
 
 if TYPE_CHECKING:
@@ -42,9 +51,13 @@ def execute_http_action(
 ) -> ActionResult:
     """Execute an HTTP action (logout, restart); connection errors on restart are treated as success."""
     stripped_base = base_url.rstrip("/")
+    level = EventLevel(log_level)
+    action_name = action.method
 
     # Phase 1 + 2: Pre-fetch and endpoint extraction
-    endpoint = _resolve_endpoint(session, stripped_base, action, timeout, log_level=log_level, model=model)
+    endpoint = _resolve_endpoint(
+        session, stripped_base, action, timeout, log_level=log_level, model=model, action_name=action_name
+    )
     if endpoint is None:
         return ActionResult(
             success=False,
@@ -63,7 +76,7 @@ def execute_http_action(
         url = f"{url}{sep}{qs}"
     headers = dict(action.headers) if action.headers else None
 
-    _logger.log(log_level, "Action [%s]: %s %s", model, action.method, endpoint)
+    log_event(_logger, ActionStarted(model=model, transport="http", action_name=action_name, level=level))
 
     try:
         if action.json_body is not None:
@@ -83,20 +96,24 @@ def execute_http_action(
                 headers=headers,
                 timeout=timeout,
             )
-        _logger.log(log_level, "Action response [%s]: %d", model, resp.status_code)
+        log_event(
+            _logger,
+            ActionCompleted(
+                model=model,
+                transport="http",
+                action_name=action_name,
+                status_code=resp.status_code,
+                result="ok" if resp.ok else "error",
+                level=level,
+            ),
+        )
         return ActionResult(
             success=True,
             message=f"Action completed with status {resp.status_code}",
             details={"status_code": resp.status_code},
         )
     except (requests.ConnectionError, requests.Timeout):
-        _logger.log(
-            log_level,
-            "Action [%s]: connection lost after %s %s — expected for restart",
-            model,
-            action.method,
-            endpoint,
-        )
+        log_event(_logger, ActionConnectionLost(model=model, transport="http", action_name=action_name, level=level))
         return ActionResult(
             success=True,
             message="Action sent (connection lost — expected for restart)",
@@ -111,64 +128,75 @@ def _resolve_endpoint(
     *,
     log_level: int = logging.INFO,
     model: str = "",
+    action_name: str = "",
 ) -> str | None:
     """Return the resolved action endpoint; ``None`` if keyword extraction fails with no static fallback."""
     if not action.pre_fetch_url:
         return action.endpoint
 
-    # Phase 1: Pre-fetch
+    level = EventLevel(log_level)
     pre_url = f"{base_url}{action.pre_fetch_url}"
-    _logger.log(log_level, "Action pre-fetch [%s]: GET %s", model, action.pre_fetch_url)
 
+    # Phase 1: Pre-fetch (start log dropped — no ActionPreFetchStarted event)
     try:
         pre_resp = session.get(pre_url, timeout=timeout)
-        _logger.log(
-            log_level,
-            "Action pre-fetch [%s]: %d (%d bytes)",
-            model,
-            pre_resp.status_code,
-            len(pre_resp.content),
-        )
+        # Response bytes log dropped — absorbed into downstream pre-fetch events
     except (requests.ConnectionError, requests.Timeout):
-        _logger.warning(
-            "Action pre-fetch failed [%s]: GET %s — connection lost",
-            model,
-            action.pre_fetch_url,
-        )
         # Pre-fetch may only be for session state; try static endpoint
-        return action.endpoint or None
+        fallback = action.endpoint or None
+        log_event(
+            _logger,
+            ActionPreFetchFailed(
+                model=model,
+                transport="http",
+                action_name=action_name,
+                reason="connection_lost",
+                fallback_endpoint=fallback,
+            ),
+        )
+        return fallback
 
     # Phase 2: Endpoint extraction (only if keyword is configured)
     if action.endpoint_pattern:
-        extracted = _extract_form_action(
-            pre_resp.text,
-            action.endpoint_pattern,
-        )
+        extracted = _extract_form_action(pre_resp.text, action.endpoint_pattern)
         if extracted:
-            _logger.log(log_level, "Action endpoint extracted [%s]: %s", model, extracted)
+            log_event(
+                _logger,
+                ActionPreFetchCompleted(
+                    model=model,
+                    transport="http",
+                    action_name=action_name,
+                    key_count=1,
+                    fallback_endpoint=None,
+                    level=level,
+                ),
+            )
             return extracted
 
         # Extraction failed — use fallback or fail
-        page_preview = pre_resp.text[:500] if pre_resp.text else "(empty)"
         if action.endpoint:
-            _logger.warning(
-                'Action endpoint extraction failed [%s] — keyword "%s" not '
-                "found in any form action. Falling back to static "
-                "endpoint %s. Page content preview: %s",
-                model,
-                action.endpoint_pattern,
-                action.endpoint,
-                page_preview,
+            log_event(
+                _logger,
+                ActionPreFetchCompleted(
+                    model=model,
+                    transport="http",
+                    action_name=action_name,
+                    key_count=0,
+                    fallback_endpoint=action.endpoint,
+                    level=level,
+                ),
             )
             return action.endpoint
 
-        _logger.warning(
-            'Action endpoint extraction failed [%s] — keyword "%s" not '
-            "found in any form action. No static endpoint fallback. "
-            "Page content preview: %s",
-            model,
-            action.endpoint_pattern,
-            page_preview,
+        log_event(
+            _logger,
+            ActionPreFetchFailed(
+                model=model,
+                transport="http",
+                action_name=action_name,
+                reason=f'keyword "{action.endpoint_pattern}" not found in any form action',
+                fallback_endpoint=None,
+            ),
         )
         return None
 

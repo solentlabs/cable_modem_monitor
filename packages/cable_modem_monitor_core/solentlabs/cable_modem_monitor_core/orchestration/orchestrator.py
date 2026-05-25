@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from .events import AuthStateReset, ConnectivityBackoffReset
+from .logging import log_event
 from .models import ModemSnapshot, OrchestratorDiagnostics, RestartResult
 from .policy import SignalPolicy
 from .recovery import Recovery
@@ -182,7 +184,7 @@ class Orchestrator:
         self._collector.clear_session()
         self._first_poll_complete = False
         self._prev_error_baseline = None
-        _logger.info("Auth state reset — next poll will attempt fresh login")
+        log_event(_logger, AuthStateReset(model=self._modem_config.model))
 
     def reset_connectivity(self) -> None:
         """Reset connectivity backoff for immediate retry.
@@ -194,7 +196,7 @@ class Orchestrator:
         was_backing_off = self._policy.connectivity_streak > 0
         self._policy.reset_connectivity()
         if was_backing_off:
-            _logger.info("Connectivity backoff reset — next poll will attempt connection")
+            log_event(_logger, ConnectivityBackoffReset(model=self._modem_config.model))
 
     def diagnostics(self) -> OrchestratorDiagnostics:
         """Return a read-only snapshot of operational diagnostics.
@@ -426,7 +428,7 @@ class Orchestrator:
         assert modem_data is not None  # guaranteed by success=True
 
         # Derive statuses
-        connection_status = derive_connection_status(modem_data)
+        connection_status = derive_connection_status(modem_data, model=self._modem_config.model)
         enrich_docsis_status(modem_data)
         docsis_status = modem_data.get("system_info", {}).get("docsis_status", DocsisStatus.UNKNOWN)
 

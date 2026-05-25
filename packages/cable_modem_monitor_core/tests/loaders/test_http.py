@@ -94,13 +94,13 @@ _DECODE_CASES: list[tuple[str, str, str, str | None, str]] = [
 @pytest.mark.parametrize("text,fmt,encoding,exp_type,desc", _DECODE_CASES, ids=[c[4] for c in _DECODE_CASES])
 def test_decode_response(text: str, fmt: str, encoding: str, exp_type: str | None, desc: str) -> None:
     """_decode_response: {desc}."""
-    result = _decode_response(text, fmt, encoding)
+    value, reason = _decode_response(text, fmt, encoding)
     if exp_type is None:
-        assert result is None
+        assert value is None
     elif exp_type == "soup":
-        assert isinstance(result, BeautifulSoup)
+        assert isinstance(value, BeautifulSoup)
     elif exp_type == "dict":
-        assert isinstance(result, dict)
+        assert isinstance(value, dict)
 
 
 class TestDecodeResponseBehaviors:
@@ -108,13 +108,34 @@ class TestDecodeResponseBehaviors:
 
     def test_json_dict_preserves_keys(self) -> None:
         """Valid JSON dict preserves original keys."""
-        result = _decode_response('{"key": "value"}', "json", "")
-        assert result["key"] == "value"
+        value, _ = _decode_response('{"key": "value"}', "json", "")
+        assert value["key"] == "value"
 
     def test_json_non_dict_wrapped_in_raw(self) -> None:
         """Non-dict JSON is wrapped in _raw key."""
-        result = _decode_response("[1, 2, 3]", "json", "")
-        assert result["_raw"] == [1, 2, 3]
+        value, _ = _decode_response("[1, 2, 3]", "json", "")
+        assert value["_raw"] == [1, 2, 3]
+
+    def test_failure_returns_reason(self) -> None:
+        """Decode failures return a non-None reason string."""
+        _, reason = _decode_response("not json", "json", "")
+        assert reason == "invalid JSON"
+
+    def test_empty_body_returns_none_reason(self) -> None:
+        """Empty body returns (None, None) — not a decode error."""
+        value, reason = _decode_response("", "table", "")
+        assert value is None
+        assert reason is None
+
+    def test_base64_failure_returns_reason(self) -> None:
+        """Bad base64 returns (None, reason)."""
+        _, reason = _decode_response("!!!invalid", "table", "base64")
+        assert reason == "base64 decode failed"
+
+    def test_xml_returns_reason(self) -> None:
+        """XML format returns (None, reason) — not yet supported."""
+        _, reason = _decode_response("<root/>", "xml", "")
+        assert reason == "XML format not yet supported"
 
 
 class TestHTTPResourceLoader:

@@ -78,6 +78,7 @@ class HTTPResourceLoader:
         self._query_params = query_params or {}
         self._headers = headers
         self.resource_fetches: list[tuple[str, float, int, int, str]] = []
+        self.decode_errors: list[tuple[str, str, str]] = []  # (path, fmt, reason)
 
     def fetch(
         self,
@@ -103,6 +104,7 @@ class HTTPResourceLoader:
         """
         resources: dict[str, Any] = {}
         self.resource_fetches = []
+        self.decode_errors = []
 
         # Check for auth response reuse
         reuse_path = ""
@@ -119,13 +121,7 @@ class HTTPResourceLoader:
                     target.path,
                     self._model,
                 )
-                decoded = _decode_response(
-                    reuse_response.text,
-                    target.format,
-                    target.encoding,
-                )
-                if decoded is not None:
-                    resources[target.path] = decoded
+                self._store_decoded(resources, target.path, reuse_response.text, target.format, target.encoding)
                 continue
 
             # Fetch the page
@@ -190,21 +186,24 @@ class HTTPResourceLoader:
                 )
                 raise LoginPageDetectedError(target.path)
 
-            decoded = _decode_response(
-                response.text,
-                target.format,
-                target.encoding,
-            )
-            if decoded is not None:
-                resources[target.path] = decoded
-            else:
-                _logger.warning(
-                    "Empty or undecoded response for %s (format=%s)",
-                    target.path,
-                    target.format,
-                )
+            self._store_decoded(resources, target.path, response.text, target.format, target.encoding)
 
         return resources
+
+    def _store_decoded(
+        self,
+        resources: dict[str, Any],
+        path: str,
+        text: str,
+        fmt: str,
+        encoding: str,
+    ) -> None:
+        """Decode text and store result, or record decode error."""
+        decoded, reason = _decode_response(text, fmt, encoding)
+        if decoded is not None:
+            resources[path] = decoded
+        elif reason is not None:
+            self.decode_errors.append((path, fmt, reason))
 
     def _build_url(self, path: str) -> str:
         """Build the full URL for a resource path.
@@ -262,50 +261,42 @@ def _decode_response(
     text: str,
     fmt: str,
     encoding: str,
-) -> Any:
+) -> tuple[Any, str | None]:
     """Decode a response body based on format and encoding.
 
-    Args:
-        text: Raw response body text.
-        fmt: Format from parser.yaml (``table``, ``json``, etc.).
-        encoding: Optional encoding (``base64`` or empty).
-
-    Returns:
-        Decoded value (``BeautifulSoup`` or ``dict``), or ``None``
-        if the response is empty.
+    Returns ``(value, None)`` on success, ``(None, reason)`` on decode
+    failure, ``(None, None)`` for an empty body.  Callers check reason
+    to distinguish a real decode error from a silently-empty response.
     """
     if not text:
-        return None
+        return None, None
 
     # Handle base64 encoding on response body
     if encoding == "base64":
         try:
             text = base64.b64decode(text).decode("utf-8", errors="replace")
         except Exception:
-            _logger.debug("Failed to base64-decode response")
-            return None
+            return None, "base64 decode failed"
 
     kind = _decode_kind(fmt)
 
     if kind == "html":
-        return BeautifulSoup(text, "html.parser")
+        return BeautifulSoup(text, "html.parser"), None
 
     if kind == "json":
         try:
             data = json.loads(text)
         except json.JSONDecodeError:
-            _logger.warning("Response is not valid JSON")
-            return None
+            return None, "invalid JSON"
         if not isinstance(data, dict):
-            return {"_raw": data}
-        return data
+            return {"_raw": data}, None
+        return data, None
 
     if kind == "xml":
-        _logger.warning("XML format not yet supported by loader")
-        return None
+        return None, "XML format not yet supported"
 
     _logger.warning("Unknown format '%s', returning as BeautifulSoup", fmt)
-    return BeautifulSoup(text, "html.parser")
+    return BeautifulSoup(text, "html.parser"), None
 
 
 def _is_login_page(text: str) -> bool:

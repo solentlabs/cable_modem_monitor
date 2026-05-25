@@ -12,6 +12,15 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from .events import (
+    AuthCircuitBreakerOpen,
+    AuthLockoutDetected,
+    ConnectivityBackoffActive,
+    ConnectivityBackoffCleared,
+    ConnectivityFailureDetected,
+    StaleSessionRecoveryDisabled,
+)
+from .logging import log_event
 from .signals import CollectorSignal, ConnectionStatus
 
 if TYPE_CHECKING:
@@ -115,12 +124,9 @@ class SignalPolicy:
             return
 
         self._session_reuse_disabled = True
-        _logger.info(
-            "Recovered stale-session streak reached threshold [%s] — "
-            "disabling session reuse for this runtime "
-            "(%d consecutive recoveries)",
-            self._model,
-            self._stale_session_recovery_streak,
+        log_event(
+            _logger,
+            StaleSessionRecoveryDisabled(model=self._model, streak=self._stale_session_recovery_streak),
         )
 
     def reset_stale_session_recovery_streak(self) -> None:
@@ -147,14 +153,10 @@ class SignalPolicy:
 
         self._connectivity_backoff -= 1
         if self._connectivity_backoff > 0:
-            _logger.info(
-                "Connectivity backoff active [%s] (%d remaining), skipping poll",
-                self._model,
-                self._connectivity_backoff,
-            )
+            log_event(_logger, ConnectivityBackoffActive(model=self._model, polls_remaining=self._connectivity_backoff))
             return True
 
-        _logger.info("Connectivity backoff cleared [%s], retrying", self._model)
+        log_event(_logger, ConnectivityBackoffCleared(model=self._model))
         return False
 
     def apply(self, result: ModemResult) -> ConnectionStatus:
@@ -185,11 +187,7 @@ class SignalPolicy:
 
         if signal == CollectorSignal.AUTH_LOCKOUT:
             self._auth_failure_streak += 1
-            _logger.warning(
-                "Auth lockout [%s] — firmware anti-brute-force triggered, stopping immediately (streak: %d)",
-                self._model,
-                self._auth_failure_streak,
-            )
+            log_event(_logger, AuthLockoutDetected(model=self._model, streak=self._auth_failure_streak))
             self._trip_circuit_breaker()
             return ConnectionStatus.AUTH_FAILED
 
@@ -228,11 +226,9 @@ class SignalPolicy:
                 self._max_connectivity_backoff,
             )
             self._connectivity_backoff = backoff
-            _logger.warning(
-                "Connection failure [%s] — unreachable (streak: %d, backoff: %d polls)",
-                self._model,
-                self._connectivity_streak,
-                backoff,
+            log_event(
+                _logger,
+                ConnectivityFailureDetected(model=self._model, streak=self._connectivity_streak, backoff_polls=backoff),
             )
             return ConnectionStatus.UNREACHABLE
 
@@ -290,11 +286,7 @@ class SignalPolicy:
         bad, retrying is pointless and risks modem anti-brute-force.
         """
         self._circuit_open = True
-        _logger.error(
-            "Auth circuit breaker OPEN [%s] — credentials rejected. "
-            "Polling stopped. Reconfigure credentials to resume.",
-            self._model,
-        )
+        log_event(_logger, AuthCircuitBreakerOpen(model=self._model, streak=self._auth_failure_streak))
 
     def _maybe_trip_circuit_breaker(self) -> None:
         """Trip the circuit breaker if threshold reached.
@@ -303,9 +295,4 @@ class SignalPolicy:
         """
         if self._auth_failure_streak >= self._threshold:
             self._circuit_open = True
-            _logger.error(
-                "Auth circuit breaker OPEN [%s] — %d consecutive auth failures. "
-                "Polling stopped. Reconfigure credentials to resume.",
-                self._model,
-                self._auth_failure_streak,
-            )
+            log_event(_logger, AuthCircuitBreakerOpen(model=self._model, streak=self._auth_failure_streak))

@@ -20,6 +20,16 @@ from ...protocol.hnap import (
     HNAP_NAMESPACE,
     compute_auth_header,
 )
+from ..events import (
+    ActionCompleted,
+    ActionConnectionLost,
+    ActionFailed,
+    ActionPreFetchCompleted,
+    ActionPreFetchFailed,
+    ActionStarted,
+    EventLevel,
+)
+from ..logging import log_event
 from .base import ActionResult
 
 if TYPE_CHECKING:
@@ -42,34 +52,9 @@ def execute_hnap_action(
     log_level: int = logging.INFO,
     model: str = "",
 ) -> ActionResult:
-    """Execute an HNAP SOAP action (restart).
-
-    Phases:
-    1. Pre-fetch (optional): call ``pre_fetch_action`` to get current
-       config values for parameter interpolation.
-    2. Interpolation: replace ``${var:default}`` placeholders in
-       ``params`` with values from the pre-fetch response.
-    3. Main request: HMAC-sign and send the SOAP call.
-    4. Response validation: check ``response_key``, ``result_key``,
-       ``success_value``.
-
-    Connection errors are expected during restart (the modem is
-    rebooting) and treated as success.
-
-    Args:
-        session: Authenticated session with HNAP cookies.
-        base_url: Modem base URL.
-        action: HNAP action config from modem.yaml.
-        private_key: HNAP HMAC signing key from auth context.
-        hmac_algorithm: HMAC algorithm (``"md5"`` or ``"sha256"``).
-        timeout: Per-request timeout in seconds.
-        log_level: Log level for action messages. Use ``logging.DEBUG``
-            for routine operations to reduce noise.
-
-    Returns:
-        ActionResult with success status and response details.
-    """
+    """Execute an HNAP SOAP action (restart); connection errors are treated as success."""
     url = f"{base_url.rstrip('/')}{HNAP_ENDPOINT}"
+    level = EventLevel(log_level)
 
     # Phase 1: Pre-fetch current config (optional)
     pre_fetch_data: dict[str, str] = {}
@@ -89,7 +74,7 @@ def execute_hnap_action(
     params = _interpolate_params(dict(action.params), pre_fetch_data)
 
     # Phase 3: Send SOAP request
-    _logger.log(log_level, "Action [%s]: HNAP %s", model, action.action_name)
+    log_event(_logger, ActionStarted(model=model, transport="hnap", action_name=action.action_name, level=level))
 
     body = {action.action_name: params}
     headers = {
@@ -110,11 +95,9 @@ def execute_hnap_action(
             timeout=timeout,
         )
     except (requests.ConnectionError, requests.Timeout):
-        _logger.log(
-            log_level,
-            "Action [%s]: connection lost after HNAP %s — expected for restart",
-            model,
-            action.action_name,
+        log_event(
+            _logger,
+            ActionConnectionLost(model=model, transport="hnap", action_name=action.action_name, level=level),
         )
         return ActionResult(
             success=True,
@@ -125,10 +108,14 @@ def execute_hnap_action(
     try:
         response_data = resp.json()
     except (ValueError, TypeError):
-        _logger.warning(
-            "HNAP action response [%s] is not valid JSON (status %d)",
-            model,
-            resp.status_code,
+        log_event(
+            _logger,
+            ActionFailed(
+                model=model,
+                transport="hnap",
+                action_name=action.action_name,
+                reason=f"invalid JSON (status {resp.status_code})",
+            ),
         )
         return ActionResult(
             success=False,
@@ -137,10 +124,14 @@ def execute_hnap_action(
         )
 
     if not isinstance(response_data, dict):
-        _logger.warning(
-            "HNAP action response [%s] is not a JSON object (status %d)",
-            model,
-            resp.status_code,
+        log_event(
+            _logger,
+            ActionFailed(
+                model=model,
+                transport="hnap",
+                action_name=action.action_name,
+                reason=f"response not a JSON object (status {resp.status_code})",
+            ),
         )
         return ActionResult(
             success=False,
@@ -162,24 +153,9 @@ def _execute_pre_fetch(
     log_level: int = logging.INFO,
     model: str = "",
 ) -> dict[str, str]:
-    """Call an HNAP action to get current config for interpolation.
-
-    The response key is derived automatically: ``{action}Response``.
-
-    Args:
-        session: Authenticated session.
-        url: HNAP endpoint URL.
-        pre_fetch_action: HNAP action name to call.
-        private_key: HMAC signing key.
-        hmac_algorithm: Hash algorithm.
-        timeout: Request timeout.
-        log_level: Log level for informational messages.
-
-    Returns:
-        Dict of values from the pre-fetch response, or empty dict
-        on failure.
-    """
-    _logger.log(log_level, "Action pre-fetch [%s]: HNAP %s", model, pre_fetch_action)
+    """Call an HNAP action to get current config for interpolation; returns {} on failure."""
+    # Pre-fetch start log dropped — no ActionPreFetchStarted event defined
+    level = EventLevel(log_level)
 
     body: dict[str, dict[str, str]] = {pre_fetch_action: {}}
     headers = {
@@ -201,23 +177,46 @@ def _execute_pre_fetch(
         )
         data = resp.json()
     except (requests.RequestException, ValueError, TypeError) as exc:
-        _logger.warning("Action pre-fetch failed [%s]: %s", model, exc)
+        log_event(
+            _logger,
+            ActionPreFetchFailed(
+                model=model,
+                transport="hnap",
+                action_name=pre_fetch_action,
+                reason=str(exc),
+                fallback_endpoint=None,
+            ),
+        )
         return {}
 
     if not isinstance(data, dict):
-        _logger.warning("Action pre-fetch [%s]: response is not a JSON object", model)
+        log_event(
+            _logger,
+            ActionPreFetchFailed(
+                model=model,
+                transport="hnap",
+                action_name=pre_fetch_action,
+                reason="response is not a JSON object",
+                fallback_endpoint=None,
+            ),
+        )
         return {}
 
     # Unwrap response: {ActionResponse: {...data...}}
     response_key = f"{pre_fetch_action}Response"
     inner = data.get(response_key, data)
+    key_count = len(inner) if isinstance(inner, dict) else 0
 
-    _logger.log(
-        log_level,
-        "Action pre-fetch [%s]: %s returned %d keys",
-        model,
-        pre_fetch_action,
-        len(inner) if isinstance(inner, dict) else 0,
+    log_event(
+        _logger,
+        ActionPreFetchCompleted(
+            model=model,
+            transport="hnap",
+            action_name=pre_fetch_action,
+            key_count=key_count,
+            fallback_endpoint=None,
+            level=level,
+        ),
     )
 
     return dict(inner) if isinstance(inner, dict) else {}
@@ -227,15 +226,7 @@ def _interpolate_params(
     params: dict[str, str],
     pre_fetch_data: dict[str, str],
 ) -> dict[str, str]:
-    """Replace ``${var:default}`` placeholders in params.
-
-    Args:
-        params: Parameter dict with possible placeholders.
-        pre_fetch_data: Values from pre-fetch action response.
-
-    Returns:
-        Params with placeholders replaced.
-    """
+    """Replace ``${var:default}`` placeholders in params using pre-fetch values."""
     result: dict[str, str] = {}
     for key, value in params.items():
         if isinstance(value, str):
@@ -273,19 +264,8 @@ def _validate_response(
     log_level: int = logging.INFO,
     model: str = "",
 ) -> ActionResult:
-    """Validate the HNAP action response.
-
-    Uses ``response_key``, ``result_key``, and ``success_value`` from
-    the action config to check the response.
-
-    Args:
-        response_data: Parsed JSON response.
-        action: HNAP action config with validation fields.
-        log_level: Log level for informational messages.
-
-    Returns:
-        ActionResult based on response validation.
-    """
+    """Validate the HNAP action response using response_key, result_key, and success_value."""
+    level = EventLevel(log_level)
     data = response_data
 
     # Unwrap response envelope if configured
@@ -296,11 +276,16 @@ def _validate_response(
     if action.result_key:
         result_value = data.get(action.result_key, "")
         if action.success_value and result_value == action.success_value:
-            _logger.log(
-                log_level,
-                "HNAP action accepted [%s] (result=%s)",
-                model,
-                result_value,
+            log_event(
+                _logger,
+                ActionCompleted(
+                    model=model,
+                    transport="hnap",
+                    action_name=action.action_name,
+                    status_code=None,
+                    result=result_value,
+                    level=level,
+                ),
             )
             return ActionResult(
                 success=True,
@@ -308,10 +293,14 @@ def _validate_response(
                 details={"result": result_value},
             )
         if result_value:
-            _logger.warning(
-                "HNAP action unexpected result [%s]: %s",
-                model,
-                result_value,
+            log_event(
+                _logger,
+                ActionFailed(
+                    model=model,
+                    transport="hnap",
+                    action_name=action.action_name,
+                    reason=f"unexpected result: {result_value}",
+                ),
             )
             return ActionResult(
                 success=False,
@@ -320,7 +309,17 @@ def _validate_response(
             )
 
     # No result key or no match — assume success if we got a response
-    _logger.log(log_level, "HNAP action sent [%s] (no result key in response)", model)
+    log_event(
+        _logger,
+        ActionCompleted(
+            model=model,
+            transport="hnap",
+            action_name=action.action_name,
+            status_code=None,
+            result="sent",
+            level=level,
+        ),
+    )
     return ActionResult(
         success=True,
         message="Action sent",

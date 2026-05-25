@@ -15,6 +15,8 @@ import time
 from typing import TYPE_CHECKING
 
 from .actions import execute_action
+from .events import RestartCommandFailed, RestartCommandSent
+from .logging import log_event
 from .models import RestartResult
 
 if TYPE_CHECKING:
@@ -89,10 +91,9 @@ def run_restart(
             auth_result = collector.authenticate()
             if not auth_result.success:
                 elapsed = time.monotonic() - start
-                _logger.error(
-                    "Restart command failed [%s]: auth failed — %s",
-                    model,
-                    auth_result.error,
+                log_event(
+                    _logger,
+                    RestartCommandFailed(model=model, reason=f"auth failed — {auth_result.error}"),
                 )
                 return RestartResult(
                     success=False,
@@ -113,7 +114,7 @@ def run_restart(
         collector.clear_session()
     except Exception as exc:  # noqa: BLE001
         elapsed = time.monotonic() - start
-        _logger.error("Restart command failed [%s]: %s", model, exc)
+        log_event(_logger, RestartCommandFailed(model=model, reason=str(exc)))
         return RestartResult(
             success=False,
             elapsed_seconds=elapsed,
@@ -121,11 +122,7 @@ def run_restart(
         )
 
     elapsed = time.monotonic() - start
-    _logger.info(
-        "Restart command sent [%s] — session cleared (%.1fs)",
-        model,
-        elapsed,
-    )
+    log_event(_logger, RestartCommandSent(model=model, elapsed_seconds=elapsed))
 
     # Step 5 — hand off to Recovery. begin() fires the observer so
     # HA's cadence listener drops the data-coordinator interval;

@@ -2177,3 +2177,7 @@ but the result is available for diagnostics and future recovery
 decisions.
 
 ---
+
+## Event Taxonomy
+
+See [`LOGGING_SPEC.md`](LOGGING_SPEC.md).
