@@ -66,6 +66,7 @@ Fields — `ConnectivityBackoffReset`: `model`
 | `AuthFailed` | WARNING | Auth failed |
 | `AuthLockoutDetected` | WARNING | Lockout detected |
 | `AuthCircuitBreakerOpen` | ERROR | Circuit breaker opened |
+| `CircuitBreakerPollingBlocked` | ERROR | Per-poll guard — breaker is open; credentials must be reconfigured |
 | `AuthStateReset` | INFO | Auth state reset (circuit breaker cleared) |
 | `StaleSessionRecoveryDisabled` | INFO | Stale-session recovery streak hit threshold; session reuse disabled for this runtime |
 
@@ -75,6 +76,7 @@ Fields — `AuthFailed`: `model`, `strategy: str`, `error: str`, `method: str | 
 `response_body: str | None`
 Fields — `AuthLockoutDetected`: `model`, `streak: int`
 Fields — `AuthCircuitBreakerOpen`: `model`, `streak: int`
+Fields — `CircuitBreakerPollingBlocked`: `model`
 Fields — `StaleSessionRecoveryDisabled`: `model`, `streak: int`
 
 Response-related fields on `AuthFailed` are `None` when auth failed with a
@@ -99,6 +101,15 @@ Fields — `HnapSessionExpired`: `model`, `status_code: int`
 Fields — `StubPageDetected`: `model`, `path: str`, `anchors_found: int`,
 `anchors_expected: int`
 
+| Event | Level | When |
+|---|---|---|
+| `SessionRetryStarted` | INFO | Single-poll session retry started for LOAD_AUTH or LOAD_INTEGRITY |
+| `SessionRetrySucceeded` | INFO | Retry succeeded — fresh login obtained in same poll |
+| `SessionRetryFailed` | INFO | Retry failed — policy recording signal as auth failure |
+
+Fields — `SessionRetryStarted` / `SessionRetrySucceeded`: `model`, `signal_name: str`
+Fields — `SessionRetryFailed`: `model`, `signal_name: str`, `streak: int`, `threshold: int`
+
 ### Phase: probe / health
 
 | Event | Level | When |
@@ -120,6 +131,12 @@ Fields — `HealthStatusReport`: `model`, `status: str`, `changed: bool`,
 `detail: str`
 Fields — `HealthRecoveryDetected`: `model`, `previous_status: str`
 
+| Event | Level | When |
+|---|---|---|
+| `HealthBackoffCleared` | INFO | Health probe confirmed modem reachable — connectivity backoff cleared |
+
+Fields — `HealthBackoffCleared`: `model`
+
 ### Phase: collection / parsing
 
 | Event | Level | When |
@@ -138,6 +155,14 @@ Fields — `ParseError`: `model`, `reason: str`
 Fields — `ResourceLoadError` / `HttpStatusError` / `ConnectionFailedDuringLoad`:
 `model`, `path: str`, `status_code: int | None`, `reason: str`
 Fields — `HnapConnectionFailed` / `HnapLoadError`: `model`, `reason: str`
+
+| Event | Level | When |
+|---|---|---|
+| `StatusTransition` | INFO | Connection status changed between polls |
+| `CounterReset` | INFO | Error counters dropped — modem rebooted or stats cleared |
+
+Fields — `StatusTransition`: `model`, `from_status: str`, `to_status: str`
+Fields — `CounterReset`: `model`, `prev_corrected: int`, `cur_corrected: int`, `prev_uncorrected: int`, `cur_uncorrected: int`
 
 ### Phase: restart / recovery
 
@@ -204,6 +229,20 @@ raising `LoginPageDetectedError` — the collection layer owns the signal),
 and the unknown-format fallback warning in `_decode_response` (the loader
 returns BeautifulSoup rather than failing, so no `ResourceDecodeError` is
 appropriate).
+
+## Intentional exceptions — direct `_logger` calls
+
+The following calls bypass `log_event()` by design. Each has a documented
+reason; adding an event type for them would not improve diagnostics.
+
+| File | Message pattern | Reason |
+|------|----------------|--------|
+| `orchestration/orchestrator.py` | `"Session reuse disabled [%s]..."` (DEBUG) | Low-signal pre-poll detail. |
+| `orchestration/orchestrator.py` | `"Poll [%s] — auth: %s, url: %s..."` (INFO/DEBUG) | Verbose first-poll context log. INFO on first poll, DEBUG after. No event needed — it summarises static config, not a runtime signal. |
+| `orchestration/policy.py` | `"Unknown signal: %s"` (WARNING) | Defensive guard that should never fire. |
+| `orchestration/collector.py` | `"No active session [%s] — Authenticating"` (DEBUG) | Pre-auth lifecycle noise. `SessionReused` fires on the reuse path; this fires on the non-reuse path as a single debug line. |
+| `orchestration/actions/hnap_action.py` | `"Interpolated %s: ${%s} → ..."` (DEBUG ×2) | Variable interpolation detail for action payload construction. |
+| `orchestration/modem_health.py` | ICMP/HTTP probe debug calls (DEBUG ×4) | Individual probe failures below the aggregate `HealthStatusReport` signal. Documented above in § probe/health. |
 
 ## Test pattern
 

@@ -46,12 +46,15 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         AuthLockoutDetected,
         AuthStateReset,
         AuthSucceeded,
+        CircuitBreakerPollingBlocked,
         CollectionComplete,
         ConnectionFailedDuringLoad,
         ConnectivityBackoffActive,
         ConnectivityBackoffCleared,
         ConnectivityBackoffReset,
         ConnectivityFailureDetected,
+        CounterReset,
+        HealthBackoffCleared,
         HealthRecoveryDetected,
         HealthStatusReport,
         HnapConnectionFailed,
@@ -70,8 +73,12 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         RestartCommandFailed,
         RestartCommandSent,
         SessionCleared,
+        SessionRetryFailed,
+        SessionRetryStarted,
+        SessionRetrySucceeded,
         SessionReused,
         StaleSessionRecoveryDisabled,
+        StatusTransition,
         StubPageDetected,
         ZeroChannelsNoSystemInfo,
     )
@@ -124,6 +131,9 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
             " auth failures. Polling stopped. Reconfigure credentials to resume."
         )
 
+    if isinstance(event, CircuitBreakerPollingBlocked):
+        return f"Circuit breaker OPEN [{event.model}] — polling stopped. Reconfigure credentials to resume."
+
     if isinstance(event, AuthStateReset):
         return f"Auth state reset [{event.model}] — next poll will attempt fresh login"
 
@@ -157,6 +167,18 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
             f" {event.anchors_found}/{event.anchors_expected} anchors found"
         )
 
+    if isinstance(event, SessionRetryStarted):
+        return f"{event.signal_name} [{event.model}] — clearing session and retrying once in same poll"
+
+    if isinstance(event, SessionRetrySucceeded):
+        return f"{event.signal_name} recovered [{event.model}] — fresh login succeeded in same poll"
+
+    if isinstance(event, SessionRetryFailed):
+        return (
+            f"{event.signal_name} [{event.model}] — retry failed,"
+            f" reporting auth_failed (streak: {event.streak}/{event.threshold})"
+        )
+
     # --- probe / health ---
 
     if isinstance(event, HealthStatusReport):
@@ -164,6 +186,9 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
 
     if isinstance(event, HealthRecoveryDetected):
         return f"Health recovered [{event.model}] — was {event.previous_status}"
+
+    if isinstance(event, HealthBackoffCleared):
+        return f"Health recovery detected [{event.model}] — clearing connectivity backoff"
 
     # --- collection / parsing ---
 
@@ -194,6 +219,16 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
 
     if isinstance(event, ZeroChannelsNoSystemInfo):
         return f"Zero channels and no system_info [{event.model}] — cannot confirm parser health"
+
+    if isinstance(event, StatusTransition):
+        return f"Status transition [{event.model}]: {event.from_status} → {event.to_status}"
+
+    if isinstance(event, CounterReset):
+        return (
+            f"Counter reset detected [{event.model}]"
+            f" — corrected: {event.prev_corrected}→{event.cur_corrected},"
+            f" uncorrected: {event.prev_uncorrected}→{event.cur_uncorrected}"
+        )
 
     # --- restart / recovery ---
 

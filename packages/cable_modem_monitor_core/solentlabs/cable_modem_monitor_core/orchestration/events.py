@@ -117,6 +117,14 @@ class AuthCircuitBreakerOpen:
 
 
 @dataclass
+class CircuitBreakerPollingBlocked:
+    """Poll skipped — circuit breaker is open; credentials must be reconfigured."""
+
+    model: str
+    level: EventLevel = field(default=EventLevel.ERROR, init=False)
+
+
+@dataclass
 class AuthStateReset:
     """Auth state reset; circuit breaker cleared."""
 
@@ -191,6 +199,39 @@ class StubPageDetected:
     level: EventLevel = field(default=EventLevel.WARNING, init=False)
 
 
+@dataclass
+class SessionRetryStarted:
+    """Single-poll session retry started for a LOAD_AUTH or LOAD_INTEGRITY signal."""
+
+    model: str
+    signal_name: str  # "LOAD_AUTH" or "LOAD_INTEGRITY"
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
+class SessionRetrySucceeded:
+    """Single-poll session retry succeeded — fresh login obtained in same poll."""
+
+    model: str
+    signal_name: str  # "LOAD_AUTH" or "LOAD_INTEGRITY"
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
+class SessionRetryFailed:
+    """Single-poll retry failed — policy recording signal as auth failure.
+
+    Fires when policy receives a LOAD_AUTH or LOAD_INTEGRITY signal,
+    meaning the orchestrator's same-poll retry already failed.
+    """
+
+    model: str
+    signal_name: str  # "LOAD_AUTH" or "LOAD_INTEGRITY"
+    streak: int
+    threshold: int
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
 # ---------------------------------------------------------------------------
 # Phase: probe / health
 # ---------------------------------------------------------------------------
@@ -225,6 +266,14 @@ class HealthRecoveryDetected:
 
     model: str
     previous_status: str
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
+class HealthBackoffCleared:
+    """Health probe confirmed modem reachable — connectivity backoff cleared."""
+
+    model: str
     level: EventLevel = field(default=EventLevel.INFO, init=False)
 
 
@@ -310,6 +359,28 @@ class ZeroChannelsNoSystemInfo:
 
     model: str
     level: EventLevel = field(default=EventLevel.WARNING, init=False)
+
+
+@dataclass
+class StatusTransition:
+    """Connection status changed between polls."""
+
+    model: str
+    from_status: str
+    to_status: str
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
+class CounterReset:
+    """Error counters dropped between polls — modem rebooted or stats cleared."""
+
+    model: str
+    prev_corrected: int
+    cur_corrected: int
+    prev_uncorrected: int
+    cur_uncorrected: int
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
 
 
 # ---------------------------------------------------------------------------
@@ -485,6 +556,7 @@ type OrchestratorEvent = (
     | AuthFailed
     | AuthLockoutDetected
     | AuthCircuitBreakerOpen
+    | CircuitBreakerPollingBlocked
     | AuthStateReset
     | StaleSessionRecoveryDisabled
     | SessionReused
@@ -493,8 +565,12 @@ type OrchestratorEvent = (
     | LogoutFailed
     | HnapSessionExpired
     | StubPageDetected
+    | SessionRetryStarted
+    | SessionRetrySucceeded
+    | SessionRetryFailed
     | HealthStatusReport
     | HealthRecoveryDetected
+    | HealthBackoffCleared
     | CollectionComplete
     | ParseError
     | ResourceLoadError
@@ -503,6 +579,8 @@ type OrchestratorEvent = (
     | HnapConnectionFailed
     | HnapLoadError
     | ZeroChannelsNoSystemInfo
+    | StatusTransition
+    | CounterReset
     | RestartCommandSent
     | RestartCommandFailed
     | RecoveryWindowOpened

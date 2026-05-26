@@ -18,6 +18,7 @@ from .events import (
     ConnectivityBackoffActive,
     ConnectivityBackoffCleared,
     ConnectivityFailureDetected,
+    SessionRetryFailed,
     StaleSessionRecoveryDisabled,
 )
 from .logging import log_event
@@ -181,7 +182,6 @@ class SignalPolicy:
 
         if signal == CollectorSignal.AUTH_FAILED:
             self._auth_failure_streak += 1
-            self._log_auth_failure()
             self._trip_circuit_breaker()
             return ConnectionStatus.AUTH_FAILED
 
@@ -194,11 +194,14 @@ class SignalPolicy:
         if signal == CollectorSignal.LOAD_AUTH:
             self._auth_failure_streak += 1
             self._collector.clear_session()
-            _logger.info(
-                "LOAD_AUTH [%s] — retry failed, reporting auth_failed (streak: %d/%d)",
-                self._model,
-                self._auth_failure_streak,
-                self._threshold,
+            log_event(
+                _logger,
+                SessionRetryFailed(
+                    model=self._model,
+                    signal_name="LOAD_AUTH",
+                    streak=self._auth_failure_streak,
+                    threshold=self._threshold,
+                ),
             )
             self._maybe_trip_circuit_breaker()
             return ConnectionStatus.AUTH_FAILED
@@ -210,11 +213,14 @@ class SignalPolicy:
             # log clarity ("stub response" vs "credentials rejected").
             self._auth_failure_streak += 1
             self._collector.clear_session()
-            _logger.info(
-                "LOAD_INTEGRITY [%s] — stub response, clearing session, reporting auth_failed (streak: %d/%d)",
-                self._model,
-                self._auth_failure_streak,
-                self._threshold,
+            log_event(
+                _logger,
+                SessionRetryFailed(
+                    model=self._model,
+                    signal_name="LOAD_INTEGRITY",
+                    streak=self._auth_failure_streak,
+                    threshold=self._threshold,
+                ),
             )
             self._maybe_trip_circuit_breaker()
             return ConnectionStatus.AUTH_FAILED
@@ -233,11 +239,9 @@ class SignalPolicy:
             return ConnectionStatus.UNREACHABLE
 
         if signal == CollectorSignal.LOAD_ERROR:
-            _logger.warning("Resource load error [%s] — reporting unreachable", self._model)
             return ConnectionStatus.UNREACHABLE
 
         if signal == CollectorSignal.PARSE_ERROR:
-            _logger.warning("Parse error [%s] — reporting parser_issue", self._model)
             return ConnectionStatus.PARSER_ISSUE
 
         # Defensive — should never reach here
@@ -270,14 +274,6 @@ class SignalPolicy:
         self._auth_failure_streak = 0
         self._connectivity_streak = 0
         self._connectivity_backoff = 0
-
-    def _log_auth_failure(self) -> None:
-        """Log auth failure with streak context."""
-        _logger.info(
-            "Auth failed [%s] — wrong credentials or strategy mismatch (streak: %d)",
-            self._model,
-            self._auth_failure_streak,
-        )
 
     def _trip_circuit_breaker(self) -> None:
         """Trip the circuit breaker immediately.

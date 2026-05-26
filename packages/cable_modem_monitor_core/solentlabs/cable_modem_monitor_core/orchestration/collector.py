@@ -126,7 +126,6 @@ class ModemDataCollector:
         try:
             auth_result = self.authenticate()
         except LoginLockoutError as exc:
-            _logger.warning("Auth lockout [%s] — firmware anti-brute-force triggered", self._modem_config.model)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.AUTH_LOCKOUT,

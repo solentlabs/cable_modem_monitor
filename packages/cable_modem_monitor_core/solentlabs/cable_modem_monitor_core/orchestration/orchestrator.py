@@ -20,7 +20,16 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from .events import AuthStateReset, ConnectivityBackoffReset
+from .events import (
+    AuthStateReset,
+    CircuitBreakerPollingBlocked,
+    ConnectivityBackoffReset,
+    CounterReset,
+    HealthBackoffCleared,
+    SessionRetryStarted,
+    SessionRetrySucceeded,
+    StatusTransition,
+)
 from .logging import log_event
 from .models import ModemSnapshot, OrchestratorDiagnostics, RestartResult
 from .policy import SignalPolicy
@@ -287,10 +296,7 @@ class Orchestrator:
 
         # Circuit breaker
         if self._policy.circuit_open:
-            _logger.error(
-                "Circuit breaker OPEN [%s] — polling stopped. Reconfigure credentials to resume.",
-                self._modem_config.model,
-            )
+            log_event(_logger, CircuitBreakerPollingBlocked(model=self._modem_config.model))
             return self._make_snapshot(
                 ConnectionStatus.AUTH_FAILED,
                 DocsisStatus.UNKNOWN,
@@ -309,10 +315,7 @@ class Orchestrator:
             and self._health_monitor.latest.health_status == HealthStatus.RESPONSIVE
             and self._is_health_probe_fresh()
         ):
-            _logger.info(
-                "Health recovery detected [%s] — clearing connectivity backoff",
-                self._modem_config.model,
-            )
+            log_event(_logger, HealthBackoffCleared(model=self._modem_config.model))
             self._policy.reset_connectivity()
 
         # Connectivity backoff
@@ -353,13 +356,11 @@ class Orchestrator:
 
             if not result.success:
                 self._policy.reset_stale_session_recovery_streak()
-                self._log_poll_result(result)
                 return self._handle_failure(result)
 
             if not load_auth_recovered:
                 self._policy.reset_stale_session_recovery_streak()
 
-            self._log_poll_result(result)
             self._first_poll_complete = True
             return self._handle_success(result)
         finally:
@@ -376,21 +377,13 @@ class Orchestrator:
         without waiting for the next scheduled cycle.
         """
         signal_name = signal.value.upper()
-        _logger.info(
-            "%s [%s] — clearing session and retrying once in same poll",
-            signal_name,
-            self._modem_config.model,
-        )
+        log_event(_logger, SessionRetryStarted(model=self._modem_config.model, signal_name=signal_name))
         self._collector.clear_session()
 
         retry_result = self._collector.execute()
         if retry_result.success:
             self._policy.record_stale_session_recovery()
-            _logger.info(
-                "%s recovered [%s] — fresh login succeeded in same poll",
-                signal_name,
-                self._modem_config.model,
-            )
+            log_event(_logger, SessionRetrySucceeded(model=self._modem_config.model, signal_name=signal_name))
 
         return retry_result
 
@@ -498,11 +491,13 @@ class Orchestrator:
         self._last_status = new_status
 
         if old_status is not None and old_status != new_status:
-            _logger.info(
-                "Status transition [%s]: %s → %s",
-                self._modem_config.model,
-                old_status.value,
-                new_status.value,
+            log_event(
+                _logger,
+                StatusTransition(
+                    model=self._modem_config.model,
+                    from_status=old_status.value,
+                    to_status=new_status.value,
+                ),
             )
 
     # ------------------------------------------------------------------
@@ -526,30 +521,6 @@ class Orchestrator:
             self._collector._base_url,
             "yes" if has_creds else "no",
             session,
-        )
-
-    def _log_poll_result(self, result: ModemResult) -> None:
-        """Log poll outcome. First success at INFO, steady-state at DEBUG."""
-        model = self._modem_config.model
-
-        if not result.success:
-            _logger.warning(
-                "Poll failed [%s] — signal: %s, error: %s",
-                model,
-                result.signal.value,
-                result.error,
-            )
-            return
-
-        ds = len(result.modem_data.get("downstream", [])) if result.modem_data else 0
-        us = len(result.modem_data.get("upstream", [])) if result.modem_data else 0
-
-        log = _logger.info if not self._first_poll_complete else _logger.debug
-        log(
-            "Parse complete [%s]: %d DS, %d US channels",
-            model,
-            ds,
-            us,
         )
 
     # ------------------------------------------------------------------
@@ -623,13 +594,15 @@ class Orchestrator:
 
         if cur_corrected < prev.corrected or cur_uncorrected < prev.uncorrected:
             self._stats_last_reset = datetime.now(UTC)
-            _logger.info(
-                "Counter reset detected [%s] — corrected: %d→%d, uncorrected: %d→%d",
-                self._modem_config.model,
-                prev.corrected,
-                cur_corrected,
-                prev.uncorrected,
-                cur_uncorrected,
+            log_event(
+                _logger,
+                CounterReset(
+                    model=self._modem_config.model,
+                    prev_corrected=prev.corrected,
+                    cur_corrected=cur_corrected,
+                    prev_uncorrected=prev.uncorrected,
+                    cur_uncorrected=cur_uncorrected,
+                ),
             )
             return  # interval spans a discontinuity — no inter-poll delta
 
