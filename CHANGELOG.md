@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.7] - 2026-05-26
+
+### Added
+
+- **Arris SB8200 `modem-basic` variant (URL Token, v6 hardware).** v6 hardware
+  does not issue a session cookie on login; this variant uses the URL token
+  strategy without cookie credential reuse. Status: `awaiting_verification`.
+  Related to #170.
+- **`ModemSnapshot.to_event_payload()` and HA event bus integration.** Core
+  now produces a structured `EventBusPayload` (model, ISP, status, channel
+  counts, collection timestamp) on every successful poll. The HA coordinator
+  fires this as the `cable_modem_monitor_data_updated` event, enabling
+  downstream integrations to consume live modem data without coordinator
+  coupling. Related to #169.
+
+### Changed
+
+- **Orchestration logging migrated to typed `OrchestratorEvent` dataclasses.**
+  All log output from the orchestration layer now flows through a single
+  `log_event()` adapter. No runtime behavior change.
+- **HA adapter: dev tools extracted to `dev_tools.py`.** `async_request_modem_refresh`,
+  service registration, and related utilities moved from `services.py` into a
+  dedicated module. No behavior change.
+
 ## [3.14.0-beta.6] - 2026-05-22
 
 ### Breaking Changes
