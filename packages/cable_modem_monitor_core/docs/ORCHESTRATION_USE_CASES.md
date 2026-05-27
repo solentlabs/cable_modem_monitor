@@ -1606,11 +1606,12 @@ Collector created with default `legacy_ssl=False`.
 
 ---
 
-### UC-83: HTTPS modem with legacy SSL firmware
+### UC-83: HTTPS modem requiring SECLEVEL=0 cipher context
 
-**Preconditions:** Modem uses HTTPS but only supports legacy TLS ciphers.
-Protocol detection discovered `legacy_ssl=True`. Collector created
-with `legacy_ssl=True`.
+**Preconditions:** Modem uses HTTPS but requires ``SECLEVEL=0`` — either
+because it negotiates TLS 1.1 or older, or because its TLS 1.2 cipher
+suites fall below Python's default security floor. Protocol detection
+discovered `legacy_ssl=True`. Collector created with `legacy_ssl=True`.
 
 | Step | Action | State change | Observable |
 |------|--------|-------------|------------|
@@ -1631,36 +1632,55 @@ with `legacy_ssl=True`.
 
 **Preconditions:** User entered a bare IP with no protocol prefix.
 The pipeline must pick HTTP or HTTPS up front and observe whether the
-modem's TLS stack is old enough to need ``LegacySSLAdapter`` at
-runtime.
+runtime session needs ``LegacySSLAdapter``.
 
 | Step | Action | State change | Observable |
 |------|--------|-------------|------------|
 | 1 | TCP probe ``host:80`` and ``host:443`` (IPv4-pinned) | | |
-| 2 | If 443 open: ``ssl.SSLContext(SECLEVEL=0)`` + ``wrap_socket()`` | | TLS handshake |
-| 3a | Handshake succeeds → read ``sock.version()`` | protocol=https; legacy_ssl from version | |
-| 3b | Handshake fails *and* :80 open → fall back to HTTP | protocol=http | |
+| 2 | If 443 open: standard Python SSL handshake | | TLS handshake |
+| 3a | Standard handshake succeeds → read ``sock.version()`` | protocol=https; legacy_ssl from version | |
+| 3b | Standard handshake fails → try ``SECLEVEL=0`` handshake | | TLS handshake |
+| 3b-i | ``SECLEVEL=0`` succeeds | protocol=https; legacy_ssl=True | |
+| 3b-ii | ``SECLEVEL=0`` fails *and* :80 open → fall back to HTTP | protocol=http | |
 | 4 | Build ``ConnectivityResult(protocol, legacy_ssl, working_url)`` | | |
 
 **Assertions:**
 
 - Detection sends *no* HTTP requests — only TCP connect plus, on
-  :443, a TLS handshake. No session slot consumed, no login counter
-  increment, no risk of single-session-firmware lockout.
-- If TCP :443 accepts and TLS handshake completes, HTTPS is chosen
-  even when :80 also responds — modems that expose both ports almost
-  always intend HTTPS for authenticated traffic.
-- ``legacy_ssl`` is observed from the negotiated TLS protocol
-  version (TLSv1.1 / TLSv1 / SSLv3 → legacy). It is *not* inferred
-  from a failed-and-retried-with-weaker-ciphers attempt.
-- The cipher context is broad (``SECLEVEL=0``) so the handshake
-  succeeds regardless of the modem's age. Runtime sessions remain
-  narrow per the persisted ``legacy_ssl`` flag — modern modems use
-  the default adapter, legacy modems mount ``LegacySSLAdapter``.
+  :443, TLS handshake attempts. No session slot consumed, no login
+  counter increment, no risk of single-session-firmware lockout.
+- If TCP :443 accepts and any TLS handshake completes, HTTPS is
+  chosen even when :80 also responds — modems that expose both ports
+  almost always intend HTTPS for authenticated traffic.
+- ``legacy_ssl`` answers the runtime question directly: standard
+  Python SSL is tried first (matching ``create_session(legacy_ssl=False)``);
+  ``SECLEVEL=0`` is the fallback (matching ``create_session(legacy_ssl=True)``).
+  ``legacy_ssl=True`` when standard SSL fails but ``SECLEVEL=0``
+  succeeds, *or* when the negotiated version is TLS 1.1 or older —
+  both conditions require ``LegacySSLAdapter`` at runtime.
 - User-specified protocol prefixes restrict probing to that single
   transport — auto-detect is bypassed.
 - ``working_url`` preserves a user-supplied ``host:port`` when
   present.
+
+**Alternative path — HTTPS with cipher incompatibility:**
+
+Port 443 open, standard Python SSL fails (modem only accepts cipher
+suites below Python's default SECLEVEL-2 floor), ``SECLEVEL=0``
+handshake succeeds.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | TCP probe :80 and :443 → both open | | |
+| 2 | Standard Python SSL handshake → fails | | ``SSLV3_ALERT_HANDSHAKE_FAILURE`` |
+| 3 | ``SECLEVEL=0`` handshake → succeeds | protocol=https; legacy_ssl=True | |
+| 4 | Return ``ConnectivityResult(success=True, protocol="https", legacy_ssl=True)`` | | |
+
+> Real-world trigger: Arris SB8200 v6 (Spectrum, firmware
+> AB01.01.009.51). Port 443 responds to TLS 1.2 but only with cipher
+> suites outside Python's SECLEVEL=2 floor. Without the SECLEVEL=0
+> fallback, ``legacy_ssl=False`` would be stored and the runtime
+> session would fail with the same SSL error. (Issue #170.)
 
 **Alternative path — modem unreachable:**
 

@@ -26,8 +26,9 @@ _MODULE = "solentlabs.cable_modem_monitor_core.connectivity"
 # Protocol detection probes TCP :80 and :443. If :443 accepts a TCP
 # connection AND completes a TLS handshake, HTTPS wins — modems that
 # expose both ports almost always intend HTTPS for authenticated
-# traffic. ``legacy_ssl`` is set from the negotiated TLS version, not
-# from a failed-and-retried inference.
+# traffic. Standard Python SSL is tried first; SECLEVEL=0 is the
+# fallback. ``legacy_ssl=True`` when standard SSL fails but SECLEVEL=0
+# succeeds, or when the negotiated TLS version is TLS 1.1 or older.
 #
 # Scenario list lives in ``DETECT_PROTOCOL_CASES`` below — adding a
 # row adds a test.
@@ -60,6 +61,11 @@ DETECT_PROTOCOL_CASES: list[_DetectCase] = [
      True,  "https", False, "https://192.168.100.1", [80, 443]),
     ("https_legacy_negotiated",
      "192.168.100.1",  False, True,  (True, True),
+     True,  "https", True,  "https://192.168.100.1", [80, 443]),
+    # UC-85 alt path: both ports open, standard SSL fails but SECLEVEL=0
+    # succeeds — HTTPS preferred with legacy_ssl=True (issue #170).
+    ("https_weak_cipher_both_ports_open",
+     "192.168.100.1",  True,  True,  (True, True),
      True,  "https", True,  "https://192.168.100.1", [80, 443]),
     ("https_handshake_fails_falls_back_to_http",
      "192.168.100.1",  True,  True,  (False, False),
@@ -260,7 +266,7 @@ class TestTcpProbe:
 
 
 class TestTlsHandshake:
-    """Direct tests for _tls_handshake — TLS version classification."""
+    """Direct tests for _tls_handshake — standard SSL probe, SECLEVEL=0 fallback, version classification."""
 
     @pytest.mark.parametrize(
         "negotiated_version,expected_legacy",
@@ -299,10 +305,59 @@ class TestTlsHandshake:
         assert legacy is expected_legacy
 
     @patch(f"{_MODULE}.socket.create_connection")
+    @patch(f"{_MODULE}.ssl.SSLContext")
+    def test_standard_ssl_fails_seclevel0_succeeds(
+        self,
+        mock_context_cls: MagicMock,
+        mock_create_conn: MagicMock,
+    ) -> None:
+        """Standard SSL fails; SECLEVEL=0 succeeds → (True, True). UC-85 alt path (issue #170)."""
+        import ssl as _ssl
+
+        from solentlabs.cable_modem_monitor_core.connectivity import _tls_handshake
+
+        raw_sock = MagicMock()
+        mock_create_conn.return_value.__enter__.return_value = raw_sock
+
+        # First SSLContext (standard): wrap_socket raises handshake failure
+        standard_ctx = MagicMock()
+        standard_ctx.wrap_socket.return_value.__enter__.side_effect = _ssl.SSLError("SSLV3_ALERT_HANDSHAKE_FAILURE")
+
+        # Second SSLContext (SECLEVEL=0): wrap_socket succeeds with TLS 1.2
+        tls_sock = MagicMock()
+        tls_sock.version.return_value = "TLSv1.2"
+        legacy_ctx = MagicMock()
+        legacy_ctx.wrap_socket.return_value.__enter__.return_value = tls_sock
+
+        mock_context_cls.side_effect = [standard_ctx, legacy_ctx]
+
+        ok, legacy = _tls_handshake("192.168.100.1", 443, timeout=2.0)
+
+        assert ok is True
+        assert legacy is True
+
+    @patch(f"{_MODULE}.socket.create_connection")
+    def test_phase1_timeout_skips_phase2(
+        self,
+        mock_create_conn: MagicMock,
+    ) -> None:
+        """Phase 1 timeout → (False, False) immediately; Phase 2 is not attempted."""
+        from solentlabs.cable_modem_monitor_core.connectivity import _tls_handshake
+
+        mock_create_conn.side_effect = TimeoutError("timed out")
+
+        ok, legacy = _tls_handshake("192.168.100.1", 443, timeout=2.0)
+
+        assert ok is False
+        assert legacy is False
+        assert mock_create_conn.call_count == 1  # Phase 2 never ran
+
+    @patch(f"{_MODULE}.socket.create_connection")
     def test_handshake_failure_returns_false_false(
         self,
         mock_create_conn: MagicMock,
     ) -> None:
+        """Both phases tried on ssl.SSLError; both fail → (False, False)."""
         import ssl as _ssl
 
         from solentlabs.cable_modem_monitor_core.connectivity import _tls_handshake
@@ -313,6 +368,25 @@ class TestTlsHandshake:
 
         assert ok is False
         assert legacy is False
+        # ssl.SSLError triggers Phase 2; both fail → 2 create_connection calls.
+        assert mock_create_conn.call_count == 2
+
+    @patch(f"{_MODULE}.socket.create_connection")
+    def test_phase1_connection_error_skips_phase2(
+        self,
+        mock_create_conn: MagicMock,
+    ) -> None:
+        """Network-level OSError in Phase 1 → (False, False); Phase 2 not attempted."""
+        from solentlabs.cable_modem_monitor_core.connectivity import _tls_handshake
+
+        mock_create_conn.side_effect = ConnectionResetError("connection reset by peer")
+
+        ok, legacy = _tls_handshake("192.168.100.1", 443, timeout=2.0)
+
+        assert ok is False
+        assert legacy is False
+        # Non-ssl.SSLError OSError exits immediately — no second probe.
+        assert mock_create_conn.call_count == 1
 
 
 # =====================================================================

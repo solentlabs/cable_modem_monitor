@@ -415,8 +415,8 @@ class TestVariantPath:
 # │ auto-detected http + connectivity  │ _connectivity     │ RuntimeError            │
 # │ auto-detected http + parse error   │ _parse_error      │ RuntimeError            │
 # │ user-specified http + auth fail    │ _auth_failed      │ PermissionError         │
-# │ auto-detected https (modern)       │ _ok_result()      │ https / legacy=False    │
-# │ auto-detected https (legacy)       │ _ok_result()      │ https / legacy=True     │
+# │ auto-detected https (modern SSL)   │ _ok_result()      │ https / legacy=False    │
+# │ auto-detected https (needs SECLEVEL=0) │ _ok_result()  │ https / legacy=True     │
 # └────────────────────────────────────┴───────────────────┴─────────────────────────┘
 
 _SINGLE_ATTEMPT_CASE = tuple[
@@ -552,7 +552,7 @@ class TestSingleAttemptCollectorArgs:
         mock_probes: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """When detect_protocol observes legacy TLS, _attempt_validation receives legacy_ssl=True."""
+        """legacy_ssl=True forwarded to _attempt_validation when SECLEVEL=0 is required."""
         modem_dir = _setup_modem_dir(tmp_path)
         mock_detect.return_value = ConnectivityResult(
             success=True,

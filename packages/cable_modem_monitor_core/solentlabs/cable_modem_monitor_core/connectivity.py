@@ -34,15 +34,7 @@ urllib3.disable_warnings(InsecureRequestWarning)
 
 
 class _HNAPHeaderParsingFilter(logging.Filter):
-    """Suppress urllib3 "Failed to parse headers" warnings.
-
-    Some HNAP modems send malformed HTTP headers with debug timing
-    data prepended to header values. urllib3 emits a warning for each,
-    producing noisy log entries on every poll. This filter drops those
-    records at the logging level so they never reach any handler.
-
-    See RESOURCE_LOADING_SPEC.md § HNAP Header Parsing Warning Suppression.
-    """
+    """Drop urllib3 "Failed to parse headers" noise from HNAP modems."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         """Return False to drop records containing the header parse warning."""
@@ -70,22 +62,7 @@ _DEFAULT_TIMEOUT = 5.0
 
 
 class LegacySSLAdapter(HTTPAdapter):
-    """``HTTPAdapter`` that allows legacy SSL ciphers.
-
-    Older modem firmware (e.g., early Arris S33 builds) only supports
-    TLS cipher suites that Python 3.10+ rejects by default.  Mounting
-    this adapter on ``https://`` downgrades the cipher floor so those
-    devices remain reachable.
-
-    This is acceptable for local LAN devices with self-signed
-    certificates.  Not recommended for public internet.
-
-    Usage::
-
-        session = requests.Session()
-        session.mount("https://", LegacySSLAdapter())
-        response = session.get("https://192.168.100.1", verify=False)
-    """
+    """``HTTPAdapter`` with ``SECLEVEL=0`` ciphers for older modem firmware."""
 
     def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
         """Create pool manager with legacy SSL context."""
@@ -105,14 +82,7 @@ class LegacySSLAdapter(HTTPAdapter):
 
 
 def create_session(*, legacy_ssl: bool = False) -> requests.Session:
-    """Create a ``requests.Session`` with appropriate SSL handling.
-
-    Args:
-        legacy_ssl: Mount :class:`LegacySSLAdapter` for HTTPS URLs.
-
-    Returns:
-        Configured session with ``verify=False``.
-    """
+    """Return a ``requests.Session`` with ``verify=False`` and optional :class:`LegacySSLAdapter`."""
     session = requests.Session()
     session.verify = False
     if legacy_ssl:
@@ -124,25 +94,16 @@ def create_session(*, legacy_ssl: bool = False) -> requests.Session:
 # Protocol detection
 # ---------------------------------------------------------------------------
 
-# TLS protocol versions classed as "legacy" — the modem's stack is old
-# enough that runtime sessions need ``LegacySSLAdapter`` mounted.
-# ``sock.version()`` returns one of these literal strings.
+# TLS versions that set legacy_ssl=True when Phase 1 succeeds.
+# Only consulted in the Phase 1 success path — Phase 2 success always
+# sets legacy_ssl=True regardless of negotiated version, because
+# standard SSL already failed.  ``sock.version()`` returns these strings.
 _LEGACY_TLS_VERSIONS = frozenset({"SSLv2", "SSLv3", "TLSv1", "TLSv1.1"})
 
 
 @dataclass
 class ConnectivityResult:
-    """Result of :func:`detect_protocol`.
-
-    Attributes:
-        success: True if the modem responded to at least one probe.
-        protocol: ``"http"`` or ``"https"`` — whichever worked first.
-        legacy_ssl: True if the modem negotiated TLS 1.1 or older —
-            runtime callers must mount :class:`LegacySSLAdapter` so
-            HTTPS sessions allow the same ciphers.
-        working_url: Full URL that responded (e.g. ``https://192.168.100.1``).
-        error: Human-readable message when ``success`` is False.
-    """
+    """Result of :func:`detect_protocol` — chosen protocol, legacy_ssl flag, and working URL."""
 
     success: bool
     protocol: str | None = None
@@ -152,13 +113,10 @@ class ConnectivityResult:
 
 
 def _tcp_probe(host: str, port: int, timeout: float) -> bool:
-    """Return True if ``host:port`` accepts a TCP connection.
-
-    Pinned to IPv4 — most consumer cable modems are IPv4-only on the
-    LAN side, and a dual-stack ``getaddrinfo`` may otherwise return
-    IPv6 first and false-fail the probe before falling back to v4.
-    """
+    """Return True if ``host:port`` accepts a TCP connection (IPv4-pinned)."""
     try:
+        # AF_INET pins to IPv4 — dual-stack getaddrinfo may return IPv6 first
+        # and false-fail before falling back to v4 on IPv4-only modem LANs.
         infos = socket.getaddrinfo(host, port, family=socket.AF_INET, type=socket.SOCK_STREAM)
     except OSError as exc:
         _logger.debug("TCP probe %s:%d — address resolution failed: %s", host, port, exc)
@@ -178,26 +136,17 @@ def _tcp_probe(host: str, port: int, timeout: float) -> bool:
 
 
 def _tls_handshake(host: str, port: int, timeout: float) -> tuple[bool, bool]:
-    """Open a TLS connection with broad ciphers and report what got negotiated.
-
-    Uses a ``SECLEVEL=0`` cipher context so the handshake succeeds
-    regardless of the modem's TLS age — the runtime adapter decision
-    is driven by the *negotiated* protocol version, not by what we
-    tried first.
-
-    Returns:
-        ``(handshake_ok, legacy_negotiated)``. ``legacy_negotiated``
-        is True when the modem chose TLS 1.1 or older.
-    """
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    context.set_ciphers(LEGACY_CIPHERS)
+    """Probe TLS on host:port; return (handshake_ok, legacy_ssl_needed)."""
+    # Phase 1 — standard Python SSL (no SECLEVEL=0).
+    # Mirrors create_session(legacy_ssl=False) at runtime.
+    std_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    std_context.check_hostname = False
+    std_context.verify_mode = ssl.CERT_NONE
 
     try:
         with (
             socket.create_connection((host, port), timeout=timeout) as raw_sock,
-            context.wrap_socket(raw_sock, server_hostname=host) as tls_sock,
+            std_context.wrap_socket(raw_sock, server_hostname=host) as tls_sock,
         ):
             version = tls_sock.version() or ""
             legacy = version in _LEGACY_TLS_VERSIONS
@@ -209,18 +158,57 @@ def _tls_handshake(host: str, port: int, timeout: float) -> tuple[bool, bool]:
                 " (legacy)" if legacy else "",
             )
             return (True, legacy)
-    except (ssl.SSLError, OSError, TimeoutError) as exc:
-        _logger.debug("TLS handshake to %s:%d failed: %s", host, port, exc)
+    except TimeoutError as exc:
+        # Timeout means the port is unresponsive — SECLEVEL=0 would also
+        # time out.  Skip Phase 2 and let the caller fall back to HTTP.
+        _logger.debug("TLS probe %s:%d — timed out: %s", host, port, exc)
         return (False, False)
+    except ssl.SSLError as exc:
+        # Cipher/protocol rejection — the specific signal that justifies
+        # Phase 2.  SECLEVEL=0 may accept what the standard context refused.
+        _logger.debug(
+            "TLS probe %s:%d — standard SSL failed, trying SECLEVEL=0: %s",
+            host,
+            port,
+            exc,
+        )
+    except OSError as exc:
+        # Network-level error (connection reset, broken pipe, etc.) —
+        # not a cipher mismatch.  Phase 2 would hit the same network
+        # problem, so skip it and let the caller fall back to HTTP.
+        _logger.debug("TLS probe %s:%d — connection error: %s", host, port, exc)
+        return (False, False)
+
+    # Phase 2 — SECLEVEL=0 fallback.
+    # Mirrors create_session(legacy_ssl=True) at runtime.  Standard SSL
+    # failed; if the modem accepts a broader cipher set it still needs
+    # LegacySSLAdapter, regardless of its TLS version.
+    legacy_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    legacy_context.check_hostname = False
+    legacy_context.verify_mode = ssl.CERT_NONE
+    legacy_context.set_ciphers(LEGACY_CIPHERS)
+
+    try:
+        with (
+            socket.create_connection((host, port), timeout=timeout) as raw_sock,
+            legacy_context.wrap_socket(raw_sock, server_hostname=host) as tls_sock,
+        ):
+            version = tls_sock.version() or ""
+            _logger.info(
+                "TLS probe %s:%d — standard SSL failed, SECLEVEL=0 succeeded (version=%s): legacy_ssl=True",
+                host,
+                port,
+                version or "unknown",
+            )
+            return (True, True)
+    except (ssl.SSLError, OSError, TimeoutError) as exc:
+        _logger.debug("TLS probe %s:%d — SECLEVEL=0 also failed: %s", host, port, exc)
+
+    return (False, False)
 
 
 def _strip_protocol(host: str) -> tuple[str | None, str]:
-    """Split an optional protocol prefix from a host string.
-
-    Returns ``(protocol, bare_host)``. ``protocol`` is ``"http"`` or
-    ``"https"`` if the input had a prefix, else None. ``bare_host``
-    may still include a ``:port`` suffix.
-    """
+    """Split an optional ``http://`` or ``https://`` prefix; return (protocol|None, bare_host)."""
     for prefix, name in (("http://", "http"), ("https://", "https")):
         if host.startswith(prefix):
             bare = host[len(prefix) :].split("/", 1)[0]
@@ -229,13 +217,7 @@ def _strip_protocol(host: str) -> tuple[str | None, str]:
 
 
 def _split_host_port(host: str) -> tuple[str, int | None]:
-    """Split ``host:port`` into ``(hostname, port)``.
-
-    Returns ``(host, None)`` when the input has no port suffix.
-    Bracketed IPv6 literals (``[::1]:8080``) are handled — the
-    bracket form is the only safe way to disambiguate IPv6 from a
-    bare ``host:port`` colon.
-    """
+    """Split ``host:port`` into ``(hostname, port|None)``; handles bracketed IPv6."""
     if host.startswith("["):
         end = host.find("]")
         if end == -1:
@@ -257,30 +239,7 @@ def detect_protocol(
     *,
     timeout: float = _DEFAULT_TIMEOUT,
 ) -> ConnectivityResult:
-    """Detect the working protocol for a modem.
-
-    Probes TCP ``:80`` and ``:443``. If ``:443`` accepts connections
-    *and* completes a TLS handshake, prefers HTTPS — modems that
-    expose both ports almost always intend HTTPS for authenticated
-    traffic, and ``:80`` is typically a redirect or legacy stub.
-
-    Sets ``legacy_ssl`` from the negotiated TLS protocol version
-    rather than from a failed-and-retried-with-weaker-ciphers
-    inference. The runtime ``LegacySSLAdapter`` decision is driven
-    by what the modem actually picked.
-
-    If *host* already includes a protocol prefix (``http://`` or
-    ``https://``), only that transport is probed — the user has
-    explicitly chosen.
-
-    Args:
-        host: IP address, hostname, or full URL.
-        timeout: Per-probe timeout in seconds (applied to each TCP
-            probe and the TLS handshake separately).
-
-    Returns:
-        :class:`ConnectivityResult` describing the chosen transport.
-    """
+    """TCP-probe :80/:443 and run TLS handshakes to pick the working protocol and session type."""
     explicit_protocol, bare_host = _strip_protocol(host)
     hostname, port_override = _split_host_port(bare_host)
     http_port = port_override or 80
@@ -306,7 +265,7 @@ def detect_protocol(
         url = f"https://{url_host}"
         _logger.info(
             "Protocol detection: HTTPS reachable%s — using %s",
-            " (legacy TLS)" if legacy_ssl else "",
+            " (needs SECLEVEL=0)" if legacy_ssl else "",
             url,
         )
         return ConnectivityResult(
@@ -345,15 +304,7 @@ def detect_protocol(
 
 
 def test_icmp(host: str, *, timeout: int = 2) -> bool:
-    """Test whether the host responds to ICMP echo (ping).
-
-    Runs the system ``ping`` command.  Returns False if ICMP is
-    blocked, the host is unreachable, or the command is unavailable.
-
-    Args:
-        host: IP address or hostname.
-        timeout: Wait time in seconds (``ping -W``).
-    """
+    """Return True if ``host`` responds to ICMP echo; False if blocked, unreachable, or ping missing."""
     try:
         result = subprocess.run(
             ["ping", "-c", "1", "-W", str(timeout), host],
@@ -375,20 +326,7 @@ def test_http_head(
     legacy_ssl: bool = False,
     timeout: float = _DEFAULT_TIMEOUT,
 ) -> bool:
-    """Test whether the modem responds to HTTP HEAD requests.
-
-    Some modems (e.g., Technicolor TC4400 with micro_httpd) reject
-    HEAD — they only respond to GET.  This probe lets the health
-    monitor know whether HEAD is usable.
-
-    Args:
-        url: Full URL (e.g. ``http://192.168.100.1``).
-        legacy_ssl: Use ``SECLEVEL=0`` ciphers for HTTPS.
-        timeout: Request timeout in seconds.
-
-    Returns:
-        True if HEAD returns a status < 500.
-    """
+    """Return True if ``url`` responds to HTTP HEAD with status < 500."""
     try:
         session = create_session(legacy_ssl=legacy_ssl)
         resp = session.head(url, timeout=timeout, allow_redirects=False)

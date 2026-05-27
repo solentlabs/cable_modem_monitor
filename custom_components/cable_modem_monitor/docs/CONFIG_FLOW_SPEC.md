@@ -191,10 +191,10 @@ helper in `config_flow_helpers.py` performs this check.
 (typically `192.168.100.1`).
 
 **Host input accepts IP, hostname, or full URL.** If the user enters a
-bare IP (e.g., `192.168.100.1`), protocol detection runs automatically in
-Step 4. If the user includes a protocol prefix (e.g.,
-`https://192.168.100.1`), detection is skipped and the specified protocol
-is used directly. This gives users an escape hatch when automatic
+bare IP (e.g., `192.168.100.1`), protocol detection probes both :80 and
+:443 automatically in Step 4. If the user includes a protocol prefix
+(e.g., `https://192.168.100.1`), only that port is probed — no fallback
+to the other transport. This gives users an escape hatch when automatic
 detection picks the wrong protocol.
 
 **Entity prefix is selected in Step 1.** Options: `none`, `model`, `ip`.
@@ -209,17 +209,18 @@ Runs in an executor thread to avoid blocking the HA event loop.
 
 1. **Protocol detection** — if the user entered a bare IP/hostname
    (no `http://` or `https://` prefix), TCP-probe ports 80 and 443.
-   When 443 accepts a connection *and* completes a TLS handshake (using
-   a `SECLEVEL=0` cipher context that admits both modern and legacy
-   suites), prefer HTTPS — modems that expose both ports almost always
-   intend HTTPS for authenticated traffic. The negotiated TLS protocol
-   version drives `legacy_ssl`: TLS 1.1 or older is observed-legacy.
-   When 443 is closed or its handshake fails, fall back to HTTP if
-   port 80 is open. The probe never sends an HTTP request — only a
-   TCP connect plus, on 443, a TLS handshake. Records `working_url`,
-   `protocol`, and `legacy_ssl` for runtime. If the user explicitly
-   included a protocol prefix, respect it and probe only that
-   transport.
+   When 443 accepts a connection *and* completes a TLS handshake,
+   prefer HTTPS — modems that expose both ports almost always intend
+   HTTPS for authenticated traffic. Standard Python SSL is tried
+   first; `SECLEVEL=0` is the fallback only when standard fails.
+   `legacy_ssl=True` when standard SSL fails but `SECLEVEL=0`
+   succeeds, or when the negotiated TLS version is TLS 1.1 or older
+   — both require `LegacySSLAdapter` at runtime. When 443 is closed
+   or both handshakes fail, fall back to HTTP if port 80 is open.
+   The probe never sends an HTTP request — only TCP connects plus,
+   on 443, TLS handshakes. Records `working_url`, `protocol`, and
+   `legacy_ssl` for runtime. If the user explicitly included a
+   protocol prefix, respect it and probe only that transport.
 2. **Authenticate + Parse** — load modem config from the catalog, create
    a `ModemDataCollector`, and run `execute()`. This single call
    authenticates with the variant's auth strategy, fetches data pages,
@@ -242,9 +243,9 @@ config_flow_helpers.validate_connection(hass, host, user, pass, modem_dir, varia
  └─ _run_validation(...)                      [executor thread]
       │
       ├─ 1. detect_protocol(hostname)         [Core connectivity]
-      │     TCP probe :80 and :443; TLS handshake on :443 with
-      │     SECLEVEL=0 cipher context; legacy_ssl set from the
-      │     negotiated TLS version (TLSv1.1 or older → legacy)
+      │     TCP probe :80 and :443; TLS handshake on :443 —
+      │     standard Python SSL first, SECLEVEL=0 fallback;
+      │     legacy_ssl=True when standard fails or version ≤ TLS 1.1
       │     → ConnectivityResult(protocol, legacy_ssl, working_url)
       │
       ├─ 2. load_modem_config(modem.yaml)     [Core config_loader]
