@@ -190,6 +190,22 @@ class UrlTokenAuthManager(BaseAuthManager):
         # Token extraction: body without indicator = token string
         url_token = self._extract_token(session, body, log_level)
 
+        # Credential cookie injection: replicate browser JS eraseCookie / createCookie
+        # pattern for firmware where the server never issues the auth cookie via
+        # Set-Cookie. Only fires when no token was extracted (empty body, no server
+        # Set-Cookie) — the case where the browser would have called
+        # createCookie("credential", "") and the server accepts btoa(user:pass).
+        if config.inject_credential_cookie and config.cookie_name and not url_token:
+            injected = base64.b64encode(
+                f"{username}:{password}".encode(),
+            ).decode("ascii")
+            session.cookies.set(config.cookie_name, injected)
+            _logger.log(
+                log_level,
+                "URL token auth: injected %s cookie (btoa credential)",
+                config.cookie_name,
+            )
+
         # Set Basic auth header for data requests if configured
         if config.auth_header_data:
             session.auth = (username, password)
@@ -203,11 +219,10 @@ class UrlTokenAuthManager(BaseAuthManager):
         # Contract: token branch must NOT populate response/response_url.
         # Those fields advertise an auth-response-reuse opportunity to the
         # loader and only apply when the body IS the data page (the
-        # indicator-present branch above). A token-only body shares the
-        # login URL path with parser-configured data pages on some firmware
-        # (SB8200: /cmconnectionstatus.html), so falsely advertising reuse
-        # would cause the loader to surface the token string as the data
-        # page and skip the real fetch. See AuthResult docstring +
+        # indicator-present branch above). Some firmware shares the login
+        # URL path with parser-configured data pages, so falsely advertising
+        # reuse would cause the loader to surface the token string as the
+        # data page and skip the real fetch. See AuthResult docstring +
         # RESOURCE_LOADING_SPEC.md § Auth Response Reuse. Regression: #81.
         return AuthResult(
             success=True,

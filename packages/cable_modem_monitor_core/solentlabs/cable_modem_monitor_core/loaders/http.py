@@ -181,8 +181,10 @@ class HTTPResourceLoader:
                 and _is_login_page(response.text)
             ):
                 _logger.warning(
-                    "Data page %s appears to be a login page",
+                    "Data page %s appears to be a login page" " — session: cookies=%s basic_auth=%s",
                     target.path,
+                    list(self._session.cookies.keys()),
+                    self._session.auth is not None,
                 )
                 raise LoginPageDetectedError(target.path)
 

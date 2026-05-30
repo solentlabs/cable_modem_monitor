@@ -1,5 +1,5 @@
 {
-  "_description": "URL token auth: login response body is a 31-char session token (firmware returns token directly in auth response body)",
+  "_description": "URL token auth: GET login page returns empty body (client-side credential cookie injection pattern)",
   "_entries": [
     {
       "request": {
@@ -9,7 +9,7 @@
       "response": {
         "status": 200,
         "headers": [],
-        "content": {"text": "ddgFdG7bqJDDJIBXNfyMSPfDdgjG8PC"}
+        "content": {"text": ""}
       }
     }
   ]
