@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +12,17 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import UrlToke
 from solentlabs.cable_modem_monitor_core.test_harness import HARMockServer
 
 from .conftest import load_auth_fixture
+
+# Expected token extracted from har_url_token_login_body_token fixture response body.
+_BODY_TOKEN = "ddgFdG7bqJDDJIBXNfyMSPfDdgjG8PC"
+
+# Extra UrlTokenAuth fields needed for the body-token variant (prefix in URL and on data requests).
+_BODY_TOKEN_AUTH_CONFIG = {"login_prefix": "login_", "token_prefix": "ct_"}
+
+# Credentials used across all url_token auth tests.
+_USERNAME = "admin"
+_PASSWORD = "password"
+_BTOA_CREDENTIAL = base64.b64encode(f"{_USERNAME}:{_PASSWORD}".encode()).decode("ascii")
 
 
 class TestUrlTokenAuthManager:
@@ -28,7 +40,7 @@ class TestUrlTokenAuthManager:
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
             assert result.success is True
 
     def test_session_cookie_set_after_login(self, session: requests.Session) -> None:
@@ -42,7 +54,7 @@ class TestUrlTokenAuthManager:
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
             assert result.success is True
             # Runner extracts URL token from session cookies, not auth_context
             assert session.cookies.get("sessionId") == "tok_abc123"
@@ -59,7 +71,7 @@ class TestUrlTokenAuthManager:
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
             assert result.success is True
 
     def test_success_indicator_absent_extracts_body_as_token(self, session: requests.Session) -> None:
@@ -79,7 +91,7 @@ class TestUrlTokenAuthManager:
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
             # New behavior: body without indicator = token extraction (not failure)
             assert result.success is True
             assert result.auth_context.url_token == "Error: bad credentials"
@@ -110,10 +122,10 @@ class TestUrlTokenAuthManager:
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
 
             assert result.success is True
-            assert result.auth_context.url_token == "ddgFdG7bqJDDJIBXNfyMSPfDdgjG8PC"
+            assert result.auth_context.url_token == _BODY_TOKEN
             # Contract: token branch does not advertise reuse
             assert result.response is None
             assert result.response_url == ""
@@ -130,7 +142,7 @@ class TestUrlTokenAuthManager:
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
             assert result.success is True
 
     def test_auth_header_data_sets_basic_auth(self, session: requests.Session) -> None:
@@ -145,9 +157,9 @@ class TestUrlTokenAuthManager:
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
             assert result.success is True
-            assert session.auth == ("admin", "password")
+            assert session.auth == (_USERNAME, _PASSWORD)
 
     def test_data_page_branch_advertises_reuse(self, session: requests.Session) -> None:
         """Data-page branch populates response/response_url for loader reuse.
@@ -167,7 +179,7 @@ class TestUrlTokenAuthManager:
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
             assert result.success is True
             assert result.response is not None
             assert result.response_url == "/login.html"
@@ -183,10 +195,58 @@ class TestUrlTokenAuthManager:
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
             assert result.success is True
             # Cookies are on the session — runner reads them via cookie_name
             assert len(session.cookies) > 0
+
+    @pytest.mark.parametrize(
+        "fixture,extra_config,expect_btoa_cookie,expect_url_token",
+        [
+            ("har_url_token_login_empty_body.json", {}, True, ""),
+            ("har_url_token_login_body_token.json", _BODY_TOKEN_AUTH_CONFIG, False, _BODY_TOKEN),
+        ],
+        ids=["empty-body-injects-btoa", "body-token-skips-injection"],
+    )
+    def test_inject_credential_cookie(
+        self,
+        session: requests.Session,
+        fixture: str,
+        extra_config: dict,
+        expect_btoa_cookie: bool,
+        expect_url_token: str,
+    ) -> None:
+        """inject_credential_cookie fires only when no body token was extracted.
+
+        When the auth response body is empty, the firmware JS would call
+        createCookie("credential", btoa(user+":"+pass)) client-side — Core
+        replicates this with inject_credential_cookie. When a server-issued
+        body token is present, it goes to auth_context.url_token and the
+        credential injection is skipped to avoid overwriting the server's token.
+        """
+        entries, _ = load_auth_fixture(fixture)
+        with HARMockServer(entries) as server:
+            config = UrlTokenAuth(
+                strategy="url_token",
+                login_page="/login.html",
+                ajax_login=True,
+                inject_credential_cookie=True,
+                cookie_name="credential",
+                **extra_config,
+            )
+            manager = UrlTokenAuthManager(config)
+            manager.configure_session(session, {})
+
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
+
+            assert result.success is True
+            assert result.auth_context.url_token == expect_url_token
+            if expect_btoa_cookie:
+                assert session.cookies.get("credential") == _BTOA_CREDENTIAL
+                assert result.response is None
+                assert result.response_url == ""
+            else:
+                assert session.cookies.get("credential") is None
 
     def test_login_non_200(self, session: requests.Session) -> None:
         """Reports error when login GET returns non-200, attaches response."""
@@ -197,7 +257,7 @@ class TestUrlTokenAuthManager:
         resp = MagicMock()
         resp.status_code = 500
         with patch.object(session, "get", return_value=resp):
-            result = manager.authenticate(session, "http://192.168.100.1", "admin", "password")
+            result = manager.authenticate(session, "http://192.168.100.1", _USERNAME, _PASSWORD)
 
         assert result.success is False
         assert "500" in result.error
@@ -210,7 +270,7 @@ class TestUrlTokenAuthManager:
         manager.configure_session(session, {})
 
         with patch.object(session, "get", side_effect=requests.RequestException("redirects")):
-            result = manager.authenticate(session, "http://192.168.100.1", "admin", "password")
+            result = manager.authenticate(session, "http://192.168.100.1", _USERNAME, _PASSWORD)
 
         assert result.success is False
         assert "URL token login failed" in result.error
@@ -225,4 +285,4 @@ class TestUrlTokenAuthManager:
             patch.object(session, "get", side_effect=requests.ConnectionError("refused")),
             pytest.raises(requests.ConnectionError),
         ):
-            manager.authenticate(session, "http://127.0.0.1:1", "admin", "password")
+            manager.authenticate(session, "http://127.0.0.1:1", _USERNAME, _PASSWORD)

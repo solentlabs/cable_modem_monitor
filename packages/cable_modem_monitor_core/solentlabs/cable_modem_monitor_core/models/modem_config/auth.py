@@ -117,6 +117,7 @@ class UrlTokenAuth(AuthStrategyBase):
     auth_header_data: bool = False
     cookie_name: str = ""
     token_prefix: str = ""
+    inject_credential_cookie: bool = False
 
     display_name: ClassVar[str] = "URL Token"
     transport: ClassVar[str] = "http"
