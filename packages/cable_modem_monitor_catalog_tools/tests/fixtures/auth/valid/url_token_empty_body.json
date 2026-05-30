@@ -1,0 +1,23 @@
+{
+  "_description": "URL token auth where auth response body is empty — triggers empty-body warning",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/login.html?login_YWRtaW46cGFzcw==",
+        "headers": [{"name": "X-Requested-With", "value": "XMLHttpRequest"}],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 0, "text": ""}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "url_token",
+  "_expected_confidence": "high",
+  "_expected_warning": "url_token auth response body is empty"
+}
