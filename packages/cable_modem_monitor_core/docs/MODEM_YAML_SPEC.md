@@ -492,7 +492,7 @@ auth:
 | `auth_header_data` | bool | `false` | Include `Authorization: Basic` header on data requests |
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `token_prefix` | string | `""` | URL token prefix for subsequent data page requests (e.g., `ct_`). The token value is extracted by the auth manager from the login response body. |
-| `inject_credential_cookie` | bool | `false` | After auth, if no token was extracted from the body or server Set-Cookie, write `base64(user:pass)` into the session as `cookie_name`. Use when the server returns an empty auth response and the firmware JS sets the credential cookie client-side from the encoded credentials (e.g., `createCookie("credential", btoa(user+":"+pass))`). Only fires when `url_token` is empty — does not fire when a server-issued body token was extracted. |
+| `inject_credential_cookie` | bool | `false` | After auth, set `cookie_name` to the auth response body (a server-issued session token). Use when the server returns a token in the auth response body and the firmware JS sets it as the credential cookie client-side (e.g., `createCookie("credential", result)` where `result` is the response body). Auth fails if the body is empty — this field requires a non-empty server response. |
 
 **Success detection and response type discrimination:**
 

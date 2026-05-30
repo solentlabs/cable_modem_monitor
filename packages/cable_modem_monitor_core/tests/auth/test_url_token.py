@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -16,13 +15,9 @@ from .conftest import load_auth_fixture
 # Expected token extracted from har_url_token_login_body_token fixture response body.
 _BODY_TOKEN = "ddgFdG7bqJDDJIBXNfyMSPfDdgjG8PC"
 
-# Extra UrlTokenAuth fields needed for the body-token variant (prefix in URL and on data requests).
-_BODY_TOKEN_AUTH_CONFIG = {"login_prefix": "login_", "token_prefix": "ct_"}
-
 # Credentials used across all url_token auth tests.
 _USERNAME = "admin"
-_PASSWORD = "password"
-_BTOA_CREDENTIAL = base64.b64encode(f"{_USERNAME}:{_PASSWORD}".encode()).decode("ascii")
+_PASSWORD = "pw"
 
 
 class TestUrlTokenAuthManager:
@@ -200,31 +195,14 @@ class TestUrlTokenAuthManager:
             # Cookies are on the session — runner reads them via cookie_name
             assert len(session.cookies) > 0
 
-    @pytest.mark.parametrize(
-        "fixture,extra_config,expect_btoa_cookie,expect_url_token",
-        [
-            ("har_url_token_login_empty_body.json", {}, True, ""),
-            ("har_url_token_login_body_token.json", _BODY_TOKEN_AUTH_CONFIG, False, _BODY_TOKEN),
-        ],
-        ids=["empty-body-injects-btoa", "body-token-skips-injection"],
-    )
-    def test_inject_credential_cookie(
-        self,
-        session: requests.Session,
-        fixture: str,
-        extra_config: dict,
-        expect_btoa_cookie: bool,
-        expect_url_token: str,
-    ) -> None:
-        """inject_credential_cookie fires only when no body token was extracted.
+    def test_inject_credential_cookie(self, session: requests.Session) -> None:
+        """inject_credential_cookie sets cookie from auth response body.
 
-        When the auth response body is empty, the firmware JS would call
-        createCookie("credential", btoa(user+":"+pass)) client-side — Core
-        replicates this with inject_credential_cookie. When a server-issued
-        body token is present, it goes to auth_context.url_token and the
-        credential injection is skipped to avoid overwriting the server's token.
+        The response body is the server-issued session token; Core sets it as the
+        credential cookie, replicating browser JS createCookie("credential", result).
+        url_token is empty — the body is not a URL suffix.
         """
-        entries, _ = load_auth_fixture(fixture)
+        entries, _ = load_auth_fixture("har_url_token_login_body_token.json")
         with HARMockServer(entries) as server:
             config = UrlTokenAuth(
                 strategy="url_token",
@@ -232,7 +210,6 @@ class TestUrlTokenAuthManager:
                 ajax_login=True,
                 inject_credential_cookie=True,
                 cookie_name="credential",
-                **extra_config,
             )
             manager = UrlTokenAuthManager(config)
             manager.configure_session(session, {})
@@ -240,13 +217,33 @@ class TestUrlTokenAuthManager:
             result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
 
             assert result.success is True
-            assert result.auth_context.url_token == expect_url_token
-            if expect_btoa_cookie:
-                assert session.cookies.get("credential") == _BTOA_CREDENTIAL
-                assert result.response is None
-                assert result.response_url == ""
-            else:
-                assert session.cookies.get("credential") is None
+            assert session.cookies.get("credential") == _BODY_TOKEN
+            assert result.auth_context.url_token == ""
+            assert result.response is None
+            assert result.response_url == ""
+
+    def test_inject_credential_cookie_empty_body_fails(self, session: requests.Session) -> None:
+        """inject_credential_cookie returns failure when auth response body is empty.
+
+        Empty body means the server gave no token — this is a misconfiguration or
+        an unexpected firmware response, not a variant to handle silently.
+        """
+        entries, _ = load_auth_fixture("har_url_token_login_empty_body.json")
+        with HARMockServer(entries) as server:
+            config = UrlTokenAuth(
+                strategy="url_token",
+                login_page="/login.html",
+                inject_credential_cookie=True,
+                cookie_name="credential",
+            )
+            manager = UrlTokenAuthManager(config)
+            manager.configure_session(session, {})
+
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
+
+            assert result.success is False
+            assert "empty" in result.error
+            assert session.cookies.get("credential") is None
 
     def test_login_non_200(self, session: requests.Session) -> None:
         """Reports error when login GET returns non-200, attaches response."""

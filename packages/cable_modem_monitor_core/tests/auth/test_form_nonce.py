@@ -37,7 +37,7 @@ class TestFormNonceAuthManager:
             manager = FormNonceAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
             # response_url intentionally empty — nonce auth response body
             # is the text prefix, not page content at the redirect target
@@ -56,7 +56,7 @@ class TestFormNonceAuthManager:
             manager = FormNonceAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is False
             assert "Invalid credentials" in result.error
             assert result.response is not None
@@ -102,7 +102,7 @@ class TestFormNonceAuthManager:
         manager.configure_session(session, {})
 
         with patch.object(session, "post", side_effect=requests.RequestException("redirects")):
-            result = manager.authenticate(session, "http://192.168.100.1", "admin", "password")
+            result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
 
         assert result.success is False
         assert "Nonce login POST failed" in result.error
@@ -117,7 +117,7 @@ class TestFormNonceAuthManager:
             patch.object(session, "post", side_effect=requests.ConnectionError("refused")),
             pytest.raises(requests.ConnectionError),
         ):
-            manager.authenticate(session, "http://127.0.0.1:1", "admin", "password")
+            manager.authenticate(session, "http://127.0.0.1:1", "admin", "pw")
 
 
 class TestPackB64Credentials:
@@ -207,7 +207,7 @@ class TestB64PackedIntegration:
             manager = FormNonceAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
 
     def test_plain_login_with_prefetch(self, session: requests.Session) -> None:
@@ -224,5 +224,5 @@ class TestB64PackedIntegration:
             manager = FormNonceAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True

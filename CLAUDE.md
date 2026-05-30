@@ -253,6 +253,7 @@ propose fixes first.
   can't be found, leave the field empty rather than guessing.
 - **`packages/cable_modem_monitor_catalog/README.md` is auto-generated.**
   Never edit it directly. Run `python3 packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py`
+  to regenerate.
   to regenerate. Three rules: (1) Contributors are not responsible for
   regenerating it — the `/modem-confirm` and `/modem-intake` skills handle
   it as a verified final step and may bundle it with the catalog commit.

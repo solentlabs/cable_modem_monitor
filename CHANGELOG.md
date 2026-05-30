@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`inject_credential_cookie` auth: body is the credential cookie value.**
+  Firmware that uses this pattern returns a server-issued session token in
+  the auth response body; browser JS sets it directly as the credential
+  cookie (`createCookie("credential", result)`). Core now replicates this
+  correctly. An empty auth response body is treated as an error — there is
+  no btoa fallback. Related to #170.
+
+### Added
+
+- **`inject_credential_cookie` field for `url_token` auth.** When set,
+  Core sets `cookie_name` to the server-issued token from the auth response
+  body after login. Use for firmware where the server never issues the
+  credential cookie via `Set-Cookie` and the browser JS reads the token from
+  the response body instead.
+- **SB8200 `modem-basic` golden file regression test.** `modem-basic.har`
+  now carries a synthetic auth response body so `test_modem_har_replay`
+  exercises the full auth → fetch → parse pipeline for this variant.
+
 ## [3.14.0-beta.8] - 2026-05-29
 
 ### Fixed
@@ -47,9 +67,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Arris SB8200 `modem-basic` variant (URL Token, v6 hardware).** v6 hardware
-  does not issue a session cookie on login; this variant uses the URL token
-  strategy without cookie credential reuse. Status: `awaiting_verification`.
+- **Arris SB8200 `modem-basic` variant (URL Token, v6 hardware).** Added
+  catalog entry for the v6 hardware variant (firmware AB01.01.009.51).
+  Auth mechanism confirmed in Unreleased. Status: `awaiting_verification`.
   Related to #170.
 - **`ModemSnapshot.to_event_payload()` and HA event bus integration.** Core
   now produces a structured `EventBusPayload` (model, ISP, status, channel

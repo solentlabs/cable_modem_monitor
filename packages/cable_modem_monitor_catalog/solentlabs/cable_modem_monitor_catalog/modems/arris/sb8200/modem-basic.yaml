@@ -36,13 +36,13 @@ isps:
 notes: |
   HW v6 firmware variant (AB01.01.009.51_080720_183.0A.NSH). Differs from
   modem-cookie.yaml (v7) in one functional way: the server does not issue a
-  credential cookie via Set-Cookie on the login response. Instead, the browser
-  JS sets the credential cookie client-side from the auth response body:
-    createCookie("credential", result)   // result = auth response body
-  Core replicates this via inject_credential_cookie: true, which injects
-  base64(user:pass) as the credential cookie when the auth response body is
-  empty. Pending confirmation from contributor (#170) that this is the value
-  the server expects.
+  credential cookie via Set-Cookie on the login response. Instead, the server
+  returns a session token in the auth response body and the browser JS sets
+  it as the credential cookie:
+    createCookie("credential", result)   // result = 31-char server-issued token
+  Core replicates this via inject_credential_cookie: true, which sets the
+  credential cookie to the auth response body. Confirmed by contributor (#170):
+  atob(credential) decodes to binary (server-issued token, not btoa(user:pass)).
 
   Same page structure and parser as all other SB8200 variants.
 

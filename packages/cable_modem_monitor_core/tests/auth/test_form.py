@@ -55,7 +55,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
             assert result.response is not None
 
@@ -72,7 +72,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
 
     def test_password_field_list(self, session: requests.Session) -> None:
@@ -89,7 +89,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
 
     def test_password_field_string_normalized(self, session: requests.Session) -> None:
@@ -106,7 +106,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
 
     def test_success_redirect_check(self, session: requests.Session) -> None:
@@ -122,7 +122,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             # The mock server doesn't redirect, so the final URL
             # is the login URL itself -- which contains "/login"
             assert result.success is True
@@ -140,7 +140,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
 
     def test_success_indicator_missing(self, session: requests.Session) -> None:
@@ -156,7 +156,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is False
             assert "indicator" in result.error
 
@@ -172,7 +172,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
             assert result.response_url == "/goform/login"
 
@@ -185,7 +185,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
 
     def test_401_no_success_criteria(self, session: requests.Session) -> None:
@@ -197,7 +197,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is False
             assert "401" in result.error
 
@@ -210,7 +210,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is False
             assert "500" in result.error
 
@@ -227,7 +227,7 @@ class TestFormAuthManager:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is False
             assert "redirect mismatch" in result.error.lower()
             assert "/dashboard" in result.error
@@ -249,7 +249,7 @@ class TestHiddenFieldsAndCredentialRouting:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
 
     def test_password_field_list_with_hidden_fields(self, session: requests.Session) -> None:
@@ -284,7 +284,7 @@ class TestHiddenFieldsAndCredentialRouting:
             manager = FormAuthManager(config)
             manager.configure_session(session, {})
 
-            result = manager.authenticate(session, server.base_url, "admin", "password")
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
 
 

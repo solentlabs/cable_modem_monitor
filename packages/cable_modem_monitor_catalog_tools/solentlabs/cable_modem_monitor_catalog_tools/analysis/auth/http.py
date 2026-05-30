@@ -375,9 +375,9 @@ def _detect_client_side_cookie(
     """Return name of first cookie in post-login requests never issued via Set-Cookie.
 
     Detects the client-side credential cookie injection pattern: firmware
-    authenticates but never sets a session cookie via Set-Cookie; browser JS
-    synthesizes the cookie (typically btoa(user:pass)). Returns the cookie
-    name, or empty string if not detected.
+    authenticates and returns a session token in the response body; browser JS
+    sets it as a credential cookie (createCookie("credential", result)).
+    Returns the cookie name, or empty string if not detected.
     """
     server_cookies = _collect_server_cookie_names(entries)
     past_auth = False
@@ -410,16 +410,16 @@ def _extract_url_token(
 
     resp_text = resp.get("content", {}).get("text", "")
 
-    # Empty auth response body: cannot confirm credential value from HAR alone.
-    # This is the client-side cookie injection pattern — firmware authenticates
-    # but never issues a Set-Cookie; browser JS synthesizes the credential cookie
-    # from btoa(user:pass). Detect whether that pattern is present.
+    # Empty auth response body: HAR sanitizers strip the response body, so an
+    # empty body here may mean the body was redacted, not that it was empty.
+    # The pattern: firmware returns a server-issued token in the auth body;
+    # browser JS sets it as a credential cookie (createCookie("credential", result)).
     inject_credential_cookie = False
     detected_cookie_name = ""
     if not resp_text:
         warnings.append(
             f"{WARNING_PREFIX} url_token auth response body is empty — "
-            "cannot confirm credential value from HAR. "
+            "body may have been redacted by har-capture sanitizer. "
             "Check whether post-login requests carry a credential cookie "
             "that was not set via Set-Cookie (client-side cookie injection pattern)."
         )
@@ -431,7 +431,8 @@ def _extract_url_token(
                 "post-login requests but was never issued via Set-Cookie — "
                 "client-side credential cookie injection detected. "
                 "Setting inject_credential_cookie: true (confidence: low — "
-                "verify that btoa(user:pass) is the correct cookie value)."
+                "verify the auth response body contains the credential value; "
+                "it is typically a server-issued token, not btoa(user:pass))."
             )
 
     fields: dict[str, Any] = {

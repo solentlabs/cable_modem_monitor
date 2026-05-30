@@ -277,7 +277,7 @@ class TestFormPbkdf2AuthManager:
             login_resp.json.return_value = {"error": False}
             mock_post.side_effect = [salt_resp, login_resp]
 
-            result = manager.authenticate(session, "http://192.168.100.1", "admin", "password")
+            result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
             assert result.success is True
             assert mock_post.call_count == 2
 
@@ -298,7 +298,7 @@ class TestFormPbkdf2AuthManager:
             login_resp.json.return_value = {"error": False}
             mock_post.side_effect = [salt_resp, login_resp]
 
-            result = manager.authenticate(session, "http://192.168.100.1", "admin", "password")
+            result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
             assert result.success is True
 
     def test_with_csrf_endpoint(self, session: requests.Session) -> None:
@@ -321,7 +321,7 @@ class TestFormPbkdf2AuthManager:
                 login_resp.json.return_value = {"error": False}
                 mock_post.side_effect = [salt_resp, login_resp]
 
-                result = manager.authenticate(session, server.base_url, "admin", "password")
+                result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
             assert session.headers.get("X-CSRF-TOKEN") == "csrf_abc123"
 
@@ -343,7 +343,7 @@ class TestFormPbkdf2AuthManager:
             }
             mock_post.side_effect = [salt_resp, login_resp]
 
-            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "pw")
             assert result.success is True
 
     def test_login_success_dict_mismatch_fails(self, session: requests.Session) -> None:
@@ -360,7 +360,7 @@ class TestFormPbkdf2AuthManager:
             login_resp.json.return_value = {"error": "session_limit", "message": "MSG_LOGIN_150"}
             mock_post.side_effect = [salt_resp, login_resp]
 
-            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "pw")
             assert result.success is False
             assert "MSG_LOGIN_150" in result.error
 
@@ -374,7 +374,7 @@ class TestFormPbkdf2AuthManager:
             patch.object(session, "post", side_effect=requests.ConnectionError("refused")),
             pytest.raises(requests.ConnectionError),
         ):
-            manager.authenticate(session, "http://127.0.0.1:1", "admin", "password")
+            manager.authenticate(session, "http://127.0.0.1:1", "admin", "pw")
 
     def test_login_post_connection_error_propagates(self, session: requests.Session) -> None:
         """ConnectionError on login POST propagates for collector."""
@@ -393,7 +393,7 @@ class TestFormPbkdf2AuthManager:
                 requests.ConnectionError("connection lost"),
             ]
 
-            manager.authenticate(session, "http://192.168.100.1", "admin", "password")
+            manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
 
     @pytest.mark.parametrize(
         "desc,setup_fn,expected_error,expects_response",
@@ -419,7 +419,7 @@ class TestFormPbkdf2AuthManager:
         manager.configure_session(session, {})
 
         setup_fn(session)
-        result = manager.authenticate(session, "http://192.168.100.1", "admin", "password")
+        result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
 
         assert result.success is False
         assert expected_error.lower() in result.error.lower()

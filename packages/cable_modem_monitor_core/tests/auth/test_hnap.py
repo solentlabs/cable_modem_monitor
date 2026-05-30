@@ -161,7 +161,7 @@ class TestSuccessfulLogin:
         manager = _make_manager()
         session = requests.Session()
 
-        manager.authenticate(session, hnap_server, "admin", "password")
+        manager.authenticate(session, hnap_server, "admin", "pw")
 
         assert session.cookies.get("uid") == _HNAPHandler.cookie
 
