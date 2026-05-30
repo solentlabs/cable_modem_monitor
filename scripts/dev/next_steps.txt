@@ -2,6 +2,9 @@ Welcome back to Cable Modem Monitor!
 
 Your (.venv) environment is active.
 
+Background (on folder open - scripts/dev/sync_skills.sh):
+  - skills/ synced to .claude/skills/ for Claude Code
+
 Next steps:
   1. Run tests:
      Use VS Code Task: Ctrl+Shift+P -> Tasks -> 'Run All Tests' (or 'Run Quick Tests')

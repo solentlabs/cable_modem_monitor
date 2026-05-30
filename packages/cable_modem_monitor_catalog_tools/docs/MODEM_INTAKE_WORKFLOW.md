@@ -233,13 +233,24 @@ If tests fail, diagnose from the structured diff:
 
 Fix the config, re-run. Loop until green.
 
-## Step 10: Show Changes
+## Step 10: Regenerate Catalog README
+
+Run the generator to keep the catalog index current:
+
+```bash
+python3 packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py
+```
+
+Stage `README.md` and `CATALOG_AUDIT.md` alongside the catalog files —
+CI gates on README freshness and a stale README will fail the PR.
+
+## Step 11: Show Changes
 
 Run `git status` to see all files created or modified, and
 `git diff --stat` for a summary. Do NOT commit or push automatically —
 staging and commits are yours to make.
 
-## Step 11: Open a Pull Request
+## Step 12: Open a Pull Request
 
 Once tests are green and the diff looks right:
 
@@ -267,7 +278,7 @@ parser working, the maintainer captures that evidence as a
 `confirmed`. This phase is maintainer-side; the contributor's only
 job is to share their HA diagnostics download.
 
-### Step 12: Receive Hardware Confirmation
+### Step 13: Receive Hardware Confirmation
 
 Trigger: the originating issue gets a comment with a config-entry
 diagnostics JSON attached and a positive report (channels populated,
@@ -290,7 +301,7 @@ If anything is missing or wrong, treat it as another iteration: ask
 clarifying questions, ship a patch alpha, and wait for fresh
 diagnostics. Do NOT confirm partial wins.
 
-### Step 13: Build verified.json
+### Step 14: Build verified.json
 
 The verified.json is a faithful copy of the diagnostics `data`
 section, with integration-side noise stripped and provenance metadata
@@ -337,7 +348,7 @@ For single-variant modems, the file is `modem.verified.json`. For
 multi-variant modems, name it after the variant the contributor used
 (e.g. `modem-basic.verified.json`).
 
-### Step 14: Flip Status
+### Step 15: Flip Status
 
 Edit `modem.yaml` (or the variant-specific YAML):
 
@@ -350,7 +361,7 @@ verified.** A confirmation on one variant does not transfer to the
 others — each variant exercises a different transport/auth path and
 must be verified independently.
 
-### Step 15: Commit and Reply
+### Step 16: Commit and Reply
 
 Stage the two files and commit with this message shape:
 

@@ -19,7 +19,7 @@ hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config: "[#104 CM1100 HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/104)"
@@ -41,12 +41,14 @@ notes: |
   at runtime via login_page). md5.js loaded but password sent plaintext
   in captured HAR. Downstream table has 10 columns (includes Unerrored
   Codewords between SNR and Correctable).
-  Quirk: channel 19 (QAM256, locked, 537 MHz) reports 4,196,002,703
-  correctable codewords while every other QAM channel has single-digit
-  counts. The 10-column mapping is verified correct against HTML headers.
-  Likely firmware counter corruption or an OFDM channel the firmware
-  misclassifies as QAM256. This dominates total_corrected. Needs a
-  second CM1100 user's data to confirm per-unit vs per-model.
+  Session: server-side session expires in under 10 minutes (shorter than
+  the default poll interval). LOAD_INTEGRITY detects the stub redirect
+  page and re-auths within the same poll; after 2 consecutive recoveries
+  the policy disables session reuse for the runtime. Normal behavior —
+  session_reuse_disabled=true in diagnostics is expected.
+  Codeword counter note: first HAR (unit 1) showed 4,196,002,703
+  correctable codewords on the 537 MHz channel — confirmed per-unit by
+  second user whose 537 MHz channel reports normal single-digit counts.
 
 references:
   issues:

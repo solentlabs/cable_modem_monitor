@@ -252,9 +252,13 @@ propose fixes first.
   claim is indistinguishable from fabricated data. If a source
   can't be found, leave the field empty rather than guessing.
 - **`packages/cable_modem_monitor_catalog/README.md` is auto-generated.**
-  Never edit it directly or regenerate it as a side effect of another
-  change. Run `python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py`
-  only when the intent is a standalone README update commit.
+  Never edit it directly. Run `python3 packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py`
+  to regenerate. Three rules: (1) Contributors are not responsible for
+  regenerating it — the `/modem-confirm` and `/modem-intake` skills handle
+  it as a verified final step and may bundle it with the catalog commit.
+  (2) When multiple catalog changes land in one session, regenerate once
+  after all changes are staged, not per-change. (3) CI gates on README
+  freshness — if a PR fails this check, regenerate and amend before merging.
 - **Catalog data stays true to source; normalization happens at
   presentation.** This project is a universal translator — the
   catalog is the authoritative record of what each modem reports
