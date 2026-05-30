@@ -1,0 +1,41 @@
+{
+  "_description": "URL token auth with empty body and client-side credential cookie — detects inject_credential_cookie pattern",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/login.html?login_YWRtaW46cGFzcw==",
+        "headers": [{"name": "X-Requested-With", "value": "XMLHttpRequest"}],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 0, "text": ""}
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/status.html",
+        "headers": [],
+        "cookies": [{"name": "credential", "value": "COOKIE_sanitized"}]
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 1000, "text": "<html>Downstream Bonded Channels</html>"}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "url_token",
+  "_expected_confidence": "high",
+  "_expected_warning": "client-side credential cookie injection detected",
+  "_expected_fields": {
+    "inject_credential_cookie": true,
+    "cookie_name": "credential"
+  }
+}

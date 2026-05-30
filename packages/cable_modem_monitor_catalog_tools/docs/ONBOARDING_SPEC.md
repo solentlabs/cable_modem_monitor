@@ -415,6 +415,7 @@ Examine post-login requests for session artifacts:
 |----------|--------|
 | `Set-Cookie` header after login with named cookie | `auth.cookie_name: "<name>"` (auth owns the cookie it produces) |
 | Same cookie sent on all subsequent requests | Confirms cookie-based session |
+| Cookie in post-login requests but never in a `Set-Cookie` response | `auth.inject_credential_cookie: true` + `auth.cookie_name: "<name>"` (url_token only) — firmware sets the credential cookie client-side via JavaScript; Core replicates with `btoa(user:pass)` |
 | No cookies on any request | Stateless — no cookie_name needed |
 | Logout endpoint visible in HAR | `actions.logout` (see Phase 4) |
 | `X-Requested-With: XMLHttpRequest` on data requests | `session.headers: { X-Requested-With: "XMLHttpRequest" }` |
