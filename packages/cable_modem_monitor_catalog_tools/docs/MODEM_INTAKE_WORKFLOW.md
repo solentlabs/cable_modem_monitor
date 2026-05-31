@@ -133,6 +133,21 @@ Report what was detected:
 - Actions: logout={yes/no}, restart={yes/no}
 - Sections: list formats and channel counts
 
+If `auth.confidence` is not `high`, or `warnings` is non-empty for the auth
+entry, verify the detected strategy against the HAR before proceeding. Pull
+`analysis["auth"]["fields"]` and cross-check:
+
+| Strategy | Key signal in the HAR |
+|----------|-----------------------|
+| `form` | Login is a POST with plain form fields. If `login_page` is set, a pre-fetch GET precedes the POST and hidden fields appear in the POST body. Check `encoding` — `base64` if the password is base64-encoded in the POST body, `plain` if it appears verbatim. |
+| `form_nonce` | Auth response body starts with `Url:` (success) or `Error:` (failure) — no HTTP redirect. The POST body contains a short random numeric value alongside credentials; `nonce_field` should match its field name. |
+| `form_pbkdf2` | A preliminary request fires before credentials are submitted and the response contains a salt value. `pbkdf2_iterations` and `pbkdf2_key_length` should match values visible in that exchange. |
+| `form_sjcl` | The credential POST body is an encrypted SJCL JSON blob, not plain form fields. `encrypt_aad` and `decrypt_aad` should match the AAD strings in the login JS. |
+
+If the detected strategy or any extracted field looks wrong, correct
+`analysis["auth"]` before calling `generate_config` — don't patch the
+generated YAML after the fact.
+
 ## Step 5: Check for Core Gaps
 
 If `analysis["core_gaps"]` is present, the modem uses a pattern Core
