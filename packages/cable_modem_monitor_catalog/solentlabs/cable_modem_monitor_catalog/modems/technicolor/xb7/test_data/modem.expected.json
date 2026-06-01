@@ -464,12 +464,10 @@
     {
       "channel_id": 10,
       "channel_number": 5,
-      "channel_type": "atdma",
+      "channel_type": "ofdma",
       "frequency": 42000000,
       "lock_status": "locked",
-      "modulation": "OFDMA",
-      "power": 35.5,
-      "symbol_rate": 0
+      "power": 35.5
     }
   ]
 }
