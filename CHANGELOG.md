@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **XB6/XB7: upstream OFDMA channels now correctly classified as `ofdma`.**
+  Firmware reports `Channel Type: TDMA` for OFDMA upstream channels because
+  `docsIfUpChannelType` (DOCS-IF-MIB, RFC 4546) has no OFDMA value. The
+  channel type is now derived from the `Modulation` field instead, matching
+  the DOCSIS 3.1 spec. `symbol_rate` and the redundant modulation label are
+  correctly stripped from OFDMA channels. Addresses #107.
+- **XB7: malformed `<th>` HTML normalized before parsing.** Firmware emits
+  `<th>Label</td><td>value</td>` — unclosed `<th>` tags that cause
+  BeautifulSoup to nest sibling cells instead of treating them as a row.
+  `normalize_html()` now rewrites the tag at the input boundary so the table
+  parser sees well-formed HTML. Addresses #107.
 - **`inject_credential_cookie` auth: body is the credential cookie value.**
   Firmware that uses this pattern returns a server-issued session token in
   the auth response body; browser JS sets it directly as the credential
