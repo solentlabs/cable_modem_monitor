@@ -16,7 +16,7 @@ set -euo pipefail
 # on specific paths — also pattern-matchers, not dependencies.
 # GitHub workflow files reference CI runtime paths (e.g., `dist/` for
 # upload-artifact) that exist on the runner, not in the working tree.
-EXCLUDE_PATTERN='(\.gitignore|pyrightconfig\.json|mypy\.ini|\.markdownlint-cli2\.jsonc|check-local-path-refs\.sh)$|^\.github/workflows/|^\.claude/settings\.json$'
+EXCLUDE_PATTERN='(\.gitignore|pyrightconfig\.json|mypy\.ini|cspell\.config\.yaml|\.markdownlint-cli2\.jsonc|check-local-path-refs\.sh)$|^\.github/workflows/|^\.claude/settings\.json$'
 
 # --- Extract directory names from .gitignore ---
 #

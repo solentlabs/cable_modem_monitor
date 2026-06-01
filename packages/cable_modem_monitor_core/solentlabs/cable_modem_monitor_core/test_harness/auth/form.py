@@ -72,7 +72,11 @@ class FormAuthHandler(AuthHandler):
     ) -> RouteEntry | None:
         """Accept login POST and set session state.
 
-        Returns None — caller uses the route table response.
+        Returns None so the server falls through to the route table and
+        serves the HAR response verbatim. A missing login entry in the HAR
+        produces a 404, which fails the test — this is intentional. HAR
+        fixtures must include the full auth flow; validate_har enforces this
+        at intake time.
         """
         if not self.is_login_request(method, path):
             return None
@@ -127,7 +131,7 @@ class FormAuthHandler(AuthHandler):
 
 def create_handler(
     modem_config: ModemConfig,
-    har_entries: list[dict[str, Any]] | None = None,  # noqa: ARG001
+    har_entries: list[dict[str, Any]] | None = None,
 ) -> FormAuthHandler:
     """Entry point for dynamic auth handler dispatch."""
     auth = modem_config.auth

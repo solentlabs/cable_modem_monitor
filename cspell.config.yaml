@@ -1,0 +1,355 @@
+version: "0.2"
+language: en
+
+ignorePaths:
+  - .venv/**
+  - htmlcov/**
+  - RAW_DATA/**
+  - captures/**
+  - "**/*.har"
+  - "**/*.expected.json"
+
+# Random test strings — valid in test fixtures, not vocabulary
+ignoreWords:
+  - aabb
+  - BADHASH
+  - Ddgj
+  - JDDJIBX
+  - KEYSTR
+  - klmnopqrst
+  - Nlcjpw
+  - qwertyuiop
+  - Rpem
+
+words:
+  # Home Assistant tooling
+  - automations
+  - HACS
+  - HAOS
+  - hass
+  - hassfest
+  - homeassistant
+
+  # DOCSIS / cable protocol
+  - AESCCM
+  - ATDMA
+  - CMTS
+  - dbmv
+  - DCID
+  - DCIDs
+  - Docsis
+  - DOCSIS
+  - docsis
+  - docsisversion
+  - HMAC
+  - ksym
+  - Ksym
+  - LDPC
+  - MULPI
+  - Msym
+  - OFDM
+  - Ofdm
+  - ofdm
+  - OFDMA
+  - Ofdma
+  - ofdma
+  - OSSI
+  - PHPSESSID
+  - QPSK
+  - qpsk
+  - scdma
+  - scqam
+  - serviceflow
+  - SNMP
+  - Snmp
+  - SOAP
+  - subcarrier
+  - subcarriers
+  - Symb
+  - TDMA
+  - tdma
+  - Uncorrectables
+  - Unerrored
+  - unerrored
+
+  # Authentication / crypto
+  - canonicalizable
+  - CSRF
+  - csrfnonce
+  - decryptable
+  - decryptor
+  - dklen
+  - encryptor
+  - HNAP
+  - Hnap
+  - hnap
+  - HNAPs
+  - padder
+  - PBKDF2
+  - saltwebui
+  - seclevel
+  - SECLEVEL
+  - seeksalthash
+  - SJCL
+  - Sjcl
+  - sjcl
+  - SJCL's
+  - soapaction
+  - unpadder
+  - webToken
+
+  # Modem hardware (chipsets, boot)
+  - bootstate
+  - bootstatus
+  - BOOTR
+  - Broadcom
+  - CHIPSET
+  - Chipset
+  - chipset
+  - chipsets
+  - DHCE
+  - FHCE
+  - Puma
+
+  # Modem manufacturers and product lines
+  - Arris
+  - Compal
+  - Hitron
+  - Motorola
+  - Netgear
+  - netgear
+  - Nighthawk
+  - Sagemcom
+  - Sercomm
+  - sercomm
+  - SURFboard
+  - Technicolor
+  - Touchstone
+
+  # ISPs / providers
+  - Comcast
+  - MTAT
+  - Vodafone
+  - Xfinity
+
+  # Modem data fields (concatenated identifiers from firmware)
+  - channeltype
+  - cmconnectionstatus
+  - cmdocsisds
+  - cursystemtime
+  - dschannel
+  - dsinfo
+  - firmwares
+  - firmwareversion
+  - fwbt
+  - fwinfo
+  - goform
+  - hardwareversion
+  - idloginincorrect
+  - internetconnection
+  - isps
+  - loginpassword
+  - loginusername
+  - macaddress
+  - networkaccess
+  - serialnumber
+  - softwaremodelname
+  - softwareversion
+  - ssids
+  - sysinfo
+  - Sysinfo
+  - SYSINFO
+  - systemtime
+  - systemuptime
+  - TAGVALUE
+  - tagvalue
+  - tagvaluelist
+  - tagValueList
+  - uschannel
+  - usinfo
+
+  # Project-specific
+  - blindspots
+  - CMMT
+  - cooldown
+  - cooloff
+  - Cooloff
+  - COOLOFF
+  - disambiguator
+  - dogfood
+  - EOFCONFIG
+  - goldens
+  - hars
+  - HARS
+  - htmlcov
+  - indentless
+  - lockdown
+  - modbase
+  - noparser
+  - NOSESSION
+  - reauthentication
+  - rebonding
+  - rebrands
+  - relogin
+  - slugification
+  - solentlabs
+  - triaging
+  - unbonded
+  - undecoded
+  - unitless
+  - unparseable
+  - unrecovered
+  - unresp
+  - unschedules
+  - unsub
+  - unsuffixed
+  - uppercased
+  - uppercasing
+  - webservers
+  - WEBUI
+  - webui
+  - worktree
+  - worktrees
+  - yamls
+
+  # Dev tools / Python packages and builtins
+  - altinstall
+  - antipattern
+  - antipatterns
+  - asyncio
+  - autouse
+  - backoffs
+  - beautifulsoup
+  - caplog
+  - capsys
+  - ciphertext
+  - conftest
+  - dataclass
+  - dataclasses
+  - defusedxml
+  - docstrings
+  - dunder
+  - fixturenames
+  - frozenset
+  - frozensets
+  - functools
+  - funcs
+  - genericity
+  - hashlib
+  - isinstance
+  - itertools
+  - kwargs
+  - lastindex
+  - logfile
+  - lxml
+  - metafunc
+  - Metafunc
+  - monkeypatch
+  - metacharacters
+  - mypy
+  - noqa
+  - nosec
+  - parameterised
+  - pathlib
+  - pgrep
+  - pkill
+  - pycache
+  - pydantic
+  - pyproject
+  - pyprojects
+  - pyright
+  - pyrightconfig
+  - pysnmp
+  - pytest
+  - PyYAML
+  - ruamel
+  - setattr
+  - splitlines
+  - stdlib
+  - timedelta
+  - tomli
+  - uncoercible
+  - unimodal
+  - urllib
+  - venv
+  - xmltodict
+  - yarl
+
+  # Network / socket / HTTP
+  - connectionpool
+  - flowinfo
+  - hostport
+  - keepalive
+  - poolmanager
+  - Referer
+  - referer
+  - scopeid
+  - sockaddr
+  - socktype
+
+  # System / shell / platform
+  - ASKPASS
+  - chromeos
+  - cros
+  - Crostini
+  - EDITMSG
+  - IMAGENAME
+  - libasound
+  - libbz
+  - libncurses
+  - libreadline
+  - libsqlite
+  - mdev
+  - tasklist
+  - textconv
+  - tulpn
+
+  # UI
+  - checkmark
+  - glyphicon
+
+  # British / alternate spellings (used in comments and docs)
+  - behaviour
+  - Centralises
+  - entrancy
+  - Formalises
+  - nonpositive
+  - recognised
+  - serialisable
+  - serialised
+
+  # Abbreviations used in production code
+  - applation
+  - authing
+  - coro
+  - creds
+  - Descr
+  - filt
+  - ftype
+  - funs
+  - hdrs
+  - hexvalue
+  - idxs
+  - Pswd
+  - sess
+  - testpbkdf
+  - withoutloginkey
+
+  # Test data constants (intentional placeholder values in fixtures)
+  - anykey
+  - Correcteds
+  - Dadmin
+  - dotdot
+  - dtaubert
+  - Dtest
+  - emptypassword
+  - listy
+  - longtoken
+  - mypasswd
+  - mypassword
+  - NOSPACEHERE
+  - sometoken
+  - someuser
+  - Winesnob's
+  - wronghexkey
+  - WRONGKEY

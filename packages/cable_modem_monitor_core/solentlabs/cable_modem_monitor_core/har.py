@@ -25,6 +25,8 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
+from .loaders.html_normalize import normalize_html
+
 _logger = logging.getLogger(__name__)
 
 _LFS_POINTER_PREFIX = "version https://git-lfs.github.com/spec/v1"
@@ -275,10 +277,10 @@ def _decode_har_entry(text: str, mime_type: str, url_path: str) -> Any:
         try:
             return _wrap_json(json.loads(text))
         except (ValueError, TypeError):
-            return BeautifulSoup(text, "html.parser")
+            return BeautifulSoup(normalize_html(text), "html.parser")
 
     if _is_html_content(mime_type, text):
-        return BeautifulSoup(text, "html.parser")
+        return BeautifulSoup(normalize_html(text), "html.parser")
 
     return None
 

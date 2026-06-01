@@ -34,6 +34,6 @@ class NoneAuthManager(BaseAuthManager):
         return AuthResult(success=True)
 
 
-def create_manager(config: NoneAuth) -> NoneAuthManager:  # noqa: ARG001
+def create_manager(config: NoneAuth) -> NoneAuthManager:
     """Entry point for dynamic auth factory dispatch."""
     return NoneAuthManager()

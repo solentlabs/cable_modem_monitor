@@ -1,0 +1,19 @@
+{
+  "_description": "Unclosed-th malformed HTML normalized at the input boundary — normalize_html() rewrites <th>Label</td> to <th>Label</th> before BS4 parsing. Exercises the len(cells) >= 2 branch in _build_label_map (not the nesting fallback).",
+  "_normalize": true,
+  "_html": "<html><body><table><thead><tr><th colspan=\"3\">Downstream</th></tr></thead><tbody><tr><th class=\"row-label\">Channel ID</td><td>10</td><td>9</td></tr><tr><th class=\"row-label\">Frequency</td><td>519000000 Hz</td><td>513000000 Hz</td></tr><tr><th class=\"row-label\">Power Level</td><td>5 dBmV</td><td>4 dBmV</td></tr></tbody></table></body></html>",
+  "_resource": "/network_setup.jst",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Frequency", "field": "frequency", "type": "frequency", "unit": "Hz"},
+      {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"channel_id": 10, "frequency": 519000000, "power": 5.0, "channel_type": "qam"},
+    {"channel_id": 9, "frequency": 513000000, "power": 4.0, "channel_type": "qam"}
+  ]
+}

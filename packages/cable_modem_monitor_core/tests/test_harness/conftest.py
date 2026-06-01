@@ -9,7 +9,7 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def _allow_sockets(socket_enabled: None) -> None:  # noqa: ARG001
+def _allow_sockets(socket_enabled: None) -> None:
     """Enable sockets for all tests in this directory.
 
     The ``socket_enabled`` fixture is provided by pytest-socket
