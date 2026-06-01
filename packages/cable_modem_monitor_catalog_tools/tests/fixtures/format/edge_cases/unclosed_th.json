@@ -1,0 +1,6 @@
+{
+  "_description": "Transposed table with unclosed-th malformed HTML — <th>Label</td> normalized to <th>Label</th> before BS4 parsing. Without normalization, recursive=False returns 1 cell with concatenated text (e.g. 'Channel ID10 9'). With normalization, header cells are separated correctly.",
+  "_html": "<html><body><table><tr><th class=\"row-label\">Channel ID</td><td>10</td><td>9</td></tr><tr><th class=\"row-label\">Frequency</td><td>519 MHz</td><td>513 MHz</td></tr></table></body></html>",
+  "_expected_table_count": 1,
+  "_expected_first_header": "Channel ID"
+}

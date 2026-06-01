@@ -44,6 +44,23 @@ _ORPHANED_TD_RE = re.compile(
     re.DOTALL | re.IGNORECASE,
 )
 
+# Some modem firmware emits malformed transposed-table HTML where each
+# row's label <th> is closed with </td> instead of </th>:
+#
+#   <th class="row-label">Channel ID</td>
+#   <td>17</td><td>1</td>...
+#
+# html.parser (via BS4) nests the following <td> elements inside the
+# unclosed <th>, so recursive=False on the row returns 1 cell with all
+# values concatenated in its text. Fix: replace </td> with </th> when it
+# appears as the only closing tag inside a <th> that has no nested tags.
+# The pattern only fires on <th>text</td> (never valid HTML), so it
+# cannot silently corrupt well-formed tables.
+_UNCLOSED_TH_RE = re.compile(
+    r"(<th\b[^>]*>)([^<]*)(</td>)",
+    re.IGNORECASE,
+)
+
 _TAG_STRIP = re.compile(r"<[^>]+>")
 
 _LABEL_VALUE_PATTERN = re.compile(
@@ -298,6 +315,7 @@ def detect_tables(body: str) -> list[DetectedTable]:
     filtering.
     """
     body = _ORPHANED_TD_RE.sub(r"\1<tr>\2\3", body)
+    body = _UNCLOSED_TH_RE.sub(r"\1\2</th>", body)
     soup = BeautifulSoup(body, "html.parser")
     tables: list[DetectedTable] = []
 

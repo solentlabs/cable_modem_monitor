@@ -16,6 +16,7 @@ import logging
 from typing import Any
 
 from bs4 import Tag
+from bs4.element import NavigableString
 
 from ...models.parser_config.common import (
     ChannelTypeConfig,
@@ -108,15 +109,39 @@ def _build_label_map(table_el: Tag) -> dict[str, list[Tag]]:
         # nested tables within a cell (e.g., SB6141 "Power Level" row
         # has a nested <TABLE> with explanatory text in the label cell).
         cells = row.find_all(["td", "th"], recursive=False)
-        if len(cells) < 2:
+
+        if len(cells) >= 2:
+            label_text = cells[0].get_text(strip=True).lower()
+            if not label_text:
+                continue
+            # Data cells are everything after the label cell
+            label_map[label_text] = list(cells[1:])
             continue
 
-        label_text = cells[0].get_text(strip=True).lower()
+        # Fallback for the "unclosed-th" malformed HTML pattern: firmware
+        # emits <th>Label</td><td>val</td>... where <th> is closed with
+        # </td> instead of </th>. html.parser (via BS4) nests the following
+        # <td> elements inside the <th>, so recursive=False returns 1 cell
+        # containing all data cells as children. If the HTML parser changes,
+        # this nesting behavior may differ — the HAR replay test will catch it.
+        if len(cells) != 1:
+            continue
+
+        label_cell = cells[0]
+        nested_tds = label_cell.find_all("td", recursive=False)
+        if not nested_tds:
+            # No nested <td>s — nothing to salvage (e.g., header-only row).
+            continue
+
+        # Extract label text from direct NavigableString children only,
+        # so we don't pick up text from the nested <td>s.
+        label_text = (
+            "".join(str(child) for child in label_cell.children if isinstance(child, NavigableString)).strip().lower()
+        )
         if not label_text:
             continue
 
-        # Data cells are everything after the label cell
-        label_map[label_text] = list(cells[1:])
+        label_map[label_text] = nested_tds
 
     return label_map
 

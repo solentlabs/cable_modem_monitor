@@ -23,6 +23,7 @@ from ..models.parser_config.config import ALL_FORMAT_MODELS
 from ..models.parser_config.format_registry import lookup_decode_kind
 from .diagnostics import describe_request
 from .fetch_list import ResourceTarget
+from .html_normalize import normalize_html
 
 _logger = logging.getLogger(__name__)
 
@@ -283,7 +284,7 @@ def _decode_response(
     kind = _decode_kind(fmt)
 
     if kind == "html":
-        return BeautifulSoup(text, "html.parser"), None
+        return BeautifulSoup(normalize_html(text), "html.parser"), None
 
     if kind == "json":
         try:
@@ -298,7 +299,7 @@ def _decode_response(
         return None, "XML format not yet supported"
 
     _logger.warning("Unknown format '%s', returning as BeautifulSoup", fmt)
-    return BeautifulSoup(text, "html.parser"), None
+    return BeautifulSoup(normalize_html(text), "html.parser"), None
 
 
 def _is_login_page(text: str) -> bool:

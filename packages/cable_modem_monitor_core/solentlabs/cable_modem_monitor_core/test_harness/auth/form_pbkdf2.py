@@ -237,7 +237,7 @@ def _derive_key(password: str, salt: str, iterations: int, key_length_bits: int)
 
 def create_handler(
     modem_config: ModemConfig,
-    har_entries: list[dict[str, Any]] | None = None,  # noqa: ARG001
+    har_entries: list[dict[str, Any]] | None = None,
 ) -> FormPbkdf2AuthHandler:
     """Entry point for dynamic auth handler dispatch."""
     from ...models.modem_config.auth import FormPbkdf2Auth

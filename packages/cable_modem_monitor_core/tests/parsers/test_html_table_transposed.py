@@ -15,6 +15,7 @@ from typing import Any
 
 import pytest
 from bs4 import BeautifulSoup
+from solentlabs.cable_modem_monitor_core.loaders.html_normalize import normalize_html
 from solentlabs.cable_modem_monitor_core.models.parser_config.transposed import (
     TransposedTableDefinition,
 )
@@ -31,10 +32,12 @@ def _load_fixture(path: Path) -> dict[str, Any]:
     return dict(json.loads(path.read_text()))
 
 
-def _build_resources(html: str | None, resource_key: str) -> dict[str, BeautifulSoup]:
+def _build_resources(html: str | None, resource_key: str, *, normalize: bool = False) -> dict[str, BeautifulSoup]:
     """Build a resource dict. Returns empty dict if html is None."""
     if html is None:
         return {}
+    if normalize:
+        html = normalize_html(html)
     return {resource_key: BeautifulSoup(html, "html.parser")}
 
 
@@ -50,7 +53,7 @@ def test_extraction(fixture_path: Path) -> None:
     resource_key = data["_resource"]
     # Allow fixtures to specify a different key for the resource dict
     resource_dict_key = data.get("_resource_key", resource_key)
-    resources = _build_resources(data.get("_html"), resource_dict_key)
+    resources = _build_resources(data.get("_html"), resource_dict_key, normalize=data.get("_normalize", False))
 
     table_def = TransposedTableDefinition(**data["_config"])
     parser = HTMLTableTransposedParser(resource_key, table_def)
