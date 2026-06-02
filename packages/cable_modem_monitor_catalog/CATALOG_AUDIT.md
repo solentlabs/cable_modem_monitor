@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**41 configurations supported** — 15 confirmed on real hardware, 26 awaiting verification.
+**41 configurations supported** — 16 confirmed on real hardware, 25 awaiting verification.
 
 ---
 
@@ -36,7 +36,6 @@ and share a diagnostics snapshot.
 | CGA6444VF | HTML | Vodafone |  |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy |  |
 | XB6 | HTML | Rogers |  |
-| XB7 | HTML | Rogers, Comcast, Xfinity |  |
 | Hub 5 | HTML | Virgin Media UK |  |
 
 ## Pending Review
@@ -70,6 +69,7 @@ Working on real hardware with a report on file.
 | CM1100 | HTML | Comcast |
 | CM1200 (basic) | HTML | Comcast, Spectrum, Cox |
 | CM2050V | HTML | Comcast, Xfinity |
+| XB7 | HTML | Rogers, Comcast, Xfinity |
 
 ---
 

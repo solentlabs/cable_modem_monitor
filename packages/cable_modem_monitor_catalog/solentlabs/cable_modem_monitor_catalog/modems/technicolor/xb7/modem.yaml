@@ -19,7 +19,7 @@ hardware:
   chipset: "Broadcom BCM3390"
   release_date: "2020"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config: "[#2 Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
@@ -43,12 +43,11 @@ notes: |
   Form-based authentication to /check.jst endpoint.
   System uptime format: "X days Xh: Xm: Xs" (note spaces around colons).
   May have localized variants (Italian translations found in Rogers/Italian market).
-  Quirk — BCM3390 error count duplication: channel 10 (QAM256, locked)
-  reports corrected and uncorrected counts identical to channel 34 (OFDM)
-  — 780,484,376 and 257 respectively. Same chipset-level pattern as SB8200.
-  Aggregate intentionally omitted because the duplicated OFDM data on a
-  QAM channel ID makes QAM totals unreliable. Needs a second XB7 user's
-  data to confirm whether the pattern is per-unit or per-model.
+  Quirk — BCM3390 error count duplication: channel 17 (primary QAM256)
+  reports corrected and uncorrected counts identical to channel 34 (OFDM).
+  Confirmed per-model (observed across two independent units). Same
+  chipset-level pattern as SB8200. Aggregate intentionally omitted because
+  the duplicated OFDM data makes QAM totals unreliable.
 references:
   issues:
     - "[#2 — Add support for Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"

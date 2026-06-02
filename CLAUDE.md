@@ -22,21 +22,6 @@
 | Specs by package | core: `packages/cable_modem_monitor_core/docs/README.md` · catalog tools: `packages/cable_modem_monitor_catalog_tools/docs/README.md` · HA: `custom_components/cable_modem_monitor/docs/README.md` · project: `docs/README.md` |
 | Reference test (table-driven exemplar) | `tests/modem_config/test_modem_yaml_validation.py` |
 
-## Contents
-
-| Section | What it covers |
-| ------- | -------------- |
-| Core Principles               | Specs and process — 12 numbered rules that govern Claude's behavior |
-| Diagnosis Discipline          | Asking for the data that distinguishes causes                       |
-| Decision Discipline           | Sequencing, no shortcuts, no speculation                            |
-| Verification Discipline       | Ground-truth checks before claims                                   |
-| Catalog & Data Discipline     | YAML scope, recovery genericity, HAR-first intake                   |
-| Code Discipline               | Docstrings, WHY comments, type-safety, isolation, no infra for hypotheticals |
-| Shell Command Generation      | Avoid permission-check triggers                                     |
-| Pre-Push Verification         | Always run `make validate-ci` before pushing                        |
-| Irreversible Operations       | Stop and verify before destructive git ops                          |
-| PR and Issue Conventions      | No auto-close keywords; cite issues for context                     |
-
 ## Core Principles
 
 These principles govern Claude's behavior on every change. They are
@@ -72,14 +57,11 @@ over convenience.
 6. **Before deleting or moving ANY file, run `rg <filename>` across
    the entire project.** Files are referenced by non-Python sources
    (CI workflows, Makefiles, docs, VS Code tasks) that linters don't
-   scan.
-
-6a. **When any task label, script name, or path changes in
-   `.vscode/tasks.json`, audit these files for references:**
-   `scripts/dev/next_steps.txt`, `scripts/dev/welcome_message.txt`,
-   `.devcontainer/post-start.sh`, `docs/setup/GETTING_STARTED.md`.
-   Task name drift is invisible to linters and causes silent breakage
-   in the contributor on-ramp.
+   scan. When any task label, script name, or path changes in
+   `.vscode/tasks.json`, also audit: `scripts/dev/next_steps.txt`,
+   `scripts/dev/welcome_message.txt`, `.devcontainer/post-start.sh`,
+   `docs/setup/GETTING_STARTED.md`. Task name drift is invisible to
+   linters and causes silent breakage in the contributor on-ramp.
 
 7. **Always read a file before writing to it. No exceptions.** Even
    "I just want to overwrite it" — read first. Local-only/gitignored
@@ -261,7 +243,8 @@ propose fixes first.
 - **`packages/cable_modem_monitor_catalog/README.md` is auto-generated.**
   Never edit it directly. Run `python3 packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py`
   to regenerate.
-  to regenerate. Three rules: (1) Contributors are not responsible for
+
+  Three rules: (1) Contributors are not responsible for
   regenerating it — the `/modem-confirm` and `/modem-intake` skills handle
   it as a verified final step and may bundle it with the catalog commit.
   (2) When multiple catalog changes land in one session, regenerate once
