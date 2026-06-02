@@ -18,6 +18,15 @@ hardware:
   chipset: "Broadcom BCM3390"
   release_date: "2017"
 
+session:
+  max_concurrent: 1
+
+actions:
+  logout:
+    type: http
+    method: GET
+    endpoint: "/logout.html"
+
 status: awaiting_verification
 
 attribution:
@@ -45,6 +54,12 @@ notes: |
   atob(credential) decodes to binary (server-issued token, not btoa(user:pass)).
 
   Same page structure and parser as all other SB8200 variants.
+
+  Single-session firmware: port 80 admin interface allows only one active
+  session at a time. session.max_concurrent: 1 + actions.logout causes Core
+  to call GET /logout.html after each poll, releasing the session so browser
+  access works between fetches. Port 8080 (spectrum analyzer) is a separate
+  service with independent session state and is unaffected.
 
   Quirk — BCM3390 OFDM duplicate corrected counts: the two OFDM downstream
   channels report identical corrected error counts despite different
