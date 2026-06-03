@@ -103,8 +103,7 @@ Verify at: <https://github.com/solentlabs/cable_modem_monitor/releases>
 
 Two tiers ship: beta and stable. Both publish to PyPI and create
 GitHub Releases with a zip asset. Beta tags carry the GitHub
-`prerelease` flag; stable tags don't. Alpha is a development concept
-only — alphas run from a local source clone and never tag.
+`prerelease` flag; stable tags don't.
 
 | Tier   | Tag pattern       | PyPI      | GitHub Release          | HACS visibility                   |
 |--------|-------------------|-----------|-------------------------|-----------------------------------|
