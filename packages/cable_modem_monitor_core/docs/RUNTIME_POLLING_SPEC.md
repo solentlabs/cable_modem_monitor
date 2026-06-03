@@ -348,15 +348,24 @@ user must reconfigure credentials to resume. See `ORCHESTRATION_SPEC.md`
 § Auth Circuit Breaker for the full use-case walkthrough.
 
 **Single-session logout** — modems with `max_concurrent: 1` allow only
-one authenticated session. When `actions.logout` is declared, the auth
-manager executes it after each successful poll to free the session, so
-users can access the modem's web UI between polls. Logout uses the
-same action schema as restart (`type: http` or `type: hnap`) and
-receives the auth manager's existing session. Logout is post-poll
-only — there is no pre-login logout (we cannot clear another client's
-session, and our own stale sessions from a crash are lost in memory).
-If another client holds the session when we attempt to login, the
-strategy returns `AuthResult.FAILURE`.
+one authenticated session. When `actions.logout` is declared, logout
+fires in two places:
+
+1. **After each successful poll** — frees the session so users can
+   access the modem's web UI between polls.
+2. **Before a same-poll auth retry** — when `LOAD_AUTH` or
+   `LOAD_INTEGRITY` fires, the orchestrator calls logout before
+   clearing the stale local session and retrying. This recovers from
+   a crash or unclean restart where the previous session was never
+   released: since single-session firmware logout endpoints do not
+   require credentials, the call succeeds even with no cookie. Both
+   logouts are best-effort; failure does not block the subsequent poll
+   or retry.
+
+The integration cannot clear another client's session (it doesn't have
+their cookie). If another client holds the session when login is
+attempted and the auth retry's logout doesn't free it, the strategy
+returns `AuthResult.FAILURE`.
 
 ---
 

@@ -115,6 +115,23 @@ class ModemDataCollector:
         page, or HNAP HTTP error on reused session) or connectivity
         transition (unreachable → responsive).
         """
+
+    def attempt_logout_before_retry(self) -> None:
+        """Best-effort logout before a same-poll auth retry on single-session firmware.
+
+        Called by the orchestrator immediately before clear_session() when
+        LOAD_AUTH or LOAD_INTEGRITY triggers a retry. Releases any active
+        server-side session so the subsequent re-authentication can succeed.
+        Does not inspect or clear session cookies — that is clear_session()'s
+        responsibility. The firmware's logout endpoint does not require
+        credentials (confirmed on SB8200 v6), so the call succeeds whether or
+        not the session has cookies. Failure is silently ignored; the retry
+        proceeds regardless.
+
+        No-op unless both conditions are met:
+        - ``session.max_concurrent == 1``
+        - ``actions.logout`` is configured
+        """
 ```
 
 ### Result Type
@@ -179,8 +196,8 @@ class CollectorSignal(Enum):
 | `AUTH_LOCKOUT` | Trip circuit breaker immediately, report `auth_failed` |
 | `CONNECTIVITY` | Abort, report `unreachable`, apply connectivity backoff |
 | `LOAD_ERROR` | Abort, report `unreachable` |
-| `LOAD_AUTH` | Clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-17, UC-18) |
-| `LOAD_INTEGRITY` | Same as `LOAD_AUTH` — clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-19a) |
+| `LOAD_AUTH` | For single-session modems (`session.max_concurrent: 1` + `actions.logout`): attempt logout (best-effort, unauthenticated) before clearing session. Then clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-17, UC-18) |
+| `LOAD_INTEGRITY` | Same as `LOAD_AUTH` — for single-session modems, attempt logout (best-effort) before clearing session. Clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-19a) |
 | `PARSE_ERROR` | Abort, report `parser_issue` |
 
 ### State Ownership
@@ -1140,6 +1157,20 @@ Streak resets on success. Transient failures never reach the threshold.
 Poll N:   LOAD_AUTH (streak: 1), session cleared
 Poll N+1: fresh login → collection succeeds (streak: 0)
 ```
+
+**LOAD_AUTH on a data page (single-session firmware):**
+Single-session firmware enforces one active admin session. If the session was
+not released (HA restart, crash, integration reload), the stale session blocks
+new logins. The firmware's logout endpoint does not require authentication —
+the browser itself erases the credential cookie before calling it.
+
+```text
+Poll N:   LOAD_AUTH (streak: 1), logout attempted (best-effort), session cleared
+Poll N+1: fresh login → collection succeeds (streak: 0)
+```
+
+Applies when `session.max_concurrent == 1` and `actions.logout` is configured.
+Logout is best-effort: failure does not block the retry and is not counted.
 
 **LOAD_AUTH on HNAP (stale session):**
 Server-side session expiry on HNAP modems with firmware session timeouts.

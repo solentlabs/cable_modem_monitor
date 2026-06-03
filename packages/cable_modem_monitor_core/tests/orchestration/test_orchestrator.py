@@ -679,6 +679,17 @@ class TestLoadAuth:
         assert diag.stale_session_recovery_streak == 1
         assert diag.session_reuse_disabled is False
 
+    def test_load_auth_calls_attempt_logout_before_retry(self) -> None:
+        """LOAD_AUTH calls attempt_logout_before_retry before clear_session on retry."""
+        collector = _mock_collector(_fail_result(CollectorSignal.LOAD_AUTH))
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+
+        collector.attempt_logout_before_retry.assert_called_once()
+        method_names = [c[0] for c in collector.mock_calls]
+        assert method_names.index("attempt_logout_before_retry") < method_names.index("clear_session")
+
 
 class TestLoadIntegrity:
     """UC-19a: LOAD_INTEGRITY signal handling — stub-page recovery (issue #151)."""
@@ -724,6 +735,17 @@ class TestLoadIntegrity:
             orch.get_modem_data()
 
         assert orch.diagnostics().circuit_breaker_open is True
+
+    def test_load_integrity_calls_attempt_logout_before_retry(self) -> None:
+        """LOAD_INTEGRITY also calls attempt_logout_before_retry before clear_session."""
+        collector = _mock_collector(_fail_result(CollectorSignal.LOAD_INTEGRITY))
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+
+        collector.attempt_logout_before_retry.assert_called_once()
+        method_names = [c[0] for c in collector.mock_calls]
+        assert method_names.index("attempt_logout_before_retry") < method_names.index("clear_session")
 
 
 class TestLoadAuthAdaptiveReuse:

@@ -7,7 +7,7 @@ Use case coverage (collector level):
 - UC-01: First poll — fresh login
 - UC-02: Subsequent poll — session reuse
 - UC-04: Zero channels with system_info
-- UC-06: Single-session modem — logout after poll
+- UC-06: Single-session modem — logout after poll; logout before auth retry
 - UC-17: LOAD_AUTH — 401 on data page
 - UC-19: Login page detection
 - UC-30: Connection refused — CONNECTIVITY
@@ -767,6 +767,69 @@ class TestLogout:
         # After logout, session should be cleared
         assert collector.session_is_valid is False
         assert collector._auth_context is None
+
+
+# ------------------------------------------------------------------
+# Tests — attempt_logout_before_retry (behavioral, inline)
+# ------------------------------------------------------------------
+
+
+class TestAttemptLogoutBeforeRetry:
+    """Collector-level tests for attempt_logout_before_retry()."""
+
+    def test_calls_execute_action_for_single_session(self) -> None:
+        """Calls execute_action when max_concurrent=1 and logout is configured."""
+        config = _make_config(max_concurrent=1, logout_endpoint="/logout")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+
+        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
+            collector.attempt_logout_before_retry()
+
+        mock_action.assert_called_once()
+
+    def test_no_op_without_logout_action(self) -> None:
+        """Does nothing when no logout action is configured."""
+        config = _make_config(max_concurrent=1)
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+
+        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
+            collector.attempt_logout_before_retry()
+
+        mock_action.assert_not_called()
+
+    def test_no_op_when_max_concurrent_not_one(self) -> None:
+        """Does nothing when max_concurrent != 1."""
+        config = _make_config(max_concurrent=0, logout_endpoint="/logout")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+
+        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
+            collector.attempt_logout_before_retry()
+
+        mock_action.assert_not_called()
+
+    def test_swallows_execute_action_exception(self) -> None:
+        """Exceptions from execute_action are silently swallowed."""
+        config = _make_config(max_concurrent=1, logout_endpoint="/logout")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+
+        with patch(
+            "solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action",
+            side_effect=RuntimeError("connection reset"),
+        ):
+            collector.attempt_logout_before_retry()  # must not raise
+
+    def test_does_not_clear_session(self) -> None:
+        """Does not call clear_session — that is the orchestrator's responsibility."""
+        config = _make_config(max_concurrent=1, logout_endpoint="/logout")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+
+        with (
+            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action"),
+            patch.object(collector, "clear_session") as mock_clear,
+        ):
+            collector.attempt_logout_before_retry()
+
+        mock_clear.assert_not_called()
 
 
 # ------------------------------------------------------------------

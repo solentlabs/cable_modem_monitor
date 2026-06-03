@@ -9,6 +9,7 @@ See ORCHESTRATION_SPEC.md ModemDataCollector section.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 from typing import Any, Final
@@ -595,16 +596,31 @@ class ModemDataCollector:
         if self._modem_config.session is None or self._modem_config.session.max_concurrent != 1:
             return
 
-        log_event(_logger, LogoutExecuted(model=self._modem_config.model))
         try:
             execute_action(self, self._modem_config, actions.logout, log_level=_LOGOUT_LOG_LEVEL)
         except Exception as exc:
             log_event(_logger, LogoutFailed(model=self._modem_config.model, reason=str(exc)))
         else:
+            log_event(_logger, LogoutExecuted(model=self._modem_config.model))
             # Session is dead server-side after logout — clear local
             # state so next poll re-authenticates instead of reusing
             # a stale session.
             self.clear_session()
+
+    def attempt_logout_before_retry(self) -> None:
+        """Best-effort logout before a same-poll auth retry on single-session firmware."""
+        actions = self._modem_config.actions
+        if actions is None or actions.logout is None:
+            return
+        if self._modem_config.session is None or self._modem_config.session.max_concurrent != 1:
+            return
+        # This method does not inspect or clear session cookies — that is
+        # clear_session()'s job. The firmware's logout endpoint does not
+        # require credentials (the browser erases the cookie before calling
+        # it), so the request succeeds whether or not the session has cookies.
+        # Failure is silently suppressed; the retry proceeds regardless.
+        with contextlib.suppress(Exception):
+            execute_action(self, self._modem_config, actions.logout, log_level=_LOGOUT_LOG_LEVEL)
 
 
 def _auth_failure_hint(modem_config: Any) -> str:

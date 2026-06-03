@@ -32,7 +32,7 @@ status: awaiting_verification
 attribution:
   contributors:
     - github: https://github.com/bmn001
-      contribution: "HW v6 HAR capture (Issue #170)"
+      contribution: "HW v6 HAR capture and logout flow HAR (Issue #170)"
 
 sources:
   auth_config: "[#170 — SB8200 v6 Basic auth variant (Spectrum)](https://github.com/solentlabs/cable_modem_monitor/issues/170)"

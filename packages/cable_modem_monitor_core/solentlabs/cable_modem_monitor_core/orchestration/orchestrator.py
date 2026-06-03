@@ -384,6 +384,7 @@ class Orchestrator:
         """
         signal_name = signal.value.upper()
         log_event(_logger, SessionRetryStarted(model=self._modem_config.model, signal_name=signal_name))
+        self._collector.attempt_logout_before_retry()
         self._collector.clear_session()
 
         retry_result = self._collector.execute()
