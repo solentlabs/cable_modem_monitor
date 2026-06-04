@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`orphaned_statistics` service (P32).** Finds recorder statistics for a
+  modem that have no registered entity — left behind by a mode switch,
+  channel rebonding (ID mode), or a prefix change. Default call returns a
+  commented preview of orphaned entity IDs. Pass `execute: true` to purge
+  all of them directly via HA's recorder. Purge is permanent. Documented
+  in TROUBLESHOOTING.md § Ghost Statistics.
+- **Technicolor XB7 (CGM4981COM) now fully supported.** Verified on
+  hardware via contributor HAR capture. 34 downstream + 5 upstream channels
+  confirmed. Addresses #101.
+
+### Fixed
+
+- **Logout before same-poll auth retry on single-session firmware.** When
+  `LOAD_AUTH` or `LOAD_INTEGRITY` fires on a modem with
+  `session.max_concurrent: 1` and `actions.logout` configured, Core now
+  attempts a best-effort logout before clearing the session and retrying.
+  Releases any stale server-side session (e.g. after an unclean HA restart)
+  so the immediate re-authentication can succeed. Related to #170.
+- **SB8200 v6 Basic: logout action added to catalog.** The `modem-basic`
+  variant was missing a logout action, preventing the logout-before-retry
+  path from firing. Related to #170.
+- **XB7: modulation field normalized to canonical form.** The XB7 firmware
+  reports upstream modulation as `"64QAM"` where the catalog expects
+  `"qam_64"`. The parser now normalizes at intake so modulation values are
+  consistent across modem families. Addresses #107.
+
 ## [3.14.0-beta.9] - 2026-06-01
 
 ### Fixed
