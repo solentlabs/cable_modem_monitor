@@ -39,7 +39,7 @@ from custom_components.cable_modem_monitor.dev_tools import (
     _unique_types,
     create_convert_channel_identity_handler,
     create_generate_dashboard_handler,
-    create_list_orphaned_statistics_handler,
+    create_orphaned_statistics_handler,
 )
 from custom_components.cable_modem_monitor.services import (
     _find_loaded_entries,
@@ -986,7 +986,7 @@ def test_register_services() -> None:
         "request_refresh",
         "request_health_check",
         "convert_channel_identity",
-        "list_orphaned_statistics",
+        "orphaned_statistics",
     }
 
 
@@ -1002,7 +1002,7 @@ def test_unregister_services() -> None:
         "request_refresh",
         "request_health_check",
         "convert_channel_identity",
-        "list_orphaned_statistics",
+        "orphaned_statistics",
     }
 
 
@@ -1467,7 +1467,7 @@ def test_build_channel_graph_defs_number_mode_omits_channel_type() -> None:
         assert "_ch_{ch_id}" in p
 
 
-# create_list_orphaned_statistics_handler
+# create_orphaned_statistics_handler
 # -----------------------------------------------------------------------
 
 
@@ -1482,7 +1482,7 @@ async def test_list_orphaned_no_entry_returns_error() -> None:
     """No loaded entry → error yaml, recorder untouched."""
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = []
-    handler = create_list_orphaned_statistics_handler(hass)
+    handler = create_orphaned_statistics_handler(hass)
     call = _make_mock_call()
 
     with patch(
@@ -1501,7 +1501,7 @@ async def test_list_orphaned_no_stats_returns_none_found(mock_runtime_data) -> N
     entry = _make_mock_entry_minimal(mock_runtime_data)
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
-    handler = create_list_orphaned_statistics_handler(hass)
+    handler = create_orphaned_statistics_handler(hass)
     call = _make_mock_call()
 
     with patch(
@@ -1608,7 +1608,7 @@ async def test_list_orphaned_filtering(
     entry = _make_mock_entry_minimal(mock_runtime_data)
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
-    handler = create_list_orphaned_statistics_handler(hass)
+    handler = create_orphaned_statistics_handler(hass)
     call = _make_mock_call()
 
     prefix = _get_entity_prefix(entry)
@@ -1659,7 +1659,7 @@ async def test_list_orphaned_execute_clears_statistics(mock_runtime_data) -> Non
     entry = _make_mock_entry_minimal(mock_runtime_data)
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
-    handler = create_list_orphaned_statistics_handler(hass)
+    handler = create_orphaned_statistics_handler(hass)
     call = _make_mock_call({"execute": True})
 
     prefix = _get_entity_prefix(entry)
@@ -1709,7 +1709,7 @@ async def test_list_orphaned_preview_large_list_shows_execute_hint(mock_runtime_
     entry = _make_mock_entry_minimal(mock_runtime_data)
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
-    handler = create_list_orphaned_statistics_handler(hass)
+    handler = create_orphaned_statistics_handler(hass)
     call = _make_mock_call()
 
     prefix = _get_entity_prefix(entry)

@@ -18,7 +18,7 @@ Services:
         Migrates recorder statistics between channel naming modes
         (number ↔ id). Reads target from config entry, finds orphaned
         stats from previous installs, renames via recorder task queue.
-    cable_modem_monitor.list_orphaned_statistics:
+    cable_modem_monitor.orphaned_statistics:
         Finds recorder statistics for this modem that have no registered
         entity — left behind by a mode switch, channel rebonding (ID mode),
         or a prefix change. Returns a YAML snippet to paste into Developer
@@ -42,7 +42,7 @@ from .dev_tools import (
     _resolve_config_entry_for_device,
     create_convert_channel_identity_handler,
     create_generate_dashboard_handler,
-    create_list_orphaned_statistics_handler,
+    create_orphaned_statistics_handler,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ SERVICE_GENERATE_DASHBOARD = "generate_dashboard"
 SERVICE_REQUEST_REFRESH = "request_refresh"
 SERVICE_REQUEST_HEALTH_CHECK = "request_health_check"
 SERVICE_CONVERT_CHANNEL_IDENTITY = "convert_channel_identity"
-SERVICE_LIST_ORPHANED_STATISTICS = "list_orphaned_statistics"
+SERVICE_ORPHANED_STATISTICS = "orphaned_statistics"
 SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
     {
         vol.Optional("device_id"): cv.string,
@@ -226,8 +226,8 @@ def async_register_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN,
-        SERVICE_LIST_ORPHANED_STATISTICS,
-        create_list_orphaned_statistics_handler(hass),
+        SERVICE_ORPHANED_STATISTICS,
+        create_orphaned_statistics_handler(hass),
         schema=vol.Schema(
             {
                 vol.Optional("device_id"): cv.string,
@@ -242,7 +242,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         SERVICE_REQUEST_REFRESH,
         SERVICE_REQUEST_HEALTH_CHECK,
         SERVICE_CONVERT_CHANNEL_IDENTITY,
-        SERVICE_LIST_ORPHANED_STATISTICS,
+        SERVICE_ORPHANED_STATISTICS,
     )
 
 
@@ -252,5 +252,5 @@ def async_unregister_services(hass: HomeAssistant) -> None:
     hass.services.async_remove(DOMAIN, SERVICE_REQUEST_REFRESH)
     hass.services.async_remove(DOMAIN, SERVICE_REQUEST_HEALTH_CHECK)
     hass.services.async_remove(DOMAIN, SERVICE_CONVERT_CHANNEL_IDENTITY)
-    hass.services.async_remove(DOMAIN, SERVICE_LIST_ORPHANED_STATISTICS)
+    hass.services.async_remove(DOMAIN, SERVICE_ORPHANED_STATISTICS)
     _LOGGER.debug("Unregistered services")

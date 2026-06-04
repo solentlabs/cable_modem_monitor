@@ -925,10 +925,10 @@ async def _purge_statistic_ids(hass: HomeAssistant, statistic_ids: list[str]) ->
     return purged
 
 
-def create_list_orphaned_statistics_handler(
+def create_orphaned_statistics_handler(
     hass: HomeAssistant,
 ) -> Any:
-    """Create the list_orphaned_statistics service handler."""
+    """Create the orphaned_statistics service handler."""
 
     async def handle_list_orphaned(call: ServiceCall) -> dict[str, Any]:
         """Find recorder statistics with no registered entity for this modem.

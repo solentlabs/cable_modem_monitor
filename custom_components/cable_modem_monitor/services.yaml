@@ -77,7 +77,7 @@ convert_channel_identity:
         device:
           integration: cable_modem_monitor
 
-list_orphaned_statistics:
+orphaned_statistics:
   fields:
     device_id:
       required: false

@@ -385,7 +385,7 @@ Home Assistant's recorder does not automatically remove statistics when an entit
 
 **Solution:**
 
-Use the `cable_modem_monitor.list_orphaned_statistics` service. It works in two steps — preview first, then purge.
+Use the `cable_modem_monitor.orphaned_statistics` service. It works in two steps — preview first, then purge.
 
 ### Step 1 — Preview
 

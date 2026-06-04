@@ -179,8 +179,8 @@
         }
       }
     },
-    "list_orphaned_statistics": {
-      "name": "List Orphaned Statistics",
+    "orphaned_statistics": {
+      "name": "Orphaned Statistics",
       "description": "Finds recorder statistics for this modem that have no registered entity — left behind by a mode switch, channel rebonding (ID mode), or a prefix change. Without execute, returns a preview of orphaned entities. With execute: true, purges them all directly. Purge is permanent.",
       "fields": {
         "device_id": {
