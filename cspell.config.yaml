@@ -171,6 +171,9 @@ words:
   - uschannel
   - usinfo
 
+  # Shell / OS commands used in docs
+  - findstr
+
   # Project-specific
   - blindspots
   - CMMT
@@ -191,6 +194,7 @@ words:
   - noparser
   - NOSESSION
   - reauthentication
+  - rebonded
   - rebonding
   - rebrands
   - relogin

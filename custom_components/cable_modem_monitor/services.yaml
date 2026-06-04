@@ -76,3 +76,16 @@ convert_channel_identity:
       selector:
         device:
           integration: cable_modem_monitor
+
+list_orphaned_statistics:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: cable_modem_monitor
+    execute:
+      required: false
+      default: false
+      selector:
+        boolean:
