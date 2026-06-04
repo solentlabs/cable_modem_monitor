@@ -19,7 +19,7 @@ The encouraged contribution path is **expanding modem support** — the catalog 
 
 - **Bug reports** — file directly via the bug template.
 - **Modem support requests** — file directly via the modem-request template.
-- **Adding modem support yourself** — use the catalog intake pipeline (`/modem-intake`); see [Adding Modem Support](#adding-modem-support).
+- **Adding modem support yourself** — use the catalog intake pipeline — Claude Code: `/modem-intake`; other AI tools: load [`skills/modem-intake.md`](skills/modem-intake.md) as context. See [Adding Modem Support](#adding-modem-support).
 - **New features, sensors, architecture changes** — start a [Discussion](https://github.com/solentlabs/cable_modem_monitor/discussions/new?category=ideas), not an Issue. Issues are for features whose shape is already clear; Discussions are for shaping the idea. This avoids the situation where a contributor invests time in a full design that doesn't fit the project's direction.
 - **Core code changes (`packages/cable_modem_monitor_core/`)** — start a Discussion regardless of size. Core is the shared substrate every supported modem depends on; a regression there breaks every modem at once. The bar is correspondingly high (regression tests, golden files, real-modem evidence).
 - **Refactors that touch more than two files** — start as a Discussion. Small, scoped fixes outside Core can go straight to PR.
@@ -50,18 +50,27 @@ PR titles and bodies are not edited by the maintainer — any feedback comes in 
 
 ## Adding Modem Support
 
-There are two paths, depending on what you can do:
+There are two paths, depending on what you want to do:
 
-- **HA user requesting support for your modem** — see
+- **Requesting support for your modem** — see
   [docs/MODEM_REQUEST.md](./docs/MODEM_REQUEST.md). Capture a HAR,
-  screen it for PII, file a request.
-- **Have AI access and want to help expand the catalog** — see
-  [AI-Assisted Catalog Contribution](#ai-assisted-catalog-contribution)
-  below. Analyze captures, propose catalog entries, triage incoming
-  requests.
+  screen it for PII, file a request. A maintainer or contributor builds
+  the parser from there; you verify it works on your hardware.
+- **Want to implement the catalog entry yourself** — the intake pipeline
+  takes a HAR and produces `modem.yaml`, `parser.yaml`, and golden files.
+  AI assistance helps with the judgment steps but is not required. Start
+  with [AI-Assisted Catalog Contribution](#ai-assisted-catalog-contribution)
+  below, then follow
+  [MODEM_INTAKE_WORKFLOW.md](packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md)
+  for the full walkthrough.
 
-Either path is valuable. The catalog includes modems the maintainer
-can't physically test — community contribution is how it grows.
+Either path is valuable. The catalog grows through community contributions
+because the maintainer can't acquire every modem.
+
+If the intake pipeline stops with a **Core gap** — a pattern the pipeline
+can't classify — the gap report is the contribution. Paste it into your
+issue. You do not need to implement Core changes to resolve it; that is a
+separate development effort.
 
 ---
 
@@ -100,6 +109,39 @@ integration bind-mounted:
 
 To test a PR, `gh pr checkout NNN` then run **🚀 HA: Start**.
 
+### The Contributor Loop
+
+For catalog contributions (the primary path):
+
+1. Open the project in VS Code (WSL2)
+2. Use the intake pipeline with AI assistance to produce `modem.yaml`,
+   `parser.yaml`, and golden files — see
+   [AI-Assisted Catalog Contribution](#ai-assisted-catalog-contribution)
+3. Start the local HA container (**🚀 HA: Start**) and verify the
+   integration loads and sensors appear
+4. Run `make validate-ci` — green means the regression suite has
+   validated the output
+5. Submit the PR
+
+Packaging and release are handled by the maintainer. A contributor's job
+ends at step 5.
+
+### Core Changes
+
+Core changes follow the same local environment and the same `make
+validate-ci` gate — no special setup required beyond what catalog
+contributors already have. The difference is scope control, not tooling.
+
+Core is the shared substrate every supported modem depends on. A
+regression there breaks all of them at once. Before writing any Core code:
+start a Discussion, agree on scope, get a green light. PRs that skip this
+step will be closed regardless of code quality.
+
+Once a Core PR is submitted with passing tests and golden files, hardware
+sign-off comes from whoever has the affected modem — the contributor, the
+original reporter, or a community tester via the `needs-testing` label
+flow. The maintainer reviews code; hardware is the community's domain.
+
 ## Project Architecture
 
 The codebase is split into three layers:
@@ -134,6 +176,20 @@ Disclose AI use on your first PR or issue. One sentence — which tool, what rol
 ### Read CONTRIBUTING.md alongside CLAUDE.md
 
 Most coding assistants auto-load project-instruction files (`CLAUDE.md` for Claude Code, `.cursorrules` for Cursor, `.github/copilot-instructions.md` for Copilot) but do **not** auto-load `CONTRIBUTING.md`. `CLAUDE.md` is a thin behavioral guide that points to the authoritative docs (`docs/CODE_REVIEW.md`, `packages/cable_modem_monitor_core/docs/ARCHITECTURE.md`, `packages/cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md`) — it is not a substitute for the contribution-flow rules here. Add `CONTRIBUTING.md` to your AI's context explicitly when working on this repository — otherwise your tool will produce work that follows the code rules but skips the process rules (PRs that should have been Discussions, Core changes that bypass scope review, refactors spanning many files without prior alignment).
+
+### Know the entity model boundary
+
+This integration exposes what modems report — channel data, signal levels,
+system info — not computed summaries or derived analysis built on top of
+it. Features that add interpretation (signal health scores, quality grades,
+anomaly detection) cross the entity model boundary and require a Discussion
+before any code or spec work. Without that Discussion, the PR will be
+closed.
+
+The boundary is intentional and documented in
+[ARCHITECTURE_DECISIONS.md](packages/cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md).
+When your AI proposes a feature that interprets or scores modem data, that
+is the signal to open a Discussion rather than continue coding.
 
 ### One thread, one ask
 
@@ -266,11 +322,9 @@ capture and golden file.
 
 ## Code Style
 
-- Follow [PEP 8](https://pep8.org/) style guidelines
-- Use type hints where appropriate
-- Add docstrings to functions and classes
-- Keep functions focused and small
-- Use async/await for I/O operations
+Style, type-safety patterns, and test conventions are documented in
+[docs/CODE_REVIEW.md](docs/CODE_REVIEW.md). Ruff and Black enforce
+formatting automatically — run `make format` or let pre-commit handle it.
 
 ## Submitting Changes
 

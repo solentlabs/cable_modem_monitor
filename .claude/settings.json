@@ -1,21 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "_comment_allow": "Pre-approve the dev workflow and GitHub read operations. .venv/bin/* covers any venv binary (pytest, ruff, mypy, pyright, etc.). make * covers all Makefile targets. gh read commands are non-mutating — no confirmation needed. gh api* is intentionally broad: it is used almost exclusively for GET reads, and the write operations that matter (issues, PRs, comments) have explicit ask rules below.",
-  "_comment_deny": "git staging is never permitted — only the developer stages files (CLAUDE.md rule 4). test-ha-config/.storage/** contains live modem credentials in plaintext; reading it leaks passwords into the conversation context (CLAUDE.md rule 28 covers Bash readers; this is the hard backstop for the Read tool).",
-  "_comment_ask": "Any git operation that changes history or pushes to a remote requires explicit per-action confirmation. gh write operations are enumerated explicitly so reads (view, list, checks, diff, api) are never caught by a broad ask rule — ask beats allow when both match.",
+  "_comment_deny": "git staging is never permitted — only the developer stages files (CLAUDE.md rule 4). test-ha-config/.storage/** contains live modem credentials in plaintext; reading it leaks passwords into the conversation context.",
+  "_comment_ask": "Core changes requiring explicit per-action confirmation: commits, pushes, history rewrites, and all GitHub write operations.",
   "permissions": {
     "allow": [
-      "Bash(.venv/bin/*)",
-      "Bash(make *)",
-      "Bash(gh issue view*)",
-      "Bash(gh issue list*)",
-      "Bash(gh pr view*)",
-      "Bash(gh pr list*)",
-      "Bash(gh pr checks*)",
-      "Bash(gh pr diff*)",
-      "Bash(gh release view*)",
-      "Bash(gh release list*)",
-      "Bash(gh api*)"
+      "Bash(*)"
     ],
     "deny": [
       "Read(test-ha-config/.storage/**)",

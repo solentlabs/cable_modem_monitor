@@ -324,10 +324,11 @@ When generating shell commands:
 1. **Never embed newlines or `#` characters inside quoted strings** passed as command arguments
 2. **For multiline shell logic**, write to a `.sh` script file first, then execute the file
 3. **Prefer simple, single-line commands** with explicit arguments
-4. **For complex logic**, use a heredoc written to a temp file rather than inline quoted strings
-5. **Before executing any shell command**, verify it contains no newline characters inside quoted strings and no `#` characters that could be interpreted as hidden arguments
+4. **For JSON parsing**, use `jq` — it is auto-allowed, needs no temp files, and handles all `gh` output parsing. Never pipe `gh` output to `python3 -c`. Example: `gh issue view 152 --json title,body | jq -r '.title, .body[:800]'`
+5. **For complex logic that `jq` cannot express**, write to a fixed path `/tmp/claude_parse.py` (overwrite each time, not per-invocation) and run `python3 /tmp/claude_parse.py`
+6. **Before executing any shell command**, verify it contains no newline characters inside quoted strings and no `#` characters that could be interpreted as hidden arguments
 
-**Why?** Claude Code's permission checker flags quoted newlines followed by `#`-prefixed lines as potential shell injection. Restructuring commands eliminates the interrupt.
+**Why?** Embedded newlines break allowlist pattern matching — `Bash(gh issue view*)` will not match a command containing newlines, so the permission prompt fires even for explicitly allowed prefixes. `jq` sidesteps this entirely.
 
 ## Pre-Push Verification — ALWAYS Run Before Push
 
