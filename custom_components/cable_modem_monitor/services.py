@@ -21,8 +21,8 @@ Services:
     cable_modem_monitor.orphaned_statistics:
         Finds recorder statistics for this modem that have no registered
         entity — left behind by a mode switch, channel rebonding (ID mode),
-        or a prefix change. Returns a YAML snippet to paste into Developer
-        Tools → Services. Does not delete anything.
+        or a prefix change. Without execute, returns a preview as comments.
+        With execute: true, purges them all directly. Purge is permanent.
 
 See HA_ADAPTER_SPEC.md § Services.
 """

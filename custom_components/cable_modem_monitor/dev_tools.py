@@ -930,7 +930,7 @@ def create_orphaned_statistics_handler(
 ) -> Any:
     """Create the orphaned_statistics service handler."""
 
-    async def handle_list_orphaned(call: ServiceCall) -> dict[str, Any]:
+    async def handle_orphaned_statistics(call: ServiceCall) -> dict[str, Any]:
         """Find recorder statistics with no registered entity for this modem.
 
         Returns a YAML snippet for review, or purges directly when execute=True.
@@ -1009,4 +1009,4 @@ def create_orphaned_statistics_handler(
 
         return {"yaml": "\n".join(lines), "count": total}
 
-    return handle_list_orphaned
+    return handle_orphaned_statistics
