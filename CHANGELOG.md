@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.10] - 2026-06-04
+
 ### Added
 
 - **`orphaned_statistics` service (P32).** Finds recorder statistics for a

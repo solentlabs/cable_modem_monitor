@@ -17,8 +17,8 @@
     "solentlabs.cable_modem_monitor_catalog"
   ],
   "requirements": [
-    "solentlabs-cable-modem-monitor-core==3.14.0-beta.9",
-    "solentlabs-cable-modem-monitor-catalog==3.14.0-beta.9"
+    "solentlabs-cable-modem-monitor-core==3.14.0-beta.10",
+    "solentlabs-cable-modem-monitor-catalog==3.14.0-beta.10"
   ],
-  "version": "3.14.0-beta.9"
+  "version": "3.14.0-beta.10"
 }
