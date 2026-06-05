@@ -364,6 +364,24 @@ git tag -d v3.14.0
 # Start fresh from the tagging step
 ```
 
+### PR shows "Expected — Waiting for status to be reported" on required checks
+
+The `require-status-checks` repository ruleset matches check names as
+plain strings. If a workflow job is renamed, the ruleset doesn't know —
+it just never sees the old name reported and the check hangs as
+"Expected" forever.
+
+Fix: update the ruleset to use the new job name. The current required
+checks live in ruleset ID `10547747`. Update via:
+
+```bash
+gh api repos/solentlabs/cable_modem_monitor/rulesets/10547747 --method PUT --input <payload>
+```
+
+where `<payload>` is the full ruleset JSON with the corrected `context`
+strings. See CLAUDE.md § "Adding a new CI job" for the rule that
+prevents this drift.
+
 ### Release workflow didn't trigger
 
 Ensure the tag follows the pattern `v*` (e.g., `v3.14.0`). Check `.github/workflows/release.yml` for the trigger configuration.

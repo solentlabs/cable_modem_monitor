@@ -389,6 +389,13 @@ local-mirror command. The two together are a single change, not a CI
 change with a "follow up" Makefile change. Drift between CI and local
 is what hides regressions until tag time (see alpha.17 retrospective).
 
+If the job name is listed as a required status check in the
+`require-status-checks` repository ruleset, update the ruleset at the
+same time. The ruleset is a plain string match — it has no awareness
+of the workflow files. Rename drift silently breaks every subsequent
+PR (shows "Expected — Waiting for status to be reported" on required
+checks). Update via `gh api repos/solentlabs/cable_modem_monitor/rulesets/10547747 --method PUT --input <payload>`.
+
 Exceptions: external GitHub Actions that can't be reasonably
 reproduced locally (e.g., `home-assistant/actions/hassfest@master`,
 which requires HA core source and Docker). Document the exception in
