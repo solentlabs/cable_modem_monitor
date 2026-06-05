@@ -10,6 +10,7 @@ See HA_ADAPTER_SPEC.md § Services.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from collections import defaultdict
@@ -18,6 +19,7 @@ from typing import Any
 import homeassistant.helpers.device_registry as dr
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers.recorder import get_instance
 from homeassistant.util import slugify as ha_slugify
 
 from .const import (
@@ -899,3 +901,112 @@ def create_convert_channel_identity_handler(
         return {"renamed": migrated, "mode": target_mode.value}
 
     return handle_convert
+
+
+async def _clear_statistic_batch(hass: HomeAssistant, ids: list[str]) -> None:
+    """Clear one batch of statistic IDs via the recorder and wait for completion."""
+    batch_done = asyncio.Event()
+
+    def _on_done() -> None:
+        hass.loop.call_soon_threadsafe(batch_done.set)
+
+    get_instance(hass).async_clear_statistics(ids, on_done=_on_done)
+    async with asyncio.timeout(30):
+        await batch_done.wait()
+
+
+async def _purge_statistic_ids(hass: HomeAssistant, statistic_ids: list[str]) -> int:
+    """Purge statistic IDs in batches of 100. Returns total count purged."""
+    batch_size = 100
+    purged = 0
+    for i in range(0, len(statistic_ids), batch_size):
+        await _clear_statistic_batch(hass, statistic_ids[i : i + batch_size])
+        purged += len(statistic_ids[i : i + batch_size])
+    return purged
+
+
+def create_orphaned_statistics_handler(
+    hass: HomeAssistant,
+) -> Any:
+    """Create the orphaned_statistics service handler."""
+
+    async def handle_orphaned_statistics(call: ServiceCall) -> dict[str, Any]:
+        """Find recorder statistics with no registered entity for this modem.
+
+        Returns a YAML snippet for review, or purges directly when execute=True.
+        """
+        device_id = call.data.get("device_id")
+        if device_id:
+            entry = _resolve_config_entry_for_device(hass, device_id)
+        else:
+            entry = _find_loaded_entry(hass)
+        if entry is None:
+            return {"yaml": "# Error: No cable modem configured", "count": 0}
+
+        prefix = _get_entity_prefix(entry)
+
+        from homeassistant.components.recorder.statistics import (
+            async_list_statistic_ids,
+        )
+        from homeassistant.helpers import entity_registry as er
+
+        all_stats = await async_list_statistic_ids(hass)
+        our_stat_ids = {s["statistic_id"] for s in all_stats if s["statistic_id"].startswith(f"sensor.{prefix}_")}
+
+        if not our_stat_ids:
+            return {
+                "yaml": f"# No statistics found for modem prefix '{prefix}'.",
+                "count": 0,
+            }
+
+        registry = er.async_get(hass)
+        registered_entity_ids = {e.entity_id for e in registry.entities.get_entries_for_config_entry_id(entry.entry_id)}
+
+        orphaned = sorted(our_stat_ids - registered_entity_ids)
+
+        if not orphaned:
+            return {
+                "yaml": (
+                    f"# No orphaned statistics found for modem prefix '{prefix}'.\n"
+                    f"# All {len(our_stat_ids)} statistics have registered entities."
+                ),
+                "count": 0,
+            }
+
+        execute = call.data.get("execute", False)
+        total = len(orphaned)
+
+        if execute:
+            purged = await _purge_statistic_ids(hass, orphaned)
+            _LOGGER.warning(
+                "Purged %d orphaned statistics for prefix '%s'",
+                purged,
+                prefix,
+            )
+            return {
+                "yaml": f"# Purged {purged} orphaned statistics for modem prefix '{prefix}'.",
+                "count": purged,
+            }
+
+        _LOGGER.debug(
+            "Orphaned statistics preview: %d found for prefix '%s'",
+            total,
+            prefix,
+        )
+        lines = [
+            f"# Found {total} orphaned entity record(s) for modem prefix '{prefix}'.",
+            "# These have no registered entity. They were likely left behind",
+            "# by a mode switch, channel rebonding (ID mode), or a prefix change.",
+            "#",
+            "# To purge all of them: call this service again with execute: true.",
+            "# WARNING: execute: true is permanent and cannot be undone.",
+            "#",
+            "# Orphaned entities (not a runnable action):",
+            "#",
+        ]
+        for stat_id in orphaned:
+            lines.append(f"# {stat_id}")
+
+        return {"yaml": "\n".join(lines), "count": total}
+
+    return handle_orphaned_statistics

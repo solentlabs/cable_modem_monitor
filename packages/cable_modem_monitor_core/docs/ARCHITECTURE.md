@@ -1281,7 +1281,7 @@ use that parser**, not just the modem being worked on. Enhancing
 Config flow, coordinator, entity model, device registry. Tests mock
 Core's engine interface — they verify HA-specific behavior (entity
 creation, state updates, availability) without running the real
-pipeline. Scope and details TBD in a dedicated HA test spec.
+pipeline. See [HA_ADAPTER_SPEC.md § Testing](../../../custom_components/cable_modem_monitor/docs/HA_ADAPTER_SPEC.md#testing).
 
 ### No test code in Catalog
 

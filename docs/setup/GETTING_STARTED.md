@@ -1,9 +1,8 @@
 # Getting Started
 
-The supported development path is **VS Code + Dev Container** (Docker).
-Windows runs that path inside **WSL2**. There is no second path —
-keeping one canonical environment is what makes "works on my machine"
-match CI.
+The supported development path is **WSL2 + VS Code Remote WSL** on Windows,
+or native on macOS/Linux. A Dev Container option is also available — see
+[Dev Container (optional)](#dev-container-optional) below.
 
 ---
 
@@ -13,11 +12,11 @@ match CI.
 git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
 git lfs install      # required for HAR test fixtures
-code .               # VS Code prompts: "Reopen in Container"
+./scripts/setup.sh   # creates .venv and installs all dependencies
+code .
 ```
 
-Click **Reopen in Container**. First build takes 2–5 minutes; subsequent
-opens are instant. When VS Code shows "Dev environment ready!", run:
+When VS Code opens, run:
 
 ```bash
 make validate
@@ -33,8 +32,9 @@ If anything in the setup fails: `./scripts/verify-setup.sh`.
 |------|---------------|------------------|
 | Git | required | required |
 | [Git LFS](https://git-lfs.com/) | required (HAR fixtures) | required |
-| Docker | Docker Desktop or Docker Engine | Docker Desktop with WSL2 backend |
-| VS Code + Dev Containers extension (`ms-vscode-remote.remote-containers`) | required | required (installed on Windows side) |
+| Python 3.12 | required | required (install inside WSL2) |
+| VS Code | required | required (installed on Windows side) |
+| Docker Desktop | required for HA testing | WSL2 backend enabled |
 | WSL2 + Ubuntu | — | required (`wsl --install` from PowerShell as admin) |
 
 **Windows users:** clone the repo *inside* WSL2 (e.g. `~/projects/`),
@@ -43,24 +43,11 @@ slower and breaks file watchers.
 
 ---
 
-## What's inside the container
-
-- Python 3.12 with all dependencies pre-installed
-- Docker-in-Docker for running Home Assistant test containers
-- CodeQL CLI for security analysis
-- VS Code extensions: Python (Pylance), Black, Ruff, YAML, CodeQL, Spell checker
-
-Project files mount at `/workspaces/cable_modem_monitor`. All commands
-run inside the container, never on the host.
-
----
-
 ## After opening in VS Code
 
 | Notification | What to do |
 |--------------|------------|
-| "Dev Container configuration available…" | Click **Reopen in Container**. |
-| "Install recommended extensions?" | Click **Install** — six extensions, all required. |
+| "Install recommended extensions?" | Click **Install** — all required. |
 | "GitLens" / "CodeQL" extras | Optional; dismiss if not needed. |
 
 ---
@@ -175,6 +162,23 @@ processors=4
 ```
 
 Then `wsl --shutdown`.
+
+---
+
+## Dev Container (optional)
+
+A Dev Container configuration is available for contributors who prefer a
+fully isolated environment. It requires Docker and the
+[Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+
+```bash
+# After cloning, open VS Code and click "Reopen in Container"
+# First build takes 2–5 minutes; subsequent opens are instant.
+```
+
+The container installs all dependencies automatically via
+`.devcontainer/post-create.sh`. If tools like `ruff` or `black` are missing
+after a container rebuild, run the **Fix Dev Container** VS Code task.
 
 ---
 

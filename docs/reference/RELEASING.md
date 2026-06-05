@@ -103,8 +103,7 @@ Verify at: <https://github.com/solentlabs/cable_modem_monitor/releases>
 
 Two tiers ship: beta and stable. Both publish to PyPI and create
 GitHub Releases with a zip asset. Beta tags carry the GitHub
-`prerelease` flag; stable tags don't. Alpha is a development concept
-only — alphas run from a local source clone and never tag.
+`prerelease` flag; stable tags don't.
 
 | Tier   | Tag pattern       | PyPI      | GitHub Release          | HACS visibility                   |
 |--------|-------------------|-----------|-------------------------|-----------------------------------|
@@ -364,6 +363,24 @@ git tag -d v3.14.0
 
 # Start fresh from the tagging step
 ```
+
+### PR shows "Expected — Waiting for status to be reported" on required checks
+
+The `require-status-checks` repository ruleset matches check names as
+plain strings. If a workflow job is renamed, the ruleset doesn't know —
+it just never sees the old name reported and the check hangs as
+"Expected" forever.
+
+Fix: update the ruleset to use the new job name. The current required
+checks live in ruleset ID `10547747`. Update via:
+
+```bash
+gh api repos/solentlabs/cable_modem_monitor/rulesets/10547747 --method PUT --input <payload>
+```
+
+where `<payload>` is the full ruleset JSON with the corrected `context`
+strings. See CLAUDE.md § "Adding a new CI job" for the rule that
+prevents this drift.
 
 ### Release workflow didn't trigger
 

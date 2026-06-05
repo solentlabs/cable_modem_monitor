@@ -443,12 +443,10 @@
     {
       "channel_id": 7,
       "channel_number": 5,
-      "channel_type": "atdma",
+      "channel_type": "ofdma",
       "frequency": 36000000,
       "lock_status": "locked",
-      "modulation": "OFDMA",
-      "power": 30.5,
-      "symbol_rate": 0
+      "power": 30.5
     }
   ]
 }

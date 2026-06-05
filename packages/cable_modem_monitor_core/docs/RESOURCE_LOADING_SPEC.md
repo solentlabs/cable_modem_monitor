@@ -106,10 +106,17 @@ For each unique `resource` path from parser.yaml:
 4. If `encoding: base64` is set on the section, decode first:
    `b64decode(response.text)` → raw text
 5. Parse the response (format-dependent):
-   - HTML formats: `BeautifulSoup(text, "html.parser")`
+   - HTML formats: `normalize_html(text)` → `BeautifulSoup(..., "html.parser")`
    - `json`: `json.loads(text)`
    - `xml`: `xmltodict.parse(text)`
 6. Key the result by path (not by semantic name)
+
+**HTML normalization:** Before BS4 parsing, `normalize_html()` fixes known
+firmware malformations at the input boundary. The current rule rewrites
+`<th>Label</td>` → `<th>Label</th>` — firmware that closes a `<th>` with
+`</td>` instead of `</th>`, causing BS4 to nest sibling cells inside the
+unclosed `<th>`. Applied here so parsers receive well-formed HTML without
+needing per-parser workarounds.
 
 **SSL handling:** If the config entry has `legacy_ssl: true` (detected
 during validation), the loader configures the session for `SECLEVEL=0`

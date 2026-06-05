@@ -1,5 +1,5 @@
 {
-  "_about": "Capture for SB8200 hardware v6 firmware (AB01.01.009.51_080720_183.0A.NSH, Spectrum). Stem walk resolves to modem-basic.yaml — distinct auth config variant from modem-cookie.yaml (v7). Server does not issue a credential cookie on login; data requests require Authorization: Basic header (auth_header_data: true). 34DS x 4US (32 QAM256 + 2 OFDM). Captured by contributor via Issue #170.",
+  "_about": "Capture for SB8200 hardware v6 firmware (AB01.01.009.51_080720_183.0A.NSH, Spectrum). Stem walk resolves to modem-basic.yaml — distinct auth config variant from modem-cookie.yaml (v7). Server returns a 31-byte session token in the auth response body; browser JS sets it as the credential cookie (inject_credential_cookie: true). 34DS x 4US (32 QAM256 + 2 OFDM). Captured by contributor via Issue #170.",
   "downstream": [
     {
       "channel_id": 25,

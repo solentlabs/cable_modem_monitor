@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - "feature/*"
   pull_request:
   schedule:
     # Weekly Sunday 04:17 UTC — catches external state drift (brands repo,

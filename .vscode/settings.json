@@ -22,9 +22,8 @@
   //
   // ========================================
 
-  // Path to the Python interpreter - uses .venv
-  // VSCode automatically finds the correct python executable at .venv/bin/python
-  "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+  // Path to the Python interpreter - must point to the binary, not the venv directory
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
 
   // Disable automatic venv activation (we handle it with custom wrapper script)
   "python.terminal.activateEnvironment": false,
@@ -160,9 +159,5 @@
   // Set default profiles
   "terminal.integrated.defaultProfile.linux": "bash",
   "terminal.integrated.defaultProfile.osx": "zsh",
-  "cSpell.words": [
-    "Docsis",
-    "hass",
-    "Netgear"
-  ]
+  "makefile.configureOnOpen": false,
 }

@@ -572,11 +572,6 @@ changes add position mode as an alternative, not a replacement. The
 rest of ENTITY_MODEL_SPEC (system sensors, health sensors, LAN stats,
 buttons, availability, device model) is unaffected.
 
-### Prerequisites
-
-1. **PARSING_SPEC update** — Document `channel_number` reconciliation.
-2. **ENTITY_MODEL_SPEC update** — Reflect mapping manager design.
-
 ---
 
 ## 11. Open Questions

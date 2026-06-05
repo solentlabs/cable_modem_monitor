@@ -1095,7 +1095,7 @@ def _register_deferred_entity_creation(
 
         new_entities = _create_data_dependent_entities(data_coord, entry, modem_data)
         _LOGGER.info(
-            "Deferred data sensors created [%s] — %d entities",
+            "Deferred data sensors created [%s] — %d data-dependent entities",
             entry.runtime_data.modem_identity.model,
             len(new_entities),
         )

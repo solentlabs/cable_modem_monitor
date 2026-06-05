@@ -11,6 +11,9 @@
     // YAML support (required for HA configs)
     "redhat.vscode-yaml",
 
+    // Spell checking (uses cspell.config.yaml for domain-specific terms)
+    "streetsidesoftware.code-spell-checker",
+
     // Documentation
     "yzhang.markdown-all-in-one",
     "christoph.mermaid-preview"
@@ -25,6 +28,8 @@
 
   // Extensions that are not needed or conflict with project setup
   "unwantedRecommendations": [
+    // Designed for C/C++ build systems; prompts to install C++ tools for our Python task-runner Makefile
+    "ms-vscode.makefile-tools",
     "gitkraken.gitlens",
     // Replaced by Ruff (modern, fast linter)
     "ms-python.pylint",

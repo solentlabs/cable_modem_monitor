@@ -39,6 +39,7 @@ from custom_components.cable_modem_monitor.dev_tools import (
     _unique_types,
     create_convert_channel_identity_handler,
     create_generate_dashboard_handler,
+    create_orphaned_statistics_handler,
 )
 from custom_components.cable_modem_monitor.services import (
     _find_loaded_entries,
@@ -412,10 +413,13 @@ def _make_mock_entry(
     return entry
 
 
-def _make_mock_call(device_id: str | list[str] | None = None) -> MagicMock:
-    """Create a mock ServiceCall with optional device_id."""
+def _make_mock_call(
+    data: dict[str, Any] | None = None,
+    device_id: str | list[str] | None = None,
+) -> MagicMock:
+    """Create a mock ServiceCall with optional data fields."""
     call = MagicMock()
-    call.data = {}
+    call.data = dict(data) if data else {}
     if device_id is not None:
         call.data["device_id"] = device_id
     return call
@@ -975,13 +979,14 @@ def test_register_services() -> None:
     hass = MagicMock()
     async_register_services(hass)
 
-    assert hass.services.async_register.call_count == 4
+    assert hass.services.async_register.call_count == 5
     registered = {call.args[1] for call in hass.services.async_register.call_args_list}
     assert registered == {
         "generate_dashboard",
         "request_refresh",
         "request_health_check",
         "convert_channel_identity",
+        "orphaned_statistics",
     }
 
 
@@ -990,13 +995,14 @@ def test_unregister_services() -> None:
     hass = MagicMock()
     async_unregister_services(hass)
 
-    assert hass.services.async_remove.call_count == 4
+    assert hass.services.async_remove.call_count == 5
     removed = {call.args[1] for call in hass.services.async_remove.call_args_list}
     assert removed == {
         "generate_dashboard",
         "request_refresh",
         "request_health_check",
         "convert_channel_identity",
+        "orphaned_statistics",
     }
 
 
@@ -1459,3 +1465,274 @@ def test_build_channel_graph_defs_number_mode_omits_channel_type() -> None:
     for p in patterns:
         assert "{ch_type}" not in p
         assert "_ch_{ch_id}" in p
+
+
+# create_orphaned_statistics_handler
+# -----------------------------------------------------------------------
+
+
+def _make_mock_entry_minimal(mock_runtime_data):
+    """Config entry with entry_id, no snapshot required."""
+    entry = _make_mock_entry(mock_runtime_data)
+    entry.entry_id = "test_entry_id"
+    return entry
+
+
+async def test_list_orphaned_no_entry_returns_error() -> None:
+    """No loaded entry → error yaml, recorder untouched."""
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = []
+    handler = create_orphaned_statistics_handler(hass)
+    call = _make_mock_call()
+
+    with patch(
+        "homeassistant.components.recorder.statistics.async_list_statistic_ids",
+        new_callable=AsyncMock,
+    ) as mock_list:
+        result = await handler(call)
+
+    assert "Error" in result["yaml"]
+    assert result["count"] == 0
+    mock_list.assert_not_called()
+
+
+async def test_list_orphaned_no_stats_returns_none_found(mock_runtime_data) -> None:
+    """No statistics exist for this prefix → count 0."""
+    entry = _make_mock_entry_minimal(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+    handler = create_orphaned_statistics_handler(hass)
+    call = _make_mock_call()
+
+    with patch(
+        "homeassistant.components.recorder.statistics.async_list_statistic_ids",
+        new_callable=AsyncMock,
+        return_value=[],
+    ):
+        result = await handler(call)
+
+    assert result["count"] == 0
+    assert "No statistics found" in result["yaml"]
+
+
+# ┌──────────────────────────────────────┬──────────┬──────────────────────────────────────────────────────┐
+# │ scenario                             │ expected │ description                                          │
+# ├──────────────────────────────────────┼──────────┼──────────────────────────────────────────────────────┤
+# │ all stats have registered entities   │ 0        │ nothing to report                                    │
+# │ one stat has no entity               │ 1        │ single orphan in yaml                                │
+# │ multiple orphaned                    │ 3        │ all appear, sorted alphabetically                    │
+# │ id-mode orphans, position active     │ 2        │ mode-switch scenario                                 │
+# │ different prefix entirely excluded   │ 0        │ other integration not counted                        │
+# │ prefix boundary — no underscore      │ 0        │ sensor.{prefix}extra excluded (no _ separator)       │
+# │ mix: active + orphaned + other pfx   │ 2        │ only orphaned from current prefix in yaml            │
+# └──────────────────────────────────────┴──────────┴──────────────────────────────────────────────────────┘
+#
+# Each case defined as:
+#   active_suffixes   — suffixes that ARE registered (f"sensor.{prefix}_{suffix}")
+#   orphaned_suffixes — suffixes in stats but NOT registered
+#   other_stats       — full stat_ids from unrelated prefixes (excluded by prefix filter)
+#   expected_count    — int
+#   desc              — test id
+#
+# fmt: off
+LIST_ORPHANED_CASES: list[tuple[list[str], list[str], list[str], int, str]] = [
+    (
+        ["ds_ch_1_power", "ds_ch_2_power"],
+        [],
+        [],
+        0,
+        "all_active",
+    ),
+    (
+        ["ds_ch_1_power"],
+        ["ds_qam_ch_21_power"],
+        [],
+        1,
+        "single_orphan",
+    ),
+    (
+        ["ds_ch_1_power"],
+        ["ds_qam_ch_21_power", "ds_qam_ch_21_snr", "ds_qam_ch_21_corrected"],
+        [],
+        3,
+        "multiple_orphaned_sorted",
+    ),
+    (
+        ["ds_ch_1_power", "ds_ch_2_power"],      # position-mode active
+        ["ds_qam_ch_21_power", "ds_qam_ch_21_snr"],  # id-mode orphans from mode switch
+        [],
+        2,
+        "id_mode_orphans_position_active",
+    ),
+    (
+        ["ds_ch_1_power"],
+        [],
+        ["sensor.other_integration_sensor", "sensor.totally_different_ds_ch_1_power"],
+        0,
+        "different_prefix_excluded",
+    ),
+    (
+        ["ds_ch_1_power"],
+        [],
+        [],
+        0,
+        "prefix_boundary_no_underscore",
+        # sensor.{prefix}extra (no _ after prefix) must NOT be matched —
+        # verified by the handler's startswith(f"sensor.{prefix}_") filter
+    ),
+    (
+        ["ds_ch_1_power", "us_ch_1_power"],
+        ["ds_qam_ch_21_power", "ds_ofdm_ch_33_snr"],
+        ["sensor.other_thing_ds_ch_1_power", "sensor.unrelated_sensor"],
+        2,
+        "mix_active_orphaned_other_prefix",
+    ),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "active_suffixes,orphaned_suffixes,other_stats,expected_count,desc",
+    LIST_ORPHANED_CASES,
+    ids=[c[4] for c in LIST_ORPHANED_CASES],
+)
+async def test_list_orphaned_filtering(
+    mock_runtime_data,
+    active_suffixes: list[str],
+    orphaned_suffixes: list[str],
+    other_stats: list[str],
+    expected_count: int,
+    desc: str,
+) -> None:
+    """Orphan detection correctly filters by prefix, registered entities, and sort order."""
+    entry = _make_mock_entry_minimal(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+    handler = create_orphaned_statistics_handler(hass)
+    call = _make_mock_call()
+
+    prefix = _get_entity_prefix(entry)
+    stat_ids = (
+        [{"statistic_id": f"sensor.{prefix}_{s}"} for s in active_suffixes + orphaned_suffixes]
+        + [{"statistic_id": s} for s in other_stats]
+        # prefix-boundary probe: a stat that starts with the prefix but lacks the _ separator
+        + [{"statistic_id": f"sensor.{prefix}extra_suffix"}]
+    )
+    registered = [MagicMock(entity_id=f"sensor.{prefix}_{s}") for s in active_suffixes]
+
+    with (
+        patch(
+            "homeassistant.components.recorder.statistics.async_list_statistic_ids",
+            new_callable=AsyncMock,
+            return_value=stat_ids,
+        ),
+        patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
+    ):
+        mock_er.return_value.entities.get_entries_for_config_entry_id.return_value = registered
+        result = await handler(call)
+
+    assert result["count"] == expected_count
+
+    if expected_count == 0:
+        assert "action: recorder.purge_entities" not in result["yaml"]
+    else:
+        # Preview output is a comment block — not a runnable YAML action.
+        assert "action: recorder.purge_entities" not in result["yaml"]
+        assert "execute: true" in result["yaml"]
+        assert "WARNING" in result["yaml"]
+        # orphaned entries appear in preview
+        for suffix in orphaned_suffixes:
+            assert f"sensor.{prefix}_{suffix}" in result["yaml"]
+        # active entities excluded
+        for suffix in active_suffixes:
+            assert f"sensor.{prefix}_{suffix}" not in result["yaml"]
+        # other-prefix stats excluded
+        for stat in other_stats:
+            assert stat not in result["yaml"]
+        # prefix boundary: no-underscore stat excluded
+        assert f"sensor.{prefix}extra_suffix" not in result["yaml"]
+
+
+@pytest.mark.asyncio
+async def test_list_orphaned_execute_clears_statistics(mock_runtime_data) -> None:
+    """execute=True calls recorder async_clear_statistics in batches and returns purge count."""
+    entry = _make_mock_entry_minimal(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+    handler = create_orphaned_statistics_handler(hass)
+    call = _make_mock_call({"execute": True})
+
+    prefix = _get_entity_prefix(entry)
+    # 150 orphaned stats — spans two internal batches of 100
+    orphaned_ids = sorted(f"sensor.{prefix}_ch_{i:03d}_power" for i in range(150))
+    stat_ids = [{"statistic_id": sid} for sid in orphaned_ids]
+
+    cleared_batches: list[list[str]] = []
+    # call_soon_threadsafe is mocked — make it invoke the callback immediately
+    hass.loop.call_soon_threadsafe.side_effect = lambda fn: fn()
+
+    def fake_async_clear_statistics(ids: list[str], *, on_done=None) -> None:
+        cleared_batches.append(list(ids))
+        if on_done:
+            hass.loop.call_soon_threadsafe(on_done)
+
+    mock_recorder = MagicMock()
+    mock_recorder.async_clear_statistics.side_effect = fake_async_clear_statistics
+
+    with (
+        patch(
+            "homeassistant.components.recorder.statistics.async_list_statistic_ids",
+            new_callable=AsyncMock,
+            return_value=stat_ids,
+        ),
+        patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
+        patch(
+            "custom_components.cable_modem_monitor.dev_tools.get_instance",
+            return_value=mock_recorder,
+        ),
+    ):
+        mock_er.return_value.entities.get_entries_for_config_entry_id.return_value = []
+        result = await handler(call)
+
+    assert result["count"] == 150
+    assert "Purged 150" in result["yaml"]
+    # Two batches: first 100, then 50
+    assert len(cleared_batches) == 2
+    assert len(cleared_batches[0]) == 100
+    assert len(cleared_batches[1]) == 50
+    assert cleared_batches[0] + cleared_batches[1] == orphaned_ids
+
+
+@pytest.mark.asyncio
+async def test_list_orphaned_preview_large_list_shows_execute_hint(mock_runtime_data) -> None:
+    """Preview of a large list mentions execute: true and shows partial entity list."""
+    entry = _make_mock_entry_minimal(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+    handler = create_orphaned_statistics_handler(hass)
+    call = _make_mock_call()
+
+    prefix = _get_entity_prefix(entry)
+    orphaned_ids = [f"sensor.{prefix}_ch_{i:03d}_power" for i in range(150)]
+    stat_ids = [{"statistic_id": sid} for sid in orphaned_ids]
+
+    with (
+        patch(
+            "homeassistant.components.recorder.statistics.async_list_statistic_ids",
+            new_callable=AsyncMock,
+            return_value=stat_ids,
+        ),
+        patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
+    ):
+        mock_er.return_value.entities.get_entries_for_config_entry_id.return_value = []
+        result = await handler(call)
+
+    assert result["count"] == 150
+    assert "execute: true" in result["yaml"]
+    assert "action: recorder.purge_entities" not in result["yaml"]
+    # all 150 entities appear in the preview
+    for sid in orphaned_ids:
+        assert sid in result["yaml"]
+    # output is comment lines only — safe to display, nothing executes
+    non_comment_lines = [ln for ln in result["yaml"].splitlines() if ln.strip() and not ln.strip().startswith("#")]
+    assert non_comment_lines == []

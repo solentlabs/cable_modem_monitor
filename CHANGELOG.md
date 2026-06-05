@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.10] - 2026-06-04
+
+### Added
+
+- **`orphaned_statistics` service (P32).** Finds recorder statistics for a
+  modem that have no registered entity — left behind by a mode switch,
+  channel rebonding (ID mode), or a prefix change. Default call returns a
+  commented preview of orphaned entity IDs. Pass `execute: true` to purge
+  all of them directly via HA's recorder. Purge is permanent. Documented
+  in TROUBLESHOOTING.md § Ghost Statistics.
+- **Technicolor XB7 (CGM4981COM) now fully supported.** Verified on
+  hardware via contributor HAR capture. 34 downstream + 5 upstream channels
+  confirmed. Addresses #101.
+
+### Fixed
+
+- **Logout before same-poll auth retry on single-session firmware.** When
+  `LOAD_AUTH` or `LOAD_INTEGRITY` fires on a modem with
+  `session.max_concurrent: 1` and `actions.logout` configured, Core now
+  attempts a best-effort logout before clearing the session and retrying.
+  Releases any stale server-side session (e.g. after an unclean HA restart)
+  so the immediate re-authentication can succeed. Related to #170.
+- **SB8200 v6 Basic: logout action added to catalog.** The `modem-basic`
+  variant was missing a logout action, preventing the logout-before-retry
+  path from firing. Related to #170.
+- **XB7: modulation field normalized to canonical form.** The XB7 firmware
+  reports upstream modulation as `"64QAM"` where the catalog expects
+  `"qam_64"`. The parser now normalizes at intake so modulation values are
+  consistent across modem families. Addresses #107.
+
+## [3.14.0-beta.9] - 2026-06-01
+
+### Fixed
+
+- **XB6/XB7: upstream OFDMA channels now correctly classified as `ofdma`.**
+  Firmware reports `Channel Type: TDMA` for OFDMA upstream channels because
+  `docsIfUpChannelType` (DOCS-IF-MIB, RFC 4546) has no OFDMA value. The
+  channel type is now derived from the `Modulation` field instead, matching
+  the DOCSIS 3.1 spec. `symbol_rate` and the redundant modulation label are
+  correctly stripped from OFDMA channels. Addresses #107.
+- **XB7: malformed `<th>` HTML normalized before parsing.** Firmware emits
+  `<th>Label</td><td>value</td>` — unclosed `<th>` tags that cause
+  BeautifulSoup to nest sibling cells instead of treating them as a row.
+  `normalize_html()` now rewrites the tag at the input boundary so the table
+  parser sees well-formed HTML. Addresses #107.
+- **`inject_credential_cookie` auth: body is the credential cookie value.**
+  Firmware that uses this pattern returns a server-issued session token in
+  the auth response body; browser JS sets it directly as the credential
+  cookie (`createCookie("credential", result)`). Core now replicates this
+  correctly. An empty auth response body is treated as an error — there is
+  no btoa fallback. Related to #170.
+
+### Added
+
+- **`inject_credential_cookie` field for `url_token` auth.** When set,
+  Core sets `cookie_name` to the server-issued token from the auth response
+  body after login. Use for firmware where the server never issues the
+  credential cookie via `Set-Cookie` and the browser JS reads the token from
+  the response body instead.
+- **SB8200 `modem-basic` golden file regression test.** `modem-basic.har`
+  now carries a synthetic auth response body so `test_modem_har_replay`
+  exercises the full auth → fetch → parse pipeline for this variant.
+
 ## [3.14.0-beta.8] - 2026-05-29
 
 ### Fixed
@@ -47,9 +110,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Arris SB8200 `modem-basic` variant (URL Token, v6 hardware).** v6 hardware
-  does not issue a session cookie on login; this variant uses the URL token
-  strategy without cookie credential reuse. Status: `awaiting_verification`.
+- **Arris SB8200 `modem-basic` variant (URL Token, v6 hardware).** Added
+  catalog entry for the v6 hardware variant (firmware AB01.01.009.51).
+  Auth mechanism confirmed in Unreleased. Status: `awaiting_verification`.
   Related to #170.
 - **`ModemSnapshot.to_event_payload()` and HA event bus integration.** Core
   now produces a structured `EventBusPayload` (model, ISP, status, channel

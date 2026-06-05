@@ -19,8 +19,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     # Development tools
-    "black>=26.0",        # Code formatter
-    "ruff>=0.15.13",      # Linter and import sorter
+    "black>=26.5.1",      # Code formatter
+    "ruff>=0.15.15",      # Linter and import sorter
     "mypy>=1.20",         # Static type checker
     "pytest>=8.0",        # Test runner
     "pytest-cov>=5.0",    # Coverage reporting

@@ -16,7 +16,7 @@ from typing import Any, NamedTuple
 
 from ...validation.har_utils import (
     HARD_STOP_PREFIX,
-    has_content,
+    WARNING_PREFIX,
     has_set_cookie,
     lower_headers,
     parse_form_params,
@@ -102,7 +102,7 @@ def detect_http_auth(
 
     # URL token pattern -> url_token
     if signals.url_token_entry is not None:
-        return _extract_url_token(entries, signals)
+        return _extract_url_token(entries, signals, warnings)
 
     # SJCL AES-CCM encrypted login -> form_sjcl (must check before pbkdf2)
     if signals.sjcl_login_entry is not None:
@@ -351,7 +351,54 @@ def _extract_basic(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> 
     )
 
 
-def _extract_url_token(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> AuthDetail:
+def _collect_server_cookie_names(entries: list[dict[str, Any]]) -> set[str]:
+    """Return all cookie names issued via Set-Cookie across all HAR responses."""
+    names: set[str] = set()
+    for entry in entries:
+        resp = entry["response"]
+        for header in resp.get("headers", []):
+            if header["name"].lower() == "set-cookie":
+                name = header["value"].split("=", 1)[0].strip()
+                if name:
+                    names.add(name)
+        for cookie in resp.get("cookies", []):
+            name = cookie.get("name", "")
+            if name:
+                names.add(name)
+    return names
+
+
+def _detect_client_side_cookie(
+    entries: list[dict[str, Any]],
+    auth_entry: dict[str, Any],
+) -> str:
+    """Return name of first cookie in post-login requests never issued via Set-Cookie.
+
+    Detects the client-side credential cookie injection pattern: firmware
+    authenticates and returns a session token in the response body; browser JS
+    sets it as a credential cookie (createCookie("credential", result)).
+    Returns the cookie name, or empty string if not detected.
+    """
+    server_cookies = _collect_server_cookie_names(entries)
+    past_auth = False
+    for entry in entries:
+        if entry is auth_entry:
+            past_auth = True
+            continue
+        if not past_auth:
+            continue
+        for cookie in entry["request"].get("cookies", []):
+            name: str = cookie.get("name", "")
+            if name and name not in server_cookies:
+                return name
+    return ""
+
+
+def _extract_url_token(
+    entries: list[dict[str, Any]],
+    signals: _HttpAuthSignals,
+    warnings: list[str],
+) -> AuthDetail:
     """Extract url_token auth fields."""
     entry = signals.url_token_entry
     assert entry is not None  # guaranteed by caller
@@ -359,25 +406,48 @@ def _extract_url_token(entries: list[dict[str, Any]], signals: _HttpAuthSignals)
     req_hdrs = lower_headers(req)
     resp = entry["response"]
 
-    # Detect ajax_login from X-Requested-With header
     ajax_login = "x-requested-with" in req_hdrs
 
-    # Detect success_indicator from response body
-    success_indicator = ""
     resp_text = resp.get("content", {}).get("text", "")
-    if resp_text and resp.get("status") == 200 and has_content(resp):
-        # Success indicator is present if the response has data content
-        # The LLM picks the actual indicator value during config generation
-        pass
+
+    # Empty auth response body: HAR sanitizers strip the response body, so an
+    # empty body here may mean the body was redacted, not that it was empty.
+    # The pattern: firmware returns a server-issued token in the auth body;
+    # browser JS sets it as a credential cookie (createCookie("credential", result)).
+    inject_credential_cookie = False
+    detected_cookie_name = ""
+    if not resp_text:
+        warnings.append(
+            f"{WARNING_PREFIX} url_token auth response body is empty — "
+            "body may have been redacted by har-capture sanitizer. "
+            "Check whether post-login requests carry a credential cookie "
+            "that was not set via Set-Cookie (client-side cookie injection pattern)."
+        )
+        detected_cookie_name = _detect_client_side_cookie(entries, entry)
+        if detected_cookie_name:
+            inject_credential_cookie = True
+            warnings.append(
+                f"{WARNING_PREFIX} cookie '{detected_cookie_name}' appears in "
+                "post-login requests but was never issued via Set-Cookie — "
+                "client-side credential cookie injection detected. "
+                "Setting inject_credential_cookie: true (confidence: low — "
+                "verify the auth response body contains the credential value; "
+                "it is typically a server-issued token, not btoa(user:pass))."
+            )
+
+    fields: dict[str, Any] = {
+        "login_page": signals.url_token_login_page,
+        "login_prefix": signals.url_token_login_prefix,
+        "ajax_login": ajax_login,
+        "success_indicator": "",
+    }
+    if inject_credential_cookie:
+        fields["inject_credential_cookie"] = True
+        fields["cookie_name"] = detected_cookie_name
 
     return AuthDetail(
         strategy="url_token",
-        fields={
-            "login_page": signals.url_token_login_page,
-            "login_prefix": signals.url_token_login_prefix,
-            "ajax_login": ajax_login,
-            "success_indicator": success_indicator,
-        },
+        fields=fields,
         confidence="high",
     )
 

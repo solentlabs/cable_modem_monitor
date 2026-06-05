@@ -133,6 +133,21 @@ Report what was detected:
 - Actions: logout={yes/no}, restart={yes/no}
 - Sections: list formats and channel counts
 
+If `auth.confidence` is not `high`, or `warnings` is non-empty for the auth
+entry, verify the detected strategy against the HAR before proceeding. Pull
+`analysis["auth"]["fields"]` and cross-check:
+
+| Strategy | Key signal in the HAR |
+|----------|-----------------------|
+| `form` | Login is a POST with plain form fields. If `login_page` is set, a pre-fetch GET precedes the POST and hidden fields appear in the POST body. Check `encoding` — `base64` if the password is base64-encoded in the POST body, `plain` if it appears verbatim. |
+| `form_nonce` | Auth response body starts with `Url:` (success) or `Error:` (failure) — no HTTP redirect. The POST body contains a short random numeric value alongside credentials; `nonce_field` should match its field name. |
+| `form_pbkdf2` | A preliminary request fires before credentials are submitted and the response contains a salt value. `pbkdf2_iterations` and `pbkdf2_key_length` should match values visible in that exchange. |
+| `form_sjcl` | The credential POST body is an encrypted SJCL JSON blob, not plain form fields. `encrypt_aad` and `decrypt_aad` should match the AAD strings in the login JS. |
+
+If the detected strategy or any extracted field looks wrong, correct
+`analysis["auth"]` before calling `generate_config` — don't patch the
+generated YAML after the fact.
+
 ## Step 5: Check for Core Gaps
 
 If `analysis["core_gaps"]` is present, the modem uses a pattern Core
@@ -233,13 +248,24 @@ If tests fail, diagnose from the structured diff:
 
 Fix the config, re-run. Loop until green.
 
-## Step 10: Show Changes
+## Step 10: Regenerate Catalog README
+
+Run the generator to keep the catalog index current:
+
+```bash
+python3 packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py
+```
+
+Stage `README.md` and `CATALOG_AUDIT.md` alongside the catalog files —
+CI gates on README freshness and a stale README will fail the PR.
+
+## Step 11: Show Changes
 
 Run `git status` to see all files created or modified, and
 `git diff --stat` for a summary. Do NOT commit or push automatically —
 staging and commits are yours to make.
 
-## Step 11: Open a Pull Request
+## Step 12: Open a Pull Request
 
 Once tests are green and the diff looks right:
 
@@ -267,7 +293,7 @@ parser working, the maintainer captures that evidence as a
 `confirmed`. This phase is maintainer-side; the contributor's only
 job is to share their HA diagnostics download.
 
-### Step 12: Receive Hardware Confirmation
+### Step 13: Receive Hardware Confirmation
 
 Trigger: the originating issue gets a comment with a config-entry
 diagnostics JSON attached and a positive report (channels populated,
@@ -290,7 +316,7 @@ If anything is missing or wrong, treat it as another iteration: ask
 clarifying questions, ship a patch alpha, and wait for fresh
 diagnostics. Do NOT confirm partial wins.
 
-### Step 13: Build verified.json
+### Step 14: Build verified.json
 
 The verified.json is a faithful copy of the diagnostics `data`
 section, with integration-side noise stripped and provenance metadata
@@ -337,7 +363,7 @@ For single-variant modems, the file is `modem.verified.json`. For
 multi-variant modems, name it after the variant the contributor used
 (e.g. `modem-basic.verified.json`).
 
-### Step 14: Flip Status
+### Step 15: Flip Status
 
 Edit `modem.yaml` (or the variant-specific YAML):
 
@@ -350,7 +376,24 @@ verified.** A confirmation on one variant does not transfer to the
 others — each variant exercises a different transport/auth path and
 must be verified independently.
 
-### Step 15: Commit and Reply
+### Step 15a: Run Catalog Tests
+
+After flipping status, run the full catalog test suite before
+committing:
+
+```bash
+.venv/bin/python -m pytest packages/cable_modem_monitor_catalog/tests/ --no-header -q
+```
+
+`test_confirmed_modem_golden_spec_conformance` only fires for confirmed
+modems, so this is the first time it runs for this entry. A parser
+that passed `test_modem_har_replay` during onboarding can still fail
+the conformance gate here — the two tests check different things.
+Fix any failures before proceeding to Step 16. If the golden needs
+updating after a parser fix, regenerate with the actual output from
+the failing test run and re-run until clean.
+
+### Step 16: Commit and Reply
 
 Stage the two files and commit with this message shape:
 

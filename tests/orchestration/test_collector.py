@@ -497,8 +497,8 @@ def test_logout_failed_emitted_on_exception():
     ):
         collector.execute()
 
-    assert_event_emitted(events, LogoutExecuted, model=_MODEL)
     assert_event_emitted(events, LogoutFailed, model=_MODEL)
+    assert not any(isinstance(e, LogoutExecuted) for e in events)
     event = next(e for e in events if isinstance(e, LogoutFailed))
     assert event.level == EventLevel.WARNING
 

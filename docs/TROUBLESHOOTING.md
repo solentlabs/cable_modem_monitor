@@ -18,6 +18,7 @@ Common issues and solutions for Cable Modem Monitor.
 - [Understanding Log Output](#understanding-log-output)
 - [Upstream Sensors Not Appearing](#upstream-sensors-not-appearing)
 - [Orphaned Channel Sensors](#orphaned-channel-sensors)
+- [Ghost Statistics in History](#ghost-statistics-in-history)
 - [Duplicate Entities](#duplicate-entities)
 
 ---
@@ -366,6 +367,61 @@ Press the **Reset Entities** button to clean up:
 4. Integration will reload with only current channels
 
 Historical data is preserved - the same channels will reconnect to their history.
+
+---
+
+## Ghost Statistics in History
+
+### Problem: Old Channel Sensors Appear in Entity Picker or History Graphs
+
+**Symptoms:**
+
+- Sensors from a previous install appear in the entity picker even though the integration has been removed and re-added
+- History graphs show data for channel sensors that no longer exist (e.g. `sensor.old_prefix_ds_ch_1_power`)
+- This happens after reinstalling with a different entity prefix, switching between Channel Number and Channel ID modes without running `convert_channel_identity`, or (in Channel ID mode) after the modem rebonded to different channel IDs
+
+**Cause:**
+Home Assistant's recorder does not automatically remove statistics when an entity is deleted. The historical data persists in the database indefinitely under the old entity ID.
+
+**Solution:**
+
+Use the `cable_modem_monitor.orphaned_statistics` service. It works in two steps — preview first, then purge.
+
+### Step 1 — Preview
+
+1. Go to **Developer Tools → Actions**
+2. Select action: **Cable Modem Monitor: List Orphaned Statistics**
+3. Leave **Execute** unchecked
+4. Click **Perform Action**
+
+The response lists orphaned entity IDs as comments. Nothing is deleted. Example:
+
+```text
+# Found 3 orphaned entity record(s) for modem prefix 'cable_modem'.
+# These have no registered entity. They were likely left behind
+# by a mode switch, channel rebonding (ID mode), or a prefix change.
+#
+# To purge all of them: call this service again with execute: true.
+# WARNING: execute: true is permanent and cannot be undone.
+#
+# Preview of first orphaned entities (not a runnable action):
+#
+# sensor.cable_modem_ds_qam_ch_21_corrected
+# sensor.cable_modem_ds_qam_ch_21_power
+# sensor.cable_modem_ds_qam_ch_21_snr
+```
+
+### Step 2 — Purge
+
+Once you have reviewed the list and are ready to clear:
+
+1. In **Developer Tools → Actions**, select **Cable Modem Monitor: List Orphaned Statistics** again
+2. Check **Execute**
+3. Click **Perform Action**
+
+The service clears all orphaned statistics directly via HA's recorder and returns the count purged. This is permanent and cannot be undone.
+
+> **Note:** If you switched channel identity modes and want to preserve history rather than delete it, run `cable_modem_monitor.convert_channel_identity` first. That service renames statistics to match the current mode — run it before using this cleanup service.
 
 ---
 

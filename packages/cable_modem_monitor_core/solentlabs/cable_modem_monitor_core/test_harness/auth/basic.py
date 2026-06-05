@@ -60,7 +60,7 @@ class BasicAuthHandler(AuthHandler):
 
 def create_handler(
     modem_config: ModemConfig,
-    har_entries: list[dict[str, Any]] | None = None,  # noqa: ARG001
+    har_entries: list[dict[str, Any]] | None = None,
 ) -> BasicAuthHandler:
     """Entry point for dynamic auth handler dispatch."""
     from ...models.modem_config.auth import BasicAuth

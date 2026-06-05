@@ -423,20 +423,15 @@ raise ValueError("Invalid input")
 raise ValueError(f"Invalid host '{host}': must be IP address or hostname")
 ```
 
-### Modem-Specific Log Messages: `[MODEL]` Tag
+### Modem-Specific Log Messages
 
-Runtime log messages for a specific modem include the model name as a
-`[MODEL]` tag at the end of the subject phrase, before the separator
-(`:` or `—`):
+Orchestration logging uses the typed event pattern — construct the
+appropriate event dataclass and pass it to `log_event()`. The adapter
+owns level routing, `[MODEL]` formatting, and message text.
 
-```python
-_logger.info("Parse complete [%s]: %d DS, %d US", model, ds, us)
-_logger.debug("Fetched /path [%s]: 200 (1234 bytes)", model)
-```
-
-Auth success logging belongs in the **collector**, not in individual
-auth managers — the collector has the model name and logs the
-`AuthResult` centrally.
+See [`LOGGING_SPEC.md`](../packages/cable_modem_monitor_core/docs/LOGGING_SPEC.md)
+for the event taxonomy, level policy, intentional exceptions, and the
+`capture_events()` test pattern.
 
 ### Log Before Raising
 

@@ -15,27 +15,12 @@
 | Code quality (no shortcuts, quality gates, forward refs, suppression discipline) | `docs/CODE_REVIEW.md` § Design Principles + Source File Standards |
 | Test patterns (table-driven, fixtures vs inline, no data blobs, no modem-specifics, test overrides as smell) | `docs/CODE_REVIEW.md` § Test File Standards |
 | HAR fixtures (Git LFS, `load_har_json()`) | `docs/CODE_REVIEW.md` § Loading HAR Fixtures |
-| Logging conventions (`[MODEL]` tag) | `docs/CODE_REVIEW.md` § Modem-Specific Log Messages |
+| Logging conventions (event taxonomy, `log_event()`) | `packages/cable_modem_monitor_core/docs/LOGGING_SPEC.md` |
 | Async / blocking I/O | `docs/CODE_REVIEW.md` § No Blocking I/O in Async Context |
 | Release flow (branching, merging, tagging) | `docs/reference/RELEASING.md` |
 | Process questions (where does X go? PR vs Discussion vs Issue?) | `CONTRIBUTING.md` |
 | Specs by package | core: `packages/cable_modem_monitor_core/docs/README.md` · catalog tools: `packages/cable_modem_monitor_catalog_tools/docs/README.md` · HA: `custom_components/cable_modem_monitor/docs/README.md` · project: `docs/README.md` |
 | Reference test (table-driven exemplar) | `tests/modem_config/test_modem_yaml_validation.py` |
-
-## Contents
-
-| Section | What it covers |
-| ------- | -------------- |
-| Core Principles               | Specs and process — 12 numbered rules that govern Claude's behavior |
-| Diagnosis Discipline          | Asking for the data that distinguishes causes                       |
-| Decision Discipline           | Sequencing, no shortcuts, no speculation                            |
-| Verification Discipline       | Ground-truth checks before claims                                   |
-| Catalog & Data Discipline     | YAML scope, recovery genericity, HAR-first intake                   |
-| Code Discipline               | Docstrings, WHY comments, type-safety, isolation, no infra for hypotheticals |
-| Shell Command Generation      | Avoid permission-check triggers                                     |
-| Pre-Push Verification         | Always run `make validate-ci` before pushing                        |
-| Irreversible Operations       | Stop and verify before destructive git ops                          |
-| PR and Issue Conventions      | No auto-close keywords; cite issues for context                     |
 
 ## Core Principles
 
@@ -72,7 +57,11 @@ over convenience.
 6. **Before deleting or moving ANY file, run `rg <filename>` across
    the entire project.** Files are referenced by non-Python sources
    (CI workflows, Makefiles, docs, VS Code tasks) that linters don't
-   scan.
+   scan. When any task label, script name, or path changes in
+   `.vscode/tasks.json`, also audit: `scripts/dev/next_steps.txt`,
+   `scripts/dev/welcome_message.txt`, `.devcontainer/post-start.sh`,
+   `docs/setup/GETTING_STARTED.md`. Task name drift is invisible to
+   linters and causes silent breakage in the contributor on-ramp.
 
 7. **Always read a file before writing to it. No exceptions.** Even
    "I just want to overwrite it" — read first. Local-only/gitignored
@@ -252,9 +241,15 @@ propose fixes first.
   claim is indistinguishable from fabricated data. If a source
   can't be found, leave the field empty rather than guessing.
 - **`packages/cable_modem_monitor_catalog/README.md` is auto-generated.**
-  Never edit it directly or regenerate it as a side effect of another
-  change. Run `python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py`
-  only when the intent is a standalone README update commit.
+  Never edit it directly. Run `python3 packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py`
+  to regenerate.
+
+  Three rules: (1) Contributors are not responsible for
+  regenerating it — the `/modem-confirm` and `/modem-intake` skills handle
+  it as a verified final step and may bundle it with the catalog commit.
+  (2) When multiple catalog changes land in one session, regenerate once
+  after all changes are staged, not per-change. (3) CI gates on README
+  freshness — if a PR fails this check, regenerate and amend before merging.
 - **Catalog data stays true to source; normalization happens at
   presentation.** This project is a universal translator — the
   catalog is the authoritative record of what each modem reports
@@ -329,10 +324,11 @@ When generating shell commands:
 1. **Never embed newlines or `#` characters inside quoted strings** passed as command arguments
 2. **For multiline shell logic**, write to a `.sh` script file first, then execute the file
 3. **Prefer simple, single-line commands** with explicit arguments
-4. **For complex logic**, use a heredoc written to a temp file rather than inline quoted strings
-5. **Before executing any shell command**, verify it contains no newline characters inside quoted strings and no `#` characters that could be interpreted as hidden arguments
+4. **For JSON parsing**, use `jq` — it is auto-allowed, needs no temp files, and handles all `gh` output parsing. Never pipe `gh` output to `python3 -c`. Example: `gh issue view 152 --json title,body | jq -r '.title, .body[:800]'`
+5. **For complex logic that `jq` cannot express**, write to a fixed path `/tmp/claude_parse.py` (overwrite each time, not per-invocation) and run `python3 /tmp/claude_parse.py`
+6. **Before executing any shell command**, verify it contains no newline characters inside quoted strings and no `#` characters that could be interpreted as hidden arguments
 
-**Why?** Claude Code's permission checker flags quoted newlines followed by `#`-prefixed lines as potential shell injection. Restructuring commands eliminates the interrupt.
+**Why?** Embedded newlines break allowlist pattern matching — `Bash(gh issue view*)` will not match a command containing newlines, so the permission prompt fires even for explicitly allowed prefixes. `jq` sidesteps this entirely.
 
 ## Pre-Push Verification — ALWAYS Run Before Push
 
@@ -392,6 +388,13 @@ validate-ci` as a dependency.** Every CI check must have a
 local-mirror command. The two together are a single change, not a CI
 change with a "follow up" Makefile change. Drift between CI and local
 is what hides regressions until tag time (see alpha.17 retrospective).
+
+If the job name is listed as a required status check in the
+`require-status-checks` repository ruleset, update the ruleset at the
+same time. The ruleset is a plain string match — it has no awareness
+of the workflow files. Rename drift silently breaks every subsequent
+PR (shows "Expected — Waiting for status to be reported" on required
+checks). Update via `gh api repos/solentlabs/cable_modem_monitor/rulesets/10547747 --method PUT --input <payload>`.
 
 Exceptions: external GitHub Actions that can't be reasonably
 reproduced locally (e.g., `home-assistant/actions/hassfest@master`,

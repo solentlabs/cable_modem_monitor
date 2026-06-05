@@ -7,7 +7,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "if [ -n \"$REMOTE_CONTAINERS\" ]; then exit 0; elif [ -f .venv/bin/activate ]; then cat scripts/dev/next_steps.txt; else cat scripts/dev/welcome_message.txt; fi"
+        "bash scripts/dev/sync_skills.sh; if [ -n \"$REMOTE_CONTAINERS\" ]; then exit 0; elif [ -f .venv/bin/activate ]; then cat scripts/dev/next_steps.txt; else cat scripts/dev/welcome_message.txt; fi"
       ],
       "presentation": {
         "reveal": "silent",

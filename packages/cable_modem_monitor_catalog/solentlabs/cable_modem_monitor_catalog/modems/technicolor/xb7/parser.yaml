@@ -5,7 +5,7 @@ downstream:
     - channel_type:
         field: modulation
         map:
-          "256 QAM": "qam"
+          "QAM256": "qam"
           "OFDM": "ofdm"
 
       rows:
@@ -30,6 +30,8 @@ downstream:
         - field: modulation
           label: "Modulation"
           type: string
+          map:
+            "256 QAM": "QAM256"
       selector:
         match: "Downstream"
         type: header_text
@@ -52,6 +54,11 @@ downstream:
 upstream:
   format: table_transposed
   resource: "/network_setup.jst"
+  # docsIfUpChannelType (DOCS-IF-MIB, RFC 4546) has no OFDMA value.
+  # OFDMA upstream channels are in DOCS-IF31-MIB which defines no channel
+  # type field — the firmware renders the SC-QAM fallback "TDMA" for OFDMA
+  # channels. Read channel_type directly from the Channel Type HTML row;
+  # "TDMA" maps to "ofdma" here because of that firmware convention.
   rows:
     - field: channel_id
       label: "Channel ID"
@@ -67,19 +74,16 @@ upstream:
       label: "Power Level"
       type: float
       unit: "dBmV"
-    - field: modulation
-      label: "Modulation"
+    - field: channel_type
+      label: "Channel Type"
       type: string
+      map:
+        "TDMA_AND_ATDMA": "atdma"
+        "ATDMA": "atdma"
+        "TDMA": "ofdma"
     - field: symbol_rate
       label: "Symbol Rate"
       type: integer
-    - field: channel_type
-      label: "Channel Type"
-      map:
-        "ATDMA": "atdma"
-        "TDMA": "atdma"
-        "TDMA_AND_ATDMA": "atdma"
-      type: string
   selector:
     match: "Upstream"
     type: header_text

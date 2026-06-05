@@ -1,5 +1,5 @@
 {
-  "_description": "URL token auth: login response body is a 31-char session token (SB8200 AB01 firmware shape per #81 dtaubert log)",
+  "_description": "URL token auth: login response body is a 31-char session token (firmware returns token directly in auth response body)",
   "_entries": [
     {
       "request": {

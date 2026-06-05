@@ -1,10 +1,7 @@
 Welcome to Cable Modem Monitor!
 
 Quick setup:
-  ./scripts/setup.sh        (macOS/Linux)
-  .\scripts\setup.ps1       (Windows PowerShell)
+  ./scripts/setup.sh
 
-Or use the Dev Container (requires Docker):
-  Ctrl+Shift+P -> "Dev Containers: Reopen in Container"
-
-See docs/setup/GETTING_STARTED.md for details.
+Windows users: run this from inside WSL2, not PowerShell.
+See docs/setup/GETTING_STARTED.md for setup instructions.

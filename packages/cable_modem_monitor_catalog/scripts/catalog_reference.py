@@ -15,6 +15,10 @@ import re
 from pathlib import Path
 from urllib.parse import quote
 
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
+    get_strategy_display_labels,
+)
+
 _DATA_DIR = Path(__file__).parent / "data"
 
 # ------------------------------------------------------------------
@@ -83,20 +87,8 @@ _AUTH_COLORS: dict[str, str] = {
 _AUTH_COLOR_FALLBACK = "9E9E9E"
 
 
-def _load_auth_display_labels() -> dict[str, str]:
-    """Return {strategy: display_name} from Core's auth registry."""
-    try:
-        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
-            get_strategy_display_labels,
-        )
-
-        return get_strategy_display_labels()
-    except ImportError:
-        return {}
-
-
-# Loaded once at import time. Core must be installed (CI: pip install -e packages/cable_modem_monitor_core).
-_AUTH_DISPLAY_LABELS: dict[str, str] = _load_auth_display_labels()
+# Core must be installed: pip install -e packages/cable_modem_monitor_core
+_AUTH_DISPLAY_LABELS: dict[str, str] = get_strategy_display_labels()
 
 
 def _auth_badge_label(strategy: str) -> str:
@@ -235,7 +227,7 @@ def generate_provider_reference() -> list[str]:
         approval_url = entry.get("approval_url", "")
         approval_cell = f"[Official list]({approval_url})" if approval_url else "—"
         notes = entry.get("notes", "")
-        # Wrap bare "Source: URL" as markdown autolinks
+        # Wrap bare "Source: URL" as markdown links
         if "Source: http" in notes:
             notes = re.sub(r"Source: (https?://\S+)", r"Source: <\1>", notes)
         lines.append(f"| {code_cell} | {entry['name']} | {entry['region']} | {approval_cell} | {notes} |")

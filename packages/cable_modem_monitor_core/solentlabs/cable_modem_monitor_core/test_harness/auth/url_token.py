@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 
 
 def create_handler(
-    modem_config: ModemConfig,  # noqa: ARG001
-    har_entries: list[dict[str, Any]] | None = None,  # noqa: ARG001
+    modem_config: ModemConfig,
+    har_entries: list[dict[str, Any]] | None = None,
 ) -> AuthHandler:
     """Entry point for dynamic auth handler dispatch."""
     return AuthHandler()

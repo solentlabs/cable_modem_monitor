@@ -492,6 +492,7 @@ auth:
 | `auth_header_data` | bool | `false` | Include `Authorization: Basic` header on data requests |
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `token_prefix` | string | `""` | URL token prefix for subsequent data page requests (e.g., `ct_`). The token value is extracted by the auth manager from the login response body. |
+| `inject_credential_cookie` | bool | `false` | After auth, set `cookie_name` to the auth response body (a server-issued session token). Use when the server returns a token in the auth response body and the firmware JS sets it as the credential cookie client-side (e.g., `createCookie("credential", result)` where `result` is the response body). Auth fails if the body is empty — this field requires a non-empty server response. |
 
 **Success detection and response type discrimination:**
 
@@ -915,17 +916,27 @@ actions:
     endpoint: "/logout.asp"
 ```
 
-When `max_concurrent: 1`, the auth manager executes `actions.logout`
-**after each poll** to free the session for the user (so they can
-access the modem's web UI between polls). There is no pre-login
-logout — the integration cannot clear another client's session (it
-doesn't have their cookie), and its own stale sessions from a crash
-are lost in memory and timeout on the modem side.
+When `max_concurrent: 1`, logout fires in two places:
 
-If the user (or another client) is already logged in when we attempt
-to poll, login fails with `AuthResult.FAILURE` and status reports
-`auth_failed`. Recovery happens naturally when the other session ends
-(explicit logout or modem-side timeout).
+- **After each successful poll** — frees the session so the user can
+  access the modem's web UI between polls.
+- **Before a same-poll auth retry** — when `LOAD_AUTH` or
+  `LOAD_INTEGRITY` fires, Core calls logout (best-effort) before
+  clearing the stale session and retrying in the same poll. This
+  recovers from a crash or unclean restart where the session was
+  never released: single-session firmware logout endpoints typically
+  do not require credentials, so the call succeeds even without a
+  cookie. Confirmed on SB8200 v6 (Issue #170). Note: if the
+  session belongs to a user actively browsing, the logout releases
+  their session too — this is a known trade-off of unauthenticated
+  logout on single-session firmware.
+
+The integration cannot clear another client's session — it doesn't
+have their cookie. If a third-party session holds the slot and the
+pre-retry logout doesn't free it, login fails with
+`AuthResult.FAILURE` and status reports `auth_failed`. Recovery
+happens when the other session ends (explicit logout or modem-side
+timeout).
 
 > **Scope of `max_concurrent`** — this field controls *session
 > lifecycle* (whether the integration must logout after each poll),
