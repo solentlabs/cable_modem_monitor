@@ -7,6 +7,10 @@ description: Analyze a soak test log file from Home Assistant, flag anomalies, c
 
 # Soak Analysis Skill
 
+> **Invocation note**: Project-local skills in `skills/` are not registered as Skill tool
+> targets — `Skill("soak-analysis")` will return "Unknown skill". Read this file and
+> execute the steps directly. This is a Claude Code limitation, not a config gap.
+
 Analyze Cable Modem Monitor soak test logs from Home Assistant. Parses
 polling, health checks, recovery events, and timing data, then flags
 anomalies and produces a structured assessment.

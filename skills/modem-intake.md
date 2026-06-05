@@ -7,6 +7,10 @@ description: Download and analyze HAR captures from modem request issues, run th
 
 # Modem Intake
 
+> **Invocation note**: Project-local skills in `skills/` are not registered as Skill tool
+> targets — `Skill("modem-intake")` will return "Unknown skill". Read this file and
+> execute the steps directly. This is a Claude Code limitation, not a config gap.
+
 Follow the workflow in
 `packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md`.
 
