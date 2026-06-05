@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**41 configurations supported** — 17 confirmed on real hardware, 24 awaiting verification.
+**41 configurations supported** — 18 confirmed on real hardware, 23 awaiting verification.
 
 ---
 
@@ -27,7 +27,6 @@ and share a diagnostics snapshot.
 | MB8611 | HNAP | Comcast, Xfinity, Cox, Spectrum |  |
 | C3700 | HTML | Comcast, Cox, Spectrum |  |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity |  |
-| CM3000 | HTML | Comcast, Cox, Spectrum, Xfinity |  |
 | CM600 | HTML | Comcast, Cox, Spectrum, TWC |  |
 | DM1000 | HTML | Koodo |  |
 | CGA2121 | HTML | Telia |  |
@@ -69,6 +68,7 @@ Working on real hardware with a report on file.
 | CM1100 | HTML | Comcast |
 | CM1200 (basic) | HTML | Comcast, Spectrum, Cox |
 | CM2050V | HTML | Comcast, Xfinity |
+| CM3000 | HTML | Comcast, Cox, Spectrum, Xfinity |
 | XB7 | HTML | Rogers, Comcast, Xfinity |
 
 ---
