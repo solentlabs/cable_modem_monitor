@@ -51,6 +51,7 @@ from .const import (
     CONF_ENTITY_PREFIX,
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
+    CONSUMED_SYSTEM_INFO_FIELDS,
     DOMAIN,
     ChannelIdentity,
 )
@@ -164,22 +165,6 @@ _LAN_METRICS = [
 # Other metrics are created only when the field is present on the channel.
 _DS_ALWAYS_FIELDS = frozenset(("power", "snr"))
 _US_ALWAYS_FIELDS = frozenset(("power",))
-
-# System info fields consumed by dedicated sensor classes.
-# Dynamic SystemInfoFieldSensor skips these — the dedicated class owns them.
-# When a field graduates to a dedicated sensor, add it here.
-# fmt: off
-_CONSUMED_SYSTEM_INFO_FIELDS = frozenset({
-    "software_version",
-    "system_uptime",
-    "downstream_channel_count",
-    "upstream_channel_count",
-    "total_corrected",
-    "total_uncorrected",
-    "rate_corrected",
-    "rate_uncorrected",
-})
-# fmt: on
 
 # Units and device classes for dynamic system_info fields.
 # Fields not listed here display as unitless strings.
@@ -1060,7 +1045,7 @@ def _create_data_dependent_entities(
 
     # Tier 3 dynamic system_info sensors (pass-through)
     for field in sorted(system_info):
-        if field not in _CONSUMED_SYSTEM_INFO_FIELDS:
+        if field not in CONSUMED_SYSTEM_INFO_FIELDS:
             entities.append(SystemInfoFieldSensor(data_coord, entry, field=field))
 
     return entities
