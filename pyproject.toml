@@ -131,5 +131,14 @@ markers = [
 ]
 
 # -------------------------------
+# Coverage configuration
+# -------------------------------
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]
+
+# -------------------------------
 # Note: mypy configuration lives in mypy.ini (the active config file).
 # -------------------------------

@@ -63,9 +63,9 @@ else
 fi
 echo ""
 
-# Run HA integration tests (coverage gate mirrors CI tests.yml: --cov-fail-under=92)
+# Run HA integration tests (coverage gate mirrors CI tests.yml: --cov-fail-under=95)
 echo -e "${YELLOW}Running HA integration tests...${NC}"
-if pytest tests/ -v --tb=short --cov=custom_components/cable_modem_monitor --cov-report=term --cov-report=html --cov-fail-under=92; then
+if pytest tests/ -v --tb=short --cov=custom_components/cable_modem_monitor --cov-report=term --cov-report=html --cov-fail-under=95; then
     echo -e "${GREEN}✓ HA integration tests passed!${NC}"
     TEST_PASSED=true
 else

@@ -3,6 +3,7 @@ language: en
 
 ignorePaths:
   - .venv/**
+  - codeql/**
   - htmlcov/**
   - RAW_DATA/**
   - captures/**
@@ -33,6 +34,7 @@ words:
   # DOCSIS / cable protocol
   - AESCCM
   - Gbps
+  - Mbps
   - ATDMA
   - CMTS
   - dbmv
@@ -310,7 +312,12 @@ words:
   - pyright
   - pyrightconfig
   - pysnmp
+  - excinfo
+  - fixturedef
   - pytest
+  - pytestmark
+  - tryfirst
+  - usefixtures
   - PyYAML
   - ruamel
   - setattr
@@ -328,6 +335,7 @@ words:
   # Network / socket / HTTP
   - connectionpool
   - flowinfo
+  - hostnames
   - hostport
   - keepalive
   - poolmanager
@@ -361,6 +369,7 @@ words:
   # British / alternate spellings (used in comments and docs)
   - artefacts
   - behaviour
+  - behavioural
   - Centralises
   - entrancy
   - Formalises
@@ -382,25 +391,34 @@ words:
   - hexvalue
   - idxs
   - Pswd
+  - recov
   - sess
   - testpbkdf
+  - unreg
+  - unregistration
   - withoutloginkey
 
   # Test data constants (intentional placeholder values in fixtures)
   - anykey
+  - anothervendor
   - Correcteds
   - Dadmin
   - dotdot
   - dtaubert
   - Dtest
   - emptypassword
+  - keyable
   - listy
   - longtoken
+  - mymodem
   - mypasswd
   - mypassword
+  - newpass
   - NOSPACEHERE
+  - othervendor
   - sometoken
   - someuser
   - Winesnob's
   - wronghexkey
   - WRONGKEY
+  - wrongpassword

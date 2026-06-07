@@ -39,6 +39,7 @@ from custom_components.cable_modem_monitor.sensor import (
     ModemChannelCountSensor,
     ModemErrorTotalSensor,
     ModemInfoSensor,
+    ModemLastBootTimeSensor,
     ModemSoftwareVersionSensor,
     ModemStatusSensor,
     ModemSystemUptimeSensor,
@@ -956,6 +957,182 @@ def test_deferred_creation_noop_while_no_data(mock_runtime_data):
 
     # async_add_entities should NOT be called
     add_entities.assert_not_called()
+
+
+# -----------------------------------------------------------------------
+# Sensor availability — coordinator failure and absent modem data
+# -----------------------------------------------------------------------
+
+# fmt: off
+# ┌──────────────────────────┬─────────────────────┬──────────────────────────────────────────┐
+# │ sensor_cls               │ condition           │ description                              │
+# ├──────────────────────────┼─────────────────────┼──────────────────────────────────────────┤
+# │ ModemSoftwareVersionSensor│ coord failed       │ ModemSensorBase: last_update_success=False│
+# │ ModemInfoSensor          │ coord failed        │ ModemSensorBase subclass: coord failed   │
+# │ ModemStatusSensor        │ coord failed        │ own available property: last_update_success│
+# └──────────────────────────┴─────────────────────┴──────────────────────────────────────────┘
+SENSOR_COORD_FAILED_CASES = [
+    (ModemSoftwareVersionSensor, {}, "software_version"),
+    (ModemInfoSensor,            {}, "modem_info"),
+    (ModemStatusSensor,          {}, "modem_status"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "sensor_cls,kwargs,desc",
+    SENSOR_COORD_FAILED_CASES,
+    ids=[c[2] for c in SENSOR_COORD_FAILED_CASES],
+)
+def test_sensor_unavailable_when_coordinator_fails(sensor_cls, kwargs, desc, mock_runtime_data):
+    """Sensor reports unavailable when last_update_success is False."""
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    coord.last_update_success = False
+    sensor = sensor_cls(coord, entry, **kwargs)
+    assert sensor.available is False
+
+
+def test_modem_sensor_unavailable_when_no_modem_data(mock_runtime_data):
+    """ModemSensorBase subclass is unavailable when snapshot.modem_data is None."""
+    coord, entry = _make_coord_and_entry(None, mock_runtime_data)
+    sensor = ModemSoftwareVersionSensor(coord, entry)
+    assert sensor.available is False
+
+
+# -----------------------------------------------------------------------
+# _SystemInfoSensor — modem_data=None returns empty dict
+# -----------------------------------------------------------------------
+
+
+def test_system_info_sensor_returns_none_when_no_modem_data(mock_runtime_data):
+    """Channel count returns None when snapshot.modem_data is None."""
+    coord, entry = _make_coord_and_entry(None, mock_runtime_data)
+    sensor = ModemChannelCountSensor(coord, entry, direction="downstream")
+    assert sensor.native_value is None
+
+
+# -----------------------------------------------------------------------
+# ModemLastBootTimeSensor — stats_last_reset fallback
+# -----------------------------------------------------------------------
+
+
+def test_last_boot_time_falls_back_to_stats_last_reset(mock_runtime_data):
+    """native_value returns stats_last_reset when system_uptime is absent."""
+    from datetime import UTC, datetime
+
+    reset_time = datetime(2026, 1, 15, 8, 0, 0, tzinfo=UTC)
+    snapshot = ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data={"system_info": {}, "downstream": [], "upstream": []},
+        stats_last_reset=reset_time,
+    )
+    coord = MagicMock()
+    coord.data = snapshot
+    coord.last_update_success = True
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = MOCK_ENTRY_DATA
+    entry.runtime_data = mock_runtime_data
+
+    sensor = ModemLastBootTimeSensor(coord, entry)
+    assert sensor.native_value == reset_time
+
+
+def test_last_boot_time_returns_none_when_no_uptime_or_reset(mock_runtime_data):
+    """native_value returns None when both system_uptime and stats_last_reset are absent."""
+    snapshot = ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data={"system_info": {}, "downstream": [], "upstream": []},
+    )
+    coord = MagicMock()
+    coord.data = snapshot
+    coord.last_update_success = True
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = MOCK_ENTRY_DATA
+    entry.runtime_data = mock_runtime_data
+
+    sensor = ModemLastBootTimeSensor(coord, entry)
+    assert sensor.native_value is None
+
+
+# -----------------------------------------------------------------------
+# ChannelSensor — modem_data=None paths
+# -----------------------------------------------------------------------
+
+
+def test_channel_sensor_native_value_none_when_no_modem_data(mock_runtime_data):
+    """ChannelSensor.native_value is None when snapshot.modem_data is None."""
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    sensors = _create_channel_sensors(coord, entry, MOCK_MODEM_DATA)
+    assert sensors, "need at least one channel sensor for this test"
+
+    sensor = sensors[0]
+    # Replace coordinator data with a None-modem_data snapshot
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.UNREACHABLE,
+        docsis_status=DocsisStatus.NOT_LOCKED,
+        modem_data=None,
+    )
+    assert sensor.native_value is None
+
+
+def test_channel_sensor_attributes_empty_when_no_modem_data(mock_runtime_data):
+    """ChannelSensor.extra_state_attributes is {} when snapshot.modem_data is None."""
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    sensors = _create_channel_sensors(coord, entry, MOCK_MODEM_DATA)
+    sensor = sensors[0]
+
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.UNREACHABLE,
+        docsis_status=DocsisStatus.NOT_LOCKED,
+        modem_data=None,
+    )
+    assert sensor.extra_state_attributes == {}
+
+
+# -----------------------------------------------------------------------
+# LanStatsSensor — None paths
+# -----------------------------------------------------------------------
+# fmt: off
+# ┌──────────────────┬────────────────────┬──────────────────────────────────────┐
+# │ lan_stats        │ expected           │ description                          │
+# ├──────────────────┼────────────────────┼──────────────────────────────────────┤
+# │ absent key       │ None               │ interface not in lan_stats dict      │
+# │ modem_data=None  │ None               │ snapshot has no modem_data           │
+# └──────────────────┴────────────────────┴──────────────────────────────────────┘
+# fmt: on
+
+
+def _make_lan_sensor(modem_data, mock_runtime_data):
+    """Build a LanStatsSensor wired to the given modem_data snapshot."""
+    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
+    return LanStatsSensor(
+        coord,
+        entry,
+        interface="eth0",
+        field="received_bytes",
+        name_suffix="Received Bytes",
+        device_class=None,
+        unit=None,
+    )
+
+
+def test_lan_sensor_none_when_interface_absent(mock_runtime_data):
+    """native_value is None when the interface key is absent from lan_stats."""
+    modem_data = {**MOCK_MODEM_DATA, "lan_stats": {"eth1": {"received_bytes": 100}}}
+    sensor = _make_lan_sensor(modem_data, mock_runtime_data)
+    assert sensor.native_value is None
+
+
+def test_lan_sensor_none_when_no_modem_data(mock_runtime_data):
+    """native_value is None when snapshot.modem_data is None."""
+    sensor = _make_lan_sensor(None, mock_runtime_data)
+    assert sensor.native_value is None
 
 
 def test_deferred_creation_cleanup_on_unload(mock_runtime_data):
