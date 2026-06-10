@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+import requests.cookies
 from solentlabs.cable_modem_monitor_core.auth.base import AuthContext
 from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
     HnapAction,
@@ -595,6 +596,84 @@ class TestHnapPreFetch:
         params = body["SetArrisConfigurationInfo"]
         assert params["SetEEEEnable"] == "0"  # default
         assert params["LED_Status"] == "1"  # default
+
+
+# ------------------------------------------------------------------
+# Tests — HTTP cookie-param interpolation
+# ------------------------------------------------------------------
+
+
+class TestHttpCookieParamInterpolation:
+    """Cookie-value placeholder resolution in HTTP action params."""
+
+    # fmt: off
+    INTERPOLATION_CASES = [
+        # (params, cookies, expected_data, description)
+        ({"confirm": "yes"}, {}, {"confirm": "yes"}, "no placeholders — verbatim"),
+        ({"tok": "{cookie:csrfp_token}"}, {"csrfp_token": "abc123"}, {"tok": "abc123"}, "cookie placeholder resolved"),
+        ({"tok": "{cookie:missing}"}, {}, {"tok": "{cookie:missing}"}, "absent cookie — sent as-is"),
+        ({"a": "{cookie:c1}", "b": "x"}, {"c1": "v1"}, {"a": "v1", "b": "x"}, "mixed — only placeholder replaced"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "params,cookies,expected_data,desc",
+        INTERPOLATION_CASES,
+        ids=[c[3] for c in INTERPOLATION_CASES],
+    )
+    def test_cookie_param_interpolation(
+        self,
+        params: dict[str, str],
+        cookies: dict[str, str],
+        expected_data: dict[str, str],
+        desc: str,
+    ) -> None:
+        """Cookie-value placeholders in params resolve from session jar."""
+        session = MagicMock(spec=requests.Session)
+        jar = requests.cookies.RequestsCookieJar()
+        for name, value in cookies.items():
+            jar.set(name, value)
+        session.cookies = jar
+
+        resp = MagicMock()
+        resp.status_code = 200
+        session.request.return_value = resp
+
+        action = HttpAction(
+            type="http",
+            method="POST",
+            endpoint="/action",
+            params=params,
+        )
+
+        execute_http_action(session, "http://192.168.100.1", action)
+
+        session.request.assert_called_once_with(
+            "POST",
+            "http://192.168.100.1/action",
+            data=expected_data,
+            headers=None,
+            timeout=10,
+        )
+
+    def test_no_params_no_interpolation_attempted(self) -> None:
+        """Action with no params sends data=None, no cookie access."""
+        session = MagicMock(spec=requests.Session)
+        resp = MagicMock()
+        resp.status_code = 200
+        session.request.return_value = resp
+
+        action = HttpAction(type="http", method="POST", endpoint="/action")
+
+        execute_http_action(session, "http://192.168.100.1", action)
+
+        session.request.assert_called_once_with(
+            "POST",
+            "http://192.168.100.1/action",
+            data=None,
+            headers=None,
+            timeout=10,
+        )
 
 
 # ------------------------------------------------------------------

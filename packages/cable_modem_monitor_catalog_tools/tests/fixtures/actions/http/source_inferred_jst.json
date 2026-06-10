@@ -1,0 +1,30 @@
+{
+  "_description": ".jst platform: actions not in HAR traffic but visible in page source (home_loggedout.jst / ajaxSet_Reset_Restore.jst)",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://10.0.0.1/at_a_glance.jst",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": "window.location = \"home_loggedout.jst\"; $.ajax({url: \"actionHandler/ajaxSet_Reset_Restore.jst\"});"
+        }
+      }
+    }
+  ],
+  "_expected_logout": {
+    "type": "http",
+    "method": "GET",
+    "endpoint": "/home_loggedout.jst",
+    "source": "source_inferred"
+  },
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/actionHandler/ajaxSet_Reset_Restore.jst",
+    "source": "source_inferred"
+  }
+}

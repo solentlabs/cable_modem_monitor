@@ -2177,7 +2177,10 @@ Phases:
 2. **Endpoint extraction** (optional): find a `<form>` whose `action`
    attribute contains the `endpoint_pattern` keyword. Core-provided
    extraction — the keyword is not a regex.
-3. **Main request**: send the action request to the resolved endpoint.
+3. **Param interpolation**: replace `{cookie:name}` placeholders in
+   `params` values with the corresponding cookie from the session jar.
+   If the named cookie is absent the placeholder is sent as-is.
+4. **Main request**: send the action request to the resolved endpoint.
 
 Connection errors and timeouts are treated as success (the modem is
 rebooting during restart). Returns `ActionResult`.

@@ -160,5 +160,25 @@
       "aa:bb:cc:dd",
       "fe80:"
     ]
+  },
+
+  "safe_ip_values": {
+    "_description": "Exact IP values that are safe — firmware-embedded example strings, not routable addresses seen in real traffic.",
+    "_provenance": {
+      "11.22.11.22": "Static example IP in Xfinity XB-series firmware help text (locale/global.js), not the contributor's WAN IP. Appears in XB6, XB7, XB10 HAR fixtures."
+    },
+    "values": [
+      "11.22.11.22"
+    ]
+  },
+
+  "safe_email_values": {
+    "_description": "Email addresses that are known-safe — open-source library author credits embedded in modem firmware JavaScript, not contributor PII.",
+    "_provenance": {
+      "santhosh.thottingal@gmail.com": "Author credit in CLDRPluralRuleParser.js (@author tag). Publicly known — https://github.com/santhoshtr/CLDRPluralRuleParser. Appears in Xfinity XB-series firmware HAR fixtures."
+    },
+    "values": [
+      "santhosh.thottingal@gmail.com"
+    ]
   }
 }

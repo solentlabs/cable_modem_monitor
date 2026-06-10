@@ -1,6 +1,7 @@
 {
   "logout_url_patterns": [
     "/logout",
+    "loggedout",
     "/goform/logout",
     "/api/.*/logout",
     "/api/.*/session/logout"
@@ -12,6 +13,8 @@
     "/goform/.*[Ss]ecurity",
     "/goform/.*[Rr]eboot",
     "/goform/RouterStatus",
-    "/api/.*/device/reboot"
+    "/api/.*/device/reboot",
+    "ajaxSet.*[Rr]eset",
+    "ajaxSet.*[Rr]eboot"
   ]
 }

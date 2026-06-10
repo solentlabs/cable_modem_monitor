@@ -130,7 +130,14 @@ Report what was detected:
 
 - Transport: `{analysis["transport"]}`
 - Auth: `{analysis["auth"]["strategy"]}` (confidence: `{analysis["auth"]["confidence"]}`)
-- Actions: logout={yes/no}, restart={yes/no}
+- Actions: logout={observed/source_inferred/none}, restart={observed/source_inferred/none}
+  - `observed` — request appeared in HAR traffic (highest confidence)
+  - `source_inferred` — endpoint referenced in captured page source or matches a
+    working family-member modem in the catalog (add to config; flag for contributor
+    confirmation that the endpoint works and, separately, whether a Cookie header
+    appears in the logout request — `requires_session: true/false` is behavioral
+    and cannot be inferred from the HAR alone)
+  - `none` — not found by either method; request from the contributor before adding config
 - Sections: list formats and channel counts
 
 If `auth.confidence` is not `high`, or `warnings` is non-empty for the auth
@@ -476,8 +483,12 @@ are no errors in `modem_data`.
 
 ## Key Rules
 
-1. **HAR is the authority.** Every config decision traces to wire evidence.
-   If the HAR doesn't show it, don't guess.
+1. **HAR is the authority.** Two tiers of wire evidence are valid:
+   - **Observed** — the request appears in HAR traffic. Use directly, full confidence.
+   - **Source-inferred** — the endpoint is referenced in captured page source AND/OR
+     confirmed by a working family-member modem in the catalog. Add to config and note
+     as inferred; the pipeline marks these automatically via `source: source_inferred`.
+   If neither condition is met, request the information from the contributor. Do not guess.
 2. **Known patterns are automated.** If the pipeline can classify
    everything, config generation is deterministic. No LLM reasoning
    needed for the common case.
@@ -498,3 +509,9 @@ are no errors in `modem_data`.
    missing XHR due to Playwright `networkidle` bug), extract data from
    screenshots, embedded HTML/JS, and user confirmations before building
    the fixture. Note provenance in `modem.yaml` sources.
+9. **Logout is an operational requirement — confirm it works.** Logout prevents
+   stale server-side sessions from blocking re-authentication. For every modem
+   with `actions.logout` configured, ask the contributor to confirm the endpoint
+   responds (any 2xx or redirect) after a successful login. If the logout
+   request appeared in the HAR with a Cookie header, set `requires_session: true`;
+   if no Cookie header was present, set `requires_session: false` (the default).

@@ -26,6 +26,10 @@ _RESTART_PATTERNS = get_restart_patterns()
 
 _ACTION_PARAM_INDICATORS = frozenset({"reboot", "restart", "reset", "logout", "logoff", "action", "security"})
 
+# Matches quoted strings in HTML/JS source that could be URL paths.
+# Intentionally broad — patterns filter for meaningful matches.
+_SOURCE_CANDIDATE_PATTERN = re.compile(r'["\']([^\'"<>\s]{3,200})["\']')
+
 
 def detect_http_actions(
     entries: list[dict[str, Any]],
@@ -47,9 +51,15 @@ def detect_http_actions(
     if core_gaps is None:
         core_gaps = []
     logout = _find_http_action(entries, _LOGOUT_PATTERNS, "logout", warnings)
-    restart = _find_http_action(entries, _RESTART_PATTERNS, "restart", warnings)
+    if logout is None:
+        logout = _find_http_action_in_source(entries, _LOGOUT_PATTERNS, "logout")
 
-    # Flag unmatched action-like POSTs as core gaps
+    restart = _find_http_action(entries, _RESTART_PATTERNS, "restart", warnings)
+    if restart is None:
+        restart = _find_http_action_in_source(entries, _RESTART_PATTERNS, "restart")
+
+    # Flag unmatched action-like POSTs as core gaps (only when both traffic
+    # and source-scan came up empty — source_inferred counts as found)
     if logout is None or restart is None:
         _detect_unmatched_actions(entries, logout, restart, core_gaps)
 
@@ -127,6 +137,35 @@ def _suggest_pre_fetch_url(
                 f'endpoint_pattern: "{keyword}" to the action config.'
             )
             return
+
+
+def _find_http_action_in_source(
+    entries: list[dict[str, Any]],
+    patterns: tuple[re.Pattern[str], ...],
+    action_name: str,
+) -> ActionDetail | None:
+    """Scan captured page source for action endpoint references.
+
+    Used as a fallback when no matching request appears in HAR traffic.
+    Extracts quoted strings from response bodies and tests them against
+    the same URL patterns. Returns the first match as source_inferred.
+    """
+    method = "GET" if action_name == "logout" else "POST"
+    for entry in entries:
+        body = entry.get("response", {}).get("content", {}).get("text", "")
+        if not body:
+            continue
+        for match in _SOURCE_CANDIDATE_PATTERN.finditer(body):
+            raw = match.group(1)
+            path = raw if raw.startswith("/") else f"/{raw}"
+            if any(p.search(path) for p in patterns):
+                return ActionDetail(
+                    type="http",
+                    method=method,
+                    endpoint=path,
+                    source="source_inferred",
+                )
+    return None
 
 
 def _detect_unmatched_actions(

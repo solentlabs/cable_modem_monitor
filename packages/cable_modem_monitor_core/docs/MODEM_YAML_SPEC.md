@@ -968,6 +968,13 @@ supported — this is a security and terms-of-service boundary.
 Both actions share the same schema with two type discriminators:
 `http` for standard HTTP requests and `hnap` for HNAP SOAP-over-JSON.
 
+**Logout call sites:** Core invokes `actions.logout` in two places:
+after a successful poll (session always valid), and before a same-poll
+auth retry (`attempt_logout_before_retry`). The retry call is guarded
+by `requires_session` — if `true` and no session cookies are present,
+the call is skipped. See [Single-session modems](#single-session-modems)
+for the full call-site semantics.
+
 ### Action schema — `type: http`
 
 Standard HTTP request. Covers form-encoded POST, plain GET, and
@@ -1106,6 +1113,22 @@ a simple keyword, not a fragile regex.
 
 - ERROR with the keyword, fallback endpoint (if any), and a 500-char
   page content preview for diagnostics.
+
+**Cookie-value params:** Some modems use the Double Submit Cookie CSRF
+pattern — the POST body must echo a cookie value set by the server.
+Use `{cookie:name}` placeholders in `params` values:
+
+```yaml
+params:
+  csrfp_token: "{cookie:csrfp_token}"
+```
+
+Core resolves `{cookie:name}` from the session jar at action time.
+Use `pre_fetch_url` to ensure the server has issued the cookie before
+the action fires. If the named cookie is absent from the jar when the
+action executes, the placeholder is left unresolved and the param value
+is sent as the literal string `{cookie:name}` — callers should ensure
+the cookie exists via `pre_fetch_url`.
 
 **Extensibility:** If a future modem needs non-form extraction (e.g.,
 JavaScript variable), add an `extraction_mode` field to the schema and
