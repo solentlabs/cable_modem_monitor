@@ -14,22 +14,36 @@ ignorePaths:
 ignoreWords:
   - aabb
   - Afroz
+  - Anthranilic
   - BADHASH
+  - Bowles
+  - Cabe
+  - ccpk
+  - chairstacker
+  - Coert
+  - cvonk
   - Ddgj
+  - dimkalinux
   - eboot
   - ecurity
   - edent
+  - esand
   - eset
   - Flanko
   - homeautomater
   - JDDJIBX
   - jzucker
   - KEYSTR
+  - Kittyx
   - klmnopqrst
+  - kwschulz
   - Nlcjpw
+  - philfry
   - qwertyuiop
+  - rplancha
   - Rpem
   - SNTLABS
+  - Vonk
 
 words:
   # Home Assistant tooling
@@ -44,6 +58,7 @@ words:
   - AESCCM
   - Gbps
   - Mbps
+  - Mbit
   - ATDMA
   - CMTS
   - dbmv
@@ -93,10 +108,12 @@ words:
   - csrfnonce
   - csrfp
   - CSRFP
+  - desynchronize
   - DUKSID
   - decryptable
   - decryptor
   - dklen
+  - encryptflag
   - encryptor
   - HNAP
   - Hnap
@@ -139,16 +156,21 @@ words:
   - TCOM
   - Compal
   - Hitron
+  - Mikro
   - Moto
   - Motorola
   - Netgear
   - netgear
   - Nighthawk
+  - QNAP
   - Sagemcom
   - Sercomm
   - sercomm
+  - superhub
+  - SuperHub
   - SURFboard
   - Technicolor
+  - Telephonics
   - Touchstone
 
   # ISPs / providers
@@ -271,6 +293,20 @@ words:
   # Project-specific
   - blindspots
   - CMMT
+  - footgun
+  - isoformat
+  - lifecycles
+  - miscoded
+  - miscoding
+  - populator
+  - positived
+  - rebond
+  - SSOT
+  - statefully
+  - teardowns
+  - throughs
+  - unsanitized
+  - Watchlist
   - cooldown
   - cooloff
   - Cooloff
@@ -339,6 +375,7 @@ words:
   - functools
   - funcs
   - genericity
+  - getattr
   - hashlib
   - isinstance
   - itertools
@@ -349,9 +386,11 @@ words:
   - metafunc
   - Metafunc
   - monkeypatch
+  - metacharacter
   - metacharacters
   - mypy
   - noqa
+  - norecursedirs
   - nosec
   - parameterised
   - pathlib
@@ -359,10 +398,13 @@ words:
   - pkill
   - pycache
   - pydantic
+  - pyenv
   - pyproject
   - pyprojects
   - pyright
   - pyrightconfig
+  - pylint
+  - Pylint
   - pysnmp
   - excinfo
   - fixturedef
@@ -373,6 +415,7 @@ words:
   - PyYAML
   - ruamel
   - setattr
+  - setdefault
   - splitlines
   - stdlib
   - timedelta
@@ -380,6 +423,7 @@ words:
   - uncoercible
   - unimodal
   - urllib
+  - validatable
   - venv
   - xmltodict
   - yarl
@@ -397,14 +441,19 @@ words:
   - scopeid
   - sockaddr
   - socktype
+  - SSLV
+  - threadsafe
 
   # System / shell / platform
   - ASKPASS
   - chromeos
+  - coredump
   - cros
   - Crostini
   - EDITMSG
+  - fuser
   - IMAGENAME
+  - journalctl
   - libasound
   - libbz
   - libncurses
@@ -418,12 +467,15 @@ words:
   # UI
   - checkmark
   - glyphicon
+  - glyphicons
 
   # British / alternate spellings (used in comments and docs)
+  - Analysed
   - artefacts
   - behaviour
   - behavioural
   - behaviours
+  - characterised
   - Centralises
   - entrancy
   - Formalises
@@ -431,6 +483,9 @@ words:
   - recognised
   - serialisable
   - serialised
+  - serialises
+  - standardises
+  - summarises
 
   # Abbreviations used in production code
   - applation
@@ -444,6 +499,7 @@ words:
   - hdrs
   - hexvalue
   - idxs
+  - ints
   - Nums
   - Pswd
   - recov

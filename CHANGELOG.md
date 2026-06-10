@@ -24,9 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Logout before same-poll auth retry on single-session firmware.** When
-  `LOAD_AUTH` or `LOAD_INTEGRITY` fires on a modem with
-  `session.max_concurrent: 1` and `actions.logout` configured, Core now
-  attempts a best-effort logout before clearing the session and retrying.
+  `LOAD_AUTH` or `LOAD_INTEGRITY` fires on a modem with `actions.logout`
+  configured, Core now attempts a best-effort logout before clearing the
+  session and retrying.
   Releases any stale server-side session (e.g. after an unclean HA restart)
   so the immediate re-authentication can succeed. Related to #170.
 - **SB8200 v6 Basic: logout action added to catalog.** The `modem-basic`

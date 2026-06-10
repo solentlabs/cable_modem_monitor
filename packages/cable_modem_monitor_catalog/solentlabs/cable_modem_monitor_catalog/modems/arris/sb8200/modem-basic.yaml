@@ -18,14 +18,12 @@ hardware:
   chipset: "Broadcom BCM3390"
   release_date: "2017"
 
-session:
-  max_concurrent: 1
-
 actions:
   logout:
     type: http
     method: GET
     endpoint: "/logout.html"
+    requires_session: false
 
 status: awaiting_verification
 
@@ -56,8 +54,8 @@ notes: |
   Same page structure and parser as all other SB8200 variants.
 
   Single-session firmware: port 80 admin interface allows only one active
-  session at a time. session.max_concurrent: 1 + actions.logout causes Core
-  to call GET /logout.html after each poll, releasing the session so browser
+  session at a time. Configured with actions.logout (requires_session: false) —
+  Core calls GET /logout.html after each poll, releasing the session so browser
   access works between fetches. Port 8080 (spectrum analyzer) is a separate
   service with independent session state and is unaffected.
 

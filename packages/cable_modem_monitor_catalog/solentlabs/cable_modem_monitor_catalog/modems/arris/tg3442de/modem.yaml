@@ -34,12 +34,12 @@ session:
   query_params:
     _n: "12345"
 
-  max_concurrent: 1
 actions:
   logout:
     type: http
     method: POST
     endpoint: "/php/logout.php"
+    requires_session: true
 
 hardware:
   docsis_version: "3.1"

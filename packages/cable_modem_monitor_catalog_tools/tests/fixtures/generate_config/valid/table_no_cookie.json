@@ -20,8 +20,6 @@
     },
     "session": {
       "cookie_name": "",
-      "max_concurrent": null,
-      "max_concurrent_confidence": "unknown",
       "headers": {},
       "token_prefix": ""
     },

@@ -27,6 +27,7 @@ from ..loaders.http import (
     LoginPageDetectedError,
     ResourceLoadError,
 )
+from ..models.modem_config.actions import HttpAction
 from ..models.modem_config.auth import BasicAuth, NoneAuth
 from ..parsers.coordinator import ModemParserCoordinator
 from ..parsers.diagnostics import ParseDiagnostics
@@ -593,9 +594,6 @@ class ModemDataCollector:
         if actions is None or actions.logout is None:
             return
 
-        if self._modem_config.session is None or self._modem_config.session.max_concurrent != 1:
-            return
-
         try:
             execute_action(self, self._modem_config, actions.logout, log_level=_LOGOUT_LOG_LEVEL)
         except Exception as exc:
@@ -612,13 +610,12 @@ class ModemDataCollector:
         actions = self._modem_config.actions
         if actions is None or actions.logout is None:
             return
-        if self._modem_config.session is None or self._modem_config.session.max_concurrent != 1:
+        # requires_session=True means the endpoint needs a valid session cookie to
+        # function. Skip the call when we have no cookies — it would fail anyway,
+        # and the retry proceeds regardless. Unauthenticated endpoints (False, the
+        # default) can clear any active server-side session without credentials.
+        if isinstance(actions.logout, HttpAction) and actions.logout.requires_session and not self._session.cookies:
             return
-        # This method does not inspect or clear session cookies — that is
-        # clear_session()'s job. The firmware's logout endpoint does not
-        # require credentials (the browser erases the cookie before calling
-        # it), so the request succeeds whether or not the session has cookies.
-        # Failure is silently suppressed; the retry proceeds regardless.
         with contextlib.suppress(Exception):
             execute_action(self, self._modem_config, actions.logout, log_level=_LOGOUT_LOG_LEVEL)
 

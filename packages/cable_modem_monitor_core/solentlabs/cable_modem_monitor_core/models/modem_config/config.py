@@ -81,27 +81,6 @@ class ModemConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_auth_session_action_consistency(self) -> ModemConfig:
-        """Enforce auth-session-action consistency rules from MODEM_YAML_SPEC."""
-        errors: list[str] = []
-        strategy = self.auth.strategy if self.auth else None
-
-        # basic + max_concurrent: 1 -> error (Basic Auth is stateless)
-        if strategy == "basic" and self.session and self.session.max_concurrent == 1:
-            errors.append("auth strategy 'basic' is stateless — session.max_concurrent: 1 " "does not apply")
-
-        # max_concurrent: 1 without logout -> error
-        if self.session and self.session.max_concurrent == 1 and (self.actions is None or self.actions.logout is None):
-            errors.append(
-                "session.max_concurrent: 1 requires actions.logout — "
-                "single-session modem without logout locks users out"
-            )
-
-        if errors:
-            raise ValueError("; ".join(errors))
-        return self
-
-    @model_validator(mode="after")
     def validate_required_fields_by_status(self) -> ModemConfig:
         """Enforce required fields based on status level."""
         errors: list[str] = []

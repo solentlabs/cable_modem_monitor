@@ -31,6 +31,10 @@ from solentlabs.cable_modem_monitor_core.loaders.http import (
     LoginPageDetectedError,
     ResourceLoadError,
 )
+from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
+    CbnAction,
+    HttpAction,
+)
 from solentlabs.cable_modem_monitor_core.orchestration.collector import (
     LoginLockoutError,
     ModemDataCollector,
@@ -55,14 +59,17 @@ def _make_config(
     auth_type: str = "none",
     transport: str = "http",
     cookie_name: str = "",
-    max_concurrent: int = 0,
     logout_endpoint: str = "",
+    requires_session: bool = False,
+    logout_action: HttpAction | CbnAction | None = None,
     timeout: int = 10,
 ) -> Any:
     """Build a minimal ModemConfig-like object for testing.
 
     Uses MagicMock to simulate the Pydantic model without needing
     full validation. Only the fields the collector reads are set.
+    Pass ``logout_action`` to supply a pre-built action (overrides
+    ``logout_endpoint``/``requires_session``).
     """
     config = MagicMock()
     config.transport = transport
@@ -96,25 +103,22 @@ def _make_config(
     if hasattr(config.auth, "cookie_name") or isinstance(config.auth, MagicMock):
         config.auth.cookie_name = cookie_name
 
-    # Session (lifecycle only: max_concurrent, headers)
-    if max_concurrent or logout_endpoint:
-        config.session = MagicMock()
-        config.session.max_concurrent = max_concurrent
-        config.session.headers = {}
-    else:
-        config.session = None
+    # Session (lifecycle only: headers, query_params)
+    config.session = MagicMock()
+    config.session.headers = {}
+    config.session.query_params = {}
 
-    # Actions (logout)
-    if logout_endpoint:
-        from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
-            HttpAction,
-        )
-
+    # Actions — logout_action wins; fall back to building HttpAction from endpoint.
+    if logout_action is not None:
+        config.actions = MagicMock()
+        config.actions.logout = logout_action
+    elif logout_endpoint:
         config.actions = MagicMock()
         config.actions.logout = HttpAction(
             type="http",
             method="GET",
             endpoint=logout_endpoint,
+            requires_session=requires_session,
         )
     else:
         config.actions = None
@@ -630,12 +634,11 @@ class TestStubPageDetection:
 class TestLogout:
     """Logout execution for single-session modems (UC-06)."""
 
-    def test_logout_called_for_single_session(self) -> None:
+    def test_logout_called_when_configured(self) -> None:
         """Logout action fires after successful collection."""
         config = _make_config(
             auth_type="none",
             cookie_name="sid",
-            max_concurrent=1,
             logout_endpoint="/logout",
         )
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
@@ -664,45 +667,11 @@ class TestLogout:
         assert result.success is True
         mock_action.assert_called_once()
 
-    def test_no_logout_without_max_concurrent(self) -> None:
-        """Logout not called when max_concurrent != 1."""
-        config = _make_config(
-            auth_type="none",
-            cookie_name="sid",
-            max_concurrent=0,
-            logout_endpoint="/logout",
-        )
-        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
-        modem_data: dict[str, Any] = {"downstream": [], "upstream": [], "system_info": {}}
-
-        with (
-            patch.object(
-                collector,
-                "authenticate",
-                return_value=MagicMock(success=True),
-            ),
-            patch.object(
-                collector,
-                "_load_resources",
-                return_value=({}, []),
-            ),
-            patch.object(
-                collector,
-                "_parse",
-                return_value=(modem_data, ParseDiagnostics()),
-            ),
-            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action,
-        ):
-            collector.execute()
-
-        mock_action.assert_not_called()
-
     def test_logout_failure_does_not_affect_result(self) -> None:
         """Logout is best-effort — failure doesn't change success."""
         config = _make_config(
             auth_type="none",
             cookie_name="sid",
-            max_concurrent=1,
             logout_endpoint="/logout",
         )
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
@@ -743,7 +712,6 @@ class TestLogout:
         config = _make_config(
             auth_type="form",
             cookie_name="",
-            max_concurrent=1,
             logout_endpoint="/logout",
         )
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
@@ -774,42 +742,51 @@ class TestLogout:
 # ------------------------------------------------------------------
 
 
-class TestAttemptLogoutBeforeRetry:
-    """Collector-level tests for attempt_logout_before_retry()."""
+_HTTP_LOGOUT_DEFAULT = HttpAction(type="http", method="GET", endpoint="/logout")
+_HTTP_LOGOUT_REQUIRES_SESSION = HttpAction(type="http", method="GET", endpoint="/logout", requires_session=True)
+_CBN_LOGOUT = CbnAction(type="cbn", fun=16)
 
-    def test_calls_execute_action_for_single_session(self) -> None:
-        """Calls execute_action when max_concurrent=1 and logout is configured."""
-        config = _make_config(max_concurrent=1, logout_endpoint="/logout")
-        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
 
-        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
-            collector.attempt_logout_before_retry()
+@pytest.mark.parametrize(
+    "logout_action, set_cookie, expected_fires",
+    [
+        pytest.param(None, False, False, id="no_logout_action"),
+        pytest.param(_HTTP_LOGOUT_DEFAULT, False, True, id="http_default_no_cookies"),
+        pytest.param(_HTTP_LOGOUT_DEFAULT, True, True, id="http_default_has_cookies"),
+        pytest.param(_HTTP_LOGOUT_REQUIRES_SESSION, False, False, id="http_requires_session_guard_fires"),
+        pytest.param(_HTTP_LOGOUT_REQUIRES_SESSION, True, True, id="http_requires_session_has_cookies"),
+        # CBN embeds the session token by protocol — the isinstance guard never
+        # fires, so logout proceeds regardless of local cookie state.
+        pytest.param(_CBN_LOGOUT, False, True, id="cbn_no_cookies"),
+        pytest.param(_CBN_LOGOUT, True, True, id="cbn_has_cookies"),
+    ],
+)
+def test_attempt_logout_before_retry_matrix(
+    logout_action: HttpAction | CbnAction | None,
+    set_cookie: bool,
+    expected_fires: bool,
+) -> None:
+    """Table-driven guard matrix for attempt_logout_before_retry."""
+    config = _make_config(logout_action=logout_action)
+    collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+    if set_cookie:
+        collector._session.cookies.set("PHPSESSID", "abc123")
 
+    with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
+        collector.attempt_logout_before_retry()
+
+    if expected_fires:
         mock_action.assert_called_once()
-
-    def test_no_op_without_logout_action(self) -> None:
-        """Does nothing when no logout action is configured."""
-        config = _make_config(max_concurrent=1)
-        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
-
-        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
-            collector.attempt_logout_before_retry()
-
+    else:
         mock_action.assert_not_called()
 
-    def test_no_op_when_max_concurrent_not_one(self) -> None:
-        """Does nothing when max_concurrent != 1."""
-        config = _make_config(max_concurrent=0, logout_endpoint="/logout")
-        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
 
-        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
-            collector.attempt_logout_before_retry()
-
-        mock_action.assert_not_called()
+class TestAttemptLogoutBeforeRetry:
+    """Side-effect and error-handling tests for attempt_logout_before_retry."""
 
     def test_swallows_execute_action_exception(self) -> None:
         """Exceptions from execute_action are silently swallowed."""
-        config = _make_config(max_concurrent=1, logout_endpoint="/logout")
+        config = _make_config(logout_endpoint="/logout")
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
 
         with patch(
@@ -820,7 +797,7 @@ class TestAttemptLogoutBeforeRetry:
 
     def test_does_not_clear_session(self) -> None:
         """Does not call clear_session — that is the orchestrator's responsibility."""
-        config = _make_config(max_concurrent=1, logout_endpoint="/logout")
+        config = _make_config(logout_endpoint="/logout")
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
 
         with (

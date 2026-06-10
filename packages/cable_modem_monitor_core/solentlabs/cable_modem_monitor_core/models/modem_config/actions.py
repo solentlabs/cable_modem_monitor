@@ -19,6 +19,7 @@ class HttpAction(BaseModel):
     type: Literal["http"]
     method: str
     endpoint: str
+    requires_session: bool = False
     params: dict[str, str] = Field(default_factory=dict)
     json_body: dict[str, Any] | None = None
     headers: dict[str, str] = Field(default_factory=dict)

@@ -10,14 +10,12 @@ auth:
   password_field: loginPassword
   encoding: base64
 
-session:
-  max_concurrent: 1
-
 actions:
   logout:
     type: http
     method: GET
     endpoint: "/logout.asp"
+    requires_session: false
   restart:
     type: http
     method: POST
@@ -67,9 +65,9 @@ notes: |
   DOCSIS 3.0 24x8 cable modem (released 2017). Broadcom BCM3384 chipset.
   Form-based authentication with base64 password encoding.
   IP-based session tracking (no cookies). Session expires server-side in
-  ~10 minutes — shorter than the default poll interval. Single-session
-  config (max_concurrent: 1) ensures logout after each poll so next poll
-  starts fresh rather than hitting a stale session.
+  ~10 minutes — shorter than the default poll interval. Configured with
+  actions.logout (requires_session: false) — Core calls GET /logout.asp
+  after each poll to release the session so the next poll starts fresh.
   Supports up to 24 downstream and 8 upstream bonded channels (1 Gbps max).
   Restart via the MotoSecurity form — POST all form fields (UserId, OldPassword,
   NewUserId, Password, PasswordReEnter, MotoSecurityAction=1). The form is

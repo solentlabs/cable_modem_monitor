@@ -238,8 +238,8 @@ header is what identifies the mechanism. Without it, do not assume
 
 **Cross-validation: session config must match auth type.** HTTP Basic
 Auth is stateless — no cookies, no sessions, no logout. If the
-modem.yaml has session config (cookies, logout endpoints,
-max_concurrent) but declares `basic` auth, the auth type is wrong.
+modem.yaml has session config (cookies, logout endpoints) but declares
+`basic` auth, the auth type is wrong.
 
 **If auth mechanism cannot be determined:** HARD STOP. Report what was
 observed and what's missing. Do not guess.
@@ -424,8 +424,11 @@ Examine post-login requests for session artifacts:
 
 **Single-session detection:** Cannot be determined from HAR alone. If
 the modem rejects concurrent sessions, the HAR won't show it (only one
-session was active). Flag `max_concurrent` as "unknown — verify with
-contributor or modem documentation."
+session was active). If a logout flow is visible in the HAR, emit
+`actions.logout`; single-session semantics follow automatically.
+Set `requires_session: true` when the logout endpoint requires a valid
+session cookie; leave it `false` (default) for unauthenticated logout
+endpoints.
 
 **HNAP transport:** Session is implicit (`uid` + `PrivateKey` cookies,
 `HNAP_AUTH` header). Do not emit a `session` block.
@@ -442,7 +445,7 @@ Scan HAR for logout and restart flows:
 | POST to `/goform/logout*` or `/api/*/logout` | `actions.logout: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
 | POST with pre-fetch page (extract dynamic endpoint) | Add `pre_fetch_url` and `endpoint_pattern` |
 | HNAP action with logout/session-end semantics | `actions.logout: { type: hnap, action_name: "<name>" }` |
-| No logout visible in HAR | Omit `actions.logout`. If `max_concurrent: 1` is suspected, flag the inconsistency. |
+| No logout visible in HAR | Omit `actions.logout`. Note in the generated YAML that logout behavior could not be confirmed from the HAR. |
 
 #### Restart
 
@@ -1069,7 +1072,6 @@ coordinator skips missing hooks.
 
 | Condition | Message |
 |-----------|---------|
-| `max_concurrent` unknown | "Cannot determine session concurrency limit from HAR. Defaulting to `max_concurrent: 0` (unlimited). Verify with modem documentation or contributor." |
 | No logout flow in HAR | "No logout endpoint observed in HAR. If this modem has single-session limits, a logout action will be needed." |
 | HMAC algorithm uncertain (HNAP) | "HNAP HMAC algorithm cannot be confirmed from HAR. Defaulting to `md5`. Verify with contributor." |
 | Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |
@@ -1088,8 +1090,6 @@ auth:
   password_field: "loginPassword"  # from HAR: form field name in POST body
   encoding: base64                 # from HAR: password value appears base64-encoded
 
-session:
-  max_concurrent: 0                # UNVERIFIED: cannot determine from HAR alone
 ```
 
 ---
@@ -1128,8 +1128,8 @@ detection, format detection, and field mapping extraction.
   },
   "session": {
     "cookie_name": "session",
-    "max_concurrent": null,
-    "max_concurrent_confidence": "unknown"
+    "headers": {},
+    "query_params": {}
   },
   "actions": { "logout": { "...": "..." }, "restart": null },
   "sections": {
@@ -1171,7 +1171,7 @@ detection, format detection, and field mapping extraction.
       ]
     }
   },
-  "warnings": ["max_concurrent cannot be determined from HAR"],
+  "warnings": [],
   "hard_stops": [],
   "core_gaps": [
     {
@@ -1629,8 +1629,8 @@ The `generate_config` tool validates before returning:
 - All required fields present
 - Transport constraint table satisfied (valid auth strategies, formats,
   action types for the declared transport)
-- Auth-session-action consistency rules (e.g., `max_concurrent: 1`
-  requires `actions.logout`)
+- Auth-session-action consistency rules (e.g., HNAP + explicit session
+  block is an error; `requires_session` only valid on `type: http`)
 - Field types and selector types are valid
 - Every `resource` in parser.yaml appears as a request URL in the HAR
 - Every `response_key` (HNAP) corresponds to an action response key
@@ -1706,14 +1706,12 @@ auth:
   success:
     redirect: "/home.asp"
 
-session:
-  max_concurrent: 0  # UNVERIFIED
-
 actions:
   logout:
     type: http
     method: GET
     endpoint: "/logout.asp"
+    requires_session: false
 
 hardware:
   docsis_version: "3.0"
@@ -1892,10 +1890,7 @@ downstream:
    a `channel_type` field. A DOCSIS 3.0 modem with a `channel_type`
    column (QAM/ATDMA only) correctly returns "3.0". Human should verify.
 
-3. **`max_concurrent` cannot be detected from HAR.** Only one session
-   exists during capture. Default to `0` and flag for verification.
-
-4. **HMAC algorithm detection is best-effort.** HNAP hash length
+3. **HMAC algorithm detection is best-effort.** HNAP hash length
    heuristic works for MD5 (32 hex) vs SHA256 (64 hex) but can't
    distinguish other algorithms. No other algorithms are currently
    known in the modem landscape.

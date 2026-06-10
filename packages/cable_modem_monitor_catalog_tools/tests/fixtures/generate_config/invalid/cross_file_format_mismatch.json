@@ -5,7 +5,7 @@
     "transport": "hnap",
     "confidence": "high",
     "auth": {"strategy": "hnap", "fields": {"hmac_algorithm": "md5"}, "confidence": "high"},
-    "session": {"max_concurrent": null, "headers": {}},
+    "session": {"headers": {}},
     "actions": {"logout": null, "restart": null},
     "sections": {
       "downstream": {

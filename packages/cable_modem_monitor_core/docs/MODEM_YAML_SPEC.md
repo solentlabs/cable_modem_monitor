@@ -596,7 +596,6 @@ auth:
   cookie_name: "PHPSESSID"
 
 session:
-  max_concurrent: 1
   headers:
     X-Requested-With: "XMLHttpRequest"
 
@@ -605,6 +604,7 @@ actions:
     type: http
     method: POST
     endpoint: "/api/v1/session/logout"
+    requires_session: true
 ```
 
 | Field | Type | Default | Description |
@@ -663,7 +663,6 @@ auth:
   cookie_name: "PHPSESSID"
 
 session:
-  max_concurrent: 1
   headers:
     X-Requested-With: "XMLHttpRequest"
 
@@ -672,6 +671,7 @@ actions:
     type: http
     method: GET
     endpoint: "/php/logout.php"
+    requires_session: true
 ```
 
 | Field | Type | Default | Description |
@@ -798,7 +798,6 @@ auth:
   login_fun: 15
 
 session:
-  max_concurrent: 1
   headers:
     X-Requested-With: "XMLHttpRequest"
 
@@ -870,14 +869,8 @@ the *credentials and cookies*; actions declare the *operations*.
 For HNAP, session is implicit (always `uid` + `PrivateKey` cookies,
 `HNAP_AUTH` header) — no session block needed.
 
-```yaml
-session:
-  max_concurrent: 1
-```
-
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `max_concurrent` | int | `0` | Max concurrent sessions. `0` = unlimited. `1` = single-session modem. |
 | `headers` | map | `{}` | Static headers added to all requests for this session (e.g., `X-Requested-With: XMLHttpRequest` for SPA-style modems). Header values support the `{base_url}` placeholder, which resolves to the modem's URL at session-build time — used for `Referer`/`Origin` headers that some modems validate against their own origin. Dynamic headers (CSRF tokens, HNAP signatures, auth tokens) are managed by auth strategies — each strategy defines its own fields for token acquisition and header injection. |
 | `query_params` | map | `{}` | Static query parameters appended to all data-fetch URLs (e.g., `_n: "12345"` for Arris firmware that requires a cache-buster nonce on AJAX requests). Not used for auth-managed tokens — those go through `auth.token_prefix`. |
 
@@ -898,7 +891,9 @@ The session maintains this cookie across requests.
 ### Single-session modems
 
 Some modems allow only one active session. If a second session is
-attempted while one is active, login fails.
+attempted while one is active, login fails. Declare `actions.logout`
+to signal this — Core uses logout presence to drive single-session
+behaviour:
 
 ```yaml
 auth:
@@ -906,17 +901,15 @@ auth:
   # ... strategy fields ...
   cookie_name: "session"
 
-session:
-  max_concurrent: 1
-
 actions:
   logout:
     type: http
     method: GET
     endpoint: "/logout.asp"
+    requires_session: false
 ```
 
-When `max_concurrent: 1`, logout fires in two places:
+When `actions.logout` is configured, logout fires in two places:
 
 - **After each successful poll** — frees the session so the user can
   access the modem's web UI between polls.
@@ -924,12 +917,8 @@ When `max_concurrent: 1`, logout fires in two places:
   `LOAD_INTEGRITY` fires, Core calls logout (best-effort) before
   clearing the stale session and retrying in the same poll. This
   recovers from a crash or unclean restart where the session was
-  never released: single-session firmware logout endpoints typically
-  do not require credentials, so the call succeeds even without a
-  cookie. Confirmed on SB8200 v6 (Issue #170). Note: if the
-  session belongs to a user actively browsing, the logout releases
-  their session too — this is a known trade-off of unauthenticated
-  logout on single-session firmware.
+  never released. Whether the call proceeds depends on `requires_session`
+  (see below).
 
 The integration cannot clear another client's session — it doesn't
 have their cookie. If a third-party session holds the slot and the
@@ -937,13 +926,6 @@ pre-retry logout doesn't free it, login fails with
 `AuthResult.FAILURE` and status reports `auth_failed`. Recovery
 happens when the other session ends (explicit logout or modem-side
 timeout).
-
-> **Scope of `max_concurrent`** — this field controls *session
-> lifecycle* (whether the integration must logout after each poll),
-> not *session reuse strategy* (whether the integration tries to
-> reuse a cached session across polls). Reuse strategy is
-> runtime-detected by core (see RUNTIME_POLLING_SPEC.md "Adaptive
-> reuse disable") and is intentionally not configurable per modem.
 
 See RUNTIME_POLLING_SPEC.md for the full session lifecycle.
 
@@ -1007,6 +989,7 @@ actions:
 | `type` | enum | yes | `http`, `hnap`, or `cbn` |
 | `method` | string | yes | HTTP method (`GET`, `POST`, etc.). No default — must be explicit. |
 | `endpoint` | string | yes | URL path to send the request to |
+| `requires_session` | bool | `false` | *Logout only.* `false` = endpoint is unauthenticated and can clear any active server-side session without credentials. `true` = endpoint requires a valid session cookie; Core skips the pre-retry logout call when no session cookie is present. |
 | `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`. Mutually exclusive with `json_body`. |
 | `json_body` | map | no | JSON request body. If present, body is `application/json`. Mutually exclusive with `params`. Use for REST APIs that accept JSON. |
 | `headers` | map | no | Per-action headers. Merged with session-level `headers` (action wins on conflict). |
@@ -1137,7 +1120,6 @@ auth:
   # ... other form_pbkdf2 fields
 
 session:
-  max_concurrent: 1
   headers:
     X-Requested-With: "XMLHttpRequest"
 
@@ -1146,6 +1128,7 @@ actions:
     type: http
     method: POST
     endpoint: "/api/v1/session/logout"
+    requires_session: true
 ```
 
 ---
@@ -1380,13 +1363,11 @@ failures.
 
 - `auth.strategy: none` + `auth.cookie_name` → N/A (`none` has no
   `cookie_name` field — cookie-tracking requires an auth strategy)
-- `auth.strategy: basic` + `session.max_concurrent: 1` → error (Basic
-  Auth is stateless, concurrent session limits don't apply)
 - `auth.strategy: hnap` + explicit `session` block → error (HNAP
   session is implicit, cannot be overridden)
-- `session.max_concurrent: 1` without `actions.logout` → error
-  (single-session modem without logout locks users out of their
-  modem's web UI between polls)
+- `actions.logout.requires_session: true` on a `type: cbn` action →
+  schema error (`requires_session` is `HttpAction`-only; CBN logout
+  always embeds the session token by protocol)
 
 ---
 
@@ -1506,13 +1487,13 @@ auth:
 
 session:
   cookie_name: "session"
-  max_concurrent: 1
 
 actions:
   logout:
     type: http
     method: GET
     endpoint: "/logout.asp"
+    requires_session: false
 
 hardware:
   docsis_version: "3.0"

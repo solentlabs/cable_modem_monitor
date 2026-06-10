@@ -11,9 +11,6 @@
     "encoding": "base64",
     "cookie_name": "session"
   },
-  "session": {
-    "max_concurrent": 1
-  },
   "actions": {
     "logout": {
       "type": "http",

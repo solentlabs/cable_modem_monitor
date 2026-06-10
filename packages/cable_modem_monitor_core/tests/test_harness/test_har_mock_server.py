@@ -690,7 +690,7 @@ class TestHARMockServerActions:
         return _make_config(
             {
                 "auth": {"strategy": "form", "action": "/goform/login", "cookie_name": "session"},
-                "session": {"max_concurrent": 1},
+                "session": {},
                 "actions": {
                     "logout": {"type": "http", "method": "GET", "endpoint": "/goform/logout"},
                     "restart": {"type": "http", "method": "POST", "endpoint": "/goform/restart"},

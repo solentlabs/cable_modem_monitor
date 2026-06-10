@@ -451,9 +451,7 @@ def test_stub_page_detected_emitted_on_zero_fulfillment():
 
 def _make_collector_with_logout(logout_action=True):
     cfg = _make_modem_config()
-    session_cfg = MagicMock()
-    session_cfg.max_concurrent = 1
-    cfg.session = session_cfg
+    cfg.session = MagicMock()
     if logout_action:
         cfg.actions = MagicMock()
         cfg.actions.logout = MagicMock()

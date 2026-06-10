@@ -39,23 +39,8 @@ def _add_analysis_blocks(result: dict[str, Any], analysis: dict[str, Any]) -> No
     ``cookie_name`` and ``token_prefix`` are detected by session analysis
     but belong on the auth strategy config (auth owns the cookie it
     produces). This function moves them from session to auth.
-
-    Cross-block constraint: ``session.max_concurrent: 1`` requires
-    ``actions.logout`` (Core validator: single-session modem without
-    logout locks users out). When session inference proposes
-    ``max_concurrent=1`` but no logout endpoint was detected in the
-    HAR, demote ``max_concurrent`` so the generated config validates.
-    The contributor must capture a logout flow before single-session
-    semantics can be re-enabled.
     """
     session_data = analysis.get("session", {})
-    actions_data = analysis.get("actions", {})
-
-    if session_data.get("max_concurrent") == 1 and not actions_data.get("logout"):
-        # Inferred single-session without observed logout — invalid combo.
-        # Drop the inference; contributor needs to capture logout for
-        # max_concurrent to come back.
-        session_data = {**session_data, "max_concurrent": None}
 
     auth_block = _build_auth_block(analysis.get("auth", {}), session_data)
     if auth_block:
@@ -65,7 +50,7 @@ def _add_analysis_blocks(result: dict[str, Any], analysis: dict[str, Any]) -> No
     if session_block:
         result["session"] = session_block
 
-    actions_block = _build_actions_block(actions_data)
+    actions_block = _build_actions_block(analysis.get("actions", {}))
     if actions_block:
         result["actions"] = actions_block
 
@@ -131,8 +116,6 @@ def _build_session_block(session: dict[str, Any]) -> dict[str, Any] | None:
     """
     result: dict[str, Any] = {}
 
-    if session.get("max_concurrent"):
-        result["max_concurrent"] = session["max_concurrent"]
     if session.get("headers"):
         result["headers"] = session["headers"]
     if session.get("query_params"):

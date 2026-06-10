@@ -141,8 +141,8 @@ intentional — backoff and lockout protection apply equally to both.
 
 ### UC-06: Single-session modem — logout after poll
 
-**Preconditions:** modem.yaml declares `max_concurrent: 1` and
-`actions.logout`. Modem allows only one authenticated session.
+**Preconditions:** modem.yaml declares `actions.logout`. Modem allows
+only one authenticated session.
 
 | Step | Action | State change | Observable |
 |------|--------|-------------|------------|

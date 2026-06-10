@@ -327,9 +327,8 @@ counter — generic across modems, self-tuning, and restart-resetting.
 The streak is signal-agnostic: it counts any same-poll `LOAD_AUTH`
 recovery, including reboot-induced stale sessions. False positives
 are benign — forced fresh login is harmless. Note that this is
-orthogonal to `session.max_concurrent`, which controls *session
-lifecycle* (logout-after-poll for single-session modems), not *reuse
-strategy*.
+orthogonal to `actions.logout`, which controls *session lifecycle*
+(logout-after-poll for single-session modems), not *reuse strategy*.
 
 **Login backoff** — after a `LoginLockoutError` (firmware anti-brute-force
 triggered), the orchestrator suppresses login for 3 polls. This gives the
@@ -347,9 +346,8 @@ polling stops entirely. The client (HA) triggers a reauth flow — the
 user must reconfigure credentials to resume. See `ORCHESTRATION_SPEC.md`
 § Auth Circuit Breaker for the full use-case walkthrough.
 
-**Single-session logout** — modems with `max_concurrent: 1` allow only
-one authenticated session. When `actions.logout` is declared, logout
-fires in two places:
+**Single-session logout** — modems with `actions.logout` configured
+allow only one authenticated session. Logout fires in two places:
 
 1. **After each successful poll** — frees the session so users can
    access the modem's web UI between polls.

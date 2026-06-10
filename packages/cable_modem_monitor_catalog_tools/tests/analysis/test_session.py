@@ -87,26 +87,12 @@ def test_session_expected_warnings(fixture_path: Path) -> None:
 class TestSessionWarnings:
     """Session detection warning behavior across transports."""
 
-    def test_max_concurrent_warning_for_form(self) -> None:
-        """max_concurrent warning emitted for non-none, non-HNAP auth."""
-        data = load_fixture(VALID_DIR / "form_with_cookie.json")
-        warnings: list[str] = []
-        SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
-        assert any("max_concurrent" in w for w in warnings)
-
-    def test_no_max_concurrent_warning_for_hnap(self) -> None:
-        """No max_concurrent warning for HNAP transport."""
+    def test_no_warnings_for_hnap(self) -> None:
+        """No warnings emitted for HNAP transport (implicit session)."""
         data = load_fixture(VALID_DIR / "hnap_implicit.json")
         warnings: list[str] = []
         SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
-        assert not any("max_concurrent" in w for w in warnings)
-
-    def test_no_max_concurrent_warning_for_none(self) -> None:
-        """No max_concurrent warning for auth:none."""
-        data = load_fixture(VALID_DIR / "none_no_cookies.json")
-        warnings: list[str] = []
-        SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
-        assert not any("max_concurrent" in w for w in warnings)
+        assert not warnings
 
     def test_cookie_on_none_auth_warns(self) -> None:
         """Cookie detected on auth:none modem produces warning."""
@@ -129,8 +115,7 @@ class TestSessionDetailSerialization:
         detail = SessionDetail()
         d = detail.to_dict()
         assert d["cookie_name"] == ""
-        assert d["max_concurrent"] is None
-        assert d["max_concurrent_confidence"] == "unknown"
+        assert "max_concurrent" not in d
 
     def test_to_dict_with_cookie(self) -> None:
         """Cookie-based session serializes correctly."""
