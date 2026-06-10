@@ -189,6 +189,24 @@ jobs:
         run: |
           python packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py
 
+  spell-check:
+    name: Spell Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install cspell
+        run: npm install -g cspell@10
+
+      - name: Run spell check
+        # Scoped to catalog modem YAML; broader codebase (Python, docs) not yet audited.
+        run: |
+          cspell --config cspell.config.yaml \
+            "packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/**/*.yaml" \
+            --no-progress
+
   suppression-check:
     name: Suppression Discipline
     runs-on: ubuntu-latest

@@ -203,7 +203,6 @@
     }
   ],
   "system_info": {
-    "cpu_speed": "1503",
     "docsis_status": "Operational",
     "downstream_channel_count": 17,
     "hardware_version": "1.0",

@@ -10,17 +10,26 @@ ignorePaths:
   - "**/*.har"
   - "**/*.expected.json"
 
-# Random test strings — valid in test fixtures, not vocabulary
+# Random test strings, contributor handles, regex fragments — valid in context, not vocabulary
 ignoreWords:
   - aabb
+  - Afroz
   - BADHASH
   - Ddgj
+  - eboot
+  - ecurity
+  - edent
+  - eset
+  - Flanko
+  - homeautomater
   - JDDJIBX
+  - jzucker
   - KEYSTR
   - klmnopqrst
   - Nlcjpw
   - qwertyuiop
   - Rpem
+  - SNTLABS
 
 words:
   # Home Assistant tooling
@@ -79,8 +88,12 @@ words:
 
   # Authentication / crypto
   - canonicalizable
+  - CLDR
   - CSRF
   - csrfnonce
+  - csrfp
+  - CSRFP
+  - DUKSID
   - decryptable
   - decryptor
   - dklen
@@ -89,6 +102,8 @@ words:
   - Hnap
   - hnap
   - HNAPs
+  - HSTS
+  - nologin
   - padder
   - PBKDF2
   - saltwebui
@@ -114,11 +129,14 @@ words:
   - chipsets
   - DHCE
   - FHCE
+  - iFixit
+  - KOMODO
   - Puma
 
   # Modem manufacturers and product lines
   - Arris
   - COMMSCOPE
+  - TCOM
   - Compal
   - Hitron
   - Moto
@@ -178,30 +196,57 @@ words:
 
   # Modem data fields (concatenated identifiers from firmware)
   - cablemodem
+  - devname
+  - dhcpclient
+  - channelid
+  - channelidup
   - channeltype
+  - cmconfiguration
   - cmconnectionstatus
   - cmstatus
   - cmdocsisds
+  - CMMAC
+  - cmswinfo
   - cursystemtime
+  - DCIDD
   - dschannel
+  - dsid
   - dsinfo
+  - dsofdminfo
   - firmwares
   - firmwareversion
   - fwbt
   - fwinfo
   - goform
+  - hardwaretype
   - hardwareversion
+  - hwversion
   - idloginincorrect
   - internetconnection
   - isps
+  - localdomain
+  - loggedout
+  - nbsp
+  - readydlna
+  - sharedkey
+  - sharedlna
   - loginpassword
   - loginusername
+  - luci
   - macaddress
+  - modtype
+  - MTAMAC
   - networkaccess
+  - ofdmachannel
+  - ofdmchannel
   - serialnumber
+  - SNRD
   - softwaremodelname
   - softwareversion
+  - srate
   - ssids
+  - swinfo
+  - sysauth
   - sysinfo
   - Sysinfo
   - SYSINFO
@@ -211,11 +256,17 @@ words:
   - tagvalue
   - tagvaluelist
   - tagValueList
+  - uncorrect
+  - uncorrecteds
   - uschannel
+  - usid
   - usinfo
+  - usofdminfo
 
   # Shell / OS commands used in docs
   - findstr
+  - subshells
+  - unittests
 
   # Project-specific
   - blindspots
@@ -234,6 +285,7 @@ words:
   - indentless
   - lockdown
   - modbase
+  - noauth
   - noparser
   - NOSESSION
   - reauthentication
@@ -338,6 +390,7 @@ words:
   - hostnames
   - hostport
   - keepalive
+  - networkidle
   - poolmanager
   - Referer
   - referer
@@ -370,6 +423,7 @@ words:
   - artefacts
   - behaviour
   - behavioural
+  - behaviours
   - Centralises
   - entrancy
   - Formalises
@@ -390,16 +444,26 @@ words:
   - hdrs
   - hexvalue
   - idxs
+  - Nums
   - Pswd
   - recov
   - sess
   - testpbkdf
+  - Uncorr
   - unreg
   - unregistration
   - withoutloginkey
 
   # Test data constants (intentional placeholder values in fixtures)
   - anykey
+  - appletv
+  - familyroom
+  - firetv
+  - livingroom
+  - macbookpro
+  - rokustreaming
+  - rokustreamingstick
+  - testschedule
   - anothervendor
   - Correcteds
   - Dadmin

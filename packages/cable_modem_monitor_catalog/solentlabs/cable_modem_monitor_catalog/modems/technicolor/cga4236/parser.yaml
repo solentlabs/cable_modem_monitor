@@ -144,10 +144,6 @@ system_info:
           field: model_name
           type: string
           path: "data"
-        - key: ProcessorSpeed
-          field: cpu_speed
-          type: string
-          path: "data"
         - key: MemTotal
           field: memory_total
           type: string
