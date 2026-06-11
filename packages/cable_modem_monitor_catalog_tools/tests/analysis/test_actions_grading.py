@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading import (
-    GRADE_SEVERITY,
     grade_action,
     grade_actions,
 )
+from solentlabs.cable_modem_monitor_catalog_tools.grading import GRADE_SEVERITY
 
 _HTTP_RESTART = {
     "type": "http",

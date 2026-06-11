@@ -36,52 +36,29 @@ import json
 import os
 import sys
 from collections import Counter
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
-from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading import (
-    GRADE_SEVERITY,
-    ActionGrade,
-    grade_actions,
-)
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading import grade_actions
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
+from solentlabs.cable_modem_monitor_catalog_tools.grading import GRADE_SEVERITY
+from solentlabs.cable_modem_monitor_catalog_tools.regression import (
+    ModemResult,
+    build_scorecard,
+    compare_baseline,
+    entries_from_results,
+    fleet_accuracy,
+    load_baseline,
+    result_status,
+    save_baseline,
+)
 
 CATALOG_ROOT = (
     Path(__file__).resolve().parents[2] / "cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems"
 )
 
 CONFIG_FILES = ("modem.yaml", "parser.yaml", "parser.py")
-
-
-@dataclass
-class ModemResult:
-    """Result of running the full pipeline regression on one modem HAR."""
-
-    modem: str
-    har_file: str
-    stage_failed: str = ""
-    error: str = ""
-    golden_diffs: list[str] = field(default_factory=list)
-    config_diffs: list[str] = field(default_factory=list)
-    action_grades: dict[str, ActionGrade] = field(default_factory=dict)
-    channel_counts: dict[str, int] = field(default_factory=dict)
-    total_fields: int = 0
-    matching_fields: int = 0
-
-    @property
-    def passed(self) -> bool:
-        """No stage failures and no golden file drift."""
-        return not self.stage_failed and not self.golden_diffs
-
-    @property
-    def accuracy_pct(self) -> float:
-        """Field-level accuracy against committed golden file."""
-        if self.total_fields == 0:
-            return 0.0
-        return self.matching_fields / self.total_fields * 100
 
 
 # ---------------------------------------------------------------------------
@@ -424,7 +401,7 @@ def run_modem(
         committed_yaml_path = modem_dir / "modem.yaml"
         if committed_yaml_path.exists():
             committed = yaml.safe_load(committed_yaml_path.read_text()) or {}
-            result.action_grades = grade_actions(analysis_data.get("actions"), committed.get("actions"))
+            result.grades["actions"] = grade_actions(analysis_data.get("actions"), committed.get("actions"))
 
         modem_yaml, parser_yaml = _run_generate(analysis_data, modem_dir, result, fleet=fleet)
         if modem_yaml is None:
@@ -486,14 +463,15 @@ def _print_result(result: ModemResult) -> None:
 
 
 def _print_result_actions(result: ModemResult) -> None:
-    """Print per-action grades for one modem result."""
-    if not result.action_grades:
-        return
-    summary = "  ".join(f"{kind}={grade.status}" for kind, grade in sorted(result.action_grades.items()))
-    print(f"    ACTIONS {summary}")
-    for kind, grade in sorted(result.action_grades.items()):
-        if grade.status != "match" and grade.detail:
-            print(f"      {kind}: {grade.detail}")
+    """Print per-item grades for one modem result, all dimensions."""
+    for dim, grades in sorted(result.grades.items()):
+        if not grades:
+            continue
+        summary = "  ".join(f"{item}={grade.status}" for item, grade in sorted(grades.items()))
+        print(f"    {dim.upper()} {summary}")
+        for item, grade in sorted(grades.items()):
+            if grade.status != "match" and grade.detail:
+                print(f"      {item}: {grade.detail}")
 
 
 def _print_auth_audit(catalog_root: Path) -> None:
@@ -567,7 +545,7 @@ def _print_summary(
     failed_stage = [r for r in results if r.stage_failed]
     drifted = [r for r in results if r.golden_diffs and not r.stage_failed]
 
-    matching_fields, total_fields, fleet_pct = _fleet_accuracy(results)
+    matching_fields, total_fields, fleet_pct = fleet_accuracy(results)
     pipeline_passed = len(results) - len(failed_stage)
     incomplete = incomplete or []
 
@@ -584,47 +562,25 @@ def _print_summary(
     _print_incomplete_section(incomplete)
     _print_failures_section(failed_stage)
     _print_drift_section(drifted)
-    _print_actions_section(results)
+    _print_grades_sections(results)
     _print_passed_section(passed)
 
 
-def _print_actions_section(results: list[ModemResult]) -> None:
-    """Fleet-wide actions grading: capability tally plus every non-match."""
-    graded = [(r, kind, grade) for r in results for kind, grade in sorted(r.action_grades.items())]
-    if not graded:
-        return
-
-    tally = Counter(grade.status for _, _, grade in graded)
-    counts = "  ".join(f"{status}: {tally.get(status, 0)}" for status in GRADE_SEVERITY)
-    print(f"ACTIONS — pipeline-detected vs committed ({len(graded)} graded):")
-    print(f"  {counts}")
-    for r, kind, grade in graded:
-        if grade.status != "match":
-            detail = f" — {grade.detail}" if grade.detail else ""
-            print(f"  {r.modem} ({r.har_file}) {kind}: {grade.status}{detail}")
-    print()
-
-
-# ---------------------------------------------------------------------------
-# Result classification (shared by scorecard and baseline)
-# ---------------------------------------------------------------------------
-
-# Severity ordering: clean < drift < failure
-_STATUS_SEVERITY = {"clean": 0, "drift": 1, "failure": 2}
-
-
-def _result_status(result: ModemResult) -> str:
-    """Classify a result as clean, drift, or failure."""
-    if result.stage_failed:
-        return "failure"
-    if result.golden_diffs:
-        return "drift"
-    return "clean"
-
-
-def _result_key(result: ModemResult) -> str:
-    """Unique key for a result: modem_id:har_filename."""
-    return f"{result.modem}:{result.har_file}"
+def _print_grades_sections(results: list[ModemResult]) -> None:
+    """Fleet-wide capability grading per dimension: tally plus every non-match."""
+    for dim in sorted({dim for r in results for dim in r.grades}):
+        graded = [(r, item, grade) for r in results for item, grade in sorted(r.grades.get(dim, {}).items())]
+        if not graded:
+            continue
+        tally = Counter(grade.status for _, _, grade in graded)
+        counts = "  ".join(f"{status}: {tally.get(status, 0)}" for status in GRADE_SEVERITY)
+        print(f"{dim.upper()} — pipeline-detected vs committed ({len(graded)} graded):")
+        print(f"  {counts}")
+        for r, item, grade in graded:
+            if grade.status != "match":
+                detail = f" — {grade.detail}" if grade.detail else ""
+                print(f"  {r.modem} ({r.har_file}) {item}: {grade.status}{detail}")
+        print()
 
 
 # ---------------------------------------------------------------------------
@@ -632,71 +588,9 @@ def _result_key(result: ModemResult) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _fleet_accuracy(results: list[ModemResult]) -> tuple[int, int, float]:
-    """Compute fleet-wide accuracy.
-
-    Returns (matching_fields, total_fields, pct).
-    Only includes modems with committed golden files (total_fields > 0).
-    """
-    scored = [r for r in results if r.total_fields > 0]
-    total = sum(r.total_fields for r in scored)
-    matching = sum(r.matching_fields for r in scored)
-    pct = (matching / total * 100) if total else 0.0
-    return matching, total, pct
-
-
-def _build_scorecard(results: list[ModemResult]) -> dict[str, Any]:
-    """Build a JSON-serialisable scorecard for trend tracking."""
-    matching, total, fleet_pct = _fleet_accuracy(results)
-    failed_count = sum(1 for r in results if r.stage_failed)
-
-    import subprocess
-
-    try:
-        sha = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except Exception:
-        sha = os.environ.get("GITHUB_SHA", "")[:8]
-
-    actions_tally = Counter(grade.status for r in results for grade in r.action_grades.values())
-
-    return {
-        "timestamp": datetime.now(UTC).isoformat(),
-        "commit": sha,
-        "fleet_accuracy_pct": round(fleet_pct, 2),
-        "pipeline_pass_rate_pct": round((len(results) - failed_count) / len(results) * 100, 2) if results else 0.0,
-        "total_fields": total,
-        "matching_fields": matching,
-        "total_hars": len(results),
-        "pipeline_passed": len(results) - failed_count,
-        "actions_summary": {status: actions_tally.get(status, 0) for status in GRADE_SEVERITY},
-        "modems": [
-            {
-                "modem": r.modem,
-                "har_file": r.har_file,
-                "status": _result_status(r),
-                "accuracy_pct": round(r.accuracy_pct, 2),
-                "total_fields": r.total_fields,
-                "matching_fields": r.matching_fields,
-                "diff_count": len(r.golden_diffs),
-                "stage_failed": r.stage_failed,
-                "error": r.error,
-                "actions": {
-                    kind: {"status": grade.status, "detail": grade.detail}
-                    for kind, grade in sorted(r.action_grades.items())
-                },
-            }
-            for r in results
-        ],
-    }
-
-
 def _write_scorecard(path: Path, results: list[ModemResult]) -> None:
     """Write JSON scorecard to disk."""
-    scorecard = _build_scorecard(results)
+    scorecard = build_scorecard(results)
     path.write_text(json.dumps(scorecard, indent=2) + "\n")
     print(f"Scorecard written to {path}")
 
@@ -707,7 +601,7 @@ def _write_step_summary(results: list[ModemResult]) -> None:
     if not summary_path:
         return
 
-    matching, total, fleet_pct = _fleet_accuracy(results)
+    matching, total, fleet_pct = fleet_accuracy(results)
     failed_count = sum(1 for r in results if r.stage_failed)
     clean_count = sum(1 for r in results if r.passed)
     drift_count = sum(1 for r in results if r.golden_diffs and not r.stage_failed)
@@ -730,7 +624,7 @@ def _write_step_summary(results: list[ModemResult]) -> None:
         "|-------|-----|--------|----------|--------|",
     ]
     for r in sorted(results, key=lambda r: r.accuracy_pct):
-        status = _result_status(r)
+        status = result_status(r)
         fld = f"{r.matching_fields}/{r.total_fields}" if r.total_fields else "-"
         pct = f"{r.accuracy_pct:.1f}%" if r.total_fields else "-"
         lines.append(f"| {r.modem} | {r.har_file} | {status} | {pct} | {fld} |")
@@ -741,106 +635,8 @@ def _write_step_summary(results: list[ModemResult]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Baseline comparison
+# Baseline comparison (machinery lives in the regression package)
 # ---------------------------------------------------------------------------
-
-
-def _load_baseline(path: Path) -> dict[str, dict[str, Any]]:
-    """Load baseline file. Returns {key: {pipeline, actions}}.
-
-    Legacy entries that are bare status strings are normalized to the
-    current schema with no recorded action grades.
-    """
-    data = json.loads(path.read_text()).get("results", {})
-    normalized: dict[str, dict[str, Any]] = {}
-    for key, value in data.items():
-        normalized[key] = {"pipeline": value, "actions": {}} if isinstance(value, str) else value
-    return normalized
-
-
-def _save_baseline(path: Path, results: list[ModemResult]) -> None:
-    """Write current results as the new baseline."""
-    baseline = {
-        _result_key(r): {
-            "pipeline": _result_status(r),
-            "actions": {kind: grade.status for kind, grade in sorted(r.action_grades.items())},
-        }
-        for r in results
-    }
-    data = {
-        "_comment": "Intake pipeline regression baseline. Update with --update-baseline.",
-        "results": dict(sorted(baseline.items())),
-    }
-    path.write_text(json.dumps(data, indent=2) + "\n")
-
-
-def _compare_baseline(
-    results: list[ModemResult],
-    baseline: dict[str, dict[str, Any]],
-) -> tuple[list[str], list[str]]:
-    """Compare results against baseline.
-
-    Returns (regressions, improvements) as human-readable messages.
-    A regression is when a modem's pipeline status or any action grade
-    gets worse (higher severity).
-    """
-    regressions: list[str] = []
-    improvements: list[str] = []
-
-    for r in results:
-        key = _result_key(r)
-        current = _result_status(r)
-        entry = baseline.get(key)
-
-        if entry is None:
-            # New modem not in baseline — not a regression, but flag it
-            if current != "clean" or any(g.status != "match" for g in r.action_grades.values()):
-                regressions.append(f"  NEW {key}: {current} (not in baseline)")
-            continue
-
-        expected = entry.get("pipeline", "clean")
-        cur_sev = _STATUS_SEVERITY[current]
-        exp_sev = _STATUS_SEVERITY.get(expected, 0)
-
-        if cur_sev > exp_sev:
-            regressions.append(f"  REGRESSED {key}: {expected} -> {current}")
-        elif cur_sev < exp_sev:
-            improvements.append(f"  IMPROVED  {key}: {expected} -> {current}")
-
-        _compare_action_grades(key, r, entry.get("actions", {}), regressions, improvements)
-
-    # Modems removed from catalog (in baseline but not in results)
-    result_keys = {_result_key(r) for r in results}
-    for key in sorted(baseline):
-        if key not in result_keys:
-            improvements.append(f"  REMOVED   {key}: was {baseline[key].get('pipeline', '?')}")
-
-    return regressions, improvements
-
-
-def _compare_action_grades(
-    key: str,
-    result: ModemResult,
-    base_actions: dict[str, str],
-    regressions: list[str],
-    improvements: list[str],
-) -> None:
-    """Ratchet per-action grades against the baseline."""
-    worst = max(GRADE_SEVERITY.values())
-    for kind, grade in sorted(result.action_grades.items()):
-        base = base_actions.get(kind)
-        if base is None:
-            if grade.status != "match":
-                regressions.append(f"  NEW {key} actions.{kind}: {grade.status} (not in baseline)")
-            continue
-        cur_sev = GRADE_SEVERITY[grade.status]
-        base_sev = GRADE_SEVERITY.get(base, worst)
-        if cur_sev > base_sev:
-            regressions.append(f"  REGRESSED {key} actions.{kind}: {base} -> {grade.status}")
-        elif cur_sev < base_sev:
-            improvements.append(f"  IMPROVED  {key} actions.{kind}: {base} -> {grade.status}")
-    for kind in sorted(set(base_actions) - set(result.action_grades)):
-        improvements.append(f"  REMOVED   {key} actions.{kind}: was {base_actions[kind]}")
 
 
 def _print_baseline_comparison(
@@ -940,7 +736,7 @@ def main() -> None:
 
     # Update baseline mode — write and exit
     if args.update_baseline:
-        _save_baseline(args.update_baseline, results)
+        save_baseline(args.update_baseline, entries_from_results(results))
         print(f"Baseline written to {args.update_baseline}")
         sys.exit(0)
 
@@ -949,8 +745,8 @@ def main() -> None:
         if not args.baseline.exists():
             print(f"Baseline file not found: {args.baseline}")
             sys.exit(1)
-        baseline = _load_baseline(args.baseline)
-        regressions, improvements = _compare_baseline(results, baseline)
+        baseline = load_baseline(args.baseline)
+        regressions, improvements = compare_baseline(entries_from_results(results), baseline)
         _print_baseline_comparison(regressions, improvements)
         sys.exit(1 if regressions else 0)
 

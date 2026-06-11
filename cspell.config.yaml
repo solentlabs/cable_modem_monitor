@@ -110,6 +110,7 @@ words:
   - CSRFP
   - desynchronize
   - DUKSID
+  - httponly
   - decryptable
   - decryptor
   - dklen
@@ -429,6 +430,9 @@ words:
   - yarl
 
   # Network / socket / HTTP
+  - callsite
+  - Callsite
+  - callsites
   - connectionpool
   - flowinfo
   - hostnames

@@ -216,6 +216,13 @@ grades. Use `--update-baseline` to refresh
 intake, and commit the file with that change — the baseline diff is the
 durable record of what moved.
 
+The ratchet machinery (baseline load/save/compare, scorecard, result
+classification) lives in the unit-tested
+`solentlabs/cable_modem_monitor_catalog_tools/regression/` package and
+is generic over grade dimensions; the script supplies discovery,
+pipeline stages, and printing. The shared grade taxonomy is
+`solentlabs/cable_modem_monitor_catalog_tools/grading.py`.
+
 ---
 
 ## Further Reading

@@ -11,37 +11,19 @@ they are deliberately out of grading scope.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
-# Ratchet ordering for baseline comparison: a grade moving to a higher
-# severity is a regression. pipeline_only and committed_only tie — they
-# are different findings, not better or worse than each other.
-GRADE_SEVERITY: dict[str, int] = {
-    "match": 0,
-    "partial": 1,
-    "pipeline_only": 2,
-    "committed_only": 2,
-    "mismatch": 3,
-}
-
-
-@dataclass(frozen=True)
-class ActionGrade:
-    """Grade for one action: status plus a human-readable reason."""
-
-    status: str  # key of GRADE_SEVERITY
-    detail: str = ""
+from ...grading import Grade
 
 
 def grade_actions(
     detected: dict[str, Any] | None,
     committed: dict[str, Any] | None,
-) -> dict[str, ActionGrade]:
+) -> dict[str, Grade]:
     """Grade logout and restart; actions absent on both sides are skipped."""
     detected = detected or {}
     committed = committed or {}
-    grades: dict[str, ActionGrade] = {}
+    grades: dict[str, Grade] = {}
     for kind in ("logout", "restart"):
         grade = grade_action(detected.get(kind), committed.get(kind))
         if grade is not None:
@@ -52,25 +34,25 @@ def grade_actions(
 def grade_action(
     detected: dict[str, Any] | None,
     committed: dict[str, Any] | None,
-) -> ActionGrade | None:
+) -> Grade | None:
     """Grade one detected/committed action pair; None when both absent."""
     if not detected and not committed:
         return None
     if not detected:
         assert committed is not None
-        return ActionGrade(
+        return Grade(
             "committed_only",
             f"committed {committed.get('type', '?')} action not produced by pipeline",
         )
     if not committed:
-        return ActionGrade("pipeline_only", f"detected {_identity_str(detected)} absent from committed config")
+        return Grade("pipeline_only", f"detected {_identity_str(detected)} absent from committed config")
     if detected.get("type") != committed.get("type"):
-        return ActionGrade(
+        return Grade(
             "mismatch",
             f"type: detected {detected.get('type')} vs committed {committed.get('type')}",
         )
     if _identity(detected) != _identity(committed):
-        return ActionGrade(
+        return Grade(
             "mismatch",
             f"detected {_identity_str(detected)} vs committed {_identity_str(committed)}",
         )
@@ -90,7 +72,7 @@ def _identity_str(action: dict[str, Any]) -> str:
     return f"{action.get('method')} {action.get('endpoint')}"
 
 
-def _grade_params(detected: dict[str, Any], committed: dict[str, Any]) -> ActionGrade:
+def _grade_params(detected: dict[str, Any], committed: dict[str, Any]) -> Grade:
     """Identity already matches — grade the payload."""
     det_params = detected.get("params") or {}
     com_params = committed.get("params") or {}
@@ -111,5 +93,5 @@ def _grade_params(detected: dict[str, Any], committed: dict[str, Any]) -> Action
         notes.append("json_body not produced")
 
     if notes:
-        return ActionGrade("partial", "; ".join(notes))
-    return ActionGrade("match")
+        return Grade("partial", "; ".join(notes))
+    return Grade("match")
