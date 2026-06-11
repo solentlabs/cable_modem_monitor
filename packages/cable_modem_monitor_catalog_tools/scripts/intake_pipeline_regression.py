@@ -41,6 +41,7 @@ from typing import Any
 
 import yaml
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading import grade_actions
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.grading import grade_auth
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
 from solentlabs.cable_modem_monitor_catalog_tools.grading import GRADE_SEVERITY
 from solentlabs.cable_modem_monitor_catalog_tools.regression import (
@@ -396,16 +397,13 @@ def run_modem(
         if analysis_data is None:
             return result
 
-        # Actions grading — onboarding capability per action, graded even
-        # when a later stage fails
-        committed_yaml_path = modem_dir / "modem.yaml"
-        if committed_yaml_path.exists():
-            committed = yaml.safe_load(committed_yaml_path.read_text()) or {}
-            result.grades["actions"] = grade_actions(analysis_data.get("actions"), committed.get("actions"))
+        committed = _grade_actions_stage(result, analysis_data, modem_dir)
 
         modem_yaml, parser_yaml = _run_generate(analysis_data, modem_dir, result, fleet=fleet)
         if modem_yaml is None:
             return result
+
+        _grade_auth_stage(result, modem_yaml, committed)
 
         # Config diffs (informational)
         result.config_diffs.extend(_diff_config_files(modem_yaml, modem_dir / "modem.yaml", "modem.yaml"))
@@ -433,6 +431,40 @@ def run_modem(
         _print_result(result)
 
     return result
+
+
+def _grade_actions_stage(
+    result: ModemResult,
+    analysis_data: dict[str, Any],
+    modem_dir: Path,
+) -> dict[str, Any]:
+    """Grade detected actions against the committed config; returns it.
+
+    Runs right after analysis so actions are graded even when a later
+    stage fails.
+    """
+    committed_yaml_path = modem_dir / "modem.yaml"
+    if not committed_yaml_path.exists():
+        return {}
+    committed: dict[str, Any] = yaml.safe_load(committed_yaml_path.read_text()) or {}
+    result.grades["actions"] = grade_actions(analysis_data.get("actions"), committed.get("actions"))
+    return committed
+
+
+def _grade_auth_stage(
+    result: ModemResult,
+    modem_yaml: str,
+    committed: dict[str, Any],
+) -> None:
+    """Grade the generated auth block against the committed config.
+
+    Unlike actions (graded from analysis output), auth is graded from
+    the generated config, so it requires generation to succeed.
+    """
+    if not committed:
+        return
+    generated_auth = (yaml.safe_load(modem_yaml) or {}).get("auth")
+    result.grades["auth"] = grade_auth(generated_auth, committed.get("auth"))
 
 
 def _print_result(result: ModemResult) -> None:

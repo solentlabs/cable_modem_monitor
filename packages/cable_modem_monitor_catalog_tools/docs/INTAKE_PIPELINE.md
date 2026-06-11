@@ -201,6 +201,16 @@ Human-authored fields a HAR cannot show (`pre_fetch_action`,
 `action_auth`, `requires_session`, response keys) are out of grading
 scope.
 
+**Auth grading** compares the pipeline-generated auth block against the
+committed modem.yaml (`analysis/auth/grading.py`), using the same grade
+taxonomy on two items: `strategy` (the detected auth strategy — the
+headline capability) and `fields` (everything else in the block —
+endpoints, field names, cookie names, nested success criteria). Fields
+are only graded when the strategy matches; comparing field layouts of
+two different strategies is meaningless. Unlike actions (graded from
+analysis output), auth is graded from the generated config, so it
+requires generation to succeed.
+
 **Auth fixture audit** runs at the end of every sweep. For each form-auth
 modem with `login_page` configured, it verifies that the committed HAR
 fixture contains a usable login page response. Issues are printed as
