@@ -1,6 +1,13 @@
 {
   "_comment": "Chipset reference data for catalog README generation. Add new entries when onboarding modems with unknown chipsets.",
   "chipsets": {
+    "bcm33941ud": {
+      "display": "BCM33941UD",
+      "manufacturer": "Broadcom",
+      "docsis": "4.0",
+      "notes": "Unified DOCSIS 4.0 FDX+ESD SoC. Co-developed with Comcast. Deployed in Xfinity XB10 (CGM601TCOM).",
+      "link": "https://corporate.comcast.com/press/releases/comcast-broadcom-develop-ai-powered-access-network-pioneering-new-chipset"
+    },
     "bcm3390": {
       "display": "BCM3390",
       "manufacturer": "Broadcom",
@@ -52,6 +59,7 @@
     }
   },
   "aliases": {
+    "33941ud": "bcm33941ud",
     "3390": "bcm3390",
     "3384": "bcm3384",
     "3383": "bcm3383",

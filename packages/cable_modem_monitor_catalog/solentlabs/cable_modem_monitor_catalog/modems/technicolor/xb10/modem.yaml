@@ -1,0 +1,78 @@
+manufacturer: Technicolor
+model: XB10
+model_aliases:
+  - "CGM601TCOM"
+transport: http
+default_host: "10.0.0.1"
+
+auth:
+  strategy: form
+  action: "/check.jst"
+  username_field: username
+  password_field: password
+  cookie_name: "DUKSID"
+  success:
+    redirect: "/at_a_glance.jst"
+
+actions:
+  logout:
+    type: http
+    method: GET
+    endpoint: "/home_loggedout.jst"
+    # source_inferred from global.js (not observed in HAR traffic).
+    # requires_session not set (defaults to false) — pending contributor confirmation
+    # whether a Cookie header appears in the logout request.
+  restart:
+    type: http
+    method: POST
+    endpoint: "/actionHandler/ajaxSet_Reset_Restore.jst"
+    params:
+      resetInfo: '["btn1","Device","admin"]'
+      csrfp_token: "{cookie:csrfp_token}"
+    # endpoint source_inferred from restore_reboot.jst inline JS (not observed in HAR).
+    # csrfp_token: OWASP CSRFP — token is session-scoped, issued by the login
+    # redirect (/at_a_glance.jst). No pre_fetch_url needed; token is already in
+    # the session jar. POST body echoes it. Needs contributor confirmation on hardware.
+
+hardware:
+  docsis_version: "3.1"
+  chipset: "Broadcom BCM33941UD"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "[#173 Technicolor XB10](https://github.com/solentlabs/cable_modem_monitor/issues/173)"
+  chipset:
+    "[HighSpeedInternet.com — Xfinity XB10 DOCSIS 4.0 / Wi-Fi 7 gateway](https://www.highspeedinternet.com/resources/xfinity-docsis4-wifi7-gateway)
+    — names BCM33941UD; no official Broadcom product page or teardown to independently
+    confirm the part number. Primary source confirms Broadcom unified DOCSIS 4.0
+    chipset:
+    [Comcast / Broadcom press release (Oct 2023)](https://corporate.comcast.com/press/releases/comcast-broadcom-develop-ai-powered-access-network-pioneering-new-chipset)"
+  docsis_version: "[FCC ID G95601TX](https://fccid.io/G95601TX) — confirms CGM601TCOM filing"
+
+attribution:
+  contributors:
+    - github: https://github.com/chilicheech
+      contribution: "HAR capture (Issue #173)"
+
+isps:
+  - Xfinity
+
+notes: |
+  DOCSIS 4.0 hardware (BCM33941UD) provisioned in DOCSIS 3.1 mode on Xfinity.
+  Processor speed: 1701 MHz (BCM33941UD, hardware-fixed; documented here, not parsed as a live sensor).
+  Same .jst page platform as XB6 (CGM4140COM) / XB7 (CGM4331COM).
+  Transposed table format: rows are metrics, columns are channels.
+  Session cookie: DUKSID. CSRF: csrfp_token (OWASP CSRFP).
+  Default IP: 10.0.0.1 (router mode).
+  Error count duplication: channel 17 (primary QAM256) reports corrected and
+  uncorrected counts identical to OFDM channel 194 — same firmware pattern as
+  XB7. Aggregate totals intentionally omitted; per-channel data is reliable.
+  OFDM downstream frequencies reported in Hz without unit suffix (e.g.,
+  "774000000") rather than in MHz like QAM channels; stored as-is in Hz.
+  System uptime format: "X days Xh: Xm: Xs" (spaces after colons);
+  uptime parser handles this via flexible whitespace matching.
+
+references:
+  issues:
+    - "[#173 — [Modem Request] Xfinity XB10 / Technicolor CGM601TCOM](https://github.com/solentlabs/cable_modem_monitor/issues/173)"
