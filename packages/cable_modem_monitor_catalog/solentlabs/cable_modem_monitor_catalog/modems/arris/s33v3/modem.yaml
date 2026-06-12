@@ -28,18 +28,18 @@ hardware:
   chipset: Broadcom BCM3390
   release_date: "2020"
 
-status: awaiting_verification
+status: confirmed
 sources:
   auth_config: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
   chipset: "[ModemGuides S33 review](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison) — same BCM3390 platform as S33/S34"
   detection_hints: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
-  channel_data: "[#98 screenshots by homeautomater](https://github.com/solentlabs/cable_modem_monitor/issues/98) — system_info from jzucker2 HAR, channel data from homeautomater screenshots"
-  system_info_software: "[#98 jzucker2 HAR swinfo.js](https://github.com/solentlabs/cable_modem_monitor/issues/98) — CustomerConnSystemUpTime and StatusSoftwareHdVer from GetCustomerStatusSoftware"
+  channel_data: "[#98 screenshots by homeautomater](https://github.com/solentlabs/cable_modem_monitor/issues/98) — system_info from jzucker2 HAR, channel data from homeautomater screenshots; channel structure wild-confirmed by jzucker2 diagnostics (3.14.0-beta.3)"
+  system_info_software: "[#98 jzucker2 wild diagnostics](https://github.com/solentlabs/cable_modem_monitor/issues/98) — StatusSoftwareHdVer 1.0 observed via live poll; CustomerConnSystemUpTime advertised by swinfo.js but never observed in a response, mapping dropped"
 attribution:
   contributors:
     - github: https://github.com/jzucker2
-      contribution: "HAR capture for S33v3 (Issue #98)"
+      contribution: "HAR capture and hardware-confirmation diagnostics for S33v3 (Issue #98)"
     - github: https://github.com/homeautomater
       contribution: "Initial modem request (Issue #98)"
     - github: https://github.com/starsprung
@@ -53,9 +53,13 @@ notes: |
   S33v3 is a hardware revision of the S33 that uses HMAC-SHA256 (same as S34)
   instead of HMAC-MD5 (used by S33/S33v2). Firmware pattern: AT01.01.* (same
   as S34, vs S33's TB01.03.*).
-  S33v3 blocks ICMP ping - HTTP-only health checks required.
-  Uptime comes from GetCustomerStatusSoftware (swinfo page), not from
-  GetCustomerStatusConnectionInfo as on S33/S33v2.
+  ICMP health checks confirmed working on real hardware (#98 wild
+  diagnostics, ~2ms) — an earlier note claiming ICMP was blocked was
+  inherited from the S33/S34 entries, not observed on this model.
+  No system_uptime: the swinfo page advertises an Uptime row, but the
+  field never appeared in an observed GetCustomerStatusSoftware
+  response (#98 wild diagnostics). Same gap as the S34 (AT01.01.*
+  firmware line). Last Boot Time derives from counter-reset detection.
   Reboot params mirrored from S33 fix (#146); pre-fetch defaults
   are the safety net pending variant validation.
 references:

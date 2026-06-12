@@ -298,8 +298,10 @@ _SAFE_FINDING_DISPATCH: dict[str, Callable[[str], bool]] = {
     "ipv6": _is_safe_ipv6,
     # Open-source library author credits embedded in modem firmware JS.
     "email": lambda m: m.lower() in SAFE_EMAIL_VALUES,
-    # Cable modem fixtures never contain credit card numbers.
+    # Cable modem fixtures never contain credit card numbers. Long float
+    # fractions (e.g. tcp_latency_ms) pattern-match card numbers.
     "credit_card_visa": lambda _: True,
+    "credit_card_mastercard": lambda _: True,
 }
 
 
