@@ -26,7 +26,7 @@ declaratively.
 
 - At least one of parser.yaml or parser.py is required — every modem package must have one
 - parser.yaml is the primary expression mode — code is the escape hatch
-- When parser.yaml is present, it drives the fetch list — the orchestrator reads it to know what resources to load
+- parser.yaml drives the fetch list; parser.py declares the resources its hooks read via `resources` — the orchestrator merges both at startup
 - Format selection is per-section, not per-modem — a modem can mix formats
 - `BaseParser` implementations are format experts, not modem experts
 - Capabilities are implicit from mappings — no separate declarations
@@ -249,11 +249,24 @@ system_info:
     - resource: "/info.html"
 ```
 
+**parser.py:** A `PostProcessor` declares the resources its hooks read
+in a `resources` class attribute — a dict of URL path → format (see
+[parser.py — Post-Processing Hooks](#parserpy--post-processing-hooks)).
+The orchestrator merges these paths into the fetch list, deduplicated
+by path; when parser.yaml maps the same path, its declaration wins.
+This replaces the former workaround of adding a fake field mapping
+whose only purpose was forcing the fetch — declaration now lives with
+the code that consumes the resource, and graduating an extraction from
+parser.py to parser.yaml moves the resource declaration in the same
+edit.
+
 **HNAP:** Sections with `format: hnap` declare `response_key` instead
 of `resource`. The orchestrator detects this and tells the HNAP loader
 to batch all referenced action names into a single
 `GetMultipleHNAPs` request. HNAP action names are derived from `response_key`
-by stripping the `Response` suffix.
+by stripping the `Response` suffix. The parser.py `resources` attribute
+does not apply to HNAP — the batched request has no per-page fetch
+list, and no HNAP modem has needed a hook-only action.
 
 **Startup validation:** The orchestrator verifies at startup that
 every `resource` path in parser.yaml is fetchable (valid path format,
@@ -429,6 +442,14 @@ class PostProcessor:
     exact name from parser.py via ``getattr(module, "PostProcessor")``.
     """
 
+    # Optional: the resources the hooks below read. Dict of URL
+    # path → format; the orchestrator merges these into the fetch
+    # list at startup (paths parser.yaml already maps are
+    # deduplicated, with parser.yaml's format winning).
+    resources = {
+        "/network_setup.jst": "table",
+    }
+
     def parse_downstream(
         self, channels: list[dict], resources: dict[str, Any]
     ) -> list[dict]:
@@ -474,10 +495,10 @@ values, filter channels, or fully replace the extraction output.
    — the coordinator owns the pipeline.
 
 2. **No network calls.** parser.py receives the pre-fetched resource
-   dict. No session, no HTTP client, no auth awareness. If a parser
-   needs data from a URL not in the resource dict, add a `resource`
-   reference in parser.yaml — the orchestrator will include it in the
-   fetch list automatically.
+   dict. No session, no HTTP client, no auth awareness. Declare the
+   resources the hooks read in the `resources` class attribute (dict
+   of URL path → format) — the orchestrator merges it into the fetch
+   list. Never add a fake parser.yaml mapping just to force a fetch.
 
 3. **No auth or session state.** parser.py is a pure data transformer.
    Infrastructure like HNAP builders, session tokens, and cookies flow

@@ -434,7 +434,7 @@ def _run_pipeline(
             resources = hnap_loader.fetch(parser_config)
         else:
             # HTTP: per-page fetching
-            targets = collect_fetch_targets(parser_config)
+            targets = collect_fetch_targets(parser_config, post_processor)
             # Prefer body-derived token from auth_context; fall back to cookie
             url_token = ""
             token_prefix = getattr(modem_config.auth, "token_prefix", "")

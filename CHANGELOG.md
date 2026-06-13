@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **parser.py declares its own resource needs.** A `PostProcessor` now
+  declares the resources its hooks read in a `resources` class attribute
+  (URL path → format), merged into the fetch list at startup. Replaces
+  the former workaround of adding a fake parser.yaml field mapping just
+  to force the fetch. The Sercomm DM1000 — the only catalog user of the
+  workaround — has been migrated; extracted output is unchanged.
+
 ## [3.14.0-beta.10] - 2026-06-04
 
 ### Added

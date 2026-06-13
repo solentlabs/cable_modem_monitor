@@ -82,23 +82,8 @@ upstream:
     modulation:
       not: "QAM_NONE"
 
-# System info extracted by parser.py PostProcessor from Version_Info.
-# OFDMA upstream resource declared here to trigger fetch for parse_upstream hook.
-system_info:
-  sources:
-    - format: json
-      resource: "/setup.cgi?todo=Version_Info"
-      fields:
-        - key: _placeholder
-          field: software_version
-          type: string
-    # OFDMA upstream channels are extracted by parse_upstream().
-    - format: json
-      resource: "/setup.cgi?todo=RF_US_31_param"
-      fields:
-        - key: _placeholder
-          field: _ofdma_us_trigger
-          type: string
+# System info and OFDMA upstream channels are extracted by parser.py
+# hooks; their resources are declared in PostProcessor.resources.
 
 # DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
 # at a vastly different scale and are not aggregated.

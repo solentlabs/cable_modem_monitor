@@ -16,7 +16,9 @@ Use case coverage (collector level):
 
 from __future__ import annotations
 
+import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from threading import Thread
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -539,6 +541,37 @@ class TestSuccessfulCollection:
         assert result.signal == CollectorSignal.OK
         assert result.modem_data is not None
         assert result.modem_data["downstream"] == []
+
+
+class TestPostProcessorResourcesFetch:
+    """parser.py resources declarations reach the HTTP loader's fetch list."""
+
+    def test_declared_resources_included_in_http_fetch(self) -> None:
+        """Paths declared on the PostProcessor are fetched."""
+        from solentlabs.cable_modem_monitor_core.models.parser_config import (
+            ParserConfig,
+        )
+
+        fixture = Path(__file__).parent.parent / "models" / "fixtures" / "parser_config" / "valid" / "table_single.json"
+        parser_config = ParserConfig.model_validate(json.loads(fixture.read_text()))
+
+        class PostProcessor:
+            resources = {"/extra.json": "json"}
+
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, parser_config, PostProcessor(), "http://localhost", "", "")
+
+        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.HTTPResourceLoader") as loader_cls:
+            loader = loader_cls.return_value
+            loader.fetch.return_value = {}
+            loader.decode_errors = []
+            loader.resource_fetches = []
+            collector._load_http_resources(MagicMock())
+
+        targets = loader.fetch.call_args[0][0]
+        paths = {t.path for t in targets}
+        assert "/extra.json" in paths
+        assert len(paths) == 2
 
 
 # ------------------------------------------------------------------

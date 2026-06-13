@@ -111,6 +111,10 @@ class ModemDataCollector:
         if parser_config is not None:
             self._coordinator = ModemParserCoordinator(parser_config, post_processor)
 
+        # Kept for fetch-list derivation — parser.py declares the
+        # resources its hooks read via `resources` (PARSING_SPEC).
+        self._post_processor = post_processor
+
         # Login page detection — enable for form-based auth strategies
         self._detect_login_pages = _should_detect_login_pages(modem_config)
 
@@ -398,7 +402,7 @@ class ModemDataCollector:
         auth_result: AuthResult,
     ) -> tuple[dict[str, Any], list[ResourceFetch]]:
         """Fetch HTTP resources."""
-        targets = collect_fetch_targets(self._parser_config)
+        targets = collect_fetch_targets(self._parser_config, self._post_processor)
 
         # Prefer body-derived token from auth_context; fall back to cookie
         url_token = ""
@@ -475,7 +479,7 @@ class ModemDataCollector:
         from ..loaders.cbn import CBNLoader
         from ..models.modem_config.auth import FormCbnAuth
 
-        targets = collect_fetch_targets(self._parser_config)
+        targets = collect_fetch_targets(self._parser_config, self._post_processor)
 
         auth = self._modem_config.auth
         assert isinstance(auth, FormCbnAuth)

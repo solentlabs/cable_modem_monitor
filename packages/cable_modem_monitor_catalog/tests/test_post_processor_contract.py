@@ -7,11 +7,15 @@ modem's optional ``PostProcessor`` class:
     parse_upstream(channels: list, resources: dict)   -> list
     parse_system_info(system_info: dict, resources: dict) -> dict
 
+A PostProcessor may also declare ``resources`` (dict of URL path ->
+format) — the resources its hooks read — which the orchestrator merges
+into the fetch list.
+
 This file dynamically discovers every ``parser.py`` under the catalog
 and asserts each PostProcessor honors that contract — empty inputs
-don't crash and methods return the right type. Adding a new
-``parser.py`` automatically adds it to this test surface; contributors
-never write per-modem tests.
+don't crash, methods return the right type, and ``resources`` has the
+declared shape. Adding a new ``parser.py`` automatically adds it to
+this test surface; contributors never write per-modem tests.
 
 Firmware-specific filter logic *inside* a method (e.g., a state
 filter that drops non-OPERATE channels) is intentionally outside this
@@ -114,3 +118,25 @@ def test_unknown_resource_keys_do_not_crash(modem_id: str, pp: Any) -> None:
         # Replace the resources arg (always last) with garbage.
         args = (*empty_args[:-1], garbage_resources)
         method(*args)
+
+
+@pytest.mark.skipif(not _POST_PROCESSORS, reason="No parser.py files in catalog")
+@pytest.mark.parametrize(
+    "modem_id,pp",
+    _POST_PROCESSORS,
+    ids=[mid for mid, _ in _POST_PROCESSORS],
+)
+def test_resources_shape(modem_id: str, pp: Any) -> None:
+    """resources, when declared, is a dict of URL path -> format.
+
+    A wrongly declared attribute would otherwise fail only at
+    orchestrator startup (see fetch_list.collect_fetch_targets).
+    """
+    declared = getattr(pp, "resources", None)
+    if declared is None:
+        return
+    assert isinstance(declared, dict), f"{modem_id}: resources must be a dict, got {type(declared).__name__}"
+    for path, fmt in declared.items():
+        assert isinstance(path, str) and isinstance(fmt, str), (
+            f"{modem_id}: resources entries must be str -> str, " f"got {path!r}: {fmt!r}"
+        )
