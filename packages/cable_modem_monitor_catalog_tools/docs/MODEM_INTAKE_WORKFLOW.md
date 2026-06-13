@@ -550,3 +550,11 @@ are no errors in `modem_data`.
    responds (any 2xx or redirect) after a successful login. If the logout
    request appeared in the HAR with a Cookie header, set `requires_session: true`;
    if no Cookie header was present, set `requires_session: false` (the default).
+10. **Fixture values trace to observed artifacts.** Every value written into a
+    golden file or verified.json must come from a real artifact — the
+    contributor's diagnostics, a HAR, page source, or a posted screenshot. Never
+    invent a value to fill a gap or make a fixture look complete (no plausible
+    channel reading, no placeholder uptime, no "typical" SNR). A missing field
+    stays null, or the entry isn't confirmed yet (see Diagnostics partial wins).
+    A fixture that looks correct but holds a hand-filled value is wrong even when
+    the value happens to be right — the next contributor's real data won't match.
