@@ -19,6 +19,10 @@ Motivation: GitHub serves ``.github/README.md`` as the landing page, so a
 relative link written as ``./docs/X`` from that file resolves under
 ``.github/`` and 404s. This check catches that class before it ships.
 
+The root ``README.md`` (and ``info.md``) are rendered by HACS, which
+cannot resolve repo-relative paths, so any relative link in those files
+is flagged regardless of on-disk existence — they must use absolute URLs.
+
 Exit codes:
   0  All intra-repo links resolve
   1  At least one broken intra-repo link
@@ -79,6 +83,47 @@ def _resolve(target: str, md_file: Path, repo_root: Path) -> Path | None:
     return (md_file.parent / path_part).resolve()
 
 
+def _check_link(
+    target: str,
+    md_file: Path,
+    lineno: int,
+    repo_root: Path,
+    hacs_files: set[Path],
+) -> str | None:
+    """Return a broken-link description for one link, or None if it resolves."""
+    resolved = _resolve(target, md_file, repo_root)
+    if resolved is None:
+        return None
+    rel = md_file.relative_to(repo_root)
+    if md_file in hacs_files and not _REPO_BLOB.match(target):
+        note = "relative link in HACS README (use absolute URL)"
+        return f"{rel}:{lineno}  {target}  ->  {note}"
+    if resolved.exists():
+        return None
+    try:
+        missing: Path = resolved.relative_to(repo_root)
+    except ValueError:
+        missing = resolved
+    return f"{rel}:{lineno}  {target}  ->  missing: {missing}"
+
+
+def _scan_file(md_file: Path, repo_root: Path, hacs_files: set[Path]) -> list[str]:
+    """Return broken-link descriptions for one Markdown file."""
+    broken: list[str] = []
+    in_fence = False
+    for lineno, line in enumerate(md_file.read_text(encoding="utf-8").splitlines(), 1):
+        if _FENCE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        for match in _LINK.finditer(line):
+            problem = _check_link(match.group(1), md_file, lineno, repo_root, hacs_files)
+            if problem:
+                broken.append(problem)
+    return broken
+
+
 def main() -> int:
     repo_root = Path(
         subprocess.run(
@@ -89,25 +134,14 @@ def main() -> int:
         ).stdout.strip()
     )
 
+    # The root README.md / info.md are rendered by HACS, which does not
+    # resolve repo-relative paths, so those files must use absolute URLs.
+    # See CLAUDE.md § Two READMEs — GitHub vs HACS.
+    hacs_files = {repo_root / "README.md", repo_root / "info.md"}
+
     broken: list[str] = []
     for md_file in _tracked_markdown(repo_root):
-        in_fence = False
-        for lineno, line in enumerate(md_file.read_text(encoding="utf-8").splitlines(), 1):
-            if _FENCE.match(line):
-                in_fence = not in_fence
-                continue
-            if in_fence:
-                continue
-            for match in _LINK.finditer(line):
-                target = match.group(1)
-                resolved = _resolve(target, md_file, repo_root)
-                if resolved is not None and not resolved.exists():
-                    rel = md_file.relative_to(repo_root)
-                    try:
-                        missing: Path = resolved.relative_to(repo_root)
-                    except ValueError:
-                        missing = resolved
-                    broken.append(f"{rel}:{lineno}  {target}  ->  missing: {missing}")
+        broken.extend(_scan_file(md_file, repo_root, hacs_files))
 
     if broken:
         print("Broken intra-repo Markdown links:\n")

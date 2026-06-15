@@ -289,3 +289,49 @@ jobs:
             exit 1
           fi
           echo "Catalog README is up to date"
+
+  autoclose-check:
+    name: Auto-Close Keyword Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          # Full history so the scan can diff against the base ref.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Determine base ref
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "ref=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=origin/main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Scan commit bodies for auto-close keywords
+        run: |
+          python scripts/check_auto_close_keywords.py --base "${{ steps.base.outputs.ref }}"
+
+  link-check:
+    name: Markdown Link Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Check intra-repo Markdown links
+        run: |
+          python scripts/check_markdown_links.py

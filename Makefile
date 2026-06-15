@@ -119,7 +119,7 @@ validate:
 # hacs/action@main, which runs in a GitHub-hosted Docker context with
 # external network checks against home-assistant/brands and HACS APIs;
 # not reasonably reproducible locally — same exception class as hassfest).
-validate-ci: check test intake-regression pii-check spell-check catalog-readme-check suppression-check ha-compat-check
+validate-ci: check test intake-regression pii-check spell-check catalog-readme-check suppression-check ha-compat-check autoclose-check link-check
 	@echo "✅ Full CI validation passed!"
 	@echo "🔍 Checking declared dependencies for available updates..."
 	@$(VENV_BIN)/python scripts/check_owned_deps.py
@@ -173,6 +173,22 @@ catalog-readme-check:
 		exit 1; \
 	fi
 	@echo "✅ Catalog README is up to date"
+
+# Auto-close keyword scan — mirrors CI autoclose-check job. Scans commit
+# bodies on this branch (origin/main..HEAD) for GitHub auto-close
+# keywords plus an issue ref, which would close issues on merge. See
+# CLAUDE.md § PR and Issue Conventions.
+autoclose-check:
+	@echo "🔍 Scanning commit bodies for auto-close keywords..."
+	@$(VENV_BIN)/python scripts/check_auto_close_keywords.py --base origin/main
+
+# Markdown link check — mirrors CI link-check job. Validates that intra-repo
+# relative and repo-absolute links resolve, and that the HACS-rendered root
+# README uses absolute URLs. Offline and deterministic. See CLAUDE.md
+# § Two READMEs — GitHub vs HACS.
+link-check:
+	@echo "🔗 Checking intra-repo Markdown links..."
+	@$(VENV_BIN)/python scripts/check_markdown_links.py
 
 # Install optional pre-push hook that runs `make validate-ci` before push.
 # Opt-in per developer — CI is the authoritative gate. To bypass once:
