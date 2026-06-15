@@ -575,7 +575,7 @@ structural details from HAR response bodies:
 **Direction inference:** `response_key` names containing "Downstream"
 or "DSChannel" → downstream. "Upstream" or "USChannel" → upstream.
 
-See [HNAPParser](FORMAT_HNAP_SPEC.md#hnapparser) for the validated
+See [HNAPParser](../../cable_modem_monitor_core/docs/FORMAT_HNAP_SPEC.md#hnapparser) for the validated
 record layout and parser.yaml example.
 
 #### HTTP format detection
@@ -1069,12 +1069,12 @@ tables use CSS classes to indicate pass/fail status. During onboarding,
 these fields start as Tier 3 (passthrough) since they are
 modem-specific. They can be elevated to Tier 2 when the same pattern
 appears across multiple modems. See
-[SYSTEM_INFO_SPEC.md](SYSTEM_INFO_SPEC.md) for full `html_fields` semantics.
+[SYSTEM_INFO_SPEC.md](../../cable_modem_monitor_core/docs/SYSTEM_INFO_SPEC.md) for full `html_fields` semantics.
 
 ### parser.py contract
 
 If generated, parser.py must follow the post-processing contract from
-[PARSING_SPEC.md](PARSING_SPEC.md):
+[PARSING_SPEC.md](../../cable_modem_monitor_core/docs/PARSING_SPEC.md):
 
 ```python
 class PostProcessor:
@@ -1722,7 +1722,7 @@ re-runs `run_tests`. This loop continues until tests pass.
 
 ## Transport Constraint Reference
 
-Reproduced from [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#validation-rules) for quick reference during analysis:
+Reproduced from [MODEM_YAML_SPEC.md](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md#validation-rules) for quick reference during analysis:
 
 | Transport | Valid auth strategies | Valid formats | Valid action types |
 |-----------|---------------------|---------------|-------------------|
@@ -1965,7 +1965,7 @@ downstream:
    base64`. Otherwise default to `plain`.
 
 7. **The tools target the current spec.** All generated configs conform
-   to [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md) and [PARSING_SPEC.md](PARSING_SPEC.md) schemas.
+   to [MODEM_YAML_SPEC.md](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md) and [PARSING_SPEC.md](../../cable_modem_monitor_core/docs/PARSING_SPEC.md) schemas.
 
 8. **JS endpoint discovery is regex-based.** Only static URL string
    literals in AJAX/fetch calls are detected. Dynamically constructed
