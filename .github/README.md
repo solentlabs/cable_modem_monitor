@@ -36,19 +36,19 @@ Monitor your cable modem's signal quality, errors, and connection health in real
 
 - [**Installation Guide**](#installation)
 - [**Supported Modems**](#supported-modems)
-- [**Troubleshooting Guide**](./docs/TROUBLESHOOTING.md)
-- [**Contributing Guide**](./CONTRIBUTING.md)
+- [**Troubleshooting Guide**](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)
+- [**Contributing Guide**](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md)
 - [**Development**](#development) (for contributors)
 
 ---
 
 ## Development
 
-**New contributor?** Start with the [Getting Started Guide](./docs/setup/GETTING_STARTED.md) -- it covers environment setup, running tests, and your first commit in a single document.
+**New contributor?** Start with the [Getting Started Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/setup/GETTING_STARTED.md) -- it covers environment setup, running tests, and your first commit in a single document.
 
-**Returning contributor?** See the [Contributing Guide](./CONTRIBUTING.md) for workflow, code style, and PR guidelines.
+**Returning contributor?** See the [Contributing Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md) for workflow, code style, and PR guidelines.
 
-**Architecture (v3.14):** Two runtime pip packages in `packages/` (Core + Catalog) plus a thin HA adapter in `custom_components/`. A third package — **Catalog Tools** — provides catalog authoring tools (HAR analysis, YAML generation, verification) for contributors and maintainers; it is never installed by HA. See [CONTRIBUTING.md](./CONTRIBUTING.md#project-architecture) for details.
+**Architecture (v3.14):** Two runtime pip packages in `packages/` (Core + Catalog) plus a thin HA adapter in `custom_components/`. A third package — **Catalog Tools** — provides catalog authoring tools (HAR analysis, YAML generation, verification) for contributors and maintainers; it is never installed by HA. See [CONTRIBUTING.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#project-architecture) for details.
 
 ---
 
@@ -152,8 +152,8 @@ This integration supports modems from ARRIS, Compal, Hitron, Motorola, Netgear, 
 
 The catalog grows when contributors with hardware step up. Two paths:
 
-- **Modem not listed?** Use [har-capture](https://github.com/solentlabs/har-capture) to record your modem's web interface, then [file a request](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml). See the [Modem Request Guide](./docs/MODEM_REQUEST.md) for the user-facing walkthrough.
-- **Want to help more?** If you have AI access, you can analyze captures and propose catalog entries yourself. See [AI-Assisted Catalog Contribution](./CONTRIBUTING.md#ai-assisted-catalog-contribution).
+- **Modem not listed?** Use [har-capture](https://github.com/solentlabs/har-capture) to record your modem's web interface, then [file a request](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml). See the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) for the user-facing walkthrough.
+- **Want to help more?** If you have AI access, you can analyze captures and propose catalog entries yourself. See [AI-Assisted Catalog Contribution](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#ai-assisted-catalog-contribution).
 
 **Modem listed as ⏳ Awaiting?** [Report it working](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_verification.yml) to help verify support.
 
@@ -343,7 +343,7 @@ The integration registers three buttons under the modem device:
 
 ## Examples
 
-Ready-to-use dashboard and automation examples are available in the **[Examples Guide](./docs/EXAMPLES.md)**.
+Ready-to-use dashboard and automation examples are available in the **[Examples Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/EXAMPLES.md)**.
 
 Includes:
 
@@ -354,7 +354,7 @@ Includes:
 
 ## Troubleshooting
 
-**📖 See the [Troubleshooting Guide](./docs/TROUBLESHOOTING.md)** for solutions to common issues including connection problems, missing sensors, and duplicate entities.
+**📖 See the [Troubleshooting Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)** for solutions to common issues including connection problems, missing sensors, and duplicate entities.
 
 ## Contributing
 
@@ -364,7 +364,7 @@ Contributions are welcome! If you have:
 - Bug fixes
 - Feature improvements
 
-Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add support for your modem, run tests, and submit changes.
+Please see the [Contributing Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md) for details on how to add support for your modem, run tests, and submit changes.
 
 ## Privacy & Security
 
@@ -381,8 +381,8 @@ Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add
 - **CodeQL Scanning**: Automated security analysis on every push, weekly schedule, and pull request.
   - **Standard CodeQL Python suite**: 100+ security queries covering OWASP Top 10 and broad CWE coverage — command injection, hardcoded credentials, SSL/TLS misuse, path traversal, XXE, and more.
   - **Custom queries**: One project-specific query at `cable-modem-monitor-ql/queries/no_timeout.ql` flags HTTP requests without explicit timeouts, which would otherwise hang the integration on unreachable modems.
-- **Security Documentation**: See [CodeQL Testing Guide](./docs/reference/CODEQL_TESTING_GUIDE.md) for details
-- **Vulnerability Reporting**: See [SECURITY.md](./SECURITY.md) for responsible disclosure
+- **Security Documentation**: See [CodeQL Testing Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/reference/CODEQL_TESTING_GUIDE.md) for details
+- **Vulnerability Reporting**: See [SECURITY.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/SECURITY.md) for responsible disclosure
 
 ### Authentication Support
 
@@ -404,11 +404,11 @@ MIT License - see LICENSE file for details
 
 ### Project Documentation
 
-- [Changelog](./CHANGELOG.md) - Version history and release notes
-- [Contributing Guide](./CONTRIBUTING.md) - How to contribute code or add modem support
-- [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
-- [Examples](./docs/EXAMPLES.md) - Dashboard and automation YAML
-- [Modem Request Guide](./docs/MODEM_REQUEST.md) - Help add support for your modem
+- [Changelog](https://github.com/solentlabs/cable_modem_monitor/blob/main/CHANGELOG.md) - Version history and release notes
+- [Contributing Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md) - How to contribute code or add modem support
+- [Troubleshooting Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [Examples](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/EXAMPLES.md) - Dashboard and automation YAML
+- [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) - Help add support for your modem
 
 ### External Resources
 
