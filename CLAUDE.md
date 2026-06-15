@@ -44,6 +44,24 @@ over convenience.
    etc.). A code change without a corresponding spec update is
    incomplete.
 
+### Two READMEs — GitHub vs HACS (do not consolidate)
+
+The repo intentionally ships two README files for two render
+surfaces. They are not duplicates to merge:
+
+- `.github/README.md` is the **GitHub landing page** (GitHub serves a
+  README from `.github/` in preference to the repo root). Relative
+  links in it resolve from `.github/`, so a `./docs/X` resolves to
+  `.github/docs/X` and 404s — use links that resolve from `.github/`,
+  or absolute
+  `https://github.com/solentlabs/cable_modem_monitor/blob/main/...`
+  URLs.
+- The root `README.md` is what **HACS** renders in its panel. HACS
+  does not resolve repo-relative paths, so this file must use
+  **absolute** URLs only.
+
+When editing either, keep the distinction and the per-file link rule.
+
 ### Process
 
 4. **Only the developer stages files.** Never run `git add`. Show
