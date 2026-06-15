@@ -37,6 +37,7 @@ ignoreWords:
   - Kittyx
   - klmnopqrst
   - kwschulz
+  - ludeeus
   - Nlcjpw
   - philfry
   - qwertyuiop
@@ -289,6 +290,7 @@ words:
 
   # Shell / OS commands used in docs
   - findstr
+  - oneline
   - subshells
   - unittests
 

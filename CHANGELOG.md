@@ -20,15 +20,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   diagnostics: 33 downstream + 6 upstream channels, HNAP SHA256 auth,
   ICMP health checks working. The firmware does not report uptime;
   Last Boot Time derives from counter-reset detection. (Related to #98)
+- **Four more modems confirmed on hardware.** Verified via contributor
+  diagnostics: Motorola MB8611 (34 DS + 4 US, restart confirmed,
+  Related to #60), Arris SB6183 (16 DS + 4 US, Related to #95), Netgear
+  CM3000 (34 DS + 5 US, Related to #127), and ARRIS CM3500B
+  (26 DS + 5 US, Related to #73).
+- **Technicolor XB10 (CGM601TCOM) added to the catalog.** DOCSIS 4.0
+  hardware provisioned in 3.1 mode. Auth, channel parsing, and restart
+  action config derived from a contributor HAR; awaiting hardware
+  confirmation before it is marked confirmed. (Related to #173)
+- **`{cookie:name}` parameter interpolation.** Action params can now
+  reference session-jar cookies by name, resolved at execution time.
+  Supports the Double Submit Cookie CSRF pattern needed for the XB10
+  restart action. (Related to #173)
 
 ### Changed
 
+- **Breaking: `session.max_concurrent` replaced by
+  `HttpAction.requires_session`.** `max_concurrent` is removed from
+  SessionConfig. The presence of `actions.logout` is now the sole
+  indicator of single-session semantics. Per-action
+  `requires_session: true` skips the logout-before-retry when no session
+  cookie is present. Catalog YAML still using `max_concurrent` must
+  migrate. (Related to #170)
 - **parser.py declares its own resource needs.** A `PostProcessor` now
   declares the resources its hooks read in a `resources` class attribute
   (URL path → format), merged into the fetch list at startup. Replaces
   the former workaround of adding a fake parser.yaml field mapping just
   to force the fetch. The Sercomm DM1000 — the only catalog user of the
   workaround — has been migrated; extracted output is unchanged.
+
+### Fixed
+
+- **CM3500B modulation values are now canonical.** The parser.yaml
+  modulation columns were typed as plain strings; downstream QAM and
+  upstream ATDMA channels now emit canonical `QAM256` / `QAM64`.
+  (Related to #73)
 
 ## [3.14.0-beta.10] - 2026-06-04
 
