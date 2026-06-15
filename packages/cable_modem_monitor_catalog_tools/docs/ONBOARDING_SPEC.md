@@ -238,8 +238,8 @@ header is what identifies the mechanism. Without it, do not assume
 
 **Cross-validation: session config must match auth type.** HTTP Basic
 Auth is stateless — no cookies, no sessions, no logout. If the
-modem.yaml has session config (cookies, logout endpoints,
-max_concurrent) but declares `basic` auth, the auth type is wrong.
+modem.yaml has session config (cookies, logout endpoints) but declares
+`basic` auth, the auth type is wrong.
 
 **If auth mechanism cannot be determined:** HARD STOP. Report what was
 observed and what's missing. Do not guess.
@@ -424,8 +424,11 @@ Examine post-login requests for session artifacts:
 
 **Single-session detection:** Cannot be determined from HAR alone. If
 the modem rejects concurrent sessions, the HAR won't show it (only one
-session was active). Flag `max_concurrent` as "unknown — verify with
-contributor or modem documentation."
+session was active). If a logout flow is visible in the HAR, emit
+`actions.logout`; single-session semantics follow automatically.
+Set `requires_session: true` when the logout endpoint requires a valid
+session cookie; leave it `false` (default) for unauthenticated logout
+endpoints.
 
 **HNAP transport:** Session is implicit (`uid` + `PrivateKey` cookies,
 `HNAP_AUTH` header). Do not emit a `session` block.
@@ -442,7 +445,7 @@ Scan HAR for logout and restart flows:
 | POST to `/goform/logout*` or `/api/*/logout` | `actions.logout: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
 | POST with pre-fetch page (extract dynamic endpoint) | Add `pre_fetch_url` and `endpoint_pattern` |
 | HNAP action with logout/session-end semantics | `actions.logout: { type: hnap, action_name: "<name>" }` |
-| No logout visible in HAR | Omit `actions.logout`. If `max_concurrent: 1` is suspected, flag the inconsistency. |
+| No logout visible in HAR | Omit `actions.logout`. Note in the generated YAML that logout behavior could not be confirmed from the HAR. |
 
 #### Restart
 
@@ -454,6 +457,57 @@ Scan HAR for logout and restart flows:
 
 **Restart is rarely in the HAR.** Most contributors capture status pages,
 not admin operations. Omitting restart is normal and correct.
+
+#### Source-Inferred Call-Site Extraction
+
+When no request in HAR traffic matches an action pattern, scan captured
+response bodies instead. Three passes, in order:
+
+1. **`$.ajax({...})` call sites** (`analysis/actions/callsite.py`) — parse
+   the options object for `type`, `url`, and `data`. A `url` matching an
+   action pattern yields the endpoint, the method (from `type:`), and
+   data params. This is the only call shape observed at action endpoints
+   in fleet HARs (XB10 restart, S33-family logout). `$.post(url, {...})`
+   appears in fleet page source but never at an action endpoint — it is
+   deliberately unsupported until a fleet HAR shows one.
+2. **`<form action>` URLs** — a captured page's form action matching an
+   action pattern yields the endpoint and method (attribute values may
+   be quoted or bare). A query string on the form action is a
+   per-session dynamic token (Netgear `?id=`), so the config gets the
+   Core pre-fetch shape: bare endpoint as fallback, `endpoint_pattern`
+   keyword, `pre_fetch_url` pointing at the page that embeds the live
+   URL. Form input values are rewritten by page script at submit time
+   (`advButtonClick` sets `buttonSelect` after page load), so params
+   are never extracted from form HTML — a warning names the form's
+   fields for the manual step.
+3. **Bare quoted strings** — the legacy scan; yields endpoint only, with
+   the method guessed from the action name (GET for logout, POST for
+   restart). The same action-name prior applies in pass 1 when a call
+   site has no `type:` field.
+
+**Traffic-observed actions get pre-fetch from form evidence too.** When
+an observed action's endpoint equals a captured page's form action, that
+page is emitted as `pre_fetch_url` (with `endpoint_pattern` only when
+the form action carries a query token). The older keyword-overlap
+heuristic remains warning-only — it suggests, never emits.
+
+**Param resolution rules (pass 1), in precedence order:**
+
+| Param | Resolution |
+|-------|-----------|
+| Name matches a cookie name observed in this HAR's `Set-Cookie` headers | `{cookie:<name>}` directive (double-submit CSRF shape). Wins even over a literal value — the literal is the captured session's token, not a reusable one. |
+| Value is a plain string literal | Emitted verbatim. |
+| Value is a computed expression or identifier | Dropped, with a warning naming the param and quoting the expression so the manual step has the evidence in front of it. |
+
+A `data:` payload that is a bare identifier (not an object literal)
+yields no params and a warning naming the identifier.
+
+**Every value comes from the contributor's own HAR.** Confirmed modems
+contribute the *patterns* (URL regexes in `action_patterns.json`, the
+call shapes this extractor parses); they never contribute values.
+Cookie names are read from this capture's `Set-Cookie` headers — name
+matching, not value matching, because the HAR sanitizer rewrites cookie
+values but not inline JS literals.
 
 #### Credential Param Classification
 
@@ -469,6 +523,11 @@ an action trigger.  This applies to both HTTP and HNAP actions.
 
 **Behaviour:**
 
+- Params whose value is a `{cookie:<name>}` directive are exempt from
+  classification — the directive instructs Core to echo a session
+  cookie at execution time; it is config, not a captured credential
+  value. Without this exemption the name heuristic would blank
+  `csrfp_token`-style params the call-site extractor just resolved.
 - Detected credential values are replaced with empty strings in the
   generated config.  The sanitized values are artifacts — they are
   neither the real credential nor a useful placeholder.
@@ -1069,7 +1128,6 @@ coordinator skips missing hooks.
 
 | Condition | Message |
 |-----------|---------|
-| `max_concurrent` unknown | "Cannot determine session concurrency limit from HAR. Defaulting to `max_concurrent: 0` (unlimited). Verify with modem documentation or contributor." |
 | No logout flow in HAR | "No logout endpoint observed in HAR. If this modem has single-session limits, a logout action will be needed." |
 | HMAC algorithm uncertain (HNAP) | "HNAP HMAC algorithm cannot be confirmed from HAR. Defaulting to `md5`. Verify with contributor." |
 | Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |
@@ -1088,8 +1146,6 @@ auth:
   password_field: "loginPassword"  # from HAR: form field name in POST body
   encoding: base64                 # from HAR: password value appears base64-encoded
 
-session:
-  max_concurrent: 0                # UNVERIFIED: cannot determine from HAR alone
 ```
 
 ---
@@ -1128,8 +1184,8 @@ detection, format detection, and field mapping extraction.
   },
   "session": {
     "cookie_name": "session",
-    "max_concurrent": null,
-    "max_concurrent_confidence": "unknown"
+    "headers": {},
+    "query_params": {}
   },
   "actions": { "logout": { "...": "..." }, "restart": null },
   "sections": {
@@ -1171,7 +1227,7 @@ detection, format detection, and field mapping extraction.
       ]
     }
   },
-  "warnings": ["max_concurrent cannot be determined from HAR"],
+  "warnings": [],
   "hard_stops": [],
   "core_gaps": [
     {
@@ -1629,8 +1685,8 @@ The `generate_config` tool validates before returning:
 - All required fields present
 - Transport constraint table satisfied (valid auth strategies, formats,
   action types for the declared transport)
-- Auth-session-action consistency rules (e.g., `max_concurrent: 1`
-  requires `actions.logout`)
+- Auth-session-action consistency rules (e.g., HNAP + explicit session
+  block is an error; `requires_session` only valid on `type: http`)
 - Field types and selector types are valid
 - Every `resource` in parser.yaml appears as a request URL in the HAR
 - Every `response_key` (HNAP) corresponds to an action response key
@@ -1706,14 +1762,12 @@ auth:
   success:
     redirect: "/home.asp"
 
-session:
-  max_concurrent: 0  # UNVERIFIED
-
 actions:
   logout:
     type: http
     method: GET
     endpoint: "/logout.asp"
+    requires_session: false
 
 hardware:
   docsis_version: "3.0"
@@ -1892,10 +1946,7 @@ downstream:
    a `channel_type` field. A DOCSIS 3.0 modem with a `channel_type`
    column (QAM/ATDMA only) correctly returns "3.0". Human should verify.
 
-3. **`max_concurrent` cannot be detected from HAR.** Only one session
-   exists during capture. Default to `0` and flag for verification.
-
-4. **HMAC algorithm detection is best-effort.** HNAP hash length
+3. **HMAC algorithm detection is best-effort.** HNAP hash length
    heuristic works for MD5 (32 hex) vs SHA256 (64 hex) but can't
    distinguish other algorithms. No other algorithms are currently
    known in the modem landscape.

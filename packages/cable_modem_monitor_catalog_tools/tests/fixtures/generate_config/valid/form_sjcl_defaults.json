@@ -31,7 +31,6 @@
     },
     "session": {
       "cookie_name": "PHPSESSID",
-      "max_concurrent": null,
       "headers": {"X-Requested-With": "XMLHttpRequest"}
     },
     "actions": {

@@ -1,0 +1,47 @@
+{
+  "_description": "Extracted from motorola/mb7621 modem.har: restart POST observed in traffic, and the preceding page embeds a form (unquoted attributes) whose action equals the observed endpoint — the page is the pre_fetch_url. Form action has no query token, so no endpoint_pattern.",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/MotoSecurity.asp",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": "<html><body>\n<form action=/goform/MotoSecurity method=POST name=\"MotoSecurity\">\n<input type=\"hidden\" name=\"MotoSecurityAction\" value=\"0\">\n</form>\n</body></html>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/goform/MotoSecurity",
+        "headers": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "text": "MotoSecurityAction=1"
+        }
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": ""
+        }
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/MotoSecurity",
+    "params": {
+      "MotoSecurityAction": "1"
+    },
+    "pre_fetch_url": "/MotoSecurity.asp",
+    "endpoint_pattern": "",
+    "source": "observed"
+  }
+}

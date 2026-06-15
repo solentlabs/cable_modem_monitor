@@ -16,7 +16,9 @@ Use case coverage (collector level):
 
 from __future__ import annotations
 
+import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from threading import Thread
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -31,11 +33,17 @@ from solentlabs.cable_modem_monitor_core.loaders.http import (
     LoginPageDetectedError,
     ResourceLoadError,
 )
+from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
+    CbnAction,
+    HttpAction,
+)
+from solentlabs.cable_modem_monitor_core.orchestration.auth_failure import (
+    _auth_failure_hint,
+    _should_detect_login_pages,
+)
 from solentlabs.cable_modem_monitor_core.orchestration.collector import (
     LoginLockoutError,
     ModemDataCollector,
-    _auth_failure_hint,
-    _should_detect_login_pages,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     CollectorSignal,
@@ -55,14 +63,17 @@ def _make_config(
     auth_type: str = "none",
     transport: str = "http",
     cookie_name: str = "",
-    max_concurrent: int = 0,
     logout_endpoint: str = "",
+    requires_session: bool = False,
+    logout_action: HttpAction | CbnAction | None = None,
     timeout: int = 10,
 ) -> Any:
     """Build a minimal ModemConfig-like object for testing.
 
     Uses MagicMock to simulate the Pydantic model without needing
     full validation. Only the fields the collector reads are set.
+    Pass ``logout_action`` to supply a pre-built action (overrides
+    ``logout_endpoint``/``requires_session``).
     """
     config = MagicMock()
     config.transport = transport
@@ -96,25 +107,22 @@ def _make_config(
     if hasattr(config.auth, "cookie_name") or isinstance(config.auth, MagicMock):
         config.auth.cookie_name = cookie_name
 
-    # Session (lifecycle only: max_concurrent, headers)
-    if max_concurrent or logout_endpoint:
-        config.session = MagicMock()
-        config.session.max_concurrent = max_concurrent
-        config.session.headers = {}
-    else:
-        config.session = None
+    # Session (lifecycle only: headers, query_params)
+    config.session = MagicMock()
+    config.session.headers = {}
+    config.session.query_params = {}
 
-    # Actions (logout)
-    if logout_endpoint:
-        from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
-            HttpAction,
-        )
-
+    # Actions — logout_action wins; fall back to building HttpAction from endpoint.
+    if logout_action is not None:
+        config.actions = MagicMock()
+        config.actions.logout = logout_action
+    elif logout_endpoint:
         config.actions = MagicMock()
         config.actions.logout = HttpAction(
             type="http",
             method="GET",
             endpoint=logout_endpoint,
+            requires_session=requires_session,
         )
     else:
         config.actions = None
@@ -537,6 +545,37 @@ class TestSuccessfulCollection:
         assert result.modem_data["downstream"] == []
 
 
+class TestPostProcessorResourcesFetch:
+    """parser.py resources declarations reach the HTTP loader's fetch list."""
+
+    def test_declared_resources_included_in_http_fetch(self) -> None:
+        """Paths declared on the PostProcessor are fetched."""
+        from solentlabs.cable_modem_monitor_core.models.parser_config import (
+            ParserConfig,
+        )
+
+        fixture = Path(__file__).parent.parent / "models" / "fixtures" / "parser_config" / "valid" / "table_single.json"
+        parser_config = ParserConfig.model_validate(json.loads(fixture.read_text()))
+
+        class PostProcessor:
+            resources = {"/extra.json": "json"}
+
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, parser_config, PostProcessor(), "http://localhost", "", "")
+
+        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.HTTPResourceLoader") as loader_cls:
+            loader = loader_cls.return_value
+            loader.fetch.return_value = {}
+            loader.decode_errors = []
+            loader.resource_fetches = []
+            collector._load_http_resources(MagicMock())
+
+        targets = loader.fetch.call_args[0][0]
+        paths = {t.path for t in targets}
+        assert "/extra.json" in paths
+        assert len(paths) == 2
+
+
 # ------------------------------------------------------------------
 # Tests — UC-19a stub-page detection (LOAD_INTEGRITY signal)
 # ------------------------------------------------------------------
@@ -630,12 +669,11 @@ class TestStubPageDetection:
 class TestLogout:
     """Logout execution for single-session modems (UC-06)."""
 
-    def test_logout_called_for_single_session(self) -> None:
+    def test_logout_called_when_configured(self) -> None:
         """Logout action fires after successful collection."""
         config = _make_config(
             auth_type="none",
             cookie_name="sid",
-            max_concurrent=1,
             logout_endpoint="/logout",
         )
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
@@ -664,45 +702,11 @@ class TestLogout:
         assert result.success is True
         mock_action.assert_called_once()
 
-    def test_no_logout_without_max_concurrent(self) -> None:
-        """Logout not called when max_concurrent != 1."""
-        config = _make_config(
-            auth_type="none",
-            cookie_name="sid",
-            max_concurrent=0,
-            logout_endpoint="/logout",
-        )
-        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
-        modem_data: dict[str, Any] = {"downstream": [], "upstream": [], "system_info": {}}
-
-        with (
-            patch.object(
-                collector,
-                "authenticate",
-                return_value=MagicMock(success=True),
-            ),
-            patch.object(
-                collector,
-                "_load_resources",
-                return_value=({}, []),
-            ),
-            patch.object(
-                collector,
-                "_parse",
-                return_value=(modem_data, ParseDiagnostics()),
-            ),
-            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action,
-        ):
-            collector.execute()
-
-        mock_action.assert_not_called()
-
     def test_logout_failure_does_not_affect_result(self) -> None:
         """Logout is best-effort — failure doesn't change success."""
         config = _make_config(
             auth_type="none",
             cookie_name="sid",
-            max_concurrent=1,
             logout_endpoint="/logout",
         )
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
@@ -743,7 +747,6 @@ class TestLogout:
         config = _make_config(
             auth_type="form",
             cookie_name="",
-            max_concurrent=1,
             logout_endpoint="/logout",
         )
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
@@ -774,42 +777,51 @@ class TestLogout:
 # ------------------------------------------------------------------
 
 
-class TestAttemptLogoutBeforeRetry:
-    """Collector-level tests for attempt_logout_before_retry()."""
+_HTTP_LOGOUT_DEFAULT = HttpAction(type="http", method="GET", endpoint="/logout")
+_HTTP_LOGOUT_REQUIRES_SESSION = HttpAction(type="http", method="GET", endpoint="/logout", requires_session=True)
+_CBN_LOGOUT = CbnAction(type="cbn", fun=16)
 
-    def test_calls_execute_action_for_single_session(self) -> None:
-        """Calls execute_action when max_concurrent=1 and logout is configured."""
-        config = _make_config(max_concurrent=1, logout_endpoint="/logout")
-        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
 
-        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
-            collector.attempt_logout_before_retry()
+@pytest.mark.parametrize(
+    "logout_action, set_cookie, expected_fires",
+    [
+        pytest.param(None, False, False, id="no_logout_action"),
+        pytest.param(_HTTP_LOGOUT_DEFAULT, False, True, id="http_default_no_cookies"),
+        pytest.param(_HTTP_LOGOUT_DEFAULT, True, True, id="http_default_has_cookies"),
+        pytest.param(_HTTP_LOGOUT_REQUIRES_SESSION, False, False, id="http_requires_session_guard_fires"),
+        pytest.param(_HTTP_LOGOUT_REQUIRES_SESSION, True, True, id="http_requires_session_has_cookies"),
+        # CBN embeds the session token by protocol — the isinstance guard never
+        # fires, so logout proceeds regardless of local cookie state.
+        pytest.param(_CBN_LOGOUT, False, True, id="cbn_no_cookies"),
+        pytest.param(_CBN_LOGOUT, True, True, id="cbn_has_cookies"),
+    ],
+)
+def test_attempt_logout_before_retry_matrix(
+    logout_action: HttpAction | CbnAction | None,
+    set_cookie: bool,
+    expected_fires: bool,
+) -> None:
+    """Table-driven guard matrix for attempt_logout_before_retry."""
+    config = _make_config(logout_action=logout_action)
+    collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+    if set_cookie:
+        collector._session.cookies.set("PHPSESSID", "abc123")
 
+    with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
+        collector.attempt_logout_before_retry()
+
+    if expected_fires:
         mock_action.assert_called_once()
-
-    def test_no_op_without_logout_action(self) -> None:
-        """Does nothing when no logout action is configured."""
-        config = _make_config(max_concurrent=1)
-        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
-
-        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
-            collector.attempt_logout_before_retry()
-
+    else:
         mock_action.assert_not_called()
 
-    def test_no_op_when_max_concurrent_not_one(self) -> None:
-        """Does nothing when max_concurrent != 1."""
-        config = _make_config(max_concurrent=0, logout_endpoint="/logout")
-        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
 
-        with patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action:
-            collector.attempt_logout_before_retry()
-
-        mock_action.assert_not_called()
+class TestAttemptLogoutBeforeRetry:
+    """Side-effect and error-handling tests for attempt_logout_before_retry."""
 
     def test_swallows_execute_action_exception(self) -> None:
         """Exceptions from execute_action are silently swallowed."""
-        config = _make_config(max_concurrent=1, logout_endpoint="/logout")
+        config = _make_config(logout_endpoint="/logout")
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
 
         with patch(
@@ -820,7 +832,7 @@ class TestAttemptLogoutBeforeRetry:
 
     def test_does_not_clear_session(self) -> None:
         """Does not call clear_session — that is the orchestrator's responsibility."""
-        config = _make_config(max_concurrent=1, logout_endpoint="/logout")
+        config = _make_config(logout_endpoint="/logout")
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
 
         with (
@@ -1133,3 +1145,69 @@ class TestResourceFetchesProperty:
         assert result.success is True
         assert len(collector.last_resource_fetches) == 1
         assert collector.last_resource_fetches[0].path == "/status.html"
+
+
+class TestSystemInfoFieldOutcomes:
+    """Collector exposure of field outcomes (PARSING_SPEC § Field Outcomes).
+
+    missing: snapshot of the most recent parse. failed: retained for
+    the runtime once recorded (stub-body retention rationale).
+    """
+
+    def _execute_with_diagnostics(self, collector: ModemDataCollector, diagnostics: ParseDiagnostics) -> None:
+        modem_data = {"downstream": [], "upstream": [], "system_info": {"model": "T100"}}
+        with (
+            patch.object(collector, "authenticate", return_value=MagicMock(success=True)),
+            patch.object(collector, "_load_resources", return_value=({"data": "ok"}, [])),
+            patch.object(collector, "_parse", return_value=(modem_data, diagnostics)),
+        ):
+            collector.execute()
+
+    def test_missing_is_last_parse_snapshot(self) -> None:
+        """missing reflects the most recent parse; a healed field clears."""
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+
+        self._execute_with_diagnostics(collector, ParseDiagnostics(system_info_fields_missing=["system_uptime"]))
+        assert collector.last_system_info_fields_missing == ["system_uptime"]
+
+        self._execute_with_diagnostics(collector, ParseDiagnostics())
+        assert collector.last_system_info_fields_missing == []
+
+    def test_failed_retained_across_polls(self) -> None:
+        """failed entries survive later healthy parses for the runtime."""
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+
+        self._execute_with_diagnostics(
+            collector,
+            ParseDiagnostics(system_info_fields_failed={"system_uptime": "01/17/2026 14:52:10"}),
+        )
+        self._execute_with_diagnostics(collector, ParseDiagnostics())
+
+        assert collector.system_info_fields_failed == {"system_uptime": "01/17/2026 14:52:10"}
+
+    def test_failed_property_returns_copy(self) -> None:
+        """A held failed dict must not change when later polls record more failures."""
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+
+        self._execute_with_diagnostics(
+            collector,
+            ParseDiagnostics(system_info_fields_failed={"system_uptime": "01/17/2026 14:52:10"}),
+        )
+        held = collector.system_info_fields_failed
+        self._execute_with_diagnostics(
+            collector,
+            ParseDiagnostics(system_info_fields_failed={"docsis_status": "garbage"}),
+        )
+
+        assert held == {"system_uptime": "01/17/2026 14:52:10"}
+
+    def test_outcomes_empty_before_any_poll(self) -> None:
+        """Fresh collector exposes empty outcome channels."""
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+
+        assert collector.last_system_info_fields_missing == []
+        assert collector.system_info_fields_failed == {}

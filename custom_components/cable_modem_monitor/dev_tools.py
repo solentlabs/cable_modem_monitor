@@ -27,6 +27,7 @@ from .const import (
     CONF_ENTITY_PREFIX,
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
+    CONSUMED_SYSTEM_INFO_FIELDS,
     DOMAIN,
     ChannelIdentity,
 )
@@ -249,51 +250,6 @@ def _format_channel_label(
     return f"{ch_type.upper()} Ch {ch_id}"
 
 
-def _build_hardware_diag_entities(
-    entity_prefix: str,
-    system_info: dict[str, Any],
-) -> list[str]:
-    """Build YAML entities for hardware diagnostics (CPU, memory).
-
-    Only some modems expose these fields. Returns empty list when absent.
-    """
-    lines: list[str] = []
-    if "cpu_speed" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_cpu_speed")
-        lines.append("        name: CPU Speed")
-    if "memory_total" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_memory_total")
-        lines.append("        name: Memory Total")
-    if "memory_free" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_memory_free")
-        lines.append("        name: Memory Free")
-    return lines
-
-
-def _build_provisioned_speed_entities(
-    entity_prefix: str,
-    system_info: dict[str, Any],
-) -> list[str]:
-    """Build YAML entities for provisioned speed/burst fields.
-
-    Only some modems expose these fields. Returns empty list when absent.
-    """
-    lines: list[str] = []
-    if "provisioned_speed_down" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_provisioned_speed_down")
-        lines.append("        name: Provisioned Speed Down")
-    if "provisioned_speed_up" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_provisioned_speed_up")
-        lines.append("        name: Provisioned Speed Up")
-    if "provisioned_burst_down" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_provisioned_burst_down")
-        lines.append("        name: Provisioned Burst Down")
-    if "provisioned_burst_up" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_provisioned_burst_up")
-        lines.append("        name: Provisioned Burst Up")
-    return lines
-
-
 def _build_status_card_yaml(
     entity_prefix: str,
     system_info: dict[str, Any],
@@ -344,9 +300,6 @@ def _build_status_card_yaml(
                 "        icon: mdi:speedometer",
             ]
         )
-    if "docsis_status" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_docsis_status")
-        lines.append("        name: Modem Status")
     if "software_version" in system_info:
         lines.append(f"      - entity: sensor.{entity_prefix}_software_version")
         lines.append("        name: Software Version")
@@ -378,8 +331,10 @@ def _build_status_card_yaml(
                 "        name: Total Uncorrected Errors",
             ]
         )
-    lines.extend(_build_provisioned_speed_entities(entity_prefix, system_info))
-    lines.extend(_build_hardware_diag_entities(entity_prefix, system_info))
+    for field in sorted(system_info):
+        if field not in CONSUMED_SYSTEM_INFO_FIELDS:
+            lines.append(f"      - entity: sensor.{entity_prefix}_{field}")
+            lines.append(f"        name: {field.replace('_', ' ').title()}")
     lines.append("    show_header_toggle: false")
     lines.append("    state_color: false")
     return lines

@@ -20,8 +20,6 @@
       "confidence": "high"
     },
     "session": {
-      "max_concurrent": 1,
-      "max_concurrent_confidence": "unknown",
       "headers": {},
       "cookie_name": "session"
     },
@@ -47,7 +45,7 @@
         "channel_count": 16
       }
     },
-    "warnings": ["max_concurrent cannot be determined from HAR"],
+    "warnings": [],
     "hard_stops": []
   },
   "_metadata": {

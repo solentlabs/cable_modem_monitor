@@ -1,0 +1,370 @@
+{
+  "_comment": "Intake pipeline regression baseline. Update with --update-baseline.",
+  "results": {
+    "arris/cm3500b:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "arris/cm820b:modem.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "arris/g54:modem.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "arris/s33:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "restart": "committed_only"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "arris/s33v2:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "restart": "committed_only"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "arris/s33v3:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "restart": "committed_only"
+      },
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "arris/s34:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "restart": "committed_only"
+      },
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "arris/sb6141:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "restart": "committed_only"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "arris/sb6183:modem.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "arris/sb6190:modem-form-nonce-b64.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "arris/sb6190:modem-form-nonce.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "arris/sb6190:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "restart": "pipeline_only"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "arris/sb8200-cbn:modem.har": {
+      "pipeline": "failure",
+      "actions": {
+        "logout": "committed_only",
+        "restart": "committed_only"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "arris/sb8200-hnap:modem.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "arris/sb8200:modem-basic.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only",
+        "restart": "pipeline_only"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "arris/sb8200:modem-cookie.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only",
+        "restart": "pipeline_only"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "arris/sb8200:modem-url-token-body.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "arris/sb8200:modem-url-token.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "arris/sb8200:modem.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "arris/tg3442de:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "committed_only"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "arris/tm1602a:modem.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "compal/ch7465mt:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "mismatch",
+        "restart": "mismatch"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "hitron/coda56:modem.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "motorola/mb7621:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "match",
+        "restart": "match"
+      },
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "motorola/mb8600:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "restart": "committed_only"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "netgear/c7000v2:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only",
+        "restart": "partial"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "netgear/cm1100:modem.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "netgear/cm1200:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only",
+        "restart": "pipeline_only"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "netgear/cm2000:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only",
+        "restart": "partial"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "netgear/cm2050v:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only"
+      },
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "netgear/cm3000:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only",
+        "restart": "pipeline_only"
+      },
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "sercomm/dm1000:modem.har": {
+      "pipeline": "failure",
+      "actions": {
+        "restart": "pipeline_only"
+      },
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "technicolor/cga2121:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "technicolor/tc4400:modem.har": {
+      "pipeline": "drift",
+      "actions": {},
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "technicolor/xb10:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "match",
+        "restart": "partial"
+      },
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "technicolor/xb6:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only"
+      },
+      "auth": {
+        "fields": "partial",
+        "strategy": "match"
+      }
+    },
+    "technicolor/xb7:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "logout": "pipeline_only"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    },
+    "virgin/superhub5:modem-restart.har": {
+      "pipeline": "failure",
+      "actions": {
+        "restart": "partial"
+      },
+      "auth": {
+        "strategy": "mismatch"
+      }
+    },
+    "virgin/superhub5:modem.har": {
+      "pipeline": "drift",
+      "actions": {
+        "restart": "committed_only"
+      },
+      "auth": {
+        "fields": "match",
+        "strategy": "match"
+      }
+    }
+  }
+}

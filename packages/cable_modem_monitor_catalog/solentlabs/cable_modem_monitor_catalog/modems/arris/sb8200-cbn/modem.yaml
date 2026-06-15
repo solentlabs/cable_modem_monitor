@@ -8,9 +8,6 @@ default_host: "192.168.100.1"
 auth:
   strategy: form_cbn
 
-session:
-  max_concurrent: 1
-
 actions:
   restart:
     type: cbn

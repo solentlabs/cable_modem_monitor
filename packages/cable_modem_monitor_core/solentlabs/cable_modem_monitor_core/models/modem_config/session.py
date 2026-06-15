@@ -18,7 +18,6 @@ class SessionConfig(BaseModel):
     """
 
     model_config = ConfigDict(extra="forbid")
-    max_concurrent: int = 0
     headers: dict[str, str] = Field(default_factory=dict)
     query_params: dict[str, str] = Field(default_factory=dict)
 

@@ -1468,6 +1468,18 @@ class TestDiagnostics:
         assert m1.auth_failure_streak == m2.auth_failure_streak
         assert m1.circuit_breaker_open == m2.circuit_breaker_open
 
+    def test_diagnostics_include_field_outcomes(self) -> None:
+        """The collector's field outcomes land on the diagnostics snapshot."""
+        collector = _mock_collector()
+        collector.last_system_info_fields_missing = ["system_uptime"]
+        collector.system_info_fields_failed = {"docsis_status": "garbage"}
+        orch = _make_orchestrator(collector=collector)
+
+        snapshot = orch.diagnostics()
+
+        assert snapshot.system_info_fields_missing == ["system_uptime"]
+        assert snapshot.system_info_fields_failed == {"docsis_status": "garbage"}
+
     def test_diagnostics_available_with_circuit_open(self) -> None:
         """Diagnostics work even when circuit breaker is open."""
         collector = _mock_collector(_fail_result(CollectorSignal.AUTH_FAILED))

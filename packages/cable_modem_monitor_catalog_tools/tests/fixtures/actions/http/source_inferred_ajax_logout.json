@@ -1,0 +1,26 @@
+{
+  "_description": "Extracted from arris/s33 modem.har: logout $.ajax call site in js/main.js. The data payload is the bare identifier `nonce`, so no params can be extracted; the type field still yields the POST method (the legacy quoted-string scan would have guessed GET).",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://192.168.100.1/js/main.js",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": "function logout() {\n\t$.ajax({ type:\"POST\", url:\"/cgi-bin/logout\", dataType:\"text\", data:nonce, async:false, cache:false });\n\tsetSessionStorage(\"ar_nonce\",\"\");\n\tcreateCookie(\"credential\", \"\", -1);\n}"
+        }
+      }
+    }
+  ],
+  "_expected_logout": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/cgi-bin/logout",
+    "source": "source_inferred"
+  },
+  "_expected_restart": null,
+  "_expected_warnings_contains": ["nonce"]
+}

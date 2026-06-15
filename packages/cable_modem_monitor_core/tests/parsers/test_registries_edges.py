@@ -157,7 +157,7 @@ class TestSysinfoTypeGuards:
         source = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.HTMLFieldsParser") as mock_cls:
             mock_cls.return_value.parse.return_value = ["not", "a", "dict"]
-            result, _ = _parse_html_fields_sysinfo(source, {})
+            result, _, _ = _parse_html_fields_sysinfo(source, {})
         assert result == {}
 
     def test_hnap_sysinfo_non_dict_returns_empty(self) -> None:
@@ -165,7 +165,7 @@ class TestSysinfoTypeGuards:
         source = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.HNAPFieldsParser") as mock_cls:
             mock_cls.return_value.parse.return_value = None
-            result, _ = _parse_hnap_sysinfo(source, {})
+            result, _, _ = _parse_hnap_sysinfo(source, {})
         assert result == {}
 
 
@@ -317,7 +317,7 @@ class TestSysinfoTypeGuardsExtra:
         source = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.JSVarsParser") as mock_cls:
             mock_cls.return_value.parse.return_value = ["list, not dict"]
-            result, _ = _parse_js_vars_sysinfo(source, {})
+            result, _, _ = _parse_js_vars_sysinfo(source, {})
         assert result == {}
 
     def test_xml_sysinfo_non_dict_returns_empty(self) -> None:
@@ -328,5 +328,5 @@ class TestSysinfoTypeGuardsExtra:
         source = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.XMLSystemInfoParser") as mock_cls:
             mock_cls.return_value.parse.return_value = None
-            result, _ = _parse_xml_sysinfo(source, {})
+            result, _, _ = _parse_xml_sysinfo(source, {})
         assert result == {}

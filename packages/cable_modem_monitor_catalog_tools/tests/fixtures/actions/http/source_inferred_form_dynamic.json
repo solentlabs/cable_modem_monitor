@@ -1,0 +1,28 @@
+{
+  "_description": "Extracted from netgear/cm2000 modem.har: RouterStatus.htm embeds a form whose action carries a per-session ?id= token. Detection emits the Core pre-fetch shape (bare endpoint + endpoint_pattern + pre_fetch_url); form input values are rewritten by page JS before submit (advButtonClick) so params are never extracted — the warning names the fields instead.",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/RouterStatus.htm",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": "<html><body>\n<form action=\"/goform/RouterStatus?id=896951128\" method=\"post\" onsubmit=\"return false;\">\n<button name=\"reboot\" id=\"reboot\" class=\"purple_button\" onClick=\"advButtonClick(2);\">Reboot</button>\n<input type=\"hidden\" value=\"1\" name=\"buttonSelect\"/>\n<input type=\"hidden\" name=\"wantype\" value=\"dhcp\">\n</form>\n</body></html>"
+        }
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/RouterStatus",
+    "endpoint_pattern": "RouterStatus",
+    "pre_fetch_url": "/RouterStatus.htm",
+    "source": "source_inferred"
+  },
+  "_expected_warnings_contains": ["buttonSelect"]
+}

@@ -13,6 +13,17 @@ ORCHESTRATION_USE_CASES.md § UC-19a.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
+
+# Cap for raw values captured on conversion failure. Field values are
+# small; the cap guards against pathological responses landing whole
+# in a diagnostics download.
+MAX_FAILED_FIELD_VALUE_LEN = 200
+
+
+def record_failed_field(failed: dict[str, str], field_name: str, raw_value: Any) -> None:
+    """Record a conversion-rejected raw value, truncated to the cap."""
+    failed[field_name] = str(raw_value)[:MAX_FAILED_FIELD_VALUE_LEN]
 
 
 @dataclass(frozen=True)
@@ -45,9 +56,18 @@ class ParseDiagnostics:
 
     Attributes:
         by_resource: Mapping of resource path to its aggregate AnchorCount.
+        system_info_fields_missing: Mapped system_info fields no configured
+            source produced — the modem did not send the source key.
+            Section-level, post-merge. See PARSING_SPEC § Field Outcomes.
+        system_info_fields_failed: Mapped system_info fields whose located
+            value was rejected by type conversion, mapped to the raw
+            value (truncated to MAX_FAILED_FIELD_VALUE_LEN). The raw
+            value is the repair datum for the catalog format string.
     """
 
     by_resource: dict[str, AnchorCount] = field(default_factory=dict)
+    system_info_fields_missing: list[str] = field(default_factory=list)
+    system_info_fields_failed: dict[str, str] = field(default_factory=dict)
 
     @property
     def has_zero_fulfillment(self) -> bool:

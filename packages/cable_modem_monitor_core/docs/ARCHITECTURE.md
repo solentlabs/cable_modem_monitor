@@ -1189,7 +1189,7 @@ values, not different behaviors. Every variation maps to a config field:
 | HMAC algorithm | `auth.hmac_algorithm` |
 | Session cookie name | `auth.cookie_name` |
 | Logout mechanism | `actions.logout` (shared action schema) |
-| Concurrency limit | `session.max_concurrent` |
+| Single-session semantics | `actions.logout` presence |
 | CSRF token | `auth.csrf_header` (strategy-specific; `form_pbkdf2` currently) |
 
 No auth hooks means:

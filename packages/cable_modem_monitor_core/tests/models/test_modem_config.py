@@ -187,15 +187,14 @@ class TestRelationships:
         assert config.health.supports_head is False
         assert config.health.supports_icmp is False
 
-    def test_form_session_and_logout(self):
-        """Form auth with max_concurrent requires and has logout."""
+    def test_form_logout_action(self):
+        """Form auth with logout action configured."""
         config = _load("auth_form.json")
-        assert config.session is not None
-        assert config.session.max_concurrent == 1
         assert config.actions is not None
         assert config.actions.logout is not None
         assert isinstance(config.actions.logout, HttpAction)
         assert config.actions.logout.endpoint == "/logout.asp"
+        assert config.actions.logout.requires_session is False
 
     def test_cbn_transport_with_actions(self):
         """CBN transport with cbn-typed actions."""

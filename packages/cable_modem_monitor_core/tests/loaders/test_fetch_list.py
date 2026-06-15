@@ -1,9 +1,17 @@
-"""Tests for fetch list derivation from parser.yaml."""
+"""Tests for fetch list derivation from parser.yaml and parser.py.
+
+TEST DATA TABLES
+================
+parser.py ``resources`` declaration cases are table-driven; tables are
+defined at the top of the file with ASCII box-drawing comments.
+"""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from solentlabs.cable_modem_monitor_core.loaders.fetch_list import (
@@ -14,6 +22,58 @@ from solentlabs.cable_modem_monitor_core.models.parser_config import ParserConfi
 
 FIXTURES_DIR = Path(__file__).parent.parent / "models" / "fixtures" / "parser_config" / "valid"
 LOCAL_FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+# =============================================================================
+# Test Data Tables
+# =============================================================================
+
+# ┌──────────────────────────────────┬───────────────────────────────────┬──────────────────────────────┐
+# │ declared resources               │ expected (path, format) set       │ description                  │
+# ├──────────────────────────────────┼───────────────────────────────────┼──────────────────────────────┤
+# │ two new paths                    │ yaml target + both declared       │ hooks declare new paths      │
+# │ yaml path, different format      │ yaml target only, yaml format     │ parser.yaml wins on overlap  │
+# │ _ABSENT (no attribute)           │ yaml target only                  │ attribute is optional        │
+# │ None post_processor              │ yaml target only                  │ no parser.py at all          │
+# │ {}                               │ yaml target only                  │ empty declaration is a no-op │
+# └──────────────────────────────────┴───────────────────────────────────┴──────────────────────────────┘
+#
+# The yaml fixture (table_single.json) maps /status.html with format "table".
+_ABSENT = object()  # sentinel: PostProcessor defines no resources attribute
+#
+# fmt: off
+POST_PROCESSOR_RESOURCES_CASES = [
+    # (declared,                 expected_targets,            description)
+    ({"/extra.json": "json", "/extra.html": "table"},
+     {("/status.html", "table"), ("/extra.json", "json"), ("/extra.html", "table")},
+     "hooks declare new paths"),
+    ({"/status.html": "json"},   {("/status.html", "table")}, "parser.yaml wins on overlap"),
+    (_ABSENT,                    {("/status.html", "table")}, "attribute is optional"),
+    (None,                       {("/status.html", "table")}, "no parser.py at all"),
+    ({},                         {("/status.html", "table")}, "empty declaration is a no-op"),
+]
+
+INVALID_RESOURCES_CASES = [
+    # (declared,               description)
+    (["/extra.json"],          "list instead of dict"),
+    ({"/extra.json": 42},      "non-string format value"),
+    ({3: "json"},              "non-string path key"),
+]
+# fmt: on
+
+
+def _make_post_processor(declared: Any) -> Any:
+    """Build a duck-typed PostProcessor for a table case."""
+    if declared is None:
+        return None
+    if declared is _ABSENT:
+        return object()
+    return SimpleNamespace(resources=declared)
+
+
+def _table_single_config() -> ParserConfig:
+    """Load the shared single-table parser config fixture."""
+    data = json.loads((FIXTURES_DIR / "table_single.json").read_text())
+    return ParserConfig.model_validate(data)
 
 
 class TestCollectFetchTargets:
@@ -134,3 +194,27 @@ class TestCollectFetchTargets:
         target = ResourceTarget(path="/test.html", format="table")
         with pytest.raises(AttributeError):
             target.path = "/other.html"  # type: ignore[misc]
+
+
+class TestPostProcessorResources:
+    """parser.py resources declarations merged into the fetch list."""
+
+    @pytest.mark.parametrize(
+        "declared,expected_targets,desc",
+        POST_PROCESSOR_RESOURCES_CASES,
+        ids=[c[2] for c in POST_PROCESSOR_RESOURCES_CASES],
+    )
+    def test_declared_resources(self, declared: Any, expected_targets: set[tuple[str, str]], desc: str) -> None:
+        """Declared paths are fetched; parser.yaml wins on overlap."""
+        targets = collect_fetch_targets(_table_single_config(), _make_post_processor(declared))
+        assert {(t.path, t.format) for t in targets} == expected_targets, f"Failed: {desc}"
+
+    @pytest.mark.parametrize(
+        "declared,desc",
+        INVALID_RESOURCES_CASES,
+        ids=[c[1] for c in INVALID_RESOURCES_CASES],
+    )
+    def test_invalid_declaration_fails_fast(self, declared: Any, desc: str) -> None:
+        """A wrongly shaped resources declaration raises at startup."""
+        with pytest.raises(TypeError, match="resources"):
+            collect_fetch_targets(_table_single_config(), _make_post_processor(declared))

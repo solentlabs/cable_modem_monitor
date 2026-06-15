@@ -29,7 +29,7 @@ downstream:
           unit: dB
         - index: 5
           field: modulation
-          type: string
+          type: modulation
         - index: 7
           field: corrected
           type: integer
@@ -102,7 +102,7 @@ upstream:
           unit: "kSym/s"
         - index: 6
           field: modulation
-          type: string
+          type: modulation
       channel_type:
         fixed: atdma
       # Upstream OFDMA: firmware quirk — 9 data cells vs 7 header cells.

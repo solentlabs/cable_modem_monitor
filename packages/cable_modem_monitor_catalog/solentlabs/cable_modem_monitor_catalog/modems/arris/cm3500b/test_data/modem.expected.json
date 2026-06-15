@@ -6,7 +6,7 @@
       "channel_type": "qam",
       "corrected": 9,
       "frequency": 570000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -11.2,
       "snr": 36.61,
       "uncorrected": 0
@@ -17,7 +17,7 @@
       "channel_type": "qam",
       "corrected": 10,
       "frequency": 578000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -10.8,
       "snr": 37.64,
       "uncorrected": 0
@@ -28,7 +28,7 @@
       "channel_type": "qam",
       "corrected": 31,
       "frequency": 586000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -11.5,
       "snr": 36.61,
       "uncorrected": 0
@@ -39,7 +39,7 @@
       "channel_type": "qam",
       "corrected": 251,
       "frequency": 594000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -12.3,
       "snr": 35.78,
       "uncorrected": 0
@@ -50,7 +50,7 @@
       "channel_type": "qam",
       "corrected": 116,
       "frequency": 602000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -12.3,
       "snr": 36.39,
       "uncorrected": 0
@@ -61,7 +61,7 @@
       "channel_type": "qam",
       "corrected": 55,
       "frequency": 618000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -11.8,
       "snr": 36.61,
       "uncorrected": 0
@@ -72,7 +72,7 @@
       "channel_type": "qam",
       "corrected": 172,
       "frequency": 626000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -11.7,
       "snr": 35.78,
       "uncorrected": 0
@@ -83,7 +83,7 @@
       "channel_type": "qam",
       "corrected": 48,
       "frequency": 634000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -11.6,
       "snr": 36.39,
       "uncorrected": 0
@@ -94,7 +94,7 @@
       "channel_type": "qam",
       "corrected": 104,
       "frequency": 642000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -12.1,
       "snr": 36.39,
       "uncorrected": 0
@@ -105,7 +105,7 @@
       "channel_type": "qam",
       "corrected": 530,
       "frequency": 650000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -11.9,
       "snr": 35.6,
       "uncorrected": 0
@@ -116,7 +116,7 @@
       "channel_type": "qam",
       "corrected": 484,
       "frequency": 658000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -12.9,
       "snr": 35.78,
       "uncorrected": 0
@@ -127,7 +127,7 @@
       "channel_type": "qam",
       "corrected": 1340,
       "frequency": 666000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -13.6,
       "snr": 35.08,
       "uncorrected": 0
@@ -138,7 +138,7 @@
       "channel_type": "qam",
       "corrected": 2473,
       "frequency": 674000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -13.8,
       "snr": 35.08,
       "uncorrected": 0
@@ -149,7 +149,7 @@
       "channel_type": "qam",
       "corrected": 2997,
       "frequency": 682000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -13.6,
       "snr": 35.08,
       "uncorrected": 0
@@ -160,7 +160,7 @@
       "channel_type": "qam",
       "corrected": 2390,
       "frequency": 690000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -13.6,
       "snr": 35.08,
       "uncorrected": 0
@@ -171,7 +171,7 @@
       "channel_type": "qam",
       "corrected": 20098,
       "frequency": 114000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.4,
       "snr": 40.37,
       "uncorrected": 0
@@ -182,7 +182,7 @@
       "channel_type": "qam",
       "corrected": 31798,
       "frequency": 130000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -1.0,
       "snr": 40.95,
       "uncorrected": 0
@@ -193,7 +193,7 @@
       "channel_type": "qam",
       "corrected": 490,
       "frequency": 698000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -12.8,
       "snr": 35.6,
       "uncorrected": 0
@@ -204,7 +204,7 @@
       "channel_type": "qam",
       "corrected": 314,
       "frequency": 706000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -12.2,
       "snr": 35.78,
       "uncorrected": 0
@@ -215,7 +215,7 @@
       "channel_type": "qam",
       "corrected": 182,
       "frequency": 714000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -11.9,
       "snr": 36.39,
       "uncorrected": 0
@@ -226,7 +226,7 @@
       "channel_type": "qam",
       "corrected": 120,
       "frequency": 722000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -11.9,
       "snr": 36.61,
       "uncorrected": 0
@@ -237,7 +237,7 @@
       "channel_type": "qam",
       "corrected": 787,
       "frequency": 730000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -12.6,
       "snr": 35.78,
       "uncorrected": 0
@@ -248,7 +248,7 @@
       "channel_type": "qam",
       "corrected": 1067,
       "frequency": 738000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -12.8,
       "snr": 35.6,
       "uncorrected": 0
@@ -259,7 +259,7 @@
       "channel_type": "qam",
       "corrected": 555,
       "frequency": 746000000,
-      "modulation": "256QAM",
+      "modulation": "QAM256",
       "power": -12.1,
       "snr": 35.78,
       "uncorrected": 0
@@ -304,7 +304,7 @@
       "channel_number": 1,
       "channel_type": "atdma",
       "frequency": 37200000,
-      "modulation": "16QAM",
+      "modulation": "QAM16",
       "power": 45.25,
       "symbol_rate": 5120
     },
@@ -313,7 +313,7 @@
       "channel_number": 2,
       "channel_type": "atdma",
       "frequency": 51000000,
-      "modulation": "64QAM",
+      "modulation": "QAM64",
       "power": 43.75,
       "symbol_rate": 5120
     },
@@ -322,7 +322,7 @@
       "channel_number": 3,
       "channel_type": "atdma",
       "frequency": 44600000,
-      "modulation": "64QAM",
+      "modulation": "QAM64",
       "power": 44.0,
       "symbol_rate": 5120
     },
@@ -331,7 +331,7 @@
       "channel_number": 4,
       "channel_type": "atdma",
       "frequency": 30800000,
-      "modulation": "64QAM",
+      "modulation": "QAM64",
       "power": 46.0,
       "symbol_rate": 5120
     },

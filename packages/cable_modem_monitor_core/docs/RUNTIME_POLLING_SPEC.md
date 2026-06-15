@@ -327,9 +327,8 @@ counter — generic across modems, self-tuning, and restart-resetting.
 The streak is signal-agnostic: it counts any same-poll `LOAD_AUTH`
 recovery, including reboot-induced stale sessions. False positives
 are benign — forced fresh login is harmless. Note that this is
-orthogonal to `session.max_concurrent`, which controls *session
-lifecycle* (logout-after-poll for single-session modems), not *reuse
-strategy*.
+orthogonal to `actions.logout`, which controls *session lifecycle*
+(logout-after-poll for single-session modems), not *reuse strategy*.
 
 **Login backoff** — after a `LoginLockoutError` (firmware anti-brute-force
 triggered), the orchestrator suppresses login for 3 polls. This gives the
@@ -347,9 +346,8 @@ polling stops entirely. The client (HA) triggers a reauth flow — the
 user must reconfigure credentials to resume. See `ORCHESTRATION_SPEC.md`
 § Auth Circuit Breaker for the full use-case walkthrough.
 
-**Single-session logout** — modems with `max_concurrent: 1` allow only
-one authenticated session. When `actions.logout` is declared, logout
-fires in two places:
+**Single-session logout** — modems with `actions.logout` configured
+allow only one authenticated session. Logout fires in two places:
 
 1. **After each successful poll** — frees the session so users can
    access the modem's web UI between polls.
@@ -540,6 +538,16 @@ captures structured diagnostic data for the user to share in a bug report:
   expected vs. what it found, number of channels extracted (if partial)
 - **Modem identity:** manufacturer, model, variant, firmware version
   (if known from system_info)
+
+Expected-vs-found capture is not gated on poll failure. A successful
+poll can still under-deliver fields parser.yaml maps — a firmware
+variant that omits a field, or a value in an unhandled format. These
+surface as system_info field outcomes (`PARSING_SPEC § Field
+Outcomes`) in the same diagnostics download: missing fields as a
+list, conversion failures with the raw value that needs a catalog
+fix. Background: #98, where a silently absent uptime field was
+indistinguishable from a malformed one without a contributor
+round-trip.
 
 This data is exposed via HA's integration diagnostics download (JSON).
 The user downloads the file and attaches it to a GitHub issue — no

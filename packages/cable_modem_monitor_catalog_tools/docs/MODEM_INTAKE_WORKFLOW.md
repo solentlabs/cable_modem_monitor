@@ -130,8 +130,39 @@ Report what was detected:
 
 - Transport: `{analysis["transport"]}`
 - Auth: `{analysis["auth"]["strategy"]}` (confidence: `{analysis["auth"]["confidence"]}`)
-- Actions: logout={yes/no}, restart={yes/no}
+- Actions: logout={observed/source_inferred/none}, restart={observed/source_inferred/none}
+  - `observed` — request appeared in HAR traffic (highest confidence)
+  - `source_inferred` — endpoint referenced in captured page source or matches a
+    working family-member modem in the catalog (add to config; flag for contributor
+    confirmation that the endpoint works and, separately, whether a Cookie header
+    appears in the logout request — `requires_session: true/false` is behavioral
+    and cannot be inferred from the HAR alone)
+  - `none` — not found by either method; request from the contributor before adding config
 - Sections: list formats and channel counts
+
+For source_inferred actions found at a `$.ajax({...})` call site, the
+method and data params are extracted from the call site itself (see
+ONBOARDING_SPEC § Source-Inferred Call-Site Extraction). Params that
+resolve — `{cookie:<name>}` directives and string literals — need no
+manual work. A warning naming an unresolved param (a value computed in
+page script) marks the one remaining judgment step: read the quoted
+expression in the page source and resolve the value by hand. Never
+invent a value the page source doesn't support; if it can't be traced,
+leave the param out and ask the contributor.
+
+Two rules govern this layer:
+
+- **Patterns come from confirmed modems only.** New URL regexes in
+  `action_patterns.json` and new call-shape support in the extractor
+  are authored from hardware-confirmed modems. Unconfirmed intakes
+  consume patterns; they never contribute them.
+- **Every extraction rule must fire on at least one committed fleet
+  HAR.** A proposed rule with zero fleet matches is dead weight built
+  for a hypothesis — reject it. `make intake-regression` grades
+  detected actions against committed modem.yaml files and ratchets
+  them against the fleet baseline (see INTAKE_PIPELINE.md § Intake
+  Pipeline Regression) — an extractor change must improve grades or
+  leave them unchanged.
 
 If `auth.confidence` is not `high`, or `warnings` is non-empty for the auth
 entry, verify the detected strategy against the HAR before proceeding. Pull
@@ -247,6 +278,17 @@ If tests fail, diagnose from the structured diff:
 - **Golden mismatch**: compare field-by-field diff
 
 Fix the config, re-run. Loop until green.
+
+Then refresh the fleet baseline so the new modem's grades are recorded
+(without this, `make intake-regression` flags the new entry as NEW and
+fails):
+
+```bash
+python3 packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py \
+  --update-baseline packages/cable_modem_monitor_catalog_tools/scripts/intake_baseline.json
+```
+
+Stage `scripts/intake_baseline.json` alongside the catalog files.
 
 ## Step 10: Regenerate Catalog README
 
@@ -476,8 +518,12 @@ are no errors in `modem_data`.
 
 ## Key Rules
 
-1. **HAR is the authority.** Every config decision traces to wire evidence.
-   If the HAR doesn't show it, don't guess.
+1. **HAR is the authority.** Two tiers of wire evidence are valid:
+   - **Observed** — the request appears in HAR traffic. Use directly, full confidence.
+   - **Source-inferred** — the endpoint is referenced in captured page source AND/OR
+     confirmed by a working family-member modem in the catalog. Add to config and note
+     as inferred; the pipeline marks these automatically via `source: source_inferred`.
+   If neither condition is met, request the information from the contributor. Do not guess.
 2. **Known patterns are automated.** If the pipeline can classify
    everything, config generation is deterministic. No LLM reasoning
    needed for the common case.
@@ -498,3 +544,17 @@ are no errors in `modem_data`.
    missing XHR due to Playwright `networkidle` bug), extract data from
    screenshots, embedded HTML/JS, and user confirmations before building
    the fixture. Note provenance in `modem.yaml` sources.
+9. **Logout is an operational requirement — confirm it works.** Logout prevents
+   stale server-side sessions from blocking re-authentication. For every modem
+   with `actions.logout` configured, ask the contributor to confirm the endpoint
+   responds (any 2xx or redirect) after a successful login. If the logout
+   request appeared in the HAR with a Cookie header, set `requires_session: true`;
+   if no Cookie header was present, set `requires_session: false` (the default).
+10. **Fixture values trace to observed artifacts.** Every value written into a
+    golden file or verified.json must come from a real artifact — the
+    contributor's diagnostics, a HAR, page source, or a posted screenshot. Never
+    invent a value to fill a gap or make a fixture look complete (no plausible
+    channel reading, no placeholder uptime, no "typical" SNR). A missing field
+    stays null, or the entry isn't confirmed yet (see Diagnostics partial wins).
+    A fixture that looks correct but holds a hand-filled value is wrong even when
+    the value happens to be right — the next contributor's real data won't match.

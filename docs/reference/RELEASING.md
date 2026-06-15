@@ -341,7 +341,7 @@ git push origin hotfix/3.14.1
 
 - [ ] All tests passing (`pytest tests/ -v`)
 - [ ] Code quality checks passing (`ruff check`, `black --check`, `mypy`)
-- [ ] CHANGELOG.md updated with all changes
+- [ ] CHANGELOG.md `[Unreleased]` reconciled against `git log <last-tag>..HEAD --oneline` — every user-facing commit has an entry (`release.py` promotes `[Unreleased]` verbatim; it does not generate entries)
 - [ ] Version numbers consistent (manifest.json, const.py)
 - [ ] PR reviewed and merged to main
 - [ ] Tag created on main (not feature branch)

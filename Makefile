@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression pii-check catalog-readme-check suppression-check ha-compat-check install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
+.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression pii-check spell-check catalog-readme-check suppression-check ha-compat-check install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
 
 # Pin tool invocations to the project venv so that subprocesses
 # without venv on PATH (release.py shelling out, fresh clones, CI
@@ -30,6 +30,7 @@ help:
 	@echo "  make quick-check  - Quick checks (lint + format, skip type-check)"
 	@echo "  make validate-host - Cross-platform validation (auto-installs tools)"
 	@echo "  make validate-ci   - Full CI-like validation (lint + tests + ha-compat)"
+	@echo "  make spell-check   - Spell check catalog modem YAML files (requires Node.js)"
 	@echo "  make install-hooks - Install optional pre-push hook (runs validate-ci)"
 	@echo ""
 	@echo "Docker Development:"
@@ -118,20 +119,31 @@ validate:
 # hacs/action@main, which runs in a GitHub-hosted Docker context with
 # external network checks against home-assistant/brands and HACS APIs;
 # not reasonably reproducible locally — same exception class as hassfest).
-validate-ci: check test intake-regression pii-check catalog-readme-check suppression-check ha-compat-check
+validate-ci: check test intake-regression pii-check spell-check catalog-readme-check suppression-check ha-compat-check
 	@echo "✅ Full CI validation passed!"
 	@echo "🔍 Checking declared dependencies for available updates..."
 	@$(VENV_BIN)/python scripts/check_owned_deps.py
 
 # Intake pipeline accuracy regression — mirrors CI test-packages step.
+# Gated by the committed fleet baseline: fails when a modem's pipeline
+# status or action grade gets worse. After a deliberate improvement,
+# refresh with --update-baseline and commit the file.
 intake-regression:
 	@echo "🔍 Running intake pipeline regression..."
-	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py
+	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --baseline packages/cable_modem_monitor_catalog_tools/scripts/intake_baseline.json
 
 # Fixture PII / credential scan — mirrors CI pii-check job.
 pii-check:
 	@echo "🔍 Scanning fixtures for PII..."
 	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py
+
+# Spell check for catalog modem files — mirrors CI spell-check job. Requires Node.js (npx).
+# Scoped to catalog modem YAML; broader codebase (Python, docs) not yet audited.
+spell-check:
+	@echo "🔤 Running spell check on catalog modem files..."
+	@npx --yes cspell@10 --config cspell.config.yaml \
+		"packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/**/*.yaml" \
+		--no-progress
 
 # Suppression-discipline scan — mirrors CI suppression-check job.
 # Scans every commit on this branch since origin/main for unjustified

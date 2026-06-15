@@ -1,7 +1,9 @@
-"""Fetch list derivation from parser.yaml config.
+"""Fetch list derivation from parser.yaml config and parser.py.
 
 Collects unique resource paths and their formats from parser.yaml
-sections. The fetch list drives what the HTTP resource loader requests.
+sections, merged with the paths a parser.py PostProcessor declares
+via its ``resources`` attribute. The fetch list drives what the HTTP
+resource loader requests.
 
 See RESOURCE_LOADING_SPEC.md Fetch List Derivation section.
 """
@@ -33,18 +35,27 @@ class ResourceTarget:
     encoding: str = ""
 
 
-def collect_fetch_targets(config: ParserConfig) -> list[ResourceTarget]:
-    """Collect unique fetch targets from parser.yaml.
+def collect_fetch_targets(
+    config: ParserConfig,
+    post_processor: object | None = None,
+) -> list[ResourceTarget]:
+    """Collect unique fetch targets from parser.yaml and parser.py.
 
     Walks all sections (downstream, upstream, system_info) and
     extracts ``(path, format, encoding)`` tuples. Deduplicates by
-    path — the first format seen for a path wins.
+    path — the first format seen for a path wins, so parser.yaml
+    declarations win when parser.py declares the same path.
 
     HNAP sections are skipped (HNAP uses batched SOAP, not per-page
     fetches).
 
     Args:
         config: Validated ``ParserConfig`` instance.
+        post_processor: Optional parser.py ``PostProcessor`` instance.
+            Duck-typed: a ``resources`` dict (URL path → format)
+            declares the resources its hooks read, merged into the
+            fetch list. See PARSING_SPEC § parser.py — Post-Processing
+            Hooks.
 
     Returns:
         List of unique ``ResourceTarget`` objects to fetch.
@@ -61,7 +72,28 @@ def collect_fetch_targets(config: ParserConfig) -> list[ResourceTarget]:
         for source in config.system_info.sources:
             _add_section_target(source, seen_paths)
 
+    _add_post_processor_resources(post_processor, seen_paths)
+
     return list(seen_paths.values())
+
+
+def _add_post_processor_resources(
+    post_processor: object | None,
+    seen_paths: dict[str, ResourceTarget],
+) -> None:
+    """Merge parser.py ``resources`` declarations into the fetch list."""
+    # A wrongly declared attribute fails fast at startup — silently
+    # skipping it would surface later as hooks reading absent resources.
+    declared = getattr(post_processor, "resources", None)
+    if declared is None:
+        return
+    if not isinstance(declared, dict) or not all(
+        isinstance(path, str) and isinstance(fmt, str) for path, fmt in declared.items()
+    ):
+        raise TypeError("parser.py resources must be a dict of URL path -> format (str -> str)")
+    for path, fmt in declared.items():
+        if path not in seen_paths:
+            seen_paths[path] = ResourceTarget(path=path, format=fmt)
 
 
 def _add_section_target(

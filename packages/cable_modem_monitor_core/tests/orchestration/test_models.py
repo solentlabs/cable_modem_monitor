@@ -300,6 +300,8 @@ class TestOrchestratorDiagnostics:
             "resource_fetches": [],
             "last_poll_at": None,
             "last_stub_body": {},
+            "system_info_fields_missing": [],
+            "system_info_fields_failed": {},
         }
 
     def test_to_dict_with_fetches(self) -> None:

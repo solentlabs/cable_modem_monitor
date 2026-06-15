@@ -13,7 +13,6 @@ import contextlib
 import logging
 import time
 from typing import Any, Final
-from urllib.parse import urlparse, urlunparse
 
 import requests
 
@@ -27,12 +26,18 @@ from ..loaders.http import (
     LoginPageDetectedError,
     ResourceLoadError,
 )
-from ..models.modem_config.auth import BasicAuth, NoneAuth
+from ..models.modem_config.actions import HttpAction
+from ..models.modem_config.auth import NoneAuth
 from ..parsers.coordinator import ModemParserCoordinator
 from ..parsers.diagnostics import ParseDiagnostics
 from .actions import execute_action
+from .auth_failure import (
+    _auth_failure_hint,
+    _build_auth_failed_event,
+    _should_detect_login_pages,
+    _strategy_name,
+)
 from .events import (
-    AuthFailed,
     AuthSucceeded,
     CollectionComplete,
     ConnectionFailedDuringLoad,
@@ -58,10 +63,6 @@ from .signals import CollectorSignal
 _logger = logging.getLogger(__name__)
 _LOGOUT_LOG_LEVEL: Final[int] = logging.DEBUG
 _DEFAULT_AUTH_LOG_LEVEL: Final[int] = logging.DEBUG
-
-# Maximum response body characters stored in auth-failure logs (log-line budget).
-_FAILURE_BODY_SNIPPET_MAX: Final[int] = 500
-_REDACTED: Final[str] = "[REDACTED]"
 
 
 class LoginLockoutError(Exception):
@@ -110,6 +111,10 @@ class ModemDataCollector:
         if parser_config is not None:
             self._coordinator = ModemParserCoordinator(parser_config, post_processor)
 
+        # Kept for fetch-list derivation — parser.py declares the
+        # resources its hooks read via `resources` (PARSING_SPEC).
+        self._post_processor = post_processor
+
         # Login page detection — enable for form-based auth strategies
         self._detect_login_pages = _should_detect_login_pages(modem_config)
 
@@ -118,6 +123,13 @@ class ModemDataCollector:
 
         # Stub body from last LOAD_INTEGRITY failure — kept until next event
         self._last_stub_bodies: dict[str, str] = {}
+
+        # system_info field outcomes (PARSING_SPEC § Field Outcomes).
+        # missing: snapshot of the most recent parse. failed: retained
+        # for the runtime so an intermittent conversion failure survives
+        # into a diagnostics download taken after a healthy poll.
+        self._last_sysinfo_missing: list[str] = []
+        self._sysinfo_failed: dict[str, str] = {}
 
     def execute(self) -> ModemResult:
         """Execute one data collection."""
@@ -308,6 +320,19 @@ class ModemDataCollector:
         return self._last_stub_bodies
 
     @property
+    def last_system_info_fields_missing(self) -> list[str]:
+        """Mapped system_info fields no source produced on the most recent parse."""
+        return self._last_sysinfo_missing
+
+    @property
+    def system_info_fields_failed(self) -> dict[str, str]:
+        """Conversion-rejected raw values, retained for the runtime."""
+        # Copy: unlike the sibling properties (reassigned per event),
+        # this dict is mutated in place via update() across polls — a
+        # handed-out reference would change under its consumer.
+        return dict(self._sysinfo_failed)
+
+    @property
     def session(self) -> requests.Session:
         """The underlying ``requests.Session`` used for auth and loading."""
         return self._session
@@ -397,7 +422,7 @@ class ModemDataCollector:
         auth_result: AuthResult,
     ) -> tuple[dict[str, Any], list[ResourceFetch]]:
         """Fetch HTTP resources."""
-        targets = collect_fetch_targets(self._parser_config)
+        targets = collect_fetch_targets(self._parser_config, self._post_processor)
 
         # Prefer body-derived token from auth_context; fall back to cookie
         url_token = ""
@@ -474,7 +499,7 @@ class ModemDataCollector:
         from ..loaders.cbn import CBNLoader
         from ..models.modem_config.auth import FormCbnAuth
 
-        targets = collect_fetch_targets(self._parser_config)
+        targets = collect_fetch_targets(self._parser_config, self._post_processor)
 
         auth = self._modem_config.auth
         assert isinstance(auth, FormCbnAuth)
@@ -560,6 +585,10 @@ class ModemDataCollector:
             )
         if diagnostics.has_zero_fulfillment:
             return self._build_load_integrity_result(diagnostics, resources)
+        # Field outcomes are diagnostics-only — recorded, never a signal.
+        # PARSING_SPEC § Field Outcomes.
+        self._last_sysinfo_missing = list(diagnostics.system_info_fields_missing)
+        self._sysinfo_failed.update(diagnostics.system_info_fields_failed)
         return data
 
     def _build_load_integrity_result(self, diagnostics: ParseDiagnostics, resources: dict[str, Any]) -> ModemResult:
@@ -593,9 +622,6 @@ class ModemDataCollector:
         if actions is None or actions.logout is None:
             return
 
-        if self._modem_config.session is None or self._modem_config.session.max_concurrent != 1:
-            return
-
         try:
             execute_action(self, self._modem_config, actions.logout, log_level=_LOGOUT_LOG_LEVEL)
         except Exception as exc:
@@ -612,38 +638,14 @@ class ModemDataCollector:
         actions = self._modem_config.actions
         if actions is None or actions.logout is None:
             return
-        if self._modem_config.session is None or self._modem_config.session.max_concurrent != 1:
+        # requires_session=True means the endpoint needs a valid session cookie to
+        # function. Skip the call when we have no cookies — it would fail anyway,
+        # and the retry proceeds regardless. Unauthenticated endpoints (False, the
+        # default) can clear any active server-side session without credentials.
+        if isinstance(actions.logout, HttpAction) and actions.logout.requires_session and not self._session.cookies:
             return
-        # This method does not inspect or clear session cookies — that is
-        # clear_session()'s job. The firmware's logout endpoint does not
-        # require credentials (the browser erases the cookie before calling
-        # it), so the request succeeds whether or not the session has cookies.
-        # Failure is silently suppressed; the retry proceeds regardless.
         with contextlib.suppress(Exception):
             execute_action(self, self._modem_config, actions.logout, log_level=_LOGOUT_LOG_LEVEL)
-
-
-def _auth_failure_hint(modem_config: Any) -> str:
-    """Return a context-appropriate hint for a 401/403 during resource loading."""
-    if modem_config.auth is None or isinstance(modem_config.auth, NoneAuth):
-        return "modem requires authentication (check config)"
-    if isinstance(modem_config.auth, BasicAuth):
-        return "credentials rejected"
-    return "session expired"
-
-
-def _should_detect_login_pages(modem_config: Any) -> bool:
-    """Determine if login page detection should be enabled.
-
-    Only applicable to form-based HTTP auth strategies where the
-    modem may silently serve a login page at data URLs when the
-    session expires. Not applicable to none, basic, or hnap.
-    """
-    if modem_config.auth is None:
-        return False
-    if isinstance(modem_config.auth, NoneAuth | BasicAuth):
-        return False
-    return bool(modem_config.transport != "hnap")
 
 
 def _to_resource_fetches(
@@ -660,88 +662,3 @@ def _to_resource_fetches(
         )
         for r in raw
     ]
-
-
-# ---------------------------------------------------------------------------
-# Auth-failure event builder
-# ---------------------------------------------------------------------------
-
-
-def _build_auth_failed_event(
-    model: str,
-    strategy: str,
-    response: requests.Response | None,
-    error: str,
-    password: str,
-) -> AuthFailed:
-    """Build a sanitized AuthFailed event from raw auth result data."""
-    if response is None:
-        return AuthFailed(
-            model=model,
-            strategy=strategy,
-            error=error,
-            method=None,
-            url=None,
-            status_code=None,
-            content_type=None,
-            response_body=None,
-        )
-
-    method = response.request.method if response.request else "?"
-    url = _strip_url_query(response.url)
-    status = response.status_code
-    content_type = response.headers.get("Content-Type", "")
-    body_snippet = _scrub_password(response.text[:_FAILURE_BODY_SNIPPET_MAX], password)
-    if len(response.text) > _FAILURE_BODY_SNIPPET_MAX:
-        body_snippet = body_snippet + "... (truncated)"
-
-    return AuthFailed(
-        model=model,
-        strategy=strategy,
-        error=error,
-        method=method,
-        url=url,
-        status_code=status,
-        content_type=content_type,
-        response_body=body_snippet,
-    )
-
-
-def _strip_url_query(url: str) -> str:
-    """Replace any URL query string with ``?<redacted>``.
-
-    URL-token strategies put base64-encoded credentials directly in
-    the query (``?<base64(user:password)>``). Stripping the query
-    wholesale is conservative — non-credential queries lose
-    visibility, but they're rare in modem auth and not worth the
-    field-name guessing it would take to differentiate.
-    """
-    parsed = urlparse(url)
-    if not parsed.query:
-        return url
-    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, "<redacted>", parsed.fragment))
-
-
-def _strategy_name(modem_config: Any) -> str:
-    """Return the auth strategy name for the failure log (e.g., ``"form"``)."""
-    auth = getattr(modem_config, "auth", None)
-    return getattr(auth, "strategy", "none") if auth is not None else "none"
-
-
-def _scrub_password(text: str, password: str) -> str:
-    """Replace literal occurrences of the user's password with ``[REDACTED]``.
-
-    Catches the common cases:
-
-    - Modem error pages that echo the submitted password back.
-    - Form-encoded request bodies that some modems include in their
-      response (rare but observed).
-
-    Does not attempt to scrub derived forms (PBKDF2 hashes, encrypted
-    blobs) — those are protocol-shaped credentials, not the user's
-    secret, and reversing them isn't trivial enough to leak useful
-    info from a body snippet.
-    """
-    if not password:
-        return text
-    return text.replace(password, _REDACTED)

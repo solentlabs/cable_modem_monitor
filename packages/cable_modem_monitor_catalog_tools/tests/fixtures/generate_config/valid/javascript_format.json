@@ -7,7 +7,7 @@
     "transport": "http",
     "confidence": "high",
     "auth": {"strategy": "none", "fields": {}, "confidence": "high"},
-    "session": {"max_concurrent": null, "headers": {}},
+    "session": {"headers": {}},
     "actions": {"logout": null, "restart": null},
     "sections": {
       "downstream": {

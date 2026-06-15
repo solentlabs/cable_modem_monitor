@@ -35,7 +35,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest -v --tb=short --cov=custom_components/cable_modem_monitor --cov-report=xml --cov-report=term --cov-fail-under=92
+          pytest -v --tb=short --cov=custom_components/cable_modem_monitor --cov-report=xml --cov-report=term --cov-fail-under=95
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
@@ -91,7 +91,7 @@ jobs:
 
       - name: Intake pipeline accuracy
         run: |
-          python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py -v --scorecard intake-pipeline-scorecard.json
+          python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py -v --scorecard intake-pipeline-scorecard.json --baseline packages/cable_modem_monitor_catalog_tools/scripts/intake_baseline.json
 
       - name: Upload intake pipeline scorecard
         if: always()
@@ -117,7 +117,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff==0.15.2 black==26.1.0 mypy==1.19.1 types-requests types-PyYAML pytest-socket pydantic types-cryptography requests-mock har-capture>=0.5.0
+          pip install ruff==0.15.2 black==26.1.0 mypy==2.1.0 types-requests types-PyYAML pytest-socket pydantic types-cryptography requests-mock har-capture>=0.5.0
           pip install -e packages/cable_modem_monitor_core
           pip install -e packages/cable_modem_monitor_catalog
 
@@ -188,6 +188,24 @@ jobs:
       - name: Check fixtures for PII
         run: |
           python packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py
+
+  spell-check:
+    name: Spell Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install cspell
+        run: npm install -g cspell@10
+
+      - name: Run spell check
+        # Scoped to catalog modem YAML; broader codebase (Python, docs) not yet audited.
+        run: |
+          cspell --config cspell.config.yaml \
+            "packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/**/*.yaml" \
+            --no-progress
 
   suppression-check:
     name: Suppression Discipline

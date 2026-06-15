@@ -232,6 +232,8 @@ class Orchestrator:
             resource_fetches=self._collector.last_resource_fetches,
             last_poll_at=self._last_poll_at,
             last_stub_body=self._collector.last_stub_bodies,
+            system_info_fields_missing=self._collector.last_system_info_fields_missing,
+            system_info_fields_failed=self._collector.system_info_fields_failed,
         )
 
     @property

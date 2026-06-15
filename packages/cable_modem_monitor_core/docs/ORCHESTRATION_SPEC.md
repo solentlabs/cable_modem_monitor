@@ -128,9 +128,9 @@ class ModemDataCollector:
         not the session has cookies. Failure is silently ignored; the retry
         proceeds regardless.
 
-        No-op unless both conditions are met:
-        - ``session.max_concurrent == 1``
-        - ``actions.logout`` is configured
+        No-op unless ``actions.logout`` is configured.
+        When ``actions.logout.requires_session`` is true and the session
+        has no cookies, the call is skipped (session already lost).
         """
 ```
 
@@ -196,7 +196,7 @@ class CollectorSignal(Enum):
 | `AUTH_LOCKOUT` | Trip circuit breaker immediately, report `auth_failed` |
 | `CONNECTIVITY` | Abort, report `unreachable`, apply connectivity backoff |
 | `LOAD_ERROR` | Abort, report `unreachable` |
-| `LOAD_AUTH` | For single-session modems (`session.max_concurrent: 1` + `actions.logout`): attempt logout (best-effort, unauthenticated) before clearing session. Then clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-17, UC-18) |
+| `LOAD_AUTH` | For single-session modems (`actions.logout` configured): attempt logout (best-effort; skipped if `requires_session: true` and no cookies) before clearing session. Then clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-17, UC-18) |
 | `LOAD_INTEGRITY` | Same as `LOAD_AUTH` — for single-session modems, attempt logout (best-effort) before clearing session. Clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-19a) |
 | `PARSE_ERROR` | Abort, report `parser_issue` |
 
@@ -851,6 +851,21 @@ class OrchestratorDiagnostics:
             downloads even after the modem recovers. Full body stored;
             no truncation (stub pages are small, and the full body is
             the diagnostic signal).
+        system_info_fields_missing: Field names parser.yaml maps in
+            system_info whose source key appeared in no configured
+            source's response on the most recent completed parse.
+            Snapshot semantics (recomputed per parse, like
+            resource_fetches): a persistent catalog/firmware mismatch
+            is always visible; a healed field clears.
+            See PARSING_SPEC § Field Outcomes.
+        system_info_fields_failed: Mapping of field name to the raw
+            value (truncated) that type conversion rejected. Retained
+            for the rest of the runtime once recorded (stub-body
+            retention rationale: an intermittent failure must survive
+            into a diagnostics download taken after a healthy poll).
+            The raw value is the repair datum for fixing the catalog
+            format string. Only fields parser.yaml explicitly maps are
+            captured. Diagnostics-only; never feeds signals or policy.
 
     Note: auth-failure wire detail is not stored on this dataclass.
     The collector emits a single sanitized ``WARNING`` log when
@@ -870,6 +885,8 @@ class OrchestratorDiagnostics:
     resource_fetches: list[ResourceFetch] = field(default_factory=list)
     last_poll_at: str | None = None
     last_stub_body: dict[str, str] = field(default_factory=dict)
+    system_info_fields_missing: list[str] = field(default_factory=list)
+    system_info_fields_failed: dict[str, str] = field(default_factory=dict)
 
 
 class ConnectionStatus(Enum):
@@ -1171,7 +1188,7 @@ Poll N:   LOAD_AUTH (streak: 1), logout attempted (best-effort), session cleared
 Poll N+1: fresh login → collection succeeds (streak: 0)
 ```
 
-Applies when `session.max_concurrent == 1` and `actions.logout` is configured.
+Applies when `actions.logout` is configured.
 Logout is best-effort: failure does not block the retry and is not counted.
 
 **LOAD_AUTH on HNAP (stale session):**
@@ -2177,7 +2194,10 @@ Phases:
 2. **Endpoint extraction** (optional): find a `<form>` whose `action`
    attribute contains the `endpoint_pattern` keyword. Core-provided
    extraction — the keyword is not a regex.
-3. **Main request**: send the action request to the resolved endpoint.
+3. **Param interpolation**: replace `{cookie:name}` placeholders in
+   `params` values with the corresponding cookie from the session jar.
+   If the named cookie is absent the placeholder is sent as-is.
+4. **Main request**: send the action request to the resolved endpoint.
 
 Connection errors and timeouts are treated as success (the modem is
 rebooting during restart). Returns `ActionResult`.

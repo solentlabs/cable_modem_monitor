@@ -14,8 +14,6 @@
       "confidence": "high"
     },
     "session": {
-      "max_concurrent": null,
-      "max_concurrent_confidence": "unknown",
       "headers": {},
       "cookie_name": "sessionToken"
     },

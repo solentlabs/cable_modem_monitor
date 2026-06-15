@@ -55,7 +55,7 @@ from custom_components.cable_modem_monitor.services import (
 # _get_channel_info
 # -----------------------------------------------------------------------
 
-# ┌──────────────────────────────┬─────────────────────────────────────┬──────────────────────────────┐
+# ┌──────────────────────────────┬──────────────┬─────────────────────────────┬────────────────────────────┐
 # │ input channels               │ default_type │ expected output             │ description                │
 # ├──────────────────────────────┼──────────────┼─────────────────────────────┼────────────────────────────┤
 # │ typed + id                   │ "qam"        │ sorted by (type, id)        │ explicit channel_type+id   │
@@ -156,12 +156,12 @@ def test_format_channel_label(ch_type: str, ch_id: int, fmt: str, expected: str,
 
 # fmt: off
 TITLE_CASES = [
-    ("Downstream Power Levels (dBmV)", "qam",  False, "Downstream QAM Power Levels (dBmV)", "long_ds"),
+    ("Downstream Power Levels (dBmV)", "qam",   False, "Downstream QAM Power Levels (dBmV)", "long_ds"),
     ("Upstream Power Levels (dBmV)",   "atdma", False, "Upstream ATDMA Power Levels (dBmV)", "long_us"),
-    ("DS Power (dBmV)",                "qam",  True,  "DS QAM Power (dBmV)",                "short_ds"),
+    ("DS Power (dBmV)",                "qam",   True,  "DS QAM Power (dBmV)",                "short_ds"),
     ("US Power (dBmV)",                "atdma", True,  "US ATDMA Power (dBmV)",              "short_us"),
-    ("Downstream Power",               None,   False, "Downstream Power",                    "no_type"),
-    ("Other Title",                    "qam",  False, "Other Title",                         "no_prefix_match"),
+    ("Downstream Power",               None,    False, "Downstream Power",                   "no_type"),
+    ("Other Title",                    "qam",   False, "Other Title",                        "no_prefix_match"),
 ]
 # fmt: on
 
@@ -254,6 +254,59 @@ def test_build_status_card_yaml_minimal():
     assert "system_uptime" not in yaml
     assert "last_boot_time" not in yaml
     assert "total_corrected_errors" not in yaml
+
+
+def test_build_status_card_yaml_passthrough_fields():
+    """Unknown system_info fields appear via the dynamic pass-through loop."""
+    system_info = {
+        "ds_power_status": "Good",
+        "ds_snr_status": "Good",
+        "us_power_status": "Good",
+        "ds_partial_service": "No",
+        # Consumed fields must not be duplicated by the loop.
+        "software_version": "1.0",
+        "total_corrected": 100,
+        "total_uncorrected": 0,
+        "rate_corrected": 5.0,
+    }
+    lines = _build_status_card_yaml("cable_modem", system_info, has_icmp=False, has_head=False)
+    yaml = "\n".join(lines)
+    assert "sensor.cable_modem_ds_power_status" in yaml
+    assert "sensor.cable_modem_ds_snr_status" in yaml
+    assert "sensor.cable_modem_us_power_status" in yaml
+    assert "sensor.cable_modem_ds_partial_service" in yaml
+    # Consumed/explicit fields must not be duplicated.
+    assert yaml.count("software_version") == 1
+    assert "rate_corrected" not in yaml
+
+
+# Fields that were previously routed through explicit helper functions but now
+# reach the card via the generic passthrough loop.
+#
+# ┌──────────────────────────────┬───────────────────────────────────────────┐
+# │ field                        │ expected entity-id substring              │
+# └──────────────────────────────┴───────────────────────────────────────────┘
+_PASSTHROUGH_FORMERLY_EXPLICIT_CASES = [
+    ("docsis_status", {"docsis_status": "operational"}, "sensor.modem_docsis_status"),
+    ("cpu_speed", {"cpu_speed": "1GHz"}, "sensor.modem_cpu_speed"),
+    ("memory_total", {"memory_total": 1024}, "sensor.modem_memory_total"),
+    ("memory_free", {"memory_free": 512}, "sensor.modem_memory_free"),
+    ("provisioned_speed_down", {"provisioned_speed_down": "1Gbps"}, "sensor.modem_provisioned_speed_down"),
+    ("provisioned_speed_up", {"provisioned_speed_up": "100Mbps"}, "sensor.modem_provisioned_speed_up"),
+    ("provisioned_burst_down", {"provisioned_burst_down": "x"}, "sensor.modem_provisioned_burst_down"),
+    ("provisioned_burst_up", {"provisioned_burst_up": "x"}, "sensor.modem_provisioned_burst_up"),
+]
+
+
+@pytest.mark.parametrize(
+    "system_info,expected_entity",
+    [(c[1], c[2]) for c in _PASSTHROUGH_FORMERLY_EXPLICIT_CASES],
+    ids=[c[0] for c in _PASSTHROUGH_FORMERLY_EXPLICIT_CASES],
+)
+def test_passthrough_formerly_explicit_fields(system_info: dict[str, Any], expected_entity: str) -> None:
+    """Fields that were once explicitly placed now flow through the passthrough loop."""
+    lines = _build_status_card_yaml("modem", system_info, has_icmp=False, has_head=False)
+    assert expected_entity in "\n".join(lines)
 
 
 def test_build_restart_button_card_yaml():
@@ -1349,102 +1402,6 @@ def test_format_channel_label_position_mode() -> None:
     assert _format_channel_label("", 5, "full") == "Ch 5"
     # The format param is ignored in position mode
     assert _format_channel_label("", 5, "type_id") == "Ch 5"
-
-
-# Optional-entity YAML builders share a "field-presence → entity-id emitted"
-# shape; table-drive each one. New cases = new row.
-#
-# ┌─────────────────────────────────────────┬─────────────────────────────────┐
-# │ system_info input                       │ expected entity-id substrings   │
-# ├─────────────────────────────────────────┼─────────────────────────────────┤
-_HARDWARE_DIAG_CASES = [
-    # (description,        system_info,                                              expected_entities)
-    ("empty", {}, []),
-    ("cpu_speed_only", {"cpu_speed": "1GHz"}, ["sensor.modem_cpu_speed"]),
-    ("memory_total_only", {"memory_total": 1024}, ["sensor.modem_memory_total"]),
-    ("memory_free_only", {"memory_free": 512}, ["sensor.modem_memory_free"]),
-    (
-        "all_three",
-        {"cpu_speed": "1GHz", "memory_total": 1024, "memory_free": 512},
-        ["sensor.modem_cpu_speed", "sensor.modem_memory_total", "sensor.modem_memory_free"],
-    ),
-]
-
-
-@pytest.mark.parametrize(
-    "system_info,expected",
-    [(c[1], c[2]) for c in _HARDWARE_DIAG_CASES],
-    ids=[c[0] for c in _HARDWARE_DIAG_CASES],
-)
-def test_build_hardware_diag_entities(system_info: dict[str, Any], expected: list[str]) -> None:
-    """One entity emitted per present hardware-diagnostics field; empty input → no lines."""
-    from custom_components.cable_modem_monitor.dev_tools import (
-        _build_hardware_diag_entities,
-    )
-
-    joined = "\n".join(_build_hardware_diag_entities("modem", system_info))
-    for entity_id in expected:
-        assert entity_id in joined
-    if not expected:
-        assert joined == ""
-
-
-_PROVISIONED_FIELDS = (
-    "provisioned_speed_down",
-    "provisioned_speed_up",
-    "provisioned_burst_down",
-    "provisioned_burst_up",
-)
-
-
-def _provisioned_case(field: str, value: str) -> tuple[str, dict[str, str], list[str]]:
-    """Build a single-field case: input dict + expected entity-id substring."""
-    return (field, {field: value}, [f"sensor.modem_{field}"])
-
-
-_PROVISIONED_SPEED_CASES = [
-    ("empty", {}, []),
-    _provisioned_case("provisioned_speed_down", "1Gbps"),
-    _provisioned_case("provisioned_speed_up", "100Mbps"),
-    _provisioned_case("provisioned_burst_down", "1.2Gbps"),
-    _provisioned_case("provisioned_burst_up", "150Mbps"),
-    (
-        "all_four",
-        {f: "x" for f in _PROVISIONED_FIELDS},
-        [f"sensor.modem_{f}" for f in _PROVISIONED_FIELDS],
-    ),
-]
-
-
-@pytest.mark.parametrize(
-    "system_info,expected",
-    [(c[1], c[2]) for c in _PROVISIONED_SPEED_CASES],
-    ids=[c[0] for c in _PROVISIONED_SPEED_CASES],
-)
-def test_build_provisioned_speed_entities(system_info: dict[str, Any], expected: list[str]) -> None:
-    """One entity emitted per present provisioned-speed/burst field."""
-    from custom_components.cable_modem_monitor.dev_tools import (
-        _build_provisioned_speed_entities,
-    )
-
-    joined = "\n".join(_build_provisioned_speed_entities("modem", system_info))
-    for entity_id in expected:
-        assert entity_id in joined
-    if not expected:
-        assert joined == ""
-
-
-def test_build_status_card_includes_docsis_status_when_present() -> None:
-    """docsis_status field present → status entity emitted into the card YAML."""
-    lines = _build_status_card_yaml(
-        "modem",
-        {"docsis_status": "operational"},
-        has_icmp=False,
-        has_head=False,
-    )
-    joined = "\n".join(lines)
-    assert "sensor.modem_docsis_status" in joined
-    assert "Modem Status" in joined
 
 
 def test_build_channel_graph_defs_number_mode_omits_channel_type() -> None:

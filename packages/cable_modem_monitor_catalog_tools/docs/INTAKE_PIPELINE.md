@@ -158,14 +158,19 @@ Both files live in Catalog Tools (`solentlabs/cable_modem_monitor_catalog_tools/
 
 `scripts/intake_pipeline_regression.py` measures how well the pipeline
 reproduces committed catalog configs when run against the same HAR as a
-fresh submission. It is a **reporting tool**, not a CI gate — findings
-indicate where the intake pipeline can improve, not regressions in Core.
+fresh submission. It is a reporting tool for onboarding capability and,
+in baseline mode, a **ratchet gate**: the committed fleet baseline at
+`scripts/intake_baseline.json` records each modem's pipeline status and
+action grades, and `make intake-regression` (run by `validate-ci` and
+mirrored in CI) fails when any of them gets worse. Findings indicate
+where the intake pipeline — or the capture, to be resolved in
+har-capture — can improve, not regressions in Core.
 
 ```bash
 python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py
 python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --modem arris/sb8200 -v
 python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --scorecard scorecard.json
-python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --baseline baseline.json
+python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --baseline packages/cable_modem_monitor_catalog_tools/scripts/intake_baseline.json
 ```
 
 **What it reports:**
@@ -180,6 +185,32 @@ Fleet-wide **field accuracy** is reported as a percentage of committed
 golden file fields correctly reproduced by the pipeline. This tracks
 improvement over time as the pipeline gains new pattern recognition.
 
+**Actions grading** compares pipeline-detected logout/restart actions
+against the committed modem.yaml per HAR
+(`analysis/actions/grading.py`):
+
+| Grade | Meaning |
+|-------|---------|
+| `match` | Type, identity (method + endpoint, or hnap action_name), and params all reproduced |
+| `partial` | Identity matches; params differ, are missing, or json_body not produced |
+| `pipeline_only` | Pipeline detected an action the catalog never adopted — candidate enrichment, or a false positive |
+| `committed_only` | Committed action the pipeline cannot produce from the HAR (human-authored config, or action never fired during capture) |
+| `mismatch` | Type, endpoint, method, or action_name disagree — investigate which side is wrong |
+
+Human-authored fields a HAR cannot show (`pre_fetch_action`,
+`action_auth`, `requires_session`, response keys) are out of grading
+scope.
+
+**Auth grading** compares the pipeline-generated auth block against the
+committed modem.yaml (`analysis/auth/grading.py`), using the same grade
+taxonomy on two items: `strategy` (the detected auth strategy — the
+headline capability) and `fields` (everything else in the block —
+endpoints, field names, cookie names, nested success criteria). Fields
+are only graded when the strategy matches; comparing field layouts of
+two different strategies is meaningless. Unlike actions (graded from
+analysis output), auth is graded from the generated config, so it
+requires generation to succeed.
+
 **Auth fixture audit** runs at the end of every sweep. For each form-auth
 modem with `login_page` configured, it verifies that the committed HAR
 fixture contains a usable login page response. Issues are printed as
@@ -188,8 +219,19 @@ Hardware is required to confirm whether a fixture gap actually causes a
 runtime problem.
 
 **Regression baseline mode** (`--baseline`) fails only when a modem's
-status gets worse than the recorded baseline. Use `--update-baseline` to
-lock in improvements after pipeline changes.
+pipeline status or an action grade gets worse than the recorded
+baseline, or a new modem arrives with non-clean status or non-match
+grades. Use `--update-baseline` to refresh
+`scripts/intake_baseline.json` after a deliberate improvement or a new
+intake, and commit the file with that change — the baseline diff is the
+durable record of what moved.
+
+The ratchet machinery (baseline load/save/compare, scorecard, result
+classification) lives in the unit-tested
+`solentlabs/cable_modem_monitor_catalog_tools/regression/` package and
+is generic over grade dimensions; the script supplies discovery,
+pipeline stages, and printing. The shared grade taxonomy is
+`solentlabs/cable_modem_monitor_catalog_tools/grading.py`.
 
 ---
 

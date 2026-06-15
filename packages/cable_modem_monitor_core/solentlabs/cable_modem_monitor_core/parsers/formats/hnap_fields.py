@@ -13,6 +13,7 @@ from typing import Any
 
 from ...models.parser_config.system_info import HNAPSystemInfoSource
 from ..base import BaseParser
+from ..diagnostics import record_failed_field
 from ..type_conversion import convert_value
 
 _logger = logging.getLogger(__name__)
@@ -30,6 +31,9 @@ class HNAPFieldsParser(BaseParser):
 
     def __init__(self, config: HNAPSystemInfoSource) -> None:
         self._config = config
+        # Conversion-rejected raw values from the most recent parse —
+        # PARSING_SPEC § Field Outcomes.
+        self.failed_fields: dict[str, str] = {}
 
     def parse(self, resources: dict[str, Any]) -> dict[str, str]:
         """Extract system_info fields from the HNAP response.
@@ -55,6 +59,7 @@ class HNAPFieldsParser(BaseParser):
             return {}
 
         result: dict[str, str] = {}
+        self.failed_fields = {}
         for field_mapping in self._config.fields:
             value = action_response.get(field_mapping.source, "")
             if value:
@@ -67,5 +72,7 @@ class HNAPFieldsParser(BaseParser):
                 )
                 if converted is not None:
                     result[field_mapping.field] = str(converted)
+                else:
+                    record_failed_field(self.failed_fields, field_mapping.field, value)
 
         return result

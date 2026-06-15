@@ -317,9 +317,9 @@ becomes available to all future modems using the same protocol.
 
 **Decision:** `cookie_name` and `token_prefix` live on the auth
 strategy config, not the session section. Session config
-(`max_concurrent`, `headers`) is a separate top-level section that
-owns post-login lifecycle — concurrency limits, static request
-headers, and logout timing. Auth owns everything about the login flow
+(`headers`, `query_params`) is a separate top-level section that
+owns post-login lifecycle — static request headers and logout timing.
+`actions.logout` presence drives single-session semantics. Auth owns everything about the login flow
 and its outputs, including which cookie the login response produces.
 
 **Rationale:** The cookie is an output of the login flow — the modem's
@@ -352,9 +352,41 @@ original discovery. The v3.14 gap analysis (2026-04-01) identified the
 regression.
 
 **Constrains:** No `logout_url` or `logout_required` convenience
-fields. The `max_concurrent: 1` constraint requires `actions.logout`
-to be declared (build-time validation error). Auth strategies that
-don't use cookies leave `cookie_name` empty (default).
+fields. `actions.logout` presence drives single-session semantics;
+`HttpAction.requires_session` controls whether the pre-retry logout
+call is guarded by cookie presence. Auth strategies that don't use
+cookies leave `cookie_name` empty (default).
+
+### Session concurrency — SSOT via `actions.logout`
+
+**Decision:** `actions.logout` presence is the single indicator that a modem
+requires single-session discipline. `session.max_concurrent` (present in v3.13
+and earlier) has been removed from `SessionConfig`.
+
+**Rationale:** `max_concurrent: 1` and `actions.logout` always had to travel
+together — one without the other was either dead config (logout without
+`max_concurrent: 1` never fired) or a lockout footgun (`max_concurrent: 1`
+without logout held the session open and blocked the user's web UI between
+polls). Two fields encoding one constraint is redundant and a footgun source.
+The XB10 onboarding gap made this concrete: the intake pipeline had configured
+a logout block without `max_concurrent: 1`, silently disabling logout.
+
+**New field:** `HttpAction.requires_session: bool = False` distinguishes
+unauthenticated logout endpoints (`false` — can clear any active server-side
+session without a cookie; safe to call during pre-retry recovery) from
+session-scoped endpoints (`true` — skip the pre-retry call when Core has no
+valid cookie, since it would fail anyway and the retry proceeds regardless).
+CBN transport always embeds the session token by protocol; `requires_session`
+is absent from `CbnAction` by type-system design.
+
+**Fleet values (2026-06-10):** MB7621 GET `/logout.asp` and SB8200 basic GET
+`/logout.html` — no cookie in HAR request → `requires_session: false`.
+TG3442DE — logout present in YAML but no logout request captured in HAR →
+`requires_session: true` (conservative; contributor verification open).
+
+**Constrains:** Any modem with `actions.logout` configured is treated as
+single-session. There is no mechanism to configure logout without triggering
+single-session semantics.
 
 ### Auth-failure detail via single WARNING log
 

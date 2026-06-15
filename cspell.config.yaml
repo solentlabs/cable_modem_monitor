@@ -3,23 +3,48 @@ language: en
 
 ignorePaths:
   - .venv/**
+  - codeql/**
   - htmlcov/**
   - RAW_DATA/**
   - captures/**
   - "**/*.har"
   - "**/*.expected.json"
 
-# Random test strings — valid in test fixtures, not vocabulary
+# Random test strings, contributor handles, regex fragments — valid in context, not vocabulary
 ignoreWords:
   - aabb
+  - Afroz
+  - Anthranilic
   - BADHASH
+  - Bowles
+  - Cabe
+  - ccpk
+  - chairstacker
+  - Coert
+  - cvonk
   - Ddgj
+  - dimkalinux
+  - eboot
+  - ecurity
+  - edent
+  - esand
+  - eset
+  - Flanko
+  - homeautomater
   - JDDJIBX
+  - jzucker
   - KEYSTR
+  - Kittyx
   - klmnopqrst
+  - kwschulz
+  - ludeeus
   - Nlcjpw
+  - philfry
   - qwertyuiop
+  - rplancha
   - Rpem
+  - SNTLABS
+  - Vonk
 
 words:
   # Home Assistant tooling
@@ -32,11 +57,16 @@ words:
 
   # DOCSIS / cable protocol
   - AESCCM
+  - Gbps
+  - Mbps
+  - Mbit
   - ATDMA
   - CMTS
   - dbmv
+  - Datasheet
   - DCID
   - DCIDs
+  - UCID
   - Docsis
   - DOCSIS
   - docsis
@@ -74,16 +104,25 @@ words:
 
   # Authentication / crypto
   - canonicalizable
+  - CLDR
   - CSRF
   - csrfnonce
+  - csrfp
+  - CSRFP
+  - desynchronize
+  - DUKSID
+  - httponly
   - decryptable
   - decryptor
   - dklen
+  - encryptflag
   - encryptor
   - HNAP
   - Hnap
   - hnap
   - HNAPs
+  - HSTS
+  - nologin
   - padder
   - PBKDF2
   - saltwebui
@@ -109,56 +148,130 @@ words:
   - chipsets
   - DHCE
   - FHCE
+  - iFixit
+  - KOMODO
   - Puma
 
   # Modem manufacturers and product lines
   - Arris
+  - COMMSCOPE
+  - TCOM
   - Compal
   - Hitron
+  - Mikro
   - Moto
   - Motorola
   - Netgear
   - netgear
   - Nighthawk
+  - QNAP
   - Sagemcom
   - Sercomm
   - sercomm
+  - superhub
+  - SuperHub
   - SURFboard
   - Technicolor
+  - Telephonics
   - Touchstone
 
   # ISPs / providers
+  - Altice
+  - Baltics
+  - brighthouse
+  - BYOM
+  - cableone
   - Comcast
+  - Datagroup
+  - Kabel
+  - Koodo
+  - kood
+  - KOOD
+  - Mediacom
+  - mediacom
   - MTAT
+  - Pyür
+  - pyür
+  - PYÜR
+  - SERV
+  - Sparklight
+  - Suddenlink
+  - suddenlink
+  - Teksavvy
+  - teksavvy
+  - TEKS
+  - Tele
+  - Telus
+  - TNETC
+  - Unitymedia
+  - unitymedia
+  - UNKN
+  - VARI
+  - Videotron
+  - videotron
+  - Vidéotron
   - Vodafone
+  - Volia
+  - volia
+  - VOLY
+  - Volya
+  - VMDG
   - Xfinity
 
   # Modem data fields (concatenated identifiers from firmware)
   - cablemodem
+  - devname
+  - dhcpclient
+  - channelid
+  - channelidup
   - channeltype
+  - wantype
+  - cmconfiguration
   - cmconnectionstatus
   - cmstatus
   - cmdocsisds
+  - CMMAC
+  - cmswinfo
   - cursystemtime
+  - DCIDD
   - dschannel
+  - dsid
   - dsinfo
+  - dsofdminfo
   - firmwares
   - firmwareversion
   - fwbt
   - fwinfo
   - goform
+  - hardwaretype
   - hardwareversion
+  - hwversion
   - idloginincorrect
   - internetconnection
   - isps
+  - localdomain
+  - loggedout
+  - nbsp
+  - readydlna
+  - sharedkey
+  - sharedlna
   - loginpassword
   - loginusername
+  - luci
   - macaddress
+  - modtype
+  - MTAMAC
   - networkaccess
+  - ofdmachannel
+  - ofdmchannel
   - serialnumber
+  - SNRD
   - softwaremodelname
   - softwareversion
+  - srate
   - ssids
+  - swinfo
+  - sysauth
   - sysinfo
   - Sysinfo
   - SYSINFO
@@ -168,15 +281,36 @@ words:
   - tagvalue
   - tagvaluelist
   - tagValueList
+  - uncorrect
+  - uncorrecteds
   - uschannel
+  - usid
   - usinfo
+  - usofdminfo
 
   # Shell / OS commands used in docs
   - findstr
+  - oneline
+  - subshells
+  - unittests
 
   # Project-specific
   - blindspots
   - CMMT
+  - footgun
+  - isoformat
+  - lifecycles
+  - miscoded
+  - miscoding
+  - populator
+  - positived
+  - rebond
+  - SSOT
+  - statefully
+  - teardowns
+  - throughs
+  - unsanitized
+  - Watchlist
   - cooldown
   - cooloff
   - Cooloff
@@ -191,11 +325,13 @@ words:
   - indentless
   - lockdown
   - modbase
+  - noauth
   - noparser
   - NOSESSION
   - reauthentication
   - rebonded
   - rebonding
+  - Rebranded
   - rebrands
   - relogin
   - slugification
@@ -243,6 +379,7 @@ words:
   - functools
   - funcs
   - genericity
+  - getattr
   - hashlib
   - isinstance
   - itertools
@@ -253,9 +390,11 @@ words:
   - metafunc
   - Metafunc
   - monkeypatch
+  - metacharacter
   - metacharacters
   - mypy
   - noqa
+  - norecursedirs
   - nosec
   - parameterised
   - pathlib
@@ -263,15 +402,24 @@ words:
   - pkill
   - pycache
   - pydantic
+  - pyenv
   - pyproject
   - pyprojects
   - pyright
   - pyrightconfig
+  - pylint
+  - Pylint
   - pysnmp
+  - excinfo
+  - fixturedef
   - pytest
+  - pytestmark
+  - tryfirst
+  - usefixtures
   - PyYAML
   - ruamel
   - setattr
+  - setdefault
   - splitlines
   - stdlib
   - timedelta
@@ -279,29 +427,41 @@ words:
   - uncoercible
   - unimodal
   - urllib
+  - validatable
   - venv
   - xmltodict
   - yarl
 
   # Network / socket / HTTP
+  - callsite
+  - Callsite
+  - callsites
   - connectionpool
+  - onsubmit
   - flowinfo
+  - hostnames
   - hostport
   - keepalive
+  - networkidle
   - poolmanager
   - Referer
   - referer
   - scopeid
   - sockaddr
   - socktype
+  - SSLV
+  - threadsafe
 
   # System / shell / platform
   - ASKPASS
   - chromeos
+  - coredump
   - cros
   - Crostini
   - EDITMSG
+  - fuser
   - IMAGENAME
+  - journalctl
   - libasound
   - libbz
   - libncurses
@@ -315,10 +475,15 @@ words:
   # UI
   - checkmark
   - glyphicon
+  - glyphicons
 
   # British / alternate spellings (used in comments and docs)
+  - Analysed
   - artefacts
   - behaviour
+  - behavioural
+  - behaviours
+  - characterised
   - Centralises
   - entrancy
   - Formalises
@@ -326,6 +491,9 @@ words:
   - recognised
   - serialisable
   - serialised
+  - serialises
+  - standardises
+  - summarises
 
   # Abbreviations used in production code
   - applation
@@ -339,26 +507,46 @@ words:
   - hdrs
   - hexvalue
   - idxs
+  - ints
+  - Nums
   - Pswd
+  - recov
   - sess
   - testpbkdf
+  - Uncorr
+  - unreg
+  - unregistration
   - withoutloginkey
 
   # Test data constants (intentional placeholder values in fixtures)
   - anykey
+  - appletv
+  - familyroom
+  - firetv
+  - livingroom
+  - macbookpro
+  - rokustreaming
+  - rokustreamingstick
+  - testschedule
+  - anothervendor
   - Correcteds
   - Dadmin
   - dotdot
   - dtaubert
   - Dtest
   - emptypassword
+  - keyable
   - listy
   - longtoken
+  - mymodem
   - mypasswd
   - mypassword
+  - newpass
   - NOSPACEHERE
+  - othervendor
   - sometoken
   - someuser
   - Winesnob's
   - wronghexkey
   - WRONGKEY
+  - wrongpassword

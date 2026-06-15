@@ -45,6 +45,7 @@ notes: |
   table names. System info from /api/v1/system/ endpoint.
   PBKDF2 parameters from HAR JavaScript (sjcl.js): iterations and key
   length are firmware defaults, may need verification per firmware version.
+  Processor speed: 1503 MHz (BCM3390, hardware-fixed; documented here, not parsed as a live sensor).
 
 references:
   issues:

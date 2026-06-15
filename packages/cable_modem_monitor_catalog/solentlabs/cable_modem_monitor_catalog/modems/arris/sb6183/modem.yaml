@@ -13,7 +13,7 @@ hardware:
   chipset: Broadcom BCM33843D
   release_date: "2014"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Motorola_SURFboard_SB6183)"
@@ -23,6 +23,8 @@ attribution:
   contributors:
     - github: https://github.com/liehann
       contribution: "Fallback mode capture and page documentation (Issue #95)"
+    - github: https://github.com/fuxxociety
+      contribution: "Hardware confirmation on beta.10, Comcast/Xfinity (Issue #95)"
 
 isps:
   - Comcast

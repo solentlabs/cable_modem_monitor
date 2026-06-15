@@ -21,6 +21,7 @@ import re
 from typing import TYPE_CHECKING
 
 import requests
+import requests.cookies
 
 from ..events import (
     ActionCompleted,
@@ -68,7 +69,7 @@ def execute_http_action(
             ),
         )
 
-    # Phase 3: Main request
+    # Phase 3 + 4: Param interpolation and main request
     url = f"{stripped_base}{endpoint}"
     if query_params:
         sep = "&" if "?" in url else "?"
@@ -88,7 +89,12 @@ def execute_http_action(
                 timeout=timeout,
             )
         else:
-            data = dict(action.params) if action.params else None
+            raw_params = dict(action.params) if action.params else None
+            data: dict[str, str] | None = (
+                _interpolate_cookie_params(raw_params, session.cookies)
+                if raw_params and any("{cookie:" in v for v in raw_params.values())
+                else raw_params
+            )
             resp = session.request(
                 action.method,
                 url,
@@ -216,3 +222,22 @@ def _extract_form_action(page_html: str, keyword: str) -> str | None:
     if match:
         return match.group(1)
     return None
+
+
+_COOKIE_PLACEHOLDER_RE = re.compile(r"\{cookie:([^}]+)\}")
+
+
+def _interpolate_cookie_params(
+    params: dict[str, str],
+    cookies: requests.cookies.RequestsCookieJar,
+) -> dict[str, str]:
+    """Replace ``{cookie:name}`` placeholders in params with values from the session jar.
+
+    Absent cookies are left as the literal placeholder string.
+    """
+
+    def _resolve(m: re.Match[str]) -> str:
+        val = cookies.get(m.group(1))
+        return m.group(0) if val is None else val
+
+    return {k: _COOKIE_PLACEHOLDER_RE.sub(_resolve, v) for k, v in params.items()}

@@ -181,7 +181,7 @@ def _find_by_attribute(
     attrs: Mapping[str, str],
 ) -> Tag | None:
     """Find table by element attributes."""
-    element = soup.find(attrs=dict(attrs))
+    element = soup.find(None, dict(attrs))
     if element is None:
         return None
     if isinstance(element, Tag) and element.name == "table":

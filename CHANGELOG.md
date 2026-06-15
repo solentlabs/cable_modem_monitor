@@ -7,26 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.11] - 2026-06-15
+
+### Added
+
+- **Diagnostics now report system_info field outcomes.** A mapped field
+  that produces nothing on a successful poll is no longer invisible:
+  the diagnostics download lists fields the modem never sent
+  (`system_info_fields_missing`) and fields whose value type conversion
+  rejected, with the raw value (`system_info_fields_failed`). Lets a
+  field-level parsing gap be diagnosed from the first shared
+  diagnostics file instead of a contributor round-trip. (Related to #98)
+- **Arris S33v3 confirmed on hardware.** Verified via contributor
+  diagnostics: 33 downstream + 6 upstream channels, HNAP SHA256 auth,
+  ICMP health checks working. The firmware does not report uptime;
+  Last Boot Time derives from counter-reset detection. (Related to #98)
+- **Four more modems confirmed on hardware.** Verified via contributor
+  diagnostics: Motorola MB8611 (34 DS + 4 US, restart confirmed,
+  Related to #60), Arris SB6183 (16 DS + 4 US, Related to #95), Netgear
+  CM3000 (34 DS + 5 US, Related to #127), and ARRIS CM3500B
+  (26 DS + 5 US, Related to #73).
+- **Technicolor XB10 (CGM601TCOM) added to the catalog.** DOCSIS 4.0
+  hardware provisioned in 3.1 mode. Auth, channel parsing, and restart
+  action config derived from a contributor HAR; awaiting hardware
+  confirmation before it is marked confirmed. (Related to #173)
+- **`{cookie:name}` parameter interpolation.** Action params can now
+  reference session-jar cookies by name, resolved at execution time.
+  Supports the Double Submit Cookie CSRF pattern needed for the XB10
+  restart action. (Related to #173)
+
+### Changed
+
+- **Breaking: `session.max_concurrent` replaced by
+  `HttpAction.requires_session`.** `max_concurrent` is removed from
+  SessionConfig. The presence of `actions.logout` is now the sole
+  indicator of single-session semantics. Per-action
+  `requires_session: true` skips the logout-before-retry when no session
+  cookie is present. Catalog YAML still using `max_concurrent` must
+  migrate. (Related to #170)
+- **parser.py declares its own resource needs.** A `PostProcessor` now
+  declares the resources its hooks read in a `resources` class attribute
+  (URL path → format), merged into the fetch list at startup. Replaces
+  the former workaround of adding a fake parser.yaml field mapping just
+  to force the fetch. The Sercomm DM1000 — the only catalog user of the
+  workaround — has been migrated; extracted output is unchanged.
+
+### Fixed
+
+- **CM3500B modulation values are now canonical.** The parser.yaml
+  modulation columns were typed as plain strings; downstream QAM and
+  upstream ATDMA channels now emit canonical `QAM256` / `QAM64`.
+  (Related to #73)
+
 ## [3.14.0-beta.10] - 2026-06-04
 
 ### Added
 
-- **`orphaned_statistics` service (P32).** Finds recorder statistics for a
+- **`orphaned_statistics` service.** Finds recorder statistics for a
   modem that have no registered entity — left behind by a mode switch,
   channel rebonding (ID mode), or a prefix change. Default call returns a
   commented preview of orphaned entity IDs. Pass `execute: true` to purge
   all of them directly via HA's recorder. Purge is permanent. Documented
   in TROUBLESHOOTING.md § Ghost Statistics.
-- **Technicolor XB7 (CGM4981COM) now fully supported.** Verified on
+- **Technicolor XB7 (CGM4331COM) now fully supported.** Verified on
   hardware via contributor HAR capture. 34 downstream + 5 upstream channels
-  confirmed. Addresses #101.
+  confirmed.
 
 ### Fixed
 
 - **Logout before same-poll auth retry on single-session firmware.** When
-  `LOAD_AUTH` or `LOAD_INTEGRITY` fires on a modem with
-  `session.max_concurrent: 1` and `actions.logout` configured, Core now
-  attempts a best-effort logout before clearing the session and retrying.
+  `LOAD_AUTH` or `LOAD_INTEGRITY` fires on a modem with `actions.logout`
+  configured, Core now attempts a best-effort logout before clearing the
+  session and retrying.
   Releases any stale server-side session (e.g. after an unclean HA restart)
   so the immediate re-authentication can succeed. Related to #170.
 - **SB8200 v6 Basic: logout action added to catalog.** The `modem-basic`
@@ -82,7 +134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Field-set change detection for `system_info` (P25).** The orchestrator
+- **Field-set change detection for `system_info`.** The orchestrator
   now logs a WARNING when parser-level `system_info` fields appear or
   disappear between polls. Surfaces silent firmware-induced regressions
   (e.g., a CSS selector miss after a modem firmware update) that previously

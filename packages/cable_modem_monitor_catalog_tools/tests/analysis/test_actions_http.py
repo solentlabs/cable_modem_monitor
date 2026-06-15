@@ -47,6 +47,26 @@ def test_http_logout_details(fixture_path: Path) -> None:
         assert result.logout.params == expected["params"]
     if "credential_params" in expected:
         assert result.logout.credential_params == expected["credential_params"]
+    if "source" in expected:
+        assert result.logout.source == expected["source"]
+    if "pre_fetch_url" in expected:
+        assert result.logout.pre_fetch_url == expected["pre_fetch_url"]
+    if "endpoint_pattern" in expected:
+        assert result.logout.endpoint_pattern == expected["endpoint_pattern"]
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    [f for f in HTTP_FIXTURES if "_expected_warnings_contains" in load_fixture(f)],
+    ids=[f.stem for f in HTTP_FIXTURES if "_expected_warnings_contains" in load_fixture(f)],
+)
+def test_http_action_warnings(fixture_path: Path) -> None:
+    """Unresolvable call-site params surface as warnings."""
+    data = load_fixture(fixture_path)
+    warnings: list[str] = []
+    detect_actions(data["_entries"], "http", warnings)
+    for needle in data["_expected_warnings_contains"]:
+        assert any(needle in w for w in warnings), f"no warning mentions {needle!r}: {warnings}"
 
 
 @pytest.mark.parametrize(
@@ -67,3 +87,9 @@ def test_http_restart_details(fixture_path: Path) -> None:
         assert result.restart.params == expected["params"]
     if "credential_params" in expected:
         assert result.restart.credential_params == expected["credential_params"]
+    if "source" in expected:
+        assert result.restart.source == expected["source"]
+    if "pre_fetch_url" in expected:
+        assert result.restart.pre_fetch_url == expected["pre_fetch_url"]
+    if "endpoint_pattern" in expected:
+        assert result.restart.endpoint_pattern == expected["endpoint_pattern"]

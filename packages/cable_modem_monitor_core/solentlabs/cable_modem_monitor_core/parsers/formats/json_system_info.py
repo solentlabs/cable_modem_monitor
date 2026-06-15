@@ -15,6 +15,7 @@ from typing import Any
 
 from ...models.parser_config.system_info import JSONSystemInfoSource
 from ..base import BaseParser
+from ..diagnostics import record_failed_field
 from ..type_conversion import convert_value
 from .json_parser import _navigate_path
 
@@ -33,6 +34,9 @@ class JSONSystemInfoParser(BaseParser):
 
     def __init__(self, config: JSONSystemInfoSource) -> None:
         self._config = config
+        # Conversion-rejected raw values from the most recent parse —
+        # PARSING_SPEC § Field Outcomes.
+        self.failed_fields: dict[str, str] = {}
 
     def parse(self, resources: dict[str, Any]) -> dict[str, str]:
         """Extract system_info fields from the configured JSON resource.
@@ -69,6 +73,7 @@ class JSONSystemInfoParser(BaseParser):
             data = array[0] if isinstance(array[0], dict) else {}
 
         result: dict[str, str] = {}
+        self.failed_fields = {}
 
         for field_def in self._config.fields:
             # Navigate optional per-field path before key lookup
@@ -96,5 +101,7 @@ class JSONSystemInfoParser(BaseParser):
             )
             if converted is not None:
                 result[field_def.field] = str(converted)
+            else:
+                record_failed_field(self.failed_fields, field_def.field, raw_value)
 
         return result

@@ -14,6 +14,7 @@ from typing import Any
 
 from ...models.parser_config.system_info import JSSystemInfoSource
 from ..base import BaseParser
+from ..diagnostics import record_failed_field
 from ..type_conversion import convert_value
 from .js_embedded import _extract_tag_value_list
 
@@ -32,6 +33,9 @@ class JSSystemInfoParser(BaseParser):
 
     def __init__(self, config: JSSystemInfoSource) -> None:
         self._config = config
+        # Conversion-rejected raw values from the most recent parse —
+        # PARSING_SPEC § Field Outcomes.
+        self.failed_fields: dict[str, str] = {}
 
     def parse(self, resources: dict[str, Any]) -> dict[str, Any]:
         """Extract system_info fields from configured JS functions.
@@ -48,6 +52,7 @@ class JSSystemInfoParser(BaseParser):
             return {}
 
         result: dict[str, Any] = {}
+        self.failed_fields = {}
 
         for func in self._config.functions:
             raw_data = _extract_tag_value_list(soup, func.name)
@@ -81,5 +86,7 @@ class JSSystemInfoParser(BaseParser):
                 )
                 if converted is not None:
                     result[field_def.field] = converted
+                elif raw_value:
+                    record_failed_field(self.failed_fields, field_def.field, raw_value)
 
         return result

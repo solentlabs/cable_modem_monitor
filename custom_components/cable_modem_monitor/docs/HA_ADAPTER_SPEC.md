@@ -800,11 +800,21 @@ included automatically when new diagnostics are added to the model.
 - `auth_failure_streak` — consecutive auth failures (0 = healthy)
 - `circuit_breaker_open` — whether polling is stopped
 - `session_is_valid` — auth manager session state
+- `auth_strategy` — auth strategy name from modem config
 - `connectivity_streak` — consecutive connectivity failures
 - `connectivity_backoff_remaining` — polls to skip before retry
+- `stale_session_recovery_streak` — consecutive recovered stale-session events
+- `session_reuse_disabled` — whether cached-session reuse is off for this runtime
 - `resource_fetches` — per-resource timing and size from last
   successful collection (path, duration_ms, size_bytes per resource)
 - `last_poll_at` — ISO 8601 wall-clock timestamp (UTC) of last poll
+- `last_stub_body` — response bodies from the last stub-page event,
+  keyed by resource path (empty if none has occurred)
+- `system_info_fields_missing` — mapped system_info fields the modem
+  never sent on the most recent parse (PARSING_SPEC § Field Outcomes)
+- `system_info_fields_failed` — mapped fields whose value type
+  conversion rejected, with the raw value (truncated); retained for
+  the runtime so intermittent failures stay visible
 
 **Auth-failure detail surfaces in `recent_logs`.** When auth fails,
 the collector emits a single sanitized ``WARNING`` log carrying
@@ -942,7 +952,7 @@ not exposed as a sensor).
 
 After every poll (success or failure), the data coordinator fires:
 
-```
+```text
 cable_modem_monitor_data_updated
 ```
 

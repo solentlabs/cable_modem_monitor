@@ -20,6 +20,7 @@ from typing import Any
 
 from ...models.parser_config.system_info import JSVarsSystemInfoSource
 from ..base import BaseParser
+from ..diagnostics import record_failed_field
 from ..type_conversion import convert_value
 
 _logger = logging.getLogger(__name__)
@@ -37,6 +38,9 @@ class JSVarsParser(BaseParser):
 
     def __init__(self, config: JSVarsSystemInfoSource) -> None:
         self._config = config
+        # Conversion-rejected raw values from the most recent parse —
+        # PARSING_SPEC § Field Outcomes.
+        self.failed_fields: dict[str, str] = {}
 
     def parse(self, resources: dict[str, Any]) -> dict[str, str]:
         """Extract fields from JS variable assignments.
@@ -56,6 +60,7 @@ class JSVarsParser(BaseParser):
         var_to_mapping = {f.source: f for f in self._config.fields}
 
         result: dict[str, str] = {}
+        self.failed_fields = {}
         for script in soup.find_all("script"):
             text = script.string
             if not text:
@@ -64,8 +69,9 @@ class JSVarsParser(BaseParser):
                 var_name = match.group(1)
                 field_def = var_to_mapping.get(var_name)
                 if field_def is not None:
+                    raw_value = match.group(2)
                     converted = convert_value(
-                        match.group(2),
+                        raw_value,
                         field_def.type,
                         map_config=field_def.map,
                         input_format=field_def.format,
@@ -73,5 +79,7 @@ class JSVarsParser(BaseParser):
                     )
                     if converted is not None:
                         result[field_def.field] = str(converted)
+                    elif raw_value:
+                        record_failed_field(self.failed_fields, field_def.field, raw_value)
 
         return result

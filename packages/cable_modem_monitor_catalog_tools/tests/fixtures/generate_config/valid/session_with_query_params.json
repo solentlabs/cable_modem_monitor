@@ -18,8 +18,6 @@
       "confidence": "high"
     },
     "session": {
-      "max_concurrent": 1,
-      "max_concurrent_confidence": "medium",
       "headers": {"X-Requested-With": "XMLHttpRequest"},
       "query_params": {"_n": "13127"},
       "cookie_name": "PHPSESSID"

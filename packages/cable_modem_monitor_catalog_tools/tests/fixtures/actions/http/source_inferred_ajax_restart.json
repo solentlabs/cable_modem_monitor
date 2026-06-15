@@ -1,0 +1,48 @@
+{
+  "_description": "Extracted from technicolor/xb10 modem.har: restart $.ajax call site in restore_reboot.jst page JS. csrfp_token param name matches the Set-Cookie issued at login redirect, so it resolves to a {cookie:...} directive; resetInfo is computed in page script and stays unresolved.",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://10.0.0.1/at_a_glance.jst",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Set-Cookie",
+            "value": "csrfp_token=COOKIE_4e0d1f71; httponly; secure"
+          }
+        ],
+        "content": {
+          "text": "<html><body>At a Glance</body></html>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://10.0.0.1/restore_reboot.jst",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": "var token = \"COOKIE_4e0d1f71\";\nfunction resetConfirm(jsonInfo) {\n\t$.ajax({\n\t\ttype: \"POST\",\n\t\turl: \"actionHandler/ajaxSet_Reset_Restore.jst\",\n\t\tdata: { resetInfo: jsonInfo,csrfp_token: token },\n\t\tsuccess: function(data){\n\t\t\tjHide();\n\t\t\tif (JSON.parse(data).reboot) {\n\t\t\t\tjProgress($.i18n('Please wait for rebooting ...'), 999999);\n\t\t\t}\n\t\t}\n\t});\n}"
+        }
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/actionHandler/ajaxSet_Reset_Restore.jst",
+    "params": {
+      "csrfp_token": "{cookie:csrfp_token}"
+    },
+    "source": "source_inferred"
+  },
+  "_expected_warnings_contains": ["resetInfo"]
+}

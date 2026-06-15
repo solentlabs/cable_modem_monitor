@@ -84,10 +84,11 @@ system_info:
       response_key: GetArrisDeviceStatusResponse
     - format: hnap
       fields:
-        - field: system_uptime
-          source: CustomerConnSystemUpTime
-          type: uptime
-          format: "{days} days {hours}h:{minutes}m:{seconds}s"
+        # No system_uptime mapping: the swinfo page advertises an Uptime row
+        # (swinfo.js reads CustomerConnSystemUpTime from this response), but
+        # the field was never observed on real hardware — wild diagnostics
+        # (#98, 3.14.0-beta.3) returned this response without it. Same as S34.
+        # Last Boot Time falls back to counter-reset detection (#110).
         - field: hardware_version
           source: StatusSoftwareHdVer
           type: string

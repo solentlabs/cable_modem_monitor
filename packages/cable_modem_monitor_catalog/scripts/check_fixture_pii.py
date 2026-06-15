@@ -153,11 +153,13 @@ for prefix in _allowlist.get("hash_prefixes", {}).get("values", []):
 
 SAFE_MACS: set[str] = set(_SAFE["safe_macs"])
 SAFE_IP_PREFIXES: tuple[str, ...] = tuple(_SAFE["safe_ip_prefixes"])
+SAFE_IP_VALUES: set[str] = set(_SAFE.get("safe_ip_values", []))
+_SAFE_IPV6_PREFIXES: tuple[str, ...] = tuple(_SAFE["safe_ipv6_prefixes"])
+SAFE_EMAIL_VALUES: set[str] = {v.lower() for v in _SAFE.get("safe_email_values", [])}
 SAFE_SSID_VALUES: set[str] = set(_SAFE["safe_ssids"])
 TAGVALUE_SAFE_PATTERNS: set[str] = set(_SAFE["safe_tagvalue_patterns"])
 _SAFE_SERIAL_PREFIXES: tuple[str, ...] = tuple(_SAFE["safe_serial_prefixes"])
 _CODE_INDICATORS: tuple[str, ...] = tuple(_SAFE["code_indicators"])
-_SAFE_IPV6_PREFIXES: tuple[str, ...] = tuple(_SAFE["safe_ipv6_prefixes"])
 _SAFE_CREDENTIAL_PLACEHOLDERS: set[str] = {v.lower() for v in _SAFE.get("safe_credential_placeholders", [])}
 
 # Known safe values (har-capture allowlist + common placeholders +
@@ -220,7 +222,7 @@ def is_safe_mac(mac: str) -> bool:
 
 def _is_safe_ip_finding(match: str) -> bool:
     """Check if an IP finding is a known false positive."""
-    if is_safe_ip(match):
+    if is_safe_ip(match) or match in SAFE_IP_VALUES:
         return True
     octets = match.split(".")
     if len(octets) != 4 or not all(o.isdigit() for o in octets):
@@ -294,8 +296,12 @@ _SAFE_FINDING_DISPATCH: dict[str, Callable[[str], bool]] = {
     "session_token": _is_safe_session_token_or_account_id,
     "account_id": _is_safe_session_token_or_account_id,
     "ipv6": _is_safe_ipv6,
-    # Cable modem fixtures never contain credit card numbers.
+    # Open-source library author credits embedded in modem firmware JS.
+    "email": lambda m: m.lower() in SAFE_EMAIL_VALUES,
+    # Cable modem fixtures never contain credit card numbers. Long float
+    # fractions (e.g. tcp_latency_ms) pattern-match card numbers.
     "credit_card_visa": lambda _: True,
+    "credit_card_mastercard": lambda _: True,
 }
 
 

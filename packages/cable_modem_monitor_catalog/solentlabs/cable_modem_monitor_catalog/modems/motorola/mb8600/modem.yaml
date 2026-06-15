@@ -12,6 +12,10 @@ actions:
   restart:
     type: hnap
     action_name: SetStatusSecuritySettings
+    # "XXX" is NOT a placeholder. The firmware really calls
+    # GetMotoStatusSecXXX and sends MotoStatusSecXXX: "XXX". Confirmed on
+    # the MB8611 (same firmware family) via cvonk's restart-flow HAR
+    # (issue #60, June 2026); see motorola/mb8611/modem.yaml.
     pre_fetch_action: GetMotoStatusSecXXX
     params:
       MotoStatusSecXXX: XXX

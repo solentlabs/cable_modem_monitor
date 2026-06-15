@@ -26,7 +26,7 @@ declaratively.
 
 - At least one of parser.yaml or parser.py is required — every modem package must have one
 - parser.yaml is the primary expression mode — code is the escape hatch
-- When parser.yaml is present, it drives the fetch list — the orchestrator reads it to know what resources to load
+- parser.yaml drives the fetch list; parser.py declares the resources its hooks read via `resources` — the orchestrator merges both at startup
 - Format selection is per-section, not per-modem — a modem can mix formats
 - `BaseParser` implementations are format experts, not modem experts
 - Capabilities are implicit from mappings — no separate declarations
@@ -249,11 +249,24 @@ system_info:
     - resource: "/info.html"
 ```
 
+**parser.py:** A `PostProcessor` declares the resources its hooks read
+in a `resources` class attribute — a dict of URL path → format (see
+[parser.py — Post-Processing Hooks](#parserpy--post-processing-hooks)).
+The orchestrator merges these paths into the fetch list, deduplicated
+by path; when parser.yaml maps the same path, its declaration wins.
+This replaces the former workaround of adding a fake field mapping
+whose only purpose was forcing the fetch — declaration now lives with
+the code that consumes the resource, and graduating an extraction from
+parser.py to parser.yaml moves the resource declaration in the same
+edit.
+
 **HNAP:** Sections with `format: hnap` declare `response_key` instead
 of `resource`. The orchestrator detects this and tells the HNAP loader
 to batch all referenced action names into a single
 `GetMultipleHNAPs` request. HNAP action names are derived from `response_key`
-by stripping the `Response` suffix.
+by stripping the `Response` suffix. The parser.py `resources` attribute
+does not apply to HNAP — the batched request has no per-page fetch
+list, and no HNAP modem has needed a hook-only action.
 
 **Startup validation:** The orchestrator verifies at startup that
 every `resource` path in parser.yaml is fetchable (valid path format,
@@ -429,6 +442,14 @@ class PostProcessor:
     exact name from parser.py via ``getattr(module, "PostProcessor")``.
     """
 
+    # Optional: the resources the hooks below read. Dict of URL
+    # path → format; the orchestrator merges these into the fetch
+    # list at startup (paths parser.yaml already maps are
+    # deduplicated, with parser.yaml's format winning).
+    resources = {
+        "/network_setup.jst": "table",
+    }
+
     def parse_downstream(
         self, channels: list[dict], resources: dict[str, Any]
     ) -> list[dict]:
@@ -474,10 +495,10 @@ values, filter channels, or fully replace the extraction output.
    — the coordinator owns the pipeline.
 
 2. **No network calls.** parser.py receives the pre-fetched resource
-   dict. No session, no HTTP client, no auth awareness. If a parser
-   needs data from a URL not in the resource dict, add a `resource`
-   reference in parser.yaml — the orchestrator will include it in the
-   fetch list automatically.
+   dict. No session, no HTTP client, no auth awareness. Declare the
+   resources the hooks read in the `resources` class attribute (dict
+   of URL path → format) — the orchestrator merges it into the fetch
+   list. Never add a fake parser.yaml mapping just to force a fetch.
 
 3. **No auth or session state.** parser.py is a pure data transformer.
    Infrastructure like HNAP builders, session tokens, and cookies flow
@@ -865,6 +886,86 @@ Diagnostics for Remote Troubleshooting`) as a list of
 `(resource_path, expected_anchors, fulfilled_anchors)` records.
 Lets bug-report reviewers see at a glance which resources matched
 and which slipped to stub.
+
+### Field Outcomes (system_info)
+
+Anchor counts operate at resource grain. One level down, a parse can
+succeed — anchors fulfilled, channels extracted — while an individual
+`system_info` field that parser.yaml explicitly maps produces nothing.
+That state was previously invisible: an absent source key was skipped
+without logging, and a failed type conversion logged only at DEBUG.
+Field outcomes give it a home in diagnostics.
+
+For each field mapped in `system_info.sources`, the parse pass
+reports one of three outcomes:
+
+| Outcome | Meaning |
+|---------|---------|
+| produced | Field present in merged system_info output (the normal case; not reported, inferred from output) |
+| missing | No configured source produced a value for the field — the source key was absent or empty in every response |
+| failed | A source contained a non-empty value, but type conversion rejected it. The raw value is captured (truncated to a fixed cap) |
+
+Field names beginning with an underscore are internal hook
+intermediates — values a yaml mapping extracts solely as input for a
+parser.py hook — and are excluded from outcome accounting entirely.
+They are not part of the modem's data contract and would otherwise
+report as permanently missing.
+
+Fields produced only by parser.py (the escape hatch for extractions
+with no declarative path yet) are likewise outside the accounting:
+with no yaml declaration there is no expectation to compare against,
+so a broken hook extraction surfaces through field-set change
+detection, not here. When a field graduates from parser.py to a
+parser.yaml mapping (and its resource moves from the PostProcessor's
+`resources` declaration into the mapping), it enters outcome
+accounting automatically.
+
+### Field outcome semantics
+
+- Accounting is section-level, after the multi-source merge: a field
+  mapped in two sources counts as produced if either source produced
+  it. This matches user-visible impact.
+- **No signal or policy coupling.** Unlike zero anchor fulfillment,
+  a missing or failed field never raises a collector signal, never
+  triggers a retry, and never increments a streak. Field outcomes
+  are a diagnostics-only channel. Mapped fields legitimately go
+  missing on firmware variants (same rationale as partial anchor
+  fulfillment above); the catalog entry, not runtime policy, is the
+  place to resolve the mismatch.
+- **Distinct from field-set change detection.** The orchestrator's
+  field-set change event (ORCHESTRATION_SPEC) fires when the produced
+  field set *changes between polls* — a transition detector for
+  firmware updates. Field outcomes compare produced fields against
+  *configured* fields — a steady-state detector. A field that never
+  parses from the first poll onward produces no transition and is
+  visible only here.
+- The captured raw value on `failed` is the repair datum: it lets a
+  maintainer fix a `format` string or `map` entry directly from a
+  user-shared diagnostics download, without a debug-log round-trip.
+  Raw values are captured only for fields parser.yaml explicitly
+  maps — data the catalog already intends to publish in parsed form
+  (same trust decision as `last_stub_body`, see ORCHESTRATION_SPEC §
+  OrchestratorDiagnostics). Values are truncated to a fixed cap as a
+  guard against pathological responses; field values are small.
+
+### Field outcome implementation note
+
+As with anchor counts, this specification defines **what is
+reported**, not the mechanism. `missing` derives centrally from the
+configured-vs-produced set difference; `failed` reporting is
+format-specific — each system_info parser knows when a located value
+was rejected by conversion. The `BaseParser` output shape is
+unchanged; field outcomes ride the same sibling diagnostics channel
+as anchor counts.
+
+**Background:** Issue #98. An Arris S33v3 entry mapped
+`system_uptime` from a source-inferred (synthetic) HAR response. On
+real hardware the field never appeared, and nothing in logs or
+diagnostics could distinguish "modem doesn't send it" from "modem
+sends it in an unhandled format" — resolving the question consumed a
+maintainer session and the mapping had to be dropped on
+absence-of-evidence. Field outcomes make the next such case
+self-diagnosing from the first shared diagnostics download.
 
 ---
 

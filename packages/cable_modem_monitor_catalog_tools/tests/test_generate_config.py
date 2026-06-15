@@ -117,7 +117,7 @@ class TestSessionBehavior:
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         modem = yaml.safe_load(result.modem_yaml)
         assert modem["auth"]["cookie_name"] == "session"
-        assert modem["session"]["max_concurrent"] == 1
+        assert "max_concurrent" not in modem.get("session", {})
 
     def test_url_token_session(self) -> None:
         """URL token session has cookie_name and token_prefix on auth."""

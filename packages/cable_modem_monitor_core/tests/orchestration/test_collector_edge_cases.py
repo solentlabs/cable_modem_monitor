@@ -44,7 +44,6 @@ def _make_config(
     transport: str = "http",
     cookie_name: str = "",
     token_prefix: str = "",
-    max_concurrent: int = 0,
     logout_action: Any = None,
     timeout: int = 10,
     hmac_algorithm: Literal["md5", "sha256"] = "md5",
@@ -71,12 +70,9 @@ def _make_config(
     if hasattr(config.auth, "token_prefix") or isinstance(config.auth, MagicMock):
         config.auth.token_prefix = token_prefix
 
-    if max_concurrent:
-        config.session = MagicMock()
-        config.session.max_concurrent = max_concurrent
-        config.session.headers = {}
-    else:
-        config.session = None
+    config.session = MagicMock()
+    config.session.headers = {}
+    config.session.query_params = {}
 
     if logout_action is not None:
         config.actions = MagicMock()
@@ -290,7 +286,6 @@ class TestHnapLogout:
             auth_type="hnap",
             transport="hnap",
             cookie_name="uid",
-            max_concurrent=1,
             logout_action=logout_action,
         )
         collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "pw")

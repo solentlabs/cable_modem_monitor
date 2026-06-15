@@ -409,19 +409,19 @@ CHANNEL_PARSERS: dict[type, Callable[..., tuple[list[dict[str, Any]], AnchorCoun
 def _parse_html_fields_sysinfo(
     source: HTMLFieldsSource,
     resources: dict[str, Any],
-) -> tuple[dict[str, Any], AnchorCount]:
+) -> tuple[dict[str, Any], AnchorCount, dict[str, str]]:
     """Parse system_info from HTML label/value pairs."""
     html_si = HTMLFieldsParser(source)
     result = html_si.parse(resources)
     if not isinstance(result, dict):
         result = {}
-    return result, _resource_present(resources, source.resource)
+    return result, _resource_present(resources, source.resource), html_si.failed_fields
 
 
 def _parse_hnap_sysinfo(
     source: HNAPSystemInfoSource,
     resources: dict[str, Any],
-) -> tuple[dict[str, Any], AnchorCount]:
+) -> tuple[dict[str, Any], AnchorCount, dict[str, str]]:
     """Parse system_info from HNAP response fields.
 
     See note on ``_parse_hnap_channels``: HNAP is not subject to the
@@ -431,13 +431,13 @@ def _parse_hnap_sysinfo(
     result = hnap_si.parse(resources)
     if not isinstance(result, dict):
         result = {}
-    return result, _ANCHOR_TRIVIAL
+    return result, _ANCHOR_TRIVIAL, hnap_si.failed_fields
 
 
 def _parse_js_sysinfo(
     source: JSSystemInfoSource,
     resources: dict[str, Any],
-) -> tuple[dict[str, Any], AnchorCount]:
+) -> tuple[dict[str, Any], AnchorCount, dict[str, str]]:
     """Parse system_info from JS-embedded tagValueList variables.
 
     Anchor count: each non-empty ``functions[].name`` is one expected
@@ -457,13 +457,13 @@ def _parse_js_sysinfo(
         anchors = _count_js_function_anchors(soup, named_funcs)
     else:
         anchors = _resource_present(resources, source.resource)
-    return result, anchors
+    return result, anchors, js_si.failed_fields
 
 
 def _parse_js_vars_sysinfo(
     source: JSVarsSystemInfoSource,
     resources: dict[str, Any],
-) -> tuple[dict[str, Any], AnchorCount]:
+) -> tuple[dict[str, Any], AnchorCount, dict[str, str]]:
     """Parse system_info from JS variable assignments.
 
     Anchor count: each ``fields[].source`` (JS variable name) is one
@@ -481,36 +481,36 @@ def _parse_js_vars_sysinfo(
         anchors = _count_js_variable_anchors(soup, var_names)
     else:
         anchors = _resource_present(resources, source.resource)
-    return result, anchors
+    return result, anchors, js_vars_si.failed_fields
 
 
 def _parse_json_sysinfo(
     source: JSONSystemInfoSource,
     resources: dict[str, Any],
-) -> tuple[dict[str, Any], AnchorCount]:
+) -> tuple[dict[str, Any], AnchorCount, dict[str, str]]:
     """Parse system_info from a JSON API response."""
     json_si = JSONSystemInfoParser(source)
     result = json_si.parse(resources)
     if not isinstance(result, dict):
         result = {}
-    return result, _resource_present(resources, source.resource)
+    return result, _resource_present(resources, source.resource), json_si.failed_fields
 
 
 def _parse_xml_sysinfo(
     source: XMLSystemInfoSource,
     resources: dict[str, Any],
-) -> tuple[dict[str, Any], AnchorCount]:
+) -> tuple[dict[str, Any], AnchorCount, dict[str, str]]:
     """Parse system_info from XML element fields."""
     xml_si = XMLSystemInfoParser(source)
     result = xml_si.parse(resources)
     if not isinstance(result, dict):
         result = {}
-    return result, _resource_present(resources, source.resource)
+    return result, _resource_present(resources, source.resource), xml_si.failed_fields
 
 
 # Wrappers keyed by format_tag. Combined with SYSTEM_INFO_SOURCE_MODELS
 # below to build SYSINFO_PARSERS.
-_SYSINFO_WRAPPERS_BY_TAG: dict[str, Callable[..., tuple[dict[str, Any], AnchorCount]]] = {
+_SYSINFO_WRAPPERS_BY_TAG: dict[str, Callable[..., tuple[dict[str, Any], AnchorCount, dict[str, str]]]] = {
     "html_fields": _parse_html_fields_sysinfo,
     "hnap": _parse_hnap_sysinfo,
     "javascript": _parse_js_sysinfo,
@@ -520,8 +520,9 @@ _SYSINFO_WRAPPERS_BY_TAG: dict[str, Callable[..., tuple[dict[str, Any], AnchorCo
 }
 
 # Maps source config type -> parser callable(source, resources) ->
-# (dict, AnchorCount).
-SYSINFO_PARSERS: dict[type, Callable[..., tuple[dict[str, Any], AnchorCount]]] = {
+# (dict, AnchorCount, failed_fields). The third element carries
+# conversion-rejected raw values — PARSING_SPEC § Field Outcomes.
+SYSINFO_PARSERS: dict[type, Callable[..., tuple[dict[str, Any], AnchorCount, dict[str, str]]]] = {
     model: _SYSINFO_WRAPPERS_BY_TAG[model.format_tag] for model in SYSTEM_INFO_SOURCE_MODELS
 }
 

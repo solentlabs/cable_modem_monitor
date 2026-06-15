@@ -209,3 +209,83 @@ class TestMultipleSources:
             "software_version": "1.0.2.3",
             "boot_status": "Operational",
         }
+
+
+class TestFieldFailures:
+    """Conversion-rejected values are recorded with their raw value.
+
+    See PARSING_SPEC.md § Field Outcomes (system_info).
+    """
+
+    def _uptime_source(self) -> HNAPSystemInfoSource:
+        return _make_source(
+            fields=[
+                {
+                    "source": "SysUpTime",
+                    "field": "system_uptime",
+                    "type": "uptime",
+                    "format": "{days} days {hours}h:{minutes}m:{seconds}s",
+                },
+            ],
+        )
+
+    def test_rejected_value_recorded_with_raw(self) -> None:
+        """Value present but conversion fails → raw value in failed_fields."""
+        parser = HNAPFieldsParser(self._uptime_source())
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {"SysUpTime": "01/17/2026 14:52:10"},
+            },
+        }
+
+        result = parser.parse(resources)
+
+        assert result == {}
+        assert parser.failed_fields == {"system_uptime": "01/17/2026 14:52:10"}
+
+    def test_absent_key_not_recorded_as_failed(self) -> None:
+        """Missing source key is absence, not conversion failure."""
+        parser = HNAPFieldsParser(self._uptime_source())
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {"Other": "x"},
+            },
+        }
+
+        result = parser.parse(resources)
+
+        assert result == {}
+        assert parser.failed_fields == {}
+
+    def test_produced_field_not_recorded(self) -> None:
+        """Successful conversion leaves failed_fields empty."""
+        parser = HNAPFieldsParser(self._uptime_source())
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {"SysUpTime": "16 days 05h:23m:42s"},
+            },
+        }
+
+        result = parser.parse(resources)
+
+        assert result == {"system_uptime": "16 days 05h:23m:42s"}
+        assert parser.failed_fields == {}
+
+    def test_raw_value_truncated_to_cap(self) -> None:
+        """Pathologically long raw values are capped."""
+        from solentlabs.cable_modem_monitor_core.parsers.diagnostics import (
+            MAX_FAILED_FIELD_VALUE_LEN,
+        )
+
+        parser = HNAPFieldsParser(self._uptime_source())
+        long_value = "x" * (MAX_FAILED_FIELD_VALUE_LEN * 3)
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {"SysUpTime": long_value},
+            },
+        }
+
+        parser.parse(resources)
+
+        recorded = parser.failed_fields["system_uptime"]
+        assert len(recorded) == MAX_FAILED_FIELD_VALUE_LEN

@@ -45,6 +45,13 @@ _DOCSIS_RE = re.compile(r"DOCSIS", re.IGNORECASE)
 class PostProcessor:
     """Extract OFDMA upstream channels and enrich system_info."""
 
+    # Resources the hooks read — nothing in parser.yaml maps these;
+    # the orchestrator merges them into the fetch list (PARSING_SPEC).
+    resources = {
+        _VERSION_INFO: "json",
+        _OFDMA_US: "json",
+    }
+
     def parse_upstream(
         self,
         channels: list[dict[str, Any]],

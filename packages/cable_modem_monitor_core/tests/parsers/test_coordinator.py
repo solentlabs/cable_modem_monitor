@@ -716,3 +716,147 @@ def _make_field_html(fields: dict[str, str]) -> str:
     """Build minimal HTML with label/value table for html_fields parser."""
     rows = "".join(f"<tr><td>{label}</td><td>{value}</td></tr>" for label, value in fields.items())
     return f"<table>{rows}</table>"
+
+
+class TestFieldOutcomes:
+    """Coordinator-level system_info field outcomes.
+
+    See PARSING_SPEC.md § Field Outcomes (system_info).
+    """
+
+    def _config(self) -> ParserConfig:
+        return ParserConfig.model_validate(
+            {
+                "system_info": {
+                    "sources": [
+                        {
+                            "format": "hnap",
+                            "response_key": "GetDeviceStatusResponse",
+                            "fields": [
+                                {"source": "FirmwareVersion", "field": "software_version", "type": "string"},
+                                {
+                                    "source": "SysUpTime",
+                                    "field": "system_uptime",
+                                    "type": "uptime",
+                                    "format": "{days} days {hours}h:{minutes}m:{seconds}s",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            }
+        )
+
+    def test_absent_field_reported_missing(self) -> None:
+        """Mapped field with no source key anywhere → system_info_fields_missing."""
+        coordinator = ModemParserCoordinator(self._config())
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {"FirmwareVersion": "1.0"},
+            },
+        }
+
+        result, diagnostics = coordinator.parse(resources)
+
+        assert result["system_info"]["software_version"] == "1.0"
+        assert "system_uptime" not in result["system_info"]
+        assert diagnostics.system_info_fields_missing == ["system_uptime"]
+        assert diagnostics.system_info_fields_failed == {}
+
+    def test_failed_conversion_reported_with_raw(self) -> None:
+        """Mapped field rejected by conversion → system_info_fields_failed with raw."""
+        coordinator = ModemParserCoordinator(self._config())
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {
+                    "FirmwareVersion": "1.0",
+                    "SysUpTime": "01/17/2026 14:52:10",
+                },
+            },
+        }
+
+        _, diagnostics = coordinator.parse(resources)
+
+        assert diagnostics.system_info_fields_missing == []
+        assert diagnostics.system_info_fields_failed == {"system_uptime": "01/17/2026 14:52:10"}
+
+    def test_all_fields_produced(self) -> None:
+        """Complete extraction → both outcome channels empty."""
+        coordinator = ModemParserCoordinator(self._config())
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {
+                    "FirmwareVersion": "1.0",
+                    "SysUpTime": "16 days 05h:23m:42s",
+                },
+            },
+        }
+
+        result, diagnostics = coordinator.parse(resources)
+
+        assert result["system_info"]["system_uptime"] == "16 days 05h:23m:42s"
+        assert diagnostics.system_info_fields_missing == []
+        assert diagnostics.system_info_fields_failed == {}
+
+    def test_field_produced_by_second_source_not_missing(self) -> None:
+        """Section-level accounting: produced anywhere counts as produced."""
+        config = ParserConfig.model_validate(
+            {
+                "system_info": {
+                    "sources": [
+                        {
+                            "format": "hnap",
+                            "response_key": "GetDeviceStatusResponse",
+                            "fields": [{"source": "ModelName", "field": "model_name", "type": "string"}],
+                        },
+                        {
+                            "format": "hnap",
+                            "response_key": "GetSoftwareResponse",
+                            "fields": [{"source": "ModelName2", "field": "model_name", "type": "string"}],
+                        },
+                    ],
+                },
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {"Other": "x"},
+                "GetSoftwareResponse": {"ModelName2": "T100"},
+            },
+        }
+
+        result, diagnostics = coordinator.parse(resources)
+
+        assert result["system_info"]["model_name"] == "T100"
+        assert diagnostics.system_info_fields_missing == []
+
+    def test_underscore_fields_excluded_from_outcomes(self) -> None:
+        """Internal fields (hook intermediates) never report as missing."""
+        config = ParserConfig.model_validate(
+            {
+                "system_info": {
+                    "sources": [
+                        {
+                            "format": "hnap",
+                            "response_key": "GetDeviceStatusResponse",
+                            "fields": [
+                                {"source": "FirmwareVersion", "field": "software_version", "type": "string"},
+                                {"source": "RawHookInput", "field": "_hook_intermediate", "type": "string"},
+                            ],
+                        },
+                    ],
+                },
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        resources = {
+            "hnap_response": {
+                "GetDeviceStatusResponse": {"FirmwareVersion": "1.0"},
+            },
+        }
+
+        _, diagnostics = coordinator.parse(resources)
+
+        assert diagnostics.system_info_fields_missing == []
+        assert diagnostics.system_info_fields_failed == {}

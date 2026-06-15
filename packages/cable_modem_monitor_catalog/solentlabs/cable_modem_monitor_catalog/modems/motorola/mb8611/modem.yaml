@@ -14,6 +14,10 @@ actions:
   restart:
     type: hnap
     action_name: SetStatusSecuritySettings
+    # "XXX" is NOT a placeholder. The firmware's MotoStatusSecurity.html
+    # really calls GetMotoStatusSecXXX and sends MotoStatusSecXXX: "XXX".
+    # Confirmed by cvonk's restart-flow HAR (issue #60, June 2026): modem
+    # replied SetStatusSecuritySettingsResult: OK, Action: REBOOT.
     pre_fetch_action: GetMotoStatusSecXXX
     params:
       MotoStatusSecXXX: XXX
@@ -27,18 +31,19 @@ hardware:
   chipset: Broadcom BCM3390
   release_date: "2020"
 
-status: awaiting_verification
+status: confirmed
 sources:
   auth_config: "[#6 MB8611 fails to connect](https://github.com/solentlabs/cable_modem_monitor/issues/6)"
   chipset: "[AfrozAhmad Review](https://afrozahmad.com/blog/motorola-mb8611-cable-modem-review/)"
   detection_hints: "[#6 MB8611 fails to connect](https://github.com/solentlabs/cable_modem_monitor/issues/6)"
   hardware: "[Motorola MB8611 page](https://www.motorola.com/us/mb8611)"
+  restart: "[#60 MB8611 restart button not working](https://github.com/solentlabs/cable_modem_monitor/issues/60)"
 attribution:
   contributors:
     - github: https://github.com/cvonk
       contribution:
-        "HAR captures, debug logs, iterative testing (Issue #6, November
-        2025)"
+        "HAR captures, debug logs, iterative testing (Issue #6, November 2025);
+        restart flow capture confirming SetStatusSecuritySettings (Issue #60, June 2026)"
     - github: https://github.com/dlindnegm
       contribution: "Original HTML page captures (Issue #4, October 2025)"
     - github: https://github.com/BowlesCR

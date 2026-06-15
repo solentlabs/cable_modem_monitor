@@ -106,14 +106,29 @@ class ModemParserCoordinator:
         for section_name in _CHANNEL_SECTIONS:
             _strip_ofdm_fields(result[section_name])
 
-        system_info, sysinfo_counts = self._extract_system_info(resources)
+        system_info, sysinfo_counts, sysinfo_failed = self._extract_system_info(resources)
         if system_info:
             result["system_info"] = system_info
         for resource, count in sysinfo_counts.items():
             per_resource[resource] = per_resource[resource] + count
 
         self._enrich_derived_fields(result)
-        diagnostics = ParseDiagnostics(by_resource=dict(per_resource))
+
+        # Field outcomes — section-level, post-merge and post-hook.
+        # Underscore-prefixed fields are internal hook intermediates
+        # and excluded from the accounting.
+        # See PARSING_SPEC.md § Field Outcomes (system_info).
+        produced = set(result.get("system_info", {}))
+        failed = {
+            name: raw for name, raw in sysinfo_failed.items() if name not in produced and not name.startswith("_")
+        }
+        missing = sorted(self._configured_system_info_fields() - produced - set(failed))
+
+        diagnostics = ParseDiagnostics(
+            by_resource=dict(per_resource),
+            system_info_fields_missing=missing,
+            system_info_fields_failed=failed,
+        )
         return result, diagnostics
 
     def _extract_channel_section(
@@ -145,27 +160,31 @@ class ModemParserCoordinator:
     def _extract_system_info(
         self,
         resources: dict[str, Any],
-    ) -> tuple[dict[str, Any], dict[str, AnchorCount]]:
+    ) -> tuple[dict[str, Any], dict[str, AnchorCount], dict[str, str]]:
         """Extract system_info from all configured sources.
 
         Dispatches to the system info source registry by source config type.
         Merges results with last-write-wins. Returns (system_info,
-        per_resource_anchors). Per-resource anchors aggregate across all
-        sources sharing a resource path.
+        per_resource_anchors, failed_fields). Per-resource anchors
+        aggregate across all sources sharing a resource path;
+        failed_fields carries conversion-rejected raw values across all
+        sources (PARSING_SPEC § Field Outcomes).
         """
         per_resource: dict[str, AnchorCount] = defaultdict(AnchorCount)
+        failed: dict[str, str] = {}
 
         section = self._config.system_info
         if section is None:
-            return self._apply_hook("system_info", {}, resources), dict(per_resource)
+            return self._apply_hook("system_info", {}, resources), dict(per_resource), failed
 
         merged: dict[str, Any] = {}
         for source in section.sources:
             parser_fn = SYSINFO_PARSERS.get(type(source))
             if parser_fn is None:
                 raise NotImplementedError(f"{type(source).__name__} has no registered system_info parser")
-            data, anchors = parser_fn(source, resources)
+            data, anchors, source_failed = parser_fn(source, resources)
             merged.update(data)
+            failed.update(source_failed)
             # HNAP sysinfo sources share the no-resource property of HNAP
             # channel sections — skip per-resource aggregation for them.
             # Empty-string resource paths (e.g., arrays-mode JSON) are
@@ -174,7 +193,27 @@ class ModemParserCoordinator:
             if resource_path is not None:
                 per_resource[resource_path] = per_resource[resource_path] + anchors
 
-        return self._apply_hook("system_info", merged, resources), dict(per_resource)
+        return self._apply_hook("system_info", merged, resources), dict(per_resource), failed
+
+    def _configured_system_info_fields(self) -> set[str]:
+        """Field names parser.yaml maps across all system_info sources.
+
+        JS sources nest field mappings under functions; every other
+        format carries a flat ``fields`` list.
+        """
+        section = self._config.system_info
+        if section is None:
+            return set()
+
+        configured: set[str] = set()
+        for source in section.sources:
+            functions = getattr(source, "functions", None)
+            if functions is not None:
+                for func in functions:
+                    configured.update(f.field for f in func.fields)
+            else:
+                configured.update(f.field for f in getattr(source, "fields", []))
+        return {name for name in configured if not name.startswith("_")}
 
     def _apply_hook(
         self,

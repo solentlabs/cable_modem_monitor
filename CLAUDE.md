@@ -215,6 +215,14 @@ propose fixes first.
 
 ## Catalog & Data Discipline
 
+- **HAR captures are immutable evidence.** A HAR represents actual
+  hardware we do not own or control. Never edit one — not to fix
+  malformed HTML, normalize endpoints, or tidy payloads. Broken
+  markup in a capture is firmware behavior the parser must handle,
+  not noise to clean: correcting bad tags in a HAR once caused a
+  modem that really returns bad tags to be processed incorrectly.
+  The only sanctioned transformation is PII value sanitization at
+  intake, which replaces values and never structure.
 - **No modem-specific behavior in `modem.yaml`.** YAML contains how
   to *talk to* the modem (transport, auth, session, actions,
   hardware metadata, parser mappings) — not how Core processes

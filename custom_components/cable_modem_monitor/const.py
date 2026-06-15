@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 
 # IMPORTANT: Do not edit VERSION manually!
 # Use: python scripts/release.py <version>
-VERSION = "3.14.0-beta.10"
+VERSION = "3.14.0-beta.11"
 
 DOMAIN = "cable_modem_monitor"
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
@@ -86,3 +86,21 @@ class EntityPrefix(StrEnum):
     NONE = "none"
     MODEL = "model"
     IP = "ip"
+
+
+# system_info fields consumed by dedicated sensor classes.
+# Dynamic SystemInfoFieldSensor (sensor.py) and the dashboard passthrough loop
+# (dev_tools.py) both skip these — the dedicated classes own them.
+# When a field graduates to a dedicated sensor, add it here.
+# fmt: off
+CONSUMED_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({
+    "software_version",
+    "system_uptime",
+    "downstream_channel_count",
+    "upstream_channel_count",
+    "total_corrected",
+    "total_uncorrected",
+    "rate_corrected",
+    "rate_uncorrected",
+})
+# fmt: on

@@ -3,9 +3,6 @@
 Examines post-login HAR entries for session artifacts: cookies, static
 headers (e.g., X-Requested-With), and URL token prefixes.
 
-``max_concurrent`` cannot be determined from HAR (requires live testing)
-and is always flagged as unknown.
-
 HNAP transport has implicit session (``uid`` + ``PrivateKey`` cookies,
 ``HNAP_AUTH`` header) -- this phase returns an empty session for HNAP.
 The auth manager sets both cookies from the challenge-response flow;
@@ -37,8 +34,6 @@ class SessionDetail:
     """
 
     cookie_name: str = ""
-    max_concurrent: int | None = None
-    max_concurrent_confidence: str = "unknown"
     headers: dict[str, str] = field(default_factory=dict)
     query_params: dict[str, str] = field(default_factory=dict)
     token_prefix: str = ""
@@ -47,8 +42,6 @@ class SessionDetail:
         """Serialize to a plain dict for MCP tool output."""
         return {
             "cookie_name": self.cookie_name,
-            "max_concurrent": self.max_concurrent,
-            "max_concurrent_confidence": self.max_concurrent_confidence,
             "headers": self.headers,
             "query_params": self.query_params,
             "token_prefix": self.token_prefix,
@@ -90,12 +83,7 @@ class SessionDetail:
                 )
             return session
 
-        session = _scan_session_artifacts(entries)
-
-        # Infer max_concurrent from session evidence
-        _infer_max_concurrent(session, auth_strategy, warnings)
-
-        return session
+        return _scan_session_artifacts(entries)
 
 
 def _scan_session_artifacts(entries: list[dict[str, Any]]) -> SessionDetail:
@@ -228,39 +216,3 @@ def _cookie_name_from_set_cookie(header_value: str) -> str:
     if "=" in header_value:
         return header_value.split("=", 1)[0].strip()
     return ""
-
-
-# Strategies that use credentials and could exhaust session slots.
-_AUTHENTICATED_STRATEGIES: frozenset[str] = frozenset(
-    {"form", "form_nonce", "form_pbkdf2", "form_sjcl", "url_token"},
-)
-
-
-def _infer_max_concurrent(
-    session: SessionDetail,
-    auth_strategy: str,
-    warnings: list[str],
-) -> None:
-    """Infer max_concurrent from session evidence.
-
-    IP-based sessions (form auth without cookies) typically allow only
-    one concurrent session. Cookie-based sessions cannot be determined
-    from HAR alone.
-    """
-    if auth_strategy not in _AUTHENTICATED_STRATEGIES:
-        return
-
-    if not session.cookie_name:
-        # No session cookie + authenticated strategy = IP-based tracking.
-        # These modems typically enforce a single-session limit.
-        session.max_concurrent = 1
-        session.max_concurrent_confidence = "medium"
-        warnings.append(
-            "No session cookie detected with authenticated strategy — "
-            "likely IP-based session tracking with max_concurrent=1. "
-            "Verify with contributor."
-        )
-    else:
-        warnings.append(
-            "max_concurrent cannot be determined from HAR for cookie-based sessions — verify with contributor."
-        )

@@ -13,6 +13,7 @@ from typing import Any
 from xml.etree.ElementTree import Element
 
 from ...models.parser_config.system_info import XMLChildAggregate, XMLSystemInfoSource
+from ..diagnostics import record_failed_field
 from ..type_conversion import convert_value
 
 _logger = logging.getLogger(__name__)
@@ -27,6 +28,9 @@ class XMLSystemInfoParser:
 
     def __init__(self, config: XMLSystemInfoSource) -> None:
         self._config = config
+        # Conversion-rejected raw values from the most recent parse —
+        # PARSING_SPEC § Field Outcomes.
+        self.failed_fields: dict[str, str] = {}
 
     def parse(self, resources: dict[str, Any]) -> dict[str, Any]:
         """Extract system_info fields from the resource dict.
@@ -66,21 +70,7 @@ class XMLSystemInfoParser:
                 )
                 return {}
 
-        # Extract fields
-        result: dict[str, Any] = {}
-        for field_map in self._config.fields:
-            sub = container.find(field_map.source)
-            if sub is None or sub.text is None:
-                continue
-            value = convert_value(
-                sub.text.strip(),
-                field_map.type,
-                map_config=field_map.map,
-                input_format=field_map.format,
-                scale=field_map.scale,
-            )
-            if value is not None:
-                result[field_map.field] = value
+        result = self._extract_fields(container)
 
         # Extract child element aggregates
         for agg in self._config.child_aggregates:
@@ -88,6 +78,28 @@ class XMLSystemInfoParser:
             if value is not None:
                 result[agg.field] = value
 
+        return result
+
+    def _extract_fields(self, container: Element) -> dict[str, Any]:
+        """Extract mapped fields, recording conversion rejections."""
+        result: dict[str, Any] = {}
+        self.failed_fields = {}
+        for field_map in self._config.fields:
+            sub = container.find(field_map.source)
+            if sub is None or sub.text is None:
+                continue
+            raw_value = sub.text.strip()
+            value = convert_value(
+                raw_value,
+                field_map.type,
+                map_config=field_map.map,
+                input_format=field_map.format,
+                scale=field_map.scale,
+            )
+            if value is not None:
+                result[field_map.field] = value
+            elif raw_value:
+                record_failed_field(self.failed_fields, field_map.field, raw_value)
         return result
 
 

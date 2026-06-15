@@ -16,7 +16,7 @@ auth:
 hardware:
   docsis_version: "3.1"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config: "[#127 Netgear CM3000](https://github.com/solentlabs/cable_modem_monitor/issues/127)"

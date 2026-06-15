@@ -14,7 +14,6 @@
     "login_fun": 15
   },
   "session": {
-    "max_concurrent": 1,
     "headers": {"X-Requested-With": "XMLHttpRequest"}
   },
   "actions": {

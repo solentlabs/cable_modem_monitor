@@ -248,6 +248,15 @@ class OrchestratorDiagnostics:
             next LOAD_INTEGRITY event — survives successful polls so
             it is present in bug-report diagnostics downloads even after
             the modem recovers. Full body stored; no truncation.
+        system_info_fields_missing: Mapped system_info fields no
+            configured source produced on the most recent parse.
+            Snapshot semantics — recomputed per parse, a healed field
+            clears. See PARSING_SPEC § Field Outcomes.
+        system_info_fields_failed: Conversion-rejected raw values
+            (truncated), keyed by field name. Retained for the runtime
+            once recorded so intermittent failures survive into
+            diagnostics downloads. Diagnostics-only; never feeds
+            signals or policy.
     """
 
     poll_duration: float | None
@@ -262,6 +271,8 @@ class OrchestratorDiagnostics:
     resource_fetches: list[ResourceFetch] = field(default_factory=list)
     last_poll_at: str | None = None
     last_stub_body: dict[str, str] = field(default_factory=dict)
+    system_info_fields_missing: list[str] = field(default_factory=list)
+    system_info_fields_failed: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict for diagnostics output."""
@@ -278,6 +289,8 @@ class OrchestratorDiagnostics:
             "resource_fetches": [f.to_dict() for f in self.resource_fetches],
             "last_poll_at": self.last_poll_at,
             "last_stub_body": self.last_stub_body,
+            "system_info_fields_missing": self.system_info_fields_missing,
+            "system_info_fields_failed": self.system_info_fields_failed,
         }
 
 

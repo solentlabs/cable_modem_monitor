@@ -1,0 +1,28 @@
+{
+  "_description": "Extracted from netgear/cm600 modem.har: RouterStatus.asp embeds a form whose action has no query token, so the static endpoint suffices — no pre_fetch_url or endpoint_pattern emitted. Hidden input values are JS-rewritten before submit (RsAction committed as 2, page HTML says 1), so params stay unextracted.",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/RouterStatus.asp",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": "<html><body>\n<form action='/goform/RouterStatus' method=\"post\">\n<button type=\"button\" class=\"page-table-button\" onClick=\"advButtonClick(2);\">Reboot</button>\n<input type=\"hidden\" value=\"1\" name=\"buttonSelect\" />\n<input type=\"hidden\" name=\"RsAction\" value=1>\n</form>\n</body></html>"
+        }
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/RouterStatus",
+    "endpoint_pattern": "",
+    "pre_fetch_url": "",
+    "source": "source_inferred"
+  },
+  "_expected_warnings_contains": ["RsAction"]
+}

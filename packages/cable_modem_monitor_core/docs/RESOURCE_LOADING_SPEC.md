@@ -6,7 +6,8 @@ uses the authenticated session but owns no auth state, and it builds the
 dict the parser consumes but extracts no data.
 
 The fetch list is derived from parser.yaml — the orchestrator collects
-`resource` paths (HTML/REST) or `response_key` values (HNAP) at startup.
+`resource` paths (HTML/REST) or `response_key` values (HNAP) at startup —
+merged with the paths parser.py declares via its `resources` attribute.
 
 **Design principles:**
 
@@ -262,18 +263,25 @@ the entire loader operation.
 
 ## Fetch List Derivation
 
-The orchestrator builds the fetch list from parser.yaml at startup:
+The orchestrator builds the fetch list at startup from two sources:
 
-- **HTTP:** Collects all unique `resource` paths from parser.yaml
-  sections (downstream, upstream, system_info sources)
-- **HNAP:** Derives action names from parser.yaml `response_key`
-  values (strip `Response` suffix) and batches them in a single
-  `GetMultipleHNAPs` request
-- **CBN:** Collects all unique `resource` values (fun parameter
-  strings) from parser.yaml sections and system_info sources
+1. **parser.yaml** — every mapped section declares the resource it
+   extracts from:
+   - **HTTP:** Collects all unique `resource` paths from parser.yaml
+     sections (downstream, upstream, system_info sources)
+   - **HNAP:** Derives action names from parser.yaml `response_key`
+     values (strip `Response` suffix) and batches them in a single
+     `GetMultipleHNAPs` request
+   - **CBN:** Collects all unique `resource` values (fun parameter
+     strings) from parser.yaml sections and system_info sources
+2. **parser.py `resources`** — the resources its hooks read,
+   declared as a dict of path → format on the `PostProcessor`
+   class. Applies to path-based transports (HTTP, CBN); not HNAP.
+   Paths parser.yaml already maps are deduplicated, with
+   parser.yaml's format winning.
 
 See [PARSING_SPEC.md](PARSING_SPEC.md#fetch-list-derivation) for
-details on how parser.yaml drives the fetch list.
+details on both sources.
 
 ---
 

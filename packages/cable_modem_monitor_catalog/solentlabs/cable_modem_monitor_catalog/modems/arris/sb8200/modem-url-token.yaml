@@ -69,4 +69,4 @@ notes: |
 references:
   issues:
     - "[#42 — Arris SB8200](https://github.com/solentlabs/cable_modem_monitor/issues/42)"
-    - "[#81 — [Bug]: SB8200 authencation and HTTPS](https://github.com/solentlabs/cable_modem_monitor/issues/81)"
+    - "[#81 — [Bug]: SB8200 authentication and HTTPS](https://github.com/solentlabs/cable_modem_monitor/issues/81)"

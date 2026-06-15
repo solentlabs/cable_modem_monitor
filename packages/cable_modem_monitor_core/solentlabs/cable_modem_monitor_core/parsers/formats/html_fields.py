@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup, Tag
 
 from ...models.parser_config.system_info import HTMLFieldMapping, HTMLFieldsSource
 from ..base import BaseParser
+from ..diagnostics import record_failed_field
 from ..type_conversion import convert_value
 
 _logger = logging.getLogger(__name__)
@@ -35,6 +36,9 @@ class HTMLFieldsParser(BaseParser):
     def __init__(self, source: HTMLFieldsSource) -> None:
         self._resource = source.resource
         self._fields = source.fields
+        # Conversion-rejected raw values from the most recent parse —
+        # PARSING_SPEC § Field Outcomes.
+        self.failed_fields: dict[str, str] = {}
 
     def parse(self, resources: dict[str, Any]) -> dict[str, str]:
         """Extract named fields from the configured HTML resource.
@@ -51,6 +55,7 @@ class HTMLFieldsParser(BaseParser):
             return {}
 
         result: dict[str, str] = {}
+        self.failed_fields = {}
         for field_cfg in self._fields:
             value = _extract_field(soup, field_cfg)
             if value is not None:
@@ -63,6 +68,8 @@ class HTMLFieldsParser(BaseParser):
                 )
                 if converted is not None:
                     result[field_cfg.field] = str(converted)
+                else:
+                    record_failed_field(self.failed_fields, field_cfg.field, value)
 
         return result
 

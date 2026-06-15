@@ -15,7 +15,7 @@ hardware:
   chipset: unknown
   release_date: "2016"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config: "[#73 CM3500B HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/73)"
@@ -25,6 +25,8 @@ attribution:
   contributors:
     - github: https://github.com/ChBi89
       contribution: "HAR capture and initial parser (Issue #73)"
+    - github: https://github.com/quietsche
+      contribution: "Verification diagnostics (Issue #73)"
 
 isps:
   - Vodafone Germany
