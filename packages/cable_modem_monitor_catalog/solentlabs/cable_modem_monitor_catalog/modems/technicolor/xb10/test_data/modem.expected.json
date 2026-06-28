@@ -127,13 +127,11 @@
     "flash_total_memory": "2048 MB",
     "flash_used_memory": "3 MB",
     "hardware_version": "3.2",
-    "mac_address": "02:1c:6b:ff:44:cd",
     "memory_free": "1572 MB",
     "memory_total": "2446 MB",
     "memory_used_pct": 35.7,
     "model_name": "CGM601TCOM",
     "packet_cable_version": "2.0",
-    "serial_number": "469930085355204103",
     "software_image_name": "CGM601TCOM_8.5p1s3_PROD_sey",
     "software_version": "Prod_25.1_PD & SMC-BL: 7.0.0",
     "system_uptime": "4 days 16h:05m:28s",
@@ -147,7 +145,6 @@
       "channel_type": "atdma",
       "frequency": 16000000,
       "lock_status": "locked",
-      "modulation": "QAM",
       "power": 37.3,
       "symbol_rate": 5120
     },
@@ -157,7 +154,6 @@
       "channel_type": "atdma",
       "frequency": 22000000,
       "lock_status": "locked",
-      "modulation": "QAM",
       "power": 38.3,
       "symbol_rate": 5120
     },
@@ -167,7 +163,6 @@
       "channel_type": "atdma",
       "frequency": 29000000,
       "lock_status": "locked",
-      "modulation": "QAM",
       "power": 38.5,
       "symbol_rate": 5120
     },
@@ -177,7 +172,6 @@
       "channel_type": "atdma",
       "frequency": 35000000,
       "lock_status": "locked",
-      "modulation": "QAM",
       "power": 39.0,
       "symbol_rate": 5120
     },

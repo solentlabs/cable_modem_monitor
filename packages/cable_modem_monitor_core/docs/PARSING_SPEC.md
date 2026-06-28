@@ -663,11 +663,34 @@ identity, position tracking, and lock status derivation.
 
 The `modulation` field carries a single value that names a real modulation
 scheme. Canonical form is `QAM` followed by the constellation size, no
-separator: `QAM16`, `QAM32`, `QAM64`, `QAM256`, `QAM1024`, `QAM2048`,
-`QAM4096`. `QPSK` is permitted for ATDMA. Anything else is a spec
-violation.
+separator: `QAM8`, `QAM16`, `QAM32`, `QAM64`, `QAM128`, `QAM256`, `QAM512`,
+`QAM1024`, `QAM2048`, `QAM4096`, `QAM8192`, `QAM16384`. `QPSK` is also
+permitted. Anything else is a spec violation.
 
-Regex: `^QAM(?:16|32|64|256|1024|2048|4096)$|^QPSK$`
+Regex: `^QAM(?:8|16|32|64|128|256|512|1024|2048|4096|8192|16384)$|^QPSK$`
+
+**Provenance: this set is the DOCSIS standard, not a fleet observation.**
+The enumeration is the modulation orders defined by the DOCSIS PHY
+specifications: QPSK and 8/16/32/64/128-QAM (DOCSIS 3.0 SC-QAM upstream),
+64/256-QAM (DOCSIS 3.0 SC-QAM downstream), and 16 through 4096-QAM for
+DOCSIS 3.1 OFDM/OFDMA, with 8192/16384-QAM defined as optional downstream
+orders. Grounding the set in the spec means omitting a non-canonical value
+signals "not a valid DOCSIS modulation," never "an order the fleet has not
+shown us yet." If a modem reports a genuinely valid order not listed here
+(for example a future DOCSIS revision), the fix is to extend this set with
+a citation to the defining spec, not to let the parser silently drop it.
+
+Source: CableLabs DOCSIS Physical Layer Specifications,
+`CM-SP-PHYv3.0` (§ Upstream/Downstream RF Channel) and `CM-SP-PHYv3.1`
+(§ OFDM/OFDMA modulation), available from the CableLabs specification
+portal at <https://www.cablelabs.com/specifications>.
+
+Two cases to keep separate:
+
+- **Incomplete or non-modulation value** (bare `QAM` with no order,
+  channel-type restatements like `OFDM`/`OFDMA`, IUC lists): no valid
+  DOCSIS modulation exists, so the parser omits the field.
+- **Valid but unlisted order**: a gap in this enumeration, so extend it.
 
 Modems report modulation in many surface forms (`256-QAM`, `256 QAM`,
 `256qam`, `qam_256`, etc.). Normalization is the parser's job — apply

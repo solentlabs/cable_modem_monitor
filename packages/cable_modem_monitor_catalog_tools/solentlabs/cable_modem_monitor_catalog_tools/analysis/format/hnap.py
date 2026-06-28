@@ -678,10 +678,8 @@ def _map_system_info_key(key: str) -> str | None:
         return "system_uptime"
     if "networkaccess" in lower:
         return "docsis_status"
-    if "macaddress" in lower:
-        return "mac_address"
-    if "serialnumber" in lower:
-        return "serial_number"
+    # mac_address / serial_number intentionally not mapped — identity PII
+    # with no CMM consumer. See SYSTEM_INFO_SPEC § Tiered Sensor Model.
     if "systemtime" in lower or "cursystemtime" in lower:
         return "system_time"
     if "internetconnection" in lower:

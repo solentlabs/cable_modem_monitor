@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.12] - 2026-06-28
+
+### Added
+
+- **Technicolor XB10 (CGM601TCOM) confirmed on hardware.** Verified via
+  contributor diagnostics: 10 downstream + 8 upstream channels locked,
+  form auth, and the restart action tested working. Upstream channel type
+  now reads the "Channel Type" column directly (the firmware reports a bare
+  "QAM" with no constellation, so the unmappable modulation field is
+  omitted, matching the XB7). (Related to #173)
+- **Technicolor CGA6444VF logout action (untested on hardware).** This
+  modem enforces single-session login, but its config defined no logout,
+  so the integration never released its session after a poll and could
+  collide with its own still-open session on the next login. The logout
+  request is taken faithfully from the contributor HAR capture. It remains
+  awaiting verification until a CGA6444VF owner confirms. (Related to #120)
+- **Arris SB8200 (body-token variant) confirmed on hardware.** Verified
+  on two units on Spectrum that exercise the identical auth and parser
+  contract: HW v6 (34 DS + 4 US locked, Related to #170) and HW v7
+  (29 DS + 4 US locked, Related to #124), both with full system_info and
+  no errors.
+- **Config flow recovers from a failed login instead of dead-ending.**
+  When a variant guess fails validation, the connection form returns
+  with the real error and an inline variant switch, so another variant
+  can be tried without restarting Add Integration. Host and credentials
+  carry across the switch, and the form re-renders to expose credential
+  fields if the newly selected variant needs them. The form also names
+  the variant currently being configured. (Related to #176)
+
+### Changed
+
+- **Arris SB8200 "basic" variant renamed to "body-token."** The file
+  stem rendered as "URL Token (basic)" in the config-flow picker, which
+  read as HTTP Basic Auth; it is a URL-token variant whose session token
+  returns in the login response body. The picker label is now the honest
+  "URL Token (body-token)." No config-entry migration was added, so an
+  existing entry on this variant must be removed and re-added once after
+  upgrading; host and entity prefix are unchanged, so history carries
+  over. (Related to #124)
+- **Variant picker no longer shows hardware version.** The hardware
+  version does not determine the auth contract and misled contributors
+  into picking a variant by it; it is now appended only to break ties
+  between otherwise-identical variant labels. (Related to #176)
+
+### Removed
+
+- **Serial number and MAC address are no longer collected.** These
+  identity fields were scraped during earlier field enrichment but have
+  no consumer in the integration; they were only surfaced as generic
+  pass-through sensors. They are PII with no monitoring value, so the
+  parsers and the intake pipeline no longer extract them. On upgrade,
+  the "Serial Number" and "MAC Address" sensors on the Technicolor XB6,
+  XB7, and XB10 become unavailable and can be deleted.
+
+### Fixed
+
+- **Canonical modulation set now matches the DOCSIS standard.** The
+  accepted modulation values had drifted to a fleet-observed subset that
+  omitted 8-QAM, 128-QAM, and 512-QAM, all valid DOCSIS orders; a modem
+  reporting one would have had the value rejected as a spec violation. The
+  set is now the full DOCSIS PHY enumeration (QPSK, 8 through 4096-QAM,
+  plus optional 8192/16384-QAM), grounded with a CableLabs citation.
+- **SB8200 login-page response no longer crashes the loader.** When a
+  url_token login returns the login page instead of a session token
+  (single-session contention, redirect, or rejected credentials), the
+  HTML is no longer injected as a request-header cookie, which raised an
+  invalid-header error. Auth now skips the injection and the fetch is
+  classified as a login failure, the handled outcome. (Related to #81,
+  #124)
+- **SB6141 error counts restored across firmware title drift.** The
+  downstream codewords selector matched only the "Signal Status
+  (Codewords)" title; firmware 1.0.7.0-SCM00 reports "Signal Stats
+  (Codewords)," so corrected and uncorrected counts silently dropped on
+  that cohort. Both titles now match. (Related to #177)
+- **Malformed-header log noise suppressed structurally.** Firmware that
+  emits non-RFC-compliant HTTP headers (Arris S33v3, SB6141) made
+  urllib3 log a HeaderParsingError on every poll; the body parses fine
+  regardless. A single filter keyed on the exception type now suppresses
+  it on both urllib3 loggers. (Related to #98)
+- **Bond-change notification no longer fires on zero-channel readings.**
+  A (0,0) reading is a booting or no-signal page, not a real bond
+  change; a transient zero stored as the baseline could re-fire as a
+  spurious "24 to 0 then 0 to 24" change. Zero totals are now guarded so
+  they never fire or persist.
+
 ## [3.14.0-beta.11] - 2026-06-15
 
 ### Added

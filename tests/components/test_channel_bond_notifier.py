@@ -59,6 +59,42 @@ def test_evaluate(desc, stored, onboarding_eligible, recovery_active, expected):
 
 
 # ---------------------------------------------------------------------
+# evaluate() — zero-totals guard
+#
+# A (0, 0) reading means "no data yet" (booting / no_signal), never a real
+# bond. It must not fire a notification and must not be persisted as a
+# baseline, regardless of recovery state or whether a real baseline already
+# exists. Regression: a ~1h45m outage outlived the time-boxed recovery
+# window, so a transient 0-channel reading was stored as baseline and the
+# subsequent recovery looked like a 0 → 24 change. (MB7621, v3.14.0-beta.11)
+# ---------------------------------------------------------------------
+
+_ZERO = ChannelTotals(downstream=0, upstream=0)
+
+ZERO_GUARD_CASES = [
+    ("zero_with_real_baseline", _MATCHING_STATE, True, False, "none"),
+    ("zero_no_stored_eligible", None, True, False, "none"),
+    ("zero_no_stored_upgraded", None, False, False, "none"),
+    ("zero_during_recovery", _MATCHING_STATE, True, True, "none"),
+]
+
+
+@pytest.mark.parametrize(
+    "desc,stored,onboarding_eligible,recovery_active,expected",
+    ZERO_GUARD_CASES,
+    ids=[c[0] for c in ZERO_GUARD_CASES],
+)
+def test_evaluate_zero_totals_never_actionable(desc, stored, onboarding_eligible, recovery_active, expected):
+    result = evaluate(
+        current=_ZERO,
+        stored=stored,
+        onboarding_eligible=onboarding_eligible,
+        recovery_active=recovery_active,
+    )
+    assert result == expected
+
+
+# ---------------------------------------------------------------------
 # Message formatters — smoke checks
 # ---------------------------------------------------------------------
 

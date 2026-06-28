@@ -15,8 +15,8 @@ Configuration files for VS Code Dev Container development.
 
 See the [Getting Started Guide](../docs/setup/GETTING_STARTED.md) for
 setup instructions, or the
-[Dev Container Reference](../docs/setup/DEVCONTAINER.md) for advanced
-topics and HA container management.
+[Dev Container Reference](../docs/setup/GETTING_STARTED.md#dev-container-optional)
+for advanced topics and HA container management.
 
 > **Windows Users:** WSL2 is recommended for development on Windows.
-> See [WSL2 Reference](../docs/setup/WSL2_SETUP.md).
+> See [WSL2 Reference](../docs/setup/GETTING_STARTED.md#windows--wsl2-setup).

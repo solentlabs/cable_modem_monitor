@@ -9,6 +9,7 @@ Note: Windows users should run this inside WSL2. See docs/setup/GETTING_STARTED.
 import contextlib
 import os
 import platform
+import shlex
 import shutil
 import subprocess
 import sys
@@ -297,16 +298,161 @@ def _wait_for_docker_ready(timeout_seconds=60):
     return False
 
 
+# Docker Desktop's WSL integration: the engine runs in the `docker-desktop`
+# distro and exposes this socket; a per-distro proxy then creates
+# /var/run/docker.sock inside each integrated distro.
+ENGINE_SOCK = "/mnt/wsl/docker-desktop/shared-sockets/guest-services/docker.proxy.sock"
+DISTRO_SOCK = "/var/run/docker.sock"
+PROXY_BIN = "/mnt/wsl/docker-desktop/docker-desktop-user-distro"
+
+
+def _engine_up_but_socket_missing():
+    """True when Docker's engine is up but this distro's docker.sock is absent."""
+    return os.path.exists(ENGINE_SOCK) and not os.path.exists(DISTRO_SOCK)
+
+
+def _to_windows_path(linux_path):
+    """Convert a /mnt/<drive>/... WSL path to its Windows form, or None."""
+    parts = linux_path.split("/")
+    if len(parts) >= 3 and parts[1] == "mnt" and len(parts[2]) == 1:
+        return "\\".join([parts[2].upper() + ":"] + parts[3:])
+    return None
+
+
+def _wait_for_socket(timeout_seconds=15):
+    """Poll for /var/run/docker.sock, then confirm the daemon answers."""
+    print("  Waiting for Docker socket", end="", flush=True)
+    for _ in range(timeout_seconds):
+        time.sleep(1)
+        print(".", end="", flush=True)
+        if not os.path.exists(DISTRO_SOCK):
+            continue
+        try:
+            result = subprocess.run(["docker", "info"], capture_output=True, timeout=5)
+        except subprocess.TimeoutExpired:
+            continue
+        if result.returncode == 0:
+            print("")
+            print(f"{GREEN}{CHECK}{NC} Docker is ready!")
+            print("")
+            return True
+    print("")
+    return False
+
+
+def _start_distro_proxy(docker_exe):
+    """Recreate /var/run/docker.sock by launching Docker's per-distro proxy.
+
+    The engine is already up; only this distro's socket is missing (the usual
+    state after a Docker Desktop update wipes the WSL-integration config).
+    Starting the proxy directly is far less disruptive than restarting the
+    backend distro. The proxy binds a socket under root-owned /var/run and runs
+    for the life of the session, so it must go through sudo and stay detached.
+    """
+    if not os.access(PROXY_BIN, os.X_OK):
+        return False
+    # The proxy requires Docker Desktop's Windows resources dir as a positional
+    # argument; it sits beside the Docker Desktop.exe we already located.
+    resources_linux = os.path.join(os.path.dirname(docker_exe), "resources")
+    resources_win = _to_windows_path(resources_linux)
+    if not os.path.isdir(resources_linux) or resources_win is None:
+        return False
+
+    distro = os.environ.get("WSL_DISTRO_NAME", "Ubuntu")
+    # Mirror Docker Desktop's own invocation. setsid + background keeps the
+    # long-lived proxy alive after this script exits; sudo runs on the terminal
+    # so it can prompt for a password if one is needed.
+    inner = (
+        "setsid "
+        + shlex.quote(PROXY_BIN)
+        + " proxy"
+        + " --distro-name "
+        + shlex.quote(distro)
+        + " --docker-desktop-root /mnt/wsl/docker-desktop "
+        + shlex.quote(resources_win)
+        + " >/tmp/docker-distro-proxy.log 2>&1 </dev/null &"
+    )
+    print("")
+    print("  Reconnecting Docker to this WSL distro (may prompt for sudo)...")
+    try:
+        subprocess.run(["sudo", "bash", "-c", inner], check=False)
+    except (FileNotFoundError, OSError):
+        return False
+    return _wait_for_socket()
+
+
+def _repair_docker_engine_wsl():
+    """Restart only Docker's backend distro to re-attach the engine socket.
+
+    Returns True if Docker becomes ready. Terminating the `docker-desktop`
+    distro is safe from inside another distro: it leaves this session alive
+    and lets the running Docker Desktop re-provision the engine, which
+    recreates /var/run/docker.sock. We deliberately do NOT kill the Docker
+    Desktop GUI process, since force-killing it can tear down a working
+    engine without re-attaching the socket.
+    """
+    print("")
+    print("  Restarting Docker's backend distro...", end="", flush=True)
+    result = subprocess.run(
+        ["wsl.exe", "--terminate", "docker-desktop"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print(" failed")
+        return False
+    print(" done")
+    return _wait_for_docker_ready()
+
+
 def _prompt_start_docker_wsl(docker_exe):
-    """Handle Docker Desktop startup for WSL. Returns True if Docker is ready."""
+    """Start/repair Docker for WSL. True if ready, "handled" if guidance shown, else False."""
+    # Most common post-update failure: the engine is up but this distro's
+    # /var/run/docker.sock was never recreated. Reconnect it by starting the
+    # per-distro proxy directly — the surgical fix, far cheaper than restarting
+    # the backend distro. No prompt: this is meant to self-heal.
+    if _engine_up_but_socket_missing():
+        print("  Docker's engine is up but not connected to this WSL distro.")
+        print("  Reconnecting it (typical after a Docker Desktop update).")
+        if _start_distro_proxy(docker_exe):
+            return True
+        # Fall through to the heavier recovery paths if that did not take.
+
     # Check if Docker Desktop is already running but not responding
     if is_docker_desktop_running():
         print(f"  {YELLOW}Docker Desktop is running but not responding.{NC}")
         print("")
-        print("  Try restarting Docker Desktop from the Windows system tray,")
-        print("  or quit and relaunch it manually.")
+        print("  This usually means the engine did not re-attach")
+        print("  /var/run/docker.sock to this distro. It commonly happens")
+        print("  after a Docker Desktop update. Restarting Docker's backend")
+        print("  distro re-provisions the engine and recreates the socket.")
         print("")
-        return False
+        try:
+            response = input("  Restart Docker's backend to repair it? [Y/n]: ").strip().lower()
+            if response in ("", "y", "yes") and _repair_docker_engine_wsl():
+                return True
+        except (EOFError, KeyboardInterrupt):
+            print("")
+
+        # Repair declined or did not take. Fall back to the full WSL restart,
+        # which the script cannot run itself without killing this distro.
+        print("")
+        print("  If that did not fix it, do a full reset from a Windows")
+        print("  PowerShell or CMD prompt:")
+        print("")
+        print("    1. wsl --shutdown")
+        print("       (restarts all WSL distros, including this one)")
+        print("    2. Fully quit Docker Desktop from the system tray, then")
+        print("       relaunch it and wait for 'Running'")
+        print("    3. If it still fails: Docker Desktop > Settings >")
+        print("       Resources > WSL Integration > enable this distro >")
+        print("       Apply & Restart")
+        print("")
+        print("  Then re-open your terminal and try the command again.")
+        print("")
+        # Targeted guidance already shown; tell the caller to skip the
+        # generic "start Docker Desktop" trailer (it is already running).
+        return "handled"
 
     print(f"  {CYAN}Would you like to start Docker Desktop now?{NC}")
     print("")
@@ -399,7 +545,7 @@ def check_docker_running(system):
         return 1
 
     except subprocess.CalledProcessError:
-        print(f"\r{RED}{CROSS}{NC} Docker is not running   ")
+        print(f"\r{RED}{CROSS}{NC} Docker is not ready     ")
         print("")
 
         # Different guidance for container vs host environment
@@ -418,17 +564,20 @@ def check_docker_running(system):
             return 1
 
         # Try to start Docker Desktop
-        if prompt_start_docker(system):
+        outcome = prompt_start_docker(system)
+        if outcome is True:
             return 0  # Docker is now running
 
-        # Show manual instructions
-        print("  Please start Docker Desktop:")
-        print("")
-        for line in get_docker_start_instructions(system):
-            print(f"  {line}")
-        print("")
-        print("  Then try your command again.")
-        print("")
+        # The WSL "running but not responding" path prints its own targeted
+        # guidance; only show the generic start instructions otherwise.
+        if outcome != "handled":
+            print("  Please start Docker Desktop:")
+            print("")
+            for line in get_docker_start_instructions(system):
+                print(f"  {line}")
+            print("")
+            print("  Then try your command again.")
+            print("")
         return 1
 
     except FileNotFoundError:

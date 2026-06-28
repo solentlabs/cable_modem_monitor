@@ -1040,11 +1040,14 @@ modem; see FIELD_REGISTRY.md § system_info for the baseline set.
 ### PII
 
 CMM fires the full snapshot. Consumers are responsible for stripping PII
-before any external transmission. Known PII fields in `system_info`:
-`mac_address`, `serial_number`. The global denylist lives in
-`packages/cable_modem_monitor_catalog/scripts/data/pii_fields_global.json`.
-Per-modem additions are declared in `pii_fields` in each modem's
-`modem.yaml`.
+before any external transmission. CMM does not collect identity PII
+(`mac_address`, `serial_number`) — no parser extracts them and the intake
+mapping skips them (see SYSTEM_INFO_SPEC § Tiered Sensor Model). The global
+denylist
+(`packages/cable_modem_monitor_catalog/scripts/data/pii_fields_global.json`)
+retains them as defensive defaults, and per-modem additions are declared in
+`pii_fields` in each modem's `modem.yaml`, so the strip contract still holds
+if a future field surfaces PII.
 
 ---
 
@@ -1186,11 +1189,23 @@ totals were stored on the entry, every real channel-count change
 would fire a reload — exactly when the user wants stability. The
 Store helper persists per-entry state without tripping listeners.
 
-**Suppression rule:** comparison is skipped entirely when
-`orchestrator.recovery_active` is `True`. Counts can flux while a
-recovery window is open (channels renegotiate the bond); the baseline
-is preserved so a transient that resolves back to the prior totals
-produces no notification.
+**Suppression rules:**
+
+- **Zero-totals guard (primary).** A `(0, 0)` reading means "no data
+  yet" — a booting or `no_signal` page returns empty channel tables,
+  not a real bond. The notifier returns `none` and the coordinator
+  never persists it as a baseline. An operational modem always reports
+  channels, so a zero total is never a legitimate bond change. This is
+  the primary guard because it holds regardless of outage length:
+  `recovery_active` is time-boxed, and a real outage can outlive the
+  window, at which point a transient `0` would otherwise be read as a
+  `24 → 0` change, persisted as the baseline, and then re-fire as a
+  `0 → 24` change once channels return.
+- **Recovery guard (secondary).** Comparison is skipped while
+  `orchestrator.recovery_active` is `True`. Non-zero counts can still
+  flux while a recovery window is open (channels renegotiate the bond,
+  e.g. `24 → 23`); the baseline is preserved so a transient that
+  resolves back to the prior totals produces no notification.
 
 **Upgrade path:** entries created before this feature lack
 `CONF_CHANNEL_ONBOARDING_ELIGIBLE`. On first post-upgrade poll the

@@ -34,13 +34,15 @@
       },
       "connection": {
         "title": "Verbindung",
-        "description": "Gib die Verbindungsdaten deines Modems ein.",
+        "description": "Ausgewählte Variante: {variant}\n\nGib die Verbindungsdaten deines Modems ein.",
         "data": {
+          "variant": "Variante",
           "host": "Modem-IP-Adresse",
           "username": "Benutzername",
           "password": "Passwort"
         },
         "data_description": {
+          "variant": "Nur wechseln, wenn du glaubst, dass eine andere Variante zu deinem Modem passt.",
           "host": "Normalerweise 192.168.100.1. Mit http:// oder https:// die Protokollerkennung überspringen.",
           "username": "Leer lassen, wenn nicht erforderlich.",
           "password": "Leer lassen, wenn nicht erforderlich."

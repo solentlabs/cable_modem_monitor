@@ -152,9 +152,6 @@ registered_fields:
     model_name:
       type: string
       description: "Modem model identifier as reported by the device"
-    serial_number:
-      type: string
-      description: "Modem serial number"
     temperature:
       type: float
       unit: "°C"

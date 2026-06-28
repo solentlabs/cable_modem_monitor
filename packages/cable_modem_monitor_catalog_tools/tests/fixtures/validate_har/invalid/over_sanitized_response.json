@@ -1,0 +1,22 @@
+{
+  "_expected_error": "stripped after capture",
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/", "cookies": [], "headers": []},
+          "response": {"status": 302, "cookies": [], "headers": [{"name": "Location", "value": "/login.html"}], "content": {"size": 0, "text": ""}}
+        },
+        {
+          "request": {"method": "POST", "url": "http://192.168.100.1/setup.cgi", "cookies": [], "headers": [], "postData": {"text": "todo=login&login_user=technician&pws=REDACTED"}},
+          "response": {"status": 200, "cookies": [], "headers": [{"name": "Content-Type", "value": "text/html"}], "content": {"size": 8000, "text": ""}}
+        },
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/setup.cgi?todo=RF_DS_param", "cookies": [], "headers": []},
+          "response": {"status": 200, "cookies": [], "headers": [{"name": "Content-Type", "value": ""}], "content": {"size": 5382, "text": "AUTH_978d96f5"}}
+        }
+      ]
+    }
+  }
+}

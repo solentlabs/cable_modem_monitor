@@ -56,16 +56,17 @@ upstream:
   resource: "/network_setup.jst"
   # docsIfUpChannelType (DOCS-IF-MIB, RFC 4546) has no OFDMA value.
   # OFDMA upstream channels are in DOCS-IF31-MIB which defines no channel
-  # type field — the firmware renders the SC-QAM fallback "TDMA" for OFDMA
-  # channels. Derive channel_type from Modulation instead.
+  # type field, so the firmware renders the SC-QAM fallback "TDMA" for OFDMA
+  # channels. Read channel_type directly from the Channel Type HTML row;
+  # "TDMA" maps to "ofdma" because of that firmware convention.
+  #
+  # The Modulation column is intentionally not extracted: firmware reports a
+  # bare "QAM" for SC-QAM upstream (no constellation), which PARSING_SPEC
+  # § Canonical modulation values requires be mapped or omitted. It cannot be
+  # mapped to a real value, so it is omitted, matching the confirmed XB7.
   selector:
     type: header_text
     match: "Upstream"
-  channel_type:
-    field: modulation
-    map:
-      "QAM": "atdma"
-      "OFDMA": "ofdma"
   rows:
     - field: channel_id
       label: "Channel ID"
@@ -81,9 +82,12 @@ upstream:
       label: "Power Level"
       type: float
       unit: "dBmV"
-    - field: modulation
-      label: "Modulation"
+    - field: channel_type
+      label: "Channel Type"
       type: string
+      map:
+        "ATDMA": "atdma"
+        "TDMA": "ofdma"
     - field: symbol_rate
       label: "Symbol Rate"
       type: integer
@@ -99,12 +103,6 @@ system_info:
           format: "{days} days {hours}h:{minutes}m:{seconds}s"
         - field: software_version
           label: "Download Version"
-          type: string
-        - field: serial_number
-          label: "Serial Number"
-          type: string
-        - field: mac_address
-          label: "CM MAC"
           type: string
         - field: downstream_status
           label: "Acquire Downstream Channel"

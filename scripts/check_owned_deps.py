@@ -81,17 +81,18 @@ def main() -> int:
     ours = [p for p in all_outdated if _normalize(p["name"]) in owned]
 
     if not ours:
-        print("  All declared dependencies are current.")
+        print("  All installed dependencies are at their latest release.")
         return 0
 
     noun = "dependency" if len(ours) == 1 else "dependencies"
     verb = "has" if len(ours) == 1 else "have"
-    print(f"  {len(ours)} declared {noun} {verb} newer versions available:")
+    print(f"  {len(ours)} installed {noun} {verb} a newer release available:")
     w = max(len(p["name"]) for p in ours)
     print(f"  {'Package':<{w}}  {'Installed':<15}  Latest")
     print(f"  {'-' * w}  {'-' * 15}  ------")
     for p in sorted(ours, key=lambda x: x["name"].lower()):
         print(f"  {p['name']:<{w}}  {p['version']:<15}  {p['latest_version']}")
+    print("  (local venv vs PyPI; floored deps may already permit these — 'pip install -U' to refresh)")
     return 0
 
 

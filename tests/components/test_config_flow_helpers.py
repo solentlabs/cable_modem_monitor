@@ -34,6 +34,7 @@ from custom_components.cable_modem_monitor.config_flow_helpers import (
     detect_probes,
     filter_by_manufacturer,
     format_variant_label,
+    format_variant_labels,
     get_manufacturers,
     restart_requires_credentials,
 )
@@ -104,6 +105,10 @@ def _setup_modem_dir(tmp_path: Path) -> Path:
 # Pure-function helpers — format_variant_label
 # =====================================================================
 
+# hw_version is intentionally NOT shown in the label (#124): it does not
+# determine the auth contract and misled contributors. The cases below vary
+# hw_version to prove it never changes the output — only auth strategy, the
+# variant name, and confirmation status do.
 # fmt: off
 # ┌───────────────┬──────┬───────────┬────────────────────────┬──────────────────────────────┬────────────────────────┐
 # │ auth_strategy │ name │ hw_version│ status                 │ expected                     │ description            │
@@ -111,31 +116,31 @@ def _setup_modem_dir(tmp_path: Path) -> Path:
 # │ "none"        │ None │ None      │ "confirmed"            │ "No Authentication"          │ default_no_auth        │
 # │ "basic"       │ None │ None      │ "confirmed"            │ "Basic Authentication"       │ default_basic          │
 # │ "form_nonce"  │ None │ None      │ "confirmed"            │ "Form Login (Nonce)"         │ default_nonce          │
-# │ "url_token"   │ "v7" │ None      │ "confirmed"            │ "URL Token (v7)"             │ named_no_hw_version    │
+# │ "url_token"   │ "v7" │ None      │ "confirmed"            │ "URL Token (v7)"             │ name_qualifier         │
 # │ "unknown_x"   │ None │ None      │ "confirmed"            │ "unknown_x"                  │ unlisted_strategy      │
-# │ "url_token"   │ None │ "v5"      │ "confirmed"            │ "URL Token (v5)"             │ default_with_hw_ver    │
-# │ "url_token"   │ "v7" │ "v7"      │ "confirmed"            │ "URL Token (v7)"             │ named_with_hw_ver      │
-# │ "hnap"        │ None │ "v6"      │ "confirmed"            │ "HNAP (v6)"                  │ hnap_with_hw_version   │
-# │ "form_cbn"    │ None │ None      │ "confirmed"            │ "Form Login CBN"             │ cbn_no_hw_version      │
+# │ "url_token"   │ None │ "v5"      │ "confirmed"            │ "URL Token"                  │ hw_version_ignored     │
+# │ "url_token"   │ "v7" │ "v7"      │ "confirmed"            │ "URL Token (v7)"             │ name_eq_hw_shown       │
+# │ "hnap"        │ None │ "v6"      │ "confirmed"            │ "HNAP"                       │ hw_version_ignored_hnap│
+# │ "form_cbn"    │ None │ None      │ "confirmed"            │ "Form Login CBN"             │ cbn_no_name            │
 # │ "none"        │ None │ None      │ "awaiting_verification"│ "No Authentication *"        │ unconfirmed_no_auth    │
-# │ "url_token"   │ None │ "v5"      │ "awaiting_verification"│ "URL Token (v5) *"           │ unconfirmed_hw_version │
-# │ "url_token"   │ "v7" │ "v7"      │ "awaiting_verification"│ "URL Token (v7) *"           │ unconfirmed_named_hw   │
+# │ "url_token"   │ None │ "v5"      │ "awaiting_verification"│ "URL Token *"                │ unconfirmed_no_name    │
+# │ "url_token"   │ "v7" │ "v7"      │ "awaiting_verification"│ "URL Token (v7) *"           │ unconfirmed_named      │
 # └───────────────┴──────┴───────────┴────────────────────────┴──────────────────────────────┴────────────────────────┘
 #
 VARIANT_LABEL_CASES = [
     ("none",       None,  None,  "confirmed",             "No Authentication",          "default_no_auth"),
     ("basic",      None,  None,  "confirmed",             "Basic Authentication",       "default_basic"),
     ("form_nonce", None,  None,  "confirmed",             "Form Login (Nonce)",         "default_nonce"),
-    ("url_token",  "v7",  None,  "confirmed",             "URL Token (v7)",             "named_no_hw_version"),
+    ("url_token",  "v7",  None,  "confirmed",             "URL Token (v7)",             "name_qualifier"),
     ("unknown_x",  None,  None,  "confirmed",             "unknown_x",                 "unlisted_strategy"),
-    ("url_token",  None,  "v5",  "confirmed",             "URL Token (v5)",             "default_with_hw_version"),
-    ("url_token",  "v7",  "v7",  "confirmed",             "URL Token (v7)",             "named_with_hw_version"),
-    ("hnap",       None,  "v6",  "confirmed",             "HNAP (v6)",                 "hnap_with_hw_version"),
-    ("form_cbn",   None,  None,  "confirmed",             "Form Login CBN",            "cbn_no_hw_version"),
+    ("url_token",  None,  "v5",  "confirmed",             "URL Token",                  "hw_version_ignored"),
+    ("url_token",  "v7",  "v7",  "confirmed",             "URL Token (v7)",             "name_eq_hw_shown"),
+    ("hnap",       None,  "v6",  "confirmed",             "HNAP",                       "hw_version_ignored_hnap"),
+    ("form_cbn",   None,  None,  "confirmed",             "Form Login CBN",            "cbn_no_name"),
     # Unconfirmed variants — star appended
     ("none",       None,  None,  "awaiting_verification", "No Authentication *",        "unconfirmed_no_auth"),
-    ("url_token",  None,  "v5",  "awaiting_verification", "URL Token (v5) *",           "unconfirmed_hw_version"),
-    ("url_token",  "v7",  "v7",  "awaiting_verification", "URL Token (v7) *",           "unconfirmed_named_hw"),
+    ("url_token",  None,  "v5",  "awaiting_verification", "URL Token *",                "unconfirmed_no_name"),
+    ("url_token",  "v7",  "v7",  "awaiting_verification", "URL Token (v7) *",           "unconfirmed_named"),
 ]
 # fmt: on
 
@@ -146,9 +151,37 @@ VARIANT_LABEL_CASES = [
     ids=[c[5] for c in VARIANT_LABEL_CASES],
 )
 def test_format_variant_label(auth_strategy, name, hw_version, status, expected, desc):
-    """format_variant_label builds label from auth strategy, variant name, hw_version, and status."""
+    """format_variant_label builds the label from auth strategy, variant name, and status — never hw_version."""
     variant = VariantInfo(name=name, auth_strategy=auth_strategy, hw_version=hw_version, status=status)
     assert format_variant_label(variant) == expected
+
+
+def test_format_variant_labels_disambiguates_only_on_collision():
+    """hw_version is added back only when two variants would render identically (e.g. S33 generations)."""
+    variants = [
+        VariantInfo(name=None, auth_strategy="hnap", hw_version=None, status="confirmed"),
+        VariantInfo(name=None, auth_strategy="hnap", hw_version="v2", status="confirmed"),
+        VariantInfo(name=None, auth_strategy="hnap", hw_version="v3", status="confirmed"),
+    ]
+    assert format_variant_labels(variants) == ["HNAP", "HNAP (v2)", "HNAP (v3)"]
+
+
+def test_format_variant_labels_leaves_unique_labels_alone():
+    """When base labels already differ, hw_version stays hidden even if present (e.g. SB8200 by auth method)."""
+    variants = [
+        VariantInfo(name="basic", auth_strategy="url_token", hw_version="v7", status="confirmed"),
+        VariantInfo(name="cookie", auth_strategy="url_token", hw_version="v7", status="awaiting_verification"),
+    ]
+    assert format_variant_labels(variants) == ["URL Token (basic)", "URL Token (cookie) *"]
+
+
+def test_format_variant_labels_disambiguation_preserves_unconfirmed_marker():
+    """The hw_version tiebreaker is inserted before the trailing ``*`` marker."""
+    variants = [
+        VariantInfo(name=None, auth_strategy="hnap", hw_version="v2", status="awaiting_verification"),
+        VariantInfo(name=None, auth_strategy="hnap", hw_version="v3", status="awaiting_verification"),
+    ]
+    assert format_variant_labels(variants) == ["HNAP (v2) *", "HNAP (v3) *"]
 
 
 # =====================================================================

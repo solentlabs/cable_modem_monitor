@@ -34,13 +34,15 @@
       },
       "connection": {
         "title": "Anslutning",
-        "description": "Ange modemets anslutningsuppgifter.",
+        "description": "Vald variant: {variant}\n\nAnge modemets anslutningsuppgifter.",
         "data": {
+          "variant": "Variant",
           "host": "Modemets IP-adress",
           "username": "Användarnamn",
           "password": "Lösenord"
         },
         "data_description": {
+          "variant": "Byt bara om du tror att en annan variant passar ditt modem.",
           "host": "Vanligtvis 192.168.100.1. Inkludera http:// eller https:// för att hoppa över protokolldetektering.",
           "username": "Lämna tomt om det inte krävs.",
           "password": "Lämna tomt om det inte krävs."

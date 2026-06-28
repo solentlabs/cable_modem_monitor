@@ -79,6 +79,13 @@ _VERIFIED_KEY_ORDER: tuple[str, ...] = (
 # other dict body uses standard 2-space indentation.
 _CHANNEL_ARRAY_KEYS: tuple[str, ...] = ("downstream_channels", "upstream_channels")
 
+# Identity PII stripped from system_info when building a fixture. CMM no
+# longer collects these (see SYSTEM_INFO_SPEC § Tiered Sensor Model), but
+# diagnostics captured before their removal still carry them, and the HA
+# diagnostics sanitizer does not scrub them. Canonical list:
+# packages/cable_modem_monitor_catalog/scripts/data/pii_fields_global.json
+_PII_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({"mac_address", "serial_number"})
+
 # Aggregate system_info fields not in field_registry.SYSTEM_INFO_FIELDS
 # (which covers Tier-1 always-present modem facts). Aggregates are
 # computed from channel data and should always be present once channels
@@ -252,6 +259,13 @@ def _build_verified_json(
     """
     payload = {k: v for k, v in data.items() if k not in _INTEGRATION_EXTRA_KEYS}
 
+    # Strip identity PII from system_info — never collected by CMM, but
+    # pre-removal diagnostics still carry it and the HA sanitizer does not
+    # scrub it.
+    system_info = payload.get("system_info")
+    if isinstance(system_info, dict):
+        payload["system_info"] = {k: v for k, v in system_info.items() if k not in _PII_SYSTEM_INFO_FIELDS}
+
     # Canonicalize channel key order — older diagnostics (pre-canonicalization
     # in custom_components/cable_modem_monitor/diagnostics.py) emit channels
     # in parser-determined order; we match the catalog convention regardless.
@@ -311,6 +325,10 @@ def _collect_warnings(data: dict[str, Any]) -> list[str]:
             f"system_info missing fields {missing_fields} — looks like a "
             "partial confirmation; verify the parser maps these before committing."
         )
+
+    stripped_pii = sorted(f for f in _PII_SYSTEM_INFO_FIELDS if f in sysinfo)
+    if stripped_pii:
+        warnings.append(f"stripped PII from system_info (not collected by CMM): {stripped_pii}")
 
     return warnings
 

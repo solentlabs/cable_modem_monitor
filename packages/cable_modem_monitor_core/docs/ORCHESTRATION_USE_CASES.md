@@ -471,6 +471,40 @@ separation`.
 
 ---
 
+### UC-19b: Login-page body on the url_token inject path
+
+**Preconditions:** `url_token` auth with `inject_credential_cookie`.
+The login GET returns the login page instead of a session token (auth
+did not establish a session — single-session contention, silent
+redirect, or rejected credentials). The body is multi-line HTML, not a
+header-safe token.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `get_modem_data()` | | |
+| 2 | Auth: login GET returns the login page (body has `type="password"`, contains newlines) | | |
+| 3 | Auth: body is not header-safe → do **not** inject it as `cookie_name`; leave the credential cookie unset | | |
+| 4 | Auth: returns `AuthResult(success=True)` with no credential cookie (no spurious success artefact) | | |
+| 5 | Resource Loader: GET data page → HTTP 200, body is the login page | | |
+| 6 | Resource Loader: detects login page → `LOAD_AUTH` (UC-19) | | |
+| 7 | Orchestrator: clear session, streak++ | session cleared | |
+
+**Assertions:**
+
+- Auth never injects a non-header-safe value as the credential cookie — prevents the `http.client.putheader` `ValueError` (no stack trace for an expected failure)
+- Signal is `LOAD_AUTH`, reached through the existing UC-19 detection — no new failure branch
+- Single occurrence self-corrects on the next poll (same threshold-based backoff as UC-19/UC-13); persistent failures escalate normally
+- Auth log at the manager's level: body is a login page, credential cookie not injected
+
+**Background:** SB8200 inject variant (#124, rct). The login response
+was the login page; the inject path stuffed the full HTML into the
+`credential` cookie and reported success, and the loader then crashed
+in `http.client.putheader` setting that cookie as a request header.
+This use case closes the gap so the inject path honors the same
+login-page classification the loader already applies (UC-19).
+
+---
+
 ### UC-20: Password changed after months of success
 
 **Preconditions:** Modem working for months. User changes password on

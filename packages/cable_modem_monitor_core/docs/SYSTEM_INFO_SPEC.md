@@ -552,5 +552,11 @@ no code change needed.
 - `connected_devices` (1 modem) — good metric with state_class=MEASUREMENT
 - `memory_used_pct` (computed, 1 modem) — percentage with device_class
 
-Fields like `serial_number` and `mac_address` are PII-adjacent and
-should remain Tier 3.
+`serial_number` and `mac_address` are identity PII with no CMM consumer
+and are **not collected**: no `parser.yaml` extracts them and the intake
+mapping skips them, so they never reach `system_info` or become
+pass-through sensors. Earlier versions surfaced them as Tier 3 sensors —
+an unintended consequence of the default pass-through, not a deliberate
+choice. If stable device identity is ever wanted, wire `serial_number`/MAC
+into the HA device registry (`DeviceInfo` serial + `connections`)
+deliberately, not as pass-through sensors.

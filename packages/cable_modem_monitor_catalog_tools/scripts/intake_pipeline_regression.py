@@ -11,22 +11,17 @@ as a fresh submission. For each modem:
 5. Grade detected actions against the committed modem.yaml actions
 
 Reports fleet-wide accuracy percentage and per-action grades so
-onboarding capability and consistency can be tracked over time. In CI,
-writes a GitHub step summary and optional JSON scorecard artifact.
-
-Baseline mode (--baseline):
-    Compares results against a recorded baseline. Fails only on
-    regressions: a modem's pipeline status or any action grade got
-    worse. Use --update-baseline to record the current state after
-    pipeline improvements. The committed fleet baseline lives at
-    scripts/intake_baseline.json (wired into make intake-regression).
+onboarding capability and consistency can be tracked over time. This is
+a report, not a gate: it computes accuracy fresh from the catalog every
+run and, in CI, writes a GitHub step summary plus a timestamped JSON
+scorecard artifact (the durable trend record). Correctness of each
+modem's parse is gated independently by the golden replay tests.
 
 Usage:
     python .../intake_pipeline_regression.py
     python .../intake_pipeline_regression.py --modem arris/sb8200
     python .../intake_pipeline_regression.py -v
     python .../intake_pipeline_regression.py --scorecard scorecard.json
-    python .../intake_pipeline_regression.py --baseline baseline.json
 """
 
 from __future__ import annotations
@@ -47,12 +42,8 @@ from solentlabs.cable_modem_monitor_catalog_tools.grading import GRADE_SEVERITY
 from solentlabs.cable_modem_monitor_catalog_tools.regression import (
     ModemResult,
     build_scorecard,
-    compare_baseline,
-    entries_from_results,
     fleet_accuracy,
-    load_baseline,
     result_status,
-    save_baseline,
 )
 
 CATALOG_ROOT = (
@@ -666,33 +657,6 @@ def _write_step_summary(results: list[ModemResult]) -> None:
         f.write("\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# Baseline comparison (machinery lives in the regression package)
-# ---------------------------------------------------------------------------
-
-
-def _print_baseline_comparison(
-    regressions: list[str],
-    improvements: list[str],
-) -> None:
-    """Print baseline comparison results."""
-    if improvements:
-        print(f"\nIMPROVEMENTS ({len(improvements)}):")
-        for msg in improvements:
-            print(msg)
-        print("\n  Run with --update-baseline to lock in improvements.")
-
-    if regressions:
-        print(f"\nREGRESSIONS ({len(regressions)}):")
-        for msg in regressions:
-            print(msg)
-        print("\n  Pipeline changes made things worse. Fix before merging.")
-    elif not improvements:
-        print("\nBASELINE: No changes detected.")
-    else:
-        print("\nBASELINE: No regressions. Pipeline improved!")
-
-
 def main() -> None:
     """Run the regression sweep."""
     parser = argparse.ArgumentParser(description="Intake pipeline regression — accuracy tracking")
@@ -708,17 +672,6 @@ def main() -> None:
         type=Path,
         metavar="PATH",
         help="Write JSON scorecard for trend tracking",
-    )
-    parser.add_argument(
-        "--baseline",
-        type=Path,
-        help="Compare against baseline file (fail only on regressions)",
-    )
-    parser.add_argument(
-        "--update-baseline",
-        type=Path,
-        metavar="PATH",
-        help="Run sweep and write results as new baseline",
     )
     args = parser.parse_args()
 
@@ -765,22 +718,6 @@ def main() -> None:
 
     if args.scorecard:
         _write_scorecard(args.scorecard, results)
-
-    # Update baseline mode — write and exit
-    if args.update_baseline:
-        save_baseline(args.update_baseline, entries_from_results(results))
-        print(f"Baseline written to {args.update_baseline}")
-        sys.exit(0)
-
-    # Baseline comparison mode — fail only on regressions
-    if args.baseline:
-        if not args.baseline.exists():
-            print(f"Baseline file not found: {args.baseline}")
-            sys.exit(1)
-        baseline = load_baseline(args.baseline)
-        regressions, improvements = compare_baseline(entries_from_results(results), baseline)
-        _print_baseline_comparison(regressions, improvements)
-        sys.exit(1 if regressions else 0)
 
 
 if __name__ == "__main__":

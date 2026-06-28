@@ -134,6 +134,16 @@ class HTTPResourceLoader:
                 raise ResourceLoadError(
                     f"Failed to fetch {target.path}: {type(e).__name__}: {e}",
                 ) from e
+            except ValueError as e:
+                # A malformed request component (e.g. a non-header-safe session
+                # cookie value) makes http.client.putheader raise a bare
+                # ValueError, which is not a RequestException and would escape
+                # as an unhandled stack trace for what is an expected auth
+                # failure. Convert it to a handled load error. See UC-19b.
+                raise ResourceLoadError(
+                    f"Malformed request fetching {target.path} (likely a non-token session credential): {e}",
+                    path=target.path,
+                ) from e
             elapsed_ms = (time.monotonic() - start) * 1000
 
             _logger.debug(

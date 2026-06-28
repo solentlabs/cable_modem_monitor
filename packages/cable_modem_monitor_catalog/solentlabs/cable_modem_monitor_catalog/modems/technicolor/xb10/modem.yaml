@@ -38,7 +38,7 @@ hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM33941UD"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config: "[#173 Technicolor XB10](https://github.com/solentlabs/cable_modem_monitor/issues/173)"

@@ -9,6 +9,8 @@ ignorePaths:
   - captures/**
   - "**/*.har"
   - "**/*.expected.json"
+  # Localized UI strings — non-English by design, not English vocabulary
+  - "**/translations/*.json"
 
 # Random test strings, contributor handles, regex fragments — valid in context, not vocabulary
 ignoreWords:
@@ -45,6 +47,12 @@ ignoreWords:
   - Rpem
   - SNTLABS
   - Vonk
+  - Fzcw
+  - didnt
+  # German example strings in TRANSLATION_GUIDE.md
+  - Anmeldung
+  - Authentifizierung
+  - fehlgeschlagen
 
 words:
   # Home Assistant tooling
@@ -458,6 +466,7 @@ words:
   - coredump
   - cros
   - Crostini
+  - distros
   - EDITMSG
   - fuser
   - IMAGENAME
@@ -468,6 +477,7 @@ words:
   - libreadline
   - libsqlite
   - mdev
+  - setsid
   - tasklist
   - textconv
   - tulpn
@@ -550,3 +560,64 @@ words:
   - wronghexkey
   - WRONGKEY
   - wrongpassword
+
+  # Dev tooling, linters, pytest/config keys, shell flags
+  - addopts
+  - aiohttp
+  - asynccontextmanager
+  - contextmanager
+  - cursorrules
+  - freezegun
+  - fromhex
+  - iface
+  - isort
+  - jsessionid
+  - kwarg
+  - Makefiles
+  - mccabe
+  - minversion
+  - monkeypatching
+  - Pyflakes
+  - pythonpath
+  - rootdir
+  - semgrep
+  - Semgrep
+  - testpaths
+  - tuln
+  - usermod
+  - wslconfig
+
+  # DOCSIS signal/field identifiers and units
+  - channelnumber
+  - channelwidth
+  - correctederrors
+  - dbuv
+  - lockstatus
+  - modu
+  - powerlevel
+  - rxmer
+  - signalstrength
+  - singlevalue
+  - snrlevel
+  - symbolrate
+  - uncorrectederrors
+
+  # Auth pattern / firmware form identifiers
+  - ajaxset
+  - genielogin
+
+  # Spec/doc vocabulary (incl. British spellings)
+  - absoluting
+  - baselined
+  - browsable
+  - cellspacing
+  - controlflow
+  - defences
+  - formedness
+  - gatekeeping
+  - Liskov
+  - NCIP
+  - optimise
+  - redactions
+  - timespan
+  - typetracking

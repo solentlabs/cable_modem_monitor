@@ -13,9 +13,9 @@ clean log surface without explicit setup.
 
 Adding a new filter:
 
-1. Identify the logger name and a stable substring in the record
-   message (the message-text marker is what we filter on; logger name
-   tells us where to attach).
+1. Identify the logger name and a stable structural key on the record
+   (an exception type beats a message substring — it survives wording
+   changes and won't match unrelated text).
 2. Add a ``Filter`` subclass below with a docstring explaining the
    source — which modem firmware, which library version, what
    triggers it, why it is harmless.
@@ -30,31 +30,57 @@ from __future__ import annotations
 
 import logging
 
-_URLLIB3_CONNECTION_LOGGER = "urllib3.connection"
+from urllib3.exceptions import HeaderParsingError
+
+# urllib3 moved the header-parse warning between versions: 1.26 emits it
+# from ``urllib3.connectionpool``, 2.x from ``urllib3.connection``. HA
+# ships different urllib3 versions across releases, so we attach to both.
+_URLLIB3_LOGGERS = ("urllib3.connection", "urllib3.connectionpool")
 
 
-class SuppressMissingHeaderBodySeparator(logging.Filter):
-    """Drop urllib3 ``MissingHeaderBodySeparatorDefect`` warnings.
+def _carries_header_parsing_error(record: logging.LogRecord) -> bool:
+    """True if the record is urllib3's recovered ``HeaderParsingError`` warning.
 
-    Source: ARRIS SB6141 firmware (and possibly other older modems)
-    returns headers with a space before the colon — e.g.
-    ``Cache-Control : no-cache`` instead of ``Cache-Control: no-cache``.
-    Python 3.14+ urllib3 calls ``assert_header_parsing`` on every
-    response and raises ``HeaderParsingError`` for the malformed
-    header. urllib3 catches the exception internally and emits a
-    WARNING with a full traceback — the response body parses fine, so
-    nothing is actually broken, but the traceback looks alarming and
-    fires once per HTTP request.
+    urllib3 logs ``log.warning("Failed to parse headers ...: %s", url, hpe,
+    exc_info=True)``. The ``HeaderParsingError`` reaches us structurally
+    two ways depending on version (as the captured ``exc_info`` and as a
+    positional arg); checking both means a wording or format change in
+    urllib3 cannot silently re-open the noise.
+    """
+    exc_info = record.exc_info
+    if exc_info and exc_info[0] is not None and issubclass(exc_info[0], HeaderParsingError):
+        return True
+    if record.args:
+        return any(isinstance(arg, HeaderParsingError) for arg in record.args)
+    return False
 
-    Filtering is exact: the substring ``MissingHeaderBodySeparatorDefect``
-    only appears in this specific defect's records, so other urllib3
-    warnings are unaffected.
+
+class SuppressHeaderParsingWarning(logging.Filter):
+    """Drop urllib3's recovered ``HeaderParsingError`` warnings.
+
+    Source: several modems return HTTP responses Python's header parser
+    flags as malformed — ARRIS HNAP firmware prepends debug timing data
+    to the first header line (``FirstHeaderLineIsContinuationDefect``,
+    issue #98), the SB6141 puts a space before the colon
+    (``MissingHeaderBodySeparatorDefect``). In every case urllib3 calls
+    ``assert_header_parsing``, raises ``HeaderParsingError``, catches it
+    internally, emits a WARNING with a full traceback, then returns the
+    response anyway. The body parses fine (verified in
+    ``test_header_parsing_defect_is_recoverable``), so the warning is
+    per-poll noise.
+
+    We key on the ``HeaderParsingError`` exception type carried on the
+    record, not on the rendered message text. Every header-parse defect
+    inherits from it, so one structural check covers all of them with no
+    per-defect string registry, and it never matches an unrelated "parse
+    headers" message. urllib3 only emits this on the recovered-internally
+    path, so suppressing it cannot hide a real failure; genuine header
+    corruption that loses data surfaces in Core's own logging (zero
+    channels / parse error) instead.
     """
 
-    _NEEDLE = "MissingHeaderBodySeparatorDefect"
-
     def filter(self, record: logging.LogRecord) -> bool:
-        return self._NEEDLE not in record.getMessage()
+        return not _carries_header_parsing_error(record)
 
 
 def install_filters() -> None:
@@ -65,7 +91,8 @@ def install_filters() -> None:
     presence so reloading the package (or calling explicitly from a
     test fixture) does not stack duplicate filters.
     """
-    _ensure_filter(_URLLIB3_CONNECTION_LOGGER, SuppressMissingHeaderBodySeparator)
+    for logger_name in _URLLIB3_LOGGERS:
+        _ensure_filter(logger_name, SuppressHeaderParsingWarning)
 
 
 def _ensure_filter(

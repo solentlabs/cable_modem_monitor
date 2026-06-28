@@ -38,8 +38,15 @@ downstream:
           type: integer
 
       selector:
-        match: "Signal Status (Codewords)"
+        # The codewords table title differs by firmware: 1.0.7.3-SCM02
+        # reports "Signal Status (Codewords)", 1.0.7.0-SCM00 reports
+        # "Signal Stats (Codewords)" (#177). Match both observed titles
+        # explicitly via fallback.
         type: header_text
+        match: "Signal Status (Codewords)"
+        fallback:
+          type: header_text
+          match: "Signal Stats (Codewords)"
 upstream:
   format: table_transposed
   resource: "/cmSignalData.htm"

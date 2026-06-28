@@ -98,12 +98,6 @@ system_info:
         - field: software_version
           label: "Download Version"
           type: string
-        - field: serial_number
-          label: "Serial Number"
-          type: string
-        - field: mac_address
-          label: "CM MAC"
-          type: string
         - field: downstream_status
           label: "Acquire Downstream Channel"
           type: string

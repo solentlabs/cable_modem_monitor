@@ -34,13 +34,15 @@
       },
       "connection": {
         "title": "Connection",
-        "description": "Enter your modem's connection details.",
+        "description": "Selected variant: {variant}\n\nEnter your modem's connection details.",
         "data": {
+          "variant": "Variant",
           "host": "Modem IP Address",
           "username": "Username",
           "password": "Password"
         },
         "data_description": {
+          "variant": "Switch only if you think a different variant matches your modem.",
           "host": "Usually 192.168.100.1. Include http:// or https:// to skip protocol detection.",
           "username": "Leave blank if not required.",
           "password": "Leave blank if not required."

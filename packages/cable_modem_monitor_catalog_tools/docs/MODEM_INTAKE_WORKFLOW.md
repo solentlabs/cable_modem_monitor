@@ -279,16 +279,10 @@ If tests fail, diagnose from the structured diff:
 
 Fix the config, re-run. Loop until green.
 
-Then refresh the fleet baseline so the new modem's grades are recorded
-(without this, `make intake-regression` flags the new entry as NEW and
-fails):
-
-```bash
-python3 packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py \
-  --update-baseline packages/cable_modem_monitor_catalog_tools/scripts/intake_baseline.json
-```
-
-Stage `scripts/intake_baseline.json` alongside the catalog files.
+The new modem is picked up automatically — discovery walks the catalog
+tree, so there is no index or baseline to update. `make
+intake-regression` simply includes it in the accuracy report on the
+next run.
 
 ## Step 10: Regenerate Catalog README
 

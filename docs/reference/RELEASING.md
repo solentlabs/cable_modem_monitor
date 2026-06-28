@@ -116,20 +116,19 @@ betas — by design, each beta is a deliberate per-version install.
 
 **Where tags live:**
 
-- The first beta of a release line (`vX.Y.0-beta.1`) tags from
-  `main` — directly after the development branch merges in. This
-  keeps `main`'s state in lock-step with the latest published
-  release as the new model goes live.
-- Subsequent betas (`vX.Y.0-beta.2` onward) tag from a beta-line
-  branch off `main` (e.g., `feature/vX.Y.0-beta`). Beta iteration
-  doesn't disturb `main`. The branch merges back when the line
-  cuts stable.
-- Stable (`vX.Y.0`) tags from `main` after the beta-line branch
-  merges back.
+All tags live on `main`, beta and stable alike. A release is cut on a
+short-lived branch off current `main` (`feature/vX.Y.0-beta.N` for a
+beta), opened as a PR, gated by required-status-checks + commitlint,
+then merged and tagged on the merge commit. Delete the branch after.
 
-This keeps `main` either at "latest published release" or "ahead of
-latest published release by an in-progress merge," never at
-"diverged with no tagged version that matches."
+- `require-pr-approval` can't be self-satisfied (GitHub never counts the
+  author's own approval), so the maintainer merges with admin bypass.
+- A branch off current `main` can't fall behind. If one drifts, rebase
+  it onto `main`, don't cherry-pick.
+
+This replaced a long-lived beta-line branch that fell behind `main` and
+let commits dodge the PR gates until they surfaced all at once (the
+cause of the beta.11 commitlint rewrite and force-push).
 
 ### `hacs.json` configuration
 

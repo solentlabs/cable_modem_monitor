@@ -201,6 +201,25 @@ class TestHTTPResourceLoader:
             with pytest.raises(ResourceLoadError, match="404"):
                 loader.fetch(targets)
 
+    def test_malformed_cookie_value_raises_clean_error(self) -> None:
+        """A non-header-safe cookie value yields a clean ResourceLoadError.
+
+        Backstop for UC-19b: if a credential cookie carrying CR/LF reaches the
+        fetch, ``http.client.putheader`` raises a bare ``ValueError`` that
+        escapes the loader's ``requests.RequestException`` handler as an
+        unhandled stack trace. The loader must convert it to a handled
+        ResourceLoadError instead. Regression: SB8200 inject variant #124 (rct).
+        """
+        entries = _build_entries({"/status.html": ("text/html", "<html>OK</html>")})
+
+        with HARMockServer(entries) as server:
+            session = requests.Session()
+            session.cookies.set("credential", "<html>\nlogin\n</html>")
+            loader = HTTPResourceLoader(session, server.base_url, timeout=10)
+            targets = [ResourceTarget(path="/status.html", format="table")]
+            with pytest.raises(ResourceLoadError):
+                loader.fetch(targets)
+
     def test_auth_response_reuse(self) -> None:
         """Auth response is reused when its URL matches a target."""
         entries = _build_entries({"/status.html": ("text/html", "<html>Status</html>")})

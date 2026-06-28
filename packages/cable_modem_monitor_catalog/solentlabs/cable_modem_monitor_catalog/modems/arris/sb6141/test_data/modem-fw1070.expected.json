@@ -1,0 +1,109 @@
+{
+  "downstream": [
+    {
+      "channel_id": 9,
+      "channel_number": 1,
+      "channel_type": "qam",
+      "corrected": 196,
+      "frequency": 513000000,
+      "power": 5.0,
+      "snr": 37.0,
+      "uncorrected": 1911
+    },
+    {
+      "channel_id": 2,
+      "channel_number": 2,
+      "channel_type": "qam",
+      "corrected": 163,
+      "frequency": 471000000,
+      "power": 4.0,
+      "snr": 36.0,
+      "uncorrected": 1973
+    },
+    {
+      "channel_id": 10,
+      "channel_number": 3,
+      "channel_type": "qam",
+      "corrected": 51,
+      "frequency": 519000000,
+      "power": 5.0,
+      "snr": 37.0,
+      "uncorrected": 2509
+    },
+    {
+      "channel_id": 11,
+      "channel_number": 4,
+      "channel_type": "qam",
+      "corrected": 174,
+      "frequency": 525000000,
+      "power": 5.0,
+      "snr": 37.0,
+      "uncorrected": 2683
+    },
+    {
+      "channel_id": 12,
+      "channel_number": 5,
+      "channel_type": "qam",
+      "corrected": 99,
+      "frequency": 531000000,
+      "power": 5.0,
+      "snr": 36.0,
+      "uncorrected": 2553
+    },
+    {
+      "channel_id": 18,
+      "channel_number": 6,
+      "channel_type": "qam",
+      "corrected": 54,
+      "frequency": 567000000,
+      "power": 5.0,
+      "snr": 37.0,
+      "uncorrected": 2686
+    },
+    {
+      "channel_id": 22,
+      "channel_number": 7,
+      "channel_type": "qam",
+      "corrected": 63,
+      "frequency": 591000000,
+      "power": 7.0,
+      "snr": 36.0,
+      "uncorrected": 2647
+    },
+    {
+      "channel_id": 24,
+      "channel_number": 8,
+      "channel_type": "qam",
+      "corrected": 49,
+      "frequency": 603000000,
+      "power": 7.0,
+      "snr": 37.0,
+      "uncorrected": 9045366
+    }
+  ],
+  "system_info": {
+    "downstream_channel_count": 8,
+    "hardware_version": "7.0",
+    "software_version": "SB_KOMODO-1.0.7.3-SCM02-NOSH",
+    "system_uptime": "0 days 00h:09m:47s",
+    "total_corrected": 849,
+    "total_uncorrected": 9062328,
+    "upstream_channel_count": 2
+  },
+  "upstream": [
+    {
+      "channel_id": 4,
+      "channel_number": 1,
+      "channel_type": "atdma",
+      "frequency": 19600000,
+      "power": 49.0
+    },
+    {
+      "channel_id": 3,
+      "channel_number": 2,
+      "channel_type": "atdma",
+      "frequency": 13200000,
+      "power": 49.0
+    }
+  ]
+}

@@ -17,6 +17,11 @@ from .base import AuthContext, AuthResult, BaseAuthManager
 _logger = logging.getLogger(__name__)
 
 
+def _is_header_safe(value: str) -> bool:
+    """True if value is single-line (no CR/LF/NUL) — a real token always is, a login page never is."""
+    return not ("\r" in value or "\n" in value or "\x00" in value)
+
+
 class UrlTokenAuthManager(BaseAuthManager):
     """Credentials encoded in URL query string.
 
@@ -204,14 +209,29 @@ class UrlTokenAuthManager(BaseAuthManager):
                         f"auth response body is empty — cannot set {config.cookie_name} cookie"
                     ),
                 )
-            session.cookies.set(config.cookie_name, body)
-            url_token = ""  # Body is cookie value, not URL token suffix
-            _logger.log(
-                log_level,
-                "URL token auth: injected %s cookie from response body (%d chars)",
-                config.cookie_name,
-                len(body),
-            )
+            if not _is_header_safe(body):
+                # The login response is the login page, not a token (multi-line
+                # HTML). Injecting it would corrupt the next request's headers
+                # (http.client.putheader ValueError). Leave the cookie unset and
+                # let the loader's login-page detection classify the failed data
+                # fetch as LOAD_AUTH — MODEM_YAML_SPEC.md url_token branch 5,
+                # ORCHESTRATION_USE_CASES.md UC-19b. Regression: SB8200 #124.
+                _logger.log(
+                    log_level,
+                    "URL token auth: response body is not a header-safe token "
+                    "(login page?); not injecting %s cookie",
+                    config.cookie_name,
+                )
+                url_token = ""
+            else:
+                session.cookies.set(config.cookie_name, body)
+                url_token = ""  # Body is cookie value, not URL token suffix
+                _logger.log(
+                    log_level,
+                    "URL token auth: injected %s cookie from response body (%d chars)",
+                    config.cookie_name,
+                    len(body),
+                )
 
         # Set Basic auth header for data requests if configured
         if config.auth_header_data:

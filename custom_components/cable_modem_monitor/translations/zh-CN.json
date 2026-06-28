@@ -34,13 +34,15 @@
       },
       "connection": {
         "title": "连接",
-        "description": "输入您的调制解调器连接信息。",
+        "description": "已选变体：{variant}\n\n输入您的调制解调器连接信息。",
         "data": {
+          "variant": "变体",
           "host": "调制解调器 IP 地址",
           "username": "用户名",
           "password": "密码"
         },
         "data_description": {
+          "variant": "仅当你认为其他变体更适合你的调制解调器时才切换。",
           "host": "通常是 192.168.100.1。添加 http:// 或 https:// 可跳过协议检测。",
           "username": "如果不需要请留空。",
           "password": "如果不需要请留空。"

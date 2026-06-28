@@ -28,8 +28,31 @@ ALLOWED_CHANNEL_TYPES: Final = frozenset({"qam", "ofdm", "atdma", "ofdma"})
 ALLOWED_LOCK_STATUSES: Final = frozenset({"locked", "not_locked"})
 OFDM_STRIPPED_FIELDS: Final = frozenset({"is_ofdm", "symbol_rate"})
 
-# PARSING_SPEC.md § Canonical modulation values
-CANONICAL_MODULATIONS: Final = frozenset({"QAM16", "QAM32", "QAM64", "QAM256", "QAM1024", "QAM2048", "QAM4096", "QPSK"})
+# PARSING_SPEC.md § Canonical modulation values.
+# The enumeration is the DOCSIS-defined modulation orders, not a fleet
+# observation: QPSK plus 8/16/32/64/128/256-QAM (DOCSIS 3.0 SC-QAM) and
+# 512/1024/2048/4096-QAM, with optional 8192/16384-QAM (DOCSIS 3.1 OFDM).
+# A genuinely new valid order means extending this set with a spec
+# citation, never silently dropping it.
+# Source: CableLabs CM-SP-PHYv3.0 / CM-SP-PHYv3.1
+# (https://www.cablelabs.com/specifications).
+CANONICAL_MODULATIONS: Final = frozenset(
+    {
+        "QPSK",
+        "QAM8",
+        "QAM16",
+        "QAM32",
+        "QAM64",
+        "QAM128",
+        "QAM256",
+        "QAM512",
+        "QAM1024",
+        "QAM2048",
+        "QAM4096",
+        "QAM8192",
+        "QAM16384",
+    }
+)
 
 
 def canonicalize_modulation(raw: str) -> str | None:
@@ -166,7 +189,7 @@ def _validate_channel(channel: dict[str, Any], modem: str, path_prefix: str) -> 
                 path=f"{path_prefix}.channel_type",
                 rule="channel_type_enum",
                 value=channel_type,
-                message=(f"channel_type must be one of " f"{sorted(ALLOWED_CHANNEL_TYPES)}; got {channel_type!r}"),
+                message=(f"channel_type must be one of {sorted(ALLOWED_CHANNEL_TYPES)}; got {channel_type!r}"),
             )
         )
 
@@ -178,7 +201,7 @@ def _validate_channel(channel: dict[str, Any], modem: str, path_prefix: str) -> 
                 path=f"{path_prefix}.lock_status",
                 rule="lock_status_enum",
                 value=lock_status,
-                message=(f"lock_status must be one of " f"{sorted(ALLOWED_LOCK_STATUSES)}; got {lock_status!r}"),
+                message=(f"lock_status must be one of {sorted(ALLOWED_LOCK_STATUSES)}; got {lock_status!r}"),
             )
         )
 
@@ -206,9 +229,7 @@ def _validate_channel(channel: dict[str, Any], modem: str, path_prefix: str) -> 
                         path=f"{path_prefix}.{field}",
                         rule="ofdm_stripped_field",
                         value=channel[field],
-                        message=(
-                            f"{field!r} is not part of the OFDM/OFDMA " f"contract and must be removed by the parser"
-                        ),
+                        message=(f"{field!r} is not part of the OFDM/OFDMA contract and must be removed by the parser"),
                     )
                 )
 

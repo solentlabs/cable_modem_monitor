@@ -1,9 +1,10 @@
 """HAR Validation Gate — MCP tool.
 
-Orchestrates three-step validation on a HAR file before analysis proceeds:
+Orchestrates four-step validation on a HAR file before analysis proceeds:
 1. Structural validation (valid JSON, non-empty entries, request/response)
 2. Auth flow validation (first request check, session cookie check)
 3. Protocol signal scanning (transport hints, auth hints)
+4. Response integrity (bodies stripped/replaced after capture)
 
 Per ONBOARDING_SPEC.md HAR Validation Gate.
 """
@@ -17,6 +18,7 @@ from typing import Any
 from .validation.auth_flow import validate_auth_flow
 from .validation.har_utils import HARD_STOP_PREFIX
 from .validation.protocol_signals import identify_transport_and_auth
+from .validation.response_integrity import validate_response_integrity
 from .validation.structural import validate_structure
 
 
@@ -64,6 +66,9 @@ def validate_har(har_path: str | Path) -> ValidationResult:
 
     # Step 3: Protocol signal scanning
     identify_transport_and_auth(entries, issues, transport_hints)
+
+    # Step 4: Response body integrity
+    validate_response_integrity(entries, issues)
 
     valid = not any(issue.startswith(HARD_STOP_PREFIX) for issue in issues)
     return ValidationResult(

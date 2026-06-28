@@ -365,7 +365,7 @@ def check_tagvaluelist_credentials(content: str, filepath: Path) -> list[str]:
                 and not val_stripped.endswith("dBmV")
                 and "Ksym" not in val_stripped
             ):
-                issues.append(f"  Potential WiFi credential in tagValueList position {i}: " f"'{val_stripped}'")
+                issues.append(f"  Potential WiFi credential in tagValueList position {i}: '{val_stripped}'")
 
     return issues
 
@@ -417,7 +417,7 @@ def check_ips_in_content(content: str, filepath: Path) -> list[str]:
             continue
         seen_ips.add(ip)
 
-        if is_safe_ip(ip):
+        if is_safe_ip(ip) or ip in SAFE_IP_VALUES:
             continue
 
         octets = ip.split(".")

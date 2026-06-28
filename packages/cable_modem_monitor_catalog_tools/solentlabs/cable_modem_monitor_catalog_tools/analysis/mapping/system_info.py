@@ -40,9 +40,10 @@ _LABEL_FIELD_MAP: dict[str, tuple[str, int]] = {
     # Tier 2 registered
     "boot status": ("boot_status", 2),
     "boot state": ("boot_status", 2),
-    "serial number": ("serial_number", 2),
     "docsis version": ("docsis_version", 2),
     "temperature": ("temperature", 2),
+    # Identity PII (serial number, MAC) intentionally not mapped — no CMM
+    # consumer; see SYSTEM_INFO_SPEC § Tiered Sensor Model.
 }
 
 # ID-based label mapping (element ids commonly used for system info)
@@ -53,7 +54,6 @@ _ID_FIELD_MAP: dict[str, tuple[str, int]] = {
     "hardwareversion": ("hardware_version", 1),
     "networkaccess": ("docsis_status", 1),
     "bootstate": ("boot_status", 2),
-    "serialnumber": ("serial_number", 2),
     "docsisversion": ("docsis_version", 2),
 }
 
@@ -74,8 +74,6 @@ _JSON_SYSINFO_MAP: dict[str, tuple[str, int]] = {
     "status": ("docsis_status", 1),
     "bootstatus": ("boot_status", 2),
     "boot_status": ("boot_status", 2),
-    "serialnumber": ("serial_number", 2),
-    "serial_number": ("serial_number", 2),
     "docsisversion": ("docsis_version", 2),
     "docsis_version": ("docsis_version", 2),
 }

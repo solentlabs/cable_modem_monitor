@@ -12,6 +12,6 @@
       }
     }
   },
-  "_expected_fields": ["software_version", "hardware_version", "system_uptime", "serial_number"],
+  "_expected_fields": ["software_version", "hardware_version", "system_uptime"],
   "_expected_format": "json"
 }

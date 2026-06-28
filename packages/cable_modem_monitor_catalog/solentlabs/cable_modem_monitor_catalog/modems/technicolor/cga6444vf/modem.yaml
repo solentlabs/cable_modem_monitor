@@ -16,6 +16,22 @@ auth:
   salt_trigger: "seeksalthash"
   login_success:
     error: "ok"
+
+actions:
+  logout:
+    type: http
+    method: POST
+    endpoint: "/api/v1/session/logout"
+    requires_session: true
+    headers:
+      X-Requested-With: "XMLHttpRequest"
+    # HAR-observed: the browser ends each session with POST
+    # /api/v1/session/logout carrying the PHPSESSID cookie, the rotating
+    # X-CSRF-TOKEN (inherited from the auth session headers), and the
+    # X-Requested-With AJAX marker. Single-session firmware, so tearing
+    # the session down each poll prevents the next login colliding with
+    # our own still-open session (MSG_LOGIN_150).
+
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
@@ -26,6 +42,9 @@ sources:
   auth_config:
     "[#120 CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120)
     — PBKDF2 double-hash auth"
+  logout_action:
+    "[#120 CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120)
+    — POST /api/v1/session/logout observed in the contributor HAR capture"
   chipset: "[DeviWiki CGA4233](https://deviwiki.com/wiki/Technicolor_CGA4233) — same BCM3390 Technicolor gateway platform"
 
 attribution:

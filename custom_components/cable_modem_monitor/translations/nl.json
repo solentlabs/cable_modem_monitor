@@ -34,13 +34,15 @@
       },
       "connection": {
         "title": "Verbinding",
-        "description": "Voer de verbindingsgegevens van uw modem in.",
+        "description": "Geselecteerde variant: {variant}\n\nVoer de verbindingsgegevens van uw modem in.",
         "data": {
+          "variant": "Variant",
           "host": "Modem IP-adres",
           "username": "Gebruikersnaam",
           "password": "Wachtwoord"
         },
         "data_description": {
+          "variant": "Wissel alleen als je denkt dat een andere variant bij je modem past.",
           "host": "Meestal 192.168.100.1. Voeg http:// of https:// toe om protocoldetectie over te slaan.",
           "username": "Leeg laten indien niet vereist.",
           "password": "Leeg laten indien niet vereist."

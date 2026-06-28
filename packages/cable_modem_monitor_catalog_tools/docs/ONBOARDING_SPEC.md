@@ -34,7 +34,7 @@ review, commit authorization).
 | [Inputs](#inputs) | What the onboarding process requires |
 | [Outputs](#outputs) | Artifacts generated (modem.yaml, parser.yaml, etc.) |
 | [Workflow](#workflow) | End-to-end onboarding flow (capture → analysis → testing → review) |
-| [HAR Validation Gate](#har-validation-gate) | Three-step HAR quality check before proceeding |
+| [HAR Validation Gate](#har-validation-gate) | Four-step HAR quality check before proceeding |
 | [Decision Tree](#decision-tree) | 7-phase detection: transport, auth, session, format, fields |
 | [parser.py Decision](#parserpy-decision) | When code post-processing is needed vs config-only |
 | [Error Handling](#error-handling) | Hard stops, warnings, confidence annotations |
@@ -249,6 +249,26 @@ observed and what's missing. Do not guess.
 If the HAR shows no login flow and all requests return 200 with data
 content, this is valid for `auth: none` modems. The "post-auth only"
 hard stop does not apply when there is no auth to capture.
+
+### Step 4: Response body integrity
+
+Detect responses whose body was replaced or stripped **after** capture —
+over-sanitization that destroys the payload the parser needs. The signal
+is tool-agnostic: a recorded `content.size` that greatly exceeds the actual
+`content.text` length means the body shrank between capture and now. The
+common cause is a sanitizer that collapses a whole structured payload (e.g.
+base64-encoded JSON) down to a single redaction token; the field names and
+shape are not PII and must survive, so this is a defect, not expected
+sanitization.
+
+| Wire evidence | Action |
+|--------------|--------|
+| A data response's `content.size` dwarfs its body length (large recorded size, tiny non-empty body) | **HARD STOP**: the HAR is over-sanitized and carries no usable data. Recapture with a fixed sanitizer. |
+
+Empty bodies (`text: ""`) are the "no body captured" case and are not
+flagged here. Static assets and non-2xx responses are excluded. One flagged
+data response condemns the HAR — there is no point analyzing a capture whose
+payloads are gone.
 
 **How to distinguish `none` auth from post-auth HAR:**
 
@@ -575,7 +595,7 @@ structural details from HAR response bodies:
 **Direction inference:** `response_key` names containing "Downstream"
 or "DSChannel" → downstream. "Upstream" or "USChannel" → upstream.
 
-See [HNAPParser](FORMAT_HNAP_SPEC.md#hnapparser) for the validated
+See [HNAPParser](../../cable_modem_monitor_core/docs/FORMAT_HNAP_SPEC.md#hnapparser) for the validated
 record layout and parser.yaml example.
 
 #### HTTP format detection
@@ -711,10 +731,13 @@ names/positions to canonical output fields.
 |-----------------|------|:------:|
 | `boot_status` | string | sometimes |
 | `docsis_version` | string | sometimes |
-| `serial_number` | string | sometimes |
 
-System info fields are open-ended — extract whatever the modem provides.
-See [Three-tier field mapping](#three-tier-field-mapping) below.
+System info fields are open-ended — extract whatever the modem provides,
+**except identity PII**: `serial_number` and `mac_address` are deliberately
+not mapped (no CMM consumer; PII risk). The intake mapping skips them so
+they never enter the pipeline. See
+[Three-tier field mapping](#three-tier-field-mapping) below and
+SYSTEM_INFO_SPEC § Tiered Sensor Model.
 
 #### Three-tier field mapping
 
@@ -1069,12 +1092,12 @@ tables use CSS classes to indicate pass/fail status. During onboarding,
 these fields start as Tier 3 (passthrough) since they are
 modem-specific. They can be elevated to Tier 2 when the same pattern
 appears across multiple modems. See
-[SYSTEM_INFO_SPEC.md](SYSTEM_INFO_SPEC.md) for full `html_fields` semantics.
+[SYSTEM_INFO_SPEC.md](../../cable_modem_monitor_core/docs/SYSTEM_INFO_SPEC.md) for full `html_fields` semantics.
 
 ### parser.py contract
 
 If generated, parser.py must follow the post-processing contract from
-[PARSING_SPEC.md](PARSING_SPEC.md):
+[PARSING_SPEC.md](../../cable_modem_monitor_core/docs/PARSING_SPEC.md):
 
 ```python
 class PostProcessor:
@@ -1722,7 +1745,7 @@ re-runs `run_tests`. This loop continues until tests pass.
 
 ## Transport Constraint Reference
 
-Reproduced from [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#validation-rules) for quick reference during analysis:
+Reproduced from [MODEM_YAML_SPEC.md](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md#validation-rules) for quick reference during analysis:
 
 | Transport | Valid auth strategies | Valid formats | Valid action types |
 |-----------|---------------------|---------------|-------------------|
@@ -1965,7 +1988,7 @@ downstream:
    base64`. Otherwise default to `plain`.
 
 7. **The tools target the current spec.** All generated configs conform
-   to [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md) and [PARSING_SPEC.md](PARSING_SPEC.md) schemas.
+   to [MODEM_YAML_SPEC.md](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md) and [PARSING_SPEC.md](../../cable_modem_monitor_core/docs/PARSING_SPEC.md) schemas.
 
 8. **JS endpoint discovery is regex-based.** Only static URL string
    literals in AJAX/fetch calls are detected. Dynamically constructed

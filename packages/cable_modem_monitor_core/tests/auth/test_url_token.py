@@ -245,6 +245,38 @@ class TestUrlTokenAuthManager:
             assert "empty" in result.error
             assert session.cookies.get("credential") is None
 
+    def test_inject_credential_cookie_login_page_not_injected(self, session: requests.Session) -> None:
+        """A login-page body is not injected as the credential cookie (UC-19b).
+
+        When the login response is the login page (auth did not establish a
+        session — single-session contention, redirect, rejected credentials),
+        the body is multi-line HTML, not a header-safe token. Injecting it
+        would corrupt the next request's headers and crash
+        ``http.client.putheader``. The cookie is left unset; auth proceeds and
+        the loader's login-page detection classifies the failed data fetch as
+        ``LOAD_AUTH``. Regression: SB8200 inject variant #124 (rct).
+        """
+        entries, _ = load_auth_fixture("har_url_token_login_page_body.json")
+        with HARMockServer(entries) as server:
+            config = UrlTokenAuth(
+                strategy="url_token",
+                login_page="/login.html",
+                inject_credential_cookie=True,
+                cookie_name="credential",
+            )
+            manager = UrlTokenAuthManager(config)
+            manager.configure_session(session, {})
+
+            result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
+
+            # The login-page body must NOT become the credential cookie.
+            assert session.cookies.get("credential") is None
+            # Proceeds to the loader for LOAD_AUTH classification; the
+            # non-data-page response must not be advertised for reuse.
+            assert result.success is True
+            assert result.response is None
+            assert result.response_url == ""
+
     def test_login_non_200(self, session: requests.Session) -> None:
         """Reports error when login GET returns non-200, attaches response."""
         config = UrlTokenAuth(strategy="url_token", login_page="/login.html")

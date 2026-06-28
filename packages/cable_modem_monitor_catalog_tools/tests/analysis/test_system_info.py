@@ -72,7 +72,7 @@ LABEL_CASES = [
     ("Cable Modem Status",       "label",       "docsis_status",     "cable modem status"),
     ("Network Access",           "label",       "docsis_status",     "network access"),
     ("Boot Status",              "label",       "boot_status",       "tier 2 boot status"),
-    ("Serial Number",            "label",       "serial_number",     "tier 2 serial"),
+    ("Serial Number",            "label",       "",                  "serial not mapped (PII)"),
     ("DOCSIS Version",           "label",       "docsis_version",    "tier 2 docsis"),
     ("systemuptime",             "id",          "system_uptime",     "id-based uptime"),
     ("firmwareversion",          "id",          "software_version",  "id-based firmware"),

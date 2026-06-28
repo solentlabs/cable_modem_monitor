@@ -40,7 +40,7 @@ from .config_flow_helpers import (
     build_model_display_name,
     default_health_check_interval,
     filter_by_manufacturer,
-    format_variant_label,
+    format_variant_labels,
     get_manufacturers,
     load_modem_catalog,
     load_variant_list,
@@ -187,6 +187,14 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         self._selected_summary: ModemSummary | None = None
         self._variants: list[VariantInfo] = []
         self._selected_variant: str | None = None
+        # Human label of the selected variant, shown on the connection form
+        # so the user can see which variant they are configuring (#176).
+        self._selected_variant_label: str = ""
+        # Whether the selected variant's restart action needs per-action
+        # credentials despite top-level auth "none". Resolved off the event
+        # loop at variant selection (reads modem.yaml); read by
+        # _build_connection_schema, which must not do I/O.
+        self._restart_needs_credentials: bool = False
         # Directory of the selected variant — may differ from summary.path
         # when a sibling transport directory was chosen in Step 2.
         self._selected_modem_dir: Path | None = None
@@ -274,8 +282,10 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                 return await self.async_step_variant()
 
             # Single variant — skip Step 2
-            self._selected_variant = self._variants[0].name if self._variants else None
-            self._selected_modem_dir = self._variants[0].path.parent if self._variants else self._selected_summary.path
+            if self._variants:
+                await self._apply_variant(self._variants[0])
+            else:
+                self._selected_modem_dir = self._selected_summary.path
             return await self.async_step_connection()
 
         # Build model dropdown
@@ -352,30 +362,11 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     ) -> config_entries.ConfigFlowResult:
         """Step 2 — Select variant (only shown for multi-variant modems)."""
         if user_input is not None:
-            raw = user_input["variant"]
-            # Values are composite keys: "{rel_dir}/{variant_name|__default__}"
-            selected_v = next(
-                (
-                    v
-                    for v in self._variants
-                    if f"{v.path.parent.relative_to(CATALOG_PATH)}/{v.name or _DEFAULT_VARIANT}" == raw
-                ),
-                None,
-            )
+            selected_v = self._find_variant(user_input["variant"])
             if selected_v is None:
                 return self.async_abort(reason="unknown_variant")
-            self._selected_variant = selected_v.name
-            self._selected_modem_dir = selected_v.path.parent
+            await self._apply_variant(selected_v)
             return await self.async_step_connection()
-
-        variant_options = []
-        for v in self._variants:
-            # Composite key prevents collision when multiple directories
-            # contribute a default variant (name=None) to the same list.
-            rel = str(v.path.parent.relative_to(CATALOG_PATH))
-            value = f"{rel}/{v.name or _DEFAULT_VARIANT}"
-            label = format_variant_label(v)
-            variant_options.append(selector.SelectOptionDict(value=value, label=label))
 
         return self.async_show_form(
             step_id="variant",
@@ -383,13 +374,49 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                 {
                     vol.Required("variant"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=variant_options,
+                            options=self._variant_options(),
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
                 }
             ),
         )
+
+    def _variant_key(self, variant: VariantInfo) -> str:
+        """Composite dropdown value ``{rel_dir}/{name|__default__}`` — unique across sibling dirs."""
+        rel = str(variant.path.parent.relative_to(CATALOG_PATH))
+        return f"{rel}/{variant.name or _DEFAULT_VARIANT}"
+
+    def _variant_options(self) -> list[selector.SelectOptionDict]:
+        """Picker options with disambiguated labels (hw_version shown only to break ties)."""
+        labels = format_variant_labels(self._variants)
+        return [
+            selector.SelectOptionDict(value=self._variant_key(v), label=label)
+            for v, label in zip(self._variants, labels, strict=True)
+        ]
+
+    def _find_variant(self, key: str) -> VariantInfo | None:
+        """Resolve a composite variant key back to its VariantInfo."""
+        return next((v for v in self._variants if self._variant_key(v) == key), None)
+
+    def _current_variant(self) -> VariantInfo | None:
+        """The VariantInfo currently selected, matched by directory and name."""
+        return next(
+            (
+                v
+                for v in self._variants
+                if v.path.parent == self._selected_modem_dir and v.name == self._selected_variant
+            ),
+            None,
+        )
+
+    async def _apply_variant(self, variant: VariantInfo) -> None:
+        """Record the chosen variant + its disambiguated label, and resolve restart creds off-loop."""
+        self._selected_variant = variant.name
+        self._selected_modem_dir = variant.path.parent
+        labels = format_variant_labels(self._variants)
+        self._selected_variant_label = next(lbl for v, lbl in zip(self._variants, labels, strict=True) if v is variant)
+        await self._resolve_restart_credentials()
 
     # -----------------------------------------------------------------
     # Step 3: Connection details
@@ -401,6 +428,24 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     ) -> config_entries.ConfigFlowResult:
         """Step 3 — Enter host and credentials."""
         if user_input is not None:
+            # The retry form (connection_with_errors) may carry an inline variant
+            # switch (#176). Apply it before validating; it is recorded as the
+            # selected variant, not stored in the connection input.
+            rerender = False
+            raw_variant = user_input.pop("variant", None)
+            if raw_variant is not None:
+                switched = self._find_variant(raw_variant)
+                current = self._current_variant()
+                if switched is not None and (
+                    current is None or self._variant_key(switched) != self._variant_key(current)
+                ):
+                    before_creds = self._shows_credentials()
+                    await self._apply_variant(switched)
+                    # If the new variant exposes credential fields the previous
+                    # form lacked, re-render so the user can fill them before we
+                    # validate. HA forms are static — the field set only updates
+                    # on a re-render, not when the dropdown changes.
+                    rerender = self._shows_credentials() and not before_creds
             # Merge with entity prefix and channel identity from Step 1b
             if self._connection_input:
                 user_input[CONF_ENTITY_PREFIX] = self._connection_input.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE)
@@ -409,16 +454,35 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                     ChannelIdentity.NUMBER,
                 )
             self._connection_input = user_input
+            if rerender:
+                return self._show_connection_form(include_variant=True)
             return await self.async_step_validate()
 
+        return self._show_connection_form()
+
+    def _show_connection_form(
+        self,
+        *,
+        errors: dict[str, str] | None = None,
+        include_variant: bool = False,
+    ) -> config_entries.ConfigFlowResult:
+        """Render the connection form, pre-filling anything already entered (#176)."""
         return self.async_show_form(
             step_id="connection",
-            data_schema=self._build_connection_schema(),
+            data_schema=self._build_connection_schema(defaults=self._connection_input, include_variant=include_variant),
+            errors=errors,
+            description_placeholders={"variant": self._selected_variant_label},
         )
+
+    def _shows_credentials(self) -> bool:
+        """True if the current variant's connection form shows username/password fields."""
+        return self._get_selected_auth_strategy() != "none" or self._restart_needs_credentials
 
     def _build_connection_schema(
         self,
         defaults: dict[str, Any] | None = None,
+        *,
+        include_variant: bool = False,
     ) -> vol.Schema:
         """Build the connection form schema based on auth strategy."""
         summary = self._selected_summary
@@ -428,26 +492,50 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         # Determine auth strategy from selected variant
         auth_strategy = self._get_selected_auth_strategy()
 
-        fields: dict[Any, Any] = {
-            vol.Required(CONF_HOST, default=default_host): str,
-        }
+        fields: dict[Any, Any] = {}
+
+        # On the retry form, offer an inline variant switch so the user can
+        # correct a wrong pick without restarting (#176). Only when there's a
+        # choice to make (more than one variant).
+        if include_variant and len(self._variants) > 1:
+            current = self._current_variant()
+            variant_field = (
+                vol.Required("variant", default=self._variant_key(current)) if current else vol.Required("variant")
+            )
+            fields[variant_field] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=self._variant_options(),
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            )
+
+        fields[vol.Required(CONF_HOST, default=default_host)] = str
 
         if auth_strategy != "none":
             fields[vol.Optional(CONF_USERNAME, default=d.get(CONF_USERNAME, ""))] = str
             fields[vol.Optional(CONF_PASSWORD, default=d.get(CONF_PASSWORD, ""))] = str
-        else:
-            # auth_strategy == "none" — still check whether the restart action
-            # needs per-action auth (action_auth set). If so, show credentials
-            # so the user can enable restart from the HA UI.
-            try:
-                modem_dir = self._get_selected_modem_dir()
-            except ValueError:
-                modem_dir = None
-            if modem_dir is not None and restart_requires_credentials(modem_dir, self._selected_variant):
-                fields[vol.Optional(CONF_USERNAME, default=d.get(CONF_USERNAME, ""))] = str
-                fields[vol.Optional(CONF_PASSWORD, default=d.get(CONF_PASSWORD, ""))] = str
+        elif self._restart_needs_credentials:
+            # auth_strategy == "none", but the restart action needs per-action
+            # auth — show credentials so the user can enable restart from the
+            # HA UI. The flag is resolved off the event loop at variant
+            # selection (the modem.yaml read must not block the loop).
+            fields[vol.Optional(CONF_USERNAME, default=d.get(CONF_USERNAME, ""))] = str
+            fields[vol.Optional(CONF_PASSWORD, default=d.get(CONF_PASSWORD, ""))] = str
 
         return vol.Schema(fields)
+
+    async def _resolve_restart_credentials(self) -> None:
+        """Resolve, off the event loop, whether the variant's restart needs per-action auth."""
+        try:
+            modem_dir = self._get_selected_modem_dir()
+        except ValueError:
+            self._restart_needs_credentials = False
+            return
+        self._restart_needs_credentials = await self.hass.async_add_executor_job(
+            restart_requires_credentials,
+            modem_dir,
+            self._selected_variant,
+        )
 
     def _get_selected_modem_dir(self) -> Path:
         """Return the modem directory for the currently selected variant.
@@ -587,16 +675,15 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         self,
         user_input: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
-        """Return to connection step with an error message."""
-        errors = {"base": self._progress.error_key}
-        defaults = self._connection_input or {}
-        self._progress.reset()
+        """Re-show the connection step with the validation error.
 
-        return self.async_show_form(
-            step_id="connection",
-            data_schema=self._build_connection_schema(defaults=defaults),
-            errors=errors,
-        )
+        For multi-variant modems the form includes an inline variant switch so
+        the user can correct a wrong pick without restarting (#176). The error
+        banner carries the full, translated reason (strings.json config.error).
+        """
+        errors = {"base": self._progress.error_key}
+        self._progress.reset()
+        return self._show_connection_form(errors=errors, include_variant=True)
 
     # -----------------------------------------------------------------
     # Reauth flow

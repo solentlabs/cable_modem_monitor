@@ -39,6 +39,8 @@ attribution:
       contribution: "HA Community verification (October 2025)"
     - github: https://github.com/kwschulz
       contribution: "Real hardware captures HW 7.0 + HW 8.0 (April 2026)"
+    - github: https://github.com/rct
+      contribution: "Real cmSignalData capture, firmware 1.0.7.0-SCM00 (#177)"
 
 isps:
   - Comcast
@@ -48,9 +50,12 @@ isps:
   - Mediacom
 notes: |
   DOCSIS 3.0 8x4 cable modem (released 2011, EOL 2019). Broadcom BCM3380.
-  No authentication required — status page is publicly accessible.
+  No authentication required; the status page is publicly accessible.
   Transposed table layout (rows = metrics, columns = channels).
-  Companion "Signal Status (Codewords)" table provides error counts.
+  The codewords (error-count) table title differs by firmware: 1.0.7.3-SCM02
+  reports "Signal Status (Codewords)", 1.0.7.0-SCM00 reports "Signal Stats
+  (Codewords)" (#177). parser.yaml matches both observed titles explicitly via
+  selector fallback.
   system_info from cmHelpData.htm (firmware, HW version) and indexData.htm (uptime).
   HW 7.0 and HW 8.0 confirmed on firmware SB_KOMODO-1.0.7.3-SCM02-NOSH.
 references:

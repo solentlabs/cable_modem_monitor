@@ -17,6 +17,7 @@ from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.cable_modem_monitor.config_flow import (
+    CableModemMonitorConfigFlow,
     _build_prefix_options,
     _duration_to_seconds,
     _seconds_to_duration,
@@ -368,6 +369,113 @@ async def test_step_connection_shows_form(hass: HomeAssistant):
 
 
 # -----------------------------------------------------------------------
+# Config flow — Step 3: no blocking I/O while building the connection schema
+# -----------------------------------------------------------------------
+
+
+async def test_build_connection_schema_does_no_file_io(hass: HomeAssistant):
+    """_build_connection_schema must not read modem.yaml on the event loop.
+
+    The restart-credentials check reads modem.yaml; HA flagged that read as a
+    blocking call inside the event loop during the connection step. The read is
+    now resolved off the loop at variant selection, so building the schema must
+    not call restart_requires_credentials at all.
+    """
+    # Typed Any: the @HANDLERS.register decorator erases the subclass type to
+    # ConfigFlow, so the flow's own attributes aren't visible to the type checker.
+    flow: Any = CableModemMonitorConfigFlow()
+    flow.hass = hass
+    # Simulate a resolved none-auth single-variant selection.
+    flow._variants = MOCK_SINGLE_VARIANT
+    flow._selected_variant = None
+    flow._selected_summary = MOCK_SUMMARIES[0]
+    flow._selected_modem_dir = MOCK_SUMMARIES[0].path
+
+    with patch(
+        "custom_components.cable_modem_monitor.config_flow.restart_requires_credentials",
+        side_effect=AssertionError("must not read modem.yaml on the event loop"),
+    ):
+        schema = flow._build_connection_schema()
+
+    assert schema is not None
+
+
+# -----------------------------------------------------------------------
+# Config flow — Step 3: Connection shows the selected variant (#176)
+# -----------------------------------------------------------------------
+
+
+async def test_connection_form_shows_selected_variant(hass: HomeAssistant):
+    """Connection form surfaces the chosen variant so the user can see what they picked.
+
+    #176, change 1: a multi-variant modem hides which variant is active once
+    the picker closes. The connection form now carries the variant's human
+    label in description_placeholders.
+    """
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_MULTI_VARIANTS,
+        ),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"manufacturer": "__all__"},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"model": "Solent Labs/TPS-3000", "entity_prefix": "none"},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"variant": "solentlabs/tps-3000/v2"},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "connection"
+    # The selected variant's label is shown; the v2 qualifier ties it to the pick.
+    assert "v2" in result["description_placeholders"]["variant"]
+
+
+async def test_single_variant_connection_still_populates_variant(hass: HomeAssistant):
+    """Single-variant modems also populate the variant placeholder.
+
+    The connection string references {variant}; if a single-variant flow left
+    it unset the string would fail to render. The label is set even when the
+    picker step is skipped.
+    """
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_SINGLE_VARIANT,
+        ),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"manufacturer": "__all__"},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"model": "Solent Labs/TPS-2000", "entity_prefix": "none"},
+        )
+
+    assert result["step_id"] == "connection"
+    assert result["description_placeholders"]["variant"]
+
+
+# -----------------------------------------------------------------------
 # Config flow — Step 4: Validation + entry creation
 # -----------------------------------------------------------------------
 
@@ -644,6 +752,215 @@ async def test_validation_auth_error(hass: HomeAssistant):
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "connection"
     assert result["errors"]["base"] == "invalid_auth"
+
+
+# -----------------------------------------------------------------------
+# Config flow — Step 4: Failure recovery on the connection form (#176)
+# -----------------------------------------------------------------------
+
+
+def _schema_fields(result: Any) -> set[str]:
+    """Field names present in a form result's data schema."""
+    return {str(key) for key in result["data_schema"].schema}
+
+
+async def _drive_multi_variant_to_failure(hass: HomeAssistant, *, connection: dict[str, Any]) -> Any:
+    """Run a multi-variant flow (variant v2) through a failed validation; return the error form.
+
+    Assumes the caller holds the load_modem_catalog / load_variant_list /
+    validate_connection patches open.
+    """
+    result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={"manufacturer": "__all__"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"model": "Solent Labs/TPS-3000", "entity_prefix": "none"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"variant": "solentlabs/tps-3000/v2"}
+    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input=connection)
+    while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    return result
+
+
+async def test_multi_variant_failure_shows_error_form_with_variant_switch(hass: HomeAssistant):
+    """A multi-variant failure returns to the connection form with the error and an inline variant switch (#176)."""
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_MULTI_VARIANTS,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            side_effect=PermissionError("auth_error:invalid_auth:Bad password"),
+        ),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result = await _drive_multi_variant_to_failure(hass, connection={"host": "192.168.100.1"})
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "connection"
+    # The full, translated reason is shown via the error banner (not a hand-rolled string).
+    assert result["errors"]["base"] == "invalid_auth"
+    # The form offers an inline variant switch.
+    assert "variant" in _schema_fields(result)
+
+
+async def test_single_variant_failure_has_no_variant_switch(hass: HomeAssistant):
+    """A single-variant failure shows the error form without a variant field (nothing to switch to)."""
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_SINGLE_VARIANT,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            side_effect=ConnectionError("unreachable"),
+        ),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input={"manufacturer": "__all__"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input={"model": "Solent Labs/TPS-2000", "entity_prefix": "none"}
+        )
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={"host": "192.168.100.1"})
+        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
+            result = await hass.config_entries.flow.async_configure(result["flow_id"])
+
+    assert result["step_id"] == "connection"
+    assert result["errors"]["base"] == "network_unreachable"
+    assert "variant" not in _schema_fields(result)
+
+
+async def test_failure_form_preserves_entered_connection(hass: HomeAssistant):
+    """The error form keeps the host and credentials already typed (#176)."""
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_MULTI_VARIANTS,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            side_effect=PermissionError("auth_error:invalid_auth:Bad password"),
+        ),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result = await _drive_multi_variant_to_failure(
+            hass, connection={"host": "10.0.0.5", "username": "myuser", "password": "secret"}
+        )
+
+    assert result["step_id"] == "connection"
+    applied = result["data_schema"]({})
+    assert applied["host"] == "10.0.0.5"
+    assert applied["username"] == "myuser"
+
+
+async def test_switch_variant_on_failure_form_revalidates(hass: HomeAssistant):
+    """Switching variant on the error form re-runs validation with the new variant (#176)."""
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_MULTI_VARIANTS,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            side_effect=[PermissionError("auth_error:invalid_auth:Bad password"), MOCK_VALIDATION_RESULT],
+        ),
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result: Any = await _drive_multi_variant_to_failure(hass, connection={"host": "192.168.100.1"})
+        assert result["step_id"] == "connection"
+        # Switch to the default variant and resubmit; second validation succeeds.
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"variant": "solentlabs/tps-3000/__default__", "host": "192.168.100.1"},
+        )
+        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
+            result = await hass.config_entries.flow.async_configure(result["flow_id"])
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    # The switched-to default variant (name=None) is what got recorded.
+    assert result["data"]["variant"] is None
+
+
+async def test_switch_to_credentialed_variant_rerenders_before_validating(hass: HomeAssistant):
+    """Switching from a no-auth variant to one needing credentials re-renders the form first (#176).
+
+    HA forms are static, so the credential fields only appear on a re-render. The
+    flow must show them before validating, not fail a credential-less attempt first.
+    """
+    from solentlabs.cable_modem_monitor_core.catalog_manager import VariantInfo
+
+    base_dir = FAKE_CATALOG / "solentlabs" / "tps-3000"
+    variants = [
+        VariantInfo(name=None, auth_strategy="none", path=base_dir / "modem.yaml"),
+        VariantInfo(name="secure", auth_strategy="basic", path=base_dir / "modem-secure.yaml"),
+    ]
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=variants,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            side_effect=ConnectionError("unreachable"),
+        ) as mock_validate,
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input={"manufacturer": "__all__"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input={"model": "Solent Labs/TPS-3000", "entity_prefix": "none"}
+        )
+        # Pick the no-auth variant first; its connection form has no credentials.
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input={"variant": "solentlabs/tps-3000/__default__"}
+        )
+        assert "username" not in _schema_fields(result)
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={"host": "192.168.100.1"})
+        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
+            result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        assert result["step_id"] == "connection"
+        assert mock_validate.call_count == 1
+        # Switch to the credentialed variant: form must re-render with the password
+        # field, without running a second validation.
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"variant": "solentlabs/tps-3000/secure", "host": "192.168.100.1"},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "connection"
+    assert "username" in _schema_fields(result)
+    assert "password" in _schema_fields(result)
+    assert mock_validate.call_count == 1  # no re-validation triggered by the switch
 
 
 # -----------------------------------------------------------------------

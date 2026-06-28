@@ -134,6 +134,11 @@ def test_paths_resolve_to_unsuffixed_files_for_null_variant() -> None:
 # ---------------------------------------------------------------------------
 
 _PARTIAL_SYSTEM_INFO = {**_HEALTHY_DATA["system_info"], "hardware_version": None}
+_PII_SYSTEM_INFO = {
+    **_HEALTHY_DATA["system_info"],
+    "mac_address": "50:bb:9f:53:92:10",
+    "serial_number": "469930085355204103",
+}
 
 _WARNING_CASES = [
     pytest.param(
@@ -166,6 +171,11 @@ _WARNING_CASES = [
         "system_info missing fields",
         id="partial_system_info",
     ),
+    pytest.param(
+        _patched(system_info=_PII_SYSTEM_INFO),
+        "stripped PII from system_info",
+        id="pii_system_info_stripped",
+    ),
 ]
 
 
@@ -188,6 +198,23 @@ def test_warning_triggers(
     assert any(
         expected_substring in w for w in result.warnings
     ), f"expected warning containing {expected_substring!r}, got: {result.warnings}"
+
+
+def test_pii_fields_stripped_from_system_info(tmp_path: Path) -> None:
+    """mac_address and serial_number are removed from the built fixture."""
+    diag_path = _write_diag(tmp_path, _patched(system_info=_PII_SYSTEM_INFO))
+
+    result = verify_diagnostics(
+        diag_path,
+        version=_TEST_VERSION,
+        catalog_root=_CATALOG,
+        verified_at=_TEST_DATE,
+    )
+
+    sysinfo = result.verified_json["system_info"]
+    assert "mac_address" not in sysinfo
+    assert "serial_number" not in sysinfo
+    assert sysinfo["docsis_status"] == "Operational"  # non-PII fields retained
 
 
 def test_no_warnings_on_healthy_diagnostics(tmp_path: Path) -> None:

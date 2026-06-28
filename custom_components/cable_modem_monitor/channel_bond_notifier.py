@@ -49,6 +49,15 @@ def evaluate(
         recovery_active: Orchestrator's recovery flag. Counts flux
             during a recovery window is expected and suppressed.
     """
+    # A zero-channel reading means "no data yet" (booting / no_signal page),
+    # never a real bond — an operational modem always reports channels. Don't
+    # act on it and (since the call site only persists when action != "none")
+    # don't let it become the stored baseline. This is the primary guard:
+    # recovery_active is time-boxed and a real outage can outlive the window,
+    # at which point a transient 0 would otherwise be read as a 24 → 0 change.
+    if current.downstream == 0 and current.upstream == 0:
+        return "none"
+
     if recovery_active:
         return "none"
 

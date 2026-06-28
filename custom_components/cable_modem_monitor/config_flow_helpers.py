@@ -11,6 +11,7 @@ blocks the HA event loop.
 from __future__ import annotations
 
 import logging
+from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -65,15 +66,39 @@ AUTH_STRATEGY_LABELS: dict[str, str] = get_strategy_display_labels()
 
 
 def format_variant_label(variant: VariantInfo) -> str:
-    """Build a human-readable dropdown label: auth strategy + hw_version/name qualifiers + ``*`` if unconfirmed."""
+    """Build a human-readable dropdown label: auth strategy + variant name qualifier + ``*`` if unconfirmed."""
+    # Hardware version is deliberately not shown: it does not determine the
+    # auth contract and misled contributors into picking the wrong variant
+    # (#124). The variant name is the meaningful qualifier.
     label = AUTH_STRATEGY_LABELS.get(variant.auth_strategy, variant.auth_strategy)
-    if variant.hw_version:
-        label = f"{label} ({variant.hw_version})"
-    if variant.name and variant.name != variant.hw_version:
+    if variant.name:
         label = f"{label} ({variant.name})"
     if variant.status != "confirmed":
         label = f"{label} *"
     return label
+
+
+def format_variant_labels(variants: list[VariantInfo]) -> list[str]:
+    """Picker labels for a variant set, adding hw_version only to break ties.
+
+    The base label hides hw_version (#124). But some modems have variants that
+    differ *only* by hardware revision (e.g. the Arris S33 generations), where
+    dropping it would make two options identical. For those — and only those —
+    the hw_version is appended as a tiebreaker.
+    """
+    base = [format_variant_label(v) for v in variants]
+    collisions = {label for label, count in Counter(base).items() if count > 1}
+    out: list[str] = []
+    for variant, label in zip(variants, base, strict=True):
+        if label in collisions and variant.hw_version:
+            # Insert the hw_version qualifier before any trailing "*" marker.
+            if label.endswith(" *"):
+                out.append(f"{label[:-2]} ({variant.hw_version}) *")
+            else:
+                out.append(f"{label} ({variant.hw_version})")
+        else:
+            out.append(label)
+    return out
 
 
 # ---------------------------------------------------------------------------

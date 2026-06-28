@@ -158,19 +158,19 @@ Both files live in Catalog Tools (`solentlabs/cable_modem_monitor_catalog_tools/
 
 `scripts/intake_pipeline_regression.py` measures how well the pipeline
 reproduces committed catalog configs when run against the same HAR as a
-fresh submission. It is a reporting tool for onboarding capability and,
-in baseline mode, a **ratchet gate**: the committed fleet baseline at
-`scripts/intake_baseline.json` records each modem's pipeline status and
-action grades, and `make intake-regression` (run by `validate-ci` and
-mirrored in CI) fails when any of them gets worse. Findings indicate
-where the intake pipeline — or the capture, to be resolved in
-har-capture — can improve, not regressions in Core.
+fresh submission. It is a **report, not a gate**: `make
+intake-regression` (run by `validate-ci` and mirrored in CI) computes
+fleet onboarding accuracy fresh from the catalog every run and never
+fails the build on accuracy. The durable trend lives in the timestamped
+scorecard artifact (`--scorecard`), and per-modem parse correctness is
+gated independently by the golden replay tests. Findings indicate where
+the intake pipeline — or the capture, to be resolved in har-capture —
+can improve, not regressions in Core.
 
 ```bash
 python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py
 python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --modem arris/sb8200 -v
 python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --scorecard scorecard.json
-python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --baseline packages/cable_modem_monitor_catalog_tools/scripts/intake_baseline.json
 ```
 
 **What it reports:**
@@ -218,16 +218,15 @@ advisory — they indicate catalog gaps to investigate, not CI failures.
 Hardware is required to confirm whether a fixture gap actually causes a
 runtime problem.
 
-**Regression baseline mode** (`--baseline`) fails only when a modem's
-pipeline status or an action grade gets worse than the recorded
-baseline, or a new modem arrives with non-clean status or non-match
-grades. Use `--update-baseline` to refresh
-`scripts/intake_baseline.json` after a deliberate improvement or a new
-intake, and commit the file with that change — the baseline diff is the
-durable record of what moved.
+**Trend tracking** is the scorecard (`--scorecard`), a timestamped,
+commit-stamped JSON snapshot of fleet accuracy and per-modem grades.
+CI uploads it as an artifact every run, so accuracy over time is read
+from the scorecard history rather than a committed baseline. Adding a
+modem needs no index or baseline update — discovery walks the catalog
+tree and the new HAR is included automatically on the next run.
 
-The ratchet machinery (baseline load/save/compare, scorecard, result
-classification) lives in the unit-tested
+The reusable machinery (scorecard building, result classification)
+lives in the unit-tested
 `solentlabs/cable_modem_monitor_catalog_tools/regression/` package and
 is generic over grade dimensions; the script supplies discovery,
 pipeline stages, and printing. The shared grade taxonomy is

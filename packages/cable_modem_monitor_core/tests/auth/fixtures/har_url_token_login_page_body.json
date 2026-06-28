@@ -1,0 +1,16 @@
+{
+  "_description": "URL token inject path: login GET returns the login page (multi-line HTML with a password field) instead of a session token. Auth must not inject this as the credential cookie — it is not header-safe. See ORCHESTRATION_USE_CASES.md UC-19b.",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/login.html"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "<html>\n<body>\n<form>\n<input type=\"password\" name=\"password\">\n</form>\n</body>\n</html>"}
+      }
+    }
+  ]
+}
