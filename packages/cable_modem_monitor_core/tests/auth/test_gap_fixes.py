@@ -222,57 +222,12 @@ class TestG3FormRefererHeader:
             assert server.base_url in sent_headers["Referer"]
 
 
-# ┌────────────────────────────────────────────────────────────────────┐
-# │ G-6: HNAP header parsing warning filter                           │
-# └────────────────────────────────────────────────────────────────────┘
-
-
-class TestG6HNAPWarningFilter:
-    """G-6: urllib3 header parsing warnings are suppressed."""
-
-    def test_filter_suppresses_header_parsing_warnings(self) -> None:
-        """The filter drops 'Failed to parse headers' log records."""
-        from solentlabs.cable_modem_monitor_core.connectivity import (
-            _HNAPHeaderParsingFilter,
-        )
-
-        filt = _HNAPHeaderParsingFilter()
-        record = logging.LogRecord(
-            name="urllib3.connectionpool",
-            level=logging.WARNING,
-            pathname="",
-            lineno=0,
-            msg="Failed to parse headers (url=http://192.168.100.1/HNAP1/)",
-            args=(),
-            exc_info=None,
-        )
-        # Filter should drop (return False)
-        assert filt.filter(record) is False
-
-    def test_filter_passes_normal_warnings(self) -> None:
-        """Normal warnings pass through the filter."""
-        from solentlabs.cable_modem_monitor_core.connectivity import (
-            _HNAPHeaderParsingFilter,
-        )
-
-        filt = _HNAPHeaderParsingFilter()
-        record = logging.LogRecord(
-            name="urllib3.connectionpool",
-            level=logging.WARNING,
-            pathname="",
-            lineno=0,
-            msg="Connection pool is full, discarding connection",
-            args=(),
-            exc_info=None,
-        )
-        # Normal warning should pass (return True)
-        assert filt.filter(record) is True
-
-    def test_filter_installed_on_urllib3_logger(self) -> None:
-        """Filter is installed on the urllib3.connectionpool logger."""
-        logger = logging.getLogger("urllib3.connectionpool")
-        filter_types = [type(f).__name__ for f in logger.filters]
-        assert "_HNAPHeaderParsingFilter" in filter_types
+# G-6 (HNAP header parsing warning filter) was consolidated. The
+# ``_HNAPHeaderParsingFilter`` on the ``urllib3.connectionpool`` logger
+# is replaced by ``log_filters.SuppressHeaderParsingWarning``, which
+# covers both the connection and connectionpool loggers (urllib3 moved
+# the warning between 1.26 and 2.x — see issue #98). Coverage lives in
+# ``tests/test_log_filters.py``.
 
 
 # G-7 (HNAP auth diagnostics) was retired. The per-strategy

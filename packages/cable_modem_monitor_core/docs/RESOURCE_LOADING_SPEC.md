@@ -358,20 +358,61 @@ leaking the value. Shared formatter:
 
 ## HNAP Header Parsing Warning Suppression
 
-Some HNAP modems send malformed HTTP headers with debug timing data
-prepended to header values. urllib3 emits a
-`HeaderParsingError` warning for each malformed header, producing
-noisy log entries on every poll cycle.
+Some modems send malformed HTTP headers that Python's parser flags.
+ARRIS HNAP firmware prepends debug timing data plus leading whitespace
+to the first header line (e.g. `4.400002  |Content-type: text/html`
+preceded by spaces, which Python reads as an illegal header
+continuation → `FirstHeaderLineIsContinuationDefect`, issue #98); the
+SB6141 puts a space before the colon
+(`MissingHeaderBodySeparatorDefect`). urllib3 emits a
+`HeaderParsingError` warning with a full traceback for each such
+response, producing noisy log entries on every poll cycle.
 
-Core suppresses these warnings globally alongside the existing
-`InsecureRequestWarning` suppression in `connectivity.py`. The filter
-is harmless for modems that don't trigger it — standard urllib3 header
-parsing warnings are infrastructure noise for cable modem monitoring,
-not actionable signals.
+Core suppresses these warnings globally. The filter is harmless for
+modems that don't trigger it — standard urllib3 header parsing warnings
+are infrastructure noise for cable modem monitoring, not actionable
+signals. urllib3 only emits this message after it has caught the
+`HeaderParsingError` internally and returned the response, so the
+suppressed warning never hides a real failure; genuine header
+corruption that loses data surfaces in Core's own logging (zero
+channels / parse error) instead. The malformed first header is
+recoverable in practice: because `Content-Length` lands on a later,
+well-formed line, the body is read in full and only the unused
+Content-Type header is lost.
 
-**Implementation:** A `logging.Filter` on the `urllib3.connectionpool`
-logger that drops log records containing "Failed to parse headers."
-Applied once at module import time.
+**Implementation:** `log_filters.SuppressHeaderParsingWarning`, a
+`logging.Filter` that drops log records carrying a urllib3
+`HeaderParsingError`. It keys on the **exception type** present on the
+record (via `exc_info`, or as a positional arg), not on the rendered
+message text. Every header-parse defect inherits from
+`HeaderParsingError`, so one structural check covers all of them with
+no per-defect string registry, and it cannot match an unrelated "parse
+headers" message. It is attached to **both** the `urllib3.connection`
+and `urllib3.connectionpool` loggers, because urllib3 moved the warning
+between versions (1.26 emits from `connectionpool`, 2.x from
+`connection`, and HA ships both across releases). Installed once at
+package import via `install_filters()` (see `__init__.py`).
+
+Scope note: this is a process-global filter, so it suppresses
+`HeaderParsingError` warnings for every urllib3 consumer in the host
+process, not only CMM polls. That is judged proportionate because the
+warning is, by urllib3's own design, always the recovered-internally,
+non-fatal case. If strict per-caller scoping is ever required, the
+upgrade path is a thread-local set during CMM's own HTTP calls that the
+filter consults.
+
+**Why suppress rather than switch HTTP clients:** the lenient header
+parsing under `requests`/`urllib3` (Python's `http.client`) is
+load-bearing, not a liability. Cable modem firmware routinely emits
+non-compliant HTTP, and `http.client` tolerates it: it records a defect
+and still returns the body. Strict, spec-compliant clients reject the
+same bytes outright. Feeding the #98 response to alternatives confirms
+this: `httpx` (h11) raises `RemoteProtocolError` ("continuation line at
+start of headers") and `aiohttp` (llhttp) raises a 400 "Invalid header
+token". Either would turn a working modem into a failed poll with no
+data. The `HeaderParsingError` warning is urllib3 being tolerant *and*
+chatty; we keep the tolerance and silence the chatter rather than adopt
+a client that is quiet only because it refuses to proceed.
 
 ---
 

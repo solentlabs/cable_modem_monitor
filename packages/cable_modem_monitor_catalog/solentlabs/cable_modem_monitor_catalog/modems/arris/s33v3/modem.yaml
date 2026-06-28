@@ -62,6 +62,10 @@ notes: |
   firmware line). Last Boot Time derives from counter-reset detection.
   Reboot params mirrored from S33 fix (#146); pre-fetch defaults
   are the safety net pending variant validation.
+  HNAP responses carry debug timing data on the first HTTP header
+  line, which Python flags as a malformed header (#98). urllib3
+  recovers and the body parses fine; the resulting warning is
+  suppressed centrally in Core (log_filters.SuppressHeaderParsingWarning).
 references:
   issues:
     - "[#98 — [Modem Request] Arris S33v3](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
