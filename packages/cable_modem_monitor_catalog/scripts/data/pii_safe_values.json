@@ -165,9 +165,11 @@
   "safe_ip_values": {
     "_description": "Exact IP values that are safe — firmware-embedded example strings, not routable addresses seen in real traffic.",
     "_provenance": {
-      "11.22.11.22": "Static example IP in Xfinity XB-series firmware help text (locale/global.js), not the contributor's WAN IP. Appears in XB6, XB7, XB10 HAR fixtures."
+      "11.22.11.22": "Static example IP in Xfinity XB-series firmware help text (locale/global.js), not the contributor's WAN IP. Appears in XB6, XB7, XB10 HAR fixtures.",
+      "10.0.0.1": "Xfinity XB-series default LAN gateway (router mode). Declared as default_host in technicolor/xb10 modem.yaml; identical across all XB10 units, RFC1918 private, not contributor PII."
     },
     "values": [
+      "10.0.0.1",
       "11.22.11.22"
     ]
   },

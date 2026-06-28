@@ -145,7 +145,6 @@
       "channel_type": "atdma",
       "frequency": 16000000,
       "lock_status": "locked",
-      "modulation": "QAM",
       "power": 37.3,
       "symbol_rate": 5120
     },
@@ -155,7 +154,6 @@
       "channel_type": "atdma",
       "frequency": 22000000,
       "lock_status": "locked",
-      "modulation": "QAM",
       "power": 38.3,
       "symbol_rate": 5120
     },
@@ -165,7 +163,6 @@
       "channel_type": "atdma",
       "frequency": 29000000,
       "lock_status": "locked",
-      "modulation": "QAM",
       "power": 38.5,
       "symbol_rate": 5120
     },
@@ -175,7 +172,6 @@
       "channel_type": "atdma",
       "frequency": 35000000,
       "lock_status": "locked",
-      "modulation": "QAM",
       "power": 39.0,
       "symbol_rate": 5120
     },

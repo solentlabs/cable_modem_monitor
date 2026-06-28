@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Technicolor XB10 (CGM601TCOM) confirmed on hardware.** Verified via
+  contributor diagnostics: 10 downstream + 8 upstream channels locked,
+  form auth, and the restart action tested working. Upstream channel type
+  now reads the "Channel Type" column directly (the firmware reports a bare
+  "QAM" with no constellation, so the unmappable modulation field is
+  omitted, matching the XB7). (Related to #173)
+
 ### Removed
 
 - **Serial number and MAC address are no longer collected.** These
@@ -16,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parsers and the intake pipeline no longer extract them. On upgrade,
   the "Serial Number" and "MAC Address" sensors on the Technicolor XB6,
   XB7, and XB10 become unavailable and can be deleted.
+
+### Fixed
+
+- **Canonical modulation set now matches the DOCSIS standard.** The
+  accepted modulation values had drifted to a fleet-observed subset that
+  omitted 8-QAM, 128-QAM, and 512-QAM, all valid DOCSIS orders; a modem
+  reporting one would have had the value rejected as a spec violation. The
+  set is now the full DOCSIS PHY enumeration (QPSK, 8 through 4096-QAM,
+  plus optional 8192/16384-QAM), grounded with a CableLabs citation.
 
 ## [3.14.0-beta.11] - 2026-06-15
 

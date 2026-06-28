@@ -1,13 +1,18 @@
 {
   "_description": "canonicalize_modulation: input → expected canonical (or null when not a modulation)",
   "_cases": [
+    {"input": "QAM8",     "expected": "QAM8",    "note": "canonical pass-through (DOCSIS 3.0 upstream)"},
     {"input": "QAM16",    "expected": "QAM16",   "note": "canonical pass-through"},
     {"input": "QAM32",    "expected": "QAM32",   "note": "canonical pass-through"},
     {"input": "QAM64",    "expected": "QAM64",   "note": "canonical pass-through"},
+    {"input": "QAM128",   "expected": "QAM128",  "note": "canonical pass-through (DOCSIS 3.0 upstream / 3.1 downstream)"},
     {"input": "QAM256",   "expected": "QAM256",  "note": "canonical pass-through"},
+    {"input": "QAM512",   "expected": "QAM512",  "note": "canonical pass-through (DOCSIS 3.1)"},
     {"input": "QAM1024",  "expected": "QAM1024", "note": "canonical pass-through"},
     {"input": "QAM2048",  "expected": "QAM2048", "note": "canonical pass-through"},
     {"input": "QAM4096",  "expected": "QAM4096", "note": "canonical pass-through"},
+    {"input": "QAM8192",  "expected": "QAM8192", "note": "canonical pass-through (DOCSIS 3.1 optional)"},
+    {"input": "QAM16384", "expected": "QAM16384","note": "canonical pass-through (DOCSIS 3.1 optional)"},
     {"input": "QPSK",     "expected": "QPSK",    "note": "canonical pass-through"},
 
     {"input": "256QAM",   "expected": "QAM256",  "note": "number-prefix → suffix"},
@@ -33,7 +38,6 @@
     {"input": "ATDMA",    "expected": null,      "note": "channel-type restatement is not modulation"},
     {"input": "Other",    "expected": null,      "note": "generic label is not modulation"},
     {"input": "QAM",      "expected": null,      "note": "bare QAM with no constellation"},
-    {"input": "QAM128",   "expected": null,      "note": "constellation outside canonical set"},
     {"input": "0,1,3,4",  "expected": null,      "note": "IUC list bleed-through"},
     {"input": "3, 4, 5, 6, 9", "expected": null, "note": "IUC list bleed-through"},
     {"input": "",         "expected": null,      "note": "empty input"},
