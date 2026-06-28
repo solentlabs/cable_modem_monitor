@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now reads the "Channel Type" column directly (the firmware reports a bare
   "QAM" with no constellation, so the unmappable modulation field is
   omitted, matching the XB7). (Related to #173)
+- **Technicolor CGA6444VF logout action (untested on hardware).** This
+  modem enforces single-session login, but its config defined no logout,
+  so the integration never released its session after a poll and could
+  collide with its own still-open session on the next login. The logout
+  request is taken faithfully from the contributor HAR capture. It remains
+  awaiting verification until a CGA6444VF owner confirms. (Related to #120)
 
 ### Removed
 
