@@ -618,6 +618,8 @@ words:
   - Liskov
   - NCIP
   - optimise
+  - pingable
   - redactions
   - timespan
   - typetracking
+  - unmappable

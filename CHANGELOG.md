@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Faster reconnect after a long modem reboot.** When a reboot
+  outlasted the recovery window and the modem came back through a
+  DEGRADED health state (pingable, but its web UI still warming up),
+  the integration did not schedule an immediate poll on recovery and
+  waited for the next slow scan (or a manual refresh) to reconnect.
+  The health-recovery trigger now treats DEGRADED as a data-path-down
+  state, so reconnection is bounded by the health-check interval
+  instead. (Related to #170)
+
 ## [3.14.0-beta.12] - 2026-06-28
 
 ### Added

@@ -931,6 +931,50 @@ def test_health_recovery_no_op_in_steady_responsive():
     hass.async_create_task.assert_not_called()
 
 
+def test_health_recovery_triggers_refresh_on_degraded_to_responsive():
+    """Transition DEGRADED -> RESPONSIVE schedules an immediate poll.
+
+    DEGRADED means ICMP ok but TCP (the data path) is down — the exact
+    state a modem passes through while its web UI warms up after a
+    reboot. Recovery through DEGRADED must trigger the prompt poll just
+    like UNRESPONSIVE; otherwise the data path waits for the next slow
+    scan (the #170-adjacent post-reboot latency this fixes).
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    hass, health_coord, data_coord, listener_fn = _health_recovery_inputs()
+
+    # Tick 1: DEGRADED (TCP/data path down)
+    health_coord.data.health_status = HealthStatus.DEGRADED
+    listener_fn()
+    hass.async_create_task.assert_not_called()
+
+    # Tick 2: RESPONSIVE — data path recovered, schedule the poll
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
+    listener_fn()
+    hass.async_create_task.assert_called_once()
+
+
+def test_health_recovery_no_refresh_on_icmp_blocked_to_responsive():
+    """ICMP_BLOCKED -> RESPONSIVE is NOT a data-path recovery.
+
+    ICMP_BLOCKED means TCP (the data path) was already up — the data
+    poll would have succeeded throughout — so ICMP starting to answer
+    is not a recovery worth a forced poll. Excluding it avoids spurious
+    polls on modems that routinely block ping.
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    hass, health_coord, _, listener_fn = _health_recovery_inputs()
+
+    health_coord.data.health_status = HealthStatus.ICMP_BLOCKED
+    listener_fn()
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
+    listener_fn()
+
+    hass.async_create_task.assert_not_called()
+
+
 # -----------------------------------------------------------------------
 # _format_interval — hours branch
 # -----------------------------------------------------------------------

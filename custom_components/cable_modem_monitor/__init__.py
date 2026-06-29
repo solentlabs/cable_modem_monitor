@@ -228,9 +228,14 @@ def _attach_health_recovery_listener(
 ) -> None:
     """Trigger an immediate data poll on health recovery.
 
-    When health transitions from UNRESPONSIVE/UNKNOWN to RESPONSIVE,
-    schedules an immediate data poll so recovery latency is bounded by
-    the health check interval (~30s) rather than the scan interval (~10m).
+    When health transitions to RESPONSIVE from a data-path-down state
+    (DEGRADED, UNRESPONSIVE, or UNKNOWN), schedules an immediate data
+    poll so recovery latency is bounded by the health-check interval
+    rather than the scan interval (~10m). DEGRADED counts because it
+    means TCP — the data path — was down while ICMP stayed up, the
+    state a modem sits in while its web UI warms up after a reboot.
+    ICMP_BLOCKED is excluded: TCP was up, so the data poll already
+    worked and a forced poll would be spurious.
 
     The Core orchestrator independently clears connectivity backoff when
     it sees RESPONSIVE health — this listener just ensures the poll
@@ -246,7 +251,15 @@ def _attach_health_recovery_listener(
         if health_coordinator.data is None:
             return
         current = health_coordinator.data.health_status
-        was_down = previous[0] in (HealthStatus.UNRESPONSIVE, HealthStatus.UNKNOWN)
+        # "Down" = the data path (TCP) was unusable: DEGRADED (ICMP ok,
+        # TCP down — the post-reboot web-UI-warmup state), UNRESPONSIVE,
+        # or UNKNOWN. ICMP_BLOCKED is deliberately excluded — TCP was up,
+        # so the data poll already worked and a forced poll is spurious.
+        was_down = previous[0] in (
+            HealthStatus.DEGRADED,
+            HealthStatus.UNRESPONSIVE,
+            HealthStatus.UNKNOWN,
+        )
         previous[0] = current
         if was_down and current == HealthStatus.RESPONSIVE:
             _LOGGER.info("Health recovery [%s] — scheduling immediate poll", model)
