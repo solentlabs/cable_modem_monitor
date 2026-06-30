@@ -17,7 +17,7 @@ and share a diagnostics snapshot.
 | G54 | HTML | Cox, Spectrum, Xfinity |  |
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity |  |
 | SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom |  |
-| SB8200 (v3) | CBN | Comcast, Cox, Spectrum, Xfinity |  |
+| SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity |  |
 | C3700 | HTML | Comcast, Cox, Spectrum |  |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity |  |
 | CM600 | HTML | Comcast, Cox, Spectrum, TWC |  |
@@ -37,9 +37,9 @@ May have open repair work — review individually.
 | Modem | Transport | ISPs |
 |-------|-----------|------|
 | SB6190 | HTML | Comcast, Cox, Spectrum, TWC |
-| SB8200 (v7, cookie) | HTML | Spectrum |
-| SB8200 (v7, url-token) | HTML | Comcast, Cox, Spectrum, Xfinity |
-| SB8200 (v7) | HTML | Service Electric Cablevision |
+| SB8200 (cookie) | HTML | Spectrum |
+| SB8200 (url-token) | HTML | Comcast, Cox, Spectrum, Xfinity |
+| SB8200 (No Authentication) | HTML | Service Electric Cablevision |
 | CM1200 | HTML | Comcast, Spectrum, Cox |
 
 ## Confirmed
@@ -55,8 +55,8 @@ Working on real hardware with a report on file.
 | S33 (v3) | HNAP | Comcast, Cox, Spectrum, Xfinity |
 | SB6183 | HTML | Comcast, Cox, Spectrum, Xfinity, Mediacom |
 | SB6190 (form-nonce) | HTML | Comcast, Spectrum |
-| SB8200 (v7, body-token) | HTML | Spectrum |
-| SB8200 (v6) | HNAP | Cox |
+| SB8200 (body-token) | HTML | Spectrum |
+| SB8200 (HNAP) | HNAP | Cox |
 | TG3442DE | HTML | Vodafone DE |
 | TM1602A | HTML | Spectrum |
 | CH7465MT | CBN | MTAT |
