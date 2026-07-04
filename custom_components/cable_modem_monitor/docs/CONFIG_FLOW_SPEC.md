@@ -82,10 +82,14 @@ with authenticated polling.
 
 Two sub-steps that narrow the selection progressively:
 
-**Step 1a — Select manufacturer.** A dropdown lists every manufacturer in
-the catalog, plus an "All" option that shows every modem. At ~25 modems
-the full list is still usable, so "All" is a practical default for users
-who aren't sure of the manufacturer.
+**Step 1a — Select manufacturer.** A dropdown lists every name a user
+might identify the maker by: the union of `manufacturer:` values and
+`brands:` entries across the catalog, plus an "All" option that shows
+every modem. A modem branded differently from its recorded manufacturer
+(e.g., the CommScope-made G54 sold under the Arris brand) appears under
+both names while remaining one catalog record. At ~25 modems the full
+list is still usable, so "All" is a practical default for users who
+aren't sure of the manufacturer.
 
 **Step 1b — Select model.** A second dropdown filtered to models from the
 selected manufacturer (or all models if "All" was chosen). This step
@@ -98,7 +102,8 @@ selection. No search index is needed at the current catalog size (~25
 modems).
 
 **Display format:** `{manufacturer} {model}` with DOCSIS version and
-verification status. Aliases shown in parentheses.
+verification status. Alternate user-facing names — `model_aliases` ∪
+`brands` — shown in parentheses.
 
 ```text
 Arris SB8200                    DOCSIS 3.1

@@ -157,7 +157,7 @@ Core's engine. Depends on both Core and Catalog.
 
 | Responsibility | What |
 |----------------|------|
-| Config flow | Manufacturer dropdown → model filter → variant → connection → validate. Uses Core's `list_modems()` with Catalog's `CATALOG_PATH` |
+| Config flow | Manufacturer dropdown (union of `manufacturer` and `brands` values) → model filter → variant → connection → validate. Uses Core's `list_modems()` with Catalog's `CATALOG_PATH` |
 | Runtime storage | `CableModemRuntimeData` on `entry.runtime_data` (HA 2024.12+) |
 | Data coordinator | Wraps Core's `Orchestrator.get_modem_data()` in HA's `DataUpdateCoordinator` |
 | Health coordinator | Second `DataUpdateCoordinator` wrapping `HealthMonitor.ping()`. Conditional — only created if probes work. Independent cadence (default 30s) |
@@ -1111,10 +1111,14 @@ and metadata differ.
 
 With the parser.yaml + modem-{variant}.yaml split, families share one
 `parser.yaml` (extraction mappings) and each model gets its own variant
-yaml with per-model metadata. `model_aliases` and `brands` in `modem.yaml`
-provide search matching for internal or rebranded names (not shown in the
-config flow UI). Distinct products get their own catalog entries — see
-`MODEM_YAML_SPEC.md` § Aliases vs Separate Entries.
+yaml with per-model metadata. `model_aliases` in `modem.yaml` records
+alternate user-facing model names (rebadges, regional variants, sticker
+codes) and `brands` records user-visible box branding. Both are shown:
+aliases and brands in the model line's parenthetical, brands
+additionally as manufacturer-dropdown choices (see
+ARCHITECTURE_DECISIONS § Config Flow). Firmware-internal identifiers
+belong in neither field. Distinct products get their own catalog
+entries — see `MODEM_YAML_SPEC.md` § Aliases vs Separate Entries.
 
 ### Evidence: Multi-Variant Modem
 

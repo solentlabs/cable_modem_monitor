@@ -1032,6 +1032,35 @@ filename stem) already communicates the version to the user — duplication
 degrades the label. `firmware` should always be recorded when known as it is
 useful for future tooling and contributor reference.
 
+### Brand names as manufacturer-step choices
+
+**Decision:** One catalog record per physical product. `manufacturer:`
+stores the maker as the firmware reports it and determines the modem's
+directory (`modems/{manufacturer}/{model}/`). `brands:` stores the
+user-visible brand names from the product/box. The config flow's
+manufacturer dropdown is built from the union of `manufacturer` values
+and `brands` entries, so a rebranded modem appears under every name a
+user might look for while remaining a single record.
+
+**Rationale:** The G54 (#72) is made by CommScope (firmware
+`manufacturer` field) but sold under the Arris brand (firmware
+`customer` field, box branding). Filing it under CommScope only made it
+undiscoverable for a user holding an Arris box; duplicating the entry
+under Arris would fork one product's evidence trail (HAR, golden files,
+verification status) across two records. The rule: disk and
+`manufacturer:` reflect what the hardware reports; dropdowns reflect
+what the user sees.
+
+**Constrains:** Rebrands never get a second catalog entry —
+MODEM_YAML_SPEC § Aliases vs Separate Entries governs. `brands` entries
+must be sourced (box, marketing page, or firmware fields such as
+`customer`). The model line's parenthetical shows alternate user-facing
+names — `model_aliases` ∪ `brands`; `model_aliases` is not a dropdown
+dimension, and firmware-internal identifiers (product codes, platform
+strings) belong in neither field. Manufacturer display casing is
+presentation-only and must preserve deliberate mixed case (CommScope,
+not Commscope).
+
 ---
 
 ## References
