@@ -20,7 +20,7 @@
 | Release flow (branching, merging, tagging) | `docs/reference/RELEASING.md` |
 | Process questions (where does X go? PR vs Discussion vs Issue?) | `CONTRIBUTING.md` |
 | Specs by package | core: `packages/cable_modem_monitor_core/docs/README.md` · catalog tools: `packages/cable_modem_monitor_catalog_tools/docs/README.md` · HA: `custom_components/cable_modem_monitor/docs/README.md` · project: `docs/README.md` |
-| Reference test (table-driven exemplar) | `tests/modem_config/test_modem_yaml_validation.py` |
+| Reference test (table-driven exemplar) | `tests/lib/test_parse_host_input.py` |
 
 ## Core Principles
 
