@@ -1,7 +1,7 @@
 manufacturer: Arris
 model: S34
 brands:
-  - Surfboard
+  - "SURFboard"
 transport: hnap
 default_host: 192.168.100.1
 
@@ -29,6 +29,7 @@ hardware:
 
 status: awaiting_verification
 sources:
+  brands: "[SURFboard product family](https://www.surfboard.com/products/cable-modems/sb8200/) — manufacturer styles the brand SURFboard"
   auth_config: "[PR #90 S34 support](https://github.com/solentlabs/cable_modem_monitor/pull/90)"
   chipset: "[ModemGuides S33 review](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison) — same BCM3390 platform as S33"
   detection_hints: "[PR #90 S34 support](https://github.com/solentlabs/cable_modem_monitor/pull/90)"

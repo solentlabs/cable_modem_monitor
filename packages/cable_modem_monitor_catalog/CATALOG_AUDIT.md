@@ -14,20 +14,20 @@ and share a diagnostics snapshot.
 
 | Modem | Transport | ISPs | Note |
 |-------|-----------|------|------|
-| G54 | HTML | Cox, Spectrum, Xfinity |  |
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity |  |
 | SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom |  |
 | SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity |  |
+| G54 | HTML | Cox, Spectrum, Xfinity |  |
 | C3700 | HTML | Comcast, Cox, Spectrum |  |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity |  |
 | CM600 | HTML | Comcast, Cox, Spectrum, TWC |  |
+| F3896LG-VMB | HTML | Virgin Media UK |  |
 | DM1000 | HTML | Koodo |  |
 | CGA2121 | HTML | Telia |  |
 | CGA4236 | HTML | Unknown |  |
 | CGA6444VF | HTML | Vodafone |  |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy |  |
 | XB6 | HTML | Rogers |  |
-| Hub 5 | HTML | Virgin Media UK |  |
 
 ## Pending Review
 

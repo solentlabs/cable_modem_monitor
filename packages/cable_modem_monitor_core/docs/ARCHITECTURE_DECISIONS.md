@@ -1061,6 +1061,13 @@ strings) belong in neither field. Manufacturer display casing is
 presentation-only and must preserve deliberate mixed case (CommScope,
 not Commscope).
 
+Labels are bucket-contextual: within a brand bucket the model line
+leads with the brand name and carries the manufacturer-composed name in
+the parenthetical (`Arris G54 (CommScope G54)` under Arris); within the
+manufacturer bucket and the All view it leads with the manufacturer
+(`CommScope G54 (Arris)`). The lead always matches the filter the user
+chose.
+
 ---
 
 ## References

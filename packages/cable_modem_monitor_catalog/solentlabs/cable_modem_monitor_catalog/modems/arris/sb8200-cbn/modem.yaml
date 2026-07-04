@@ -1,7 +1,7 @@
 manufacturer: ARRIS
 model: SB8200
-model_aliases: []
-brands: []
+brands:
+  - "SURFboard"
 transport: cbn
 default_host: "192.168.100.1"
 
@@ -27,6 +27,7 @@ status: awaiting_verification
 
 sources:
   auth_config: "[#109 — SB8200v3 HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/109)"
+  brands: "[SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/) — SURFboard styling"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
   hardware: "[ARRIS SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/)"
 

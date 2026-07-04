@@ -1,7 +1,7 @@
 manufacturer: Arris
 model: S33
 brands:
-  - Surfboard
+  - "SURFboard"
 transport: hnap
 default_host: 192.168.100.1
 
@@ -30,6 +30,7 @@ hardware:
 
 status: confirmed
 sources:
+  brands: "[SURFboard product family](https://www.surfboard.com/products/cable-modems/sb8200/) — manufacturer styles the brand SURFboard"
   auth_config: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
   chipset: "[ModemGuides S33 review](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison) — same BCM3390 platform as S33/S34"
   detection_hints: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"

@@ -16,6 +16,7 @@ hardware:
 status: confirmed
 
 sources:
+  brands: "[SURFboard product family](https://www.surfboard.com/products/cable-modems/sb8200/) — manufacturer styles the brand SURFboard"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Motorola_SURFboard_SB6183)"
   hardware: "[SURFboard SB6183 product page](https://www.surfboard.com/products/cable-modems/sb6183/)"
 

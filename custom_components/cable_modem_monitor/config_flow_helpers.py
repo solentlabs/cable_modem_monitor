@@ -157,13 +157,31 @@ def filter_by_manufacturer(
     ]
 
 
-def build_model_display_name(summary: ModemSummary) -> str:
-    """Build the ``{Manufacturer} {Model} (aliases ∪ brands) *`` label (see MODEM_YAML_SPEC.md § Aliases)."""
-    parts = [_normalize_manufacturer(summary.manufacturer), summary.model]
+def build_model_display_name(summary: ModemSummary, bucket: str | None = None) -> str:
+    """Build the bucket-contextual ``{Lead} {Model} (alternates) *`` label (see CONFIG_FLOW_SPEC § Step 1)."""
+    mfr = _normalize_manufacturer(summary.manufacturer)
+    brands = summary.brands or []
 
-    # Parenthetical carries alternate user-facing names only — never
-    # firmware-internal codes (ARCHITECTURE_DECISIONS § Config Flow).
-    alternates = [*(summary.model_aliases or []), *(summary.brands or [])]
+    # The lead always matches the filter the user chose: browsing a brand
+    # bucket leads with that brand, and the manufacturer-composed name
+    # moves into the parenthetical (ARCHITECTURE_DECISIONS § Config Flow).
+    lead_brand = None
+    if bucket is not None and bucket.lower() != summary.manufacturer.lower():
+        lead_brand = next((b for b in brands if b.lower() == bucket.lower()), None)
+
+    if lead_brand is not None:
+        parts = [_normalize_manufacturer(lead_brand), summary.model]
+        alternates = [
+            *(summary.model_aliases or []),
+            f"{mfr} {summary.model}",
+            *(b for b in brands if b != lead_brand),
+        ]
+    else:
+        parts = [mfr, summary.model]
+        # Parenthetical carries alternate user-facing names only — never
+        # firmware-internal codes (ARCHITECTURE_DECISIONS § Config Flow).
+        alternates = [*(summary.model_aliases or []), *brands]
+
     if alternates:
         parts.append(f"({', '.join(alternates)})")
 
@@ -171,6 +189,30 @@ def build_model_display_name(summary: ModemSummary) -> str:
         parts.append("*")
 
     return " ".join(parts)
+
+
+def build_model_options(
+    summaries: list[ModemSummary],
+    bucket: str | None,
+) -> list[tuple[str, str]]:
+    """Step 1b dropdown ``(value, label)`` pairs — the All view lists one row per user-facing name."""
+    if bucket is not None:
+        return [
+            (f"{s.manufacturer}/{s.model}", build_model_display_name(s, bucket=bucket))
+            for s in filter_by_manufacturer(summaries, bucket)
+        ]
+
+    # All view: a modem branded under multiple names gets one row per
+    # name, each with that name leading, so an alphabetical scan finds
+    # it under any name the user knows. Brand rows suffix the value
+    # with "|{brand}" to stay unique; the handler strips the suffix.
+    rows: list[tuple[str, str]] = []
+    for s in summaries:
+        rows.append((f"{s.manufacturer}/{s.model}", build_model_display_name(s)))
+        for brand in s.brands or []:
+            if brand.lower() != s.manufacturer.lower():
+                rows.append((f"{s.manufacturer}/{s.model}|{brand}", build_model_display_name(s, bucket=brand)))
+    return sorted(rows, key=lambda row: row[1].lower())
 
 
 def restart_requires_credentials(modem_dir: Path, variant: str | None) -> bool:

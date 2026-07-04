@@ -103,7 +103,11 @@ modems).
 
 **Display format:** `{manufacturer} {model}` with DOCSIS version and
 verification status. Alternate user-facing names — `model_aliases` ∪
-`brands` — shown in parentheses.
+`brands` — shown in parentheses. Labels are bucket-contextual: when the
+user filtered by a brand bucket, the line leads with that brand and the
+manufacturer-composed name moves into the parenthetical (`Arris G54
+(CommScope G54)` under Arris; `CommScope G54 (Arris)` under CommScope
+or All). The lead always matches the filter the user chose.
 
 ```text
 Arris SB8200                    DOCSIS 3.1

@@ -1,5 +1,7 @@
 manufacturer: ARRIS
 model: SB8200
+brands:
+  - "SURFboard"
 transport: http
 default_host: "192.168.100.1"
 
@@ -17,6 +19,7 @@ status: awaiting_verification
 
 sources:
   auth_config: "[#126 — SB8200 no-auth verification (Service Electric Cablevision)](https://github.com/solentlabs/cable_modem_monitor/issues/126)"
+  brands: "[SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/) — SURFboard styling"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
   hardware: "[ARRIS SB8200 page](https://www.arris.com/surfboard/products/cable-modems/sb8200/)"
 
