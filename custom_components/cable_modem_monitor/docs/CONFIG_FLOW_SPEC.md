@@ -199,12 +199,17 @@ helper in `config_flow_helpers.py` performs this check.
 **Host default:** From `default_host` in the selected modem/variant YAML
 (typically `192.168.100.1`).
 
-**Host input accepts IP, hostname, or full URL.** If the user enters a
-bare IP (e.g., `192.168.100.1`), protocol detection probes both :80 and
-:443 automatically in Step 4. If the user includes a protocol prefix
-(e.g., `https://192.168.100.1`), only that port is probed — no fallback
-to the other transport. This gives users an escape hatch when automatic
-detection picks the wrong protocol.
+**Host input accepts IP, hostname, or full URL.** Address-bar pastes
+are tolerated: any path, query, or fragment is discarded, with or
+without a scheme (`https://192.168.100.1/cgi-bin/luci/` → host
+`192.168.100.1`, protocol `https`). Only the protocol and host[:port]
+are ever kept —
+data-page paths come from the catalog, never from the user. If the
+user enters a bare IP (e.g., `192.168.100.1`), protocol detection
+probes both :80 and :443 automatically in Step 4. If the user includes
+a protocol prefix (e.g., `https://192.168.100.1`), only that port is
+probed — no fallback to the other transport. This gives users an
+escape hatch when automatic detection picks the wrong protocol.
 
 **Entity prefix is selected in Step 1.** Options: `none`, `model`, `ip`.
 `none` is only available if no other instance is already using it.

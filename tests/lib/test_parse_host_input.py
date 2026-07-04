@@ -54,6 +54,12 @@ PARSE_HOST_CASES = [
     ("  https://192.168.100.1  ",       "192.168.100.1",            "https",           "whitespace-protocol"),
     ("10.0.0.1",                        "10.0.0.1",                 None,              "private-ip"),
     ("Http://192.168.100.1",            "192.168.100.1",            "http",            "mixed-case-http"),
+    # Address-bar pastes: path/query/fragment are discarded, scheme or not (#72).
+    ("https://192.168.100.1/cgi-bin/luci/", "192.168.100.1",        "https",           "url-with-path"),
+    ("192.168.100.1/cgi-bin/luci/",     "192.168.100.1",            None,              "bare-host-path"),
+    ("192.168.100.1:8080/status",       "192.168.100.1:8080",       None,              "bare-port-path"),
+    ("mymodem.local/status?x=1",        "mymodem.local",            None,              "bare-host-query"),
+    ("192.168.100.1#frag",              "192.168.100.1",            None,              "bare-host-fragment"),
 ]
 # fmt: on
 

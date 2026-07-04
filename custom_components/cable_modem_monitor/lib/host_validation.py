@@ -18,11 +18,12 @@ def parse_host_input(raw: str) -> tuple[str, str | None]:
 
     Examples::
 
-        "192.168.100.1"           -> ("192.168.100.1", None)
-        "https://192.168.100.1"   -> ("192.168.100.1", "https")
-        "http://192.168.100.1/"   -> ("192.168.100.1", "http")
-        "192.168.100.1:8080"      -> ("192.168.100.1:8080", None)
-        "HTTPS://192.168.100.1"   -> ("192.168.100.1", "https")
+        "192.168.100.1"                  -> ("192.168.100.1", None)
+        "https://192.168.100.1"          -> ("192.168.100.1", "https")
+        "http://192.168.100.1/"          -> ("192.168.100.1", "http")
+        "192.168.100.1:8080"             -> ("192.168.100.1:8080", None)
+        "HTTPS://192.168.100.1"          -> ("192.168.100.1", "https")
+        "192.168.100.1/cgi-bin/luci/"    -> ("192.168.100.1", None)
 
     Args:
         raw: Raw user input (bare IP, hostname, or URL with protocol).
@@ -43,7 +44,11 @@ def parse_host_input(raw: str) -> tuple[str, str | None]:
             return (stripped, None)
         return (host, protocol)
 
-    return (stripped, None)
+    # Address-bar pastes without a scheme: keep only host[:port], drop
+    # any path/query/fragment — the config only ever needs protocol and
+    # host; data-page paths come from the catalog, never from the user.
+    host = stripped.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+    return (host or stripped, None)
 
 
 def build_url(host: str, protocol: str | None = None) -> str:
