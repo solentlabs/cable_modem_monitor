@@ -7,8 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Find your modem by any name on its box.** The manufacturer dropdown
+  now lists brand names alongside manufacturers (union of `manufacturer`
+  and `brands` catalog fields), so a modem branded differently from its
+  maker appears under both — the CommScope-made G54 sold as Arris shows
+  under Arris and CommScope. Labels are bucket-contextual: the lead name
+  always matches the filter chosen ("Arris G54 (CommScope G54)" under
+  Arris; "CommScope G54 (Arris)" under CommScope), and the "All" view
+  lists one row per user-facing name so an alphabetical scan finds a
+  modem under any of them. Brand entries are sourced in the catalog
+  (firmware brand fields, product pages, manuals). (Related to #72)
+- **Manufacturer names keep their real styling.** Display normalization
+  no longer mangles deliberate mixed case: CommScope and SURFboard
+  render as branded instead of "Commscope"/"Surfboard".
+- **Two catalog entries renamed to their true manufacturer.** The G54
+  moved to `commscope/g54` (firmware self-reports CommScope; Arris is
+  the box brand) and the Virgin Media Hub 5 to `sagemcom/f3896lg-vmb`
+  (the hub is a Sagemcom F3896LG-VMB; "Hub 5" and "SuperHub 5" remain
+  as searchable aliases, Virgin Media as the brand). Entries created on
+  earlier 3.14 betas for these two modems must be removed and re-added
+  once after upgrading; upgrades from 3.13 and earlier resolve the new
+  locations automatically. Unverifiable model aliases were removed
+  (MB8612; Zoom 5370 and Thomson TCM420 are different hardware).
+  (Related to #72, #82)
+
 ### Fixed
 
+- **Host field tolerates address-bar pastes.** A host entered with a
+  path but no scheme ("192.168.100.1/cgi-bin/luci/") kept the path as
+  part of the host and broke every request. Only the protocol and
+  host are ever kept now, with or without a scheme; data-page paths
+  always come from the catalog. (Related to #72)
 - **Faster reconnect after a long modem reboot.** When a reboot
   outlasted the recovery window and the modem came back through a
   DEGRADED health state (pingable, but its web UI still warming up),
