@@ -16,6 +16,7 @@ See Also:
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Mapping
 from datetime import timedelta
 from importlib.metadata import version as pkg_version
@@ -94,6 +95,15 @@ _LOGGER = logging.getLogger(__name__)
 
 # Must match ConfigFlow.VERSION in config_flow.py
 _CURRENT_VERSION = 2
+
+
+def _local_dev_suffix() -> str:
+    """Startup-log marker for local dev installs (CMM_LOCAL_DEV env var)."""
+    # The manifest version only bumps at release time, so a bind-mounted
+    # dev tree otherwise logs itself as the previous beta and reads as a
+    # released install. docker-compose.test.yml sets the variable; HACS
+    # installs never have it.
+    return " (local dev)" if os.getenv("CMM_LOCAL_DEV") else ""
 
 
 def _get_package_versions() -> str:
@@ -280,8 +290,9 @@ async def async_setup_entry(
     """
     pkg_versions = await hass.async_add_executor_job(_get_package_versions)
     _LOGGER.info(
-        "Cable Modem Monitor v%s starting [%s %s] — %s",
+        "Cable Modem Monitor v%s%s starting [%s %s] — %s",
         VERSION,
+        _local_dev_suffix(),
         entry.data.get(CONF_MANUFACTURER, ""),
         entry.data.get(CONF_MODEL, ""),
         pkg_versions,

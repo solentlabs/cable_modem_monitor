@@ -18,6 +18,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - TZ=America/New_York
+      # Marks this bind-mounted working tree in the startup log —
+      # the manifest version only bumps at release time
+      - CMM_LOCAL_DEV=1
     restart: unless-stopped
     privileged: true
     working_dir: /workspace
