@@ -2,6 +2,9 @@ manufacturer: Technicolor
 model: XB7
 model_aliases:
   - "CGM4331COM"
+brands:
+  - "Xfinity"
+  - "Panoramic Wifi"
 transport: http
 default_host: "10.0.0.1"
 
@@ -22,6 +25,7 @@ hardware:
 status: confirmed
 
 sources:
+  brands: "Xfinity: [DSLReports XB7 thread](https://www.dslreports.com/forum/r32469291-Equip-XB7-Technicolor-CGM4331COM-Arris-TG4482-Wireless-AX-Wi-Fi-6); Panoramic Wifi: [Cox setup guide](https://www.cox.com/content/dam/cox/residential/support/internet/print_media/TechnicolorCGM4331_EasyConnectGuide.pdf)"
   model_aliases: "[DSLReports — XB7 Technicolor CGM4331COM](https://www.dslreports.com/forum/r32469291-Equip-XB7-Technicolor-CGM4331COM-Arris-TG4482-Wireless-AX-Wi-Fi-6)"
   auth_config: "[#2 Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
   chipset: "[WikiDevi](https://wikidevi.wi-cat.ru/Technicolor_CGM4331COM)"

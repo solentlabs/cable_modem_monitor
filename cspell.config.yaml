@@ -310,8 +310,12 @@ words:
   - lifecycles
   - miscoded
   - miscoding
+  - myuser
   - populator
   - positived
+  - rebadge
+  - rebadged
+  - rebadges
   - rebond
   - SSOT
   - statefully
@@ -378,6 +382,7 @@ words:
   - dataclass
   - dataclasses
   - defusedxml
+  - delenv
   - docstrings
   - dunder
   - fixturenames
@@ -389,10 +394,13 @@ words:
   - genericity
   - getattr
   - hashlib
+  - httpx
   - isinstance
   - itertools
   - kwargs
   - lastindex
+  - linecap
+  - llhttp
   - logfile
   - lxml
   - metafunc
@@ -408,6 +416,7 @@ words:
   - pathlib
   - pgrep
   - pkill
+  - putheader
   - pycache
   - pydantic
   - pyenv
@@ -428,6 +437,7 @@ words:
   - ruamel
   - setattr
   - setdefault
+  - setenv
   - splitlines
   - stdlib
   - timedelta

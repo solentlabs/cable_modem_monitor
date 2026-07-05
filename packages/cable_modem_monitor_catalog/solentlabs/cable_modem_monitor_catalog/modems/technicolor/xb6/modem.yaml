@@ -2,6 +2,8 @@ manufacturer: Technicolor
 model: XB6
 model_aliases:
   - "CGM4140COM"
+brands:
+  - "Xfinity"
 transport: http
 default_host: "10.0.0.1"
 
@@ -23,6 +25,7 @@ hardware:
 status: awaiting_verification
 
 sources:
+  brands: "[TechInfoDepot — Technicolor CGM4140COM (Xfinity XB6)](https://techinfodepot.shoutwiki.com/wiki/Technicolor_CGM4140COM)"
   model_aliases: "[TechInfoDepot — Technicolor CGM4140COM (XB6)](https://techinfodepot.shoutwiki.com/wiki/Technicolor_CGM4140COM)"
   auth_config: "[#111 XB6](https://github.com/solentlabs/cable_modem_monitor/issues/111)"
   chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Technicolor_CGM4140COM)"

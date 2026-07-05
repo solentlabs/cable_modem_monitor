@@ -171,11 +171,14 @@ def build_model_display_name(summary: ModemSummary, bucket: str | None = None) -
 
     if lead_brand is not None:
         parts = [_normalize_manufacturer(lead_brand), summary.model]
-        alternates = [
-            *(summary.model_aliases or []),
-            f"{mfr} {summary.model}",
-            *(b for b in brands if b != lead_brand),
-        ]
+        # Aliases (sticker codes, rebadges) anchor the device; the
+        # manufacturer-composed name is only worth a slot when no alias
+        # does that job (e.g. the G54, whose only alternate is the
+        # CommScope listing name).
+        alternates = [*(summary.model_aliases or [])]
+        if not alternates:
+            alternates.append(f"{mfr} {summary.model}")
+        alternates.extend(b for b in brands if b != lead_brand)
     else:
         parts = [mfr, summary.model]
         # Parenthetical carries alternate user-facing names only — never

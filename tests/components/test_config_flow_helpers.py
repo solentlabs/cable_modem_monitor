@@ -324,8 +324,9 @@ def test_build_model_display_name(manufacturer, model, aliases, brands, status, 
 
 
 # Bucket-contextual labels: the lead name matches the filter the user
-# chose. Brand bucket → brand leads, manufacturer-composed name moves
-# into the parenthetical. Manufacturer bucket / All → static label.
+# chose. Brand bucket → brand leads; the parenthetical lists aliases
+# and other brands, adding the manufacturer-composed name only when no
+# alias anchors the entry. Manufacturer bucket / All → static label.
 # ┌────────────────┬───────────────┬───────────────────────────────────────────────────────┬──────────────────┐
 # │ modem          │ bucket        │ expected                                              │ description      │
 # ├────────────────┼───────────────┼───────────────────────────────────────────────────────┼──────────────────┤
@@ -335,10 +336,14 @@ def test_build_model_display_name(manufacturer, model, aliases, brands, status, 
 # │ G54            │ "arris"       │ "Arris G54 (CommScope G54) *"                         │ case_insensitive │
 # │ SB6141         │ "Motorola"    │ "Motorola SB6141 (Arris SB6141, SURFboard)"           │ other_brand_kept │
 # │ S33            │ "SURFboard"   │ "SURFboard S33 (Arris S33)"                           │ brand_lead_conf  │
+# │ XB6            │ "Xfinity"     │ "Xfinity XB6 (CGM4140COM) *"                          │ alias_anchored   │
+# │ XB7            │ "Xfinity"     │ "Xfinity XB7 (CGM4331COM, Panoramic Wifi)"            │ alias_and_others │
 # └────────────────┴───────────────┴───────────────────────────────────────────────────────┴──────────────────┘
 _G54 = ("CommScope", "G54", [], ["Arris"], "awaiting_verification")
 _SB6141 = ("ARRIS", "SB6141", [], ["SURFboard", "Motorola"], "confirmed")
 _S33 = ("Arris", "S33", [], ["SURFboard"], "confirmed")
+_XB6 = ("Technicolor", "XB6", ["CGM4140COM"], ["Xfinity"], "awaiting_verification")
+_XB7 = ("Technicolor", "XB7", ["CGM4331COM"], ["Xfinity", "Panoramic Wifi"], "confirmed")
 
 # fmt: off
 BUCKET_LABEL_CASES = [
@@ -348,6 +353,8 @@ BUCKET_LABEL_CASES = [
     (_G54,    "arris",     "Arris G54 (CommScope G54) *",                "case_insensitive"),
     (_SB6141, "Motorola",  "Motorola SB6141 (Arris SB6141, SURFboard)",  "other_brand_kept"),
     (_S33,    "SURFboard", "SURFboard S33 (Arris S33)",                  "brand_lead_confirmed"),
+    (_XB6,    "Xfinity",   "Xfinity XB6 (CGM4140COM) *",                 "alias_anchored"),
+    (_XB7,    "Xfinity",   "Xfinity XB7 (CGM4331COM, Panoramic Wifi)",   "alias_and_other_brand"),
 ]
 # fmt: on
 
