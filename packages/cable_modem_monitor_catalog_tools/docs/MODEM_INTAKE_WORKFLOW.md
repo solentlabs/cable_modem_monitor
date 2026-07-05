@@ -216,6 +216,17 @@ For each item in `enrich_result.missing`:
 - **hardware.docsis_version**: check if OFDM channels detected (= 3.1), else 3.0
 - **isps**: web search `"{model} compatible ISPs"`
 - **default_host**: usually 192.168.100.1 for DOCSIS modems
+- **brands**: user-visible box branding. Check firmware brand fields in
+  the HAR (e.g. `customer`) and retail listings. Entries become
+  manufacturer-dropdown buckets and must carry a source.
+- **model_aliases**: alternate user-facing names only — rebadges,
+  regional variants, sticker codes, each with a source. Firmware
+  `product`/platform codes stay in the HAR as evidence; they never go
+  in aliases (this is how the G54 got bad aliases, see #72).
+
+`manufacturer` is stored as the firmware reports it and determines the
+catalog directory; box branding that differs goes in `brands`. Full
+research guidance: ONBOARDING_SPEC.md § Fields to research.
 
 Confirm any values you can't find rather than guessing.
 
@@ -531,8 +542,12 @@ are no errors in `modem_data`.
    fix, re-run. This is normal.
 6. **Never commit automatically.** Show changes; stage them yourself.
 7. **Alias vs separate entry.** Each model a user would purchase by name
-   gets its own catalog directory. Aliases are only for manufacturer
-   rebrands, internal/OEM model numbers, and marketing name variants.
+   gets its own catalog directory — but a separate entry requires its
+   own HAR evidence; until a capture exists, a rebadge is recorded as a
+   sourced alias on the evidenced entry. Aliases hold alternate
+   user-facing names only (rebadges, sticker codes); firmware-internal
+   codes belong in neither aliases nor brands. Box branding goes in
+   `brands` and becomes a manufacturer-dropdown bucket.
    See [MODEM_YAML_SPEC.md](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md) § Aliases vs Separate Entries.
 8. **Consolidate issue resources.** When a HAR is incomplete (e.g.,
    missing XHR due to Playwright `networkidle` bug), extract data from

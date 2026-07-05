@@ -31,6 +31,26 @@ def validate_modem(
         return None
 
 
+def validate_aliases_and_brands(
+    data: dict[str, Any],
+    errors: list[str],
+) -> None:
+    """Reject firmware-internal codes in model_aliases and brands."""
+    # Guards the documented G54 failure (#72): intake once wrote the
+    # firmware product code (G54_COMMSCOPE) into model_aliases. An
+    # underscore is the firmware-code tell — user-facing names on boxes,
+    # stickers, and listings never carry one. Firmware codes stay in the
+    # HAR as evidence (MODEM_YAML_SPEC § Aliases vs Separate Entries).
+    for field_name in ("model_aliases", "brands"):
+        for name in data.get(field_name) or []:
+            if "_" in name:
+                errors.append(
+                    f'modem.yaml: {field_name}: "{name}" looks like a '
+                    f"firmware-internal code — firmware identifiers stay in "
+                    f"the HAR, not in {field_name}"
+                )
+
+
 def validate_parser(
     data: dict[str, Any],
     errors: list[str],

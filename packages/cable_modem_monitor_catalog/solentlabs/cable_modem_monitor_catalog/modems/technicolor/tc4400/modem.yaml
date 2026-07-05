@@ -17,6 +17,7 @@ timeout: 20
 status: awaiting_verification
 
 sources:
+  model_aliases: "Unit label TC4400-AM on retail listings (e.g. https://www.ebay.com/itm/406711931022)"
   auth_config: "[#1 TC-4400 Login](https://github.com/solentlabs/cable_modem_monitor/issues/1)"
   chipset: "[FCC Filing](https://fccid.io/VU4-TC4400)"
 

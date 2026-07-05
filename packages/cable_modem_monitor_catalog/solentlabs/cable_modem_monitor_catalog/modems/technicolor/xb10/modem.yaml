@@ -41,6 +41,7 @@ hardware:
 status: confirmed
 
 sources:
+  model_aliases: "[Xfinity XB10 = CGM601TCOM](https://forums.xfinity.com/conversations/internet/answered-comcast-modem-wireless-gateway-devicefeature-comparison/602da6d1c5375f08cdd28eeb)"
   auth_config: "[#173 Technicolor XB10](https://github.com/solentlabs/cable_modem_monitor/issues/173)"
   chipset:
     "[HighSpeedInternet.com — Xfinity XB10 DOCSIS 4.0 / Wi-Fi 7 gateway](https://www.highspeedinternet.com/resources/xfinity-docsis4-wifi7-gateway)

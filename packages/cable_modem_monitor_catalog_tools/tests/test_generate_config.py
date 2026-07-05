@@ -16,7 +16,10 @@ from pathlib import Path
 
 import pytest
 import yaml
-from solentlabs.cable_modem_monitor_catalog_tools.generate_config import generate_config
+from solentlabs.cable_modem_monitor_catalog_tools.generate_config import (
+    GenerateConfigResult,
+    generate_config,
+)
 from tests._helpers import collect_fixtures, load_fixture
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "generate_config"
@@ -90,6 +93,45 @@ def test_valid_parser_yaml_presence(fixture_path: Path) -> None:
             assert parser["downstream"]["format"] == expected_format
     else:
         assert result.parser_yaml is None
+
+
+# ---------------------------------------------------------------------------
+# Alias and brand validation — firmware-internal codes rejected from aliases/brands
+# ---------------------------------------------------------------------------
+
+
+class TestAliasAndBrandValidation:
+    """Firmware-internal codes are rejected from model_aliases and brands.
+
+    Guards the documented G54 failure (#72): intake once wrote the
+    firmware product code into model_aliases. Underscores are the
+    firmware-code tell; legitimate user-facing names never carry them.
+    """
+
+    def _fixture(self) -> dict:
+        return load_fixture(VALID_DIR / "table_form_auth.json")
+
+    def _with_identity(self, **identity: list[str]) -> GenerateConfigResult:
+        fixture = self._fixture()
+        metadata = {**fixture["_metadata"], **identity}
+        return generate_config(fixture["_analysis"], metadata)
+
+    def test_firmware_code_alias_rejected(self) -> None:
+        result = self._with_identity(model_aliases=["G54_COMMSCOPE"])
+        assert not result.validation.valid
+        assert any("model_aliases" in e and "firmware" in e for e in result.validation.errors)
+
+    def test_firmware_code_brand_rejected(self) -> None:
+        result = self._with_identity(brands=["G54_COMMSCOPE"])
+        assert not result.validation.valid
+        assert any("brands" in e and "firmware" in e for e in result.validation.errors)
+
+    def test_user_facing_names_pass(self) -> None:
+        result = self._with_identity(
+            model_aliases=["CGM4140COM", "Motorola SB6141", "Hub 5"],
+            brands=["SURFboard", "Virgin Media"],
+        )
+        assert result.validation.valid, result.validation.errors
 
 
 # ---------------------------------------------------------------------------

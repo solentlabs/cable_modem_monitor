@@ -1,5 +1,7 @@
 manufacturer: Netgear
 model: CM2000
+brands:
+  - "Nighthawk"
 transport: http
 default_host: "192.168.100.1"
 auth:
@@ -25,6 +27,7 @@ hardware:
   release_date: "2020-08"
 status: awaiting_verification
 sources:
+  brands: "[Netgear product page](https://www.netgear.com/home/wifi/modems/cm2000/) — Nighthawk branding"
   auth_config: "[#38 Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
   chipset: "[Homeowner.com Review](https://www.homeowner.com/connectivity/netgear/netgear-cm2000-review)"
   detection_hints: "[#38 Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"

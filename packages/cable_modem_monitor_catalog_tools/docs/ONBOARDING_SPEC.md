@@ -23,7 +23,9 @@ review, commit authorization).
 - Deterministic logic lives in MCP tools, not in prompts — repeatable and testable
 - Ambiguity is a hard stop, not a guess — flag for human review
 - Metadata not in the HAR is filled via web search, not left as TODOs
-- Generated config must pass Pydantic build-time validation
+- Generated config must pass Pydantic build-time validation, plus an
+  alias-and-brand check: firmware-internal codes (underscore-shaped,
+  e.g. `G54_COMMSCOPE`) are rejected from `model_aliases` and `brands`
 - The golden file is the human review checkpoint — not the config itself
 - All modems — new and existing — go through the same workflow from HAR. Every modem package is built from scratch
 

@@ -1,5 +1,7 @@
 manufacturer: ARRIS
 model: CM820B
+brands:
+  - "Touchstone"
 transport: http
 default_host: "192.168.100.1"
 
@@ -17,6 +19,7 @@ hardware:
 status: confirmed
 
 sources:
+  brands: "[ARRIS Touchstone CM820 page](https://mktg-webtestext.arris.com/products/touchstone-cable-modem-cm820/) — Touchstone product line"
   auth_config: "Synthetic HAR — no login required"
 
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_CM820A"

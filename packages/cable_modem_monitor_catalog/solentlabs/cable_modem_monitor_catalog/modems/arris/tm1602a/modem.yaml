@@ -1,5 +1,7 @@
 manufacturer: ARRIS
 model: TM1602A
+brands:
+  - "Touchstone"
 transport: http
 default_host: "192.168.100.1"
 
@@ -13,6 +15,7 @@ hardware:
 status: confirmed
 
 sources:
+  brands: "[Arris Touchstone TM1602A](https://compatiblemodems.com/modems/arris-touchstone-tm1602a-docsis-3-0-upgradeable-16x4-telephony-modem/) — Touchstone product line"
   auth_config: "HAR capture (#112) — no login required"
   chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Arris_TM1602A)"
   verification: "User diagnostics capture on v3.14.0-alpha.14 (2026-04-13, Issue #112)"

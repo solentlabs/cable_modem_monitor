@@ -1,5 +1,7 @@
 manufacturer: Netgear
 model: C7000v2
+brands:
+  - "Nighthawk"
 transport: http
 default_host: "192.168.100.1"
 
@@ -25,6 +27,7 @@ hardware:
 status: confirmed
 
 sources:
+  brands: "[Netgear C7000v2 page](https://www.netgear.com/support/product/c7000v2) — Nighthawk AC1900 branding"
   auth_config: "[#163 C7000v2 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/163)"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Netgear_C7000_v2)"
   detection_hints: "[#163 C7000v2 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/163)"

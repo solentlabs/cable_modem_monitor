@@ -1,8 +1,5 @@
 manufacturer: Compal
 model: CH7465MT
-model_aliases:
-  - CH7465LG
-brands: []
 transport: cbn
 default_host: "192.168.0.1"
 

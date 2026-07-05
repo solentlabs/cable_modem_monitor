@@ -24,6 +24,7 @@ hardware:
 status: awaiting_verification
 
 sources:
+  model_aliases: "[device.report — Technicolor CGA4236TCH1](https://device.report/technicolor/cga4236tch1)"
   auth_config:
     "[#115 Technicolor CGA4236](https://github.com/solentlabs/cable_modem_monitor/issues/115)
     — PBKDF2 double-hash auth"
