@@ -15,10 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   maker appears under both — the CommScope-made G54 sold as Arris shows
   under Arris and CommScope. Labels are bucket-contextual: the lead name
   always matches the filter chosen ("Arris G54 (CommScope G54)" under
-  Arris; "CommScope G54 (Arris)" under CommScope), and the "All" view
-  lists one row per user-facing name so an alphabetical scan finds a
-  modem under any of them. Brand entries are sourced in the catalog
-  (firmware brand fields, product pages, manuals). (Related to #72)
+  Arris; "CommScope G54 (Arris)" under CommScope), the parenthetical
+  shows sticker codes and other brands ("Xfinity XB6 (CGM4140COM)"),
+  and the "All" view lists one row per user-facing name so an
+  alphabetical scan finds a modem under any of them. ISP-issued
+  gateways gained their ISP buckets: the XB6, XB7, and XB10 appear
+  under Xfinity, and the XB7 also under Cox's Panoramic Wifi. Brand
+  entries are sourced in the catalog (firmware brand fields, product
+  pages, manuals). (Related to #72)
 - **Manufacturer names keep their real styling.** Display normalization
   no longer mangles deliberate mixed case: CommScope and SURFboard
   render as branded instead of "Commscope"/"Surfboard".
@@ -35,6 +39,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Honest message when login gets a 404.** A login endpoint returning
+  404 means the device at that address has no login page (wrong device,
+  or the modem web interface is unavailable) — not that credentials
+  were rejected. The circuit breaker still stops polling immediately
+  (retrying would keep posting credentials at an unknown device), but
+  the log now says what actually happened and that reloading the
+  integration retries, instead of telling you to reconfigure
+  credentials that were never wrong.
 - **Host field tolerates address-bar pastes.** A host entered with a
   path but no scheme ("192.168.100.1/cgi-bin/luci/") kept the path as
   part of the host and broke every request. Only the protocol and

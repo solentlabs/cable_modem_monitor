@@ -182,7 +182,7 @@ class SignalPolicy:
 
         if signal == CollectorSignal.AUTH_FAILED:
             self._auth_failure_streak += 1
-            self._trip_circuit_breaker()
+            self._trip_circuit_breaker(status_code=result.auth_status_code)
             return ConnectionStatus.AUTH_FAILED
 
         if signal == CollectorSignal.AUTH_LOCKOUT:
@@ -275,14 +275,24 @@ class SignalPolicy:
         self._connectivity_streak = 0
         self._connectivity_backoff = 0
 
-    def _trip_circuit_breaker(self) -> None:
+    def _trip_circuit_breaker(self, status_code: int | None = None) -> None:
         """Trip the circuit breaker immediately.
 
         Used for AUTH_FAILED and AUTH_LOCKOUT — credentials are known
         bad, retrying is pointless and risks modem anti-brute-force.
+        A login 404 (endpoint absent — wrong device or modem
+        unavailable) also stops here: retrying would keep posting
+        credentials at an unknown device.
         """
         self._circuit_open = True
-        log_event(_logger, AuthCircuitBreakerOpen(model=self._model, streak=self._auth_failure_streak))
+        log_event(
+            _logger,
+            AuthCircuitBreakerOpen(
+                model=self._model,
+                streak=self._auth_failure_streak,
+                status_code=status_code,
+            ),
+        )
 
     def _maybe_trip_circuit_breaker(self) -> None:
         """Trip the circuit breaker if threshold reached.

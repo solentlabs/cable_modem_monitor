@@ -141,6 +141,23 @@ def test_log_event_level_matches_event():
     assert level_arg == EventLevel.ERROR
 
 
+def test_circuit_breaker_message_default():
+    """Without a status code the breaker message points at credentials."""
+    logger = MagicMock(spec=logging.Logger)
+    log_event(logger, AuthCircuitBreakerOpen(model="SB8200", streak=1))
+    _, msg = logger.log.call_args.args
+    assert "Reconfigure credentials" in msg
+
+
+def test_circuit_breaker_message_endpoint_not_found():
+    """HTTP 404 on login is endpoint absence, not credential rejection — wrong device or modem unavailable."""
+    logger = MagicMock(spec=logging.Logger)
+    log_event(logger, AuthCircuitBreakerOpen(model="SB8200", streak=1, status_code=404))
+    _, msg = logger.log.call_args.args
+    assert "login endpoint not found" in msg
+    assert "Reconfigure credentials" not in msg
+
+
 def test_log_event_message_contains_model():
     logger = MagicMock(spec=logging.Logger)
     event = ZeroChannelsNoSystemInfo(model="HUB5")

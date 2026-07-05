@@ -177,6 +177,7 @@ class ModemDataCollector:
                 success=False,
                 signal=CollectorSignal.AUTH_FAILED,
                 error=auth_result.error,
+                auth_status_code=(auth_result.response.status_code if auth_result.response is not None else None),
             )
 
         # Phase 2: Load resources

@@ -113,6 +113,7 @@ class AuthCircuitBreakerOpen:
 
     model: str
     streak: int
+    status_code: int | None = None
     level: EventLevel = field(default=EventLevel.ERROR, init=False)
 
 

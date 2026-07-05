@@ -65,12 +65,17 @@ class ModemResult:
             Always OK when success is True.
         error: Human-readable error detail for logging/diagnostics.
             Empty string on success.
+        auth_status_code: HTTP status of the failed login response
+            (AUTH_FAILED only, when the modem answered) — lets the
+            circuit breaker message distinguish endpoint-not-found
+            from credential rejection.
     """
 
     success: bool
     modem_data: dict[str, Any] | None = None
     signal: CollectorSignal = CollectorSignal.OK
     error: str = ""
+    auth_status_code: int | None = None
 
 
 @dataclass
