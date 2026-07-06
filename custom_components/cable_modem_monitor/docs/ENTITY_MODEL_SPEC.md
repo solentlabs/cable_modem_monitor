@@ -420,9 +420,14 @@ row every poll (#178). Currently: `current_time`.
 
 **Discontinued entities:** sensors the integration used to create and
 no longer does (`System Uptime`, `Current Time`) leave orphaned
-registry entries on in-place beta upgrades. There is no automatic
-cleanup — beta users remove and re-add the integration (or press
-Reset Entities), which re-registers from the current sensor classes.
+registry entries on in-place upgrades. Two cleanup paths:
+
+- **v1 (3.13) entries**: the v1→v2 config-entry migration removes the
+  v1-era System Uptime row (`V1_DISCONTINUED_UNIQUE_ID_SUFFIXES` in
+  `migrations/v1_to_v2.py`) — 3.13 upgraders never see the orphan.
+- **v2 (3.14 beta) entries**: no automatic cleanup — remove and
+  re-add the integration (or press Reset Entities), which
+  re-registers from the current sensor classes.
 
 The grouping is by HA entity ownership, not by FIELD_REGISTRY tier.
 

@@ -31,10 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   changes only when the modem actually reboots, so its relative
   rendering ("5 days ago") carries the uptime display. The dashboard
   generator emits the updated card; regenerate your dashboard after
-  upgrading. On upgrades from earlier 3.14 betas the removed sensors
-  linger as unavailable — remove and re-add the integration, or press
-  Reset Entities, to clear them. Both values still flow in the data
-  layer (event payload, diagnostics). (Related to #178)
+  upgrading. Upgrades from 3.13 clear the old System Uptime entity
+  automatically during config-entry migration. On upgrades from
+  earlier 3.14 betas the removed sensors linger as unavailable —
+  press Reset Entities (keeps your config and history), or remove
+  and re-add the integration, to clear them. Both values still flow
+  in the data layer (event payload, diagnostics). (Related to #178)
 
 - **Find your modem by any name on its box.** The manufacturer dropdown
   now lists brand names alongside manufacturers (union of `manufacturer`
