@@ -219,7 +219,12 @@ propose fixes first.
   `git gc` away from loss.
 - **Run pyright alongside mypy.** `mypy` and Pyright (Pylance) have
   different strictness. Code passing mypy can still show red
-  squiggles in VS Code. After mypy, run `.venv/bin/pyright`.
+  squiggles in VS Code. After mypy, run
+  `PYRIGHT_PYTHON_FORCE_VERSION=latest .venv/bin/pyright` over
+  **every file in `git status`, tests included** — Pylance tracks
+  latest pyright, and touched test files are where missed
+  diagnostics repeatedly surface. Do this unprompted before
+  declaring any work unit done, in the same pass as the test run.
 - **Preserve actor when restating prior facts.** When summarizing or
   recommending based on a prior exchange, the subject/object of "who
   said/did/decided X" is load-bearing. Compressing "X reported Y"

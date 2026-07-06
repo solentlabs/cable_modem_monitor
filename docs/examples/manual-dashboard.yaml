@@ -16,11 +16,12 @@ cards:
         name: Status
       - entity: sensor.cable_modem_software_version
         name: Software Version
-      - entity: sensor.cable_modem_system_uptime
+      - entity: sensor.cable_modem_last_boot_time
         name: Uptime
+        format: relative
       - entity: sensor.cable_modem_last_boot_time
         name: Last Boot
-        format: date
+        format: datetime
       - entity: sensor.cable_modem_downstream_channel_count
         name: DS Channel Count
       - entity: sensor.cable_modem_upstream_channel_count

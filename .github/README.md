@@ -267,8 +267,7 @@ Channel Identity is set when you add the integration. To switch, remove and re-a
 ### System Information
 
 - `sensor.cable_modem_software_version`: Modem firmware/software version
-- `sensor.cable_modem_system_uptime`: How long the modem has been running
-- `sensor.cable_modem_last_boot_time`: When the modem last rebooted (timestamp device class)
+- `sensor.cable_modem_last_boot_time`: When the modem last rebooted (timestamp device class); Home Assistant renders it as relative age ("5 days ago"), which doubles as uptime
 - `sensor.cable_modem_ds_channel_count`: Number of active downstream channels
 - `sensor.cable_modem_us_channel_count`: Number of active upstream channels
 

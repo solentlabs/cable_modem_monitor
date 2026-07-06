@@ -28,6 +28,7 @@ from .const import (
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONSUMED_SYSTEM_INFO_FIELDS,
+    DISPLAY_ONLY_SYSTEM_INFO_FIELDS,
     DOMAIN,
     ChannelIdentity,
 )
@@ -303,12 +304,21 @@ def _build_status_card_yaml(
     if "software_version" in system_info:
         lines.append(f"      - entity: sensor.{entity_prefix}_software_version")
         lines.append("        name: Software Version")
-    if "system_uptime" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_system_uptime")
-        lines.append("        name: Uptime")
-        lines.append(f"      - entity: sensor.{entity_prefix}_last_boot_time")
-        lines.append("        name: Last Boot")
-        lines.append("        format: date")
+    # Uptime is a display-time calculation, not a sensor (#178): both
+    # rows render Last Boot Time — relative ("5 days ago") for uptime,
+    # absolute for the boot instant. Gate mirrors sensor.py's Last
+    # Boot Time creation gate.
+    if "system_uptime" in system_info or "total_corrected" in system_info or "total_uncorrected" in system_info:
+        lines.extend(
+            [
+                f"      - entity: sensor.{entity_prefix}_last_boot_time",
+                "        name: Uptime",
+                "        format: relative",
+                f"      - entity: sensor.{entity_prefix}_last_boot_time",
+                "        name: Last Boot",
+                "        format: datetime",
+            ]
+        )
     lines.extend(
         [
             f"      - entity: sensor.{entity_prefix}_ds_channel_count",
@@ -332,9 +342,10 @@ def _build_status_card_yaml(
             ]
         )
     for field in sorted(system_info):
-        if field not in CONSUMED_SYSTEM_INFO_FIELDS:
-            lines.append(f"      - entity: sensor.{entity_prefix}_{field}")
-            lines.append(f"        name: {field.replace('_', ' ').title()}")
+        if field in CONSUMED_SYSTEM_INFO_FIELDS or field in DISPLAY_ONLY_SYSTEM_INFO_FIELDS:
+            continue
+        lines.append(f"      - entity: sensor.{entity_prefix}_{field}")
+        lines.append(f"        name: {field.replace('_', ' ').title()}")
     lines.append("    show_header_toggle: false")
     lines.append("    state_color: false")
     return lines

@@ -92,6 +92,7 @@ class EntityPrefix(StrEnum):
 # Dynamic SystemInfoFieldSensor (sensor.py) and the dashboard passthrough loop
 # (dev_tools.py) both skip these — the dedicated classes own them.
 # When a field graduates to a dedicated sensor, add it here.
+# system_uptime has no sensor of its own — it feeds Last Boot Time.
 # fmt: off
 CONSUMED_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({
     "software_version",
@@ -104,3 +105,9 @@ CONSUMED_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({
     "rate_uncorrected",
 })
 # fmt: on
+
+# system_info fields captured for the data layer (snapshot, event payload,
+# diagnostics) but never minted as entities: per-poll wall-clock readings
+# whose past states have no diagnostic value. Persisting them writes a
+# recorder row every poll for data that display surfaces derive live (#178).
+DISPLAY_ONLY_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({"current_time"})

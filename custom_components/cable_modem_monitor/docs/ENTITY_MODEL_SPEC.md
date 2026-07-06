@@ -64,8 +64,7 @@ output (some gated by config).
 | Status | `_status` | display¹ | — | — | — | `connection_status`, `health_status`, `docsis_status`, `diagnosis` |
 | Modem Info | `_info` | detected model | — | — | — | `manufacturer`, `model`, `release_date`, `docsis_version`, `status` (from Core's `ModemIdentity`) |
 | Software Version | `_software_version` | string | — | — | — | — |
-| System Uptime | `_system_uptime` | string | — | — | — | — |
-| Last Boot Time | `_last_boot_time` | datetime | TIMESTAMP | — | — | — |
+| Last Boot Time | `_last_boot_time` | datetime | TIMESTAMP | — | — | Held steady across poll jitter⁵ |
 | DS Channel Count | `_downstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
@@ -102,6 +101,37 @@ sensors permanently absent. Instead, the rate sensors are created
 alongside the totals; `native_value` returns `None` (HA renders
 `unknown`) on polls where the orchestrator omits the field. See
 [ORCHESTRATION_SPEC.md § Derived Fields](../../../packages/cable_modem_monitor_core/docs/ORCHESTRATION_SPEC.md#derived-fields).
+
+⁵ Last Boot Time derives from `now − system_uptime` (or, for modems
+without native uptime, the orchestrator's counter-reset detection).
+Both sources jitter: poll timing shifts the computed timestamp a few
+seconds every cycle, which would write a new recorder row per poll
+and change the value on every HA restart (#178). The sensor therefore
+holds its last emitted value and only replaces it on reboot
+evidence: an uptime decrease since the previous poll (uptime is
+monotonic within a boot, so a lower reading is a reboot regardless
+of how close the timestamps land — catches double reboots inside
+the tolerance), or a computation that moves by more than 5 minutes —
+far above jitter and uptime-string granularity, far below the shift
+of any real reboot (the entire prior uptime). The held value is
+restored across HA restarts (`RestoreSensor`) and survives polls
+where both sources are absent. Stability contract: **the state
+changes only on a real reboot.**
+
+**Boot-time source normalization.** Every boot-time source is
+converted to a duration and anchored to HA's clock; the modem's wall
+clock is never used as an absolute anchor (its timezone and sync
+state are unknown). Source priority:
+
+1. `system_uptime` — already a duration; the trusted source.
+2. A native modem-reported boot time (none in the fleet today): if
+   one appears, subtract it from the modem's own `current_time` on
+   the same page so clock offset and timezone cancel, then anchor
+   the resulting duration to HA's clock. The modem's clock is only
+   ever compared against itself. Do not implement until a HAR shows
+   a modem reporting this.
+3. Counter-reset detection — an upper bound with poll-interval
+   granularity, not a measurement; last resort.
 
 **Implicit capabilities:** Capabilities are not declared — they are
 implicit from parser.yaml mappings (see
@@ -355,25 +385,44 @@ All non-metric fields from the channel dict are exposed as
 
 ### System Info Pass-Through
 
-System info fields use a consumed/dynamic pattern:
+System info fields use a consumed/display-only/dynamic pattern:
 
 | Pattern | HA Entity | Fields |
 |---------|-----------|--------|
-| Consumed (dedicated class) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected` |
+| Consumed (dedicated class or derivation) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected` |
+| Display-only (never minted) | None — derived at display time | `current_time` |
 | Dynamic (pass-through) | Generic `SystemInfoFieldSensor(field=key)` | Everything else in `system_info` |
 
-**Consumed fields** are those with a dedicated sensor class in
-`sensor.py` (see § Entity Catalog — System Sensors). They are listed
-in `_CONSUMED_SYSTEM_INFO_FIELDS`:
+**Consumed fields** are those owned by a dedicated sensor class or
+derivation in `sensor.py` (see § Entity Catalog — System Sensors).
+They are listed in `CONSUMED_SYSTEM_INFO_FIELDS`:
 
-- `software_version`, `system_uptime` — Tier 1 canonical, always
-  from parser.yaml mappings
+- `software_version` — Tier 1 canonical, always from parser.yaml
+  mappings
+- `system_uptime` — Tier 1 canonical, consumed by the Last Boot Time
+  derivation. It has **no sensor of its own**: an uptime state changes
+  every poll by definition, writing a recorder row per cycle for a
+  value that is `now − last_boot` at display time (#178). The
+  dashboard generator renders Last Boot Time with `format: relative`
+  to carry the uptime display.
 - `downstream_channel_count`, `upstream_channel_count` — always
   computed by the parser coordinator (`len(channels)`); native value from
   parser.yaml takes precedence if mapped
 - `total_corrected`, `total_uncorrected` — declared in parser.yaml's
   `aggregate` section (scoped sums from channel data); native mapping
   takes precedence if the modem reports totals directly
+
+**Display-only fields** (`DISPLAY_ONLY_SYSTEM_INFO_FIELDS`) are
+captured for the data layer — snapshot, event payload, diagnostics —
+but never minted as entities: per-poll wall-clock readings whose past
+states have no diagnostic value. Persisting them writes a recorder
+row every poll (#178). Currently: `current_time`.
+
+**Discontinued entities:** sensors the integration used to create and
+no longer does (`System Uptime`, `Current Time`) leave orphaned
+registry entries on in-place beta upgrades. There is no automatic
+cleanup — beta users remove and re-add the integration (or press
+Reset Entities), which re-registers from the current sensor classes.
 
 The grouping is by HA entity ownership, not by FIELD_REGISTRY tier.
 

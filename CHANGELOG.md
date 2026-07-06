@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **System Uptime and Current Time sensors removed.** Both wrote a new
+  recorder row every poll for values with no historical worth: uptime
+  is derivable at display time from Last Boot Time, and a wall-clock
+  reading from 40 polls ago answers nothing. Last Boot Time now holds
+  steady across poll-timing jitter and Home Assistant restarts, and
+  changes only when the modem actually reboots, so its relative
+  rendering ("5 days ago") carries the uptime display. The dashboard
+  generator emits the updated card; regenerate your dashboard after
+  upgrading. On upgrades from earlier 3.14 betas the removed sensors
+  linger as unavailable — remove and re-add the integration, or press
+  Reset Entities, to clear them. Both values still flow in the data
+  layer (event payload, diagnostics). (Related to #178)
+
 - **Find your modem by any name on its box.** The manufacturer dropdown
   now lists brand names alongside manufacturers (union of `manufacturer`
   and `brands` catalog fields), so a modem branded differently from its

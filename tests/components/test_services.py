@@ -224,8 +224,9 @@ def test_build_status_card_yaml_full():
     assert "sensor.cable_modem_tcp_latency" in yaml
     assert "sensor.cable_modem_http_latency" in yaml
     assert "sensor.cable_modem_software_version" in yaml
-    assert "sensor.cable_modem_system_uptime" in yaml
+    assert "sensor.cable_modem_system_uptime" not in yaml
     assert "sensor.cable_modem_last_boot_time" in yaml
+    assert "format: relative" in yaml
     assert "sensor.cable_modem_total_corrected_errors" in yaml
     # Rates are intentionally NOT in the status entities row even when
     # the fields are present in system_info.
