@@ -163,7 +163,7 @@
         },
         "status_card_exclude": {
           "name": "Pola wykluczone z karty stanu",
-          "description": "Pola pomijane na wygenerowanej karcie stanu. Domyślnie wykluczane są ciągi identyfikacyjne (wersja sprzętu); dodaj docsis_status, aby usunąć również wiersz stanu DOCSIS, lub przekaż pustą listę, aby uwzględnić wszystko."
+          "description": "Pola pomijane na wygenerowanej karcie stanu. Domyślnie puste; dodaj docsis_status, aby usunąć wiersz stanu DOCSIS, lub dowolną nazwę pola przekazywanego, aby usunąć jego wiersz."
         }
       }
     },

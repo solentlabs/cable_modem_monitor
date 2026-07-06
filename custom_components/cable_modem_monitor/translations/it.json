@@ -163,7 +163,7 @@
         },
         "status_card_exclude": {
           "name": "Campi esclusi dalla scheda di stato",
-          "description": "Campi omessi dalla scheda di stato generata. Per impostazione predefinita sono escluse le stringhe di identità (versione hardware); aggiungere docsis_status per rimuovere anche la riga dello stato DOCSIS, oppure passare un elenco vuoto per includere tutto."
+          "description": "Campi da omettere dalla scheda di stato generata. Vuoto per impostazione predefinita; aggiungere docsis_status per rimuovere la riga dello stato DOCSIS, o qualsiasi nome di campo pass-through per rimuovere la sua riga."
         }
       }
     },

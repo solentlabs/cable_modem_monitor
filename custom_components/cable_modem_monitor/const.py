@@ -107,7 +107,16 @@ CONSUMED_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({
 # fmt: on
 
 # system_info fields captured for the data layer (snapshot, event payload,
-# diagnostics) but never minted as entities: per-poll wall-clock readings
-# whose past states have no diagnostic value. Persisting them writes a
-# recorder row every poll for data that display surfaces derive live (#178).
-DISPLAY_ONLY_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({"current_time"})
+# diagnostics) but never minted as entities (#178):
+# - current_time: a per-poll wall-clock reading whose past states have no
+#   diagnostic value — persisting it writes a recorder row every poll.
+# - hardware_version, model_name: immutable identity strings — a sensor
+#   whose state cannot change is device metadata, shown natively on the
+#   device page (hw_version / model in the device registry).
+DISPLAY_ONLY_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset(
+    {
+        "current_time",
+        "hardware_version",
+        "model_name",
+    }
+)

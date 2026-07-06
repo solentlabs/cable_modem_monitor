@@ -852,7 +852,7 @@ def test_create_data_dependent_entities_passthrough_sorted(mock_runtime_data):
 
 
 def test_create_data_dependent_entities_display_only_not_minted(mock_runtime_data):
-    """Display-only fields (current_time) never become pass-through sensors."""
+    """Display-only fields never become pass-through sensors."""
     from custom_components.cable_modem_monitor.sensor import (
         _create_data_dependent_entities,
     )
@@ -862,13 +862,15 @@ def test_create_data_dependent_entities_display_only_not_minted(mock_runtime_dat
         "system_info": {
             **MOCK_MODEM_DATA["system_info"],
             "current_time": "Thu Jan 01 12:00:00 2026",
+            "hardware_version": "V1.0",
+            "model_name": "TPS-2000",
         },
     }
     coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
     entities = _create_data_dependent_entities(coord, entry, modem_data)
 
     passthrough_fields = {e._field for e in entities if isinstance(e, SystemInfoFieldSensor)}
-    assert "current_time" not in passthrough_fields
+    assert passthrough_fields.isdisjoint({"current_time", "hardware_version", "model_name"})
 
 
 # -----------------------------------------------------------------------

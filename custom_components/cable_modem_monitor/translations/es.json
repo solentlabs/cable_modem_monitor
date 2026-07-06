@@ -163,7 +163,7 @@
         },
         "status_card_exclude": {
           "name": "Campos excluidos de la tarjeta de estado",
-          "description": "Campos omitidos en la tarjeta de estado generada. De forma predeterminada se excluyen las cadenas de identidad (versión de hardware); agregue docsis_status para omitir también la fila de estado DOCSIS, o pase una lista vacía para incluir todo."
+          "description": "Campos que se omiten en la tarjeta de estado generada. Vacío de forma predeterminada; agregue docsis_status para quitar la fila de estado DOCSIS, o cualquier nombre de campo de paso para quitar su fila."
         }
       }
     },

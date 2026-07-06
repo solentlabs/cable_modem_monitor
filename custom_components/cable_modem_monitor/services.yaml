@@ -54,8 +54,7 @@ generate_dashboard:
         boolean:
     status_card_exclude:
       required: false
-      default:
-        - hardware_version
+      default: []
       selector:
         text:
           multiple: true

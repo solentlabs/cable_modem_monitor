@@ -601,6 +601,15 @@ def _update_device_registry(
     protocol = data.get(CONF_PROTOCOL, "http")
     host = data[CONF_HOST]
 
+    # Version identity lives on the device card, not in the entity list
+    # (#178). software_version also stays a sensor — the sensor is the
+    # firmware-change timeline; this field is display-only and refreshes
+    # at entry setup. Empty when the first poll returned no data.
+    snapshot = entry.runtime_data.data_coordinator.data
+    system_info: dict[str, Any] = {}
+    if snapshot is not None and snapshot.modem_data is not None:
+        system_info = snapshot.modem_data.get("system_info", {})
+
     registry = dr.async_get(hass)
     registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -609,4 +618,6 @@ def _update_device_registry(
         manufacturer=identity.manufacturer,
         model=identity.model,
         configuration_url=f"{protocol}://{host}",
+        sw_version=system_info.get("software_version"),
+        hw_version=system_info.get("hardware_version"),
     )

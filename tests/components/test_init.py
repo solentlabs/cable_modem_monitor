@@ -482,23 +482,27 @@ async def test_setup_entry_happy_path():
 # -----------------------------------------------------------------------
 
 
-def test_update_device_registry():
-    """Device registry updated with modem identity."""
-    hass = MagicMock()
+def _make_registry_entry(modem_data):
+    """Build the mock entry + identity for device registry tests."""
     entry = MagicMock()
     entry.data = MOCK_ENTRY_DATA
     entry.entry_id = "test_123"
-
-    identity = ModemIdentity(
+    entry.runtime_data = MagicMock()
+    entry.runtime_data.modem_identity = ModemIdentity(
         manufacturer="Solent Labs",
         model="TPS-2000",
         docsis_version="3.0",
         release_date="2024",
         status="confirmed",
     )
-    entry.runtime_data = MagicMock()
-    entry.runtime_data.modem_identity = identity
+    entry.runtime_data.data_coordinator.data.modem_data = modem_data
+    return entry
 
+
+def test_update_device_registry():
+    """Device registry updated with modem identity and version fields."""
+    hass = MagicMock()
+    entry = _make_registry_entry({"system_info": {"software_version": "1.2.3", "hardware_version": "V1.0"}})
     mock_registry = MagicMock()
 
     with patch(
@@ -512,6 +516,25 @@ def test_update_device_registry():
     assert kwargs["manufacturer"] == "Solent Labs"
     assert kwargs["model"] == "TPS-2000"
     assert kwargs["configuration_url"] == "http://192.168.100.1"
+    assert kwargs["sw_version"] == "1.2.3"
+    assert kwargs["hw_version"] == "V1.0"
+
+
+def test_update_device_registry_no_modem_data():
+    """Version fields stay empty when the first poll returned no data."""
+    hass = MagicMock()
+    entry = _make_registry_entry(None)
+    mock_registry = MagicMock()
+
+    with patch(
+        "custom_components.cable_modem_monitor.dr.async_get",
+        return_value=mock_registry,
+    ):
+        _update_device_registry(hass, entry)
+
+    kwargs = mock_registry.async_get_or_create.call_args.kwargs
+    assert kwargs["sw_version"] is None
+    assert kwargs["hw_version"] is None
 
 
 # -----------------------------------------------------------------------

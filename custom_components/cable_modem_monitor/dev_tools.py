@@ -174,11 +174,12 @@ def _unique_types(channel_info: list[tuple[str, int]]) -> set[str]:
 # YAML builders
 # ------------------------------------------------------------------
 
-# Pass-through fields left off the generated status card by default:
-# identity strings, not status. Overridable per service call via
-# status_card_exclude — which can also drop the explicit docsis_status
-# row below.
-STATUS_CARD_DEFAULT_EXCLUDE = ("hardware_version",)
+# Default fields left off the generated status card. Empty since the
+# identity strings (hardware_version, model_name) stopped minting
+# sensors entirely (DISPLAY_ONLY_SYSTEM_INFO_FIELDS); the option
+# remains for users to drop rows, including the explicit
+# docsis_status row below.
+STATUS_CARD_DEFAULT_EXCLUDE: tuple[str, ...] = ()
 
 
 def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:

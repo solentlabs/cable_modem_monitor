@@ -163,7 +163,7 @@
         },
         "status_card_exclude": {
           "name": "Status Card Excluded Fields",
-          "description": "Fields left off the generated status card. Default excludes identity strings (hardware version); add docsis_status to also drop the DOCSIS Status row, or pass an empty list to include everything."
+          "description": "Fields to leave off the generated status card. Empty by default; add docsis_status to drop the DOCSIS Status row, or any pass-through field name to drop its row."
         }
       }
     },

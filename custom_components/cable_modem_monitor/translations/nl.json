@@ -163,7 +163,7 @@
         },
         "status_card_exclude": {
           "name": "Uitgesloten velden van statuskaart",
-          "description": "Velden die van de gegenereerde statuskaart worden weggelaten. Standaard worden identiteitsreeksen (hardwareversie) uitgesloten; voeg docsis_status toe om ook de DOCSIS-statusregel te verwijderen, of geef een lege lijst door om alles op te nemen."
+          "description": "Velden die van de gegenereerde statuskaart worden weggelaten. Standaard leeg; voeg docsis_status toe om de DOCSIS-statusregel te verwijderen, of een willekeurige doorgegeven veldnaam om die regel te verwijderen."
         }
       }
     },

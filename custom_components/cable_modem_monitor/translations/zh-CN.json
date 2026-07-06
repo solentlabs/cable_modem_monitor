@@ -163,7 +163,7 @@
         },
         "status_card_exclude": {
           "name": "状态卡排除字段",
-          "description": "从生成的状态卡中省略的字段。默认排除标识字符串（硬件版本）；添加 docsis_status 可同时移除 DOCSIS 状态行，或传入空列表以包含全部字段。"
+          "description": "从生成的状态卡中省略的字段。默认为空；添加 docsis_status 可移除 DOCSIS 状态行，或添加任意透传字段名以移除其对应行。"
         }
       }
     },

@@ -315,17 +315,19 @@ def test_passthrough_formerly_explicit_fields(system_info: dict[str, Any], expec
     assert expected_entity in "\n".join(lines)
 
 
-def test_status_card_default_exclusions():
-    """Hardware version stays off by default; DOCSIS Status shows at its old spot."""
+def test_status_card_display_only_fields_never_appear():
+    """Display-only fields (no sensors exist) stay off the card even unexcluded."""
     system_info = {
         "docsis_status": "Operational",
         "hardware_version": "V1.0",
+        "model_name": "TPS-2000",
         "software_version": "1.0",
         "ds_power_status": "Good",
     }
     lines = _build_status_card_yaml("modem", system_info, has_icmp=False, has_head=False)
     yaml = "\n".join(lines)
     assert "hardware_version" not in yaml
+    assert "model_name" not in yaml
     assert "sensor.modem_ds_power_status" in yaml
     # Explicit DOCSIS row, exactly once, positioned before Software Version.
     assert yaml.count("sensor.modem_docsis_status") == 1
@@ -336,11 +338,11 @@ def test_status_card_default_exclusions():
 
 
 def test_status_card_exclude_override():
-    """A caller-supplied exclusion list replaces the defaults entirely."""
+    """A caller-supplied exclusion list drops the named pass-through rows."""
     system_info = {
         "docsis_status": "Operational",
-        "hardware_version": "V1.0",
         "ds_power_status": "Good",
+        "dhcp_status": "Ready",
     }
     yaml = "\n".join(
         _build_status_card_yaml(
@@ -352,7 +354,7 @@ def test_status_card_exclude_override():
         )
     )
     assert "sensor.modem_docsis_status" in yaml
-    assert "sensor.modem_hardware_version" in yaml
+    assert "sensor.modem_dhcp_status" in yaml
     assert "ds_power_status" not in yaml
 
 

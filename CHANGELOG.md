@@ -12,14 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Status card contents are now configurable.** The dashboard
   generator's `generate_dashboard` service accepts a
   `status_card_exclude` list controlling which fields appear on the
-  status card. By default only identity strings (`hardware_version`)
-  are left off; the DOCSIS Status row shows near the top and can be
-  dropped by adding `docsis_status` to the list. Label history for
-  anyone diffing regenerated cards: this row was "Modem Status"
-  through beta.10, silently became "Docsis Status" in beta.11 when a
-  refactor routed it through the generic field loop, and is now
-  "DOCSIS Status" back at its original position. Entities are
-  unaffected — this only shapes the generated card. (Related to #178)
+  status card (empty by default; add `docsis_status` to drop the
+  DOCSIS Status row). Label history for anyone diffing regenerated
+  cards: that row was "Modem Status" through beta.10, silently became
+  "Docsis Status" in beta.11 when a refactor routed it through the
+  generic field loop, and is now "DOCSIS Status" back at its original
+  position. (Related to #178)
+
+- **Firmware and hardware versions on the device page.** The device
+  registry now carries `sw_version` and `hw_version`, so the device
+  info card shows them natively. The Software Version sensor remains
+  — a firmware push is a state change worth automating on — but the
+  Hardware Version and Model Name sensors are gone: immutable
+  identity strings are device metadata, not sensors. Both values
+  still flow in diagnostics and the event payload. Clear the leftover
+  entities the same way as the uptime sensors below. (Related to #178)
 
 ### Changed
 

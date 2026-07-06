@@ -390,7 +390,7 @@ System info fields use a consumed/display-only/dynamic pattern:
 | Pattern | HA Entity | Fields |
 |---------|-----------|--------|
 | Consumed (dedicated class or derivation) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected` |
-| Display-only (never minted) | None — derived at display time | `current_time` |
+| Display-only (never minted) | None — display surfaces carry the value | `current_time`, `hardware_version`, `model_name` |
 | Dynamic (pass-through) | Generic `SystemInfoFieldSensor(field=key)` | Everything else in `system_info` |
 
 **Consumed fields** are those owned by a dedicated sensor class or
@@ -414,13 +414,23 @@ They are listed in `CONSUMED_SYSTEM_INFO_FIELDS`:
 
 **Display-only fields** (`DISPLAY_ONLY_SYSTEM_INFO_FIELDS`) are
 captured for the data layer — snapshot, event payload, diagnostics —
-but never minted as entities: per-poll wall-clock readings whose past
-states have no diagnostic value. Persisting them writes a recorder
-row every poll (#178). Currently: `current_time`.
+but never minted as entities (#178):
+
+- `current_time` — a per-poll wall-clock reading whose past states
+  have no diagnostic value; persisting it writes a recorder row
+  every poll.
+- `hardware_version`, `model_name` — immutable identity strings. A
+  sensor whose state cannot change is device metadata: the device
+  registry carries them natively (`hw_version`, `model`), set in
+  `_update_device_registry`. `software_version` is the deliberate
+  contrast — it also appears on the device card (`sw_version`) but
+  **keeps its sensor**, because a firmware push is a state change
+  users automate on and the sensor is the only timeline of it.
 
 **Discontinued entities:** sensors the integration used to create and
-no longer does (`System Uptime`, `Current Time`) leave orphaned
-registry entries on in-place upgrades. Two cleanup paths:
+no longer does (`System Uptime`, `Current Time`, `Hardware Version`,
+`Model Name`) leave orphaned registry entries on in-place upgrades.
+Two cleanup paths:
 
 - **v1 (3.13) entries**: the v1→v2 config-entry migration removes the
   v1-era System Uptime row (`V1_DISCONTINUED_UNIQUE_ID_SUFFIXES` in
