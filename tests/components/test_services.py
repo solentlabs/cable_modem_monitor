@@ -1342,7 +1342,7 @@ async def test_convert_with_device_id_resolves_entry(mock_runtime_data) -> None:
 
     with (
         patch(
-            "custom_components.cable_modem_monitor.dev_tools." "_resolve_config_entry_for_device",
+            "custom_components.cable_modem_monitor.dev_tools._resolve_config_entry_for_device",
             return_value=entry,
         ) as mock_resolve,
         patch(

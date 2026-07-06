@@ -119,9 +119,10 @@ class AuthCircuitBreakerOpen:
 
 @dataclass
 class CircuitBreakerPollingBlocked:
-    """Poll skipped — circuit breaker is open; credentials must be reconfigured."""
+    """Poll skipped — circuit breaker is open; status_code preserves the trip reason."""
 
     model: str
+    status_code: int | None = None
     level: EventLevel = field(default=EventLevel.ERROR, init=False)
 
 

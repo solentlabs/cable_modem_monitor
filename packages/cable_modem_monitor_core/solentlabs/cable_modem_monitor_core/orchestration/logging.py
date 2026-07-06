@@ -142,6 +142,13 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         )
 
     if isinstance(event, CircuitBreakerPollingBlocked):
+        if event.status_code == 404:
+            # Preserve the trip reason on every blocked poll — after a
+            # 404 trip, credentials are not the fix.
+            return (
+                f"Circuit breaker OPEN [{event.model}] — login endpoint not found"
+                " (HTTP 404). Polling stopped. Reload the integration to retry."
+            )
         return f"Circuit breaker OPEN [{event.model}] — polling stopped. Reconfigure credentials to resume."
 
     if isinstance(event, AuthStateReset):

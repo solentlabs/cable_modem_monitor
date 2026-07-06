@@ -20,6 +20,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.events import (
     AuthCircuitBreakerOpen,
     AuthFailed,
     AuthSucceeded,
+    CircuitBreakerPollingBlocked,
     CollectionComplete,
     ConnectivityFailureDetected,
     EventLevel,
@@ -153,6 +154,23 @@ def test_circuit_breaker_message_endpoint_not_found():
     """HTTP 404 on login is endpoint absence, not credential rejection — wrong device or modem unavailable."""
     logger = MagicMock(spec=logging.Logger)
     log_event(logger, AuthCircuitBreakerOpen(model="SB8200", streak=1, status_code=404))
+    _, msg = logger.log.call_args.args
+    assert "login endpoint not found" in msg
+    assert "Reconfigure credentials" not in msg
+
+
+def test_polling_blocked_message_default():
+    """Steady-state blocked message points at credentials when the trip was credential rejection."""
+    logger = MagicMock(spec=logging.Logger)
+    log_event(logger, CircuitBreakerPollingBlocked(model="SB8200"))
+    _, msg = logger.log.call_args.args
+    assert "Reconfigure credentials" in msg
+
+
+def test_polling_blocked_message_endpoint_not_found():
+    """Steady-state blocked message preserves the 404 trip reason — credentials are not the fix."""
+    logger = MagicMock(spec=logging.Logger)
+    log_event(logger, CircuitBreakerPollingBlocked(model="SB8200", status_code=404))
     _, msg = logger.log.call_args.args
     assert "login endpoint not found" in msg
     assert "Reconfigure credentials" not in msg

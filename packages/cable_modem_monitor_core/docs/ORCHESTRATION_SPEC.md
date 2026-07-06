@@ -597,7 +597,9 @@ class Orchestrator:
         Called when the user requests a manual refresh (Update Modem
         Data button). Clears connectivity streak and backoff so the
         next get_modem_data() attempts a real connection regardless
-        of prior connectivity failures.
+        of prior connectivity failures. Deliberately does NOT clear
+        the auth circuit breaker — see § Auth Circuit Breaker,
+        "No manual bypass."
         """
 
     def diagnostics(self) -> OrchestratorDiagnostics:
@@ -1138,6 +1140,31 @@ The streak counter resets to 0 on any successful collection.
 AUTH_FAILURE_THRESHOLD: int = 6  # applies to LOAD_AUTH only
 ```
 
+**Recovery paths.** An open circuit blocks all polling indefinitely;
+it never times out. It clears via `reset_auth()` (credential
+reconfiguration through the client's reauth flow) or a client
+restart/reload (a fresh orchestrator starts with a closed circuit).
+
+**No manual bypass — a considered decision, not an omission.**
+Manual refresh (`reset_connectivity()`, the HA Update Modem Data
+button, the `request_refresh` service) deliberately cannot clear the
+breaker. The refresh path is an automation surface — HA users wire
+`request_refresh` into automations ("ping fails → refresh") — so a
+breaker bypass there would let a retry loop post known-bad
+credentials at automation frequency, defeating the breaker's
+purpose (on HNAP firmware with `REBOOT` anti-brute-force, each
+attempt can restart the modem). The known trip causes that
+self-resolve without a credential fix (dev instance started on the
+wrong network, modem web UI temporarily down) recover via reload,
+which is acceptable for their frequency. Revisit only with field
+evidence of latched breakers that a reload cannot reasonably cover.
+
+**Trip reason is preserved.** The policy records the HTTP status
+that tripped the breaker (`circuit_trip_status_code`). Every
+subsequent blocked poll logs advice matching the trip cause: a 404
+trip says "login endpoint not found — reload the integration to
+retry," not "reconfigure credentials."
+
 #### Use Cases
 
 **Password changed after months of success (UC-87):**
@@ -1215,6 +1242,7 @@ grows and the circuit trips — same as wrong credentials.
 | Login backoff counter | Anti-brute-force suppression | Decremented each get_modem_data(), cleared by reset_auth() |
 | Auth failure streak | Circuit breaker — consecutive auth-related failures | Reset on successful collection or reset_auth() |
 | Circuit open flag | Stops collection when streak reaches threshold | Set when tripped, cleared by reset_auth() |
+| Circuit trip status code | Keeps blocked-poll advice matched to the trip cause (404 vs credentials) | Set on immediate trip, cleared by reset_auth() |
 | Connectivity streak | Tracks consecutive CONNECTIVITY failures | Reset on success, non-connectivity failure, or reset_connectivity() |
 | Connectivity backoff | Exponential backoff for unreachable modem: min(2^(streak-1), 6) | Decremented each get_modem_data(), cleared by reset_connectivity() |
 | Recovery window state | Aggressive poll cadence, session preservation during the window | Owned by the recovery module; see § Recovery |
@@ -1343,6 +1371,7 @@ first-poll output.
 - INFO (first poll) / DEBUG (after): `"Poll [MODEL] — auth: FormAuth, url: ..., credentials: yes, session: none"`
 - WARNING: `"Auth lockout [MODEL] — firmware anti-brute-force triggered, suppressing login for 3 polls (streak: 3/6)"`
 - ERROR: `"Circuit breaker OPEN [MODEL] — polling stopped. Reconfigure credentials to resume."`
+- ERROR (404 trip): `"Circuit breaker OPEN [MODEL] — login endpoint not found (HTTP 404). Polling stopped. Reload the integration to retry."`
 
 **Backoff and circuit breaker:**
 

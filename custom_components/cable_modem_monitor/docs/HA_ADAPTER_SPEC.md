@@ -793,7 +793,9 @@ Circuit breaker opens
 
 **No polling while circuit is open.** `get_modem_data()` returns
 `AUTH_FAILED` immediately when the circuit breaker is open. The user
-must fix credentials before polling resumes.
+must fix credentials (or reload the integration) before polling
+resumes. Manual refresh deliberately does not bypass the breaker —
+see ORCHESTRATION_SPEC § Auth Circuit Breaker, "No manual bypass."
 
 See ORCHESTRATION_USE_CASES.md UC-81 for the full scenario.
 
@@ -1107,7 +1109,11 @@ device is specified.
 2. Short-circuit if `runtime.active_operation is not None` — a
    restart or reset is already running and will trigger its own
    post-operation refresh; no user action is needed
-3. Call `orchestrator.reset_connectivity()` to clear backoff
+3. Call `orchestrator.reset_connectivity()` to clear backoff — this
+   deliberately does not touch the auth circuit breaker; this
+   service is an automation surface, and a breaker bypass would let
+   a retry loop post known-bad credentials (see ORCHESTRATION_SPEC
+   § Auth Circuit Breaker, "No manual bypass")
 4. Refresh health coordinator (if health monitoring is enabled)
 5. Refresh data coordinator
 

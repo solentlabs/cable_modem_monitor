@@ -304,11 +304,25 @@ class Orchestrator:
 
         # Circuit breaker
         if self._policy.circuit_open:
-            log_event(_logger, CircuitBreakerPollingBlocked(model=self._modem_config.model))
+            trip_status_code = self._policy.circuit_trip_status_code
+            log_event(
+                _logger,
+                CircuitBreakerPollingBlocked(
+                    model=self._modem_config.model,
+                    status_code=trip_status_code,
+                ),
+            )
+            # After a 404 trip, credentials are not the fix — keep the
+            # snapshot error honest about the trip reason.
+            error = (
+                "Circuit breaker open — login endpoint not found"
+                if trip_status_code == 404
+                else "Circuit breaker open — reconfigure credentials"
+            )
             return self._make_snapshot(
                 ConnectionStatus.AUTH_FAILED,
                 DocsisStatus.UNKNOWN,
-                error="Circuit breaker open — reconfigure credentials",
+                error=error,
             )
 
         # Health recovery — clear connectivity backoff if the modem

@@ -82,7 +82,11 @@ async def async_request_modem_refresh(runtime: CableModemRuntimeData) -> None:
 
     Resets connectivity backoff, refreshes health probes (if enabled),
     then triggers a data poll. Health runs first so the snapshot
-    includes fresh health info.
+    includes fresh health info. Deliberately does NOT reset the auth
+    circuit breaker: this helper backs the request_refresh service, an
+    automation surface — a breaker bypass here would let a retry loop
+    post known-bad credentials (HNAP anti-brute-force can reboot the
+    modem on a single extra attempt).
 
     Used by UpdateModemDataButton.async_press() and the
     request_refresh service.
