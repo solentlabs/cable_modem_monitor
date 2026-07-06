@@ -51,6 +51,16 @@ more reading and iteration against the specs.
   has cookies on the first request and no auth flow, recapture in
   incognito/private browsing — the pipeline will reject it.
 
+## HAR Captures Are Immutable Evidence
+
+A HAR represents actual hardware we do not own or control. Never
+edit one — not to fix malformed HTML, normalize endpoints, or tidy
+payloads. Broken markup in a capture is firmware behavior the parser
+must handle, not noise to clean: correcting bad tags in a HAR once
+caused a modem that really returns bad tags to be processed
+incorrectly. The only sanctioned transformation is PII value
+sanitization at intake, which replaces values and never structure.
+
 ## Inputs
 
 You provide one of:

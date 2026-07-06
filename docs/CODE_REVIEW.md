@@ -153,6 +153,16 @@ def get_parser(name: str) -> type[ModemParser] | None:
     ...
 ```
 
+Preferred patterns for common situations:
+
+| Situation | Use | Not |
+|-----------|-----|-----|
+| Param with fixed valid values | `Literal[...]` | `str` |
+| Pydantic model from dict | `Model.model_validate(data)` | `Model(**data)` |
+| JSON file caching | `@functools.lru_cache` | global `dict \| None` + manual checks |
+| Pass-through `*args/**kwargs` | `Any` | `object` |
+| JSON data | `dict[str, Any]` | `dict[str, object]` |
+
 ### No Blocking I/O in Async Context
 
 When calling sync functions from async code (e.g., in `config_flow.py`,
@@ -357,6 +367,12 @@ Two distinct test shapes:
 
 Don't mix shapes. A behavioural test should not load a fixture; a
 schema test should not assert on field defaults.
+
+Fixture content uses placeholder values, never production formats:
+no real URLs, hostnames, or vendor-specific payload shapes in
+hand-written fixture JSON. Keep fixtures minimal — only the fields
+the test exercises. (HAR-derived fixtures are the exception: they
+are sanitized captures of real hardware and stay verbatim.)
 
 ### No Inline Data Blobs in Test Files
 
