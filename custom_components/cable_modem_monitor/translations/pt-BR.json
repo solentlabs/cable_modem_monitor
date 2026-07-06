@@ -160,6 +160,10 @@
         "short_titles": {
           "name": "Usar Títulos Curtos",
           "description": "Curto: 'DS Power (dBmV)' vs Longo: 'Downstream Power Levels (dBmV)'."
+        },
+        "status_card_exclude": {
+          "name": "Campos excluídos do cartão de status",
+          "description": "Campos omitidos do cartão de status gerado. O padrão exclui strings de identidade (versão de hardware); adicione docsis_status para remover também a linha de status DOCSIS, ou passe uma lista vazia para incluir tudo."
         }
       }
     },

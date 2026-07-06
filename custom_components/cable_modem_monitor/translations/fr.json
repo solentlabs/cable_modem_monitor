@@ -160,6 +160,10 @@
         "short_titles": {
           "name": "Utiliser des Titres Courts",
           "description": "Court : 'DS Power (dBmV)' vs Long : 'Downstream Power Levels (dBmV)'."
+        },
+        "status_card_exclude": {
+          "name": "Champs exclus de la carte d'état",
+          "description": "Champs omis de la carte d'état générée. Par défaut, les chaînes d'identité (version matérielle) sont exclues ; ajoutez docsis_status pour supprimer aussi la ligne d'état DOCSIS, ou passez une liste vide pour tout inclure."
         }
       }
     },

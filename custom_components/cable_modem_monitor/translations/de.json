@@ -160,6 +160,10 @@
         "short_titles": {
           "name": "Kurze Titel verwenden",
           "description": "Kurz: 'DS Power (dBmV)' vs Lang: 'Downstream Power Levels (dBmV)'."
+        },
+        "status_card_exclude": {
+          "name": "Ausgeschlossene Felder der Statuskarte",
+          "description": "Felder, die auf der generierten Statuskarte weggelassen werden. Standardmäßig werden Identitätszeichenfolgen (Hardwareversion) ausgeschlossen; docsis_status hinzufügen, um auch die DOCSIS-Statuszeile zu entfernen, oder leere Liste übergeben, um alles einzuschließen."
         }
       }
     },

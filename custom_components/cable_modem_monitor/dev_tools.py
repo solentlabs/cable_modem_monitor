@@ -174,6 +174,12 @@ def _unique_types(channel_info: list[tuple[str, int]]) -> set[str]:
 # YAML builders
 # ------------------------------------------------------------------
 
+# Pass-through fields left off the generated status card by default:
+# identity strings, not status. Overridable per service call via
+# status_card_exclude — which can also drop the explicit docsis_status
+# row below.
+STATUS_CARD_DEFAULT_EXCLUDE = ("hardware_version",)
+
 
 def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
     """Get dashboard card titles based on user preference."""
@@ -257,6 +263,7 @@ def _build_status_card_yaml(
     *,
     has_icmp: bool,
     has_head: bool,
+    exclude_fields: frozenset[str] | None = None,
 ) -> list[str]:
     """Build YAML for the status entities card.
 
@@ -270,7 +277,11 @@ def _build_status_card_yaml(
         has_icmp: Whether ICMP ping latency entity exists.
         has_head: Whether the HTTP HEAD latency entity exists
             (only created on supports_head=True modems).
+        exclude_fields: Pass-through fields to omit from the card;
+            defaults to STATUS_CARD_DEFAULT_EXCLUDE.
     """
+    if exclude_fields is None:
+        exclude_fields = frozenset(STATUS_CARD_DEFAULT_EXCLUDE)
     lines = [
         "  - type: entities",
         "    title: Cable Modem Status",
@@ -301,6 +312,12 @@ def _build_status_card_yaml(
                 "        icon: mdi:speedometer",
             ]
         )
+    # DOCSIS status gets an explicit row at its historical position
+    # (the pre-beta.12 "Modem Status" spot); the loop below always
+    # skips it so it is never duplicated at the bottom.
+    if "docsis_status" in system_info and "docsis_status" not in exclude_fields:
+        lines.append(f"      - entity: sensor.{entity_prefix}_docsis_status")
+        lines.append("        name: DOCSIS Status")
     if "software_version" in system_info:
         lines.append(f"      - entity: sensor.{entity_prefix}_software_version")
         lines.append("        name: Software Version")
@@ -342,7 +359,12 @@ def _build_status_card_yaml(
             ]
         )
     for field in sorted(system_info):
-        if field in CONSUMED_SYSTEM_INFO_FIELDS or field in DISPLAY_ONLY_SYSTEM_INFO_FIELDS:
+        if (
+            field == "docsis_status"  # explicit row above owns it
+            or field in CONSUMED_SYSTEM_INFO_FIELDS
+            or field in DISPLAY_ONLY_SYSTEM_INFO_FIELDS
+            or field in exclude_fields
+        ):
             continue
         lines.append(f"      - entity: sensor.{entity_prefix}_{field}")
         lines.append(f"        name: {field.replace('_', ' ').title()}")
@@ -637,6 +659,7 @@ def create_generate_dashboard_handler(
                     system_info,
                     has_icmp=has_icmp,
                     has_head=has_head,
+                    exclude_fields=frozenset(call.data.get("status_card_exclude", STATUS_CARD_DEFAULT_EXCLUDE)),
                 )
             )
 

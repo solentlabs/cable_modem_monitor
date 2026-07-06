@@ -54,6 +54,11 @@ data:
   include_downstream_snr: true
   graph_hours: 48
   short_titles: true
+  # Fields to leave off the status card. Shown here with the default;
+  # add docsis_status to also drop the DOCSIS Status row, or pass an
+  # empty list to include everything.
+  status_card_exclude:
+    - hardware_version
 response_variable: result
 ```
 

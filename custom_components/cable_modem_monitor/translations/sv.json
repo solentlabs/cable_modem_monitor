@@ -160,6 +160,10 @@
         "short_titles": {
           "name": "Använd korta titlar",
           "description": "Kort: 'DS Power (dBmV)' vs Lång: 'Downstream Power Levels (dBmV)'."
+        },
+        "status_card_exclude": {
+          "name": "Exkluderade fält för statuskort",
+          "description": "Fält som utelämnas från det genererade statuskortet. Som standard exkluderas identitetssträngar (hårdvaruversion); lägg till docsis_status för att även ta bort DOCSIS-statusraden, eller skicka en tom lista för att inkludera allt."
         }
       }
     },

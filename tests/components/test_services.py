@@ -288,7 +288,8 @@ def test_build_status_card_yaml_passthrough_fields():
 # │ field                        │ expected entity-id substring              │
 # └──────────────────────────────┴───────────────────────────────────────────┘
 _PASSTHROUGH_FORMERLY_EXPLICIT_CASES = [
-    ("docsis_status", {"docsis_status": "operational"}, "sensor.modem_docsis_status"),
+    # docsis_status is absent here: it moved back to an explicit row
+    # (see test_status_card_default_exclusions).
     ("cpu_speed", {"cpu_speed": "1GHz"}, "sensor.modem_cpu_speed"),
     ("memory_total", {"memory_total": 1024}, "sensor.modem_memory_total"),
     ("memory_free", {"memory_free": 512}, "sensor.modem_memory_free"),
@@ -305,9 +306,69 @@ _PASSTHROUGH_FORMERLY_EXPLICIT_CASES = [
     ids=[c[0] for c in _PASSTHROUGH_FORMERLY_EXPLICIT_CASES],
 )
 def test_passthrough_formerly_explicit_fields(system_info: dict[str, Any], expected_entity: str) -> None:
-    """Fields that were once explicitly placed now flow through the passthrough loop."""
-    lines = _build_status_card_yaml("modem", system_info, has_icmp=False, has_head=False)
+    """Fields that were once explicitly placed now flow through the passthrough loop.
+
+    Exclusion is disabled here — this test asserts loop reach, not the
+    default exclusion policy (covered below).
+    """
+    lines = _build_status_card_yaml("modem", system_info, has_icmp=False, has_head=False, exclude_fields=frozenset())
     assert expected_entity in "\n".join(lines)
+
+
+def test_status_card_default_exclusions():
+    """Hardware version stays off by default; DOCSIS Status shows at its old spot."""
+    system_info = {
+        "docsis_status": "Operational",
+        "hardware_version": "V1.0",
+        "software_version": "1.0",
+        "ds_power_status": "Good",
+    }
+    lines = _build_status_card_yaml("modem", system_info, has_icmp=False, has_head=False)
+    yaml = "\n".join(lines)
+    assert "hardware_version" not in yaml
+    assert "sensor.modem_ds_power_status" in yaml
+    # Explicit DOCSIS row, exactly once, positioned before Software Version.
+    assert yaml.count("sensor.modem_docsis_status") == 1
+    assert "name: DOCSIS Status" in yaml
+    docsis_idx = lines.index("      - entity: sensor.modem_docsis_status")
+    sw_idx = lines.index("      - entity: sensor.modem_software_version")
+    assert docsis_idx < sw_idx
+
+
+def test_status_card_exclude_override():
+    """A caller-supplied exclusion list replaces the defaults entirely."""
+    system_info = {
+        "docsis_status": "Operational",
+        "hardware_version": "V1.0",
+        "ds_power_status": "Good",
+    }
+    yaml = "\n".join(
+        _build_status_card_yaml(
+            "modem",
+            system_info,
+            has_icmp=False,
+            has_head=False,
+            exclude_fields=frozenset({"ds_power_status"}),
+        )
+    )
+    assert "sensor.modem_docsis_status" in yaml
+    assert "sensor.modem_hardware_version" in yaml
+    assert "ds_power_status" not in yaml
+
+
+def test_status_card_exclude_drops_docsis_row():
+    """Excluding docsis_status removes the explicit DOCSIS Status row."""
+    system_info = {"docsis_status": "Operational"}
+    yaml = "\n".join(
+        _build_status_card_yaml(
+            "modem",
+            system_info,
+            has_icmp=False,
+            has_head=False,
+            exclude_fields=frozenset({"docsis_status"}),
+        )
+    )
+    assert "docsis_status" not in yaml
 
 
 def test_build_restart_button_card_yaml():

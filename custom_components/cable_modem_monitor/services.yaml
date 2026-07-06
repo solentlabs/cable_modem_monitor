@@ -52,6 +52,13 @@ generate_dashboard:
       default: true
       selector:
         boolean:
+    status_card_exclude:
+      required: false
+      default:
+        - hardware_version
+      selector:
+        text:
+          multiple: true
 
 request_refresh:
   fields:
