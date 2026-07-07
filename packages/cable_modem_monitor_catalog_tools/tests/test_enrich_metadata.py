@@ -153,7 +153,7 @@ class TestMVPReview:
         assert hw["chipset"] == "BCM33XX"
 
     def test_verified_status_reports_missing(self) -> None:
-        """Verified status reports attribution and isps as missing."""
+        """Verified status reports attribution, isps, and release_date as missing."""
         analysis = _minimal_analysis()
         user_input = {
             "manufacturer": "Solent Labs",
@@ -164,6 +164,20 @@ class TestMVPReview:
 
         assert "attribution" in result.missing
         assert "isps" in result.missing
+        assert "hardware.release_date" in result.missing
+
+    def test_release_date_present_not_missing(self) -> None:
+        """A provided release_date is not reported missing."""
+        analysis = _minimal_analysis()
+        user_input = {
+            "manufacturer": "Solent Labs",
+            "model": "T100",
+            "status": "confirmed",
+            "hardware": {"release_date": "2024"},
+        }
+        result = enrich_metadata(analysis, user_input=user_input)
+
+        assert "hardware.release_date" not in result.missing
 
 
 # ---------------------------------------------------------------------------

@@ -44,11 +44,13 @@ actions:
 hardware:
   docsis_version: "3.1"
   chipset: "Intel Puma 7 (FHCE2752M)"
+  release_date: "2018"
 
 timeout: 10
 
 status: confirmed
 sources:
+  release_date: "[tk-world.de, 2018-08-27](https://www.tk-world.de/blog/vodafone-station-neuer-standard-router-fuer-kabeltarife/) — Vodafone Station became Vodafone Germany's standard cable router on 2018-08-28"
   auth_config: "[#86 Arris TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"
   chipset: "[TG3442DE Teardown](https://github.com/nox-x/TG3442DE-Teardown)"
 attribution:

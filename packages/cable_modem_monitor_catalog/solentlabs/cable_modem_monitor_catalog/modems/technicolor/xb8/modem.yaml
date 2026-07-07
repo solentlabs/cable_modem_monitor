@@ -1,0 +1,67 @@
+manufacturer: Technicolor
+model: XB8
+model_aliases:
+  - "CGM4981COM"
+brands:
+  - "Xfinity"
+  - "Panoramic Wifi"
+transport: http
+default_host: "10.0.0.1"
+
+auth:
+  strategy: form
+  action: "/check.jst"
+  username_field: username
+  password_field: password
+  cookie_name: "session"
+
+  success:
+    redirect: "/at_a_glance.jst"
+hardware:
+  docsis_version: "3.1"
+  release_date: "2022"
+
+status: awaiting_verification
+
+sources:
+  brands: "Xfinity: [FCC XB8/CGM4981COM user guide](https://fcc.report/FCC-ID/G954981X/5542915.pdf); Panoramic Wifi: [Cox Technicolor CGM4981 support page](https://www.cox.com/residential/support/technicolor-cgm4981.html)"
+  model_aliases: "[FCC XB8/CGM4981COM user guide](https://fcc.report/FCC-ID/G954981X/5542915.pdf); [DSLReports — Next Gateway XB8 Technicolor CGM4981COM](https://www.dslreports.com/forum/r33227126-Next-Gateway-XB8-Technicolor-CGM4981COM-Wi-Fi-6E)"
+  auth_config: "[#101 Technicolor CGM4981COM](https://github.com/solentlabs/cable_modem_monitor/issues/101) diagnostics (auth_discovery: form_plain to /check.jst, fields observed)"
+  release_date: "Xfinity rollout began 2022: [DSLReports — Next Gateway XB8](https://www.dslreports.com/forum/r33227126-Next-Gateway-XB8-Technicolor-CGM4981COM-Wi-Fi-6E); [Xfinity Community Forum — NEW xFi Gateway XB8](https://forums.xfinity.com/conversations/your-home-network/new-xfi-gateway-xb8/6216d91580db9c3cdd5e96fc)"
+attribution:
+  contributors:
+    - github: https://github.com/dondonini
+      contribution:
+        "[Issue #101](https://github.com/solentlabs/cable_modem_monitor/issues/101)
+        diagnostics captures and XB7-parser field test"
+
+isps:
+  - Rogers
+  - Comcast
+  - Xfinity
+  - Cox
+notes: |
+  DOCSIS 3.1 Wi-Fi 6E cable modem + router gateway (CGM4981COM),
+  successor to the XB7 (CGM4331COM). Same web UI family: form-based
+  authentication to /check.jst, transposed channel tables on
+  /network_setup.jst, spaced-colon uptime format "X days Xh: Xm: Xs".
+  Reconstructed fixture — not a wire capture. No XB8 HAR has been
+  contributed. test_data/modem.har uses the XB7 fixture as the
+  structural template with real CGM4981COM values substituted from the
+  issue #101 diagnostics (v3.12.0 live parse: 34/34 downstream and 5/5
+  upstream channels parsed on real hardware, which is the empirical
+  basis for the shared page structure). Observed values: channel IDs,
+  frequencies, SNR, power, modulation, upstream channel types, error
+  codewords, uptime, software/BOOT/hardware versions, model string.
+  Unobserved template filler: per-channel lock status, upstream symbol
+  rates, unerrored codewords, check.jst POST mechanics. Replace the
+  fixture with a real HAR when an XB8 owner contributes one.
+  Firmware renders the SC-QAM fallback "TDMA" channel type for OFDMA
+  upstream channels (observed on channel 11, modulation OFDMA).
+  Quirk — error count duplication observed on XB8 as on XB7: primary
+  QAM channel 23 reports corrected/uncorrected counts identical to
+  OFDM channel 34. Aggregate intentionally omitted for the same reason
+  as the XB7 entry.
+references:
+  issues:
+    - "[#101 — [Modem Request] Technicolor CGM4981COM](https://github.com/solentlabs/cable_modem_monitor/issues/101)"

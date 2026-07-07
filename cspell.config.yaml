@@ -155,6 +155,7 @@ words:
   - chipset
   - chipsets
   - DHCE
+  - AnandTech
   - FHCE
   - iFixit
   - KOMODO
@@ -193,11 +194,11 @@ words:
   - Datagroup
   - Kabel
   - Koodo
+  - Midco
   - kood
   - KOOD
   - Mediacom
   - mediacom
-  - MTAT
   - Pyür
   - pyür
   - PYÜR
@@ -224,6 +225,7 @@ words:
   - VOLY
   - Volya
   - VMDG
+  - vodafonekabelforum
   - Xfinity
 
   # Modem data fields (concatenated identifiers from firmware)

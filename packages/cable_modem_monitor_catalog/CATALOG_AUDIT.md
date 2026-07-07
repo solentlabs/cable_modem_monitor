@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**42 configurations supported** — 23 confirmed on real hardware, 19 awaiting verification.
+**43 configurations supported** — 23 confirmed on real hardware, 20 awaiting verification.
 
 ---
 
@@ -28,6 +28,7 @@ and share a diagnostics snapshot.
 | CGA6444VF | HTML | Vodafone |  |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy |  |
 | XB6 | HTML | Rogers |  |
+| XB8 | HTML | Rogers, Comcast, Xfinity, Cox |  |
 
 ## Pending Review
 
@@ -59,7 +60,7 @@ Working on real hardware with a report on file.
 | SB8200 (HNAP) | HNAP | Cox |
 | TG3442DE | HTML | Vodafone DE |
 | TM1602A | HTML | Spectrum |
-| CH7465MT | CBN | MTAT |
+| CH7465MT | CBN | Magenta AT |
 | CODA56 | HTML | Comcast, Xfinity |
 | MB7621 | HTML | Comcast, Cox, Spectrum, TWC, CableOne, RCN, Comcast Xfinity, Suddenlink, BrightHouse |
 | MB8600 | HNAP | Comcast, Xfinity, Cox, Spectrum |

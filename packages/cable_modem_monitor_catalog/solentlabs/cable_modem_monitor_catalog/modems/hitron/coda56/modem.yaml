@@ -14,10 +14,15 @@ auth:
 hardware:
   docsis_version: "3.1"
   chipset: "Intel Puma 7 (FHCE2703)"
+  release_date: "2022"
 
 status: confirmed
 
 sources:
+  release_date:
+    "[ApprovedModemList — Comcast Xfinity](https://approvedmodemlist.com/comcast-xfinity-approved-modems/)
+    — approved for Xfinity retail December 2022; corroborated by
+    [Hitron datasheet dated November 2022](https://us.hitrontech.com/wp-content/uploads/2022/11/DS-CODA56RES.pdf)"
   auth_config:
     "[#89 Hitron CODA56](https://github.com/solentlabs/cable_modem_monitor/issues/89)
     — guest mode (user=nologin/pws=nologin)"

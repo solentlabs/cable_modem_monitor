@@ -24,10 +24,16 @@ auth:
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom"
+  release_date: "2020"
 
 status: awaiting_verification
 
 sources:
+  release_date:
+    "[ApprovedModemList — Blue Ridge](https://approvedmodemlist.com/blue-ridge-approved-modems/)
+    — first ISP deployment approval found, August 2020; corroborated by
+    the 2020 copyright in the [Midco DM1000 user guide](https://midco.com/globalassets/support-new/internet/modems/approved-modems/sercomm-dm1000-user-guide_rev03.pdf).
+    Koodo/Telus rollout date not published"
   auth_config:
     "[#92 Sercomm DM1000](https://github.com/solentlabs/cable_modem_monitor/issues/92)
     — form POST with base64-encoded password"

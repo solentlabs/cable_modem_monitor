@@ -15,11 +15,13 @@ auth:
 
 hardware:
   docsis_version: "3.1"
+  release_date: "2024"
 
 status: confirmed
 
 sources:
   auth_config: "[#127 Netgear CM3000](https://github.com/solentlabs/cable_modem_monitor/issues/127)"
+  release_date: "[Netgear press release, March 12, 2024](https://www.businesswire.com/news/home/20240312800246/en/NETGEAR-Unveils-Next-Generation-of-Connectivity-with-the-Nighthawk-DOCSIS-3.1-High-Speed-Internet-Cable-Modem) announcing Nighthawk CM3000 U.S. availability"
 
 attribution:
   contributors:

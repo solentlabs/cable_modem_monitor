@@ -18,12 +18,14 @@ auth:
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
+  release_date: "2018"
 
 status: confirmed
 
 sources:
   auth_config: "[#104 CM1100 HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/104)"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Netgear_CM1100)"
+  release_date: "[Netgear CM1100 user manual, August 2018](https://www.downloads.netgear.com/files/GDC/CM1100/CM1100_UM_EN.pdf); Q4 2018 retail availability per AnandTech CES 2019 coverage and DSLReports threads"
 
 attribution:
   contributors:

@@ -21,9 +21,9 @@ Auto-generated index of the v3.14 modem catalog.
 
 - `modem.yaml` — Single source of truth (manufacturer, model, hardware, ISPs, status)
 
-**37 modems, 42 configurations** (23 ✅ confirmed, 19 ⏳ awaiting)
+**38 modems, 43 configurations** (23 ✅ confirmed, 20 ⏳ awaiting)
 
-**Auth strategies:** form (13), none (8), hnap (7), basic (5), url_token (3), form_cbn (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1)
+**Auth strategies:** form (14), none (8), hnap (7), basic (5), url_token (3), form_cbn (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1)
 
 ## Directory Structure
 
@@ -64,7 +64,7 @@ packages/cable_modem_monitor_catalog/.../modems/
 | Arris | [TG3442DE](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/tg3442de/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 7](#puma-7) | ![sjcl](https://img.shields.io/badge/-sjcl-7B4FB8?style=flat-square "Form Login (SJCL)") | [![VDF](https://img.shields.io/badge/-VDF-aa6666?style=flat-square "Vodafone Kabel")](#vodafone) | TG3442DE | ✅ Confirmed |
 | Arris | [TM1602A](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/tm1602a/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 6](#puma-6) | ![none](https://img.shields.io/badge/-none-808080?style=flat-square "No Authentication") | [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | TM1602A | ✅ Confirmed |
 | CommScope | [G54](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/commscope/g54/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) | G54 | ⏳ Awaiting |
-| Compal | [CH7465MT](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/compal/ch7465mt/modem.yaml) | 3.0 | ![CBN](https://img.shields.io/badge/-CBN-8B6914?style=flat-square "CBN SOAP-based protocol") | [Puma 6](#puma-6) | ![cbn](https://img.shields.io/badge/-cbn-8B6914?style=flat-square "Form Login CBN") | ![MTAT](https://img.shields.io/badge/-MTAT-gray?style=flat-square "MTAT") | CH7465MT | ✅ Confirmed |
+| Compal | [CH7465MT](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/compal/ch7465mt/modem.yaml) | 3.0 | ![CBN](https://img.shields.io/badge/-CBN-8B6914?style=flat-square "CBN SOAP-based protocol") | [Puma 6](#puma-6) | ![cbn](https://img.shields.io/badge/-cbn-8B6914?style=flat-square "Form Login CBN") | [![MAG](https://img.shields.io/badge/-MAG-aa5588?style=flat-square "Magenta Telekom")](#magenta) | CH7465MT | ✅ Confirmed |
 | Hitron | [CODA56](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/hitron/coda56/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 7](#puma-7) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) | CODA56 | ✅ Confirmed |
 | Motorola | [MB7621](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/motorola/mb7621/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3384](#bcm3384) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable")](#twc)<br>[![C1](https://img.shields.io/badge/-C1-7788aa?style=flat-square "Cable One")](#cableone) [![RCN](https://img.shields.io/badge/-RCN-556688?style=flat-square "RCN Corporation")](#rcn) [![SUD](https://img.shields.io/badge/-SUD-6699aa?style=flat-square "Suddenlink")](#suddenlink) [![BRIG](https://img.shields.io/badge/-BRIG-6688aa?style=flat-square "BrightHouse")](#brighthouse) | MB7621 | ✅ Confirmed |
 | Motorola | [MB8600](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/motorola/mb8600/modem.yaml) | 3.1 | ![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth") | [BCM3390](#bcm3390) | ![hnap](https://img.shields.io/badge/-hnap-5B8FBF?style=flat-square "HNAP") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | MB8600 | ✅ Confirmed |
@@ -87,6 +87,7 @@ packages/cable_modem_monitor_catalog/.../modems/
 | Technicolor | [XB10](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb10/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM33941UD](#bcm33941ud) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) | XB10<br>CGM601TCOM | ✅ Confirmed |
 | Technicolor | [XB6](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb6/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications")](#rogers) | XB6<br>CGM4140COM | ⏳ Awaiting |
 | Technicolor | [XB7](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb7/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications")](#rogers) [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) | XB7<br>CGM4331COM | ✅ Confirmed |
+| Technicolor | [XB8](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb8/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications")](#rogers) [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) | XB8<br>CGM4981COM | ⏳ Awaiting |
 
 ## Unsupported Modems
 
@@ -104,6 +105,7 @@ DOCSIS 3.0
 ├── 2011  ARRIS       SB6141     ░██████████░░░░░░░░░   8yr  EOL 2019
 ├── 2014  Netgear     C3700      ░░░░░██████████░░░░░   8yr  EOL 2022
 ├── 2014  Arris       SB6183     ░░░░░███████████████  12yr  Current
+├── 2014  ARRIS       TM1602A    ░░░░░███████████████  12yr  Current
 ├── 2015  Technicolor CGA2121    ░░░░░░██████████████  11yr  Current
 ├── 2015  Compal      CH7465MT   ░░░░░░██████████████  11yr  Current
 ├── 2016  Netgear     C7000v2    ░░░░░░░█████████████  10yr  Current
@@ -117,18 +119,29 @@ DOCSIS 3.1
 ├── 2017  ARRIS       SB8200     ░░░░░░░░████████████   9yr  Current
 ├── 2017  ARRIS       SB8200     ░░░░░░░░████████████   9yr  Current
 ├── 2017  Technicolor TC4400     ░░░░░░░░████████████   9yr  Current
+├── 2017  Technicolor XB6        ░░░░░░░░████████████   9yr  Current
+├── 2018  Netgear     CM1100     ░░░░░░░░░░██████████   8yr  Current
+├── 2018  Arris       TG3442DE   ░░░░░░░░░░██████████   8yr  Current
 ├── 2019  Netgear     CM1200     ░░░░░░░░░░░█████████   7yr  Current
+├── 2020  Technicolor CGA4236    ░░░░░░░░░░░░████████   6yr  Current
 ├── 2020  Netgear     CM2000     ░░░░░░░░░░░░████████   6yr  Current
+├── 2020  Netgear     CM2050V    ░░░░░░░░░░░░████████   6yr  Current
+├── 2020  Sercomm     DM1000     ░░░░░░░░░░░░████████   6yr  Current
 ├── 2020  Motorola    MB8611     ░░░░░░░░░░░░████████   6yr  Current
 ├── 2020  Arris       S33        ░░░░░░░░░░░░████████   6yr  Current
 ├── 2020  Arris       S33        ░░░░░░░░░░░░████████   6yr  Current
 ├── 2020  Arris       S33        ░░░░░░░░░░░░████████   6yr  Current
 ├── 2020  Technicolor XB7        ░░░░░░░░░░░░████████   6yr  Current
+├── 2021  Technicolor CGA6444VF  ░░░░░░░░░░░░░███████   5yr  Current
 ├── 2021  Sagemcom    F3896LG-VM ░░░░░░░░░░░░░███████   5yr  Current
+├── 2022  Hitron      CODA56     ░░░░░░░░░░░░░░░█████   4yr  Current
+├── 2022  Technicolor XB8        ░░░░░░░░░░░░░░░█████   4yr  Current
 ├── 2023  Compal      CH8978E    ░░░░░░░░░░░░░░░░████   3yr  Current
 ├── 2023  CommScope   G54        ░░░░░░░░░░░░░░░░████   3yr  Current
 ├── 2023  ARRIS       SB8200     ░░░░░░░░░░░░░░░░████   3yr  Current
-└── 2024  Arris       S34        ░░░░░░░░░░░░░░░░░███   2yr  Current
+├── 2024  Netgear     CM3000     ░░░░░░░░░░░░░░░░░███   2yr  Current
+├── 2024  Arris       S34        ░░░░░░░░░░░░░░░░░███   2yr  Current
+└── 2025  Technicolor XB10       ░░░░░░░░░░░░░░░░░░██   1yr  Current
 ```
 
 _Timeline: █ = years actively supported, ░ = discontinued or not yet released_
@@ -173,6 +186,7 @@ _Scale: 2010-2026 (16 years)_
 | <span id="volia"></span>VOLY | Volia | Ukraine | [Official list](https://en.wikipedia.org/wiki/Volia_(ISP)) | Acquired by Datagroup (2021) |
 | <span id="pyür"></span>PYÜR | Pyür | Germany | [Official list](https://www.pyur.com/) | Formerly Tele Columbus |
 | <span id="vodafone"></span>VDF | Vodafone Kabel | Germany | [Official list](https://www.vodafone.de/) | BYOM allowed since 2016; absorbed Unitymedia |
+| <span id="magenta"></span>MAG | Magenta Telekom | Austria | [Official list](https://www.magenta.at/hilfe-service/services/hardwaresupport/device/internet-fiber/box) | Formerly UPC Austria / T-Mobile Austria; distributes CH7465MT as Internet Fiber Box |
 | <span id="unitymedia"></span>UM | Unitymedia | Germany (West) | — | Merged into Vodafone (2019) |
 | <span id="virgin"></span>VM | Virgin Media | UK | [Official list](https://www.virginmedia.com/) | No BYOM; modem mode available |
 | <span id="telia"></span>TEL | Telia | Nordic/Baltic | [Official list](https://www.teliacompany.com/) | Sweden, Finland, Norway, Baltics |
@@ -187,4 +201,4 @@ _Scale: 2010-2026 (16 years)_
 
 ---
 
-Generated by `scripts/generate_catalog_index.py` from 43 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).
+Generated by `scripts/generate_catalog_index.py` from 44 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).

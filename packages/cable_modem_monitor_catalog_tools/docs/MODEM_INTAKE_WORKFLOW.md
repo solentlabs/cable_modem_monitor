@@ -61,6 +61,40 @@ caused a modem that really returns bad tags to be processed
 incorrectly. The only sanctioned transformation is PII value
 sanitization at intake, which replaces values and never structure.
 
+### Reconstructed fixtures
+
+Not every fixture is a wire capture. Before har-capture existed,
+entries were routinely assembled from user-supplied HTML and
+diagnostics (`creator` values like `fixtures_to_har (synthetic)`,
+`synthetic`, and `composite (fixture + har-capture)` across the
+fleet record this). The practice is legitimate; this section
+codifies the rules it must follow.
+
+When no HAR exists but a sibling model's live parse output proves
+structural compatibility (a diagnostics capture showing the sibling's
+parser fully extracting channels on the new hardware), a fixture may
+be *reconstructed*: the sibling's HAR is used as the structural
+template and every parsed value is substituted with the real values
+observed in the diagnostics. This is not an edited capture — it is a
+new artifact that must declare itself:
+
+- `log.creator.name` identifies the fixture as reconstructed (the
+  fleet convention: synthetic fixtures self-identify in `creator`).
+- `log.comment` in the HAR states it is reconstructed, names the
+  template model, the evidence issue, and lists every unobserved
+  template-filler field (e.g. lock status, symbol rates).
+- The `modem.yaml` `notes:` block repeats the provenance and says the
+  fixture is replaced when a real HAR arrives.
+- The entry ships as `status: awaiting_verification`, never
+  `confirmed`.
+- The reconstruction is only valid when the parsed diagnostics values
+  round-trip: run the parser over the reconstructed HAR and diff the
+  output against the diagnostics — zero mismatches required.
+
+First use under these codified rules: Technicolor XB8 (CGM4981COM),
+issue #101, reconstructed from the XB7 fixture plus a v3.12.0
+diagnostics capture.
+
 ## Inputs
 
 You provide one of:
@@ -224,6 +258,11 @@ For each item in `enrich_result.missing`:
 
 - **hardware.chipset**: web search `"{manufacturer} {model} chipset"`
 - **hardware.docsis_version**: check if OFDM channels detected (= 3.1), else 3.0
+- **hardware.release_date**: web search the launch announcement
+  (manufacturer press release, ISP rollout coverage). An FCC grant or
+  dated manufacturer manual is an acceptable proxy — label it as such
+  in `sources.release_date`. Feeds the catalog README timeline;
+  entries without it are silently omitted from that rendering.
 - **isps**: web search `"{model} compatible ISPs"`
 - **default_host**: usually 192.168.100.1 for DOCSIS modems
 - **brands**: user-visible box branding. Check firmware brand fields in

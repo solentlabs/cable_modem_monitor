@@ -11,10 +11,12 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: Intel Puma 6
+  release_date: "2014"
 
 status: confirmed
 
 sources:
+  release_date: "[ARRIS Touchstone TM1602 User's Guide (mirror)](https://www.top4runners.com/computer/Arris%20TM1602%20User%20Guide.pdf) — manufacturer documentation imprinted 'Release 16 Standard 1.3 July 2014', ©ARRIS 2014; Optimum deployment threads on DSLReports begin 2014-2015"
   brands: "[Arris Touchstone TM1602A](https://compatiblemodems.com/modems/arris-touchstone-tm1602a-docsis-3-0-upgradeable-16x4-telephony-modem/) — Touchstone product line"
   auth_config: "HAR capture (#112) — no login required"
   chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Arris_TM1602A)"
@@ -28,7 +30,7 @@ attribution:
 isps:
   - Spectrum
 notes: |
-  DOCSIS 3.0 / PacketCable 2.0 Telephony Modem (released ~2016).
+  DOCSIS 3.0 / PacketCable 2.0 Telephony Modem.
   No authentication required — CGI endpoints are publicly accessible.
   Same CGI structure as CM820B: /cgi-bin/status_cgi (channels + uptime)
   and /cgi-bin/vers_cgi (firmware/hardware version). Version info

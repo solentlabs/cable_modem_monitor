@@ -1,0 +1,130 @@
+downstream:
+  format: table_transposed
+  resource: "/network_setup.jst"
+  tables:
+    - channel_type:
+        field: modulation
+        map:
+          "QAM256": "qam"
+          "OFDM": "ofdm"
+
+      rows:
+        - field: channel_id
+          label: "Channel ID"
+          type: integer
+        - field: lock_status
+          label: "Lock Status"
+          type: lock_status
+        - field: frequency
+          label: "Frequency"
+          type: frequency
+          unit: "MHz"
+        - field: snr
+          label: "SNR"
+          type: float
+          unit: "dB"
+        - field: power
+          label: "Power Level"
+          type: float
+          unit: "dBmV"
+        - field: modulation
+          label: "Modulation"
+          type: string
+          map:
+            "256 QAM": "QAM256"
+      selector:
+        match: "Downstream"
+        type: header_text
+    - merge_by:
+        - channel_id
+      rows:
+        - field: channel_id
+          label: "Channel ID"
+          type: integer
+        - field: corrected
+          label: "Correctable Codewords"
+          type: integer
+        - field: uncorrected
+          label: "Uncorrectable Codewords"
+          type: integer
+
+      selector:
+        match: "CM Error Codewords"
+        type: header_text
+upstream:
+  format: table_transposed
+  resource: "/network_setup.jst"
+  # docsIfUpChannelType (DOCS-IF-MIB, RFC 4546) has no OFDMA value.
+  # OFDMA upstream channels are in DOCS-IF31-MIB which defines no channel
+  # type field — the firmware renders the SC-QAM fallback "TDMA" for OFDMA
+  # channels. Read channel_type directly from the Channel Type HTML row;
+  # "TDMA" maps to "ofdma" here because of that firmware convention.
+  rows:
+    - field: channel_id
+      label: "Channel ID"
+      type: integer
+    - field: lock_status
+      label: "Lock Status"
+      type: lock_status
+    - field: frequency
+      label: "Frequency"
+      type: frequency
+      unit: "MHz"
+    - field: power
+      label: "Power Level"
+      type: float
+      unit: "dBmV"
+    - field: channel_type
+      label: "Channel Type"
+      type: string
+      map:
+        "TDMA_AND_ATDMA": "atdma"
+        "ATDMA": "atdma"
+        "TDMA": "ofdma"
+    - field: symbol_rate
+      label: "Symbol Rate"
+      type: integer
+  selector:
+    match: "Upstream"
+    type: header_text
+
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/network_setup.jst"
+      fields:
+        - field: system_uptime
+          label: "System Uptime"
+          type: uptime
+          format: "{days} days {hours}h:{minutes}m:{seconds}s"
+        - field: software_version
+          label: "Download Version"
+          type: string
+        - field: downstream_status
+          label: "Acquire Downstream Channel"
+          type: string
+          map:
+            "Complete": "Operational"
+        - field: upstream_status
+          label: "Upstream Ranging"
+          type: string
+          map:
+            "Complete": "Operational"
+        - field: hardware_version
+          label: "HW Version"
+          type: string
+        - field: model_name
+          label: "Model"
+          type: string
+
+computed:
+  docsis_status:
+    operation: combined_status
+    inputs:
+      ds: downstream_status
+      us: upstream_status
+# DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
+# at a vastly different scale and are not aggregated.
+# Aggregate intentionally omitted. Firmware duplicates OFDM error
+# data onto QAM channel IDs (see modem.yaml quirks), making QAM
+# totals unreliable. Per-channel data is still available.

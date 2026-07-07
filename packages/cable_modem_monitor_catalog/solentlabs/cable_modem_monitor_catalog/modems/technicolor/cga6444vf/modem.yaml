@@ -35,10 +35,16 @@ actions:
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
+  release_date: "2021"
 
 status: awaiting_verification
 
 sources:
+  release_date:
+    "[Vodafone Germany CGA6444VF manual, 2021-05-11](https://www.vodafone.de/downloadarea/CGA6444VF-DMS3-CTC-25-593_v2.0_German_public_20210511.pdf)
+    — dated official support documentation; corroborated by
+    [vodafonekabelforum.de thread, August 2021](https://www.vodafonekabelforum.de/viewtopic.php?t=44454)
+    reporting the device newly issued as the Vodafone Station Wi-Fi 6"
   auth_config:
     "[#120 CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120)
     — PBKDF2 double-hash auth"
