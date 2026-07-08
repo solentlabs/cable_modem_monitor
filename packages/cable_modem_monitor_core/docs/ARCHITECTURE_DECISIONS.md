@@ -9,7 +9,7 @@ files; this document explains the choices that shaped them.
 | Section | What it covers |
 |---------|----------------|
 | [Package Boundaries](#package-boundaries) | Runtime package split, dependency direction, where each piece lives |
-| [Core Schema Model](#core-schema-model) | What enters Core's schema vs what stays user-side |
+| [Core Schema Model](#core-schema-model) | What enters Core's schema vs what stays user-side; catalog stores source-faithful strings, display normalizes |
 | [Transport and Constraint Model](#transport-and-constraint-model) | Transport as protocol identifier, implicit capabilities |
 | [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging |
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
@@ -214,6 +214,29 @@ fall on the blueprint side for the same reason.
   HA blueprints, not in Core. PR proposals that require relaxing this
   rule (e.g., a signal-health sensor inside Core) are out of scope by
   this decision.
+
+### Catalog data stays true to source; normalization happens at presentation
+
+**Decision:** The catalog is the authoritative record of what each
+modem reports about itself and how its manufacturer brands it.
+`manufacturer:` in modem.yaml stores the manufacturer's actual
+styling (`ARRIS` if that's how the modem self-reports, `Arris` if
+that's what comes back from HNAP, `Compal`, `Hitron`, etc.). Data is
+never pre-normalized to title case in the catalog.
+
+**Why:** This project is a universal translator. Variation in
+manufacturer string across the same vendor's products is real signal
+— different firmware reports the manufacturer differently — not
+drift to be ironed out. Normalizing at the source would destroy
+evidence the fleet actually exhibits.
+
+**Constrains:**
+
+- Display layers (`build_model_display_name` in the integration's
+  config flow, sensor titles, etc.) own case normalization for human
+  readability. The catalog never does.
+- Intake and review must not "fix" styling inconsistencies between
+  entries; matching the hardware's own output is the requirement.
 
 ---
 
@@ -1031,6 +1054,44 @@ users during setup.
 filename stem) already communicates the version to the user — duplication
 degrades the label. `firmware` should always be recorded when known as it is
 useful for future tooling and contributor reference.
+
+### Brand names as manufacturer-step choices
+
+**Decision:** One catalog record per physical product. `manufacturer:`
+stores the maker as the firmware reports it and determines the modem's
+directory (`modems/{manufacturer}/{model}/`). `brands:` stores the
+user-visible brand names from the product/box. The config flow's
+manufacturer dropdown is built from the union of `manufacturer` values
+and `brands` entries, so a rebranded modem appears under every name a
+user might look for while remaining a single record.
+
+**Rationale:** The G54 (#72) is made by CommScope (firmware
+`manufacturer` field) but sold under the Arris brand (firmware
+`customer` field, box branding). Filing it under CommScope only made it
+undiscoverable for a user holding an Arris box; duplicating the entry
+under Arris would fork one product's evidence trail (HAR, golden files,
+verification status) across two records. The rule: disk and
+`manufacturer:` reflect what the hardware reports; dropdowns reflect
+what the user sees.
+
+**Constrains:** Rebrands never get a second catalog entry —
+MODEM_YAML_SPEC § Aliases vs Separate Entries governs. `brands` entries
+must be sourced (box, marketing page, or firmware fields such as
+`customer`). The model line's parenthetical shows alternate user-facing
+names — `model_aliases` ∪ `brands`; `model_aliases` is not a dropdown
+dimension, and firmware-internal identifiers (product codes, platform
+strings) belong in neither field. Manufacturer display casing is
+presentation-only and must preserve deliberate mixed case (CommScope,
+not Commscope).
+
+Labels are bucket-contextual: within a brand bucket the model line
+leads with the brand name, and the parenthetical lists aliases and
+other brands (`Xfinity XB6 (CGM4140COM)` under Xfinity), adding the
+manufacturer-composed name only when no alias anchors the entry
+(`Arris G54 (CommScope G54)` under Arris); within the manufacturer
+bucket and the All view it leads with the manufacturer
+(`CommScope G54 (Arris)`). The lead always matches the filter the user
+chose.
 
 ---
 

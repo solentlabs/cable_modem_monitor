@@ -42,7 +42,6 @@ from custom_components.cable_modem_monitor.sensor import (
     ModemLastBootTimeSensor,
     ModemSoftwareVersionSensor,
     ModemStatusSensor,
-    ModemSystemUptimeSensor,
     PingLatencySensor,
     SystemInfoFieldSensor,
     TcpLatencySensor,
@@ -56,12 +55,6 @@ from .conftest import MOCK_ENTRY_DATA, MOCK_MODEM_DATA
 # -----------------------------------------------------------------------
 # Module-level test data
 # -----------------------------------------------------------------------
-
-MODEM_DATA_RAW_SECONDS_UPTIME: dict[str, Any] = {
-    "system_info": {"system_uptime": "90061"},
-    "downstream": [],
-    "upstream": [],
-}
 
 MODEM_DATA_WITH_LAN: dict[str, Any] = {
     **MOCK_MODEM_DATA,
@@ -301,18 +294,6 @@ def test_software_version_sensor_value(mock_runtime_data):
     """Software version sensor returns version string."""
     sensor = _make_sensor(ModemSoftwareVersionSensor, mock_runtime_data)
     assert sensor.native_value == "4502.9.016"
-
-
-def test_system_uptime_sensor_value(mock_runtime_data):
-    """System uptime returns raw string."""
-    sensor = _make_sensor(ModemSystemUptimeSensor, mock_runtime_data)
-    assert sensor.native_value == "2d 5h 30m"
-
-
-def test_system_uptime_sensor_raw_seconds(mock_runtime_data):
-    """System uptime formats raw seconds into human-readable form."""
-    sensor = _make_sensor(ModemSystemUptimeSensor, mock_runtime_data, modem_data=MODEM_DATA_RAW_SECONDS_UPTIME)
-    assert sensor.native_value == "1d 1h 1m 1s"
 
 
 def test_modem_info_sensor(mock_runtime_data):
@@ -780,12 +761,11 @@ def test_create_data_dependent_entities(mock_runtime_data):
     #   2 error totals (corrected + uncorrected)
     #   2 error rates (corrected + uncorrected)
     #   1 software version
-    #   1 system uptime
-    #   1 last boot time (uptime present)
+    #   1 last boot time (uptime present; no uptime sensor — display-derived)
     #   12 channel sensors (see test_create_channel_sensors_downstream)
     #   0 LAN sensors (no lan_stats)
-    # Total = 21
-    assert len(entities) == 21
+    # Total = 20
+    assert len(entities) == 20
 
     rate_sensors = [e for e in entities if isinstance(e, ModemErrorRateSensor)]
     assert len(rate_sensors) == 2
@@ -847,9 +827,9 @@ def test_create_data_dependent_entities_with_passthrough(mock_runtime_data):
     coord, entry = _make_coord_and_entry(MODEM_DATA_WITH_PASSTHROUGH, mock_runtime_data)
     entities = _create_data_dependent_entities(coord, entry, MODEM_DATA_WITH_PASSTHROUGH)
 
-    # Base case has 21 entities (see test_create_data_dependent_entities).
-    # MODEM_DATA_WITH_PASSTHROUGH adds 3 Tier 3 fields → 21 + 3 = 24.
-    assert len(entities) == 24
+    # Base case has 20 entities (see test_create_data_dependent_entities).
+    # MODEM_DATA_WITH_PASSTHROUGH adds 3 Tier 3 fields → 20 + 3 = 23.
+    assert len(entities) == 23
 
     passthrough = [e for e in entities if isinstance(e, SystemInfoFieldSensor)]
     assert len(passthrough) == 3
@@ -869,6 +849,28 @@ def test_create_data_dependent_entities_passthrough_sorted(mock_runtime_data):
     passthrough = [e for e in entities if isinstance(e, SystemInfoFieldSensor)]
     fields = [s._field for s in passthrough]
     assert fields == sorted(fields)
+
+
+def test_create_data_dependent_entities_display_only_not_minted(mock_runtime_data):
+    """Display-only fields never become pass-through sensors."""
+    from custom_components.cable_modem_monitor.sensor import (
+        _create_data_dependent_entities,
+    )
+
+    modem_data: dict[str, Any] = {
+        **MOCK_MODEM_DATA,
+        "system_info": {
+            **MOCK_MODEM_DATA["system_info"],
+            "current_time": "Thu Jan 01 12:00:00 2026",
+            "hardware_version": "V1.0",
+            "model_name": "TPS-2000",
+        },
+    }
+    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
+    entities = _create_data_dependent_entities(coord, entry, modem_data)
+
+    passthrough_fields = {e._field for e in entities if isinstance(e, SystemInfoFieldSensor)}
+    assert passthrough_fields.isdisjoint({"current_time", "hardware_version", "model_name"})
 
 
 # -----------------------------------------------------------------------
@@ -922,7 +924,7 @@ def test_deferred_creation_on_first_data(mock_runtime_data):
     # Entities should be added
     add_entities.assert_called_once()
     created = add_entities.call_args[0][0]
-    assert len(created) == 21  # Same as test_create_data_dependent_entities
+    assert len(created) == 20  # Same as test_create_data_dependent_entities
 
 
 def test_deferred_creation_noop_while_no_data(mock_runtime_data):
@@ -1058,6 +1060,109 @@ def test_last_boot_time_returns_none_when_no_uptime_or_reset(mock_runtime_data):
 
     sensor = ModemLastBootTimeSensor(coord, entry)
     assert sensor.native_value is None
+
+
+# -----------------------------------------------------------------------
+# ModemLastBootTimeSensor — jitter tolerance (only real reboots move it)
+# -----------------------------------------------------------------------
+
+
+def _boot_time_poll(sensor, coord, uptime, stats_last_reset=None):
+    """Advance the sensor one poll: swap the snapshot and invalidate the cache."""
+    system_info = {} if uptime is None else {"system_uptime": uptime}
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data={"system_info": system_info, "downstream": [], "upstream": []},
+        stats_last_reset=stats_last_reset,
+    )
+    sensor.__dict__.pop("native_value", None)
+    return sensor.native_value
+
+
+def test_last_boot_time_stable_across_poll_jitter(mock_runtime_data):
+    """A few seconds of poll-timing jitter must not move the emitted boot time.
+
+    Uptime keeps increasing between polls (it can never decrease
+    without a reboot); jitter shows up as the computed timestamp
+    wobbling because the increase doesn't exactly match wall time.
+    """
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    sensor = ModemLastBootTimeSensor(coord, entry)
+
+    first = _boot_time_poll(sensor, coord, "86400")
+    second = _boot_time_poll(sensor, coord, "86410")
+
+    assert first is not None
+    assert second == first
+
+
+def test_last_boot_time_updates_on_real_reboot(mock_runtime_data):
+    """A large uptime drop (real reboot) replaces the emitted boot time."""
+    from datetime import timedelta
+
+    from homeassistant.util import dt as dt_util
+
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    sensor = ModemLastBootTimeSensor(coord, entry)
+
+    first = _boot_time_poll(sensor, coord, "86400")
+    second = _boot_time_poll(sensor, coord, "60")
+
+    assert first is not None
+    assert second is not None
+    assert second != first
+    assert second - first > timedelta(hours=23)
+    assert abs(second - (dt_util.now() - timedelta(seconds=60))) < timedelta(minutes=1)
+
+
+def test_last_boot_time_double_reboot_within_tolerance(mock_runtime_data):
+    """An uptime decrease is reboot evidence even inside the jitter tolerance."""
+    from datetime import timedelta
+
+    from homeassistant.util import dt as dt_util
+
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    sensor = ModemLastBootTimeSensor(coord, entry)
+
+    _boot_time_poll(sensor, coord, "86400")
+    first_reboot = _boot_time_poll(sensor, coord, "300")
+    # Second reboot 4 minutes after the first: timestamps land inside
+    # the tolerance, but uptime dropped 300 → 60.
+    second_reboot = _boot_time_poll(sensor, coord, "60")
+
+    assert first_reboot is not None
+    assert second_reboot is not None
+    assert second_reboot != first_reboot
+    assert abs(second_reboot - (dt_util.now() - timedelta(seconds=60))) < timedelta(minutes=1)
+
+
+def test_last_boot_time_keeps_restored_value_when_sources_absent(mock_runtime_data):
+    """A restored boot time survives polls that carry no uptime or reset data."""
+    from datetime import UTC, datetime
+
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    sensor = ModemLastBootTimeSensor(coord, entry)
+    restored = datetime(2026, 6, 1, 3, 0, 0, tzinfo=UTC)
+    sensor._stable_boot_time = restored
+
+    assert _boot_time_poll(sensor, coord, None) == restored
+
+
+def test_last_boot_time_counter_reset_respects_tolerance(mock_runtime_data):
+    """A stats_last_reset within tolerance of the held value does not rewrite it."""
+    from datetime import timedelta
+
+    from homeassistant.util import dt as dt_util
+
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    sensor = ModemLastBootTimeSensor(coord, entry)
+
+    held = dt_util.now() - timedelta(days=2)
+    sensor._stable_boot_time = held
+    nearby_reset = held + timedelta(seconds=30)
+
+    assert _boot_time_poll(sensor, coord, None, stats_last_reset=nearby_reset) == held
 
 
 # -----------------------------------------------------------------------

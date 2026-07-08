@@ -225,6 +225,37 @@ class TestResolveModemDir:
         assert result is None
 
 
+# Relocated catalog identities — REAL catalog, no mocks. Entries that were
+# renamed to their true manufacturer must stay resolvable from the identity a
+# pre-rename config entry stored. This resolver-based self-heal is what
+# replaced a dedicated modem_dir migration when the dirs moved; if one of
+# these cases breaks, upgrading users lose their modem at setup.
+# fmt: off
+RELOCATED_IDENTITY_CASES = [
+    # (stored manufacturer, stored model, expected dir,          id)
+    ("Arris",         "G54",         "commscope/g54",         "g54-old-identity"),
+    ("CommScope",     "G54",         "commscope/g54",         "g54-current-identity"),
+    ("Virgin Media",  "Hub 5",       "sagemcom/f3896lg-vmb",  "hub5-old-identity"),
+    ("Virgin Media",  "SuperHub 5",  "sagemcom/f3896lg-vmb",  "hub5-community-name"),
+    ("Sagemcom",      "F3896LG-VMB", "sagemcom/f3896lg-vmb",  "hub5-current-identity"),
+]
+# fmt: on
+
+
+class TestResolveRelocatedIdentities:
+    """Pre-rename identities resolve to the relocated catalog dirs (real catalog)."""
+
+    @pytest.mark.parametrize(
+        "manufacturer,model,expected_dir,desc",
+        RELOCATED_IDENTITY_CASES,
+        ids=[c[3] for c in RELOCATED_IDENTITY_CASES],
+    )
+    def test_resolves_to_new_dir(self, manufacturer, model, expected_dir, desc):
+        result = resolve_modem_dir(manufacturer, model)
+        assert result is not None, f"{manufacturer} {model} no longer resolves"
+        assert result.modem_dir == expected_dir
+
+
 # =============================================================================
 # resolve_variant — match v1 auth_strategy to catalog variant
 # =============================================================================
@@ -450,6 +481,17 @@ class TestFullMigrationShape:
 class TestAsyncMigrate:
     """Test the async_migrate HA wrapper with mocked I/O."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_entity_registry(self):
+        """Stub the entity registry; tests override registry_entries as needed."""
+        self.registry = MagicMock()
+        self.registry.entities.get_entries_for_config_entry_id.return_value = []
+        with patch(
+            "custom_components.cable_modem_monitor.migrations.v1_to_v2.er.async_get",
+            return_value=self.registry,
+        ):
+            yield
+
     async def test_success(self):
         """Successful migration updates entry to v2 with catalog values."""
         hass = MagicMock()
@@ -484,6 +526,45 @@ class TestAsyncMigrate:
         assert new_data["manufacturer"] == "Vendor"
         assert new_data["model"] == "Model"
         assert new_data["health_check_interval"] == 30
+
+    async def test_removes_discontinued_v1_entities(self):
+        """Migration drops the v1 System Uptime registry row; others survive."""
+        from types import SimpleNamespace
+
+        hass = MagicMock()
+        entry = MagicMock()
+        entry.data = _build_v1_entry()
+        entry.entry_id = "test_id"
+
+        async def _mock_executor(func, *args):
+            return func(*args)
+
+        hass.async_add_executor_job = _mock_executor
+        self.registry.entities.get_entries_for_config_entry_id.return_value = [
+            SimpleNamespace(
+                entity_id="sensor.modem_system_uptime",
+                unique_id="test_id_cable_modem_system_uptime",
+            ),
+            SimpleNamespace(
+                entity_id="sensor.modem_last_boot_time",
+                unique_id="test_id_cable_modem_last_boot_time",
+            ),
+        ]
+
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_modem_dir",
+                return_value=ResolvedModem("vendor/model", "Vendor", "Model", []),
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.migrations.v1_to_v2.resolve_variant",
+                return_value="basic",
+            ),
+        ):
+            assert await async_migrate(hass, entry) is True
+
+        removed = {call.args[0] for call in self.registry.async_remove.call_args_list}
+        assert removed == {"sensor.modem_system_uptime"}
 
     async def test_success_uses_catalog_manufacturer(self):
         """Migration uses canonical catalog manufacturer, not raw v1 value."""

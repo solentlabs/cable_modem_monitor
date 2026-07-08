@@ -127,12 +127,28 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         )
 
     if isinstance(event, AuthCircuitBreakerOpen):
+        if event.status_code == 404:
+            # Endpoint absence is not a credential rejection — the
+            # device at this address has no login page (wrong device,
+            # or the modem's web layer is unavailable).
+            return (
+                f"Auth circuit breaker OPEN [{event.model}] — login endpoint not found"
+                " (HTTP 404: wrong device at this address, or modem web interface"
+                " unavailable). Polling stopped. Reload the integration to retry."
+            )
         return (
             f"Auth circuit breaker OPEN [{event.model}] — {event.streak} consecutive"
             " auth failures. Polling stopped. Reconfigure credentials to resume."
         )
 
     if isinstance(event, CircuitBreakerPollingBlocked):
+        if event.status_code == 404:
+            # Preserve the trip reason on every blocked poll — after a
+            # 404 trip, credentials are not the fix.
+            return (
+                f"Circuit breaker OPEN [{event.model}] — login endpoint not found"
+                " (HTTP 404). Polling stopped. Reload the integration to retry."
+            )
         return f"Circuit breaker OPEN [{event.model}] — polling stopped. Reconfigure credentials to resume."
 
     if isinstance(event, AuthStateReset):

@@ -29,6 +29,7 @@ from custom_components.cable_modem_monitor.config_flow_helpers import (
     _detect_and_inject_form_nonce_encoding,
     _run_validation,
     build_model_display_name,
+    build_model_options,
     classify_error,
     default_health_check_interval,
     detect_probes,
@@ -199,6 +200,35 @@ def test_get_manufacturers_normalizes_and_deduplicates():
     assert get_manufacturers(summaries) == ["Arris", "Netgear"]
 
 
+def test_get_manufacturers_preserves_mixed_case():
+    """Deliberate mixed case survives display normalization (CommScope, not Commscope)."""
+    summaries = [
+        ModemSummary(manufacturer="CommScope", model="G54", path=Path("/fake")),
+        ModemSummary(manufacturer="ARRIS", model="SB8200", path=Path("/fake")),
+    ]
+    assert get_manufacturers(summaries) == ["Arris", "CommScope"]
+
+
+def test_get_manufacturers_includes_brands():
+    """Dropdown is the union of manufacturer and brand names (ARCHITECTURE_DECISIONS § Config Flow)."""
+    summaries = [
+        ModemSummary(manufacturer="CommScope", model="G54", brands=["Arris"], path=Path("/fake")),
+        ModemSummary(manufacturer="Arris", model="S33", brands=["Surfboard"], path=Path("/fake")),
+    ]
+    assert get_manufacturers(summaries) == ["Arris", "CommScope", "Surfboard"]
+
+
+def test_get_manufacturers_merges_brand_case_variants():
+    """Case variants of one brand collapse to a single dropdown entry."""
+    summaries = [
+        ModemSummary(manufacturer="Arris", model="S33", brands=["Surfboard"], path=Path("/fake")),
+        ModemSummary(manufacturer="Arris", model="SB6183", brands=["SURFboard"], path=Path("/fake")),
+    ]
+    result = get_manufacturers(summaries)
+    assert len(result) == 2
+    assert [r.lower() for r in result] == ["arris", "surfboard"]
+
+
 def test_get_manufacturers_empty():
     """Empty summaries returns empty list."""
     assert get_manufacturers([]) == []
@@ -222,47 +252,174 @@ def test_filter_by_manufacturer_no_match():
     assert filter_by_manufacturer(summaries, "Motorola") == []
 
 
+def test_filter_by_manufacturer_matches_brands():
+    """A brand-bucket selection surfaces modems carrying that brand (G54 under Arris)."""
+    summaries = [
+        ModemSummary(manufacturer="CommScope", model="G54", brands=["Arris"], path=Path("/fake")),
+        ModemSummary(manufacturer="Arris", model="S33", brands=["Surfboard"], path=Path("/fake")),
+        ModemSummary(manufacturer="Netgear", model="CM1100", path=Path("/fake")),
+    ]
+    result = filter_by_manufacturer(summaries, "Arris")
+    assert {s.model for s in result} == {"G54", "S33"}
+    assert {s.model for s in filter_by_manufacturer(summaries, "Surfboard")} == {"S33"}
+
+
 # =====================================================================
 # Pure-function helpers — build_model_display_name
 # =====================================================================
 
-# ┌──────────────┬──────────┬───────────────┬──────────────────────────┬──────────────────────────────┬────────────────┐
-# │ manufacturer │ model    │ aliases       │ status                   │ expected                     │ description    │
-# ├──────────────┼──────────┼───────────────┼──────────────────────────┼──────────────────────────────┼────────────────┤
-# │ "ARRIS"      │ "SB8200" │ []            │ "confirmed"              │ "Arris SB8200"               │ basic          │
-# │ "Motorola"   │ "MB8611" │ ["MB8612"]    │ "confirmed"              │ "Motorola MB8611 (MB8612)"   │ with_alias     │
-# │ "netgear"    │ "CM1100" │ []            │ "awaiting_verification"  │ "Netgear CM1100 *"           │ unverified     │
-# │ "ARRIS"      │ "CM820B" │ ["Zoom 5370"] │ "awaiting_verification"  │ "Arris CM820B (Zoom 5370) *" │ alias_and_star │
-# └──────────────┴──────────┴───────────────┴──────────────────────────┴──────────────────────────────┴────────────────┘
+# Status column: ✓ = "confirmed", * = "awaiting_verification".
+# ┌──────────────┬──────────┬─────────────────────┬───────────────┬───┬──────────────────────────────────────────────┐
+# │ manufacturer │ model    │ aliases             │ brands        │ st│ expected                                     │
+# ├──────────────┼──────────┼─────────────────────┼───────────────┼───┼──────────────────────────────────────────────┤
+# │ "ARRIS"      │ "SB8200" │ []                  │ []            │ ✓ │ "Arris SB8200"                               │
+# │ "Motorola"   │ "MB8611" │ ["MB8612"]          │ []            │ ✓ │ "Motorola MB8611 (MB8612)"                   │
+# │ "netgear"    │ "CM1100" │ []                  │ []            │ * │ "Netgear CM1100 *"                           │
+# │ "ARRIS"      │ "CM820B" │ ["Zoom 5370"]       │ []            │ * │ "Arris CM820B (Zoom 5370) *"                 │
+# │ "CommScope"  │ "G54"    │ []                  │ ["Arris"]     │ * │ "CommScope G54 (Arris) *"                    │
+# │ "Arris"      │ "S33"    │ []                  │ ["Surfboard"] │ ✓ │ "Arris S33 (Surfboard)"                      │
+# │ "ARRIS"      │ "SB6141" │ ["Motorola SB6141"] │ ["SURFboard"] │ ✓ │ "Arris SB6141 (Motorola SB6141, SURFboard)"  │
+# └──────────────┴──────────┴─────────────────────┴───────────────┴───┴──────────────────────────────────────────────┘
 #
-# Remaining aliases are internal/OEM names — shown in parentheses
-# as search aids. See MODEM_YAML_SPEC.md § Aliases vs Separate Entries.
+# The parenthetical shows alternate user-facing names — model_aliases ∪
+# brands (ARCHITECTURE_DECISIONS § Config Flow). Mixed-case manufacturer
+# styling (CommScope) is preserved; single-case styling is title-cased.
 #
 # fmt: off
 DISPLAY_NAME_CASES = [
-    ("ARRIS",    "SB8200", [],             "confirmed",             "Arris SB8200",                "basic"),
-    ("Motorola", "MB8611", ["MB8612"],     "confirmed",             "Motorola MB8611 (MB8612)",    "with_alias"),
-    ("netgear",  "CM1100", [],             "awaiting_verification", "Netgear CM1100 *",            "unverified"),
-    ("ARRIS",    "CM820B", ["Zoom 5370"],  "awaiting_verification", "Arris CM820B (Zoom 5370) *",  "alias_and_star"),
+    ("ARRIS", "SB8200", [], [], "confirmed",
+     "Arris SB8200", "basic"),
+    ("Motorola", "MB8611", ["MB8612"], [], "confirmed",
+     "Motorola MB8611 (MB8612)", "with_alias"),
+    ("netgear", "CM1100", [], [], "awaiting_verification",
+     "Netgear CM1100 *", "unverified"),
+    ("ARRIS", "CM820B", ["Zoom 5370"], [], "awaiting_verification",
+     "Arris CM820B (Zoom 5370) *", "alias_and_star"),
+    ("CommScope", "G54", [], ["Arris"], "awaiting_verification",
+     "CommScope G54 (Arris) *", "brand_only"),
+    ("Arris", "S33", [], ["Surfboard"], "confirmed",
+     "Arris S33 (Surfboard)", "brand_confirmed"),
+    ("ARRIS", "SB6141", ["Motorola SB6141"], ["SURFboard"], "confirmed",
+     "Arris SB6141 (Motorola SB6141, SURFboard)", "alias_and_brand"),
 ]
 # fmt: on
 
 
 @pytest.mark.parametrize(
-    "manufacturer,model,aliases,status,expected,desc",
+    "manufacturer,model,aliases,brands,status,expected,desc",
     DISPLAY_NAME_CASES,
-    ids=[c[5] for c in DISPLAY_NAME_CASES],
+    ids=[c[6] for c in DISPLAY_NAME_CASES],
 )
-def test_build_model_display_name(manufacturer, model, aliases, status, expected, desc):
-    """build_model_display_name formats manufacturer, model, aliases, status."""
+def test_build_model_display_name(manufacturer, model, aliases, brands, status, expected, desc):
+    """build_model_display_name formats manufacturer, model, aliases ∪ brands, status."""
     summary = ModemSummary(
         manufacturer=manufacturer,
         model=model,
         model_aliases=aliases,
+        brands=brands,
         status=status,
         path=Path("/fake"),
     )
     assert build_model_display_name(summary) == expected
+
+
+# Bucket-contextual labels: the lead name matches the filter the user
+# chose. Brand bucket → brand leads; the parenthetical lists aliases
+# and other brands, adding the manufacturer-composed name only when no
+# alias anchors the entry. Manufacturer bucket / All → static label.
+# ┌────────────────┬───────────────┬───────────────────────────────────────────────────────┬──────────────────┐
+# │ modem          │ bucket        │ expected                                              │ description      │
+# ├────────────────┼───────────────┼───────────────────────────────────────────────────────┼──────────────────┤
+# │ G54            │ "Arris"       │ "Arris G54 (CommScope G54) *"                         │ brand_lead       │
+# │ G54            │ "CommScope"   │ "CommScope G54 (Arris) *"                             │ mfr_bucket       │
+# │ G54            │ None (All)    │ "CommScope G54 (Arris) *"                             │ all_view         │
+# │ G54            │ "arris"       │ "Arris G54 (CommScope G54) *"                         │ case_insensitive │
+# │ SB6141         │ "Motorola"    │ "Motorola SB6141 (Arris SB6141, SURFboard)"           │ other_brand_kept │
+# │ S33            │ "SURFboard"   │ "SURFboard S33 (Arris S33)"                           │ brand_lead_conf  │
+# │ XB6            │ "Xfinity"     │ "Xfinity XB6 (CGM4140COM) *"                          │ alias_anchored   │
+# │ XB7            │ "Xfinity"     │ "Xfinity XB7 (CGM4331COM, Panoramic Wifi)"            │ alias_and_others │
+# └────────────────┴───────────────┴───────────────────────────────────────────────────────┴──────────────────┘
+_G54 = ("CommScope", "G54", [], ["Arris"], "awaiting_verification")
+_SB6141 = ("ARRIS", "SB6141", [], ["SURFboard", "Motorola"], "confirmed")
+_S33 = ("Arris", "S33", [], ["SURFboard"], "confirmed")
+_XB6 = ("Technicolor", "XB6", ["CGM4140COM"], ["Xfinity"], "awaiting_verification")
+_XB7 = ("Technicolor", "XB7", ["CGM4331COM"], ["Xfinity", "Panoramic Wifi"], "confirmed")
+
+# fmt: off
+BUCKET_LABEL_CASES = [
+    (_G54,    "Arris",     "Arris G54 (CommScope G54) *",                "brand_lead"),
+    (_G54,    "CommScope", "CommScope G54 (Arris) *",                    "mfr_bucket"),
+    (_G54,    None,        "CommScope G54 (Arris) *",                    "all_view"),
+    (_G54,    "arris",     "Arris G54 (CommScope G54) *",                "case_insensitive"),
+    (_SB6141, "Motorola",  "Motorola SB6141 (Arris SB6141, SURFboard)",  "other_brand_kept"),
+    (_S33,    "SURFboard", "SURFboard S33 (Arris S33)",                  "brand_lead_confirmed"),
+    (_XB6,    "Xfinity",   "Xfinity XB6 (CGM4140COM) *",                 "alias_anchored"),
+    (_XB7,    "Xfinity",   "Xfinity XB7 (CGM4331COM, Panoramic Wifi)",   "alias_and_other_brand"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "modem,bucket,expected,desc",
+    BUCKET_LABEL_CASES,
+    ids=[c[3] for c in BUCKET_LABEL_CASES],
+)
+def test_build_model_display_name_bucket_contextual(modem, bucket, expected, desc):
+    """Within a brand bucket the brand leads; manufacturer bucket and All use the static label."""
+    manufacturer, model, aliases, brands, status = modem
+    summary = ModemSummary(
+        manufacturer=manufacturer,
+        model=model,
+        model_aliases=aliases,
+        brands=brands,
+        status=status,
+        path=Path("/fake"),
+    )
+    assert build_model_display_name(summary, bucket=bucket) == expected
+
+
+def test_build_model_options_all_view_lists_row_per_name():
+    """All view lists one row per user-facing name — the G54 appears under both Arris and CommScope."""
+    summaries = [
+        ModemSummary(
+            manufacturer="CommScope",
+            model="G54",
+            brands=["Arris"],
+            status="awaiting_verification",
+            path=Path("/fake"),
+        ),
+        ModemSummary(manufacturer="Netgear", model="CM1100", status="confirmed", path=Path("/fake")),
+    ]
+    options = build_model_options(summaries, None)
+    labels = [label for _, label in options]
+    assert "Arris G54 (CommScope G54) *" in labels
+    assert "CommScope G54 (Arris) *" in labels
+    assert "Netgear CM1100" in labels
+    assert labels == sorted(labels, key=str.lower)  # both G54 rows land at their own alphabet spot
+    # Brand rows carry a "|{brand}" value suffix; stripping it resolves to the same modem.
+    values = dict(zip(labels, [v for v, _ in options], strict=True))
+    assert values["CommScope G54 (Arris) *"] == "CommScope/G54"
+    assert values["Arris G54 (CommScope G54) *"] == "CommScope/G54|Arris"
+    assert values["Arris G54 (CommScope G54) *"].split("|", 1)[0] == "CommScope/G54"
+
+
+def test_build_model_options_bucket_single_row():
+    """A bucket view lists each modem once, with the bucket-contextual label."""
+    summaries = [
+        ModemSummary(
+            manufacturer="CommScope",
+            model="G54",
+            brands=["Arris"],
+            status="awaiting_verification",
+            path=Path("/fake"),
+        ),
+        ModemSummary(manufacturer="Arris", model="S33", brands=["SURFboard"], status="confirmed", path=Path("/fake")),
+    ]
+    options = build_model_options(summaries, "Arris")
+    assert options == [
+        ("CommScope/G54", "Arris G54 (CommScope G54) *"),
+        ("Arris/S33", "Arris S33 (SURFboard)"),
+    ]
 
 
 # =====================================================================

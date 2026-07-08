@@ -33,8 +33,57 @@ from catalog_reference import (  # noqa: E402  # pyright: ignore[reportMissingIm
     isp_to_badge,
     protocol_to_badge,
 )
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (  # noqa: E402
+    get_strategy_display_labels,
+)
 
 CATALOG_DIR = catalog_root / "solentlabs" / "cable_modem_monitor_catalog" / "modems"
+
+# Auth-strategy display labels (shared with the config-flow picker).
+_AUTH_STRATEGY_LABELS = get_strategy_display_labels()
+
+
+def build_model_display_names(modems: list[dict]) -> dict[int, str]:
+    """Map ``id(modem)`` to its table title, disambiguating same-model rows.
+
+    The title is the model plus its variant-name qualifier when present.
+    Hardware version is never the primary qualifier (#124): it does not
+    determine the auth contract and misled contributors into picking the
+    wrong variant. When two rows would still render identically (same model,
+    no variant name), they are distinguished by auth-strategy label, or by
+    hardware version when the auth strategy is shared across the group (e.g.
+    the Arris S33 generations). Mirrors the picker's ``format_variant_labels``.
+    """
+    base: dict[int, str] = {}
+    for m in modems:
+        variant = m.get("variant_name")
+        base[id(m)] = f"{m['model']} ({variant})" if variant else m["model"]
+
+    groups: dict[str, list[dict]] = {}
+    for m in modems:
+        groups.setdefault(base[id(m)], []).append(m)
+
+    out: dict[int, str] = {}
+    for label, members in groups.items():
+        if len(members) == 1:
+            out[id(members[0])] = label
+            continue
+        # Same base label on multiple rows — disambiguate without leading on
+        # hw_version. Auth label distinguishes when it varies; otherwise the
+        # rows differ only by hardware revision, so hw_version is the real key.
+        auths_distinct = len({m["auth_strategy"] for m in members}) == len(members)
+        for m in members:
+            if auths_distinct:
+                auth_label = _AUTH_STRATEGY_LABELS.get(m["auth_strategy"], m["auth_strategy"])
+                out[id(m)] = f"{m['model']} ({auth_label})"
+            elif m.get("hw_version"):
+                out[id(m)] = f"{m['model']} ({m['hw_version']})"
+            else:
+                # The primary entry has no distinguishing hardware version —
+                # leave it bare, like the picker leaves its version-less member.
+                out[id(m)] = m["model"]
+    return out
+
 
 # Fully qualified base URL for modem.yaml links — required because PyPI
 # renders the README outside the GitHub repo context.
@@ -196,19 +245,11 @@ def _build_summary(supported: list[dict]) -> tuple[str, str]:
     return summary, auth_str
 
 
-def _modem_table_row(m: dict) -> str:
+def _modem_table_row(m: dict, model_display: str) -> str:
     """Build a single modem table row."""
     status = _STATUS_ICONS.get(m["status"], "❓ Unknown")
     chipset = chipset_to_link(m["chipset"])
     protocol = protocol_to_badge(m["protocol"])
-    model_display = m["model"]
-    qualifiers = []
-    if m.get("hw_version"):
-        qualifiers.append(m["hw_version"])
-    if m.get("variant_name") and m["variant_name"] != m.get("hw_version"):
-        qualifiers.append(m["variant_name"])
-    if qualifiers:
-        model_display = f"{model_display} ({', '.join(qualifiers)})"
     model_link = f"[{model_display}]({_GITHUB_MODEM_BASE}/{m['path']}/{m['yaml_file']})"
     all_names = [m["model"]] + m["model_aliases"]
     names_cell = "<br>".join(all_names)
@@ -308,8 +349,9 @@ def generate_index(output_path: Path | None = None) -> str:
         "|--------------|-------|--------|-----------|---------|------|------|-------|--------|",
     ]
 
+    display_names = build_model_display_names(modems)
     for m in supported:
-        lines.append(_modem_table_row(m))
+        lines.append(_modem_table_row(m, display_names[id(m)]))
 
     if unsupported:
         lines.extend(
@@ -392,16 +434,10 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
     confirmed = [m for m in modems if m["status"] == "confirmed"]
     awaiting = [m for m in modems if m["status"] == "awaiting_verification"]
 
+    display_names = build_model_display_names(modems)
+
     def display(m: dict) -> str:
-        qualifiers = []
-        if m.get("hw_version"):
-            qualifiers.append(m["hw_version"])
-        if m.get("variant_name") and m["variant_name"] != m.get("hw_version"):
-            qualifiers.append(m["variant_name"])
-        label = m["model"]
-        if qualifiers:
-            label = f"{label} ({', '.join(qualifiers)})"
-        return label
+        return display_names[id(m)]
 
     def has_verified(m: dict) -> bool:
         test_data = CATALOG_DIR / m["path"] / "test_data"

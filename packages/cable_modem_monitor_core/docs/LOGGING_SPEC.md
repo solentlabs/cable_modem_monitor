@@ -75,7 +75,12 @@ Fields — `AuthFailed`: `model`, `strategy: str`, `error: str`, `method: str | 
 `url: str | None`, `status_code: int | None`, `content_type: str | None`,
 `response_body: str | None`
 Fields — `AuthLockoutDetected`: `model`, `streak: int`
-Fields — `AuthCircuitBreakerOpen`: `model`, `streak: int`
+Fields — `AuthCircuitBreakerOpen`: `model`, `streak: int`,
+`status_code: int | None` — HTTP status of the failed login response
+when the modem answered. A 404 renders the endpoint-not-found message
+(wrong device at the address, or modem web interface unavailable)
+instead of the credentials one; the stop behavior is identical either
+way — retrying would keep posting credentials at an unknown device.
 Fields — `CircuitBreakerPollingBlocked`: `model`
 Fields — `StaleSessionRecoveryDisabled`: `model`, `streak: int`
 

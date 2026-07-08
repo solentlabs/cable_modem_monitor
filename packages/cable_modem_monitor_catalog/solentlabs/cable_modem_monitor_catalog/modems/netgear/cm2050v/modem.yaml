@@ -16,11 +16,13 @@ auth:
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
+  release_date: "2020"
 
 status: confirmed
 
 sources:
   auth_config: "[#105 Netgear CM2050V](https://github.com/solentlabs/cable_modem_monitor/issues/105)"
+  release_date: "[Netgear press release, September 22, 2020](https://www.businesswire.com/news/home/20200922005367/en/Netgear-Introduces-Industry-first-2.5Gbps-DOCSIS-3.1-Cable-Modems-to-Deliver-Top-Internet-Speeds-to-the-Home) announcing CM2050V availability"
   chipset: "[DSLReports community post](https://www.dslreports.com/forum/r33000298-Netgear-CM2000-vs-Arris-S33-vs-Motorola-MB8611) — same BCM3390 platform as CM2000/CM1200 family"
 
 attribution:

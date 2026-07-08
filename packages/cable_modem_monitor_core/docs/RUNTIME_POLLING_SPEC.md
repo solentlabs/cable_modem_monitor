@@ -343,8 +343,9 @@ consecutive auth-related failures (AUTH_FAILED, AUTH_LOCKOUT, LOAD_AUTH,
 LOAD_INTEGRITY). After 6 consecutive failures
 (~2 lockout cycles on HNAP modems), the circuit breaker opens and
 polling stops entirely. The client (HA) triggers a reauth flow — the
-user must reconfigure credentials to resume. See `ORCHESTRATION_SPEC.md`
-§ Auth Circuit Breaker for the full use-case walkthrough.
+user must reconfigure credentials to resume. Manual refresh
+deliberately does not bypass the breaker (see `ORCHESTRATION_SPEC.md`
+§ Auth Circuit Breaker, "No manual bypass").
 
 **Single-session logout** — modems with `actions.logout` configured
 allow only one authenticated session. Logout fires in two places:

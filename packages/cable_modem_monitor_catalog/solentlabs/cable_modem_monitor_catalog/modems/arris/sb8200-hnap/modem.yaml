@@ -1,5 +1,7 @@
 manufacturer: ARRIS
 model: SB8200
+brands:
+  - "SURFboard"
 transport: hnap
 default_host: "192.168.100.1"
 
@@ -18,6 +20,7 @@ status: confirmed
 
 sources:
   auth_config: "[#165 — SB8200 HW v6 TB01 firmware](https://github.com/solentlabs/cable_modem_monitor/issues/165)"
+  brands: "[SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/) — SURFboard styling"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
   hardware: "[ARRIS SB8200 page](https://www.surfboard.com/products/cable-modems/sb8200/)"
 

@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
@@ -52,6 +53,7 @@ from .const import (
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONSUMED_SYSTEM_INFO_FIELDS,
+    DISPLAY_ONLY_SYSTEM_INFO_FIELDS,
     DOMAIN,
     ChannelIdentity,
 )
@@ -530,38 +532,16 @@ class ModemSoftwareVersionSensor(_SystemInfoSensor):
         return self._get_system_info().get("software_version")
 
 
-class ModemSystemUptimeSensor(_SystemInfoSensor):
-    """System uptime sensor (raw string from modem)."""
-
-    def __init__(
-        self,
-        coordinator: DataUpdateCoordinator[ModemSnapshot],
-        entry: CableModemConfigEntry,
-    ) -> None:
-        """Initialize the system uptime sensor."""
-        super().__init__(coordinator, entry)
-        self._attr_name = "System Uptime"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_system_uptime"
-        self._attr_icon = "mdi:clock-outline"
-
-    @functools.cached_property
-    def native_value(self) -> str | None:
-        """Return the uptime string as reported by the modem.
-
-        If the modem reports raw seconds (e.g., "1471890"), formats
-        as "17d 0h 51m 30s" for readability.
-        """
-        raw = self._get_system_info().get("system_uptime")
-        if raw and raw.strip().isdigit():
-            total = int(raw.strip())
-            days, rem = divmod(total, 86400)
-            hours, rem = divmod(rem, 3600)
-            minutes, seconds = divmod(rem, 60)
-            return f"{days}d {hours}h {minutes}m {seconds}s"
-        return raw
+# now() - uptime jitters by poll timing and uptime reporting granularity;
+# a real reboot moves the boot time by the entire prior uptime. 5 minutes
+# sits far above the jitter and far below any reboot delta (#178).
+_BOOT_TIME_JITTER_TOLERANCE = timedelta(minutes=5)
 
 
-class ModemLastBootTimeSensor(_SystemInfoSensor):
+class ModemLastBootTimeSensor(  # pyright: ignore[reportIncompatibleVariableOverride]  # rationale: ModemSensorBase.available is an intentional property override of Entity's attribute (suppressed there); adding RestoreSensor to the MRO re-raises the same variance complaint at the class level, matching HealthSensorBase
+    _SystemInfoSensor,
+    RestoreSensor,
+):
     """Last boot time (derived from system uptime or counter reset).
 
     Priority: native system_uptime from modem > counter-reset detection
@@ -580,19 +560,50 @@ class ModemLastBootTimeSensor(_SystemInfoSensor):
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_last_boot_time"
         self._attr_icon = "mdi:restart"
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
+        self._stable_boot_time: datetime | None = None
+        self._last_uptime_seconds: int | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Seed the held boot time from the last recorded state (HA restart)."""
+        await super().async_added_to_hass()
+        data = await self.async_get_last_sensor_data()
+        if data is not None:
+            restored: Any = data.native_value
+            if isinstance(restored, str):
+                restored = dt_util.parse_datetime(restored)
+            if isinstance(restored, datetime):
+                self._stable_boot_time = restored
 
     @functools.cached_property
     def native_value(self) -> datetime | None:
-        """Return last boot time calculated from uptime or counter reset."""
-        # Priority 1: native uptime from modem
+        """Return last boot time, held steady across poll-timing jitter."""
+        candidate: datetime | None = None
+        uptime_rebooted = False
         uptime_str = self._get_system_info().get("system_uptime")
         if uptime_str:
             uptime_seconds = parse_uptime_to_seconds(uptime_str)
             if uptime_seconds is not None:
-                return dt_util.now() - timedelta(seconds=uptime_seconds)
-
-        # Priority 2: counter-reset detection from orchestrator
-        return self._snapshot.stats_last_reset
+                candidate = dt_util.now() - timedelta(seconds=uptime_seconds)
+                # Uptime is monotonic within a boot — a decrease is
+                # reboot evidence even when the resulting timestamps
+                # land inside the jitter tolerance (double reboot
+                # within the deadband).
+                uptime_rebooted = self._last_uptime_seconds is not None and uptime_seconds < self._last_uptime_seconds
+                self._last_uptime_seconds = uptime_seconds
+        if candidate is None:
+            candidate = self._snapshot.stats_last_reset
+        if candidate is None:
+            return self._stable_boot_time
+        # Only reboot evidence replaces the held value: an uptime
+        # decrease, or a shift beyond the tolerance — otherwise every
+        # poll writes a slightly different timestamp to the recorder.
+        if (
+            self._stable_boot_time is None
+            or uptime_rebooted
+            or abs(candidate - self._stable_boot_time) > _BOOT_TIME_JITTER_TOLERANCE
+        ):
+            self._stable_boot_time = candidate
+        return self._stable_boot_time
 
 
 class SystemInfoFieldSensor(_SystemInfoSensor):
@@ -1023,11 +1034,11 @@ def _create_data_dependent_entities(
         entities.append(ModemErrorTotalSensor(data_coord, entry, error_type="uncorrected"))
         entities.append(ModemErrorRateSensor(data_coord, entry, error_type="uncorrected"))
 
-    # Software version and uptime (gated by field presence)
+    # Software version (gated by field presence). system_uptime gets no
+    # sensor of its own — it feeds Last Boot Time below, and uptime is
+    # rendered at display time as now − last_boot (#178).
     if "software_version" in system_info:
         entities.append(ModemSoftwareVersionSensor(data_coord, entry))
-    if "system_uptime" in system_info:
-        entities.append(ModemSystemUptimeSensor(data_coord, entry))
 
     # Last boot time — from native uptime OR counter-reset detection.
     # Gate mirrors the error-total sensors: SC-QAM aggregate presence
@@ -1045,8 +1056,9 @@ def _create_data_dependent_entities(
 
     # Tier 3 dynamic system_info sensors (pass-through)
     for field in sorted(system_info):
-        if field not in CONSUMED_SYSTEM_INFO_FIELDS:
-            entities.append(SystemInfoFieldSensor(data_coord, entry, field=field))
+        if field in CONSUMED_SYSTEM_INFO_FIELDS or field in DISPLAY_ONLY_SYSTEM_INFO_FIELDS:
+            continue
+        entities.append(SystemInfoFieldSensor(data_coord, entry, field=field))
 
     return entities
 

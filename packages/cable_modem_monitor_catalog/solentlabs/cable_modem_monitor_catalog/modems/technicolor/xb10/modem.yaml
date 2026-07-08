@@ -2,6 +2,8 @@ manufacturer: Technicolor
 model: XB10
 model_aliases:
   - "CGM601TCOM"
+brands:
+  - "Xfinity"
 transport: http
 default_host: "10.0.0.1"
 
@@ -37,10 +39,14 @@ actions:
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM33941UD"
+  release_date: "2025"
 
 status: confirmed
 
 sources:
+  release_date: "[Xfinity Community Forum, May 2025](https://forums.xfinity.com/conversations/customer-service/xb10-availability/6814de85ce99874d94b358f6) — official Xfinity replies confirm XB10 available to X-Class (FDX DOCSIS 4.0) customers with phased rollout in 2025; [FCC grant for CGM601TCOM (G95601TX)](https://fcc.report/FCC-ID/G95601TX) 2025-02-14"
+  brands: "[Xfinity gateway comparison](https://forums.xfinity.com/conversations/internet/answered-comcast-modem-wireless-gateway-devicefeature-comparison/602da6d1c5375f08cdd28eeb)"
+  model_aliases: "[Xfinity XB10 = CGM601TCOM](https://forums.xfinity.com/conversations/internet/answered-comcast-modem-wireless-gateway-devicefeature-comparison/602da6d1c5375f08cdd28eeb)"
   auth_config: "[#173 Technicolor XB10](https://github.com/solentlabs/cable_modem_monitor/issues/173)"
   chipset:
     "[HighSpeedInternet.com — Xfinity XB10 DOCSIS 4.0 / Wi-Fi 7 gateway](https://www.highspeedinternet.com/resources/xfinity-docsis4-wifi7-gateway)

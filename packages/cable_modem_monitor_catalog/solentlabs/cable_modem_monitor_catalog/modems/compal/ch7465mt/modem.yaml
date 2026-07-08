@@ -1,8 +1,5 @@
 manufacturer: Compal
 model: CH7465MT
-model_aliases:
-  - CH7465LG
-brands: []
 transport: cbn
 default_host: "192.168.0.1"
 
@@ -25,6 +22,11 @@ hardware:
 status: confirmed
 
 sources:
+  isps:
+    "[Magenta Austria — Internet Fiber Box support page](https://www.magenta.at/hilfe-service/services/hardwaresupport/device/internet-fiber/box)
+    and [user manual](https://www.magenta.at/content/dam/magenta_at/pdfs/consumer/faq/Benutzerhandbuch_Internet_Fiber_Box.pdf)
+    — Magenta distributes the CH7465MT as the Internet Fiber Box;
+    MT operator suffix = Magenta Telekom (as LG = Liberty Global)"
   auth_config: "[PR #129 — CH7465MT HAR captures](https://github.com/solentlabs/cable_modem_monitor/pull/129)"
   hardware: "[Compal CH7465MT datasheet](https://www.compal-broadband.com)"
   chipset:
@@ -40,7 +42,7 @@ attribution:
       contribution: "Maintainer — v3.14 CBN transport, parser, catalog entry"
 
 isps:
-  - MTAT
+  - Magenta AT
 
 notes: |
   CBN (Compal Broadband Networks) firmware modem.

@@ -126,6 +126,16 @@ def test_circuit_breaker_open_on_auth_failed():
     assert event.level == EventLevel.ERROR
 
 
+def test_circuit_breaker_event_carries_auth_status_code():
+    """A login 404 reaches the breaker event so the message can say endpoint-not-found."""
+    policy = _make_policy(model="MB7621")
+    result = ModemResult(success=False, signal=CollectorSignal.AUTH_FAILED, auth_status_code=404)
+    with capture_events() as events:
+        policy.apply(result)
+    event = next(e for e in events if isinstance(e, AuthCircuitBreakerOpen))
+    assert event.status_code == 404
+
+
 def test_circuit_breaker_open_on_auth_lockout():
     policy = _make_policy()
     with capture_events() as events:

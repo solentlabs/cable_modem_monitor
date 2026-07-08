@@ -1,7 +1,7 @@
 manufacturer: Arris
 model: S33
 brands:
-  - Surfboard
+  - "SURFboard"
 transport: hnap
 default_host: 192.168.100.1
 
@@ -29,6 +29,7 @@ hardware:
 
 status: confirmed
 sources:
+  brands: "[SURFboard product family](https://www.surfboard.com/products/cable-modems/sb8200/) — manufacturer styles the brand SURFboard"
   auth_config:
     "[#32 Arris S33](https://github.com/solentlabs/cable_modem_monitor/issues/32),
     [#117 S33v2 crash](https://github.com/solentlabs/cable_modem_monitor/issues/117)"

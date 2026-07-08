@@ -591,6 +591,35 @@ class TestResetAuth:
         assert "rate_uncorrected" not in system_info
 
 
+class TestCircuitBreakerTripReason:
+    """Blocked-poll errors preserve the trip reason — 404 trips are not credential problems."""
+
+    def test_blocked_error_names_endpoint_not_found_for_404_trip(self) -> None:
+        result = ModemResult(
+            success=False,
+            signal=CollectorSignal.AUTH_FAILED,
+            error="login endpoint 404",
+            auth_status_code=404,
+        )
+        collector = _mock_collector(result)
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()  # 404 trip
+        snapshot = orch.get_modem_data()  # blocked
+
+        assert "login endpoint not found" in snapshot.error
+        assert "credentials" not in snapshot.error
+
+    def test_blocked_error_names_credentials_for_credential_trip(self) -> None:
+        collector = _mock_collector(_fail_result(CollectorSignal.AUTH_FAILED))
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()  # credential trip
+        snapshot = orch.get_modem_data()  # blocked
+
+        assert "reconfigure credentials" in snapshot.error
+
+
 class TestLoadAuth:
     """UC-17/18/19: LOAD_AUTH signal handling."""
 

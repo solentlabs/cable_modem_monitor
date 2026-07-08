@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 
 # IMPORTANT: Do not edit VERSION manually!
 # Use: python scripts/release.py <version>
-VERSION = "3.14.0-beta.12"
+VERSION = "3.14.0-beta.13"
 
 DOMAIN = "cable_modem_monitor"
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
@@ -92,6 +92,7 @@ class EntityPrefix(StrEnum):
 # Dynamic SystemInfoFieldSensor (sensor.py) and the dashboard passthrough loop
 # (dev_tools.py) both skip these — the dedicated classes own them.
 # When a field graduates to a dedicated sensor, add it here.
+# system_uptime has no sensor of its own — it feeds Last Boot Time.
 # fmt: off
 CONSUMED_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({
     "software_version",
@@ -104,3 +105,18 @@ CONSUMED_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({
     "rate_uncorrected",
 })
 # fmt: on
+
+# system_info fields captured for the data layer (snapshot, event payload,
+# diagnostics) but never minted as entities (#178):
+# - current_time: a per-poll wall-clock reading whose past states have no
+#   diagnostic value — persisting it writes a recorder row every poll.
+# - hardware_version, model_name: immutable identity strings — a sensor
+#   whose state cannot change is device metadata, shown natively on the
+#   device page (hw_version / model in the device registry).
+DISPLAY_ONLY_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset(
+    {
+        "current_time",
+        "hardware_version",
+        "model_name",
+    }
+)

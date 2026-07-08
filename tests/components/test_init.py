@@ -482,23 +482,27 @@ async def test_setup_entry_happy_path():
 # -----------------------------------------------------------------------
 
 
-def test_update_device_registry():
-    """Device registry updated with modem identity."""
-    hass = MagicMock()
+def _make_registry_entry(modem_data):
+    """Build the mock entry + identity for device registry tests."""
     entry = MagicMock()
     entry.data = MOCK_ENTRY_DATA
     entry.entry_id = "test_123"
-
-    identity = ModemIdentity(
+    entry.runtime_data = MagicMock()
+    entry.runtime_data.modem_identity = ModemIdentity(
         manufacturer="Solent Labs",
         model="TPS-2000",
         docsis_version="3.0",
         release_date="2024",
         status="confirmed",
     )
-    entry.runtime_data = MagicMock()
-    entry.runtime_data.modem_identity = identity
+    entry.runtime_data.data_coordinator.data.modem_data = modem_data
+    return entry
 
+
+def test_update_device_registry():
+    """Device registry updated with modem identity and version fields."""
+    hass = MagicMock()
+    entry = _make_registry_entry({"system_info": {"software_version": "1.2.3", "hardware_version": "V1.0"}})
     mock_registry = MagicMock()
 
     with patch(
@@ -512,6 +516,25 @@ def test_update_device_registry():
     assert kwargs["manufacturer"] == "Solent Labs"
     assert kwargs["model"] == "TPS-2000"
     assert kwargs["configuration_url"] == "http://192.168.100.1"
+    assert kwargs["sw_version"] == "1.2.3"
+    assert kwargs["hw_version"] == "V1.0"
+
+
+def test_update_device_registry_no_modem_data():
+    """Version fields stay empty when the first poll returned no data."""
+    hass = MagicMock()
+    entry = _make_registry_entry(None)
+    mock_registry = MagicMock()
+
+    with patch(
+        "custom_components.cable_modem_monitor.dr.async_get",
+        return_value=mock_registry,
+    ):
+        _update_device_registry(hass, entry)
+
+    kwargs = mock_registry.async_get_or_create.call_args.kwargs
+    assert kwargs["sw_version"] is None
+    assert kwargs["hw_version"] is None
 
 
 # -----------------------------------------------------------------------
@@ -926,6 +949,50 @@ def test_health_recovery_no_op_in_steady_responsive():
 
     health_coord.data.health_status = HealthStatus.RESPONSIVE
     listener_fn()
+    listener_fn()
+
+    hass.async_create_task.assert_not_called()
+
+
+def test_health_recovery_triggers_refresh_on_degraded_to_responsive():
+    """Transition DEGRADED -> RESPONSIVE schedules an immediate poll.
+
+    DEGRADED means ICMP ok but TCP (the data path) is down — the exact
+    state a modem passes through while its web UI warms up after a
+    reboot. Recovery through DEGRADED must trigger the prompt poll just
+    like UNRESPONSIVE; otherwise the data path waits for the next slow
+    scan (the #170-adjacent post-reboot latency this fixes).
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    hass, health_coord, data_coord, listener_fn = _health_recovery_inputs()
+
+    # Tick 1: DEGRADED (TCP/data path down)
+    health_coord.data.health_status = HealthStatus.DEGRADED
+    listener_fn()
+    hass.async_create_task.assert_not_called()
+
+    # Tick 2: RESPONSIVE — data path recovered, schedule the poll
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
+    listener_fn()
+    hass.async_create_task.assert_called_once()
+
+
+def test_health_recovery_no_refresh_on_icmp_blocked_to_responsive():
+    """ICMP_BLOCKED -> RESPONSIVE is NOT a data-path recovery.
+
+    ICMP_BLOCKED means TCP (the data path) was already up — the data
+    poll would have succeeded throughout — so ICMP starting to answer
+    is not a recovery worth a forced poll. Excluding it avoids spurious
+    polls on modems that routinely block ping.
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    hass, health_coord, _, listener_fn = _health_recovery_inputs()
+
+    health_coord.data.health_status = HealthStatus.ICMP_BLOCKED
+    listener_fn()
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
     listener_fn()
 
     hass.async_create_task.assert_not_called()

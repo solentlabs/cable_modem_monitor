@@ -1,7 +1,7 @@
 manufacturer: ARRIS
 model: SB6190
 brands:
-  - "Surfboard"
+  - "SURFboard"
 transport: http
 default_host: "192.168.100.1"
 
@@ -17,6 +17,7 @@ hardware:
 status: awaiting_verification
 
 sources:
+  brands: "[SURFboard product family](https://www.surfboard.com/products/cable-modems/sb8200/) — manufacturer styles the brand SURFboard"
   auth_config:
     "[#93 SB6190 support](https://github.com/solentlabs/cable_modem_monitor/issues/93)
     — no login required on older firmware"

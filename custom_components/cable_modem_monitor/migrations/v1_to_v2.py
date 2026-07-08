@@ -19,12 +19,20 @@ from urllib.parse import urlparse
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems, list_variants
 
 from ..const import DEFAULT_HEALTH_CHECK_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
+
+# unique_id suffixes of v1-era sensors that v2 (3.14) no longer creates.
+# v3.13 minted a per-poll System Uptime sensor; 3.14 derives uptime from
+# Last Boot Time at display time (#178). Removed here so 3.13 upgraders
+# don't inherit a permanently-unavailable orphan. v2 entries created on
+# 3.14 betas clear theirs via remove-and-re-add (see CHANGELOG).
+V1_DISCONTINUED_UNIQUE_ID_SUFFIXES = ("_cable_modem_system_uptime",)
 
 # v1 keys that do not exist in v2 and must be removed.
 V1_STALE_KEYS = frozenset(
@@ -111,6 +119,13 @@ async def async_migrate(
     }
 
     hass.config_entries.async_update_entry(entry, data=new_data, version=2)
+
+    # --- Drop registry rows for sensors v2 no longer creates ---
+    registry = er.async_get(hass)
+    for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if reg_entry.unique_id.endswith(V1_DISCONTINUED_UNIQUE_ID_SUFFIXES):
+            _LOGGER.info("Removing discontinued v1 entity %s", reg_entry.entity_id)
+            registry.async_remove(reg_entry.entity_id)
 
     _LOGGER.info(
         "Migrated entry %s to v2: manufacturer=%s, model=%s, modem_dir=%s",

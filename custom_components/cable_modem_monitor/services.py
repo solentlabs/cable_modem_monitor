@@ -39,6 +39,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from .const import DOMAIN
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
 from .dev_tools import (
+    STATUS_CARD_DEFAULT_EXCLUDE,
     _resolve_config_entry_for_device,
     create_convert_channel_identity_handler,
     create_generate_dashboard_handler,
@@ -68,6 +69,9 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
         vol.Optional("short_titles", default=False): cv.boolean,
         vol.Optional("channel_label", default="auto"): vol.In(["auto", "full", "id_only", "type_id"]),
         vol.Optional("channel_grouping", default="by_direction"): vol.In(["by_direction", "by_type"]),
+        vol.Optional("status_card_exclude", default=list(STATUS_CARD_DEFAULT_EXCLUDE)): vol.All(
+            cv.ensure_list, [cv.string]
+        ),
     }
 )
 
@@ -82,7 +86,11 @@ async def async_request_modem_refresh(runtime: CableModemRuntimeData) -> None:
 
     Resets connectivity backoff, refreshes health probes (if enabled),
     then triggers a data poll. Health runs first so the snapshot
-    includes fresh health info.
+    includes fresh health info. Deliberately does NOT reset the auth
+    circuit breaker: this helper backs the request_refresh service, an
+    automation surface — a breaker bypass here would let a retry loop
+    post known-bad credentials (HNAP anti-brute-force can reboot the
+    modem on a single extra attempt).
 
     Used by UpdateModemDataButton.async_press() and the
     request_refresh service.

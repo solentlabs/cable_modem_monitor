@@ -30,6 +30,9 @@
   "unwantedRecommendations": [
     // Designed for C/C++ build systems; prompts to install C++ tools for our Python task-runner Makefile
     "ms-vscode.makefile-tools",
+    // Prompts on docker-compose.test.yml; compose runs through tasks/Makefile, no editor tooling needed
+    "ms-azuretools.vscode-containers",
+    "ms-azuretools.vscode-docker",
     "gitkraken.gitlens",
     // Replaced by Ruff (modern, fast linter)
     "ms-python.pylint",

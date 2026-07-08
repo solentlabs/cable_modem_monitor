@@ -1,9 +1,8 @@
 manufacturer: ARRIS
 model: SB6141
-model_aliases:
-  - "Motorola SB6141"
 brands:
-  - "Surfboard"
+  - "SURFboard"
+  - "Motorola"
 transport: http
 default_host: "192.168.100.1"
 
@@ -29,6 +28,7 @@ status: awaiting_verification
 sources:
   auth_config: "Real hardware captures (HW 7.0 + HW 8.0, April 2026) — no login required"
 
+  brands: "[Motorola-branded SB6141 user guide](https://d15yx0mnc9teae.cloudfront.net/sites/default/files/Motorola_SB6141_manual.pdf) and [ARRIS SURFboard SB6141 manual](https://www.manualslib.com/manual/777279/Arris-Surfboard-Sb6141.html) — same modem sold under both brands"
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6141"
   detection_hints: "[HA Community thread](https://community.home-assistant.io/)"
 attribution:

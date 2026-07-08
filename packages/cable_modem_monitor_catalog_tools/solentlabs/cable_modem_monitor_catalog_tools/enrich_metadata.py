@@ -220,8 +220,8 @@ def _check_missing(
     """Check for fields still missing based on target status.
 
     All statuses need: manufacturer, model, auth (from analysis).
-    ``confirmed`` / ``awaiting_verification`` also needs: hardware,
-    attribution, isps.
+    ``confirmed`` / ``awaiting_verification`` also needs:
+    hardware (docsis_version, release_date), attribution, isps.
     """
     # Always required
     if not metadata.get("manufacturer"):
@@ -234,6 +234,10 @@ def _check_missing(
         hw = metadata.get("hardware") or {}
         if not isinstance(hw, dict) or not hw.get("docsis_version"):
             result.missing.append("hardware.docsis_version")
+        # release_date feeds the catalog README timeline — entries
+        # without it are silently omitted from that rendering
+        if not isinstance(hw, dict) or not hw.get("release_date"):
+            result.missing.append("hardware.release_date")
         if not metadata.get("attribution"):
             result.missing.append("attribution")
         if not metadata.get("isps"):

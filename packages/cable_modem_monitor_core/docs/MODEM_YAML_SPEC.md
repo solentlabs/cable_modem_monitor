@@ -90,9 +90,9 @@ for the contract.
 # Identity
 manufacturer: "ARRIS"
 model: "SB8200"
-model_aliases:                    # optional — search matching only (not shown in UI)
+model_aliases:                    # optional — alternate user-facing names; shown in parentheses
   - "CommScope SB8200"
-brands:                           # optional — config flow search
+brands:                           # optional — user-visible brand names; become manufacturer-dropdown choices
   - "Surfboard"
 transport: http                    # http | hnap | cbn
 default_host: "192.168.100.1"
@@ -159,8 +159,8 @@ references:
 |-------|------| :--------: |-------------|
 | `manufacturer` | string | yes | Manufacturer name (e.g., "Arris", "Netgear", "Motorola") |
 | `model` | string | yes | Model identifier (e.g., "SB8200", "CM1200") |
-| `model_aliases` | list[string] | no | Internal or rebranded names for search matching — not shown in the config flow UI (e.g., `["CGM4140COM"]`). See [Aliases vs Separate Entries](#aliases-vs-separate-entries). |
-| `brands` | list[string] | no | Product branding for config flow search (e.g., `["Surfboard"]`) |
+| `model_aliases` | list[string] | no | Alternate user-facing model names — rebadges, regional variants, sticker codes (e.g., `["CGM4140COM"]`). Shown in the model line's parenthetical. Firmware-internal codes do not belong here. See [Aliases vs Separate Entries](#aliases-vs-separate-entries). |
+| `brands` | list[string] | no | User-visible brand names from the product/box (e.g., `["Surfboard"]`, or `["Arris"]` on CommScope-made hardware). Feed the config flow's manufacturer dropdown alongside `manufacturer` — a rebranded modem appears under both names while staying one record. Entries must be sourced. |
 | `transport` | enum | yes | `http`, `hnap`, or `cbn` |
 | `default_host` | string | yes | Default IP address (e.g., "192.168.100.1") |
 
@@ -191,15 +191,36 @@ implementation detail. The new entry's `references` section links to
 compatible models. Having a standalone entry enables diagnostics
 collection and golden file validation for that specific model.
 
-**model_aliases** (search aids — not shown in the config flow UI):
+A separate entry also requires its own evidence — a HAR capture in
+`test_data/`. Until a capture exists for a rebadged or sibling
+product, it is recorded as an alias on the evidenced entry (e.g.,
+`MB8612` on the MB8611) and graduates to its own entry when evidence
+arrives.
+
+**model_aliases** (alternate user-facing names — shown in the model
+line's parenthetical):
 
 - Manufacturer rebrand of the same product (e.g., acquirer name)
-- Internal/OEM model numbers from firmware responses
+- Alternate model numbers users encounter on boxes, device stickers,
+  or ISP paperwork
 - Marketing name variants for the same hardware
-- Firmware platform identifiers embedded in version strings
 
-Aliases help users who search by an alternate name. They do not appear
-in the config flow dropdown — only the primary `model` name is shown.
+Firmware-internal identifiers (product codes, platform strings from
+firmware responses) do not belong in `model_aliases` — they are
+evidence in the HAR and candidates for a future detection block, not
+names users recognize.
+
+Aliases appear in the model line's parenthetical so users can match an
+alternate name; the primary `model` name leads the label.
+
+**brands** (user-visible names — a manufacturer-dropdown dimension):
+
+Box-level brand names (`Surfboard`, or `Arris` on CommScope-made
+hardware) belong in `brands`, not `model_aliases`. Each entry becomes a
+choice in the config flow's manufacturer dropdown and also appears in
+the model line's parenthetical, so the modem is findable under the name
+on the box while remaining one catalog record. See
+ARCHITECTURE_DECISIONS § Brand names as manufacturer-step choices.
 
 ---
 

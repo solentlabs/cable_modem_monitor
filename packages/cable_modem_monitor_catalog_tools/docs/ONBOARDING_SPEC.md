@@ -23,7 +23,9 @@ review, commit authorization).
 - Deterministic logic lives in MCP tools, not in prompts — repeatable and testable
 - Ambiguity is a hard stop, not a guess — flag for human review
 - Metadata not in the HAR is filled via web search, not left as TODOs
-- Generated config must pass Pydantic build-time validation
+- Generated config must pass Pydantic build-time validation, plus an
+  alias-and-brand check: firmware-internal codes (underscore-shaped,
+  e.g. `G54_COMMSCOPE`) are rejected from `model_aliases` and `brands`
 - The golden file is the human review checkpoint — not the config itself
 - All modems — new and existing — go through the same workflow from HAR. Every modem package is built from scratch
 
@@ -52,7 +54,7 @@ review, commit authorization).
 | Input | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | HAR file | `.har` file path | yes | Capture from [har-capture](https://github.com/solentlabs/har-capture) — records the full HTTP conversation (auth flows, API calls, page content) with built-in PII redaction |
-| Manufacturer | string | yes | Modem manufacturer (e.g., "Arris", "Motorola") |
+| Manufacturer | string | yes | Modem manufacturer as the firmware reports it (e.g., "Arris", "CommScope") — determines the catalog directory. Box branding that differs goes in `brands`, not here. |
 | Model | string | yes | Model identifier (e.g., "SB8200", "MB7621") |
 | GitHub issue | integer | yes | Issue number for `references` and change tracking |
 | Contributor | string | yes | GitHub username for `attribution` |
@@ -999,8 +1001,9 @@ gaps by searching the web using the manufacturer and model as search terms.
 |-------|----------------|----------|
 | `hardware.docsis_version` | Search "{manufacturer} {model} specifications" or FCC filing. Also infer from HAR: if OFDM/OFDMA channels are present in data pages, the modem is DOCSIS 3.1. | Infer from channel data if possible; flag if ambiguous |
 | `hardware.chipset` | Search "{manufacturer} {model} chipset" or "{model} teardown". FCC filings, iFixit teardowns, and DSLReports forums are common sources. | Omit — chipset is optional |
-| `brands` | Search "{model} brand name". Some modems are sold under brand names (e.g., SB8200 → "Surfboard", CGM4981COM → "XB7"). | Omit if no branding found |
-| `model_aliases` | Only for internal/OEM names or manufacturer rebrands — not for distinct products. Search firmware responses for `product` or `model` fields that differ from the marketing name (e.g., OEM model numbers, firmware product codes). If the name is a different product users would purchase and search for, create a separate catalog entry instead. See `MODEM_YAML_SPEC.md` § Aliases vs Separate Entries. | Omit if no aliases found |
+| `hardware.release_date` | Search "{manufacturer} {model} release" or "{model} launch". Prefer a manufacturer press release or ISP rollout announcement; an FCC grant date or dated manufacturer manual is an acceptable proxy when labeled as such in `sources.release_date`. Feeds the catalog README timeline — entries without it are omitted from that rendering. | Omit and note the gap — never guess a year |
+| `brands` | User-visible brand names from the box or retail listings (e.g., SB8200 → "Surfboard", the CommScope-made G54 → "Arris"). Also check firmware brand fields in the HAR (e.g., `customer`). Brands become manufacturer-dropdown choices and appear in the model line's parenthetical, so entries must be names users actually see, and must be sourced. | Omit if no branding found |
+| `model_aliases` | Alternate user-facing model names only — rebadges, regional variants, and sticker codes users encounter (e.g., MB8612 for the MB8611, SuperHub 5 for the Hub 5). Shown in the model line's parenthetical. Firmware-internal `product`/platform codes (e.g., `G54_COMMSCOPE`, `G5X`) do NOT belong here — they stay in the HAR as evidence. If the name is a different product users would purchase and search for, create a separate catalog entry instead. See `MODEM_YAML_SPEC.md` § Aliases vs Separate Entries. | Omit if no aliases found |
 | `isps` | Search "{model} ISP" or "{model} compatible". Also check the GitHub issue — contributors often mention their ISP. | `["Various"]` if unknown |
 | `default_host` | Most cable modems use `192.168.100.1`. Some (Compal, some gateways) use `10.0.0.1` or `192.168.0.1`. Check modem documentation if contributor didn't provide it. | `"192.168.100.1"` |
 

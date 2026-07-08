@@ -24,6 +24,7 @@ from .validation import (
     PARSER_KEY_ORDER,
     normalize_key_order,
     to_yaml,
+    validate_aliases_and_brands,
     validate_modem,
     validate_parser,
 )
@@ -80,6 +81,7 @@ def generate_config(
     parser_dict = build_parser_dict(sections, metadata, fleet=fleet) if sections else None
 
     # Validate via Pydantic
+    validate_aliases_and_brands(modem_dict, errors)
     modem_config = validate_modem(modem_dict, errors)
     parser_config = validate_parser(parser_dict, errors) if parser_dict else None
 

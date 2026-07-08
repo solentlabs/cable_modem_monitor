@@ -160,6 +160,10 @@
         "short_titles": {
           "name": "Korte Titels Gebruiken",
           "description": "Kort: 'DS Power (dBmV)' vs Lang: 'Downstream Power Levels (dBmV)'."
+        },
+        "status_card_exclude": {
+          "name": "Uitgesloten velden van statuskaart",
+          "description": "Velden die van de gegenereerde statuskaart worden weggelaten. Standaard leeg; voeg docsis_status toe om de DOCSIS-statusregel te verwijderen, of een willekeurige doorgegeven veldnaam om die regel te verwijderen."
         }
       }
     },

@@ -2,6 +2,8 @@ manufacturer: Technicolor
 model: XB6
 model_aliases:
   - "CGM4140COM"
+brands:
+  - "Xfinity"
 transport: http
 default_host: "10.0.0.1"
 
@@ -19,10 +21,14 @@ auth:
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
+  release_date: "2017"
 
 status: awaiting_verification
 
 sources:
+  release_date: "[Next TV / Multichannel News, December 6, 2017](https://www.nexttv.com/news/comcast-goes-wide-docsis-31-gigabit-gateway-416930) — Comcast national rollout of the xFi Advanced Gateway (XB6), naming Technicolor as builder of the Broadcom-chipset CGM4140COM"
+  brands: "[TechInfoDepot — Technicolor CGM4140COM (Xfinity XB6)](https://techinfodepot.shoutwiki.com/wiki/Technicolor_CGM4140COM)"
+  model_aliases: "[TechInfoDepot — Technicolor CGM4140COM (XB6)](https://techinfodepot.shoutwiki.com/wiki/Technicolor_CGM4140COM)"
   auth_config: "[#111 XB6](https://github.com/solentlabs/cable_modem_monitor/issues/111)"
   chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Technicolor_CGM4140COM)"
 

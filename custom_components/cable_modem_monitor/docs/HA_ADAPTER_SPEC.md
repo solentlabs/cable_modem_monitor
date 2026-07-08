@@ -194,8 +194,9 @@ async_setup_entry(hass, entry)
  │     update_interval from config (or None if disabled)
  │
  ├─ 5a. Attach health recovery listener (if health_monitor)
- │      On health RESPONSIVE after non-responsive, triggers
- │      immediate data poll via coordinator.async_request_refresh()
+ │      On health RESPONSIVE from a data-path-down state
+ │      (DEGRADED/UNRESPONSIVE/UNKNOWN; ICMP_BLOCKED excluded),
+ │      triggers immediate data poll via coordinator.async_request_refresh()
  │
  ├─ 6. Run first poll
  │     coordinator.async_config_entry_first_refresh()
@@ -520,6 +521,18 @@ stays a pure types module (`CableModemRuntimeData` +
 helper in `__init__.py` because it's local to startup and
 conceptually separate from Core's recovery observer.
 
+The health-recovery listener fires an immediate data poll when health
+transitions to RESPONSIVE from a *data-path-down* state — DEGRADED,
+UNRESPONSIVE, or UNKNOWN. DEGRADED (ICMP up, TCP down) is included
+because TCP is the data path, and that is the state a modem occupies
+while its web UI warms up after a reboot; a long reboot that outlasts
+Core's recovery window would otherwise leave a recovered modem waiting
+for the next slow scan (or a manual refresh) once cadence scales back.
+ICMP_BLOCKED is excluded — TCP was up, so the data poll already worked
+and a forced poll would be spurious. Consequence worth noting:
+post-window recovery latency is bounded by the health-check interval,
+so lengthening that interval slows reconnection proportionally.
+
 ### Public surface
 
 ```python
@@ -780,7 +793,9 @@ Circuit breaker opens
 
 **No polling while circuit is open.** `get_modem_data()` returns
 `AUTH_FAILED` immediately when the circuit breaker is open. The user
-must fix credentials before polling resumes.
+must fix credentials (or reload the integration) before polling
+resumes. Manual refresh deliberately does not bypass the breaker —
+see ORCHESTRATION_SPEC § Auth Circuit Breaker, "No manual bypass."
 
 See ORCHESTRATION_USE_CASES.md UC-81 for the full scenario.
 
@@ -1094,7 +1109,11 @@ device is specified.
 2. Short-circuit if `runtime.active_operation is not None` — a
    restart or reset is already running and will trigger its own
    post-operation refresh; no user action is needed
-3. Call `orchestrator.reset_connectivity()` to clear backoff
+3. Call `orchestrator.reset_connectivity()` to clear backoff — this
+   deliberately does not touch the auth circuit breaker; this
+   service is an automation surface, and a breaker bypass would let
+   a retry loop post known-bad credentials (see ORCHESTRATION_SPEC
+   § Auth Circuit Breaker, "No manual bypass")
 4. Refresh health coordinator (if health monitoring is enabled)
 5. Refresh data coordinator
 

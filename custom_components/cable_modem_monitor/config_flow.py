@@ -38,8 +38,8 @@ from solentlabs.cable_modem_monitor_core.catalog_manager import (
 
 from .config_flow_helpers import (
     build_model_display_name,
+    build_model_options,
     default_health_check_interval,
-    filter_by_manufacturer,
     format_variant_labels,
     get_manufacturers,
     load_modem_catalog,
@@ -255,8 +255,10 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     ) -> config_entries.ConfigFlowResult:
         """Step 1b — Select model and entity prefix."""
         if user_input is not None:
-            # Find the selected summary by model key
-            model_key = user_input["model"]
+            # Find the selected summary by model key. Brand rows in the
+            # All view suffix the value with "|{brand}" — strip it; both
+            # rows resolve to the same modem.
+            model_key = user_input["model"].split("|", 1)[0]
             for s in self._summaries:
                 if f"{s.manufacturer}/{s.model}" == model_key:
                     self._selected_summary = s
@@ -288,18 +290,11 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                 self._selected_modem_dir = self._selected_summary.path
             return await self.async_step_connection()
 
-        # Build model dropdown
-        if self._selected_manufacturer == _ALL_MANUFACTURERS:
-            models = self._summaries
-        else:
-            models = filter_by_manufacturer(self._summaries, self._selected_manufacturer)
-
+        # Build model dropdown — All lists one row per user-facing name
+        bucket = None if self._selected_manufacturer == _ALL_MANUFACTURERS else self._selected_manufacturer
         model_options = [
-            selector.SelectOptionDict(
-                value=f"{s.manufacturer}/{s.model}",
-                label=build_model_display_name(s),
-            )
-            for s in models
+            selector.SelectOptionDict(value=value, label=label)
+            for value, label in build_model_options(self._summaries, bucket)
         ]
 
         # Entity prefix options

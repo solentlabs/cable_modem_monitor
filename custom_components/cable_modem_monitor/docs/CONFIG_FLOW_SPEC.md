@@ -82,10 +82,14 @@ with authenticated polling.
 
 Two sub-steps that narrow the selection progressively:
 
-**Step 1a — Select manufacturer.** A dropdown lists every manufacturer in
-the catalog, plus an "All" option that shows every modem. At ~25 modems
-the full list is still usable, so "All" is a practical default for users
-who aren't sure of the manufacturer.
+**Step 1a — Select manufacturer.** A dropdown lists every name a user
+might identify the maker by: the union of `manufacturer:` values and
+`brands:` entries across the catalog, plus an "All" option that shows
+every modem. A modem branded differently from its recorded manufacturer
+(e.g., the CommScope-made G54 sold under the Arris brand) appears under
+both names while remaining one catalog record. At ~25 modems the full
+list is still usable, so "All" is a practical default for users who
+aren't sure of the manufacturer.
 
 **Step 1b — Select model.** A second dropdown filtered to models from the
 selected manufacturer (or all models if "All" was chosen). This step
@@ -98,7 +102,14 @@ selection. No search index is needed at the current catalog size (~25
 modems).
 
 **Display format:** `{manufacturer} {model}` with DOCSIS version and
-verification status. Aliases shown in parentheses.
+verification status. Alternate user-facing names — `model_aliases` ∪
+`brands` — shown in parentheses. Labels are bucket-contextual: when the
+user filtered by a brand bucket, the line leads with that brand and the
+parenthetical lists aliases and other brands (`Xfinity XB6
+(CGM4140COM)` under Xfinity), adding the manufacturer-composed name
+only when no alias anchors the entry (`Arris G54 (CommScope G54)`
+under Arris; `CommScope G54 (Arris)` under CommScope or All). The lead
+always matches the filter the user chose.
 
 ```text
 Arris SB8200                    DOCSIS 3.1
@@ -190,12 +201,17 @@ helper in `config_flow_helpers.py` performs this check.
 **Host default:** From `default_host` in the selected modem/variant YAML
 (typically `192.168.100.1`).
 
-**Host input accepts IP, hostname, or full URL.** If the user enters a
-bare IP (e.g., `192.168.100.1`), protocol detection probes both :80 and
-:443 automatically in Step 4. If the user includes a protocol prefix
-(e.g., `https://192.168.100.1`), only that port is probed — no fallback
-to the other transport. This gives users an escape hatch when automatic
-detection picks the wrong protocol.
+**Host input accepts IP, hostname, or full URL.** Address-bar pastes
+are tolerated: any path, query, or fragment is discarded, with or
+without a scheme (`https://192.168.100.1/cgi-bin/luci/` → host
+`192.168.100.1`, protocol `https`). Only the protocol and host[:port]
+are ever kept —
+data-page paths come from the catalog, never from the user. If the
+user enters a bare IP (e.g., `192.168.100.1`), protocol detection
+probes both :80 and :443 automatically in Step 4. If the user includes
+a protocol prefix (e.g., `https://192.168.100.1`), only that port is
+probed — no fallback to the other transport. This gives users an
+escape hatch when automatic detection picks the wrong protocol.
 
 **Entity prefix is selected in Step 1.** Options: `none`, `model`, `ip`.
 `none` is only available if no other instance is already using it.

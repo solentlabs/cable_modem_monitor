@@ -28,6 +28,7 @@ from .const import (
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONSUMED_SYSTEM_INFO_FIELDS,
+    DISPLAY_ONLY_SYSTEM_INFO_FIELDS,
     DOMAIN,
     ChannelIdentity,
 )
@@ -173,6 +174,13 @@ def _unique_types(channel_info: list[tuple[str, int]]) -> set[str]:
 # YAML builders
 # ------------------------------------------------------------------
 
+# Default fields left off the generated status card. Empty since the
+# identity strings (hardware_version, model_name) stopped minting
+# sensors entirely (DISPLAY_ONLY_SYSTEM_INFO_FIELDS); the option
+# remains for users to drop rows, including the explicit
+# docsis_status row below.
+STATUS_CARD_DEFAULT_EXCLUDE: tuple[str, ...] = ()
+
 
 def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
     """Get dashboard card titles based on user preference."""
@@ -256,6 +264,7 @@ def _build_status_card_yaml(
     *,
     has_icmp: bool,
     has_head: bool,
+    exclude_fields: frozenset[str] | None = None,
 ) -> list[str]:
     """Build YAML for the status entities card.
 
@@ -269,7 +278,11 @@ def _build_status_card_yaml(
         has_icmp: Whether ICMP ping latency entity exists.
         has_head: Whether the HTTP HEAD latency entity exists
             (only created on supports_head=True modems).
+        exclude_fields: Pass-through fields to omit from the card;
+            defaults to STATUS_CARD_DEFAULT_EXCLUDE.
     """
+    if exclude_fields is None:
+        exclude_fields = frozenset(STATUS_CARD_DEFAULT_EXCLUDE)
     lines = [
         "  - type: entities",
         "    title: Cable Modem Status",
@@ -300,15 +313,30 @@ def _build_status_card_yaml(
                 "        icon: mdi:speedometer",
             ]
         )
+    # DOCSIS status gets an explicit row at its historical position
+    # (the pre-beta.12 "Modem Status" spot); the loop below always
+    # skips it so it is never duplicated at the bottom.
+    if "docsis_status" in system_info and "docsis_status" not in exclude_fields:
+        lines.append(f"      - entity: sensor.{entity_prefix}_docsis_status")
+        lines.append("        name: DOCSIS Status")
     if "software_version" in system_info:
         lines.append(f"      - entity: sensor.{entity_prefix}_software_version")
         lines.append("        name: Software Version")
-    if "system_uptime" in system_info:
-        lines.append(f"      - entity: sensor.{entity_prefix}_system_uptime")
-        lines.append("        name: Uptime")
-        lines.append(f"      - entity: sensor.{entity_prefix}_last_boot_time")
-        lines.append("        name: Last Boot")
-        lines.append("        format: date")
+    # Uptime is a display-time calculation, not a sensor (#178): both
+    # rows render Last Boot Time — relative ("5 days ago") for uptime,
+    # absolute for the boot instant. Gate mirrors sensor.py's Last
+    # Boot Time creation gate.
+    if "system_uptime" in system_info or "total_corrected" in system_info or "total_uncorrected" in system_info:
+        lines.extend(
+            [
+                f"      - entity: sensor.{entity_prefix}_last_boot_time",
+                "        name: Uptime",
+                "        format: relative",
+                f"      - entity: sensor.{entity_prefix}_last_boot_time",
+                "        name: Last Boot",
+                "        format: datetime",
+            ]
+        )
     lines.extend(
         [
             f"      - entity: sensor.{entity_prefix}_ds_channel_count",
@@ -332,9 +360,15 @@ def _build_status_card_yaml(
             ]
         )
     for field in sorted(system_info):
-        if field not in CONSUMED_SYSTEM_INFO_FIELDS:
-            lines.append(f"      - entity: sensor.{entity_prefix}_{field}")
-            lines.append(f"        name: {field.replace('_', ' ').title()}")
+        if (
+            field == "docsis_status"  # explicit row above owns it
+            or field in CONSUMED_SYSTEM_INFO_FIELDS
+            or field in DISPLAY_ONLY_SYSTEM_INFO_FIELDS
+            or field in exclude_fields
+        ):
+            continue
+        lines.append(f"      - entity: sensor.{entity_prefix}_{field}")
+        lines.append(f"        name: {field.replace('_', ' ').title()}")
     lines.append("    show_header_toggle: false")
     lines.append("    state_color: false")
     return lines
@@ -626,6 +660,7 @@ def create_generate_dashboard_handler(
                     system_info,
                     has_icmp=has_icmp,
                     has_head=has_head,
+                    exclude_fields=frozenset(call.data.get("status_card_exclude", STATUS_CARD_DEFAULT_EXCLUDE)),
                 )
             )
 

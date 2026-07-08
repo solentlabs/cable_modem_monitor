@@ -51,6 +51,50 @@ more reading and iteration against the specs.
   has cookies on the first request and no auth flow, recapture in
   incognito/private browsing — the pipeline will reject it.
 
+## HAR Captures Are Immutable Evidence
+
+A HAR represents actual hardware we do not own or control. Never
+edit one — not to fix malformed HTML, normalize endpoints, or tidy
+payloads. Broken markup in a capture is firmware behavior the parser
+must handle, not noise to clean: correcting bad tags in a HAR once
+caused a modem that really returns bad tags to be processed
+incorrectly. The only sanctioned transformation is PII value
+sanitization at intake, which replaces values and never structure.
+
+### Reconstructed fixtures
+
+Not every fixture is a wire capture. Before har-capture existed,
+entries were routinely assembled from user-supplied HTML and
+diagnostics (`creator` values like `fixtures_to_har (synthetic)`,
+`synthetic`, and `composite (fixture + har-capture)` across the
+fleet record this). The practice is legitimate; this section
+codifies the rules it must follow.
+
+When no HAR exists but a sibling model's live parse output proves
+structural compatibility (a diagnostics capture showing the sibling's
+parser fully extracting channels on the new hardware), a fixture may
+be *reconstructed*: the sibling's HAR is used as the structural
+template and every parsed value is substituted with the real values
+observed in the diagnostics. This is not an edited capture — it is a
+new artifact that must declare itself:
+
+- `log.creator.name` identifies the fixture as reconstructed (the
+  fleet convention: synthetic fixtures self-identify in `creator`).
+- `log.comment` in the HAR states it is reconstructed, names the
+  template model, the evidence issue, and lists every unobserved
+  template-filler field (e.g. lock status, symbol rates).
+- The `modem.yaml` `notes:` block repeats the provenance and says the
+  fixture is replaced when a real HAR arrives.
+- The entry ships as `status: awaiting_verification`, never
+  `confirmed`.
+- The reconstruction is only valid when the parsed diagnostics values
+  round-trip: run the parser over the reconstructed HAR and diff the
+  output against the diagnostics — zero mismatches required.
+
+First use under these codified rules: Technicolor XB8 (CGM4981COM),
+issue #101, reconstructed from the XB7 fixture plus a v3.12.0
+diagnostics capture.
+
 ## Inputs
 
 You provide one of:
@@ -214,8 +258,24 @@ For each item in `enrich_result.missing`:
 
 - **hardware.chipset**: web search `"{manufacturer} {model} chipset"`
 - **hardware.docsis_version**: check if OFDM channels detected (= 3.1), else 3.0
+- **hardware.release_date**: web search the launch announcement
+  (manufacturer press release, ISP rollout coverage). An FCC grant or
+  dated manufacturer manual is an acceptable proxy — label it as such
+  in `sources.release_date`. Feeds the catalog README timeline;
+  entries without it are silently omitted from that rendering.
 - **isps**: web search `"{model} compatible ISPs"`
 - **default_host**: usually 192.168.100.1 for DOCSIS modems
+- **brands**: user-visible box branding. Check firmware brand fields in
+  the HAR (e.g. `customer`) and retail listings. Entries become
+  manufacturer-dropdown buckets and must carry a source.
+- **model_aliases**: alternate user-facing names only — rebadges,
+  regional variants, sticker codes, each with a source. Firmware
+  `product`/platform codes stay in the HAR as evidence; they never go
+  in aliases (this is how the G54 got bad aliases, see #72).
+
+`manufacturer` is stored as the firmware reports it and determines the
+catalog directory; box branding that differs goes in `brands`. Full
+research guidance: ONBOARDING_SPEC.md § Fields to research.
 
 Confirm any values you can't find rather than guessing.
 
@@ -531,8 +591,12 @@ are no errors in `modem_data`.
    fix, re-run. This is normal.
 6. **Never commit automatically.** Show changes; stage them yourself.
 7. **Alias vs separate entry.** Each model a user would purchase by name
-   gets its own catalog directory. Aliases are only for manufacturer
-   rebrands, internal/OEM model numbers, and marketing name variants.
+   gets its own catalog directory — but a separate entry requires its
+   own HAR evidence; until a capture exists, a rebadge is recorded as a
+   sourced alias on the evidenced entry. Aliases hold alternate
+   user-facing names only (rebadges, sticker codes); firmware-internal
+   codes belong in neither aliases nor brands. Box branding goes in
+   `brands` and becomes a manufacturer-dropdown bucket.
    See [MODEM_YAML_SPEC.md](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md) § Aliases vs Separate Entries.
 8. **Consolidate issue resources.** When a HAR is incomplete (e.g.,
    missing XHR due to Playwright `networkidle` bug), extract data from

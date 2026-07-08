@@ -1,9 +1,10 @@
-manufacturer: Virgin Media
-model: Hub 5
+manufacturer: Sagemcom
+model: F3896LG-VMB
 model_aliases:
+  - "Hub 5"
   - "SuperHub 5"
-  - "VMDG660"
-  - "F3896LG-VMB"
+brands:
+  - "Virgin Media"
 transport: http
 default_host: "192.168.100.1"
 
@@ -34,6 +35,8 @@ sources:
   auth_config: "Synthetic HAR — no authentication required"
   action_config: "[Issue #82 comment by @edent](https://github.com/solentlabs/cable_modem_monitor/issues/82) — login endpoint, token shape, reboot body confirmed via curl"
 
+  manufacturer: "[ISPreview — Hub 5 launch](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html) identifies the Hub 5 as the Sagemcom F3896LG-VMB"
+  brands: "[ISPreview — Hub 5 launch](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html) — sold by Virgin Media as the Hub 5"
   chipset: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
   detection_hints: "[Issue #82](https://github.com/solentlabs/cable_modem_monitor/issues/82)"
   hardware: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
@@ -45,8 +48,8 @@ attribution:
 isps:
   - Virgin Media UK
 notes: |
-  DOCSIS 3.1 gateway. OEM: Sagemcom F3896LG-VMB. Chipset: Broadcom BCM3390.
-  Also marketed as "Hub 5" or "SuperHub 5".
+  DOCSIS 3.1 gateway made by Sagemcom. Chipset: Broadcom BCM3390.
+  Sold by Virgin Media as the "Hub 5" (community name "SuperHub 5").
   REST API at /rest/v1/cablemodem/ - no authentication required.
   33 SC-QAM downstream + 1 OFDM, 5 ATDMA upstream + 1 OFDMA.
   bootFilename shows "vmdg660" (Virgin's internal designation).

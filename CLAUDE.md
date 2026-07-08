@@ -20,7 +20,7 @@
 | Release flow (branching, merging, tagging) | `docs/reference/RELEASING.md` |
 | Process questions (where does X go? PR vs Discussion vs Issue?) | `CONTRIBUTING.md` |
 | Specs by package | core: `packages/cable_modem_monitor_core/docs/README.md` · catalog tools: `packages/cable_modem_monitor_catalog_tools/docs/README.md` · HA: `custom_components/cable_modem_monitor/docs/README.md` · project: `docs/README.md` |
-| Reference test (table-driven exemplar) | `tests/modem_config/test_modem_yaml_validation.py` |
+| Reference test (table-driven exemplar) | `tests/lib/test_parse_host_input.py` |
 
 ## Core Principles
 
@@ -148,10 +148,13 @@ propose fixes first.
 - **Research returns a recommendation, not a paper.** When asked to
   research, analyze, or assess, default to a 2–3 sentence answer
   with the single tradeoff that matters. Tables, section headers,
-  ASCII diagrams, and leverage rankings are opt-in — only expand
-  when the user asks "explain why" or "show your work." This rule
-  exists because research prompts repeatedly returned multi-section
-  papers when a recommendation was wanted.
+  Phase-numbered plan scaffolding, ASCII diagrams, and leverage
+  rankings are opt-in — only expand when the user asks "explain
+  why" or "show your work." This rule exists because research
+  prompts repeatedly returned multi-section papers when a
+  recommendation was wanted.
+- **Structure over presentation.** Prioritize the data model and
+  schema; defer presentation polish until the structure is settled.
 - **No judgment shortcuts.** Don't dismiss alternatives with
   "overkill," "churn," "make-work," or "no cohesion payoff" without
   weighing real costs and benefits. The shortcut costs more later —
@@ -219,7 +222,12 @@ propose fixes first.
   `git gc` away from loss.
 - **Run pyright alongside mypy.** `mypy` and Pyright (Pylance) have
   different strictness. Code passing mypy can still show red
-  squiggles in VS Code. After mypy, run `.venv/bin/pyright`.
+  squiggles in VS Code. After mypy, run
+  `PYRIGHT_PYTHON_FORCE_VERSION=latest .venv/bin/pyright` over
+  **every file in `git status`, tests included** — Pylance tracks
+  latest pyright, and touched test files are where missed
+  diagnostics repeatedly surface. Do this unprompted before
+  declaring any work unit done, in the same pass as the test run.
 - **Preserve actor when restating prior facts.** When summarizing or
   recommending based on a prior exchange, the subject/object of "who
   said/did/decided X" is load-bearing. Compressing "X reported Y"
@@ -233,22 +241,16 @@ propose fixes first.
 
 ## Catalog & Data Discipline
 
-- **HAR captures are immutable evidence.** A HAR represents actual
-  hardware we do not own or control. Never edit one — not to fix
-  malformed HTML, normalize endpoints, or tidy payloads. Broken
-  markup in a capture is firmware behavior the parser must handle,
-  not noise to clean: correcting bad tags in a HAR once caused a
-  modem that really returns bad tags to be processed incorrectly.
-  The only sanctioned transformation is PII value sanitization at
-  intake, which replaces values and never structure.
-- **No modem-specific behavior in `modem.yaml`.** YAML contains how
-  to *talk to* the modem (transport, auth, session, actions,
-  hardware metadata, parser mappings) — not how Core processes
-  responses. No behavior flags, no per-modem timing knobs.
-- **Recovery logic stays generic.** One shared recovery primitive
-  for all post-disruption polling, regardless of trigger
-  (commanded, observed outage, reboot-signal vote). No per-modem
-  recovery tuning.
+- **HAR captures are immutable evidence.** Never edit one — broken
+  markup is firmware behavior the parser must handle. Full policy:
+  `packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md`
+  § HAR Captures Are Immutable Evidence.
+- **No modem-specific behavior in `modem.yaml`.** Config selects and
+  parameterizes Core behaviours; no behavior flags, no per-modem
+  timing knobs. Authority: `MODEM_YAML_SPEC.md` § Principles.
+- **Recovery logic stays generic.** All triggers reach the same code
+  path; no per-modem recovery tuning. Authority:
+  `ORCHESTRATION_SPEC.md` § Recovery.
 - **HAR intake is the only data path.** When a user's modem isn't
   matching the catalog, the default ask is a fresh HAR — not
   one-off questions ("what URL is in your address bar?"). HAR is
@@ -256,11 +258,10 @@ propose fixes first.
   Fall back to direct questions only if `har-capture` genuinely
   can't capture what's needed.
 - **Verified JSON must be faithful.** `modem.verified.json` is a
-  faithful copy of the HA diagnostics `data` section — not a
-  curated subset. Keep all modem data verbatim. Strip only:
-  `home_assistant`, `custom_components`, `integration_manifest`,
-  `setup_times`, `_solentlabs`, `_review_before_sharing`,
-  `recent_logs`. Add `verified_at` and `version` at top.
+  faithful copy of the diagnostics `data` section, not a curated
+  subset. Strip list and format:
+  `packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md`
+  § Build verified.json.
 - **Source all factual claims.** Every factual claim in data files
   (`providers.json`, `chipsets.json`, modem.yaml notes/sources)
   must include a reference URL or citation. Without a source, the
@@ -277,24 +278,20 @@ propose fixes first.
   after all changes are staged, not per-change. (3) CI gates on README
   freshness — if a PR fails this check, regenerate and amend before merging.
 - **Catalog data stays true to source; normalization happens at
-  presentation.** This project is a universal translator — the
-  catalog is the authoritative record of what each modem reports
-  about itself and how its manufacturer brands it. `manufacturer:`
-  in modem.yaml stores the manufacturer's actual styling (`ARRIS`
-  if that's how the modem self-reports, `Arris` if that's what
-  comes back from HNAP, `Compal`, `Hitron`, etc.). Don't pre-
-  normalize to title case in the catalog. Display layers
-  (`build_model_display_name` in the integration's config flow,
-  sensor titles, etc.) handle case normalization for human
-  readability. Variation in manufacturer string across the same
-  vendor's products is real signal — different firmware reports
-  the manufacturer differently — not drift to be ironed out.
+  presentation.** Manufacturer styling variation is real signal, not
+  drift — never pre-normalize in the catalog; display layers own
+  case normalization. Authority: `ARCHITECTURE_DECISIONS.md`
+  § Core Schema Model → Catalog data stays true to source.
 
 ## Code Discipline
 
 - **TDD for non-trivial bug fixes.** (1) Read relevant specs.
   (2) Document the use case if missing. (3) Write tests that fail.
   (4) Implement. (5) Verify tests pass.
+- **Fix the actual bug — no speculative migrations or renames.** AI
+  drift is dangerous: a fix that "also cleans up" adjacent naming,
+  structure, or config it wasn't asked to touch creates review
+  burden and regressions. Scope the diff to the defect.
 - **One-line docstrings only.** Never multi-paragraph docstrings
   with Args/Returns/Raises sections — the signature and type
   annotations carry that information. One short line max. Non-obvious
@@ -324,12 +321,9 @@ propose fixes first.
   docstring explaining what lives there. A 50-line file with one
   clear concern beats a 50-line addition to a `utils.py` dumping
   ground.
-- **Type-safety patterns:**
-  - `Literal[...]` for params with fixed valid values, not `str`
-  - `Model.model_validate(data)` for Pydantic from dicts, not `Model(**data)`
-  - `@functools.lru_cache` for JSON file caching, not global `dict | None` with manual checks
-  - `Any` for pass-through `*args/**kwargs`, not `object`
-  - `dict[str, Any]` for JSON data, not `dict[str, object]`
+- **Type-safety patterns.** Preferred idioms (`Literal` over `str`
+  enums, `model_validate` over `Model(**data)`, `lru_cache` over
+  module-global caches, etc.): `docs/CODE_REVIEW.md` § Type Hints.
 - **Use existing pipelines.** Never hand-build artifacts when a
   pipeline tool exists. `generate_golden_file()` runs the real
   parser coordinator. Serialize with
@@ -443,6 +437,33 @@ Examples of irreversible operations requiring verification:
 - PR/issue closures
 - Tag deletions
 - Any git operation with `--force`
+
+## Contributor Communications
+
+Voice and content rules for anything posted to GitHub (issues, PRs,
+discussions, release notes) or other public surfaces.
+
+- **Solo-maintainer voice.** Ken writes as "I", never "we/us/our".
+  There is no team.
+- **Humble, short, personal.** First names in greetings; @-mention
+  only when the comment must notify. No usernames-as-names.
+- **No LLM tells.** No "Good news:", no "just landed", no em-dashes,
+  no stylistic hyphens, no "/" separators in prose.
+- **Claims must be referenced.** State only what's verified;
+  inferences get "one possibility is...", never stated as diagnosis.
+  Drop speculative "this also helps X" claims. User-supplied claims
+  get the same ground-truth check before posting.
+- **Attribute Claude.** Never write "I read the code" in Ken's voice
+  if Claude did the analysis.
+- **Post drafts verbatim.** When Ken supplies reply text, post it
+  unmodified — no padding, no fluffing.
+- **Acknowledge input already given.** Reflect a contributor's
+  specific ask back in their own terms; don't re-ask for what they
+  already provided, and skip install/setup walkthroughs for
+  returning contributors.
+- **No contributor details in code.** No handles or literal user
+  inputs in comments, tests, or specs — cite issue numbers, use
+  generic values.
 
 ## PR and Issue Conventions
 

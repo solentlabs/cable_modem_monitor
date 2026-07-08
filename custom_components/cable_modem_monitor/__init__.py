@@ -16,6 +16,7 @@ See Also:
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Mapping
 from datetime import timedelta
 from importlib.metadata import version as pkg_version
@@ -94,6 +95,15 @@ _LOGGER = logging.getLogger(__name__)
 
 # Must match ConfigFlow.VERSION in config_flow.py
 _CURRENT_VERSION = 2
+
+
+def _local_dev_suffix() -> str:
+    """Startup-log marker for local dev installs (CMM_LOCAL_DEV env var)."""
+    # The manifest version only bumps at release time, so a bind-mounted
+    # dev tree otherwise logs itself as the previous beta and reads as a
+    # released install. docker-compose.test.yml sets the variable; HACS
+    # installs never have it.
+    return " (local dev)" if os.getenv("CMM_LOCAL_DEV") else ""
 
 
 def _get_package_versions() -> str:
@@ -228,9 +238,14 @@ def _attach_health_recovery_listener(
 ) -> None:
     """Trigger an immediate data poll on health recovery.
 
-    When health transitions from UNRESPONSIVE/UNKNOWN to RESPONSIVE,
-    schedules an immediate data poll so recovery latency is bounded by
-    the health check interval (~30s) rather than the scan interval (~10m).
+    When health transitions to RESPONSIVE from a data-path-down state
+    (DEGRADED, UNRESPONSIVE, or UNKNOWN), schedules an immediate data
+    poll so recovery latency is bounded by the health-check interval
+    rather than the scan interval (~10m). DEGRADED counts because it
+    means TCP — the data path — was down while ICMP stayed up, the
+    state a modem sits in while its web UI warms up after a reboot.
+    ICMP_BLOCKED is excluded: TCP was up, so the data poll already
+    worked and a forced poll would be spurious.
 
     The Core orchestrator independently clears connectivity backoff when
     it sees RESPONSIVE health — this listener just ensures the poll
@@ -246,7 +261,15 @@ def _attach_health_recovery_listener(
         if health_coordinator.data is None:
             return
         current = health_coordinator.data.health_status
-        was_down = previous[0] in (HealthStatus.UNRESPONSIVE, HealthStatus.UNKNOWN)
+        # "Down" = the data path (TCP) was unusable: DEGRADED (ICMP ok,
+        # TCP down — the post-reboot web-UI-warmup state), UNRESPONSIVE,
+        # or UNKNOWN. ICMP_BLOCKED is deliberately excluded — TCP was up,
+        # so the data poll already worked and a forced poll is spurious.
+        was_down = previous[0] in (
+            HealthStatus.DEGRADED,
+            HealthStatus.UNRESPONSIVE,
+            HealthStatus.UNKNOWN,
+        )
         previous[0] = current
         if was_down and current == HealthStatus.RESPONSIVE:
             _LOGGER.info("Health recovery [%s] — scheduling immediate poll", model)
@@ -267,8 +290,9 @@ async def async_setup_entry(
     """
     pkg_versions = await hass.async_add_executor_job(_get_package_versions)
     _LOGGER.info(
-        "Cable Modem Monitor v%s starting [%s %s] — %s",
+        "Cable Modem Monitor v%s%s starting [%s %s] — %s",
         VERSION,
+        _local_dev_suffix(),
         entry.data.get(CONF_MANUFACTURER, ""),
         entry.data.get(CONF_MODEL, ""),
         pkg_versions,
@@ -577,6 +601,15 @@ def _update_device_registry(
     protocol = data.get(CONF_PROTOCOL, "http")
     host = data[CONF_HOST]
 
+    # Version identity lives on the device card, not in the entity list
+    # (#178). software_version also stays a sensor — the sensor is the
+    # firmware-change timeline; this field is display-only and refreshes
+    # at entry setup. Empty when the first poll returned no data.
+    snapshot = entry.runtime_data.data_coordinator.data
+    system_info: dict[str, Any] = {}
+    if snapshot is not None and snapshot.modem_data is not None:
+        system_info = snapshot.modem_data.get("system_info", {})
+
     registry = dr.async_get(hass)
     registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -585,4 +618,6 @@ def _update_device_registry(
         manufacturer=identity.manufacturer,
         model=identity.model,
         configuration_url=f"{protocol}://{host}",
+        sw_version=system_info.get("software_version"),
+        hw_version=system_info.get("hardware_version"),
     )

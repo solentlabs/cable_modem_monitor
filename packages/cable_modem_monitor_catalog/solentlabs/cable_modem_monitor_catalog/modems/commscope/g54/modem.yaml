@@ -1,8 +1,7 @@
 manufacturer: CommScope
 model: G54
-model_aliases:
-  - "G54_COMMSCOPE"
-  - "G5X"
+brands:
+  - "Arris"
 transport: http
 default_host: "192.168.0.1"
 
@@ -24,6 +23,7 @@ status: awaiting_verification
 sources:
   auth_config: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
 
+  brands: 'Firmware `customer` field in test_data/modem.har ("ARRIS Group, Inc.") — box branding'
   detection_hints: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
   hardware: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
 attribution:
@@ -41,6 +41,8 @@ notes: |
   Form-based authentication with sysauth cookie.
   Modem was in Bridge mode during fixture capture (WiFi disabled).
   puma_hw_ver fields are legacy naming - actual chipset is BCM3390.
+  Firmware self-reports product "G54_COMMSCOPE" on platform "G5X" and
+  customer "ARRIS Group, Inc." (see test_data/modem.har).
   Default IPs: 192.168.100.1 (modem mode) or 192.168.0.1 (router mode).
 references:
   issues:
