@@ -28,6 +28,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still flow in diagnostics and the event payload. Clear the leftover
   entities the same way as the uptime sensors below. (Related to #178)
 
+- **Technicolor XB8 (CGM4981COM) catalog entry (awaiting hardware
+  verification).** Built from a reconstructed fixture: the XB7 capture
+  as structural template with real XB8 values from contributor
+  diagnostics, whose live parse (34 downstream + 5 upstream channels
+  locked) is the empirical basis. The entry stays awaiting
+  verification until an XB8 owner confirms on current firmware.
+  (Related to #101)
+
+- **Catalog timeline now dates every modem.** Sourced hardware release
+  dates were added to the XB8 and backfilled across 11 existing
+  entries; the catalog README timeline previously skipped undated
+  entries silently and now renders all 38. The CH7465MT's abbreviated
+  ISP name became a proper sourced Magenta AT provider entry.
+
 ### Changed
 
 - **System Uptime and Current Time sensors removed.** Both wrote a new
