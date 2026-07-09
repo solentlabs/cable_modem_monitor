@@ -1376,6 +1376,51 @@ references:
     - 57
 ```
 
+### Gaps
+
+Known capability gaps on an otherwise-verified entry. Status and
+coverage are separate axes: `status: confirmed` certifies that the
+*shipped* pipeline works on real hardware; `gaps` records what is
+*not shipped yet* and exactly what evidence would close it.
+
+A gap is a capability blocked on a **single specific obtainable
+artifact** — almost always a HAR capture. This is the *build* axis:
+we lack the wire evidence to implement the capability. Two things
+that look like gaps are not:
+
+- **Implemented but unverified on this variant's hardware** — that is
+  the *verify* axis, which `status` and `notes` own. A reboot action
+  mirrored from a sibling model and awaiting a hardware test is not a
+  gap; no new artifact would build it, only confirm it.
+- **A capability no artifact could ever close** — firmware that
+  simply never exposes the data. That is a permanent limitation,
+  documented in `notes`, not a gap (a `needs:` no capture can satisfy
+  is a false promise to contributors).
+
+If no obtainable artifact would close it, it is not a gap.
+
+```yaml
+gaps:
+  - capability: system_uptime
+    needs: "HAR capture that includes the status.html page"
+    issue: "https://github.com/solentlabs/cable_modem_monitor/issues/92"
+  - capability: reboot action
+    needs: "HAR capture of the Reboot button click (advanced page)"
+    issue: "https://github.com/solentlabs/cable_modem_monitor/issues/92"
+```
+
+| Field | Required | Description |
+|-------|:--------:|-------------|
+| `capability` | yes | The missing capability, named concretely (a canonical field, an action, a sensor) |
+| `needs` | yes | The specific evidence that closes the gap — phrased so a contributor can act on it |
+| `issue` | no | URL of the issue where the gap is being tracked or discussed |
+
+The catalog index generator renders all gaps into a "Confirmed with
+Gaps" table in `CATALOG_AUDIT.md`, making each row a self-contained
+contribution task. The `notes` field keeps the narrative *why*; the
+`gaps` list is the machine-readable roll-up. Remove the entry when
+the capability lands.
+
 ---
 
 ## Validation Rules

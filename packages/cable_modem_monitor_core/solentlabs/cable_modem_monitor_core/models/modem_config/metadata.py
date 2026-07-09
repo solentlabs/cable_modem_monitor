@@ -44,3 +44,12 @@ class ReferencesConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     issues: list[str] = Field(default_factory=list)
     prs: list[str] = Field(default_factory=list)
+
+
+class GapEntry(BaseModel):
+    """A known capability gap on an otherwise-verified entry."""
+
+    model_config = ConfigDict(extra="forbid")
+    capability: str
+    needs: str
+    issue: str = ""

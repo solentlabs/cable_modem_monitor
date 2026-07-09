@@ -145,6 +145,7 @@ def load_catalog_modems() -> list[dict]:
                     "auth_strategy": strategy,
                     "isps": data.get("isps") or [],
                     "model_aliases": data.get("model_aliases") or [],
+                    "gaps": data.get("gaps") or [],
                 }
             )
 
@@ -497,17 +498,50 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         isp_str = ", ".join(m["isps"]) if m["isps"] else "—"
         lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} |")
 
+    with_gaps = [m for m in confirmed if m["gaps"]]
+    if with_gaps:
+        lines += [
+            "",
+            "## Confirmed with Gaps",
+            "",
+            "Core support is verified on real hardware, but a named",
+            "capability is still missing. Each row is a self-contained",
+            "contribution: supply the evidence in the Needs column and",
+            "the gap closes.",
+            "",
+            "| Modem | Missing | Needs | Tracked |",
+            "|-------|---------|-------|---------|",
+        ]
+
+        def cell(value: str) -> str:
+            # Raw YAML, not schema-validated here: guard missing keys and
+            # escape '|' so a stray pipe can't shift table columns.
+            return str(value).replace("|", "\\|") if value else "—"
+
+        for m in with_gaps:
+            for gap in m["gaps"]:
+                issue = gap.get("issue", "")
+                tracked = f"[issue]({cell(issue)})" if issue else "—"
+                capability = cell(gap.get("capability", ""))
+                needs = cell(gap.get("needs", ""))
+                lines.append(f"| {display(m)} | {capability} | {needs} | {tracked} |")
+
     lines += [
         "",
         "## Confirmed",
         "",
         "Working on real hardware with a report on file.",
+        "Entries with an open capability gap are listed above, not here.",
         "",
         "| Modem | Transport | ISPs |",
         "|-------|-----------|------|",
     ]
 
+    # Gap-bearing modems are rendered in "Confirmed with Gaps" above;
+    # exclude them here so each confirmed modem appears exactly once.
     for m in confirmed:
+        if m["gaps"]:
+            continue
         isp_str = ", ".join(m["isps"]) if m["isps"] else "—"
         lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} |")
 
@@ -542,11 +576,14 @@ def main() -> None:
         default=catalog_root / "README.md",
         help="Output file path",
     )
-    parser.add_argument("--print", "-p", action="store_true", help="Print to stdout")
+    parser.add_argument("--print", "-p", action="store_true", help="Print README to stdout")
+    parser.add_argument("--print-audit", action="store_true", help="Print CATALOG_AUDIT to stdout")
     args = parser.parse_args()
 
     if args.print:
         sys.stdout.write(generate_index())
+    elif args.print_audit:
+        sys.stdout.write(generate_catalog_audit())
     else:
         generate_index(args.output)
         generate_catalog_audit(catalog_root / "CATALOG_AUDIT.md")

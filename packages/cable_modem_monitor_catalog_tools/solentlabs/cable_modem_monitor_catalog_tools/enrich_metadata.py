@@ -105,6 +105,7 @@ def _extract_metadata_from_config(config: dict[str, Any]) -> dict[str, Any]:
         "isps",
         "notes",
         "references",
+        "gaps",
         "timeout",
     ):
         if key in config:

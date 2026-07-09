@@ -371,6 +371,16 @@ the conversation — not automatic).
     `parser.py`, and `modem.expected.json`
   - **Gate:** all of the above pass the regression test suite before
     the branch merges
+- **Capability gap on a confirmed modem** (missing uptime, untested
+  action, etc.) — the durable record is the `gaps:` list in the
+  modem's `modem.yaml`, rendered in
+  [CATALOG_AUDIT.md](packages/cable_modem_monitor_catalog/CATALOG_AUDIT.md)
+  as "Confirmed with Gaps." An issue tracking a gap stays open while
+  there's an active conversation; when it goes cold, close it with a
+  pointer to the audit table — the gap record survives the closure.
+  Renewed interest gets a fresh issue (ideally opened by the
+  interested contributor), and the gap's `issue:` URL is updated to
+  match.
 
 ### Commit Message Format
 

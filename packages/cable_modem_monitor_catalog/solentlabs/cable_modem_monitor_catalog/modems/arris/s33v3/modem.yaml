@@ -60,7 +60,16 @@ notes: |
   No system_uptime: the swinfo page advertises an Uptime row, but the
   field never appeared in an observed GetCustomerStatusSoftware
   response (#98 wild diagnostics). Same gap as the S34 (AT01.01.*
-  firmware line). Last Boot Time derives from counter-reset detection.
+  firmware line). The web UI does render a live Uptime value (#98,
+  contributor screenshot 2026-06-12), so the firmware reports it via
+  a call not present in the capture on file. Open contribution: a
+  fresh HAR that includes the Software Information page (Cmswinfo.html)
+  would reveal that call and let system_uptime be mapped here and
+  checked against the S34. Uptime is the primary input for Last Boot
+  Time, which carries the uptime display since the standalone sensor's
+  removal in 3.14.0-beta.13 (#178); without the mapping, Last Boot
+  Time stays empty until a counter reset is observed while the
+  integration is running (#110).
   Reboot params mirrored from S33 fix (#146); pre-fetch defaults
   are the safety net pending variant validation.
   HNAP responses carry debug timing data on the first HTTP header
@@ -71,3 +80,8 @@ references:
   issues:
     - "[#98 — [Modem Request] Arris S33v3](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
     - "[#146 — [Bug]: Arris S33 Modem Reboot Not Working](https://github.com/solentlabs/cable_modem_monitor/issues/146)"
+
+gaps:
+  - capability: system_uptime
+    needs: "HAR capture that includes the Software Information page (Cmswinfo.html)"
+    issue: "https://github.com/solentlabs/cable_modem_monitor/issues/98"
