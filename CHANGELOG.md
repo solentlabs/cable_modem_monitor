@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Sercomm DM1000 confirmed on hardware.** Verified via contributor
+  diagnostics on 3.14.0-alpha.15: 34 downstream + 5 upstream channels
+  locked, form auth, full system_info, clean polls. Modulation values
+  now canonicalize (`256QAM` → `QAM256`, `64QAM` → `QAM64`) — caught
+  by the confirmed-modem conformance gate at promotion. Lock status
+  is now mapped from the firmware's native signals (QAM_NONE filter
+  survivors, the OFDM PLC indicator, OFDMA STATE=OPERATE), which
+  lets Core derive DOCSIS status. Remaining gaps documented in the
+  catalog entry: no system_uptime and no reboot action, both blocked
+  on one supplemental HAR covering status.html and the Reboot click.
+  (Related to #92)
+
+- **`fixed_fields` for JSON parsers.** The JSON channel format now
+  supports static per-channel field values (flat and multi-array
+  forms), mirroring the XML tables capability — for firmware that
+  expresses lock state by omission or sentinel rather than a lock
+  column. First consumer is the DM1000.
+
+- **Catalog entries can declare capability gaps.** New optional
+  `gaps:` list in modem.yaml (capability, needs, tracking issue)
+  records what a verified modem is still missing and exactly what
+  evidence closes it. The catalog audit renders them as a "Confirmed
+  with Gaps" table — each row a self-contained contribution task.
+  Backfilled for the S33v3 (uptime, #98) and DM1000 (uptime +
+  reboot, #92).
+
 ### Changed
 
 - **DOCSIS 4.0 enters the catalog vocabulary.** `hardware.docsis_version`
