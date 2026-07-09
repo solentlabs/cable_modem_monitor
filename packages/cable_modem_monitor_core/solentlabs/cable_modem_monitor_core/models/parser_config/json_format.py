@@ -31,6 +31,7 @@ class JSONArrayDefinition(BaseModel):
     array_path: str
     fields: list[JsonChannelMapping]
     channel_type: ChannelTypeConfig | None = None
+    fixed_fields: dict[str, str] = Field(default_factory=dict)
     filter: dict[str, FilterValue] = Field(default_factory=dict)
 
 
@@ -54,6 +55,7 @@ class JSONSection(BaseModel):
     array_path: str = ""
     fields: list[JsonChannelMapping] | None = None
     channel_type: ChannelTypeConfig | None = None
+    fixed_fields: dict[str, str] = Field(default_factory=dict)
     filter: dict[str, FilterValue] = Field(default_factory=dict)
 
     # Multi-array form
@@ -72,6 +74,25 @@ class JSONSection(BaseModel):
             raise ValueError("json flat form requires both array_path and fields")
         if has_flat and not self.resource:
             raise ValueError("json flat form requires a resource")
+        if has_multi:
+            # These are flat-form-only: the multi-array parser reads them
+            # per array, so a section-level value would validate and then
+            # be silently ignored. Reject rather than surprise.
+            ignored = [
+                name
+                for name, value in (
+                    ("channel_type", self.channel_type),
+                    ("fixed_fields", self.fixed_fields),
+                    ("filter", self.filter),
+                )
+                if value
+            ]
+            if ignored:
+                raise ValueError(
+                    f"json multi-array form: {', '.join(ignored)} must be set "
+                    "per array, not at section level (section-level values "
+                    "are not applied to arrays)"
+                )
         return self
 
     @model_validator(mode="after")

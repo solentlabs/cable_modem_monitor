@@ -97,6 +97,7 @@ upstream:
 | `fields[].fallback_key` | string | no | Alternative key if primary is missing |
 | `fields[].format` | string | no | Input format for types that require it (e.g., `seconds` for `uptime`). |
 | `fields[].scale` | number | no | Multiplier applied after type conversion. Whole-number results cast to int. |
+| `fixed_fields` | map | no | Static field values for every channel. Applied after channel_type, before filter (same semantics as XML tables). |
 | `arrays` | list | yes* | Multi-array form (alternative to array_path/fields) |
 
 \* Mutually exclusive: use either flat form (`array_path` + `fields`)
@@ -128,7 +129,10 @@ downstream:
 ```
 
 Each array entry has its own `array_path`, `fields`, `channel_type`,
-and `filter`. Results from all arrays are concatenated.
+`fixed_fields`, and `filter`. Results from all arrays are concatenated.
+In multi-array form these three must be set per array — a section-level
+`channel_type`, `fixed_fields`, or `filter` alongside `arrays` is a
+validation error (it would otherwise be silently ignored).
 
 **Per-array resources** --- when channel data lives on separate API
 endpoints (following the same pattern as XML tables), each array can
@@ -160,7 +164,9 @@ validation error.
 
 1. Get resource dict entry by path
 2. Navigate to array(s) using dot-notation path
-3. For each object in each array, map keys to canonical fields
+3. For each object in each array, map keys to canonical fields,
+   apply `channel_type`, apply `fixed_fields` (static values
+   override/fill fields on every channel), then apply `filter`
 4. Concatenate results from all arrays
 5. Auto-assign `channel_number` from 1-based array index when not
    already mapped by parser.yaml (see

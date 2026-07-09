@@ -100,6 +100,7 @@ class JSONParser(BaseParser):
             self._config.array_path,
             self._config.fields or [],
             self._config.channel_type,
+            self._config.fixed_fields,
             self._config.filter,
         )
 
@@ -121,6 +122,7 @@ class JSONParser(BaseParser):
                     array_def.array_path,
                     array_def.fields,
                     array_def.channel_type,
+                    array_def.fixed_fields,
                     array_def.filter,
                 )
             )
@@ -144,6 +146,7 @@ def _extract_from_array(
     array_path: str,
     mappings: list[JsonChannelMapping],
     channel_type: ChannelTypeConfig | None,
+    fixed_fields: dict[str, str],
     filter_rules: dict[str, FilterValue],
 ) -> list[dict[str, Any]]:
     """Extract channels from a single JSON array.
@@ -173,6 +176,9 @@ def _extract_from_array(
             continue
 
         _apply_channel_type(channel, channel_type)
+
+        for field_name, field_value in fixed_fields.items():
+            channel[field_name] = field_value
 
         if not passes_filter(channel, filter_rules):
             continue

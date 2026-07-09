@@ -260,6 +260,8 @@ def _transform_json(section: dict[str, Any]) -> dict[str, Any]:
     }
     if ct:
         result["channel_type"] = ct
+    if section.get("fixed_fields"):
+        result["fixed_fields"] = section["fixed_fields"]
     if section.get("filter"):
         result["filter"] = section["filter"]
 
