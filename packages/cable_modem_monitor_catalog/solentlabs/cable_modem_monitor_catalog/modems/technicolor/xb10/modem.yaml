@@ -37,7 +37,7 @@ actions:
     # the session jar. POST body echoes it. Needs contributor confirmation on hardware.
 
 hardware:
-  docsis_version: "3.1"
+  docsis_version: "4.0"
   chipset: "Broadcom BCM33941UD"
   release_date: "2025"
 
@@ -54,7 +54,21 @@ sources:
     confirm the part number. Primary source confirms Broadcom unified DOCSIS 4.0
     chipset:
     [Comcast / Broadcom press release (Oct 2023)](https://corporate.comcast.com/press/releases/comcast-broadcom-develop-ai-powered-access-network-pioneering-new-chipset)"
-  docsis_version: "[FCC ID G95601TX](https://fccid.io/G95601TX) — confirms CGM601TCOM filing"
+  docsis_version:
+    "[Comcast / Broadcom press release (Oct 2023)](https://corporate.comcast.com/press/releases/comcast-broadcom-develop-ai-powered-access-network-pioneering-new-chipset)
+    — BCM33941UD is Broadcom's unified DOCSIS 4.0 chipset; [Xfinity Community
+    Forum, May 2025](https://forums.xfinity.com/conversations/customer-service/xb10-availability/6814de85ce99874d94b358f6)
+    — XB10 ships to X-Class (FDX DOCSIS 4.0) customers. Corroborated by the
+    fixture HAR (#173): locked upstream OFDMA at 105/200/297 MHz, beyond the
+    204 MHz high-split upstream ceiling
+    ([CableLabs, Band Splits 101](https://www.cablelabs.com/blog/band-splits-splitting-our-way-to-10g)
+    — high-split extends upstream to 204 MHz) and inside DOCSIS 4.0's FDX
+    upstream band of 108-684 MHz
+    ([Averna, DOCSIS 4.0 Overview](https://insight.averna.com/en/resources/blog/the-flavors-of-docsis-4-0)
+    — 'The frequency range for FDX mode is 108 MHz to 1218 MHz downstream
+    and 5-85 MHz and 108-684 MHz upstream'; governing spec CM-SP-PHYv4.0,
+    [CableLabs DOCSIS 4.0](https://www.cablelabs.com/technologies/docsis-4-0-technology)).
+    [FCC ID G95601TX](https://fccid.io/G95601TX) confirms the CGM601TCOM filing."
 
 attribution:
   contributors:
@@ -65,7 +79,12 @@ isps:
   - Xfinity
 
 notes: |
-  DOCSIS 4.0 hardware (BCM33941UD) provisioned in DOCSIS 3.1 mode on Xfinity.
+  DOCSIS 4.0 hardware (BCM33941UD) on Xfinity with FDX upstream active:
+  the fixture capture shows locked upstream OFDMA at 105/200/297 MHz —
+  FDX-band frequencies beyond DOCSIS 3.1's 204 MHz upstream ceiling
+  (an earlier note claiming "provisioned in DOCSIS 3.1 mode" predated
+  this reading of the channel data). Downstream shape is standard 3.1:
+  SC-QAM at 957-999 MHz plus OFDM at 774/1086 MHz, under 1218 MHz.
   Processor speed: 1701 MHz (BCM33941UD, hardware-fixed; documented here, not parsed as a live sensor).
   Same .jst page platform as XB6 (CGM4140COM) / XB7 (CGM4331COM).
   Transposed table format: rows are metrics, columns are channels.

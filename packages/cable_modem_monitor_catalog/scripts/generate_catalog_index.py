@@ -164,8 +164,12 @@ def generate_timeline(modems: list[dict]) -> list[str]:
     if not dated:
         return ["_No release date information available._"]
 
-    d30 = [m for m in dated if str(m.get("docsis", "")).startswith("3.0")]
-    d31 = [m for m in dated if str(m.get("docsis", "")).startswith("3.1")]
+    # Group dynamically by DOCSIS version so new versions (e.g. 4.0) render
+    # instead of silently dropping — a hardcoded 3.0/3.1 split lost the XB10
+    # the day it was relabeled 4.0.
+    groups: dict[str, list[dict]] = {}
+    for m in dated:
+        groups.setdefault(str(m.get("docsis", "unspecified")), []).append(m)
 
     lines = ["```text"]
 
@@ -185,16 +189,14 @@ def generate_timeline(modems: list[dict]) -> list[str]:
         model = str(m["model"])[:10]
         return f"{prefix} {release}  {mfr:<11} {model:<10} {bar}  {years:>2}yr  {status}"
 
-    if d30:
-        lines.append("DOCSIS 3.0")
-        for i, m in enumerate(d30):
-            lines.append(render(m, i == len(d30) - 1))
-        lines.append("")
-
-    if d31:
-        lines.append("DOCSIS 3.1")
-        for i, m in enumerate(d31):
-            lines.append(render(m, i == len(d31) - 1))
+    versions = sorted(groups)
+    for gi, version in enumerate(versions):
+        group = groups[version]
+        lines.append(f"DOCSIS {version}")
+        for i, m in enumerate(group):
+            lines.append(render(m, i == len(group) - 1))
+        if gi < len(versions) - 1:
+            lines.append("")
 
     lines.append("```")
     lines.append("")

@@ -1205,7 +1205,7 @@ hardware:
 
 | Field | Type | Required | Description |
 |-------|------| :--------: |-------------|
-| `docsis_version` | string | yes | DOCSIS specification version ("3.0" or "3.1") |
+| `docsis_version` | string | yes | DOCSIS specification version of the hardware ("3.0", "3.1", or "4.0"). Hardware capability, not provisioned mode — a 4.0 modem running on a 3.1 plant is still "4.0". Intake inference only ever assigns "3.0" or "3.1": DOCSIS 4.0 reuses 3.1's OFDM/OFDMA channel types ([Averna, DOCSIS 4.0 Overview](https://insight.averna.com/en/resources/blog/the-flavors-of-docsis-4-0) — "Like 3.1, DOCSIS 4.0 uses OFDM"), so wire data can't distinguish them; "4.0" is set by hand from hardware sources. |
 | `hw_version` | string | no | Hardware version label shown in the variant dropdown (e.g., `"v6"`). Users can verify this against the sticker on the modem. |
 | `firmware` | string | no | Firmware family identifier for catalog documentation (e.g., `"TB01"`). Not shown in the UI. |
 | `chipset` | string | no | Modem chipset (informational) |

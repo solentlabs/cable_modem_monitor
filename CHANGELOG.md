@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **DOCSIS 4.0 enters the catalog vocabulary.** `hardware.docsis_version`
+  now accepts `"4.0"` (Core schema + MODEM_YAML_SPEC § Hardware), defined
+  as hardware capability rather than provisioned mode. The XB10
+  (CGM601TCOM) is relabeled from "3.1" — the schema previously had no
+  legal way to say 4.0. Its own fixture corroborates the hardware
+  sources: locked upstream OFDMA at 105/200/297 MHz, FDX-band
+  frequencies beyond DOCSIS 3.1's 204 MHz upstream ceiling, replacing
+  the earlier "provisioned in DOCSIS 3.1 mode" note. Intake inference
+  still assigns only "3.0"/"3.1" (D4.0 shares 3.1's channel types on
+  the wire); "4.0" is set by hand from hardware sources. (Related to #173)
+
 ## [3.14.0-beta.13] - 2026-07-08
 
 ### Added

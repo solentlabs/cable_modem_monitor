@@ -163,6 +163,10 @@ def _infer_docsis_version(analysis: dict[str, Any]) -> str:
     Checks both fixed types and mapped values — the presence of a
     channel_type field alone is not sufficient (a DOCSIS 3.0 modem
     can have a channel_type column with only QAM/ATDMA values).
+    Never infers "4.0": D4.0 uses the same channel types as 3.1, so
+    wire data can't distinguish them here — 3.1 is the conservative
+    floor, and "4.0" is set by hand from hardware sources (see
+    MODEM_YAML_SPEC § Hardware; first case: technicolor/xb10).
     """
     sections = analysis.get("sections") or {}
     for section_name in ("downstream", "upstream"):
