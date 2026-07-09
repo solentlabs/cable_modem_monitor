@@ -163,7 +163,7 @@ ha-compat-check:
 	@echo "🔍 Checking Core/Catalog deps against HA package constraints..."
 	@$(VENV_BIN)/python scripts/check_ha_compat.py
 
-# Catalog README freshness — mirrors CI catalog-readme job.
+# Catalog README + audit freshness — mirrors CI catalog-readme job.
 catalog-readme-check:
 	@echo "🔍 Checking catalog README is up to date..."
 	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py --print > /tmp/catalog_readme.md
@@ -174,6 +174,15 @@ catalog-readme-check:
 		exit 1; \
 	fi
 	@echo "✅ Catalog README is up to date"
+	@echo "🔍 Checking catalog audit is up to date..."
+	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py --print-audit > /tmp/catalog_audit.md
+	@if ! diff -q packages/cable_modem_monitor_catalog/CATALOG_AUDIT.md /tmp/catalog_audit.md > /dev/null 2>&1; then \
+		echo "❌ Catalog audit is out of date."; \
+		echo "   Run: python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py"; \
+		diff --unified packages/cable_modem_monitor_catalog/CATALOG_AUDIT.md /tmp/catalog_audit.md || true; \
+		exit 1; \
+	fi
+	@echo "✅ Catalog audit is up to date"
 
 # Auto-close keyword scan — mirrors CI autoclose-check job. Scans commit
 # bodies on this branch (origin/main..HEAD) for GitHub auto-close

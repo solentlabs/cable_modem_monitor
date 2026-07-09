@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**43 configurations supported** — 23 confirmed on real hardware, 20 awaiting verification.
+**43 configurations supported** — 24 confirmed on real hardware, 19 awaiting verification.
 
 ---
 
@@ -22,7 +22,6 @@ and share a diagnostics snapshot.
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity |  |
 | CM600 | HTML | Comcast, Cox, Spectrum, TWC |  |
 | F3896LG-VMB | HTML | Virgin Media UK |  |
-| DM1000 | HTML | Koodo |  |
 | CGA2121 | HTML | Telia |  |
 | CGA4236 | HTML | Unknown |  |
 | CGA6444VF | HTML | Vodafone |  |
@@ -43,9 +42,23 @@ May have open repair work — review individually.
 | SB8200 (No Authentication) | HTML | Service Electric Cablevision |
 | CM1200 | HTML | Comcast, Spectrum, Cox |
 
+## Confirmed with Gaps
+
+Core support is verified on real hardware, but a named
+capability is still missing. Each row is a self-contained
+contribution: supply the evidence in the Needs column and
+the gap closes.
+
+| Modem | Missing | Needs | Tracked |
+|-------|---------|-------|---------|
+| S33 (v3) | system_uptime | HAR capture that includes the Software Information page (Cmswinfo.html) | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/98) |
+| DM1000 | system_uptime | HAR capture (har-capture >= 0.10.1) that includes status.html | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/92) |
+| DM1000 | reboot action | HAR capture of the Reboot button click on the advanced page | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/92) |
+
 ## Confirmed
 
 Working on real hardware with a report on file.
+Entries with an open capability gap are listed above, not here.
 
 | Modem | Transport | ISPs |
 |-------|-----------|------|
@@ -53,7 +66,6 @@ Working on real hardware with a report on file.
 | CM820B | HTML | Volya, Various |
 | S33 | HNAP | Comcast, Cox, Spectrum, Xfinity |
 | S33 (v2) | HNAP | Comcast, Cox, Spectrum, Xfinity |
-| S33 (v3) | HNAP | Comcast, Cox, Spectrum, Xfinity |
 | SB6183 | HTML | Comcast, Cox, Spectrum, Xfinity, Mediacom |
 | SB6190 (form-nonce) | HTML | Comcast, Spectrum |
 | SB8200 (body-token) | HTML | Spectrum |
