@@ -311,6 +311,48 @@ def _engine_up_but_socket_missing():
     return os.path.exists(ENGINE_SOCK) and not os.path.exists(DISTRO_SOCK)
 
 
+def _find_orphaned_proxy_pids():
+    """PIDs of distro proxies still running after the engine went away."""
+    if os.path.exists(ENGINE_SOCK):
+        return []
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "docker-desktop-user-distro proxy"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return []
+    return [pid for pid in result.stdout.split() if pid.isdigit()]
+
+
+def _cleanup_stale_proxy(pids):
+    """Kill orphaned distro proxies and remove the dead socket they hold.
+
+    A proxy launched by an earlier recovery outlives Docker Desktop by design
+    (setsid, detached). Once Desktop exits, the proxy's upstream engine socket
+    is gone but its /var/run/docker.sock remains — every docker command then
+    hangs on the dead socket, and the leftover can block Desktop's next
+    provisioning. Both proxy and socket are root-owned, so this goes through
+    sudo. PIDs are collected beforehand and killed by number — a pkill -f
+    inside the sudo shell would match its own command line.
+    """
+    print("  A leftover Docker proxy from a previous session is holding a")
+    print("  dead /var/run/docker.sock; docker commands hang on it.")
+    print("  Cleaning it up (may prompt for sudo)...")
+    inner = "kill " + " ".join(pids) + " 2>/dev/null; rm -f " + shlex.quote(DISTRO_SOCK)
+    try:
+        subprocess.run(["sudo", "bash", "-c", inner], check=False)
+    except (FileNotFoundError, OSError):
+        return False
+    if os.path.exists(DISTRO_SOCK):
+        return False
+    print_success("Stale proxy cleared")
+    print("")
+    return True
+
+
 def _to_windows_path(linux_path):
     """Convert a /mnt/<drive>/... WSL path to its Windows form, or None."""
     parts = linux_path.split("/")
@@ -405,18 +447,51 @@ def _repair_docker_engine_wsl():
     return _wait_for_docker_ready()
 
 
+def _reconnect_engine_socket(docker_exe, grace_wait):
+    """Reconnect this distro's socket to an already-up engine. True if ready.
+
+    With grace_wait, first give a running Docker Desktop time to provision
+    the socket itself — the same socket state occurs mid-startup on a cold
+    boot, and waiting avoids the sudo proxy (and its password prompt) when
+    Desktop is about to finish on its own.
+    """
+    print("  Docker's engine is up but not yet connected to this WSL distro.")
+    if grace_wait and is_docker_desktop_running():
+        print("  Docker Desktop is running and may still be provisioning it.")
+        if _wait_for_socket(30):
+            return True
+    print("  Reconnecting it (typical after a Docker Desktop update).")
+    return _start_distro_proxy(docker_exe)
+
+
+def _clear_stale_proxy_if_any():
+    """Detect and clear an orphaned distro proxy holding a dead socket.
+
+    Inverse of the engine-up-socket-missing failure: this distro still has a
+    docker.sock but the engine behind it is gone — the signature of a proxy
+    left over from an earlier recovery after Docker Desktop exited. Clearing
+    it stops docker commands hanging and lets Desktop re-provision cleanly.
+    Only fires when an orphaned proxy process is confirmed — a plain Docker
+    Engine socket is left alone.
+    """
+    if os.path.exists(DISTRO_SOCK) and not os.path.exists(ENGINE_SOCK):
+        pids = _find_orphaned_proxy_pids()
+        if pids:
+            _cleanup_stale_proxy(pids)
+
+
 def _prompt_start_docker_wsl(docker_exe):
     """Start/repair Docker for WSL. True if ready, "handled" if guidance shown, else False."""
+    # Clear a stale proxy first, then continue into the start/repair flow.
+    _clear_stale_proxy_if_any()
+
     # Most common post-update failure: the engine is up but this distro's
     # /var/run/docker.sock was never recreated. Reconnect it by starting the
     # per-distro proxy directly — the surgical fix, far cheaper than restarting
     # the backend distro. No prompt: this is meant to self-heal.
-    if _engine_up_but_socket_missing():
-        print("  Docker's engine is up but not connected to this WSL distro.")
-        print("  Reconnecting it (typical after a Docker Desktop update).")
-        if _start_distro_proxy(docker_exe):
-            return True
-        # Fall through to the heavier recovery paths if that did not take.
+    # Falls through to the heavier recovery paths if the reconnect fails.
+    if _engine_up_but_socket_missing() and _reconnect_engine_socket(docker_exe, grace_wait=True):
+        return True
 
     # Check if Docker Desktop is already running but not responding
     if is_docker_desktop_running():
@@ -467,7 +542,17 @@ def _prompt_start_docker_wsl(docker_exe):
                 stderr=subprocess.DEVNULL,
             )
             print(" started")
-            return _wait_for_docker_ready()
+            # A cold start (first launch after reboot) regularly needs more
+            # than 60s before the engine answers.
+            if _wait_for_docker_ready(120):
+                return True
+            # The engine may have come up mid-wait without this distro's
+            # socket (broken WSL integration never provisions it). Reconnect
+            # now instead of exiting for another manual run — Desktop already
+            # had the whole wait to provision, so skip the grace period.
+            if _engine_up_but_socket_missing():
+                return _reconnect_engine_socket(docker_exe, grace_wait=False)
+            return False
     except (EOFError, KeyboardInterrupt):
         print("")
     return False
@@ -489,7 +574,8 @@ def prompt_start_docker(system):
                     stderr=subprocess.DEVNULL,
                 )
                 print(" started")
-                return _wait_for_docker_ready()
+                # Cold starts regularly need more than 60s (see WSL path).
+                return _wait_for_docker_ready(120)
         except (EOFError, KeyboardInterrupt):
             print("")
     elif system == "Linux" and is_wsl():
@@ -517,6 +603,26 @@ def check_docker_installed(system):
     return False
 
 
+def _handle_docker_timeout(system):
+    """Recover from a hung `docker info`. Returns 0 if Docker is ready, 1 otherwise.
+
+    A hang (rather than a fast connection error) is the signature of a dead
+    socket — typically a stale distro proxy — so run the same recovery flow
+    as a failed check instead of punting.
+    """
+    if is_running_in_container():
+        print("  Docker may be starting up. Please wait a moment and try again.")
+        print("")
+        return 1
+    outcome = prompt_start_docker(system)
+    if outcome is True:
+        return 0
+    if outcome != "handled":
+        print("  Docker may be starting up. Please wait a moment and try again.")
+        print("")
+    return 1
+
+
 def check_docker_running(system):
     """Check if Docker daemon is running. Returns 0 if running, 1 otherwise."""
     # Show checking status
@@ -540,9 +646,7 @@ def check_docker_running(system):
     except subprocess.TimeoutExpired:
         print(f"\r{RED}{CROSS}{NC} Docker command timed out")
         print("")
-        print("  Docker may be starting up. Please wait a moment and try again.")
-        print("")
-        return 1
+        return _handle_docker_timeout(system)
 
     except subprocess.CalledProcessError:
         print(f"\r{RED}{CROSS}{NC} Docker is not ready     ")
