@@ -18,12 +18,14 @@ populates ``HealthInfo.http_latency_ms`` when available.
 The orchestrator notifies the HealthMonitor when data collections
 start and end — TCP and HEAD probes are skipped while a collection
 is active (avoids contention) or recently succeeded (redundant).
+A failing ICMP probe overrides the skip for TCP — stale collection
+evidence must not outvote a live probe (UC-59a).
 
 Probe capabilities (ICMP, HEAD) are declared in modem.yaml and
 confirmed by auto-detection during setup.
 
 See ORCHESTRATION_SPEC.md § HealthMonitor and ORCHESTRATION_USE_CASES.md
-UC-50 through UC-57.
+UC-50 through UC-59a.
 """
 
 from __future__ import annotations
@@ -141,6 +143,10 @@ class HealthMonitor:
         already proves L4/HTTP reachability. See
         ``record_collection_start`` and ``record_collection_end``.
 
+        Exception (UC-59a): a failing ICMP probe forces the TCP probe
+        past the skip gate — stale collection evidence must not
+        outvote a live probe. HEAD stays skipped.
+
         Status derivation uses ICMP + TCP. ``http_latency_ms`` is a
         latency-only signal that populates only on HEAD-capable modems.
 
@@ -162,6 +168,14 @@ class HealthMonitor:
         # TCP and HEAD probes share a skip gate — when collection
         # evidence supersedes them, neither runs.
         skip_reason = self._should_skip_probes() if self._http_probe else None
+
+        # Contradiction override (UC-59a): collection evidence is a
+        # statement about the past; a failing ICMP probe is a current
+        # observation that contradicts it — the modem may have gone
+        # down since the poll succeeded. Force the TCP probe so status
+        # derivation uses a live reading instead of the stale evidence.
+        # HEAD stays skipped (latency-only, cannot affect status).
+        tcp_forced = skip_reason is not None and icmp_ok is False
 
         if self._http_probe and skip_reason is None:
             # HEAD probe runs first (when supported) so the modem's web
@@ -187,11 +201,16 @@ class HealthMonitor:
                     http_ms = http_elapsed_ms - tcp_ms
                 else:
                     http_ms = http_elapsed_ms
+        elif tcp_forced:
+            tcp_ms = self._measure_tcp_connect()
+            tcp_ok = tcp_ms is not None
 
         # Status derivation uses ICMP + TCP. Collection evidence is
-        # treated as proof of TCP reachability when probes were skipped.
+        # treated as proof of TCP reachability only when the probes
+        # were skipped outright — a forced TCP probe supplies a real
+        # reading instead.
         effective_tcp_ok = tcp_ok
-        if skip_reason is not None:
+        if skip_reason is not None and not tcp_forced:
             effective_tcp_ok = True
 
         health_status = self._derive_status(icmp_ok, effective_tcp_ok)
@@ -524,7 +543,14 @@ class HealthMonitor:
             parts.append(icmp_part)
 
         if skip_reason is not None:
-            parts.append(f"TCP/HEAD skipped ({skip_reason})")
+            # A forced TCP probe (ICMP contradiction override) has a
+            # real result to report; the plain skip line covers the
+            # rest. tcp_ok is None exactly when TCP did not run.
+            if tcp_part := _format_probe("TCP", tcp_ok, info.tcp_latency_ms):
+                parts.append(tcp_part)
+                parts.append(f"HEAD skipped ({skip_reason}; TCP forced by ICMP failure)")
+            else:
+                parts.append(f"TCP/HEAD skipped ({skip_reason})")
             return ", ".join(parts) if parts else "no probes"
 
         if tcp_part := _format_probe("TCP", tcp_ok, info.tcp_latency_ms):

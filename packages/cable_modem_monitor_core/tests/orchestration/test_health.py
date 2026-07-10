@@ -16,6 +16,7 @@ Use case coverage:
 - UC-56: Both probes disabled
 - UC-57: Health during restart — independent
 - Collection evidence: TCP/HEAD skipped during/after data collection
+- UC-59a: ICMP failure forces the TCP probe past the skip gate
 """
 
 from __future__ import annotations
@@ -699,27 +700,31 @@ class TestHealthLogging:
 
 # Status derivation matrix with collection evidence.
 #
-# ┌─────────────────────┬──────────┬──────────────┬────────────┬──────────────────┐
-# │ evidence_state      │ icmp     │ status       │ http_calls │ description      │
-# ├─────────────────────┼──────────┼──────────────┼────────────┼──────────────────┤
-# │ active              │ pass     │ RESPONSIVE   │ 0          │ active_icmp_pass │
-# │ active              │ fail     │ ICMP_BLOCKED │ 0          │ active_icmp_fail │
-# │ active              │ disabled │ RESPONSIVE   │ 0          │ active_no_icmp   │
-# │ recent_success      │ pass     │ RESPONSIVE   │ 0          │ recent_icmp_pass │
-# │ recent_success      │ fail     │ ICMP_BLOCKED │ 0          │ recent_icmp_fail │
-# │ failed_collection   │ pass     │ RESPONSIVE   │ 1          │ failed_icmp_pass │
-# │ no_evidence         │ pass     │ RESPONSIVE   │ 1          │ none_icmp_pass   │
-# └─────────────────────┴──────────┴──────────────┴────────────┴──────────────────┘
+# An ICMP failure forces the TCP probe past the skip gate (UC-59a) —
+# the autouse socket mock makes the forced probe succeed, so the
+# icmp=fail rows confirm ICMP_BLOCKED with a real TCP measurement.
+#
+# ┌─────────────────────┬──────────┬──────────────┬────────────┬────────────┬──────────────────┐
+# │ evidence_state      │ icmp     │ status       │ http_calls │ tcp_probed │ description      │
+# ├─────────────────────┼──────────┼──────────────┼────────────┼────────────┼──────────────────┤
+# │ active              │ pass     │ RESPONSIVE   │ 0          │ no         │ active_icmp_pass │
+# │ active              │ fail     │ ICMP_BLOCKED │ 0          │ forced     │ active_icmp_fail │
+# │ active              │ disabled │ RESPONSIVE   │ 0          │ no         │ active_no_icmp   │
+# │ recent_success      │ pass     │ RESPONSIVE   │ 0          │ no         │ recent_icmp_pass │
+# │ recent_success      │ fail     │ ICMP_BLOCKED │ 0          │ forced     │ recent_icmp_fail │
+# │ failed_collection   │ pass     │ RESPONSIVE   │ 1          │ normal     │ failed_icmp_pass │
+# │ no_evidence         │ pass     │ RESPONSIVE   │ 1          │ normal     │ none_icmp_pass   │
+# └─────────────────────┴──────────┴──────────────┴────────────┴────────────┴──────────────────┘
 #
 # fmt: off
 EVIDENCE_CASES = [
-    ("active",            "pass",     HealthStatus.RESPONSIVE,   0, "active_icmp_pass"),
-    ("active",            "fail",     HealthStatus.ICMP_BLOCKED, 0, "active_icmp_fail"),
-    ("active",            "disabled", HealthStatus.RESPONSIVE,   0, "active_no_icmp"),
-    ("recent_success",    "pass",     HealthStatus.RESPONSIVE,   0, "recent_icmp_pass"),
-    ("recent_success",    "fail",     HealthStatus.ICMP_BLOCKED, 0, "recent_icmp_fail"),
-    ("failed_collection", "pass",     HealthStatus.RESPONSIVE,   1, "failed_icmp_pass"),
-    ("no_evidence",       "pass",     HealthStatus.RESPONSIVE,   1, "none_icmp_pass"),
+    ("active",            "pass",     HealthStatus.RESPONSIVE,   0, False, "active_icmp_pass"),
+    ("active",            "fail",     HealthStatus.ICMP_BLOCKED, 0, True,  "active_icmp_fail"),
+    ("active",            "disabled", HealthStatus.RESPONSIVE,   0, False, "active_no_icmp"),
+    ("recent_success",    "pass",     HealthStatus.RESPONSIVE,   0, False, "recent_icmp_pass"),
+    ("recent_success",    "fail",     HealthStatus.ICMP_BLOCKED, 0, True,  "recent_icmp_fail"),
+    ("failed_collection", "pass",     HealthStatus.RESPONSIVE,   1, True,  "failed_icmp_pass"),
+    ("no_evidence",       "pass",     HealthStatus.RESPONSIVE,   1, True,  "none_icmp_pass"),
 ]
 # fmt: on
 
@@ -753,9 +758,9 @@ def _setup_evidence(
 
 
 @pytest.mark.parametrize(
-    "evidence_state, icmp, expected_status, http_calls, _desc",
+    "evidence_state, icmp, expected_status, http_calls, tcp_probed, _desc",
     EVIDENCE_CASES,
-    ids=[c[4] for c in EVIDENCE_CASES],
+    ids=[c[5] for c in EVIDENCE_CASES],
 )
 @patch(f"{_MODULE}.subprocess.run")
 def test_collection_evidence_matrix(
@@ -764,6 +769,7 @@ def test_collection_evidence_matrix(
     icmp: str,
     expected_status: HealthStatus,
     http_calls: int,
+    tcp_probed: bool,
     _desc: str,
 ) -> None:
     """Verify HTTP probe suppression and status derivation with collection evidence."""
@@ -788,6 +794,7 @@ def test_collection_evidence_matrix(
 
     assert info.health_status == expected_status
     assert session.head.call_count == http_calls
+    assert (info.tcp_latency_ms is not None) == tcp_probed
     if http_calls == 0:
         assert info.http_latency_ms is None
     else:
@@ -913,6 +920,94 @@ class TestCollectionEvidenceBehavior:
             monitor.ping()
 
         assert "TCP/HEAD skipped (recent collection)" in caplog.text
+
+
+# ------------------------------------------------------------------
+# Collection evidence — ICMP contradiction override (UC-59a)
+#
+# Collection evidence is a statement about the past; a failing ICMP
+# probe is a current observation that contradicts it. The override
+# forces the TCP probe past the skip gate so status derivation uses
+# a live reading instead of fabricating tcp_ok=True — otherwise an
+# outage beginning within one health interval of a successful poll
+# reports a false ICMP_BLOCKED.
+# ------------------------------------------------------------------
+
+
+class TestIcmpFailureOverridesSkipGate:
+    """A failing ICMP probe forces the TCP probe past the skip gate."""
+
+    @staticmethod
+    def _monitor_with_recent_collection(mock_run: MagicMock) -> tuple[HealthMonitor, MagicMock]:
+        """Monitor with a consumed baseline ping and fresh collection evidence."""
+        mock_run.return_value = _mock_ping_success()
+        monitor, session = _make_monitor()
+        session.head.return_value = _mock_http_response()
+        monitor.ping()  # baseline — first ping never skips
+        session.head.reset_mock()
+        monitor.record_collection_start()
+        monitor.record_collection_end(success=True)
+        return monitor, session
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_dead_modem_is_unresponsive_not_icmp_blocked(self, mock_run: MagicMock) -> None:
+        """Outage right after a poll: ICMP fail + forced TCP fail → UNRESPONSIVE."""
+        monitor, session = self._monitor_with_recent_collection(mock_run)
+        mock_run.return_value = _mock_ping_failure()
+
+        with patch(f"{_MODULE}.socket.create_connection", side_effect=OSError):
+            info = monitor.ping()
+
+        assert info.health_status == HealthStatus.UNRESPONSIVE
+        session.head.assert_not_called()
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_live_modem_confirms_icmp_blocked(self, mock_run: MagicMock) -> None:
+        """ICMP fail + forced TCP pass → ICMP_BLOCKED backed by a real measurement."""
+        monitor, session = self._monitor_with_recent_collection(mock_run)
+        mock_run.return_value = _mock_ping_failure()
+
+        info = monitor.ping()
+
+        assert info.health_status == HealthStatus.ICMP_BLOCKED
+        assert info.tcp_latency_ms is not None
+        assert info.http_latency_ms is None
+        session.head.assert_not_called()
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_override_applies_during_active_collection(self, mock_run: MagicMock) -> None:
+        """Skip reason 'collection active' is also overridden by ICMP failure."""
+        mock_run.return_value = _mock_ping_success()
+        monitor, session = _make_monitor()
+        session.head.return_value = _mock_http_response()
+        monitor.ping()  # baseline — first ping never skips
+        session.head.reset_mock()
+        monitor.record_collection_start()
+        mock_run.return_value = _mock_ping_failure()
+
+        with patch(f"{_MODULE}.socket.create_connection", side_effect=OSError):
+            info = monitor.ping()
+
+        assert info.health_status == HealthStatus.UNRESPONSIVE
+        session.head.assert_not_called()
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_log_shows_forced_tcp(
+        self,
+        mock_run: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Log detail names the skip reason and the forced TCP probe."""
+        monitor, _session = self._monitor_with_recent_collection(mock_run)
+        mock_run.return_value = _mock_ping_failure()
+
+        with (
+            patch(f"{_MODULE}.socket.create_connection", side_effect=OSError),
+            caplog.at_level("DEBUG"),
+        ):
+            monitor.ping()
+
+        assert "HEAD skipped (recent collection; TCP forced by ICMP failure)" in caplog.text
 
 
 # ------------------------------------------------------------------
