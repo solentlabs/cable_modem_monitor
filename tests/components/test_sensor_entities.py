@@ -873,6 +873,123 @@ def test_create_data_dependent_entities_display_only_not_minted(mock_runtime_dat
     assert passthrough_fields.isdisjoint({"current_time", "hardware_version", "model_name"})
 
 
+def test_docsis_status_not_minted_as_passthrough(mock_runtime_data):
+    """docsis_status is consumed by the Status sensor — no standalone sensor (#178).
+
+    A genuine pass-through field still mints alongside it.
+    """
+    from custom_components.cable_modem_monitor.sensor import (
+        _create_data_dependent_entities,
+    )
+
+    modem_data: dict[str, Any] = {
+        "system_info": {
+            "software_version": "1.0",
+            "docsis_status": "operational",
+            "dhcp_status": "success",
+        },
+        "downstream": [],
+        "upstream": [],
+    }
+    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
+    entities = _create_data_dependent_entities(coord, entry, modem_data)
+
+    passthrough_fields = {e._field for e in entities if isinstance(e, SystemInfoFieldSensor)}
+    assert "docsis_status" not in passthrough_fields
+    assert "dhcp_status" in passthrough_fields  # a real pass-through still mints
+
+
+# -----------------------------------------------------------------------
+# Sticky availability — non-continuous data sensors hold value on outage
+# (#178). One modem outage should log one line (Status -> Unreachable),
+# not a fan-out of `-> Unavailable` lines from every non-continuous sensor.
+# -----------------------------------------------------------------------
+
+
+def _outage_snapshot() -> ModemSnapshot:
+    """A poll where the modem is unreachable: modem_data is None."""
+    return ModemSnapshot(
+        connection_status=ConnectionStatus.UNREACHABLE,
+        docsis_status=DocsisStatus.UNKNOWN,
+        modem_data=None,
+    )
+
+
+def test_software_version_sticky_holds_value_and_stays_available(mock_runtime_data):
+    """Software Version holds its last value and stays available on outage."""
+    sensor = _make_sensor(ModemSoftwareVersionSensor, mock_runtime_data)
+    assert sensor.native_value == "4502.9.016"
+    assert sensor.available is True
+
+    # A subsequent poll finds the modem unreachable (modem_data=None).
+    sensor.coordinator.data = _outage_snapshot()
+    vars(sensor).pop("native_value", None)
+
+    assert sensor.native_value == "4502.9.016"  # held → no state change → no log line
+    assert sensor.available is True
+
+
+def test_software_version_unavailable_on_coordinator_failure(mock_runtime_data):
+    """A hard coordinator failure still takes the sticky sensor unavailable."""
+    sensor = _make_sensor(ModemSoftwareVersionSensor, mock_runtime_data)
+    sensor.coordinator.last_update_success = False
+    assert sensor.available is False
+
+
+def test_last_boot_time_stays_available_on_outage(mock_runtime_data):
+    """Last Boot Time stays available on outage (value already holds itself)."""
+    sensor = _make_sensor(ModemLastBootTimeSensor, mock_runtime_data)
+    assert sensor.available is True
+    sensor.coordinator.data = _outage_snapshot()
+    assert sensor.available is True
+
+
+def test_system_info_field_noncontinuous_is_sticky(mock_runtime_data):
+    """A non-continuous pass-through field holds value and stays available."""
+    modem_data: dict[str, Any] = {
+        "system_info": {"ds_scanning_status": "success"},
+        "downstream": [],
+        "upstream": [],
+    }
+    sensor = _make_sensor(SystemInfoFieldSensor, mock_runtime_data, modem_data=modem_data, field="ds_scanning_status")
+    assert sensor.native_value == "success"
+    assert sensor.available is True
+
+    sensor.coordinator.data = _outage_snapshot()
+    vars(sensor).pop("native_value", None)
+
+    assert sensor.native_value == "success"  # held
+    assert sensor.available is True
+
+
+def test_system_info_field_continuous_not_sticky(mock_runtime_data):
+    """A continuous pass-through field (unit/state_class) keeps graph gaps."""
+    modem_data: dict[str, Any] = {
+        "system_info": {"provisioned_speed_down": 110100480},
+        "downstream": [],
+        "upstream": [],
+    }
+    sensor = _make_sensor(
+        SystemInfoFieldSensor, mock_runtime_data, modem_data=modem_data, field="provisioned_speed_down"
+    )
+    assert sensor.native_value == 110100480
+    assert sensor.available is True
+
+    sensor.coordinator.data = _outage_snapshot()
+    vars(sensor).pop("native_value", None)
+
+    assert sensor.native_value is None  # no holding — the gap is graph signal
+    assert sensor.available is False  # continuous → unavailable on outage
+
+
+def test_continuous_data_sensor_unavailable_on_outage(mock_runtime_data):
+    """Continuous data sensors are untouched — they go unavailable on outage."""
+    sensor = _make_sensor(ModemChannelCountSensor, mock_runtime_data, direction="downstream")
+    assert sensor.available is True
+    sensor.coordinator.data = _outage_snapshot()
+    assert sensor.available is False
+
+
 # -----------------------------------------------------------------------
 # Deferred entity creation (UC-84)
 # -----------------------------------------------------------------------
@@ -995,9 +1112,13 @@ def test_sensor_unavailable_when_coordinator_fails(sensor_cls, kwargs, desc, moc
 
 
 def test_modem_sensor_unavailable_when_no_modem_data(mock_runtime_data):
-    """ModemSensorBase subclass is unavailable when snapshot.modem_data is None."""
+    """A continuous ModemSensorBase subclass is unavailable when modem_data is None.
+
+    Sticky sensors deliberately stay available here — see the
+    sticky-availability tests above.
+    """
     coord, entry = _make_coord_and_entry(None, mock_runtime_data)
-    sensor = ModemSoftwareVersionSensor(coord, entry)
+    sensor = ModemChannelCountSensor(coord, entry, direction="downstream")
     assert sensor.available is False
 
 

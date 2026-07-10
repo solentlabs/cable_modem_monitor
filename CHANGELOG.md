@@ -37,6 +37,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **One outage, one Activity line.** A modem going unreachable used to
+  write four logbook lines (Status, Docsis Status, Last Boot Time, and
+  Software Version all going to Unavailable). Now it writes one: Status
+  to Unreachable. The non-continuous data sensors (Software Version,
+  Last Boot Time, and string pass-through fields) are now "sticky" —
+  they stay available and hold their last value through a transient
+  outage, so no spurious "to Unavailable" transition reaches the
+  logbook. Real changes still log: a firmware push (Software Version)
+  and a reboot (Last Boot Time) are value changes and each log one line.
+  Continuous sensors (channel metrics, error counts and rates,
+  provisioned speeds) are untouched, so their unavailable-gaps stay
+  meaningful on graphs. (Related to #178)
+
+- **Docsis Status sensor retired, folded into Status.** The Status
+  sensor already carries the DOCSIS lock state two ways: as its display
+  value (Not Locked, Partial Lock, Operational, via the priority
+  cascade) and on its `docsis_status` attribute. The standalone
+  `sensor.<prefix>_docsis_status` was a duplicate that double-logged
+  every real lock change and contributed the fourth outage line above.
+  The dashboard generator now renders DOCSIS Status as an attribute row
+  off the Status sensor (the raw value, e.g. `operational`); regenerate
+  your dashboard after upgrading. On upgrades from earlier 3.14 betas
+  the removed sensor lingers as unavailable — press Reset Entities
+  (keeps your config and history), or remove and re-add the
+  integration, to clear it. Upgrades from 3.13 and earlier never had a
+  standalone DOCSIS sensor, so there is nothing to clear.
+  (Related to #178)
+
 - **DOCSIS 4.0 enters the catalog vocabulary.** `hardware.docsis_version`
   now accepts `"4.0"` (Core schema + MODEM_YAML_SPEC § Hardware), defined
   as hardware capability rather than provisioned mode. The XB10

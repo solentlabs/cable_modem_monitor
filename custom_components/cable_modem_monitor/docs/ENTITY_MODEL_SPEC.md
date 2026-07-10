@@ -63,15 +63,15 @@ output (some gated by config).
 |--------|-----------------|-------|--------------|-------------|------|------------|
 | Status | `_status` | display¹ | — | — | — | `connection_status`, `health_status`, `docsis_status`, `diagnosis` |
 | Modem Info | `_info` | detected model | — | — | — | `manufacturer`, `model`, `release_date`, `docsis_version`, `status` (from Core's `ModemIdentity`) |
-| Software Version | `_software_version` | string | — | — | — | — |
-| Last Boot Time | `_last_boot_time` | datetime | TIMESTAMP | — | — | Held steady across poll jitter⁵ |
+| Software Version | `_software_version` | string⁶ | — | — | — | — |
+| Last Boot Time | `_last_boot_time` | datetime⁶ | TIMESTAMP | — | — | Held steady across poll jitter⁵ |
 | DS Channel Count | `_downstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
 | Total Uncorrected | `_total_uncorrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
 | Rate Corrected | `_rate_corrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
 | Rate Uncorrected | `_rate_uncorrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
-| System Info Field³ | `_{field}` | pass-through | — | — | — | Dynamic per-field sensor for non-consumed system_info fields |
+| System Info Field³ | `_{field}` | pass-through⁶ | — | — | — | Dynamic per-field sensor for non-consumed system_info fields |
 
 ¹ See [Status Sensor](#status-sensor) for the priority cascade that
 produces the display state.
@@ -117,6 +117,23 @@ of any real reboot (the entire prior uptime). The held value is
 restored across HA restarts (`RestoreSensor`) and survives polls
 where both sources are absent. Stability contract: **the state
 changes only on a real reboot.**
+
+⁶ **Sticky** (non-continuous data sensors). These fields carry no
+`state_class` or `unit`, so Home Assistant treats them as
+non-continuous and logs **every** state change to the logbook —
+including a `→ Unavailable` transition when the modem goes
+unreachable. On a transient outage the Status sensor is the sole
+announcer (`→ Unreachable`); Software Version, Last Boot Time, and
+non-continuous pass-through fields therefore stay available and hold
+their last value through the data gap, so no second logbook line is
+written (#178). This is the availability axis in action: **a sticky
+sensor's gap carries no information, so it is suppressed; a continuous
+sensor's gap is graph signal, so it is preserved.** Continuous
+pass-through fields (those in `_SYSTEM_INFO_FIELD_UNITS`, which carry
+a unit/`state_class`) opt out and keep the standard data-sensor
+availability. Firmware- and reboot-change logging is unaffected: a
+real change to Software Version or Last Boot Time is still a value
+change and still logs one line.
 
 **Boot-time source normalization.** Every boot-time source is
 converted to a duration and anchored to HA's clock; the modem's wall
@@ -389,7 +406,7 @@ System info fields use a consumed/display-only/dynamic pattern:
 
 | Pattern | HA Entity | Fields |
 |---------|-----------|--------|
-| Consumed (dedicated class or derivation) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected` |
+| Consumed (dedicated class or derivation) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected`, `docsis_status` |
 | Display-only (never minted) | None — display surfaces carry the value | `current_time`, `hardware_version`, `model_name` |
 | Dynamic (pass-through) | Generic `SystemInfoFieldSensor(field=key)` | Everything else in `system_info` |
 
@@ -411,6 +428,16 @@ They are listed in `CONSUMED_SYSTEM_INFO_FIELDS`:
 - `total_corrected`, `total_uncorrected` — declared in parser.yaml's
   `aggregate` section (scoped sums from channel data); native mapping
   takes precedence if the modem reports totals directly
+- `docsis_status` — consumed by the **Status sensor**, which already
+  carries it two ways: `_compute_display_status` returns the DOCSIS
+  lock state directly when nothing higher-priority is wrong (Not
+  Locked / Partial Lock / Operational), and it is exposed raw on the
+  Status sensor's `docsis_status` attribute. It has **no sensor of its
+  own**: minting a standalone `SystemInfoFieldSensor` for it
+  double-logs every real lock change (once on Status, once on the
+  standalone) and adds a fourth `→ Unavailable` line on every outage
+  (#178). The standalone entity was retired; the dashboard generator
+  renders DOCSIS Status as an `attribute` row off the Status sensor.
 
 **Display-only fields** (`DISPLAY_ONLY_SYSTEM_INFO_FIELDS`) are
 captured for the data layer — snapshot, event payload, diagnostics —
@@ -429,15 +456,20 @@ but never minted as entities (#178):
 
 **Discontinued entities:** sensors the integration used to create and
 no longer does (`System Uptime`, `Current Time`, `Hardware Version`,
-`Model Name`) leave orphaned registry entries on in-place upgrades.
-Two cleanup paths:
+`Model Name`, `Docsis Status`) leave orphaned registry entries on
+in-place upgrades. Two cleanup paths:
 
 - **v1 (3.13) entries**: the v1→v2 config-entry migration removes the
   v1-era System Uptime row (`V1_DISCONTINUED_UNIQUE_ID_SUFFIXES` in
   `migrations/v1_to_v2.py`) — 3.13 upgraders never see the orphan.
+  `Docsis Status` needs no migration entry: 3.13 exposed DOCSIS status
+  only as a Status-sensor attribute, never as a standalone sensor, so
+  a 3.13 upgrader has no `_docsis_status` row to orphan.
 - **v2 (3.14 beta) entries**: no automatic cleanup — remove and
   re-add the integration (or press Reset Entities), which
-  re-registers from the current sensor classes.
+  re-registers from the current sensor classes. This is the path for
+  the retired `Docsis Status` sensor (minted as a dynamic pass-through
+  on earlier 3.14 betas).
 
 The grouping is by HA entity ownership, not by FIELD_REGISTRY tier.
 
@@ -534,35 +566,61 @@ two modems, HA auto-suffixes entity_ids (`_2`, `_3`, etc.). Recommend
 
 ## Availability
 
-| Scenario | Data sensors | Health sensors | Buttons |
-|----------|-------------|----------------|---------|
-| Normal operation | available | available | available |
-| Coordinator update failed | unavailable | unavailable | available |
-| Modem unreachable | unavailable | available¹ | available |
-| Modem unreachable at startup | deferred² | available¹ | available |
-| Parse error | unavailable | available¹ | available |
-| Field not parsed by this modem | never created | n/a | n/a |
+| Scenario | Continuous data¹ | Sticky data² | Status / Info | Health | Buttons |
+|----------|------------------|--------------|---------------|--------|---------|
+| Normal operation | available | available | available | available | available |
+| Coordinator update failed | unavailable | unavailable | unavailable | unavailable | available |
+| Modem unreachable | unavailable | available | available | available³ | available |
+| Modem unreachable at startup | deferred⁴ | deferred⁴ | available | available³ | available |
+| Parse error | unavailable | available | available | available³ | available |
+| Field not parsed by this modem | never created | never created | n/a | n/a | n/a |
 
-¹ Health sensors remain available when the modem is unreachable or
+¹ **Continuous data sensors** carry a `state_class` or `unit`
+(channel metrics, error totals/rates, channel counts, and continuous
+pass-through fields). Their unavailable-gaps are meaningful on graphs,
+so they go unavailable when a poll returns no `modem_data`
+(`ModemSensorBase.available`).
+
+² **Sticky data sensors** (Software Version, Last Boot Time,
+non-continuous pass-through fields) carry no `state_class`/`unit` and
+drive the logbook. They stay available and hold their last value
+through a transient data gap so a modem outage logs no spurious
+`→ Unavailable` line — the Status sensor is the sole announcer (#178).
+See catalog footnote ⁶.
+
+³ Health sensors remain available when the modem is unreachable or
 produces parse errors — they report the failure state itself (latency
 = None, status = Unresponsive/Parser Error).
 
-² When the modem is unreachable at HA startup, data-dependent entities
-(channels, system metrics, LAN stats) are deferred until the first
-successful poll. Status, Info, and Health sensors are created
-immediately and remain available during the outage. A delayed
-re-notification (1 second after creation) ensures deferred entities
-receive their initial coordinator update, avoiding an "Unknown" state
-window until the next scheduled poll. See HA_ADAPTER_SPEC § Deferred
-Entity Creation.
+⁴ When the modem is unreachable at HA startup, data-dependent entities
+(channels, system metrics, LAN stats, sticky fields) are deferred
+until the first successful poll — sticky holding needs a first value
+to hold. Status, Info, and Health sensors are created immediately and
+remain available during the outage. A delayed re-notification (1
+second after creation) ensures deferred entities receive their initial
+coordinator update, avoiding an "Unknown" state window until the next
+scheduled poll. See HA_ADAPTER_SPEC § Deferred Entity Creation.
 
 ### Sensor Availability Logic
 
-`ModemSensorBase.available` returns `True` when:
+`ModemSensorBase.available` (continuous data sensors) returns `True`
+when:
 
 - `coordinator.last_update_success` is `True`, AND
-- modem status is in a reportable state (see `connection_status`
-  values in the Status Sensor table above)
+- `modem_data` is present in the snapshot
+
+Sticky data sensors drop the `modem_data` clause: available whenever
+`coordinator.last_update_success` is `True`, holding the last
+non-`None` value across the gap. Two small mixins compose this —
+`_StickyAvailabilityMixin` (the availability override) and
+`_HoldsLastValueMixin` (the value-holding helper). Software Version
+uses both; Last Boot Time uses only the availability mixin (its value
+already holds via `_stable_boot_time`); `SystemInfoFieldSensor` uses
+the value-holding mixin and branches its own `available` (sticky for
+non-continuous fields, standard `modem_data` rule for continuous
+ones). The Status and Info sensors override `available` the same way —
+always available while the coordinator is alive — because Status is
+the single outage announcer.
 
 Health sensors (Ping, HTTP) have independent availability based on
 whether the health check ran (`ping_success is not None`,

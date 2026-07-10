@@ -329,10 +329,13 @@ def test_status_card_display_only_fields_never_appear():
     assert "hardware_version" not in yaml
     assert "model_name" not in yaml
     assert "sensor.modem_ds_power_status" in yaml
-    # Explicit DOCSIS row, exactly once, positioned before Software Version.
-    assert yaml.count("sensor.modem_docsis_status") == 1
+    # DOCSIS status is an attribute row off the Status sensor (the
+    # standalone sensor was retired, #178) — no standalone entity.
+    assert "sensor.modem_docsis_status" not in yaml
+    assert lines.count("        attribute: docsis_status") == 1
     assert "name: DOCSIS Status" in yaml
-    docsis_idx = lines.index("      - entity: sensor.modem_docsis_status")
+    # Positioned before Software Version, at its historical spot.
+    docsis_idx = lines.index("        attribute: docsis_status")
     sw_idx = lines.index("      - entity: sensor.modem_software_version")
     assert docsis_idx < sw_idx
 
@@ -353,7 +356,7 @@ def test_status_card_exclude_override():
             exclude_fields=frozenset({"ds_power_status"}),
         )
     )
-    assert "sensor.modem_docsis_status" in yaml
+    assert "attribute: docsis_status" in yaml
     assert "sensor.modem_dhcp_status" in yaml
     assert "ds_power_status" not in yaml
 

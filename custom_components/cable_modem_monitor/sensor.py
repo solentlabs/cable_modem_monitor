@@ -251,6 +251,36 @@ class ModemSensorBase(
         super()._handle_coordinator_update()
 
 
+class _StickyAvailabilityMixin:
+    """Always available while the coordinator is alive.
+
+    Non-continuous data sensors (no unit/state_class) drive the HA
+    logbook, so a modem outage's ``-> Unavailable`` transition logs a
+    spurious line. Staying available — and holding the last value (see
+    _HoldsLastValueMixin) — keeps them silent so the Status sensor is
+    the sole outage announcer (#178). See ENTITY_MODEL_SPEC § Availability.
+    """
+
+    coordinator: DataUpdateCoordinator[ModemSnapshot]
+
+    @property
+    def available(self) -> bool:
+        """Available whenever the coordinator's last update succeeded."""
+        return self.coordinator.last_update_success
+
+
+class _HoldsLastValueMixin:
+    """Holds the last non-None native value across transient data gaps."""
+
+    _held_value: Any = None
+
+    def _hold_last(self, current: Any) -> Any:
+        """Return current, or the last non-None value when current is None."""
+        if current is not None:
+            self._held_value = current
+        return self._held_value
+
+
 class HealthSensorBase(  # pyright: ignore[reportIncompatibleVariableOverride]
     CoordinatorEntity[DataUpdateCoordinator[HealthInfo]],
     SensorEntity,
@@ -512,8 +542,8 @@ class ModemErrorRateSensor(_SystemInfoSensor):
         return float(value) if value is not None else None
 
 
-class ModemSoftwareVersionSensor(_SystemInfoSensor):
-    """Software version sensor."""
+class ModemSoftwareVersionSensor(_StickyAvailabilityMixin, _HoldsLastValueMixin, _SystemInfoSensor):
+    """Software version sensor — sticky, so an outage doesn't log; a firmware push still does (#178)."""
 
     def __init__(
         self,
@@ -528,8 +558,8 @@ class ModemSoftwareVersionSensor(_SystemInfoSensor):
 
     @functools.cached_property
     def native_value(self) -> str | None:
-        """Return the software version string."""
-        return self._get_system_info().get("software_version")
+        """Return the software version string, held across data gaps."""
+        return self._hold_last(self._get_system_info().get("software_version"))
 
 
 # now() - uptime jitters by poll timing and uptime reporting granularity;
@@ -538,7 +568,8 @@ class ModemSoftwareVersionSensor(_SystemInfoSensor):
 _BOOT_TIME_JITTER_TOLERANCE = timedelta(minutes=5)
 
 
-class ModemLastBootTimeSensor(  # pyright: ignore[reportIncompatibleVariableOverride]  # rationale: ModemSensorBase.available is an intentional property override of Entity's attribute (suppressed there); adding RestoreSensor to the MRO re-raises the same variance complaint at the class level, matching HealthSensorBase
+class ModemLastBootTimeSensor(  # pyright: ignore[reportIncompatibleVariableOverride]  # rationale: the mixin's `available` property intentionally overrides Entity's attribute; combining it with RestoreSensor in the MRO raises the variance complaint at the class level, matching HealthSensorBase
+    _StickyAvailabilityMixin,
     _SystemInfoSensor,
     RestoreSensor,
 ):
@@ -547,6 +578,9 @@ class ModemLastBootTimeSensor(  # pyright: ignore[reportIncompatibleVariableOver
     Priority: native system_uptime from modem > counter-reset detection
     from the orchestrator. Counter-reset provides a proxy for modems
     that don't report uptime (see #110).
+
+    Sticky availability only (#178): _stable_boot_time already holds
+    the value, so the value-holding mixin isn't needed.
     """
 
     def __init__(
@@ -606,13 +640,16 @@ class ModemLastBootTimeSensor(  # pyright: ignore[reportIncompatibleVariableOver
         return self._stable_boot_time
 
 
-class SystemInfoFieldSensor(_SystemInfoSensor):
+class SystemInfoFieldSensor(_HoldsLastValueMixin, _SystemInfoSensor):
     """Dynamic sensor for Tier 3 system_info fields.
 
     Created for each system_info field not consumed by a dedicated
     sensor class.  Parameterized by field name — one class handles
     all pass-through fields.  Value is returned as-is with no type
     conversion.
+
+    Sticky for non-continuous fields (#178); continuous fields (those
+    in _SYSTEM_INFO_FIELD_UNITS) keep their graph-meaningful gaps.
 
     See ENTITY_MODEL_SPEC.md § Field Pass-Through.
     """
@@ -631,15 +668,24 @@ class SystemInfoFieldSensor(_SystemInfoSensor):
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_{field}"
         self._attr_icon = "mdi:information-outline"
         unit_meta = _SYSTEM_INFO_FIELD_UNITS.get(field)
+        self._continuous = unit_meta is not None
         if unit_meta is not None:
             self._attr_native_unit_of_measurement = unit_meta[0]
             self._attr_device_class = unit_meta[1]
             self._attr_state_class = unit_meta[2]
 
+    @property
+    def available(self) -> bool:
+        """Sticky for non-continuous fields; continuous fields keep graph gaps."""
+        if self._continuous:
+            return super().available  # ModemSensorBase: requires modem_data
+        return self.coordinator.last_update_success
+
     @functools.cached_property
     def native_value(self) -> str | int | float | None:
-        """Return the field value as-is (no type conversion)."""
-        return self._get_system_info().get(self._field)
+        """Return the field value as-is; held across gaps when non-continuous."""
+        current = self._get_system_info().get(self._field)
+        return current if self._continuous else self._hold_last(current)
 
 
 # ------------------------------------------------------------------

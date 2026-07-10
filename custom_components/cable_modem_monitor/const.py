@@ -93,10 +93,13 @@ class EntityPrefix(StrEnum):
 # (dev_tools.py) both skip these — the dedicated classes own them.
 # When a field graduates to a dedicated sensor, add it here.
 # system_uptime has no sensor of its own — it feeds Last Boot Time.
+# docsis_status has no sensor of its own either — the Status sensor
+# carries it as display value and attribute (#178).
 # fmt: off
 CONSUMED_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({
     "software_version",
     "system_uptime",
+    "docsis_status",
     "downstream_channel_count",
     "upstream_channel_count",
     "total_corrected",
