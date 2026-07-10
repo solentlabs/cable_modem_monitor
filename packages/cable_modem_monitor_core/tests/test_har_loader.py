@@ -6,6 +6,7 @@ build_resource_dict() (JSON body sniffing, root-level array wrapping).
 
 from __future__ import annotations
 
+import base64
 import json
 import subprocess
 from pathlib import Path
@@ -17,6 +18,14 @@ from solentlabs.cable_modem_monitor_core.har import (
     build_resource_dict,
     load_har_json,
 )
+
+_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "har_loader"
+
+
+def _fixture_text(name: str) -> str:
+    """Read a har_loader fixture file as text."""
+    return (_FIXTURE_DIR / name).read_text(encoding="utf-8").strip()
+
 
 LFS_POINTER = (
     "version https://git-lfs.github.com/spec/v1\n"
@@ -162,7 +171,7 @@ class TestBuildResourceDictJsonSniffing:
     """JSON body sniffing when Content-Type says text/html."""
 
     def test_json_object_with_html_content_type(self, tmp_path: Path) -> None:
-        body = json.dumps({"hwVersion": "1A", "swVersion": "2.0"})
+        body = _fixture_text("system_info.json")
         har = _har_file(tmp_path, [_har_entry("https://192.168.100.1/data/info.asp", body)])
 
         resources = build_resource_dict(str(har))
@@ -171,7 +180,7 @@ class TestBuildResourceDictJsonSniffing:
         assert resources["/data/info.asp"]["hwVersion"] == "1A"
 
     def test_json_array_wrapped_as_raw(self, tmp_path: Path) -> None:
-        body = json.dumps([{"channelId": "1", "frequency": "495000000"}])
+        body = _fixture_text("channel_list.json")
         har = _har_file(tmp_path, [_har_entry("https://192.168.100.1/data/dsinfo.asp", body)])
 
         resources = build_resource_dict(str(har))
@@ -182,19 +191,19 @@ class TestBuildResourceDictJsonSniffing:
         assert result["_raw"][0]["channelId"] == "1"
 
     def test_json_content_type_also_wraps_arrays(self, tmp_path: Path) -> None:
-        body = json.dumps([{"id": 1}])
+        body = _fixture_text("channel_list.json")
         har = _har_file(tmp_path, [_har_entry("https://192.168.100.1/api/status", body, mime="application/json")])
 
         resources = build_resource_dict(str(har))
 
         result = resources["/api/status"]
         assert isinstance(result, dict)
-        assert result["_raw"][0]["id"] == 1
+        assert result["_raw"][0]["channelId"] == "1"
 
     def test_html_body_not_parsed_as_json(self, tmp_path: Path) -> None:
         from bs4 import BeautifulSoup
 
-        body = "<html><body><table></table></body></html>"
+        body = _fixture_text("status_page.html")
         har = _har_file(tmp_path, [_har_entry("https://192.168.100.1/status.html", body)])
 
         resources = build_resource_dict(str(har))
@@ -277,16 +286,14 @@ class TestBuildResourceDictSkipBranches:
 
     def test_base64_encoded_text_decoded(self, tmp_path: Path) -> None:
         """Valid base64 encoding is decoded before mime-type detection."""
-        import base64
-
-        body = base64.b64encode(b'{"hwVersion": "X"}').decode("ascii")
+        body = base64.b64encode(_fixture_text("system_info.json").encode("utf-8")).decode("ascii")
         entry = _har_entry("https://192.168.100.1/info.json", body, mime="application/json")
         entry["response"]["content"]["encoding"] = "base64"
         har = _har_file(tmp_path, [entry])
 
         resources = build_resource_dict(str(har))
 
-        assert resources["/info.json"]["hwVersion"] == "X"
+        assert resources["/info.json"]["hwVersion"] == "1A"
 
     def test_undecodable_body_skipped(self, tmp_path: Path) -> None:
         """Body that's neither JSON nor HTML produces no resource entry."""
@@ -330,16 +337,7 @@ class TestHnapResourceExtraction:
 
     def test_hnap_resource_dict_built_from_har(self, tmp_path: Path) -> None:
         """build_resource_dict prefers HNAP entries when present."""
-        body = json.dumps(
-            {
-                "GetMultipleHNAPsResponse": {
-                    "GetCustomerStatusDownstreamChannelInfoResponse": {
-                        "CustomerConnDownstreamChannel": "1^Locked^256QAM^"
-                    },
-                    "GetMultipleHNAPsResult": "OK",
-                }
-            }
-        )
+        body = _fixture_text("hnap_multi_response.json")
         har = _har_file(
             tmp_path,
             [_hnap_entry("https://192.168.100.1/HNAP1/", body)],
@@ -349,13 +347,13 @@ class TestHnapResourceExtraction:
 
         assert "hnap_response" in resources
         merged = resources["hnap_response"]
-        assert "GetCustomerStatusDownstreamChannelInfoResponse" in merged
+        assert "GetChannelInfoResponse" in merged
         # GetMultipleHNAPsResult should be filtered out
         assert "GetMultipleHNAPsResult" not in merged
 
     def test_hnap_login_action_excluded(self, tmp_path: Path) -> None:
         """SOAPAction containing 'Login' is treated as auth, not data — falls back to HTTP."""
-        body = json.dumps({"GetMultipleHNAPsResponse": {"FooResponse": {"x": "y"}}})
+        body = _fixture_text("hnap_multi_response.json")
         # Login action: should be filtered out by is_hnap_data_entry
         har = _har_file(
             tmp_path,
@@ -375,7 +373,7 @@ class TestHnapResourceExtraction:
 
     def test_hnap_non_post_excluded(self, tmp_path: Path) -> None:
         """GET request to /HNAP1/ is not treated as HNAP data."""
-        body = json.dumps({"GetMultipleHNAPsResponse": {}})
+        body = _fixture_text("hnap_multi_response.json")
         entry = _hnap_entry("https://192.168.100.1/HNAP1/", body)
         entry["request"]["method"] = "GET"
         har = _har_file(tmp_path, [entry])
@@ -420,6 +418,31 @@ class TestHnapResourceExtraction:
 
         assert "hnap_response" not in resources
 
+    def test_hnap_base64_encoded_body_decoded(self, tmp_path: Path) -> None:
+        """HNAP body stored with HAR base64 encoding is decoded before merging."""
+        body = _fixture_text("hnap_multi_response.json")
+        entry = _hnap_entry(
+            "https://192.168.100.1/HNAP1/",
+            base64.b64encode(body.encode("utf-8")).decode("ascii"),
+        )
+        entry["response"]["content"]["encoding"] = "base64"
+        har = _har_file(tmp_path, [entry])
+
+        resources = build_resource_dict(str(har))
+
+        assert "hnap_response" in resources
+        assert "GetChannelInfoResponse" in resources["hnap_response"]
+
+    def test_hnap_corrupt_base64_body_skipped(self, tmp_path: Path) -> None:
+        """HNAP entry with corrupted base64 encoding contributes nothing."""
+        entry = _hnap_entry("https://192.168.100.1/HNAP1/", "!!!not-base64!!!")
+        entry["response"]["content"]["encoding"] = "base64"
+        har = _har_file(tmp_path, [entry])
+
+        resources = build_resource_dict(str(har))
+
+        assert "hnap_response" not in resources
+
 
 # -----------------------------------------------------------------------
 # _is_html_content — content-sniffing branch
@@ -433,7 +456,7 @@ class TestHtmlContentSniffing:
         """Body starting with <!DOCTYPE is detected as HTML even with octet mime."""
         from bs4 import BeautifulSoup
 
-        body = "<!DOCTYPE html><html><body>x</body></html>"
+        body = _fixture_text("doctype_page.html")
         entry = _har_entry("https://192.168.100.1/page", body, mime="application/octet-stream")
         har = _har_file(tmp_path, [entry])
 

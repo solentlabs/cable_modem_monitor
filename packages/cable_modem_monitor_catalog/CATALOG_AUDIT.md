@@ -51,7 +51,6 @@ the gap closes.
 
 | Modem | Missing | Needs | Tracked |
 |-------|---------|-------|---------|
-| S33 (v3) | system_uptime | HAR capture that includes the Software Information page (Cmswinfo.html) | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/98) |
 | DM1000 | system_uptime | HAR capture (har-capture >= 0.10.1) that includes status.html | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/92) |
 | DM1000 | reboot action | HAR capture of the Reboot button click on the advanced page | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/92) |
 
@@ -66,6 +65,7 @@ Entries with an open capability gap are listed above, not here.
 | CM820B | HTML | Volya, Various |
 | S33 | HNAP | Comcast, Cox, Spectrum, Xfinity |
 | S33 (v2) | HNAP | Comcast, Cox, Spectrum, Xfinity |
+| S33 (v3) | HNAP | Comcast, Cox, Spectrum, Xfinity |
 | SB6183 | HTML | Comcast, Cox, Spectrum, Xfinity, Mediacom |
 | SB6190 (form-nonce) | HTML | Comcast, Spectrum |
 | SB8200 (body-token) | HTML | Spectrum |

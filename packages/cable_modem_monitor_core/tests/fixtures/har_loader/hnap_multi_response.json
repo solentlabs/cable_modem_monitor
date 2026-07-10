@@ -1,0 +1,8 @@
+{
+  "GetMultipleHNAPsResponse": {
+    "GetChannelInfoResponse": {
+      "Channels": "1^Locked^"
+    },
+    "GetMultipleHNAPsResult": "OK"
+  }
+}

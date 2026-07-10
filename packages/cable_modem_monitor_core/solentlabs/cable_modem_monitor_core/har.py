@@ -158,7 +158,7 @@ def merge_hnap_har_responses(
         if not is_hnap_data_entry(request):
             continue
 
-        body_text = response.get("content", {}).get("text", "")
+        body_text = _content_text(response.get("content", {}), request.get("url", ""))
         if not body_text:
             continue
 
@@ -240,23 +240,29 @@ def _build_http_resources(
             continue
 
         content = response.get("content", {})
-        text = content.get("text", "")
+        text = _content_text(content, url_path)
         if not text:
             continue
-
-        encoding = content.get("encoding", "")
-        if encoding == "base64":
-            try:
-                text = base64.b64decode(text).decode("utf-8", errors="replace")
-            except Exception:
-                _logger.debug("Failed to base64-decode response for %s", url_path)
-                continue
 
         decoded = _decode_har_entry(text, content.get("mimeType", ""), url_path)
         if decoded is not None:
             resources[url_path] = decoded
 
     return resources
+
+
+def _content_text(content: dict[str, Any], url: str) -> str:
+    """Return a HAR content body as text, decoding base64 storage."""
+    text: str = content.get("text", "")
+    if not text:
+        return ""
+    if content.get("encoding", "") == "base64":
+        try:
+            return base64.b64decode(text).decode("utf-8", errors="replace")
+        except Exception:
+            _logger.debug("Failed to base64-decode response for %s", url)
+            return ""
+    return text
 
 
 def _decode_har_entry(text: str, mime_type: str, url_path: str) -> Any:

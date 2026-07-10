@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **S33v3 system uptime mapped from real wire data.** A contributor
+  HAR that includes the Software Information page (Cmswinfo.html)
+  finally showed the populated response: the AT01 firmware writes
+  `24 day(s) 10h:33m:56s` — `day(s)`, not the `days` the S33/S33v2
+  firmware line writes. The original mapping guessed the S33v2-style
+  format, silently failed to match on real hardware, and was misread
+  as the field being absent and dropped. Restored with the observed
+  format; the S33v3 test fixture is now that full wire capture,
+  replacing the earlier synthetic fixture, and the S33v3 gaps entry
+  is closed. Uptime feeds Last Boot Time, which no longer waits for
+  a counter reset on this model. (Related to #98)
+
+- **HAR loader decodes base64-stored HNAP bodies.** The HNAP
+  response merge read `content.text` verbatim, so a response body
+  stored with the HAR `encoding: base64` marker was silently
+  skipped; only the HTTP resource path handled the marker. Both
+  paths now share one decode step. Surfaced by the S33v3 capture,
+  whose channel-data response is stored base64-encoded.
+
 ### Added
 
 - **Sercomm DM1000 confirmed on hardware.** Verified via contributor
