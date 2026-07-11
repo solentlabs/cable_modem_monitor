@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Status no longer shows a stale "Unresponsive" after recovery.**
+  When a modem came back and a data poll succeeded before the next
+  scheduled health probe, the last probe's Unresponsive reading —
+  priority 1 in the Status cascade — kept masking the recovered modem
+  for up to a full health interval (~2.5 minutes of "Unresponsive"
+  over a modem actively serving polls). A successful poll is live
+  proof the data path is up, so it now triggers an immediate health
+  refresh — stale evidence must not outvote a live signal, the same
+  principle as the health monitor's ICMP contradiction override
+  (UC-59a), applied in the reverse direction.
+  The refresh is ICMP-only (fresh collection evidence keeps the
+  TCP/HEAD skip gate up), and the resulting recovery is recognized as
+  poll-proven so it does not trigger the health-recovery listener's
+  redundant forced poll — no extra logins on session-limited modems.
+
 - **S33v3 system uptime mapped from real wire data.** A contributor
   HAR that includes the Software Information page (Cmswinfo.html)
   finally showed the populated response: the AT01 firmware writes

@@ -892,24 +892,30 @@ def test_rebuild_channel_map_builds_map():
 
 
 # -----------------------------------------------------------------------
-# _attach_health_recovery_listener — recovery-edge detection
+# _attach_health_sync_listeners — recovery-edge detection (health → data)
 # -----------------------------------------------------------------------
 
 
 def _health_recovery_inputs():
     """Wire up listener inputs and return (hass, health_coord, data_coord, listener_fn)."""
-    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import (
+        ConnectionStatus,
+        HealthStatus,
+    )
 
-    from custom_components.cable_modem_monitor import _attach_health_recovery_listener
+    from custom_components.cable_modem_monitor import _attach_health_sync_listeners
 
     hass = MagicMock()
     health_coord = MagicMock()
     health_coord.data = MagicMock()
     health_coord.data.health_status = HealthStatus.RESPONSIVE
+    health_coord.async_request_refresh = AsyncMock()
     data_coord = MagicMock()
+    data_coord.data = MagicMock()
+    data_coord.data.connection_status = ConnectionStatus.ONLINE
     data_coord.async_request_refresh = AsyncMock()
 
-    _attach_health_recovery_listener(hass, health_coord, data_coord, "TPS-2000")
+    _attach_health_sync_listeners(hass, health_coord, data_coord, "TPS-2000")
     listener_fn = health_coord.async_add_listener.call_args[0][0]
     return hass, health_coord, data_coord, listener_fn
 
@@ -996,6 +1002,142 @@ def test_health_recovery_no_refresh_on_icmp_blocked_to_responsive():
     listener_fn()
 
     hass.async_create_task.assert_not_called()
+
+
+# -----------------------------------------------------------------------
+# _attach_health_sync_listeners — stale-health contradiction (data → health)
+# -----------------------------------------------------------------------
+
+
+def _health_sync_inputs():
+    """Wire up both listeners; return (hass, health_coord, data_coord, health_fn, data_fn)."""
+    hass, health_coord, data_coord, health_fn = _health_recovery_inputs()
+    data_fn = data_coord.async_add_listener.call_args[0][0]
+    return hass, health_coord, data_coord, health_fn, data_fn
+
+
+@pytest.mark.parametrize(
+    "stale_state",
+    ["UNRESPONSIVE", "DEGRADED"],
+)
+def test_poll_success_refreshes_stale_down_health(stale_state):
+    """A successful poll while health reads data-path-down refreshes health.
+
+    A completed collection (auth + fetches) is live proof the modem is
+    responsive; a stale UNRESPONSIVE/DEGRADED probe result must not keep
+    masking it in the Status cascade until the next scheduled probe —
+    UC-59a's principle applied in the reverse direction.
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    _, health_coord, _, _, data_fn = _health_sync_inputs()
+
+    health_coord.data.health_status = HealthStatus[stale_state]
+    data_fn()
+
+    health_coord.async_request_refresh.assert_called_once()
+
+
+def test_poll_failure_does_not_refresh_health():
+    """A failed poll (UNREACHABLE snapshot) never triggers a health refresh."""
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import (
+        ConnectionStatus,
+        HealthStatus,
+    )
+
+    _, health_coord, data_coord, _, data_fn = _health_sync_inputs()
+
+    health_coord.data.health_status = HealthStatus.UNRESPONSIVE
+    data_coord.data.connection_status = ConnectionStatus.UNREACHABLE
+    data_fn()
+
+    health_coord.async_request_refresh.assert_not_called()
+
+
+def test_poll_success_with_healthy_probe_no_refresh():
+    """Steady state — poll success while health is RESPONSIVE is a no-op."""
+    _, health_coord, _, _, data_fn = _health_sync_inputs()
+
+    data_fn()
+
+    health_coord.async_request_refresh.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "stale_state",
+    ["UNKNOWN", "ICMP_BLOCKED"],
+)
+def test_poll_success_ignores_non_data_path_states(stale_state):
+    """UNKNOWN (probes not applicable) and ICMP_BLOCKED (TCP already up)
+    are not contradicted by a successful poll — no refresh, no flag churn."""
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    _, health_coord, _, _, data_fn = _health_sync_inputs()
+
+    health_coord.data.health_status = HealthStatus[stale_state]
+    data_fn()
+
+    health_coord.async_request_refresh.assert_not_called()
+
+
+def test_poll_success_skips_when_coordinator_data_none():
+    """Listener exits silently when either coordinator has no data yet."""
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    _, health_coord, data_coord, _, data_fn = _health_sync_inputs()
+
+    health_coord.data.health_status = HealthStatus.UNRESPONSIVE
+    data_coord.data = None
+    data_fn()
+    health_coord.async_request_refresh.assert_not_called()
+
+    data_coord.data = MagicMock()
+    health_coord.data = None
+    data_fn()
+    health_coord.async_request_refresh.assert_not_called()
+
+
+def test_poll_confirmed_recovery_suppresses_forced_poll():
+    """A recovery proven by a successful poll must not force another poll.
+
+    Sequence: health goes UNRESPONSIVE → a scheduled poll succeeds (data
+    listener refreshes health) → that refresh reads RESPONSIVE. The
+    recovery edge fires, but the evidence WAS a successful poll seconds
+    ago — a forced poll would be a redundant login on session-limited
+    modems.
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    _, health_coord, data_coord, health_fn, data_fn = _health_sync_inputs()
+
+    health_coord.data.health_status = HealthStatus.UNRESPONSIVE
+    health_fn()
+    data_fn()  # poll succeeded while health stale — sets the confirmed flag
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
+    health_fn()
+
+    data_coord.async_request_refresh.assert_not_called()
+
+
+def test_confirmed_flag_cleared_by_next_down_probe():
+    """The confirmed flag survives only until the next probe result.
+
+    If the health refresh still reads down (modem dipped again after the
+    successful poll), the flag is consumed; a later genuine recovery edge
+    must fire the forced poll as usual.
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    _, health_coord, data_coord, health_fn, data_fn = _health_sync_inputs()
+
+    health_coord.data.health_status = HealthStatus.UNRESPONSIVE
+    health_fn()
+    data_fn()  # flag set
+    health_fn()  # refresh still reads UNRESPONSIVE — flag consumed
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
+    health_fn()  # genuine recovery, flag no longer set
+
+    data_coord.async_request_refresh.assert_called_once()
 
 
 # -----------------------------------------------------------------------

@@ -293,6 +293,16 @@ meaning.
 | 9 | `health_status == icmp_blocked` | ICMP Blocked |
 | 10 | default | Operational |
 
+**Input freshness.** The cascade's inputs refresh on different
+cadences (health every health-check interval, connection/DOCSIS every
+poll), so one input can be stale when the other updates. The one
+combination where staleness misleads — a stale `unresponsive` at
+priority 1 masking a modem that just served a successful poll — is
+closed by the adapter's health sync listeners: a successful poll
+while health reads a data-path-down state triggers an immediate
+health refresh (see HA_ADAPTER_SPEC § Health Sync Listeners), so the
+contradiction lives for seconds, not a full health interval.
+
 There is no synthetic "Restarting…" label. During a recovery
 window — whether triggered by a commanded restart, an observed
 outage, or a reboot-signal match — the Status sensor reflects
