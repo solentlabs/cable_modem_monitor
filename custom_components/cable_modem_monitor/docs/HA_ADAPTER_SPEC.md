@@ -194,8 +194,8 @@ async_setup_entry(hass, entry)
  │     update_interval from config (or None if disabled)
  │
  ├─ 5a. Attach health sync listeners (if health_monitor)
- │      Health → data: on health RESPONSIVE from a data-path-down state
- │      (DEGRADED/UNRESPONSIVE/UNKNOWN; ICMP_BLOCKED excluded),
+ │      Health → data: on a down → up edge of HealthStatus.data_path_up
+ │      (up = RESPONSIVE or ICMP_BLOCKED, both TCP-proven),
  │      triggers immediate data poll via coordinator.async_request_refresh()
  │      Data → health: on a successful poll while health still reads
  │      UNRESPONSIVE/DEGRADED, triggers immediate health refresh
@@ -530,17 +530,19 @@ conceptually separate from Core's recovery observer.
 coordinator so neither can outvote the other with stale state.
 
 **Health → data (recovery direction).** Fires an immediate data poll
-when health transitions to RESPONSIVE from a *data-path-down* state —
-DEGRADED, UNRESPONSIVE, or UNKNOWN. DEGRADED (ICMP up, TCP down) is
-included because TCP is the data path, and that is the state a modem
-occupies while its web UI warms up after a reboot; a long reboot that
-outlasts Core's recovery window would otherwise leave a recovered
-modem waiting for the next slow scan (or a manual refresh) once
-cadence scales back. ICMP_BLOCKED is excluded — TCP was up, so the
-data poll already worked and a forced poll would be spurious.
-Consequence worth noting: post-window recovery latency is bounded by
-the health-check interval, so lengthening that interval slows
-reconnection proportionally.
+on a down → up edge of `HealthStatus.data_path_up` — the boolean
+"does this reading prove TCP, the data path, is usable" (RESPONSIVE
+and ICMP_BLOCKED are up; DEGRADED, UNRESPONSIVE, and UNKNOWN are
+down). The edge is computed per reading rather than by enumerating
+state transitions: enumeration missed DEGRADED (fixed 2026-06-29) and
+then a transitional ICMP_BLOCKED that laundered the down state
+(observed 2026-07-12 — UNRESPONSIVE → ICMP_BLOCKED → RESPONSIVE left
+Status at Unreachable for a full scan interval). ICMP_BLOCKED counts
+as up because since UC-59a every such reading is confirmed by a live
+TCP pass; up → up steps (RESPONSIVE ↔ ICMP_BLOCKED) never fire, so
+ping-blocking setups get no spurious polls. Consequence worth noting:
+post-window recovery latency is bounded by the health-check interval,
+so lengthening that interval slows reconnection proportionally.
 
 **Data → health (stale-contradiction direction).** Fires an immediate
 health refresh when a poll succeeds (`connection_status == ONLINE`)

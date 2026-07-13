@@ -475,8 +475,11 @@ class Orchestrator:
         Sequence:
         1. Check circuit breaker — if open, return AUTH_FAILED
         2. Health recovery check — if connectivity backoff is active
-           and HealthMonitor reports RESPONSIVE, clear the backoff
-           (modem is proven reachable, no reason to keep skipping)
+           and HealthMonitor reports a data-path-up status
+           (``HealthStatus.data_path_up``: RESPONSIVE or ICMP_BLOCKED,
+           the latter proven by a live TCP pass since UC-59a), clear
+           the backoff (modem is proven reachable, no reason to keep
+           skipping)
         3. Check connectivity backoff — decrement counter. If still > 0
            after decrement, return UNREACHABLE. If counter reached 0,
            backoff is cleared and collection proceeds.
@@ -976,8 +979,9 @@ def get_modem_data(self) -> ModemSnapshot:
         return ModemSnapshot(connection_status=ConnectionStatus.AUTH_FAILED, ...)
 
     # Health recovery — clear connectivity backoff if proven reachable
+    # (data_path_up: RESPONSIVE or ICMP_BLOCKED — live TCP pass per UC-59a)
     if (self._health_monitor and self._connectivity_backoff > 0
-            and self._health_monitor.latest.health_status == RESPONSIVE):
+            and self._health_monitor.latest.health_status.data_path_up):
         self._policy.reset_connectivity()
 
     # Connectivity backoff — decrement; skip only while counter > 0

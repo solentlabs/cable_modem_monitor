@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Recovery is no longer missed when an outage resolves through
+  "ICMP Blocked".** A modem coming back sometimes answers TCP before
+  ping, producing a transitional ICMP_BLOCKED health reading. The
+  recovery detector enumerated state transitions and treated that
+  reading as "was never down," so neither the immediate recovery poll
+  nor Core's backoff clear fired — a reachable modem stayed
+  Unreachable until the next scheduled scan (observed live: 13.5
+  minutes). Both checks now derive from one predicate,
+  `HealthStatus.data_path_up`: TCP was down and is now proven up.
+  ICMP_BLOCKED counts as proof because, since the ICMP contradiction
+  override shipped in this release, every such reading is confirmed
+  by a live TCP handshake — this also retires the "conservative for
+  v1" exclusion that kept ICMP_BLOCKED from clearing connectivity
+  backoff on ping-filtered networks. Up-to-up transitions never
+  trigger polls, so ping-blocking setups see no extra logins.
+
 - **Status no longer shows a stale "Unresponsive" after recovery.**
   When a modem came back and a data poll succeeded before the next
   scheduled health probe, the last probe's Unresponsive reading —

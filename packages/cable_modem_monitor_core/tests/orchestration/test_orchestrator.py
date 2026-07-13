@@ -2267,17 +2267,24 @@ def _make_health_monitor(status_value: str) -> MagicMock:
 # │ responsive       │ yes         │ yes          │ recovery clears backoff     │
 # │ unresponsive     │ yes         │ no           │ still down                  │
 # │ degraded         │ yes         │ no           │ HTTP probe failing          │
-# │ icmp_blocked     │ yes         │ no           │ conservative for v1         │
+# │ icmp_blocked     │ yes         │ yes          │ TCP verified up (UC-59a)    │
 # │ unknown          │ yes         │ no           │ no probe data               │
 # │ (none)           │ no          │ no           │ no health monitor           │
 # └──────────────────┴─────────────┴──────────────┴─────────────────────────────┘
+#
+# icmp_blocked clears since the ICMP contradiction override (UC-59a):
+# every ICMP_BLOCKED reading is confirmed by a live TCP pass, never
+# assumed from stale collection evidence — the "conservative for v1"
+# rationale no longer applies. Observed live 2026-07-12: the old
+# behavior left a reachable modem in backoff for a full scan interval
+# after an outage resolved through icmp_blocked.
 #
 # fmt: off
 HEALTH_RECOVERY_CASES = [
     ("responsive",   True,  True,  "recovery_clears_backoff"),
     ("unresponsive", True,  False, "still_down"),
     ("degraded",     True,  False, "http_probe_failing"),
-    ("icmp_blocked", True,  False, "conservative_for_v1"),
+    ("icmp_blocked", True,  True,  "tcp_verified_up_uc59a"),
     ("unknown",      True,  False, "no_probe_data"),
     ("responsive",   False, False, "no_health_monitor"),
 ]
@@ -2287,9 +2294,9 @@ HEALTH_RECOVERY_CASES = [
 class TestHealthRecoveryClearsBackoff:
     """UC-36: Health recovery clears connectivity backoff.
 
-    When the health monitor reports RESPONSIVE while connectivity
-    backoff is active, the orchestrator clears the backoff and the
-    poll proceeds immediately.
+    When the health monitor reports a data-path-up status (RESPONSIVE
+    or ICMP_BLOCKED) while connectivity backoff is active, the
+    orchestrator clears the backoff and the poll proceeds immediately.
     """
 
     @pytest.mark.parametrize(
@@ -2304,7 +2311,7 @@ class TestHealthRecoveryClearsBackoff:
         expect_clear: bool,
         desc: str,
     ) -> None:
-        """Backoff is cleared only when health monitor reports RESPONSIVE."""
+        """Backoff is cleared only when health proves the data path up."""
         from solentlabs.cable_modem_monitor_core.orchestration.models import HealthInfo
         from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
 

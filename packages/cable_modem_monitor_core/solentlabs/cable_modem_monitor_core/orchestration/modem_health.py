@@ -249,7 +249,7 @@ class HealthMonitor:
 
         Consumers use this to judge freshness of ``latest`` — e.g.,
         the orchestrator's health-recovery-clears-backoff shortcut
-        ignores a cached RESPONSIVE reading if the probe happened
+        ignores a cached data-path-up reading if the probe happened
         before the last observed connectivity failure.
         """
         return self._last_ping_time

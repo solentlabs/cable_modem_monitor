@@ -1004,6 +1004,65 @@ def test_health_recovery_no_refresh_on_icmp_blocked_to_responsive():
     hass.async_create_task.assert_not_called()
 
 
+@pytest.mark.parametrize("down_state", ["UNRESPONSIVE", "DEGRADED"])
+def test_health_recovery_triggers_refresh_on_down_to_icmp_blocked(down_state):
+    """Transition from a down state to ICMP_BLOCKED IS a data-path recovery.
+
+    Since the ICMP contradiction override (UC-59a), every ICMP_BLOCKED
+    reading carries a live TCP pass — the data path is proven up, so
+    the forced poll must fire just as it does for RESPONSIVE.
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    hass, health_coord, _, listener_fn = _health_recovery_inputs()
+
+    health_coord.data.health_status = HealthStatus[down_state]
+    listener_fn()
+    hass.async_create_task.assert_not_called()
+
+    health_coord.data.health_status = HealthStatus.ICMP_BLOCKED
+    listener_fn()
+    hass.async_create_task.assert_called_once()
+
+
+def test_health_recovery_fires_once_through_icmp_blocked():
+    """UNRESPONSIVE -> ICMP_BLOCKED -> RESPONSIVE fires exactly one poll.
+
+    The transitional ICMP_BLOCKED reading must not launder the down
+    state (observed live 2026-07-12: the old state-enumeration edge
+    missed this path and left Status at Unreachable for a full scan
+    interval), and the subsequent up -> up step must not double-fire.
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    hass, health_coord, _, listener_fn = _health_recovery_inputs()
+
+    health_coord.data.health_status = HealthStatus.UNRESPONSIVE
+    listener_fn()
+    health_coord.data.health_status = HealthStatus.ICMP_BLOCKED
+    listener_fn()
+    health_coord.data.health_status = HealthStatus.RESPONSIVE
+    listener_fn()
+
+    hass.async_create_task.assert_called_once()
+
+
+def test_health_recovery_no_refresh_on_responsive_to_icmp_blocked():
+    """RESPONSIVE -> ICMP_BLOCKED is up -> up — no forced poll.
+
+    A modem whose network starts filtering ping has not lost its data
+    path; firing here would spuriously poll ping-blocking setups.
+    """
+    from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+
+    hass, health_coord, _, listener_fn = _health_recovery_inputs()
+
+    health_coord.data.health_status = HealthStatus.ICMP_BLOCKED
+    listener_fn()
+
+    hass.async_create_task.assert_not_called()
+
+
 # -----------------------------------------------------------------------
 # _attach_health_sync_listeners — stale-health contradiction (data → health)
 # -----------------------------------------------------------------------

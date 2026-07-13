@@ -243,17 +243,18 @@ def _attach_health_sync_listeners(
 
     Two directions, one shared piece of state:
 
-    Health → data: when health transitions to RESPONSIVE from a
-    data-path-down state (DEGRADED, UNRESPONSIVE, or UNKNOWN),
-    schedules an immediate data poll so recovery latency is bounded by
-    the health-check interval rather than the scan interval (~10m).
-    DEGRADED counts because it means TCP — the data path — was down
-    while ICMP stayed up, the state a modem sits in while its web UI
-    warms up after a reboot. ICMP_BLOCKED is excluded: TCP was up, so
-    the data poll already worked and a forced poll would be spurious.
-    The Core orchestrator independently clears connectivity backoff
-    when it sees RESPONSIVE health — this listener just ensures the
-    poll happens promptly rather than waiting for the next scan.
+    Health → data: when health transitions from data-path-down to
+    data-path-up (``HealthStatus.data_path_up``), schedules an
+    immediate data poll so recovery latency is bounded by the
+    health-check interval rather than the scan interval (~10m). The
+    edge is a boolean derived per reading, not a pair of enumerated
+    states — enumerating transitions missed DEGRADED (2026-06-29) and
+    then a transitional ICMP_BLOCKED that laundered the down state
+    (2026-07-12). Up→up steps (RESPONSIVE ↔ ICMP_BLOCKED) never fire,
+    so ping-blocking setups get no spurious polls. The Core
+    orchestrator independently clears connectivity backoff on
+    data-path-up health — this listener just ensures the poll happens
+    promptly rather than waiting for the next scan.
 
     Data → health: when a poll succeeds while health still reads
     UNRESPONSIVE or DEGRADED, schedules an immediate health refresh. A
@@ -272,10 +273,10 @@ def _attach_health_sync_listeners(
     the recovery as poll-proven; the next probe result consumes the
     mark, suppressing exactly that one forced poll.
     """
-    # Start as RESPONSIVE so the first successful health check is not
-    # misinterpreted as "recovery from UNKNOWN" — avoids a spurious
-    # immediate poll right after the initial data fetch.
-    previous: list[HealthStatus] = [HealthStatus.RESPONSIVE]
+    # Start "up" so the first successful health check is not
+    # misinterpreted as a recovery — avoids a spurious immediate poll
+    # right after the initial data fetch.
+    previous_up: list[bool] = [True]
     # True while the current down state has been contradicted by a
     # successful poll — the recovery is already proven, data is fresh.
     poll_proven: list[bool] = [False]
@@ -284,22 +285,14 @@ def _attach_health_sync_listeners(
     def _on_health_update() -> None:
         if health_coordinator.data is None:
             return
-        current = health_coordinator.data.health_status
-        # "Down" = the data path (TCP) was unusable: DEGRADED (ICMP ok,
-        # TCP down — the post-reboot web-UI-warmup state), UNRESPONSIVE,
-        # or UNKNOWN. ICMP_BLOCKED is deliberately excluded — TCP was up,
-        # so the data poll already worked and a forced poll is spurious.
-        was_down = previous[0] in (
-            HealthStatus.DEGRADED,
-            HealthStatus.UNRESPONSIVE,
-            HealthStatus.UNKNOWN,
-        )
-        previous[0] = current
+        current_up = health_coordinator.data.health_status.data_path_up
+        was_up = previous_up[0]
+        previous_up[0] = current_up
         # Any live probe result supersedes the poll-proven mark; it may
         # suppress only the recovery edge of the probe that follows it.
         proven = poll_proven[0]
         poll_proven[0] = False
-        if was_down and current == HealthStatus.RESPONSIVE:
+        if not was_up and current_up:
             if proven:
                 _LOGGER.debug(
                     "Health recovery [%s] — poll already succeeded, skipping forced poll",
@@ -316,14 +309,12 @@ def _attach_health_sync_listeners(
             return
         if snapshot.connection_status is not ConnectionStatus.ONLINE:
             return
-        # Only the data-path-down claims are contradicted by a successful
-        # poll. ICMP_BLOCKED is consistent with it (TCP up), and UNKNOWN
-        # means probes are not applicable — a refresh adds no information
-        # and would fire on every poll for probe-less configurations.
-        if health_coordinator.data.health_status not in (
-            HealthStatus.UNRESPONSIVE,
-            HealthStatus.DEGRADED,
-        ):
+        # Only a data-path-down claim is contradicted by a successful
+        # poll. UNKNOWN is excluded — probes are not applicable, so a
+        # refresh adds no information and would fire on every poll for
+        # probe-less configurations.
+        health_status = health_coordinator.data.health_status
+        if health_status.data_path_up or health_status is HealthStatus.UNKNOWN:
             return
         poll_proven[0] = True
         _LOGGER.info(

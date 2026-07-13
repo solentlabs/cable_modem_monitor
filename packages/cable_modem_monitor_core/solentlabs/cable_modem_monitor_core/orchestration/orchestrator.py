@@ -40,7 +40,6 @@ from .signals import (
     CollectorSignal,
     ConnectionStatus,
     DocsisStatus,
-    HealthStatus,
 )
 from .status import derive_connection_status, enrich_docsis_status
 
@@ -133,10 +132,10 @@ class Orchestrator:
         # Monotonic timestamp of the last CONNECTIVITY failure. Used
         # by the "health recovery clears connectivity backoff"
         # shortcut in _execute_poll() to avoid trusting a cached
-        # RESPONSIVE reading that pre-dates the outage. The health
+        # data-path-up reading that pre-dates the outage. The health
         # coordinator runs on its own (slower) cadence, so between
         # a modem going down and the next health probe, latest
-        # would otherwise report stale RESPONSIVE.
+        # would otherwise report a stale up status.
         self._last_connectivity_failure_at: float | None = None
 
     def get_modem_data(self) -> ModemSnapshot:
@@ -326,15 +325,17 @@ class Orchestrator:
             )
 
         # Health recovery — clear connectivity backoff if the modem
-        # is proven reachable. The freshness gate matters: the health
-        # coordinator is on a slower cadence than the data coordinator
-        # during a recovery window, so ``latest`` may still hold a
-        # pre-outage RESPONSIVE reading. Only trust it if the probe
-        # ran AFTER our last observed connectivity failure.
+        # is proven reachable. ICMP_BLOCKED qualifies: since UC-59a it
+        # always carries a live TCP pass, so the data path is proven up
+        # even when ping is filtered. The freshness gate matters: the
+        # health coordinator is on a slower cadence than the data
+        # coordinator during a recovery window, so ``latest`` may still
+        # hold a pre-outage reading. Only trust it if the probe ran
+        # AFTER our last observed connectivity failure.
         if (
             self._health_monitor is not None
             and self._policy.connectivity_backoff_remaining > 0
-            and self._health_monitor.latest.health_status == HealthStatus.RESPONSIVE
+            and self._health_monitor.latest.health_status.data_path_up
             and self._is_health_probe_fresh()
         ):
             log_event(_logger, HealthBackoffCleared(model=self._modem_config.model))
@@ -503,7 +504,7 @@ class Orchestrator:
         observed CONNECTIVITY failure.
 
         Used to gate the "health recovery clears connectivity backoff"
-        shortcut so we don't trust a cached RESPONSIVE reading from
+        shortcut so we don't trust a cached data-path-up reading from
         before a modem outage. Returns True when either:
 
         - No connectivity failure has been observed yet (nothing to
