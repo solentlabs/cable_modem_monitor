@@ -815,6 +815,44 @@ using its native scheduling primitives.
 
 ---
 
+### Recovery detection derives from `data_path_up`, not state enumeration
+
+**Decision:** Every consumer that asks "did the modem's data path
+recover?" derives the answer from `HealthStatus.data_path_up` — a
+per-reading boolean (RESPONSIVE and ICMP_BLOCKED are up; DEGRADED,
+UNRESPONSIVE, and UNKNOWN are down). Recovery is a down → up edge of
+that boolean. No consumer enumerates health states or state
+transitions for reachability decisions. Current consumers: Core's
+connectivity-backoff clear (ORCHESTRATION_SPEC § get_modem_data
+step 2) and the HA adapter's health sync listeners (HA_ADAPTER_SPEC
+§ Health Sync Listeners).
+
+**Rationale:** State enumeration produced three field bugs from the
+same root: a startup UNKNOWN misread as recovery, DEGRADED missing
+from the down-set (2026-06-29, issue #170 class), and a transitional
+ICMP_BLOCKED reading laundering the down state so neither recovery
+path fired (observed 2026-07-12 — a reachable modem stayed
+Unreachable for a full scan interval). Lists of states model
+positions; recovery is a property of a path, and intermediate
+readings the list never anticipated each became a bug. ICMP_BLOCKED
+counts as up because the ICMP contradiction override (UC-59a)
+guarantees every such reading is confirmed by a live TCP handshake —
+this supersedes the "conservative for v1" exclusion from 2026-04-01,
+which predated that guarantee and was recorded only in a test-table
+comment rather than here. Up → up transitions (RESPONSIVE ↔
+ICMP_BLOCKED) are not edges, so ping-filtering networks get backoff
+clearing without spurious forced polls.
+
+**Constrains:** New reachability consumers use `data_path_up`; a new
+HealthStatus member must define its `data_path_up` value at
+introduction. Display concerns (the Status sensor's 10-level
+cascade) stay granular and are exempt — this decision governs
+reachability logic only. Provisional decisions get an entry in this
+file at the moment they are made; a "v1"/"conservative" label in
+code or tests is not a durable record.
+
+---
+
 ## Testing Strategy
 
 ### HAR replay as integration tests

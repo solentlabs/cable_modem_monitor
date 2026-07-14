@@ -26,7 +26,7 @@ hardware:
   chipset: "Broadcom"
   release_date: "2020"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   release_date:
@@ -41,7 +41,7 @@ sources:
 attribution:
   contributors:
     - github: https://github.com/B0ndo2
-      contribution: "HAR capture and Python parsing script (Issue #92)"
+      contribution: "HAR capture, Python parsing script, and hardware-confirmation diagnostics (Issue #92)"
 
 isps:
   - Koodo
@@ -63,6 +63,30 @@ notes: |
   hardware verification can revisit if firmware grows a real lower-edge
   field.
 
+  Confirmed on real hardware via #92 diagnostics (3.14.0-alpha.15,
+  2026-04-20): 34 DS / 5 US channels, clean polls. Lock status is
+  read from the firmware's own signals: QAM channels mark inactive
+  as modulation=QAM_NONE (filtered, survivors locked), OFDM exposes
+  the PLC lock indicator, OFDMA gates on STATE=OPERATE — which lets
+  Core derive docsis_status. Remaining gaps (see gaps:) are blocked
+  on one missing capture: no system_uptime — absent from the
+  /setup.cgi?todo= JSON endpoints, known to render on status.html
+  (contributor scraping script, #92), but that page is not in the
+  HAR on file. No reboot action — the button lives on the advanced
+  page and its request was never observed; a supplemental capture
+  attempt (2026-06-18) arrived empty due to a har-capture 0.10.0
+  sanitizer bug (fixed in 0.10.1). One fresh HAR (har-capture
+  >= 0.10.1) from login through the status pages to a Reboot click
+  closes both.
+
 references:
   issues:
     - "[#92 — [Modem Request] Sercomm DM1000](https://github.com/solentlabs/cable_modem_monitor/issues/92)"
+
+gaps:
+  - capability: system_uptime
+    needs: "HAR capture (har-capture >= 0.10.1) that includes status.html"
+    issue: "https://github.com/solentlabs/cable_modem_monitor/issues/92"
+  - capability: reboot action
+    needs: "HAR capture of the Reboot button click on the advanced page"
+    issue: "https://github.com/solentlabs/cable_modem_monitor/issues/92"

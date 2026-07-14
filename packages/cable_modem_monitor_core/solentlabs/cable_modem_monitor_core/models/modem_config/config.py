@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from .actions import ActionsConfig
 from .auth import AuthConfig, get_transport_strategy_sets
 from .health import HealthConfig
-from .metadata import AttributionConfig, HardwareConfig, ReferencesConfig
+from .metadata import AttributionConfig, GapEntry, HardwareConfig, ReferencesConfig
 from .session import SessionConfig
 
 
@@ -68,6 +68,7 @@ class ModemConfig(BaseModel):
     isps: list[str] = Field(default_factory=list)
     notes: str = ""
     references: ReferencesConfig | None = None
+    gaps: list[GapEntry] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_transport_constraints(self) -> ModemConfig:

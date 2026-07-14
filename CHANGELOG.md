@@ -7,6 +7,129 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.14] - 2026-07-14
+
+### Fixed
+
+- **Recovery is no longer missed when an outage resolves through
+  "ICMP Blocked".** A modem coming back sometimes answers TCP before
+  ping, producing a transitional ICMP_BLOCKED health reading. The
+  recovery detector enumerated state transitions and treated that
+  reading as "was never down," so neither the immediate recovery poll
+  nor Core's backoff clear fired — a reachable modem stayed
+  Unreachable until the next scheduled scan (observed live: 13.5
+  minutes). Both checks now derive from one predicate,
+  `HealthStatus.data_path_up`: TCP was down and is now proven up.
+  ICMP_BLOCKED counts as proof because, since the ICMP contradiction
+  override shipped in this release, every such reading is confirmed
+  by a live TCP handshake — this also retires the "conservative for
+  v1" exclusion that kept ICMP_BLOCKED from clearing connectivity
+  backoff on ping-filtered networks. Up-to-up transitions never
+  trigger polls, so ping-blocking setups see no extra logins.
+
+- **Status no longer shows a stale "Unresponsive" after recovery.**
+  When a modem came back and a data poll succeeded before the next
+  scheduled health probe, the last probe's Unresponsive reading —
+  priority 1 in the Status cascade — kept masking the recovered modem
+  for up to a full health interval (~2.5 minutes of "Unresponsive"
+  over a modem actively serving polls). A successful poll is live
+  proof the data path is up, so it now triggers an immediate health
+  refresh — stale evidence must not outvote a live signal, the same
+  principle as the health monitor's ICMP contradiction override
+  (UC-59a), applied in the reverse direction.
+  The refresh is ICMP-only (fresh collection evidence keeps the
+  TCP/HEAD skip gate up), and the resulting recovery is recognized as
+  poll-proven so it does not trigger the health-recovery listener's
+  redundant forced poll — no extra logins on session-limited modems.
+
+- **S33v3 system uptime mapped from real wire data.** A contributor
+  HAR that includes the Software Information page (Cmswinfo.html)
+  finally showed the populated response: the AT01 firmware writes
+  `24 day(s) 10h:33m:56s` — `day(s)`, not the `days` the S33/S33v2
+  firmware line writes. The original mapping guessed the S33v2-style
+  format, silently failed to match on real hardware, and was misread
+  as the field being absent and dropped. Restored with the observed
+  format; the S33v3 test fixture is now that full wire capture,
+  replacing the earlier synthetic fixture, and the S33v3 gaps entry
+  is closed. Uptime feeds Last Boot Time, which no longer waits for
+  a counter reset on this model. (Related to #98)
+
+- **HAR loader decodes base64-stored HNAP bodies.** The HNAP
+  response merge read `content.text` verbatim, so a response body
+  stored with the HAR `encoding: base64` marker was silently
+  skipped; only the HTTP resource path handled the marker. Both
+  paths now share one decode step. Surfaced by the S33v3 capture,
+  whose channel-data response is stored base64-encoded.
+
+### Added
+
+- **Sercomm DM1000 confirmed on hardware.** Verified via contributor
+  diagnostics on 3.14.0-alpha.15: 34 downstream + 5 upstream channels
+  locked, form auth, full system_info, clean polls. Modulation values
+  now canonicalize (`256QAM` → `QAM256`, `64QAM` → `QAM64`) — caught
+  by the confirmed-modem conformance gate at promotion. Lock status
+  is now mapped from the firmware's native signals (QAM_NONE filter
+  survivors, the OFDM PLC indicator, OFDMA STATE=OPERATE), which
+  lets Core derive DOCSIS status. Remaining gaps documented in the
+  catalog entry: no system_uptime and no reboot action, both blocked
+  on one supplemental HAR covering status.html and the Reboot click.
+  (Related to #92)
+
+- **`fixed_fields` for JSON parsers.** The JSON channel format now
+  supports static per-channel field values (flat and multi-array
+  forms), mirroring the XML tables capability — for firmware that
+  expresses lock state by omission or sentinel rather than a lock
+  column. First consumer is the DM1000.
+
+- **Catalog entries can declare capability gaps.** New optional
+  `gaps:` list in modem.yaml (capability, needs, tracking issue)
+  records what a verified modem is still missing and exactly what
+  evidence closes it. The catalog audit renders them as a "Confirmed
+  with Gaps" table — each row a self-contained contribution task.
+  Backfilled for the S33v3 (uptime, #98) and DM1000 (uptime +
+  reboot, #92).
+
+### Changed
+
+- **One outage, one Activity line.** A modem going unreachable used to
+  write four logbook lines (Status, Docsis Status, Last Boot Time, and
+  Software Version all going to Unavailable). Now it writes one: Status
+  to Unreachable. The non-continuous data sensors (Software Version,
+  Last Boot Time, and string pass-through fields) are now "sticky" —
+  they stay available and hold their last value through a transient
+  outage, so no spurious "to Unavailable" transition reaches the
+  logbook. Real changes still log: a firmware push (Software Version)
+  and a reboot (Last Boot Time) are value changes and each log one line.
+  Continuous sensors (channel metrics, error counts and rates,
+  provisioned speeds) are untouched, so their unavailable-gaps stay
+  meaningful on graphs. (Related to #178)
+
+- **Docsis Status sensor retired, folded into Status.** The Status
+  sensor already carries the DOCSIS lock state two ways: as its display
+  value (Not Locked, Partial Lock, Operational, via the priority
+  cascade) and on its `docsis_status` attribute. The standalone
+  `sensor.<prefix>_docsis_status` was a duplicate that double-logged
+  every real lock change and contributed the fourth outage line above.
+  The dashboard generator now renders DOCSIS Status as an attribute row
+  off the Status sensor (the raw value, e.g. `operational`); regenerate
+  your dashboard after upgrading. On upgrades from earlier 3.14 betas
+  the removed sensor lingers as unavailable — press Reset Entities
+  (keeps your config and history), or remove and re-add the
+  integration, to clear it. Upgrades from 3.13 and earlier never had a
+  standalone DOCSIS sensor, so there is nothing to clear.
+  (Related to #178)
+
+- **DOCSIS 4.0 enters the catalog vocabulary.** `hardware.docsis_version`
+  now accepts `"4.0"` (Core schema + MODEM_YAML_SPEC § Hardware), defined
+  as hardware capability rather than provisioned mode. The XB10
+  (CGM601TCOM) is relabeled from "3.1" — the schema previously had no
+  legal way to say 4.0. Its own fixture corroborates the hardware
+  sources: locked upstream OFDMA at 105/200/297 MHz, FDX-band
+  frequencies beyond DOCSIS 3.1's 204 MHz upstream ceiling, replacing
+  the earlier "provisioned in DOCSIS 3.1 mode" note. Intake inference
+  still assigns only "3.0"/"3.1" (D4.0 shares 3.1's channel types on
+  the wire); "4.0" is set by hand from hardware sources. (Related to #173)
+
 ## [3.14.0-beta.13] - 2026-07-08
 
 ### Added

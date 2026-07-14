@@ -1,0 +1,41 @@
+{
+  "_description": "Per-array fixed_fields — each array stamps its own static values; arrays without fixed_fields are untouched",
+  "_json": {
+    "docsis": {
+      "qam_channels": [
+        {"id": 1, "mod": "QAM256"}
+      ],
+      "ofdm_channels": [
+        {"id": 0, "plc": "YES"}
+      ]
+    }
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "arrays": [
+      {
+        "array_path": "docsis.qam_channels",
+        "fields": [
+          {"key": "id", "field": "channel_id", "type": "integer"},
+          {"key": "mod", "field": "modulation", "type": "string"}
+        ],
+        "channel_type": {"fixed": "qam"},
+        "fixed_fields": {"lock_status": "locked"}
+      },
+      {
+        "array_path": "docsis.ofdm_channels",
+        "fields": [
+          {"key": "id", "field": "channel_id", "type": "integer"},
+          {"key": "plc", "field": "lock_status", "type": "lock_status"}
+        ],
+        "channel_type": {"fixed": "ofdm"}
+      }
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "modulation": "QAM256", "channel_type": "qam", "lock_status": "locked"},
+    {"channel_id": 0, "lock_status": "locked", "channel_type": "ofdm"}
+  ]
+}

@@ -173,13 +173,16 @@ class TestSysinfoTypeGuards:
 # Model validators — JSON section form exclusivity
 # ------------------------------------------------------------------
 
-# ┌──────────────────────────────┬────────────────────────────────┐
-# │ scenario                     │ expected error                 │
-# ├──────────────────────────────┼────────────────────────────────┤
-# │ both flat and multi-array    │ "use either flat form"         │
-# │ neither flat nor multi-array │ "must have either"             │
-# │ flat with missing fields     │ "requires both"                │
-# └──────────────────────────────┴────────────────────────────────┘
+# ┌──────────────────────────────────┬────────────────────────────────┐
+# │ scenario                         │ expected error                 │
+# ├──────────────────────────────────┼────────────────────────────────┤
+# │ both flat and multi-array        │ "use either flat form"         │
+# │ neither flat nor multi-array     │ "must have either"             │
+# │ flat with missing fields         │ "requires both"                │
+# │ arrays + section channel_type    │ "must be set per array"        │
+# │ arrays + section fixed_fields    │ "must be set per array"        │
+# │ arrays + section filter          │ "must be set per array"        │
+# └──────────────────────────────────┴────────────────────────────────┘
 #
 _FLAT_FIELD = {"field": "a", "key": "b", "type": "string"}
 _MULTI_FIELD = {"field": "c", "key": "d", "type": "string"}
@@ -194,6 +197,15 @@ JSON_VALIDATOR_CASES = [
      "must have either",      "neither flat nor multi-array"),
     ({"format": "json", "resource": "/d", "array_path": "$.x"},
      "requires both",         "flat missing fields"),
+    ({"format": "json", "resource": "/d", "channel_type": {"fixed": "qam"},
+      "arrays": [{"array_path": "$.y", "fields": [_MULTI_FIELD]}]},
+     "must be set per array", "arrays with section-level channel_type"),
+    ({"format": "json", "resource": "/d", "fixed_fields": {"lock_status": "locked"},
+      "arrays": [{"array_path": "$.y", "fields": [_MULTI_FIELD]}]},
+     "must be set per array", "arrays with section-level fixed_fields"),
+    ({"format": "json", "resource": "/d", "filter": {"modulation": {"not": "QAM_NONE"}},
+      "arrays": [{"array_path": "$.y", "fields": [_MULTI_FIELD]}]},
+     "must be set per array", "arrays with section-level filter"),
 ]
 # fmt: on
 

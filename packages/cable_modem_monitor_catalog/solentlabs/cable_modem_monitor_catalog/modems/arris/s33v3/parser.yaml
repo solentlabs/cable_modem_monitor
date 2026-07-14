@@ -84,11 +84,14 @@ system_info:
       response_key: GetArrisDeviceStatusResponse
     - format: hnap
       fields:
-        # No system_uptime mapping: the swinfo page advertises an Uptime row
-        # (swinfo.js reads CustomerConnSystemUpTime from this response), but
-        # the field was never observed on real hardware — wild diagnostics
-        # (#98, 3.14.0-beta.3) returned this response without it. Same as S34.
-        # Last Boot Time falls back to counter-reset detection (#110).
+        # AT01 firmware writes "24 day(s) 10h:33m:56s" — "day(s)", not the
+        # "days" the S33/S33v2 firmware line uses (#98 HAR, 2026-07-09).
+        # A "{days} days ..." pattern silently fails to match here; that
+        # mismatch was previously misread as the field being absent.
+        - field: system_uptime
+          source: CustomerConnSystemUpTime
+          type: uptime
+          format: "{days} day(s) {hours}h:{minutes}m:{seconds}s"
         - field: hardware_version
           source: StatusSoftwareHdVer
           type: string

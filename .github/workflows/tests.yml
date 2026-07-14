@@ -290,6 +290,16 @@ jobs:
           fi
           echo "Catalog README is up to date"
 
+      - name: Check catalog audit is up to date
+        run: |
+          python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py --print-audit > /tmp/catalog_audit.md
+          if ! diff -q packages/cable_modem_monitor_catalog/CATALOG_AUDIT.md /tmp/catalog_audit.md > /dev/null 2>&1; then
+            echo "::error::Catalog audit is out of date. Run: python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py"
+            diff --unified packages/cable_modem_monitor_catalog/CATALOG_AUDIT.md /tmp/catalog_audit.md || true
+            exit 1
+          fi
+          echo "Catalog audit is up to date"
+
   autoclose-check:
     name: Auto-Close Keyword Scan
     runs-on: ubuntu-latest

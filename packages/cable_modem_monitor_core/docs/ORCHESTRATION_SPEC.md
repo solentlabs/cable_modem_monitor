@@ -475,8 +475,11 @@ class Orchestrator:
         Sequence:
         1. Check circuit breaker — if open, return AUTH_FAILED
         2. Health recovery check — if connectivity backoff is active
-           and HealthMonitor reports RESPONSIVE, clear the backoff
-           (modem is proven reachable, no reason to keep skipping)
+           and HealthMonitor reports a data-path-up status
+           (``HealthStatus.data_path_up``: RESPONSIVE or ICMP_BLOCKED,
+           the latter proven by a live TCP pass since UC-59a), clear
+           the backoff (modem is proven reachable, no reason to keep
+           skipping)
         3. Check connectivity backoff — decrement counter. If still > 0
            after decrement, return UNREACHABLE. If counter reached 0,
            backoff is cleared and collection proceeds.
@@ -976,8 +979,9 @@ def get_modem_data(self) -> ModemSnapshot:
         return ModemSnapshot(connection_status=ConnectionStatus.AUTH_FAILED, ...)
 
     # Health recovery — clear connectivity backoff if proven reachable
+    # (data_path_up: RESPONSIVE or ICMP_BLOCKED — live TCP pass per UC-59a)
     if (self._health_monitor and self._connectivity_backoff > 0
-            and self._health_monitor.latest.health_status == RESPONSIVE):
+            and self._health_monitor.latest.health_status.data_path_up):
         self._policy.reset_connectivity()
 
     # Connectivity backoff — decrement; skip only while counter > 0
@@ -1412,7 +1416,8 @@ The orchestrator notifies the HealthMonitor when data collections
 start and end. TCP and HEAD probes are skipped when a collection is
 active (avoids contention on the modem's web server) or recently
 succeeded (redundant — the collection already proved L4/HTTP
-reachability). See Collection Evidence below.
+reachability). A failing ICMP probe overrides the skip for TCP —
+see Collection Evidence § ICMP contradiction override below.
 
 ### Probe Strategy
 
@@ -1633,7 +1638,7 @@ class HealthMonitor:
         TCP and HEAD probes.
         """
 
-    def ping(self, *, force_fresh: bool = False) -> HealthInfo:
+    def ping(self) -> HealthInfo:
         """Run health probes and return results.
 
         Runs enabled probes and returns a combined result:
@@ -1648,14 +1653,12 @@ class HealthMonitor:
         collection already proves L4/HTTP reachability. When
         skipped, collection evidence substitutes for the TCP probe
         in status derivation but tcp_latency_ms / http_latency_ms
-        stay None (not measured, not fabricated). See Collection
-        Evidence below.
+        stay None (not measured, not fabricated).
 
-        ``force_fresh=True`` bypasses the collection-evidence skip
-        and always runs TCP and HEAD probes. Used by restart
-        recovery (``_probe_for_response``) where cached pre-reboot
-        success would falsely report the modem as responsive while
-        it is still in the middle of a reboot.
+        Exception: a failing ICMP probe forces the TCP probe past
+        the skip gate — stale collection evidence must not outvote
+        a live probe. HEAD stays skipped. See Collection Evidence
+        § ICMP contradiction override.
 
         Returns:
             HealthInfo with probe results and derived status.
@@ -1773,10 +1776,28 @@ derivation matrix. The status reflects that the modem is L4-
 reachable, but `tcp_latency_ms` and `http_latency_ms` stay `None`
 (not measured).
 
+**ICMP contradiction override (UC-59a):** Collection evidence is a
+statement about the past — the modem was reachable when the poll
+ran. A failing ICMP probe is a current observation that contradicts
+it: the modem may have gone down since. When ICMP fails while the
+skip gate is engaged, `ping()` runs the TCP probe anyway and feeds
+its real result into status derivation instead of substituting
+`tcp_ok=True`. This distinguishes a genuinely ICMP-filtered network
+(`icmp_blocked`, confirmed by a live TCP pass) from an outage that
+began just after a successful poll (`unresponsive`). Without the
+override, any outage starting within one health interval of a
+successful collection reports a false `icmp_blocked` — and logs a
+spurious Status Activity line — until the evidence expires. HEAD
+stays skipped: it is latency-only and cannot affect status. The
+override applies to both skip reasons; it never bypasses the
+config-level `http_probe=False` disable, and the forced TCP result
+populates `tcp_latency_ms` when the connect succeeds.
+
 | ICMP | TCP probe | Collection evidence | Status |
 |------|-----------|-------------------|--------|
 | pass | skipped | active or recent success | `responsive` |
-| fail | skipped | active or recent success | `icmp_blocked` |
+| fail | forced — pass | active or recent success | `icmp_blocked` |
+| fail | forced — fail | active or recent success | `unresponsive` |
 | N/A | skipped | active or recent success | `responsive` |
 
 **ICMP always runs.** It is lightweight (no web server involvement)
@@ -1802,6 +1823,13 @@ Health check [MODEL]: responsive (ICMP 1.5ms, TCP/HEAD skipped (recent collectio
 `collection active` means the probes were skipped to avoid contention
 during an in-progress collection. `recent collection` means a
 collection succeeded since the last ping, making them redundant.
+
+When the ICMP contradiction override forces the TCP probe, the log
+shows the real TCP result alongside the skip reason:
+
+```text
+Health check [MODEL]: unresponsive (ICMP timeout, TCP timeout, HEAD skipped (recent collection; TCP forced by ICMP failure))
+```
 
 ### State Ownership
 

@@ -73,3 +73,12 @@ class HealthStatus(Enum):
     ICMP_BLOCKED = "icmp_blocked"
     UNRESPONSIVE = "unresponsive"
     UNKNOWN = "unknown"
+
+    @property
+    def data_path_up(self) -> bool:
+        """True when this reading proves TCP — the data path — is usable."""
+        # ICMP_BLOCKED counts as proof: since the ICMP contradiction
+        # override (UC-59a), every ICMP_BLOCKED reading is confirmed by
+        # a live TCP pass, never assumed from stale collection evidence.
+        # UNKNOWN is not evidence in either direction and reads as down.
+        return self in (HealthStatus.RESPONSIVE, HealthStatus.ICMP_BLOCKED)

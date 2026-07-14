@@ -257,7 +257,10 @@ metadata = enrich_result.metadata
 For each item in `enrich_result.missing`:
 
 - **hardware.chipset**: web search `"{manufacturer} {model} chipset"`
-- **hardware.docsis_version**: check if OFDM channels detected (= 3.1), else 3.0
+- **hardware.docsis_version**: check if OFDM channels detected (= 3.1), else 3.0.
+  Never conclude 4.0 from channel data alone — D4.0 reuses 3.1's OFDM/OFDMA
+  channel types (see MODEM_YAML_SPEC § Hardware for the sourced reference);
+  `"4.0"` requires a hardware source — chipset or manufacturer specs
 - **hardware.release_date**: web search the launch announcement
   (manufacturer press release, ISP rollout coverage). An FCC grant or
   dated manufacturer manual is an acceptable proxy — label it as such

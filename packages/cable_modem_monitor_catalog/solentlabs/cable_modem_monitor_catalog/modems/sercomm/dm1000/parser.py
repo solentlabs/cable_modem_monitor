@@ -83,6 +83,9 @@ class PostProcessor:
                 {
                     "channel_id": int(ch_data.get("CH", "0")),
                     "channel_type": "ofdma",
+                    # Gated on STATE=OPERATE above — the firmware's
+                    # native lock signal for OFDMA channels.
+                    "lock_status": "locked",
                     "power": float(ch_data.get("rep power", "0")),
                 }
             )

@@ -999,7 +999,7 @@ gaps by searching the web using the manufacturer and model as search terms.
 
 | Field | Search strategy | Fallback |
 |-------|----------------|----------|
-| `hardware.docsis_version` | Search "{manufacturer} {model} specifications" or FCC filing. Also infer from HAR: if OFDM/OFDMA channels are present in data pages, the modem is DOCSIS 3.1. | Infer from channel data if possible; flag if ambiguous |
+| `hardware.docsis_version` | Search "{manufacturer} {model} specifications" or FCC filing. Also infer from HAR: if OFDM/OFDMA channels are present in data pages, the modem is at least DOCSIS 3.1. DOCSIS 4.0 cannot be inferred from wire data — it reuses 3.1's OFDM/OFDMA channel types ([Averna, DOCSIS 4.0 Overview](https://insight.averna.com/en/resources/blog/the-flavors-of-docsis-4-0)) — so set `"4.0"` only from hardware sources (chipset, manufacturer specs). | Infer from channel data if possible; flag if ambiguous |
 | `hardware.chipset` | Search "{manufacturer} {model} chipset" or "{model} teardown". FCC filings, iFixit teardowns, and DSLReports forums are common sources. | Omit — chipset is optional |
 | `hardware.release_date` | Search "{manufacturer} {model} release" or "{model} launch". Prefer a manufacturer press release or ISP rollout announcement; an FCC grant date or dated manufacturer manual is an acceptable proxy when labeled as such in `sources.release_date`. Feeds the catalog README timeline — entries without it are omitted from that rendering. | Omit and note the gap — never guess a year |
 | `brands` | User-visible brand names from the box or retail listings (e.g., SB8200 → "Surfboard", the CommScope-made G54 → "Arris"). Also check firmware brand fields in the HAR (e.g., `customer`). Brands become manufacturer-dropdown choices and appear in the model line's parenthetical, so entries must be names users actually see, and must be sourced. | Omit if no branding found |
@@ -1332,6 +1332,7 @@ clear guidance on what's missing.
 
 - `default_host` — most common host in HAR request URLs
 - `hardware.docsis_version` — OFDM/OFDMA channels in analysis → 3.1, else 3.0
+  (never 4.0 — indistinguishable from 3.1 on the wire; hand-set from hardware sources)
 - `transport` — from analysis
 - `status` — defaults to `awaiting_verification` for new, unchanged for existing
 

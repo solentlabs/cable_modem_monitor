@@ -1153,7 +1153,8 @@ reload both coordinators start from the same instant).
 - ICMP probe runs regardless of collection state
 - `tcp_latency_ms` and `http_latency_ms` are None (not measured)
 - `health_status` is RESPONSIVE (collection evidence = tcp_ok)
-- If ICMP fails during active collection, status is ICMP_BLOCKED
+- If ICMP fails during active collection, the TCP probe is forced
+  and its real result decides status (UC-59a)
 - No contention on the modem's web server
 
 ---
@@ -1181,6 +1182,40 @@ check fires before another poll starts.
   suppress probes
 - `http_probe=False` modems are unaffected (TCP and HEAD already
   disabled at config level)
+
+---
+
+### UC-59a: ICMP failure overrides the skip gate
+
+**Preconditions:** The TCP/HEAD skip gate is engaged (collection
+active or recently succeeded). The modem then drops off the network
+— an outage beginning seconds after a successful poll.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Health timer fires → `ping()` | | |
+| 2 | ICMP probe runs → **fails** | | ICMP timeout |
+| 3 | `_should_skip_probes()` → skip reason present | | |
+| 4 | ICMP failure contradicts collection evidence → TCP probe forced | `socket.create_connection` called | |
+| 5 | TCP fails → status derived from real probe results | | UNRESPONSIVE, not a false ICMP_BLOCKED |
+| 6 | HEAD stays skipped (latency-only) | `session.head` not called | |
+| 7 | Log: `"unresponsive (ICMP timeout, TCP timeout, HEAD skipped (recent collection; TCP forced by ICMP failure))"` | | |
+
+**Assertions:**
+
+- ICMP fail + forced TCP fail → UNRESPONSIVE (dead modem)
+- ICMP fail + forced TCP pass → ICMP_BLOCKED (genuinely filtered
+  network, confirmed by a live probe; `tcp_latency_ms` populated)
+- HEAD is not called in either case; `http_latency_ms` stays None
+- Applies to both skip reasons (collection active, recent success)
+- `http_probe=False` modems are unaffected — the override bypasses
+  only the collection-evidence skip, never the config-level disable
+
+**Why:** Collection evidence is a statement about the past. A
+failing ICMP probe is a current observation that contradicts it —
+trusting the stale evidence produced a false `icmp_blocked` status
+(and a spurious Status Activity line) whenever an outage began
+within one health interval of a successful poll.
 
 ---
 

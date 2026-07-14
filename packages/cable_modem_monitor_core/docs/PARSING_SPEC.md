@@ -894,7 +894,15 @@ concern — JS-format parsers know which named functions located their
 `tagValueList`; table parsers know which `<table>` matchers hit;
 HNAP parsers know which `data_key` references resolved. This
 specification defines **what is reported**, not the mechanism by
-which each format counts. Parsers may surface the count via tuple
+which each format counts.
+
+**XML sections are provisionally exempt**: they report trivially
+fulfilled anchors (`_parse_xml_channels` in `parsers/registries.py`).
+XMLSection declares multiple `tables[].resource` rather than one
+section-level resource, and the CBN transport has not exhibited the
+stub-page failure shape that drives UC-19a. If a CBN modem ever
+serves a login/stub page where channel XML is expected, XML sections
+opt in to real anchor counting at that point. Parsers may surface the count via tuple
 return, recorder injection, or coordinator-side inspection of the
 extracted data shape against `parser_config` — whichever fits the
 format cleanly.

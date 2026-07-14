@@ -43,7 +43,10 @@ from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemIdentity,
     ModemSnapshot,
 )
-from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStatus
+from solentlabs.cable_modem_monitor_core.orchestration.signals import (
+    ConnectionStatus,
+    HealthStatus,
+)
 from solentlabs.cable_modem_monitor_core.post_processor import (
     load_post_processor,
 )
@@ -230,52 +233,99 @@ async def async_migrate_entry(
     return await async_run_migrations(hass, entry, _CURRENT_VERSION)
 
 
-def _attach_health_recovery_listener(
+def _attach_health_sync_listeners(
     hass: HomeAssistant,
     health_coordinator: DataUpdateCoordinator[HealthInfo],
     data_coordinator: DataUpdateCoordinator[ModemSnapshot],
     model: str,
 ) -> None:
-    """Trigger an immediate data poll on health recovery.
+    """Keep the health and data coordinators from outvoting each other with stale state.
 
-    When health transitions to RESPONSIVE from a data-path-down state
-    (DEGRADED, UNRESPONSIVE, or UNKNOWN), schedules an immediate data
-    poll so recovery latency is bounded by the health-check interval
-    rather than the scan interval (~10m). DEGRADED counts because it
-    means TCP — the data path — was down while ICMP stayed up, the
-    state a modem sits in while its web UI warms up after a reboot.
-    ICMP_BLOCKED is excluded: TCP was up, so the data poll already
-    worked and a forced poll would be spurious.
+    Two directions, one shared piece of state:
 
-    The Core orchestrator independently clears connectivity backoff when
-    it sees RESPONSIVE health — this listener just ensures the poll
-    happens promptly rather than waiting for the next scheduled scan.
+    Health → data: when health transitions from data-path-down to
+    data-path-up (``HealthStatus.data_path_up``), schedules an
+    immediate data poll so recovery latency is bounded by the
+    health-check interval rather than the scan interval (~10m). The
+    edge is a boolean derived per reading, not a pair of enumerated
+    states — enumerating transitions missed DEGRADED (2026-06-29) and
+    then a transitional ICMP_BLOCKED that laundered the down state
+    (2026-07-12). Up→up steps (RESPONSIVE ↔ ICMP_BLOCKED) never fire,
+    so ping-blocking setups get no spurious polls. The Core
+    orchestrator independently clears connectivity backoff on
+    data-path-up health — this listener just ensures the poll happens
+    promptly rather than waiting for the next scan.
+
+    Data → health: when a poll succeeds while health still reads
+    UNRESPONSIVE or DEGRADED, schedules an immediate health refresh. A
+    completed collection is live proof the data path is up; without
+    the refresh, the stale probe result tops the Status cascade for up
+    to a full health interval, displaying "Unresponsive" over a modem
+    that is actively serving polls (UC-59a's principle — stale
+    evidence must not outvote a live signal — in reverse). The refresh
+    is cheap: the fresh collection evidence puts the TCP/HEAD skip
+    gate up, so it is an ICMP-only probe.
+
+    The shared flag: that health refresh flips down → RESPONSIVE,
+    which would trip the health → data direction into forcing a poll
+    seconds after the successful poll that started the exchange — a
+    redundant login on session-limited modems. The data listener marks
+    the recovery as poll-proven; the next probe result consumes the
+    mark, suppressing exactly that one forced poll.
     """
-    # Start as RESPONSIVE so the first successful health check is not
-    # misinterpreted as "recovery from UNKNOWN" — avoids a spurious
-    # immediate poll right after the initial data fetch.
-    previous: list[HealthStatus] = [HealthStatus.RESPONSIVE]
+    # Start "up" so the first successful health check is not
+    # misinterpreted as a recovery — avoids a spurious immediate poll
+    # right after the initial data fetch.
+    previous_up: list[bool] = [True]
+    # True while the current down state has been contradicted by a
+    # successful poll — the recovery is already proven, data is fresh.
+    poll_proven: list[bool] = [False]
 
     @callback
     def _on_health_update() -> None:
         if health_coordinator.data is None:
             return
-        current = health_coordinator.data.health_status
-        # "Down" = the data path (TCP) was unusable: DEGRADED (ICMP ok,
-        # TCP down — the post-reboot web-UI-warmup state), UNRESPONSIVE,
-        # or UNKNOWN. ICMP_BLOCKED is deliberately excluded — TCP was up,
-        # so the data poll already worked and a forced poll is spurious.
-        was_down = previous[0] in (
-            HealthStatus.DEGRADED,
-            HealthStatus.UNRESPONSIVE,
-            HealthStatus.UNKNOWN,
-        )
-        previous[0] = current
-        if was_down and current == HealthStatus.RESPONSIVE:
+        current_up = health_coordinator.data.health_status.data_path_up
+        was_up = previous_up[0]
+        previous_up[0] = current_up
+        # Any live probe result supersedes the poll-proven mark; it may
+        # suppress only the recovery edge of the probe that follows it.
+        proven = poll_proven[0]
+        poll_proven[0] = False
+        if not was_up and current_up:
+            if proven:
+                _LOGGER.debug(
+                    "Health recovery [%s] — poll already succeeded, skipping forced poll",
+                    model,
+                )
+                return
             _LOGGER.info("Health recovery [%s] — scheduling immediate poll", model)
             hass.async_create_task(data_coordinator.async_request_refresh())
 
+    @callback
+    def _on_data_update() -> None:
+        snapshot = data_coordinator.data
+        if snapshot is None or health_coordinator.data is None:
+            return
+        if snapshot.connection_status is not ConnectionStatus.ONLINE:
+            return
+        # Only a data-path-down claim is contradicted by a successful
+        # poll. UNKNOWN is excluded — probes are not applicable, so a
+        # refresh adds no information and would fire on every poll for
+        # probe-less configurations.
+        health_status = health_coordinator.data.health_status
+        if health_status.data_path_up or health_status is HealthStatus.UNKNOWN:
+            return
+        poll_proven[0] = True
+        _LOGGER.info(
+            "Health refresh [%s] — successful poll contradicts stale %s reading",
+            model,
+            health_coordinator.data.health_status.value,
+        )
+        hass.async_create_task(health_coordinator.async_request_refresh())
+
     health_coordinator.async_add_listener(_on_health_update)
+    data_coordinator.async_add_listener(_on_data_update)
 
 
 async def async_setup_entry(
@@ -376,9 +426,10 @@ async def async_setup_entry(
             config_entry=entry,
         )
 
-    # Step 7b: Health recovery listener — trigger immediate poll on recovery
+    # Step 7b: Health sync listeners — immediate poll on health recovery,
+    # immediate health refresh when a successful poll contradicts stale health
     if health_coordinator is not None:
-        _attach_health_recovery_listener(hass, health_coordinator, data_coordinator, model)
+        _attach_health_sync_listeners(hass, health_coordinator, data_coordinator, model)
 
     # Step 8: First poll (always runs, even when polling is disabled)
     await data_coordinator.async_config_entry_first_refresh()

@@ -35,8 +35,8 @@ sources:
   chipset: "[ModemGuides S33 review](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison) — same BCM3390 platform as S33/S34"
   detection_hints: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
-  channel_data: "[#98 screenshots by homeautomater](https://github.com/solentlabs/cable_modem_monitor/issues/98) — system_info from jzucker2 HAR, channel data from homeautomater screenshots; channel structure wild-confirmed by jzucker2 diagnostics (3.14.0-beta.3)"
-  system_info_software: "[#98 jzucker2 wild diagnostics](https://github.com/solentlabs/cable_modem_monitor/issues/98) — StatusSoftwareHdVer 1.0 observed via live poll; CustomerConnSystemUpTime advertised by swinfo.js but never observed in a response, mapping dropped"
+  channel_data: "[#98 jzucker2 HAR capture 2026-07-09](https://github.com/solentlabs/cable_modem_monitor/issues/98) — channel data observed on the wire; structure originally established from homeautomater screenshots and wild-confirmed by jzucker2 diagnostics (3.14.0-beta.3)"
+  system_info_software: '[#98 jzucker2 HAR capture 2026-07-09](https://github.com/solentlabs/cable_modem_monitor/issues/98) — GetCustomerStatusSoftware observed with Cmswinfo.html in the capture: CustomerConnSystemUpTime "24 day(s) 10h:33m:56s" and StatusSoftwareHdVer 1.0 on firmware AT01.01.018.042324_S3.03.735'
 attribution:
   contributors:
     - github: https://github.com/jzucker2
@@ -57,10 +57,10 @@ notes: |
   ICMP health checks confirmed working on real hardware (#98 wild
   diagnostics, ~2ms) — an earlier note claiming ICMP was blocked was
   inherited from the S33/S34 entries, not observed on this model.
-  No system_uptime: the swinfo page advertises an Uptime row, but the
-  field never appeared in an observed GetCustomerStatusSoftware
-  response (#98 wild diagnostics). Same gap as the S34 (AT01.01.*
-  firmware line). Last Boot Time derives from counter-reset detection.
+  Uptime format is "day(s)", not the "days" the S33/S33v2 firmware
+  line writes (#98 HAR, 2026-07-09) — don't copy the sibling format
+  here. The S34 shares the AT01.01.* firmware line but has no
+  observed uptime response yet.
   Reboot params mirrored from S33 fix (#146); pre-fetch defaults
   are the safety net pending variant validation.
   HNAP responses carry debug timing data on the first HTTP header

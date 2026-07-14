@@ -15,7 +15,7 @@ class HardwareConfig(BaseModel):
     """Hardware metadata."""
 
     model_config = ConfigDict(extra="forbid")
-    docsis_version: Literal["3.0", "3.1"]
+    docsis_version: Literal["3.0", "3.1", "4.0"]
     hw_version: str | None = None
     firmware: str | None = None
     chipset: str = ""
@@ -44,3 +44,12 @@ class ReferencesConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     issues: list[str] = Field(default_factory=list)
     prs: list[str] = Field(default_factory=list)
+
+
+class GapEntry(BaseModel):
+    """A known capability gap on an otherwise-verified entry."""
+
+    model_config = ConfigDict(extra="forbid")
+    capability: str
+    needs: str
+    issue: str = ""
