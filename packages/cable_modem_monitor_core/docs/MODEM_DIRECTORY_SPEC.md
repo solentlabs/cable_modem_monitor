@@ -185,20 +185,15 @@ numbers, IP addresses.
 5. Reviewed output is committed as `{name}.expected.json`
 6. All future runs are regression tests against the golden file
 
-**Action test fixtures** use the same `test_data/` directory and naming
-convention. `discover_restart_tests` resolves the HAR for restart tests
-using a first-match rule:
+**Action test fixtures** live in the same capture as data collection —
+one HAR per variant. `discover_restart_tests` replays `modem.har` when
+`modem.yaml` declares `actions.restart`; there is no dedicated restart
+capture file. When the restart evidence arrives in a separate capture
+of the same device, assemble one fixture per
+MODEM_INTAKE_WORKFLOW § Assembled fixtures. Pass/fail for restart tests
+is determined by `ActionResult.success`, not golden file comparison.
 
-1. `modem-restart.har` — dedicated restart capture (contributor captured
-   the restart sequence separately from data collection)
-2. `modem.har` — combined capture, when `modem.yaml` declares
-   `actions.restart` (contributor captured both in the same session)
-
-`modem-restart.har` is excluded from data collection discovery — it has
-no paired `modem-restart.expected.json`. Pass/fail for restart tests is
-determined by `ActionResult.success`, not golden file comparison.
-
-**`modem-restart.har` / restart entries in `modem.har` structure:**
+**Restart entries in `modem.har` structure:**
 
 For **HTTP transport** (e.g., `action_auth: bearer`), two entries in order:
 

@@ -9,12 +9,9 @@ Config resolution follows MODEM_DIRECTORY_SPEC.md:
 - ``modem-{name}.har`` -> ``modem-{name}.yaml`` if exists, else ``modem.yaml``
 
 Action test cases are discovered separately via ``discover_restart_tests``.
-HAR resolution for restart tests (first match wins):
-
-1. ``test_data/modem-restart.har`` — dedicated restart capture
-2. ``test_data/modem.har`` — combined capture, when ``modem.yaml`` declares
-   ``actions.restart`` (contributor captured data collection and restart in
-   the same session)
+Restart tests replay ``test_data/modem.har`` when ``modem.yaml`` declares
+``actions.restart`` — one HAR per variant, so the restart click lives in
+the same capture as data collection.
 
 No golden file is produced — pass/fail is determined by ``ActionResult.success``.
 
@@ -118,8 +115,6 @@ def _discover_from_modem_dir(
         return
 
     for har_path in sorted(tests_dir.glob("*.har")):
-        if har_path.stem == "modem-restart":
-            continue  # action fixture — consumed by discover_restart_tests, not data collection
         case = _build_test_case(
             har_path,
             modem_dir,
@@ -179,8 +174,8 @@ class RestartTestCase:
     Attributes:
         name: Human-readable test ID (e.g., ``{manufacturer}/{model}/restart``).
         modem_dir: Path to the modem directory (parent of ``test_data/``).
-        har_path: Resolved HAR path — ``test_data/modem-restart.har`` if present,
-            else ``test_data/modem.har`` when ``modem.yaml`` declares ``actions.restart``.
+        har_path: ``test_data/modem.har`` — the restart click is captured in
+            the same session as data collection (one HAR per variant).
         modem_config_path: Path to ``modem.yaml``.
     """
 
@@ -193,9 +188,10 @@ class RestartTestCase:
 def discover_restart_tests(modems_dir: Path) -> list[RestartTestCase]:
     """Discover restart action test cases from a modems directory tree.
 
-    Resolves the restart HAR via a first-match rule (see MODEM_DIRECTORY_SPEC.md
-    § test_data/ Directory). Always pairs with ``modem.yaml`` — restart actions
-    are declared on the primary config, not on auth variants.
+    A modem participates when ``modem.yaml`` declares ``actions.restart``
+    and ``test_data/modem.har`` exists (see MODEM_DIRECTORY_SPEC.md
+    § test_data/ Directory). Always pairs with ``modem.yaml`` — restart
+    actions are declared on the primary config, not on auth variants.
 
     Args:
         modems_dir: Root modems directory (e.g., ``catalog/modems/``)
@@ -232,29 +228,21 @@ def _discover_restart_from_modem_dir(
 ) -> None:
     """Discover a restart test case from a single modem directory.
 
-    HAR resolution (first match wins):
-    1. ``test_data/modem-restart.har`` — dedicated restart capture
-    2. ``test_data/modem.har`` — combined capture, when modem.yaml declares actions.restart
+    Requires ``actions.restart`` in ``modem.yaml`` and ``test_data/modem.har``.
     """
     modem_config_path = modem_dir / "modem.yaml"
     if not modem_config_path.is_file():
         return
 
-    dedicated = modem_dir / "test_data" / "modem-restart.har"
-    if dedicated.is_file():
-        har_path = dedicated
-    else:
-        # Fall back to modem.har only when actions.restart is declared.
-        try:
-            config = yaml.safe_load(modem_config_path.read_text(encoding="utf-8"))
-        except Exception:
-            return
-        if not (config.get("actions") or {}).get("restart"):
-            return
-        combined = modem_dir / "test_data" / "modem.har"
-        if not combined.is_file():
-            return
-        har_path = combined
+    try:
+        config = yaml.safe_load(modem_config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    if not (config.get("actions") or {}).get("restart"):
+        return
+    har_path = modem_dir / "test_data" / "modem.har"
+    if not har_path.is_file():
+        return
 
     try:
         relative = modem_dir.relative_to(root)

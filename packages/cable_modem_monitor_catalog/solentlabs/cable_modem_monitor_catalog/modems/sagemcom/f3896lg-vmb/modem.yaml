@@ -54,6 +54,12 @@ notes: |
   33 SC-QAM downstream + 1 OFDM, 5 ATDMA upstream + 1 OFDMA.
   bootFilename shows "vmdg660" (Virgin's internal designation).
   Default IP: 192.168.100.1 (modem mode) or 192.168.0.1 (router mode).
+
+  modem.har is a SYNTHESIZED fixture (MODEM_INTAKE_WORKFLOW
+  § Assembled fixtures) — data, login, and reboot entries built from
+  the issue #82 response shapes, reboot flow confirmed via curl.
+  Full declaration in the HAR's log.comment. Replace with a real
+  full-session capture when a contributor provides one.
 references:
   issues:
     - "[#82 — [Modem Request] Virgin Media SuperHub - modem mode 5](https://github.com/solentlabs/cable_modem_monitor/issues/82)"

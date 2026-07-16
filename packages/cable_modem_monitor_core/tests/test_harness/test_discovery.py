@@ -338,31 +338,6 @@ class TestConfigResolutionTier3:
 
 
 # ---------------------------------------------------------------------------
-# Test: modem-restart.har excluded from data collection
-# ---------------------------------------------------------------------------
-
-
-class TestRestartHarExclusion:
-    """modem-restart.har is skipped by discover_modem_tests."""
-
-    def test_restart_har_not_in_data_collection(self, tmp_path: Path) -> None:
-        """modem-restart.har does not appear as a data collection test case."""
-        modems = tmp_path / "modems"
-        _build_modem_dir(
-            modems,
-            hars={"modem": _MINIMAL_HAR, "modem-restart": _MINIMAL_HAR},
-            goldens={"modem": _MINIMAL_GOLDEN},
-        )
-        modem_dir = modems / "solentlabs" / "t100"
-
-        cases = discover_modem_tests(modem_dir)
-
-        names = [c.name for c in cases]
-        assert all("modem-restart" not in n for n in names)
-        assert len(cases) == 1
-
-
-# ---------------------------------------------------------------------------
 # Test: discover_restart_tests
 # ---------------------------------------------------------------------------
 
@@ -370,27 +345,8 @@ class TestRestartHarExclusion:
 class TestRestartDiscovery:
     """discover_restart_tests finds restart action test cases."""
 
-    def test_discovers_dedicated_restart_har(self, tmp_path: Path) -> None:
-        """modem-restart.har present -> discovered as restart test case."""
-        modems = tmp_path / "modems"
-        _build_modem_dir(
-            modems,
-            mfr="acme",
-            model="r100",
-            modem_yaml=_MODEM_YAML,
-            hars={"modem-restart": _MINIMAL_HAR},
-            goldens={},
-        )
-        modem_dir = modems / "acme" / "r100"
-
-        cases = discover_restart_tests(modems)
-
-        assert len(cases) == 1
-        assert cases[0].har_path == modem_dir / "test_data" / "modem-restart.har"
-        assert cases[0].modem_config_path == modem_dir / "modem.yaml"
-
-    def test_falls_back_to_modem_har_when_actions_declared(self, tmp_path: Path) -> None:
-        """No dedicated restart HAR, actions.restart declared -> uses modem.har."""
+    def test_discovers_combined_capture_when_actions_declared(self, tmp_path: Path) -> None:
+        """actions.restart declared -> restart replays modem.har."""
         modems = tmp_path / "modems"
         _build_modem_dir(
             modems,
@@ -402,9 +358,10 @@ class TestRestartDiscovery:
 
         assert len(cases) == 1
         assert cases[0].har_path == modem_dir / "test_data" / "modem.har"
+        assert cases[0].modem_config_path == modem_dir / "modem.yaml"
 
-    def test_skips_when_no_restart_har_and_no_actions(self, tmp_path: Path) -> None:
-        """No dedicated restart HAR and modem.yaml has no actions -> skipped."""
+    def test_skips_when_no_actions(self, tmp_path: Path) -> None:
+        """modem.yaml has no actions -> skipped."""
         modems = tmp_path / "modems"
         _build_modem_dir(modems, modem_yaml=_MODEM_YAML)
 
@@ -412,8 +369,8 @@ class TestRestartDiscovery:
 
         assert cases == []
 
-    def test_skips_when_modem_har_missing_for_fallback(self, tmp_path: Path) -> None:
-        """actions.restart declared but no modem.har to fall back to -> skipped."""
+    def test_skips_when_modem_har_missing(self, tmp_path: Path) -> None:
+        """actions.restart declared but no modem.har -> skipped."""
         modems = tmp_path / "modems"
         _build_modem_dir(
             modems,
@@ -432,7 +389,7 @@ class TestRestartDiscovery:
         _build_modem_dir(
             modems,
             modem_yaml=None,
-            hars={"modem-restart": _MINIMAL_HAR},
+            hars={"modem": _MINIMAL_HAR},
             goldens={},
         )
 
@@ -447,9 +404,7 @@ class TestRestartDiscovery:
             modems,
             mfr="acme",
             model="r100",
-            modem_yaml=_MODEM_YAML,
-            hars={"modem-restart": _MINIMAL_HAR},
-            goldens={},
+            modem_yaml=_MODEM_WITH_ACTIONS_YAML,
         )
         modem_dir = modems / "acme" / "r100"
 
@@ -464,17 +419,13 @@ class TestRestartDiscovery:
             modems,
             mfr="acme",
             model="a100",
-            modem_yaml=_MODEM_YAML,
-            hars={"modem-restart": _MINIMAL_HAR},
-            goldens={},
+            modem_yaml=_MODEM_WITH_ACTIONS_YAML,
         )
         _build_modem_dir(
             modems,
             mfr="acme",
             model="b200",
-            modem_yaml=_MODEM_YAML,
-            hars={"modem-restart": _MINIMAL_HAR},
-            goldens={},
+            modem_yaml=_MODEM_WITH_ACTIONS_YAML,
         )
 
         cases = discover_restart_tests(modems)
@@ -491,9 +442,7 @@ class TestRestartDiscovery:
             modems,
             mfr="acme",
             model="r100",
-            modem_yaml=_MODEM_YAML,
-            hars={"modem-restart": _MINIMAL_HAR},
-            goldens={},
+            modem_yaml=_MODEM_WITH_ACTIONS_YAML,
         )
 
         cases = discover_restart_tests(modems)
@@ -522,17 +471,13 @@ class TestRestartDiscovery:
             modems,
             mfr="zebra",
             model="z900",
-            modem_yaml=_MODEM_YAML,
-            hars={"modem-restart": _MINIMAL_HAR},
-            goldens={},
+            modem_yaml=_MODEM_WITH_ACTIONS_YAML,
         )
         _build_modem_dir(
             modems,
             mfr="acme",
             model="a100",
-            modem_yaml=_MODEM_YAML,
-            hars={"modem-restart": _MINIMAL_HAR},
-            goldens={},
+            modem_yaml=_MODEM_WITH_ACTIONS_YAML,
         )
 
         cases = discover_restart_tests(modems)
@@ -544,9 +489,7 @@ class TestRestartDiscovery:
         modems = tmp_path / "modems"
         _build_modem_dir(
             modems,
-            modem_yaml=_MODEM_YAML,
-            hars={"modem-restart": _MINIMAL_HAR},
-            goldens={},
+            modem_yaml=_MODEM_WITH_ACTIONS_YAML,
         )
 
         cases = discover_restart_tests(modems)

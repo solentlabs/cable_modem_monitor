@@ -475,7 +475,7 @@ def _build_restart_case(
     tests_dir.mkdir(parents=True)
     modem_config_path = modem_dir / "modem.yaml"
     modem_config_path.write_text(modem_yaml)
-    har_path = tests_dir / "modem-restart.har"
+    har_path = tests_dir / "modem.har"
     har_path.write_text(json.dumps(har_data))
     return RestartTestCase(
         name="solentlabs/t100/restart",
