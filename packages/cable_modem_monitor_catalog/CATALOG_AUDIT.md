@@ -42,18 +42,6 @@ May have open repair work — review individually.
 | SB8200 (No Authentication) | HTML | Service Electric Cablevision |
 | CM1200 | HTML | Comcast, Spectrum, Cox |
 
-## Confirmed with Gaps
-
-Core support is verified on real hardware, but a named
-capability is still missing. Each row is a self-contained
-contribution: supply the evidence in the Needs column and
-the gap closes.
-
-| Modem | Missing | Needs | Tracked |
-|-------|---------|-------|---------|
-| DM1000 | system_uptime | HAR capture (har-capture >= 0.10.1) that includes status.html | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/92) |
-| DM1000 | reboot action | HAR capture of the Reboot button click on the advanced page | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/92) |
-
 ## Confirmed
 
 Working on real hardware with a report on file.
@@ -82,6 +70,7 @@ Entries with an open capability gap are listed above, not here.
 | CM1200 (basic) | HTML | Comcast, Spectrum, Cox |
 | CM2050V | HTML | Comcast, Xfinity |
 | CM3000 | HTML | Comcast, Cox, Spectrum, Xfinity |
+| DM1000 | HTML | Koodo |
 | XB10 | HTML | Xfinity |
 | XB7 | HTML | Rogers, Comcast, Xfinity |
 

@@ -412,6 +412,7 @@
     "model_name": "DM1000",
     "rate_uncorrected": 0.0,
     "software_version": "1.21.04.025",
+    "system_uptime": "29 days 09h:58m:00s",
     "total_corrected": 6,
     "total_uncorrected": 0,
     "upstream_channel_count": 5,

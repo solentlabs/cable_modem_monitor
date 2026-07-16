@@ -8,8 +8,11 @@ Different auth mechanisms, different page structures, different data formats.
 The architecture absorbs this variety through a config-driven strategy pattern
 where modem behavior is driven by YAML configuration, not code.
 
-**Evidence base:** 31 HAR captures (23 real, 8 synthetic) across
-7 manufacturers.
+**Evidence base:** the modem catalog's HAR captures — real wire
+sessions plus declared synthetic and hybrid fixtures. Current counts
+and per-entry provenance live in the auto-generated catalog
+[README](../../cable_modem_monitor_catalog/README.md) and
+[CATALOG_AUDIT](../../cable_modem_monitor_catalog/CATALOG_AUDIT.md).
 
 ---
 

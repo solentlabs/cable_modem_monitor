@@ -98,8 +98,21 @@ upstream:
     modulation:
       not: "QAM_NONE"
 
-# System info and OFDMA upstream channels are extracted by parser.py
-# hooks; their resources are declared in PostProcessor.resources.
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/status.html"
+      fields:
+        # css, not label: the page's labels are JS-drawn (dw(...));
+        # only the value cells are server-rendered.
+        - field: system_uptime
+          css: "#sys_status td"
+          type: uptime
+          format: "{days} d: {hours} h: {minutes} m"
+
+# Version_Info system info and OFDMA upstream channels are extracted
+# by parser.py hooks (enriching the declarative output above); their
+# resources are declared in PostProcessor.resources.
 
 # DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
 # at a vastly different scale and are not aggregated.

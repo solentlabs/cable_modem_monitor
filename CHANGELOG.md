@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Sercomm DM1000 reboot button and system uptime.** Both built
+  from contributor captures; uptime feeds Last Boot Time. The
+  reboot action is HAR-verified and awaits hardware confirmation.
+  Closes both DM1000 catalog gaps. (Related to #92)
+
 ## [3.14.0-beta.14] - 2026-07-14
 
 ### Fixed

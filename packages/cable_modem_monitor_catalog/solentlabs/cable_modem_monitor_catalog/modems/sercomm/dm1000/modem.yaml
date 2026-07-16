@@ -21,6 +21,16 @@ auth:
     message: ""
     cur_passwd: ""
 
+actions:
+  restart:
+    type: http
+    method: POST
+    endpoint: "/setup.cgi"
+    params:
+      todo: "reboot"
+      this_file: "adv_Product.html"
+      next_file: "adv_Product.html"
+
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom"
@@ -41,7 +51,7 @@ sources:
 attribution:
   contributors:
     - github: https://github.com/B0ndo2
-      contribution: "HAR capture, Python parsing script, and hardware-confirmation diagnostics (Issue #92)"
+      contribution: "HAR captures (initial + reboot/status supplemental), Python parsing script, and hardware-confirmation diagnostics (Issue #92)"
 
 isps:
   - Koodo
@@ -68,25 +78,19 @@ notes: |
   read from the firmware's own signals: QAM channels mark inactive
   as modulation=QAM_NONE (filtered, survivors locked), OFDM exposes
   the PLC lock indicator, OFDMA gates on STATE=OPERATE — which lets
-  Core derive docsis_status. Remaining gaps (see gaps:) are blocked
-  on one missing capture: no system_uptime — absent from the
-  /setup.cgi?todo= JSON endpoints, known to render on status.html
-  (contributor scraping script, #92), but that page is not in the
-  HAR on file. No reboot action — the button lives on the advanced
-  page and its request was never observed; a supplemental capture
-  attempt (2026-06-18) arrived empty due to a har-capture 0.10.0
-  sanitizer bug (fixed in 0.10.1). One fresh HAR (har-capture
-  >= 0.10.1) from login through the status pages to a Reboot click
-  closes both.
+  Core derive docsis_status.
+
+  modem.har is a maintainer-declared HYBRID fixture
+  (MODEM_INTAKE_WORKFLOW § Assembled fixtures): the 2026-06-18 session
+  capture (#92) as template, data-endpoint response bodies
+  transplanted from the 2026-01-05 capture of the same unit. Full
+  declaration (transplanted entries, firmware-continuity evidence)
+  in the HAR's log.comment. Replace with a fresh full-session
+  capture when one arrives.
+
+  The restart action is HAR-verified via the action replay test;
+  awaiting hardware confirmation on a beta build.
 
 references:
   issues:
     - "[#92 — [Modem Request] Sercomm DM1000](https://github.com/solentlabs/cable_modem_monitor/issues/92)"
-
-gaps:
-  - capability: system_uptime
-    needs: "HAR capture (har-capture >= 0.10.1) that includes status.html"
-    issue: "https://github.com/solentlabs/cable_modem_monitor/issues/92"
-  - capability: reboot action
-    needs: "HAR capture of the Reboot button click on the advanced page"
-    issue: "https://github.com/solentlabs/cable_modem_monitor/issues/92"
