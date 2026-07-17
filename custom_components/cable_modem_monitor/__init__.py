@@ -22,7 +22,7 @@ from datetime import timedelta
 from importlib.metadata import version as pkg_version
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
@@ -207,6 +207,42 @@ def _rebuild_channel_map(
     )
 
 
+def _start_reauth_on_lockout(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    snapshot: ModemSnapshot,
+    orchestrator: Orchestrator,
+    model: str,
+) -> None:
+    """Start HA's reauth flow when the auth circuit breaker opens."""
+    # An open breaker halts polling until the user fixes credentials.
+    # The reauth flow is HA's surface for exactly that: a
+    # "Reauthentication required" notification with the fix form attached.
+    # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reauthentication-flow/
+    # Contract: HA_ADAPTER_SPEC.md § Reauth Flow, UC-81, UC-87.
+    # Core integrations get here by raising ConfigEntryAuthFailed, which
+    # also flips every entity unavailable. Our entity model keeps the
+    # Status sensor as the sole outage announcer (#178), so we call the
+    # same underlying API directly instead.
+    if snapshot.connection_status is not ConnectionStatus.AUTH_FAILED:
+        return
+    # Breaker open — not a lone AUTH_FAILED poll — is the trigger:
+    # definitive credential rejections trip it immediately (UC-87),
+    # stale-session failures only after 6 in a row (UC-81), so
+    # transient flakes never interrupt the user.
+    if not orchestrator.diagnostics().circuit_breaker_open:
+        return
+    # HA dedupes inside async_start_reauth too; this guard keeps the
+    # WARNING to one line per lockout instead of one per poll.
+    if any(entry.async_get_active_flows(hass, {SOURCE_REAUTH})):
+        return
+    _LOGGER.warning(
+        "Auth circuit breaker open [%s] — starting reauthentication flow",
+        model,
+    )
+    entry.async_start_reauth(hass)
+
+
 def _build_snapshot_payload(snapshot: ModemSnapshot) -> dict[str, Any]:
     """Build the event bus payload from a ModemSnapshot.
 
@@ -386,6 +422,7 @@ async def async_setup_entry(
                 model,
                 snapshot.connection_status.value,
             )
+        _start_reauth_on_lockout(hass, entry, snapshot, orchestrator, model)
         _rebuild_channel_map(entry, snapshot, identity_mode)
         await _check_channel_bond_change(hass, entry, snapshot, orchestrator, model)
         hass.bus.async_fire(

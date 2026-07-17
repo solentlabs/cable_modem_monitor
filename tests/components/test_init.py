@@ -17,7 +17,15 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from solentlabs.cable_modem_monitor_core.orchestration.models import ModemIdentity
+from solentlabs.cable_modem_monitor_core.orchestration.models import (
+    ModemIdentity,
+    ModemSnapshot,
+)
+from solentlabs.cable_modem_monitor_core.orchestration.signals import (
+    CollectorSignal,
+    ConnectionStatus,
+    DocsisStatus,
+)
 
 from custom_components.cable_modem_monitor import (
     _async_update_listener,
@@ -25,6 +33,7 @@ from custom_components.cable_modem_monitor import (
     _create_core_components,
     _get_package_versions,
     _log_operational_summary,
+    _start_reauth_on_lockout,
     _update_device_registry,
     async_migrate_entry,
     async_remove_entry,
@@ -1220,3 +1229,132 @@ def test_format_interval_includes_hours(seconds, expected, caplog):
         _log_operational_summary(seconds, 30, "TPS-2000")
 
     assert expected in caplog.text
+
+
+# -----------------------------------------------------------------------
+# _start_reauth_on_lockout — auth circuit breaker → HA reauth flow (UC-81)
+# -----------------------------------------------------------------------
+
+
+def _reauth_inputs(
+    *,
+    status: ConnectionStatus = ConnectionStatus.AUTH_FAILED,
+    breaker_open: bool = True,
+    active_flows: tuple[Any, ...] = (),
+) -> tuple[MagicMock, MagicMock, ModemSnapshot, MagicMock]:
+    """Build (hass, entry, snapshot, orchestrator) for reauth trigger tests."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.async_get_active_flows.return_value = list(active_flows)
+    orchestrator = MagicMock()
+    orchestrator.diagnostics.return_value.circuit_breaker_open = breaker_open
+    snapshot = ModemSnapshot(
+        connection_status=status,
+        docsis_status=DocsisStatus.UNKNOWN,
+        modem_data=None,
+        collector_signal=CollectorSignal.AUTH_FAILED,
+        error="auth failed",
+    )
+    return hass, entry, snapshot, orchestrator
+
+
+def test_reauth_started_when_breaker_open():
+    """AUTH_FAILED with the breaker open starts HA's reauth flow."""
+    hass, entry, snapshot, orchestrator = _reauth_inputs()
+
+    _start_reauth_on_lockout(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    entry.async_start_reauth.assert_called_once_with(hass)
+
+
+def test_no_reauth_on_transient_auth_failure():
+    """A single AUTH_FAILED poll (breaker still closed) does not prompt.
+
+    The breaker debounces single-session collisions and flaky logins;
+    only a definitive lockout should interrupt the user.
+    """
+    hass, entry, snapshot, orchestrator = _reauth_inputs(breaker_open=False)
+
+    _start_reauth_on_lockout(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    entry.async_start_reauth.assert_not_called()
+
+
+def test_no_reauth_when_online():
+    """A healthy poll never starts reauth, whatever the breaker says."""
+    hass, entry, snapshot, orchestrator = _reauth_inputs(status=ConnectionStatus.ONLINE)
+
+    _start_reauth_on_lockout(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    entry.async_start_reauth.assert_not_called()
+
+
+def test_no_duplicate_reauth_while_flow_active():
+    """An in-progress reauth flow suppresses re-triggering on later polls."""
+    hass, entry, snapshot, orchestrator = _reauth_inputs(active_flows=("flow",))
+
+    _start_reauth_on_lockout(hass, entry, snapshot, orchestrator, "TPS-2000")
+
+    entry.async_start_reauth.assert_not_called()
+
+
+async def test_update_data_triggers_reauth_on_breaker_open():
+    """The coordinator update path wires the reauth trigger end to end."""
+    hass = MagicMock()
+
+    mock_orch = MagicMock()
+    mock_orch.supports_restart = False
+    mock_orch.diagnostics.return_value.circuit_breaker_open = True
+    mock_identity = ModemIdentity(
+        manufacturer="Solent Labs",
+        model="TPS-2000",
+        docsis_version="3.0",
+        release_date="2024",
+        status="confirmed",
+    )
+    snapshot = ModemSnapshot(
+        connection_status=ConnectionStatus.AUTH_FAILED,
+        docsis_status=DocsisStatus.UNKNOWN,
+        modem_data=None,
+        collector_signal=CollectorSignal.AUTH_FAILED,
+        error="auth failed",
+    )
+    mock_orch.get_modem_data = MagicMock()
+
+    async def _mock_executor(func, *args):
+        if func is mock_orch.get_modem_data:
+            return snapshot
+        if not args:
+            return "core: v1.0.0, catalog: v1.0.0"
+        # _create_core_components — health_monitor None keeps the test
+        # to a single (data) coordinator.
+        return (mock_orch, None, mock_identity)
+
+    hass.async_add_executor_job = _mock_executor
+    hass.services.has_service.return_value = False
+    hass.config_entries.async_forward_entry_setups = AsyncMock()
+
+    entry = MagicMock()
+    entry.data = MOCK_ENTRY_DATA
+    entry.options = {}
+    entry.entry_id = "test_123"
+    entry.async_get_active_flows.return_value = []
+
+    mock_data_coord = MagicMock()
+    mock_data_coord.async_config_entry_first_refresh = AsyncMock()
+    mock_duc = MagicMock()
+    mock_duc.__getitem__.return_value.side_effect = [mock_data_coord]
+
+    with (
+        patch("custom_components.cable_modem_monitor.setup_log_buffer"),
+        patch("custom_components.cable_modem_monitor.DataUpdateCoordinator", mock_duc),
+        patch("custom_components.cable_modem_monitor._update_device_registry"),
+        patch("custom_components.cable_modem_monitor.async_register_services"),
+        patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener"),
+    ):
+        assert await async_setup_entry(hass, entry) is True
+        update_method = mock_duc.__getitem__.return_value.call_args_list[0].kwargs["update_method"]
+        result = await update_method()
+
+    assert result is snapshot
+    entry.async_start_reauth.assert_called_once_with(hass)
