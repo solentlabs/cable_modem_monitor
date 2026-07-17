@@ -43,6 +43,50 @@ HA integration is a thin adapter that maps Core output to HA platforms.
 import from HA. No circular dependencies. Adding modem-specific
 knowledge to Core is a design violation.
 
+### Core is synchronous; HA integrates via executor
+
+**Decision:** Core is a synchronous library built on `requests`, and
+this is permanent. The HA integration bridges it by running every
+poll, health check, and action on Home Assistant's executor thread
+pool (`async_add_executor_job`) — never on the event loop. The two
+HA Quality Scale Platinum rules this fails by construction
+(`async-dependency`, `inject-websession`) are declined by design,
+not tracked as gaps.
+
+**Rationale:** Three forces, each sufficient alone. (1) Core serves
+non-HA consumers — the intake pipeline, the test harness, contributor
+debugging scripts — and synchronous `requests` is the surface that
+audience can read, run, and contribute against. (2) Modem firmware
+quirks are handled by the mature `requests`/`urllib3` stack: the
+legacy-SSL adapter that lowers OpenSSL's security level for old
+cipher suites, duplicate-cookie tolerance, and lenient header parsing
+that accepts responses stricter clients (including aiohttp) reject
+outright. An async rewrite would re-litigate every one of those
+battle-tested workarounds for zero functional gain. (3) Async buys
+concurrency, and the workload has none: one modem, one sequential
+login→fetch→logout conversation, a few requests per poll interval.
+The practical cost of the executor pattern is a worker thread
+occupied for a few seconds per poll — negligible.
+
+The alternatives were weighed and rejected: an aiohttp rewrite
+(high cost, regression risk in firmware-quirk handling, breaks the
+sync contributor surface) and a dual sync/async stack (doubles the
+maintenance surface and invites drift). A thin async facade over
+sync internals would satisfy the rules' letter while changing
+nothing real — quality-scale rules are checklists in service of
+outcomes, and where a rule's mechanism assumes the dependency
+exists for HA, the documented exception is the honest answer.
+
+**Constrains:** No `aiohttp`/`httpx` in Core; no `homeassistant.*`
+imports in Core (restated from the package-split decision). The HA
+adapter must never call Core from the event loop — blocking calls
+belong in executor jobs, and any blocking I/O found on the loop is
+a bug (see the config-flow `read_text` fix), not a candidate for
+loosening this rule. Everything *around* the boundary is still held
+to full strictness: executor discipline, session teardown, graceful
+failure. HA-layer quality audits assess all other quality-scale
+rules at face value and cite this entry for the two declined ones.
+
 ### Test harness lives in Core, not Catalog
 
 **Decision:** Core owns the test harness (HAR replay framework, golden
