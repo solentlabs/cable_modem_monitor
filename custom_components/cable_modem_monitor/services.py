@@ -203,7 +203,7 @@ def create_request_health_check_handler(
 
 
 def async_register_services(hass: HomeAssistant) -> None:
-    """Register services (called on first entry setup)."""
+    """Register services (called once at component load from async_setup)."""
     hass.services.async_register(
         DOMAIN,
         SERVICE_GENERATE_DASHBOARD,
@@ -252,13 +252,3 @@ def async_register_services(hass: HomeAssistant) -> None:
         SERVICE_CONVERT_CHANNEL_IDENTITY,
         SERVICE_ORPHANED_STATISTICS,
     )
-
-
-def async_unregister_services(hass: HomeAssistant) -> None:
-    """Unregister services (called when last entry is removed)."""
-    hass.services.async_remove(DOMAIN, SERVICE_GENERATE_DASHBOARD)
-    hass.services.async_remove(DOMAIN, SERVICE_REQUEST_REFRESH)
-    hass.services.async_remove(DOMAIN, SERVICE_REQUEST_HEALTH_CHECK)
-    hass.services.async_remove(DOMAIN, SERVICE_CONVERT_CHANNEL_IDENTITY)
-    hass.services.async_remove(DOMAIN, SERVICE_ORPHANED_STATISTICS)
-    _LOGGER.debug("Unregistered services")

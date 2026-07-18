@@ -46,7 +46,6 @@ from custom_components.cable_modem_monitor.services import (
     _resolve_target_entries,
     async_register_services,
     async_request_modem_refresh,
-    async_unregister_services,
     create_request_health_check_handler,
     create_request_refresh_handler,
 )
@@ -1102,22 +1101,6 @@ def test_register_services() -> None:
     assert hass.services.async_register.call_count == 5
     registered = {call.args[1] for call in hass.services.async_register.call_args_list}
     assert registered == {
-        "generate_dashboard",
-        "request_refresh",
-        "request_health_check",
-        "convert_channel_identity",
-        "orphaned_statistics",
-    }
-
-
-def test_unregister_services() -> None:
-    """Unregisters all three services."""
-    hass = MagicMock()
-    async_unregister_services(hass)
-
-    assert hass.services.async_remove.call_count == 5
-    removed = {call.args[1] for call in hass.services.async_remove.call_args_list}
-    assert removed == {
         "generate_dashboard",
         "request_refresh",
         "request_health_check",

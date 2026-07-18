@@ -25,7 +25,9 @@ from typing import Any
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_core.config_loader import (
@@ -92,7 +94,7 @@ from .lib.utils import get_device_name
 from .mapping_manager import ChannelMap, build_channel_map
 from .migrations import async_run_migrations
 from .recovery_adapter import attach_recovery_cadence_listener
-from .services import async_register_services, async_unregister_services
+from .services import async_register_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -362,13 +364,25 @@ def _attach_health_sync_listeners(
     data_coordinator.async_add_listener(_on_data_update)
 
 
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register integration-global services at component load.
+
+    Bronze action-setup: services are registered once here, not per
+    config entry, so they exist even before any entry is set up (and a
+    re-added entry keeps them). Handlers resolve their target config
+    entry at call time. See HA_ADAPTER_SPEC.md § Services.
+    """
+    async_register_services(hass)
+    return True
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: CableModemConfigEntry,
 ) -> bool:
     """Set up Cable Modem Monitor from a config entry.
 
-    Follows the 12-step startup sequence defined in HA_ADAPTER_SPEC.md.
+    Follows the startup sequence defined in HA_ADAPTER_SPEC.md.
     Steps 1-5 (config loading, Core component creation) run in an
     executor thread because they involve file I/O.
     """
@@ -401,9 +415,14 @@ async def async_setup_entry(
         orchestrator, health_monitor, modem_identity = await hass.async_add_executor_job(
             _create_core_components, entry.data
         )
-    except Exception:
+    except Exception as err:
+        # A missing or corrupt catalog config is a permanent
+        # misconfiguration — HA's retry won't fix it — so raise
+        # ConfigEntryError (not ConfigEntryNotReady). The modem being
+        # unreachable is a different case: the first poll never raises
+        # and setup proceeds with deferred entities (see § Data Coordinator).
         _LOGGER.exception("Failed to load modem configuration from catalog")
-        return False
+        raise ConfigEntryError(f"Failed to load modem configuration from catalog: {err}") from err
 
     # Step 6: Create data DataUpdateCoordinator
     host = entry.data[CONF_HOST]
@@ -508,9 +527,8 @@ async def async_setup_entry(
     # Step 11: Update device registry
     _update_device_registry(hass, entry)
 
-    # Step 12: Register services (if first entry)
-    if not hass.services.has_service(DOMAIN, "generate_dashboard"):
-        async_register_services(hass)
+    # Services are registered in async_setup (integration-global), not
+    # here — see § Services.
 
     # Log operational summary — after this, per-poll details are DEBUG only
     _log_operational_summary(scan_interval, health_check_interval, model)
@@ -578,9 +596,8 @@ async def async_unload_entry(
         # steps are blocking network/socket work, hence the executor.
         await hass.async_add_executor_job(entry.runtime_data.orchestrator.close)
 
-        # Unregister services if last entry
-        if not hass.config_entries.async_entries(DOMAIN):
-            async_unregister_services(hass)
+    # Services are integration-global (registered in async_setup); they
+    # outlive the entry and are not unregistered here.
 
     _LOGGER.info("Unloaded [%s]", model)
     return unload_ok

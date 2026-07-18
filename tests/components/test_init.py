@@ -17,6 +17,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.exceptions import ConfigEntryError
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemIdentity,
     ModemSnapshot,
@@ -37,6 +38,7 @@ from custom_components.cable_modem_monitor import (
     _update_device_registry,
     async_migrate_entry,
     async_remove_entry,
+    async_setup,
     async_setup_entry,
     async_unload_entry,
 )
@@ -134,12 +136,38 @@ async def test_async_migrate_entry_delegates():
 
 
 # -----------------------------------------------------------------------
+# async_setup — integration-global service registration
+# -----------------------------------------------------------------------
+
+
+async def test_async_setup_registers_services():
+    """async_setup registers integration-global services (Bronze action-setup).
+
+    Services are registered once at component load, not per config
+    entry, so they exist even before any entry is configured. Handlers
+    resolve their target config entry at call time.
+    """
+    hass = MagicMock()
+
+    with patch("custom_components.cable_modem_monitor.async_register_services") as mock_reg:
+        result = await async_setup(hass, {})
+
+    assert result is True
+    mock_reg.assert_called_once_with(hass)
+
+
+# -----------------------------------------------------------------------
 # async_unload_entry
 # -----------------------------------------------------------------------
 
 
 async def test_unload_entry_basic():
-    """Unload succeeds and returns True."""
+    """Unload succeeds and returns True.
+
+    Services are integration-global (registered in async_setup) and are
+    deliberately not unregistered on entry unload — they outlive the
+    entry so a re-added entry still has them.
+    """
     hass = MagicMock()
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
     hass.async_add_executor_job = AsyncMock()
@@ -147,27 +175,10 @@ async def test_unload_entry_basic():
 
     entry = MagicMock()
 
-    with patch("custom_components.cable_modem_monitor.async_unregister_services") as mock_unreg:
-        result = await async_unload_entry(hass, entry)
+    result = await async_unload_entry(hass, entry)
 
     assert result is True
     hass.config_entries.async_unload_platforms.assert_awaited_once_with(entry, PLATFORMS)
-    mock_unreg.assert_not_called()
-
-
-async def test_unload_entry_unregisters_services_on_last():
-    """Last entry removal unregisters services."""
-    hass = MagicMock()
-    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
-    hass.async_add_executor_job = AsyncMock()
-    hass.config_entries.async_entries.return_value = []  # no entries left
-
-    entry = MagicMock()
-
-    with patch("custom_components.cable_modem_monitor.async_unregister_services") as mock_unreg:
-        await async_unload_entry(hass, entry)
-
-    mock_unreg.assert_called_once_with(hass)
 
 
 async def test_unload_entry_closes_orchestrator():
@@ -183,8 +194,7 @@ async def test_unload_entry_closes_orchestrator():
 
     entry = MagicMock()
 
-    with patch("custom_components.cable_modem_monitor.async_unregister_services"):
-        await async_unload_entry(hass, entry)
+    await async_unload_entry(hass, entry)
 
     entry.runtime_data.orchestrator.close.assert_called_once_with()
 
@@ -209,7 +219,12 @@ async def test_unload_entry_skips_close_when_platform_unload_fails():
 
 
 async def test_setup_entry_catalog_failure():
-    """Setup returns False when catalog loading fails."""
+    """Setup raises ConfigEntryError when catalog loading fails.
+
+    Bronze test-before-setup: a missing/corrupt catalog config is a
+    permanent misconfiguration, so raise ConfigEntryError rather than
+    returning False (which HA logs as a bare "failed to set up").
+    """
     hass = MagicMock()
 
     call_count = 0
@@ -229,10 +244,11 @@ async def test_setup_entry_catalog_failure():
     entry.data = {"host": "192.168.100.1", "manufacturer": "Solent Labs", "model": "TPS-2000"}
     entry.options = {}
 
-    with patch("custom_components.cable_modem_monitor.setup_log_buffer"):
-        result = await async_setup_entry(hass, entry)
-
-    assert result is False
+    with (
+        patch("custom_components.cable_modem_monitor.setup_log_buffer"),
+        pytest.raises(ConfigEntryError, match="catalog"),
+    ):
+        await async_setup_entry(hass, entry)
 
 
 # -----------------------------------------------------------------------
@@ -497,7 +513,6 @@ async def test_setup_entry_happy_path():
         return (mock_orch, mock_health_mon, mock_identity)
 
     hass.async_add_executor_job = _mock_executor
-    hass.services.has_service.return_value = False
     hass.config_entries.async_forward_entry_setups = AsyncMock()
 
     entry = MagicMock()
@@ -525,7 +540,6 @@ async def test_setup_entry_happy_path():
             mock_duc,
         ),
         patch("custom_components.cable_modem_monitor._update_device_registry"),
-        patch("custom_components.cable_modem_monitor.async_register_services"),
         patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener") as mock_attach,
     ):
         result = await async_setup_entry(hass, entry)
@@ -1387,7 +1401,6 @@ async def test_update_data_triggers_reauth_on_breaker_open():
         return (mock_orch, None, mock_identity)
 
     hass.async_add_executor_job = _mock_executor
-    hass.services.has_service.return_value = False
     hass.config_entries.async_forward_entry_setups = AsyncMock()
 
     entry = MagicMock()
@@ -1405,7 +1418,6 @@ async def test_update_data_triggers_reauth_on_breaker_open():
         patch("custom_components.cable_modem_monitor.setup_log_buffer"),
         patch("custom_components.cable_modem_monitor.DataUpdateCoordinator", mock_duc),
         patch("custom_components.cable_modem_monitor._update_device_registry"),
-        patch("custom_components.cable_modem_monitor.async_register_services"),
         patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener"),
     ):
         assert await async_setup_entry(hass, entry) is True

@@ -29,6 +29,7 @@ Core, it should.
 | [Persistence Layers](#persistence-layers) | Where state lives: `runtime_data`, `entry.data`, `entry.options`, Store helper |
 | [Startup](#startup) | `async_setup_entry` — component creation and wiring |
 | [Unload](#unload) | `async_unload_entry` — cleanup and cancellation |
+| [Removal](#removal) | `async_remove_entry` cleanup, recorder no-purge design choice, removal-docs rule |
 | [Async Boundary](#async-boundary) | Which Core calls need executor wrapping |
 | [Data Coordinator](#data-coordinator) | DataUpdateCoordinator wrapping `get_modem_data()` and deferred entity creation |
 | [Health Coordinator](#health-coordinator) | Second coordinator wrapping `health_monitor.ping()` |
@@ -210,11 +211,12 @@ async_setup_entry(hass, entry)
  │
  ├─ 8. Forward platform setup (sensor, button)
  │
- ├─ 9. Update device registry
- │
- └─ 10. Register services (if first entry)
-         generate_dashboard
+ └─ 9. Update device registry
 ```
+
+Services are **not** registered here. They are integration-global and
+registered once in `async_setup` (see § Services) so they exist before
+any entry is set up and survive an entry being removed and re-added.
 
 **Steps 1-3 involve sync I/O** — all must run in executor via
 `hass.async_add_executor_job()`. Step 3 delegates to the Core
@@ -224,6 +226,23 @@ and identity internally.
 **Step 6 always runs.** Even when polling is disabled, the first poll
 runs during setup so entities have real data. "Disabled" means no
 scheduled polls after setup, not "never poll."
+
+**Two failure modes, handled differently.** Steps 1–5 (catalog config
+load) and Step 6 (first poll) fail in different ways:
+
+- **Catalog load fails** (Steps 1–5 — modem.yaml missing or corrupt, a
+  bad catalog install). This is a permanent misconfiguration that HA's
+  retry cannot fix, so `async_setup_entry` raises `ConfigEntryError`.
+  HA surfaces a clear setup error rather than logging a bare "failed to
+  set up" (Bronze `test-before-setup`).
+- **Modem unreachable** (Step 6). The orchestrator never raises — the
+  first poll returns `ModemSnapshot(UNREACHABLE, modem_data=None)` and
+  setup proceeds. Always-available entities (Status, Info, Health)
+  appear immediately; data-dependent entities are created later via the
+  deferred-creation listener (see § Data Coordinator → Deferred Entity
+  Creation). This is the proceed-when-unreachable design and is
+  deliberately *not* a `ConfigEntryNotReady` — the integration is
+  usable offline, showing the outage.
 
 ---
 
@@ -238,10 +257,16 @@ async_unload_entry(hass, entry)
  │     hass.config_entries.async_unload_platforms(entry, PLATFORMS)
  │     (stops the data + health coordinators' scheduled polls)
  │
- ├─ 2. Unregister services if last entry
+ ├─ 2. Close the orchestrator (session logout + socket pool release)
  │
  └─ 3. runtime_data auto-cleaned by HA
 ```
+
+**Services are not unregistered on unload.** They are integration-
+global (registered in `async_setup`, which runs once per HA session).
+Unregistering them here would permanently remove them when the last
+entry unloads — a subsequently re-added entry would find the services
+gone, because `async_setup` does not run again.
 
 **No restart cancellation primitive.** `orchestrator.restart()` is
 one-shot and returns in a few seconds, so there's nothing long-
@@ -257,6 +282,34 @@ tasks return to the pool when they complete.
 is memory on the orchestrator instance; when the entry unloads, the
 instance is garbage-collected and the state goes with it. Fresh
 `async_setup_entry` always starts with `recovery_active == False`.
+
+---
+
+## Removal
+
+Deleting a config entry runs `async_unload_entry` then
+`async_remove_entry`. HA removes the device, entities, and encrypted
+config-entry data itself; `async_remove_entry` removes the
+integration's own `Store` payloads (the channel-bond baseline — see
+§ Persistence Layers).
+
+**Recorder history is not purged — our choice, not an HA rule.**
+`async_remove_entry` cleans up only the integration's own `Store`
+payloads. Long-term statistics and states history live in HA's
+recorder, which governs its own retention (`purge_keep_days`);
+removing the entry does not specially purge them. States age out on
+the recorder's normal schedule, and statistics persist as orphaned
+rows — which is why the `orphaned_statistics` service exists. We could
+purge on removal (the machinery is right there), but doing so unbidden
+would destroy history a user may want, so we leave it to them. HA has
+no quality-scale rule in either direction; this is a deliberate design
+choice, not a cited best practice.
+
+**User-facing removal instructions** live in `.github/README.md`
+§ Removing the Integration, satisfying HA's Bronze
+[`docs-removal-instructions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-removal-instructions/)
+rule (which covers documenting removal only — it says nothing about
+data retention).
 
 ---
 
@@ -1104,8 +1157,14 @@ if a future field surfaces PII.
 
 ## Services
 
-All services are registered once on first entry setup and unregistered
-when the last entry is removed.
+All services are registered once in `async_setup` (integration-global,
+Bronze `action-setup`) — not per config entry. They exist before any
+entry is configured and survive an entry being removed and re-added, so
+they are never unregistered. Because a service call can arrive with no
+loaded entry (or target a specific one), every handler resolves its
+target config entry at call time via `_resolve_target_entries` /
+`_resolve_config_entry_for_device`; none capture an entry at
+registration.
 
 ### `generate_dashboard`
 
@@ -1396,7 +1455,7 @@ The HA adapter layer consists of these modules:
 
 | Module | Responsibility |
 |--------|---------------|
-| `__init__.py` | Startup, unload, migration dispatch, device registry, service registration, `async_remove_entry` cleanup |
+| `__init__.py` | Component setup (`async_setup` service registration), entry startup/unload, migration dispatch, device registry, `async_remove_entry` cleanup |
 | `coordinator.py` | `CableModemRuntimeData` dataclass + `CableModemConfigEntry` type alias |
 | `recovery_adapter.py` | Recovery cadence listener — observer into Core + dispatcher signal that flips `update_interval` while a window is open |
 | `mapping_manager.py` | Channel identity mapping (`ChannelMap`) — builds per-poll mapping between channel number/id and entity unique_id |
@@ -1408,7 +1467,7 @@ The HA adapter layer consists of these modules:
 | `config_flow_helpers.py` | Validation pipeline, probe detection, encoding detection — async wrappers around Core I/O |
 | `diagnostics.py` | Diagnostics download combining Core + HA-side data |
 | `const.py` | Domain constants, config keys, defaults |
-| `services.py` | Service registration wiring — constants, schemas, `async_request_modem_refresh`, `request_refresh` / `request_health_check` handler factories, `async_register/unregister_services` |
+| `services.py` | Service registration wiring — constants, schemas, `async_request_modem_refresh`, `request_refresh` / `request_health_check` handler factories, `async_register_services` |
 | `dev_tools.py` | Dev tool implementations — dashboard YAML generator (`_build_*` / `_format_*` / channel helpers / `create_generate_dashboard_handler`) and channel identity converter (`_plan_stat_renames_*` / `_migrate_statistics` / `create_convert_channel_identity_handler`) |
 | `migrations/` | Version-keyed config entry migration handlers |
 | `core/log_buffer.py` | Log capture for diagnostics (HA adapter + Core package loggers) |
