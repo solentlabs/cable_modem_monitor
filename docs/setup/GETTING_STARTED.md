@@ -83,6 +83,14 @@ VS Code tasks (`Ctrl+Shift+P` → **Tasks: Run Task**):
 
 After starting, open <http://localhost:8123>.
 
+> **Code changes need a full HA restart, not an entry reload.** Run
+> **🚀 HA: Start** (or `make docker-restart` from the terminal — same
+> thing). The dev harness installs Core editable
+> (`scripts/dev/ha-entrypoint.sh` runs `pip install -e`) and mounts
+> `custom_components` live, so a running HA holds the modules it already
+> imported. Reloading the integration entry re-runs setup on that stale
+> code — only a restart re-imports your edits.
+
 ---
 
 ## Daily workflow
