@@ -2,7 +2,7 @@
 
 Covers signal→policy mapping, circuit breaker, backoff, status
 derivation, transition detection, restart dispatch, Recovery
-wiring, reset_auth, and diagnostics. Tests mock the collector — no
+wiring, and diagnostics. Tests mock the collector — no
 HTTP traffic.
 
 Use case coverage (orchestrator level):
@@ -18,7 +18,6 @@ Use case coverage (orchestrator level):
 - UC-13: Backoff expiry — polling resumes
 - UC-14: Circuit breaker trip — 6 consecutive failures
 - UC-15: Circuit breaker blocks polling
-- UC-16: Credential reconfiguration — reset_auth()
 - UC-17: LOAD_AUTH — 401 on data page
 - UC-18: LOAD_AUTH — self-correcting stale session
 - UC-19: Login page detection → LOAD_AUTH
@@ -536,61 +535,6 @@ class TestCircuitBreaker:
         assert orch.diagnostics().auth_failure_streak == 5
 
 
-class TestResetAuth:
-    """UC-16: Credential reconfiguration — reset_auth()."""
-
-    def test_reset_clears_all_state(self) -> None:
-        results = [_fail_result(CollectorSignal.AUTH_FAILED), _ok_result()]
-        collector = _mock_collector(results)
-        orch = _make_orchestrator(collector=collector)
-
-        # Trip the circuit (immediate on AUTH_FAILED)
-        orch.get_modem_data()
-        assert orch.diagnostics().circuit_breaker_open is True
-
-        # Reset
-        orch.reset_auth()
-
-        assert orch.diagnostics().auth_failure_streak == 0
-        assert orch.diagnostics().circuit_breaker_open is False
-        collector.clear_session.assert_called()
-
-        # Next poll works
-        snapshot = orch.get_modem_data()
-        assert snapshot.connection_status == ConnectionStatus.ONLINE
-
-    def test_reset_auth_clears_error_rate_state(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """reset_auth() discards the error-rate baseline so the first
-        post-reset poll treats rates as unknown (no prior baseline).
-
-        Without the fix, _prev_error_totals and _prev_poll_monotonic
-        survive the auth reset, causing the post-reset poll to compute
-        a rate across a potentially long auth-outage interval.
-        """
-        _patch_orch_monotonic(monkeypatch, [0.0, 0.0, 0.0, 3600.0, 3600.0, 3600.0])
-        collector = _mock_collector(
-            [
-                _ok_result(_data_with_totals(100, 10)),
-                _ok_result(_data_with_totals(200, 20)),
-            ]
-        )
-        orch = _make_orchestrator(collector=collector)
-
-        # Poll 1 — establishes baseline
-        orch.get_modem_data()
-
-        # Simulate credential update (auth outage gap baked into monotonic patch)
-        orch.reset_auth()
-
-        # Poll 2 — first poll after reset; should have no inter-poll rate
-        snap = orch.get_modem_data()
-
-        assert snap.modem_data is not None
-        system_info = snap.modem_data["system_info"]
-        assert "rate_corrected" not in system_info
-        assert "rate_uncorrected" not in system_info
-
-
 class TestCircuitBreakerTripReason:
     """Blocked-poll errors preserve the trip reason — 404 trips are not credential problems."""
 
@@ -809,36 +753,6 @@ class TestLoadAuthAdaptiveReuse:
         assert collector.execute.call_count == 5
         collector.clear_session.assert_called_once()
 
-    def test_reset_auth_clears_adaptive_reuse_state(self) -> None:
-        """Credential reset re-enables session reuse and clears the counter."""
-        collector = _mock_collector(
-            [
-                _fail_result(CollectorSignal.LOAD_AUTH),
-                _ok_result(),
-                _fail_result(CollectorSignal.LOAD_AUTH),
-                _ok_result(),
-                _fail_result(CollectorSignal.LOAD_AUTH),
-                _ok_result(),
-            ]
-        )
-        orch = _make_orchestrator(collector=collector)
-
-        orch.get_modem_data()
-        orch.get_modem_data()
-        assert orch.diagnostics().session_reuse_disabled is True
-
-        orch.reset_auth()
-
-        diag = orch.diagnostics()
-        assert diag.stale_session_recovery_streak == 0
-        assert diag.session_reuse_disabled is False
-
-        collector.clear_session.reset_mock()
-        orch.get_modem_data()
-
-        assert collector.execute.call_count == 6
-        collector.clear_session.assert_called_once()
-
 
 class TestPasswordChanged:
     """UC-87: Password changed — circuit trips on first AUTH_FAILED."""
@@ -1040,6 +954,15 @@ class TestConnectivityFailures:
 
         assert "Connectivity backoff reset" not in caplog.text
         assert orch.diagnostics().connectivity_streak == 0
+
+    def test_close_delegates_to_collector(self) -> None:
+        """close() releases the collector's session."""
+        collector = _mock_collector([_ok_result()])
+        orch = _make_orchestrator(collector=collector)
+
+        orch.close()
+
+        collector.close.assert_called_once_with()
 
     def test_non_connectivity_failure_clears_connectivity(self) -> None:
         """Auth failure after connectivity outage clears connectivity backoff."""
@@ -1780,21 +1703,6 @@ class TestSystemInfoFieldsChanged:
 
         assert any("system_info fields changed" in r.message and "gained" in r.message for r in caplog.records)
         assert any("boot_status" in r.message for r in caplog.records)
-
-    def test_reset_auth_clears_baseline(self, caplog: pytest.LogCaptureFixture) -> None:
-        """reset_auth() clears baseline — no spurious event on next poll."""
-        data1 = _make_modem_data(system_info={"firmware": "1.0", "boot_status": "operational"})
-        data2 = _make_modem_data(system_info={"firmware": "1.0"})
-        collector = _mock_collector([_ok_result(data1), _ok_result(data2)])
-        orch = _make_orchestrator(collector=collector)
-
-        orch.get_modem_data()
-        orch.reset_auth()
-
-        with caplog.at_level(logging.WARNING):
-            orch.get_modem_data()
-
-        assert not any("system_info fields changed" in r.message for r in caplog.records)
 
     def test_rate_fields_excluded_from_diff(self, caplog: pytest.LogCaptureFixture) -> None:
         """Orchestrator-computed rate_* fields do not trigger a change event."""

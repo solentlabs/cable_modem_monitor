@@ -215,15 +215,13 @@ def _start_reauth_on_lockout(
     model: str,
 ) -> None:
     """Start HA's reauth flow when the auth circuit breaker opens."""
-    # An open breaker halts polling until the user fixes credentials.
-    # The reauth flow is HA's surface for exactly that: a
-    # "Reauthentication required" notification with the fix form attached.
+    # Reauth is HA's surface for a credential lockout: a
+    # "Reauthentication required" notification with the fix form.
     # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reauthentication-flow/
     # Contract: HA_ADAPTER_SPEC.md § Reauth Flow, UC-81, UC-87.
-    # Core integrations get here by raising ConfigEntryAuthFailed, which
-    # also flips every entity unavailable. Our entity model keeps the
-    # Status sensor as the sole outage announcer (#178), so we call the
-    # same underlying API directly instead.
+    # Core integrations trigger this by raising ConfigEntryAuthFailed,
+    # but that also flips every entity unavailable; our Status sensor is
+    # the sole outage announcer (#178), so we call the API directly.
     if snapshot.connection_status is not ConnectionStatus.AUTH_FAILED:
         return
     # Breaker open — not a lone AUTH_FAILED poll — is the trigger:
@@ -573,9 +571,16 @@ async def async_unload_entry(
     # Unload platforms
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    # Unregister services if last entry
-    if unload_ok and not hass.config_entries.async_entries(DOMAIN):
-        async_unregister_services(hass)
+    if unload_ok:
+        # Log out any live modem session and release the socket pool now
+        # rather than leaving a lock / lingering to GC — matters on reload
+        # so the fresh orchestrator doesn't collide with a dying one. Both
+        # steps are blocking network/socket work, hence the executor.
+        await hass.async_add_executor_job(entry.runtime_data.orchestrator.close)
+
+        # Unregister services if last entry
+        if not hass.config_entries.async_entries(DOMAIN):
+            async_unregister_services(hass)
 
     _LOGGER.info("Unloaded [%s]", model)
     return unload_ok

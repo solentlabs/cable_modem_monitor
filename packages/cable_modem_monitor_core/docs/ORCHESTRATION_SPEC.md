@@ -571,29 +571,6 @@ class Orchestrator:
             RestartNotSupportedError: If modem has no restart action.
         """
 
-    def reset_auth(self) -> None:
-        """Reset auth state after credential reconfiguration.
-
-        Called by the client (HA reauth flow) after the user updates
-        credentials. Clears all auth-related state so the next
-        get_modem_data() starts with a clean slate:
-
-        - Auth failure streak → 0
-        - Circuit breaker → closed
-        - Login backoff → 0
-        - Collector session → cleared
-
-        Flow:
-        1. Circuit breaker trips → client shows reconfiguration prompt
-        2. User enters new credentials → client validates them
-        3. Validation passes → client calls reset_auth()
-        4. Next get_modem_data() attempts fresh login with new credentials
-
-        get_modem_data() returns AUTH_FAILED while the circuit is open.
-        This prevents 'refresh data' from hammering the modem with
-        known-bad credentials. Credentials must be fixed first.
-        """
-
     def reset_connectivity(self) -> None:
         """Reset connectivity backoff for immediate retry.
 
@@ -603,6 +580,21 @@ class Orchestrator:
         of prior connectivity failures. Deliberately does NOT clear
         the auth circuit breaker — see § Auth Circuit Breaker,
         "No manual bypass."
+        """
+
+    def close(self) -> None:
+        """Release held resources — log out any live session, close the HTTP session.
+
+        Called by the consumer when discarding the orchestrator (e.g.
+        HA entry reload). If a session is still live (a session-reuse
+        modem at reload), best-effort logs it out first so single-session
+        firmware isn't left holding a lock; the logout is guarded (skipped
+        when no session), suppressed, and bounded by the action timeout so
+        teardown can't hang on an unreachable modem. Then releases the
+        session's pooled sockets rather than leaving them to GC.
+        Per-poll-logout modems have already cleared their session, so the
+        logout is a no-op for them. The orchestrator is single-use after
+        close().
         """
 
     def diagnostics(self) -> OrchestratorDiagnostics:
@@ -1145,9 +1137,12 @@ AUTH_FAILURE_THRESHOLD: int = 6  # applies to LOAD_AUTH only
 ```
 
 **Recovery paths.** An open circuit blocks all polling indefinitely;
-it never times out. It clears via `reset_auth()` (credential
-reconfiguration through the client's reauth flow) or a client
-restart/reload (a fresh orchestrator starts with a closed circuit).
+it never times out. It clears only by orchestrator reconstruction:
+credentials are constructor-bound (there is no setter), so credential
+reconfiguration always means the consumer rebuilds the orchestrator —
+an HA config-entry reload after the reauth flow, or a client
+restart. A fresh orchestrator starts with a closed circuit and every
+auth-related field at its constructor default.
 
 **No manual bypass — a considered decision, not an omission.**
 Manual refresh (`reset_connectivity()`, the HA Update Modem Data
@@ -1243,10 +1238,10 @@ grows and the circuit trips — same as wrong credentials.
 
 | State | Purpose | Lifetime |
 |-------|---------|----------|
-| Login backoff counter | Anti-brute-force suppression | Decremented each get_modem_data(), cleared by reset_auth() |
-| Auth failure streak | Circuit breaker — consecutive auth-related failures | Reset on successful collection or reset_auth() |
-| Circuit open flag | Stops collection when streak reaches threshold | Set when tripped, cleared by reset_auth() |
-| Circuit trip status code | Keeps blocked-poll advice matched to the trip cause (404 vs credentials) | Set on immediate trip, cleared by reset_auth() |
+| Login backoff counter | Anti-brute-force suppression | Decremented each get_modem_data(), cleared by orchestrator reconstruction |
+| Auth failure streak | Circuit breaker — consecutive auth-related failures | Reset on successful collection, cleared by orchestrator reconstruction |
+| Circuit open flag | Stops collection when streak reaches threshold | Set when tripped, cleared by orchestrator reconstruction |
+| Circuit trip status code | Keeps blocked-poll advice matched to the trip cause (404 vs credentials) | Set on immediate trip, cleared by orchestrator reconstruction |
 | Connectivity streak | Tracks consecutive CONNECTIVITY failures | Reset on success, non-connectivity failure, or reset_connectivity() |
 | Connectivity backoff | Exponential backoff for unreachable modem: min(2^(streak-1), 6) | Decremented each get_modem_data(), cleared by reset_connectivity() |
 | Recovery window state | Aggressive poll cadence, session preservation during the window | Owned by the recovery module; see § Recovery |
@@ -1315,8 +1310,8 @@ omits `rate_uncorrected` (no baseline yet).
 **Omission cases** (field absent from `system_info` for the
 corresponding counter):
 
-- First poll since orchestrator construction or `reset_auth()`, with
-  a non-zero current total (no prior baseline).
+- First poll since orchestrator construction, with a non-zero
+  current total (no prior baseline).
 - A counter reset is detected on this poll — *either* total
   decreased, which marks the interval as spanning a modem reboot or
   stats wipe. Both counters omit the inter-poll delta; counters at
@@ -1364,9 +1359,9 @@ verify the integration is polling without enabling DEBUG logging:
    Settings → System → Logs to surface per-poll detail.
 
 **First-poll trigger** — the "first poll INFO" mode fires on:
-fresh install, reconfigure (entry reload), HA server start/restart
-(orchestrator instance recreation), and `reset_auth()` (user-triggered
-reauth). Modem reboot is not in this list — it gets its own one-line
+fresh install, reconfigure or reauth (entry reload), and HA server
+start/restart — every path is an orchestrator instance recreation.
+Modem reboot is not in this list — it gets its own one-line
 INFO event ("Counter reset detected …") and does not trigger verbose
 first-poll output.
 

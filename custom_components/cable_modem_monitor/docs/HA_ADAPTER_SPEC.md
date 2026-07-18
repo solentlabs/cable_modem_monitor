@@ -819,8 +819,9 @@ Circuit breaker opens
  │
  ├─ 6. On success:
  │     ├─ Update config entry with new credentials
- │     ├─ orchestrator.reset_auth()
- │     │   (clears streak, circuit, backoff, session)
+ │     ├─ Reload the entry — a fresh orchestrator is built with the
+ │     │   new credentials (streak, circuit, backoff, session all
+ │     │   start at constructor defaults; see UC-16)
  │     └─ Next poll attempts fresh login
  │
  └─ 7. On failure: show error, user retries

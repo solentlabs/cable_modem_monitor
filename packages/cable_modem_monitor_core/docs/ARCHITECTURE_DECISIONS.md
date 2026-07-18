@@ -11,7 +11,7 @@ files; this document explains the choices that shaped them.
 | [Package Boundaries](#package-boundaries) | Runtime package split, dependency direction, where each piece lives |
 | [Core Schema Model](#core-schema-model) | What enters Core's schema vs what stays user-side; catalog stores source-faithful strings, display normalizes |
 | [Transport and Constraint Model](#transport-and-constraint-model) | Transport as protocol identifier, implicit capabilities |
-| [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging |
+| [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging, credential reconfiguration as reconstruction |
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
 | [Recovery Architecture](#recovery-architecture) | Restart vs recovery, generic timing, reboot-signal vote, observer callback |
@@ -566,6 +566,42 @@ this set as opaque — a Core-layer ``headers`` parameter, no
 "sensitive" qualifier in the loader API. The wire request is never
 modified; redaction only applies when ``describe_request`` formats
 the failure log line.
+
+---
+
+### Credential reconfiguration is reconstruction, not mutation
+
+**Decision:** Credentials are constructor-bound. Core exposes no
+credential setter and no auth-state reset method; a credential change
+always means the consumer discards the orchestrator and builds a new
+one (in HA: config-entry update + reload after the reauth or options
+flow). A fresh instance starts with every auth-related field —
+failure streak, circuit breaker, login backoff, session, error-rate
+baseline — at its constructor default.
+
+**Rationale:** `Orchestrator.reset_auth()` was specified (2026-03,
+v3.14 Step 19) for an HA reauth flow that was planned to call it, but
+the adapter shipped with entry reload instead (Step 21) and the method
+never gained a production caller. Its contract was unfulfillable:
+without a credential setter, the consumer must rebuild anyway, at
+which point every field the reset would clear is already fresh.
+Reconstruction is also strictly stronger than an in-place reset — a
+hand-maintained clearing list must be extended for every new
+auth-adjacent field (and was, across five commits, all only reachable
+from tests), while a constructor can never miss one. Retired 2026-07;
+UC-16 rewritten around rebuild, `AuthStateReset` event removed with
+no replacement log line (the lockout WARNING, reload startup INFO,
+and verbose first-poll INFO carry the recovery story).
+
+**Constrains:** Consumers treat orchestrator instances as disposable
+— no consumer-side caching that outlives a credential change, and
+they call ``orchestrator.close()`` on discard. ``close()`` best-effort
+logs out any live session (so single-session firmware isn't left
+holding a lock — the same concern as § Session concurrency) and then
+releases the HTTP session's sockets deterministically rather than at
+GC. HA does this in ``async_unload_entry``, which runs before every
+reload. Any future "clear auth state" need is served by rebuild, not
+by re-adding a reset method.
 
 ---
 

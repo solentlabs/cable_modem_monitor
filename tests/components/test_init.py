@@ -142,6 +142,7 @@ async def test_unload_entry_basic():
     """Unload succeeds and returns True."""
     hass = MagicMock()
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    hass.async_add_executor_job = AsyncMock()
     hass.config_entries.async_entries.return_value = [MagicMock()]  # not last
 
     entry = MagicMock()
@@ -158,6 +159,7 @@ async def test_unload_entry_unregisters_services_on_last():
     """Last entry removal unregisters services."""
     hass = MagicMock()
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    hass.async_add_executor_job = AsyncMock()
     hass.config_entries.async_entries.return_value = []  # no entries left
 
     entry = MagicMock()
@@ -166,6 +168,39 @@ async def test_unload_entry_unregisters_services_on_last():
         await async_unload_entry(hass, entry)
 
     mock_unreg.assert_called_once_with(hass)
+
+
+async def test_unload_entry_closes_orchestrator():
+    """Unload closes the orchestrator's session in the executor."""
+    hass = MagicMock()
+    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    hass.config_entries.async_entries.return_value = []
+
+    async def _run_executor(func, *args):
+        return func(*args)
+
+    hass.async_add_executor_job = _run_executor
+
+    entry = MagicMock()
+
+    with patch("custom_components.cable_modem_monitor.async_unregister_services"):
+        await async_unload_entry(hass, entry)
+
+    entry.runtime_data.orchestrator.close.assert_called_once_with()
+
+
+async def test_unload_entry_skips_close_when_platform_unload_fails():
+    """A failed platform unload leaves the session untouched."""
+    hass = MagicMock()
+    hass.config_entries.async_unload_platforms = AsyncMock(return_value=False)
+    hass.async_add_executor_job = AsyncMock()
+
+    entry = MagicMock()
+
+    result = await async_unload_entry(hass, entry)
+
+    assert result is False
+    hass.async_add_executor_job.assert_not_awaited()
 
 
 # -----------------------------------------------------------------------
@@ -269,6 +304,27 @@ def test_wiring_no_parser_files():
 
     mock_parser.assert_not_called()
     mock_post.assert_not_called()
+
+
+def test_wiring_passes_entry_credentials_to_factory():
+    """Entry-data credentials reach create_orchestrator on every (re)build."""
+    # Credential changes are delivered by entry reload (UC-16): the
+    # rebuilt orchestrator must be constructed from the UPDATED entry
+    # data, or the clean slate the reload promises never happens.
+    data = {**MOCK_ENTRY_DATA, "username": "admin", "password": "newpassword"}
+
+    with (
+        patch(_PATCH_LOAD_MODEM, return_value=STUB_MODEM_CONFIG),
+        patch(_PATCH_LOAD_PARSER, return_value=None),
+        patch(_PATCH_LOAD_POST, return_value=None),
+        patch("pathlib.Path.exists", return_value=False),
+        patch("custom_components.cable_modem_monitor.create_orchestrator") as mock_factory,
+    ):
+        _create_core_components(data)
+
+    kwargs = mock_factory.call_args.kwargs
+    assert kwargs["username"] == "admin"
+    assert kwargs["password"] == "newpassword"
 
 
 # ┌──────────────┬────────────┬─────────────────────┬───────────────────┐

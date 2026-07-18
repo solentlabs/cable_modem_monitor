@@ -14,6 +14,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reboot action is HAR-verified and awaits hardware confirmation.
   Closes both DM1000 catalog gaps. (Related to #92)
 
+- **Locked-out credentials now prompt for reauthentication.** When
+  the auth circuit breaker opens (definitive credential rejection,
+  or repeated stale-session failures), the integration starts Home
+  Assistant's native reauthentication flow — a "Reauthentication
+  required" notification with the credential form attached. The flow
+  itself has existed since the v3.14 adapter but nothing triggered
+  it; users had to spot the ERROR log and fix credentials by hand.
+  One WARNING per lockout, and a completed reauth reloads the
+  integration so polling resumes with the new credentials (UC-81,
+  UC-87).
+
+- **Session cleanup on unload/reload.** The orchestrator now exposes
+  `close()`, and the HA adapter calls it from `async_unload_entry` (in
+  the executor). If a session is still live — a session-reuse modem at
+  reload — it is logged out first so single-session firmware isn't left
+  holding a lock that blocks the next login; then the socket pool is
+  released immediately rather than lingering to garbage collection. The
+  logout is best-effort and timeout-bounded, and a no-op for
+  per-poll-logout modems whose session is already cleared.
+
+### Removed
+
+- **Core public API: `Orchestrator.reset_auth()` and the
+  `AuthStateReset` event.** Spec'd for a reauth flow that was
+  ultimately built on entry reload instead, the method never gained
+  a production caller and could not fulfill its own contract:
+  credentials are constructor-bound, so a credential change always
+  rebuilds the orchestrator — at which point every field the reset
+  would clear is already at its constructor default. Credential
+  reconfiguration is now ratified as reconstruction
+  (ARCHITECTURE_DECISIONS § Auth Architecture); UC-16 is rewritten
+  around rebuild. Breaking only for external consumers of the Core
+  library, of which none are known.
+
 ## [3.14.0-beta.14] - 2026-07-14
 
 ### Fixed

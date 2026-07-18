@@ -169,7 +169,7 @@ Core's engine. Depends on both Core and Catalog.
 | Restart button | Maps platform button press → `orchestrator.restart()` in executor thread with `cancel_event` for clean shutdown |
 | Update button | Triggers immediate poll via `coordinator.async_request_refresh()` |
 | Reset entities button | Removes all entities from HA registry and reloads the integration |
-| Reauth flow | Circuit breaker triggers HA native `async_step_reauth`. Calls `orchestrator.reset_auth()` on success |
+| Reauth flow | Circuit breaker triggers HA native `async_step_reauth` via `entry.async_start_reauth()`. On success: entry updated + reloaded — a fresh orchestrator starts with clean auth state |
 | Diagnostics | Combines Core's `OrchestratorDiagnostics` with HA-side sanitized logs, channel dump, PII checklist |
 | Dashboard generator | Service that generates Lovelace YAML for modem dashboard based on current channels |
 

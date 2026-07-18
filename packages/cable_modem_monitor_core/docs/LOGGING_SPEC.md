@@ -67,7 +67,6 @@ Fields — `ConnectivityBackoffReset`: `model`
 | `AuthLockoutDetected` | WARNING | Lockout detected |
 | `AuthCircuitBreakerOpen` | ERROR | Circuit breaker opened |
 | `CircuitBreakerPollingBlocked` | ERROR | Per-poll guard — breaker is open; credentials must be reconfigured |
-| `AuthStateReset` | INFO | Auth state reset (circuit breaker cleared) |
 | `StaleSessionRecoveryDisabled` | INFO | Stale-session recovery streak hit threshold; session reuse disabled for this runtime |
 
 Fields — `AuthSucceeded`: `model`, `strategy: str`, `status_code: int` (0 when no response)

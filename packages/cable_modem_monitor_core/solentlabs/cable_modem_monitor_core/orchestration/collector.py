@@ -345,6 +345,18 @@ class ModemDataCollector:
         self._last_auth_result = None
         log_event(_logger, SessionCleared(model=self._modem_config.model))
 
+    def close(self) -> None:
+        """Log out any live session, then close the HTTP session."""
+        # Release a live server-side session before dropping the socket, so
+        # single-session firmware isn't left holding a lock when a consumer
+        # discards this collector (e.g. an HA reload that was reusing the
+        # session). Best-effort and bounded by the action's timeout, so
+        # teardown can't hang on an unreachable modem. No-op for
+        # per-poll-logout modems — their session is already cleared here.
+        if self.session_is_valid:
+            self._best_effort_logout()
+        self._session.close()
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -636,13 +648,20 @@ class ModemDataCollector:
 
     def attempt_logout_before_retry(self) -> None:
         """Best-effort logout before a same-poll auth retry on single-session firmware."""
+        self._best_effort_logout()
+
+    def _best_effort_logout(self) -> None:
+        """Suppressed, guarded logout — releases an active server-side session.
+
+        Shared by the same-poll retry path and close(); never raises.
+        """
         actions = self._modem_config.actions
         if actions is None or actions.logout is None:
             return
         # requires_session=True means the endpoint needs a valid session cookie to
-        # function. Skip the call when we have no cookies — it would fail anyway,
-        # and the retry proceeds regardless. Unauthenticated endpoints (False, the
-        # default) can clear any active server-side session without credentials.
+        # function. Skip the call when we have no cookies — it would fail anyway.
+        # Unauthenticated endpoints (False, the default) can clear any active
+        # server-side session without credentials.
         if isinstance(actions.logout, HttpAction) and actions.logout.requires_session and not self._session.cookies:
             return
         with contextlib.suppress(Exception):

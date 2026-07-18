@@ -44,7 +44,6 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         AuthCircuitBreakerOpen,
         AuthFailed,
         AuthLockoutDetected,
-        AuthStateReset,
         AuthSucceeded,
         CircuitBreakerPollingBlocked,
         CollectionComplete,
@@ -150,9 +149,6 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
                 " (HTTP 404). Polling stopped. Reload the integration to retry."
             )
         return f"Circuit breaker OPEN [{event.model}] — polling stopped. Reconfigure credentials to resume."
-
-    if isinstance(event, AuthStateReset):
-        return f"Auth state reset [{event.model}] — next poll will attempt fresh login"
 
     if isinstance(event, StaleSessionRecoveryDisabled):
         return (
