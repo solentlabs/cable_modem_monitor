@@ -22,6 +22,7 @@ from collections import Counter
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import CONF_HOST, EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -205,6 +206,12 @@ class RestartModemButton(_ButtonBase):
         # post-reboot state (typically UNREACHABLE while the modem
         # comes back).
         await runtime.data_coordinator.async_request_refresh()
+
+        # Surface the failure to the caller once state has been refreshed.
+        # The notification above stays as the persistent record; this is
+        # what an automation or the UI actually sees as the action result.
+        if not result.success:
+            raise HomeAssistantError(f"{model} restart did not dispatch: {result.error}")
 
 
 class UpdateModemDataButton(_ButtonBase):

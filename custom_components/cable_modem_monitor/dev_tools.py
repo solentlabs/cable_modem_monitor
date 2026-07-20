@@ -19,6 +19,7 @@ from typing import Any
 import homeassistant.helpers.device_registry as dr
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.recorder import get_instance
 from homeassistant.util import slugify as ha_slugify
 
@@ -584,28 +585,16 @@ def _build_channel_graph_defs(
 # ------------------------------------------------------------------
 
 
-class DashboardError(Exception):
-    """Raised when a dashboard target cannot be resolved.
-
-    The exception message is the YAML error string returned to the caller.
-    """
-
-
 def _resolve_dashboard_target(hass: HomeAssistant, call: ServiceCall) -> tuple[CableModemConfigEntry, dict[str, Any]]:
-    """Resolve the config entry and modem data for a dashboard request.
-
-    Raises:
-        DashboardError: When no config entry is loaded, or when the
-            entry has no modem data snapshot yet.
-    """
+    """Resolve the config entry and modem data for a dashboard request."""
     device_id = call.data.get("device_id")
     entry = _resolve_config_entry_for_device(hass, device_id) if device_id else _find_loaded_entry(hass)
     if entry is None:
-        raise DashboardError("# Error: No cable modem configured")
+        raise ServiceValidationError("No cable modem configured")
 
     snapshot = entry.runtime_data.data_coordinator.data
     if snapshot is None or snapshot.modem_data is None:
-        raise DashboardError("# Error: No modem data available")
+        raise ServiceValidationError("No modem data available — the modem must be online")
 
     return entry, snapshot.modem_data
 
@@ -617,10 +606,7 @@ def create_generate_dashboard_handler(
 
     def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:
         """Handle the generate_dashboard service call."""
-        try:
-            entry, modem_data = _resolve_dashboard_target(hass, call)
-        except DashboardError as exc:
-            return {"yaml": str(exc)}
+        entry, modem_data = _resolve_dashboard_target(hass, call)
 
         entity_prefix = _get_entity_prefix(entry)
         has_icmp = bool(entry.data.get(CONF_SUPPORTS_ICMP, False))
@@ -848,13 +834,13 @@ def create_convert_channel_identity_handler(
         else:
             entry = _find_loaded_entry(hass)
         if entry is None:
-            return {"error": "No cable modem configured"}
+            raise ServiceValidationError("No cable modem configured")
 
         target_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
 
         snapshot = entry.runtime_data.data_coordinator.data
         if snapshot is None or snapshot.modem_data is None:
-            return {"error": "No modem data available — modem must be online"}
+            raise ServiceValidationError("No modem data available — the modem must be online")
 
         channels = _build_channel_lookup(snapshot.modem_data)
         prefix = _get_entity_prefix(entry)
@@ -933,7 +919,7 @@ def create_orphaned_statistics_handler(
         else:
             entry = _find_loaded_entry(hass)
         if entry is None:
-            return {"yaml": "# Error: No cable modem configured", "count": 0}
+            raise ServiceValidationError("No cable modem configured")
 
         prefix = _get_entity_prefix(entry)
 

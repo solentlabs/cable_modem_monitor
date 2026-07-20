@@ -243,6 +243,28 @@ def _start_reauth_on_lockout(
     entry.async_start_reauth(hass)
 
 
+def _log_availability_transition(
+    snapshot: ModemSnapshot,
+    model: str,
+    reported_unavailable: list[bool],
+) -> None:
+    """Log one line per availability edge rather than one per poll."""
+    # The coordinator never raises (Core returns snapshots carrying an
+    # error field instead), so HA's built-in once-per-transition
+    # unavailable logging never engages and we track the edge ourselves.
+    if snapshot.error:
+        if not reported_unavailable[0]:
+            reported_unavailable[0] = True
+            _LOGGER.warning(
+                "Modem unavailable [%s] — %s",
+                model,
+                snapshot.connection_status.value,
+            )
+    elif reported_unavailable[0]:
+        reported_unavailable[0] = False
+        _LOGGER.info("Modem available again [%s]", model)
+
+
 def _build_snapshot_payload(snapshot: ModemSnapshot) -> dict[str, Any]:
     """Build the event bus payload from a ModemSnapshot.
 
@@ -431,14 +453,13 @@ async def async_setup_entry(
 
     identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
 
+    # Mutable cell so the edge survives across polls (Silver
+    # log-when-unavailable); see _log_availability_transition.
+    reported_unavailable = [False]
+
     async def _async_update_data() -> ModemSnapshot:
         snapshot = await hass.async_add_executor_job(orchestrator.get_modem_data)
-        if snapshot.error:
-            _LOGGER.info(
-                "Update [%s] — no data (%s)",
-                model,
-                snapshot.connection_status.value,
-            )
+        _log_availability_transition(snapshot, model, reported_unavailable)
         _start_reauth_on_lockout(hass, entry, snapshot, orchestrator, model)
         _rebuild_channel_map(entry, snapshot, identity_mode)
         await _check_channel_bond_change(hass, entry, snapshot, orchestrator, model)

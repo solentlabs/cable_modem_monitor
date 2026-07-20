@@ -371,10 +371,16 @@ Sensors read directly from the snapshot.
 are captured in `ModemSnapshot.connection_status` and
 `ModemSnapshot.error`. The coordinator always succeeds, and sensors
 derive availability from the snapshot content (see
-ENTITY_MODEL_SPEC § Availability). The `_async_update_data` wrapper
-logs an INFO line (`"Update [MODEL] — no data (status)"`) on failed
-polls so the HA-layer log accurately reflects poll outcome alongside
-the coordinator's generic `success: True`.
+ENTITY_MODEL_SPEC § Availability).
+
+**Availability is logged per transition, not per poll.** Because the
+coordinator never raises, HA's built-in once-per-transition unavailable
+logging never engages, so `_async_update_data` tracks the edge itself: a
+WARNING (`"Modem unavailable [MODEL] — status"`) the first time a poll
+comes back with an error, and an INFO (`"Modem available again
+[MODEL]"`) on the first poll that succeeds afterwards. A sustained
+outage therefore writes one line, not one per poll, and the pair brackets
+the outage in the log (Silver `log-when-unavailable`).
 
 **First refresh:** `async_config_entry_first_refresh()` runs during
 setup. Because the orchestrator never raises, this call always
@@ -1165,6 +1171,21 @@ loaded entry (or target a specific one), every handler resolves its
 target config entry at call time via `_resolve_target_entries` /
 `_resolve_config_entry_for_device`; none capture an entry at
 registration.
+
+**Failures raise; they are never returned.** A condition the user can
+fix — no modem configured, no target entry, the modem offline when the
+action needs live data — raises `ServiceValidationError`. An operation
+that was attempted and failed raises `HomeAssistantError`; the restart
+button also keeps its persistent notification as the durable record, and
+raises only after refreshing the coordinator so the dashboard still
+reflects current state. Returning an error dict, or smuggling an error
+string back in a result field, is not a valid failure path (Silver
+`action-exceptions`).
+
+Distinguish this from legitimate empty results, which are returned
+normally and are not errors: "no statistics to migrate", "no orphaned
+statistics found", and the orphaned-statistics preview listing are all
+successful outcomes.
 
 ### `generate_dashboard`
 

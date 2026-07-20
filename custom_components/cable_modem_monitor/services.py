@@ -35,6 +35,7 @@ from typing import Any
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.exceptions import ServiceValidationError
 
 from .const import DOMAIN
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
@@ -157,8 +158,7 @@ def create_request_refresh_handler(
         """Handle the request_refresh service call."""
         entries = _resolve_target_entries(hass, call)
         if not entries:
-            _LOGGER.warning("request_refresh: no loaded config entry found for target")
-            return
+            raise ServiceValidationError("No loaded cable modem found for the requested target")
 
         for entry in entries:
             model = entry.runtime_data.modem_identity.model
@@ -177,8 +177,7 @@ def create_request_health_check_handler(
         """Handle the request_health_check service call."""
         entries = _resolve_target_entries(hass, call)
         if not entries:
-            _LOGGER.warning("request_health_check: no loaded config entry found for target")
-            return
+            raise ServiceValidationError("No loaded cable modem found for the requested target")
 
         for entry in entries:
             runtime = entry.runtime_data

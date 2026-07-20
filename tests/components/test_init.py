@@ -1426,3 +1426,86 @@ async def test_update_data_triggers_reauth_on_breaker_open():
 
     assert result is snapshot
     entry.async_start_reauth.assert_called_once_with(hass)
+
+
+async def test_unavailable_logged_once_per_transition(caplog):
+    """Silver log-when-unavailable: one line per edge, not per poll."""
+    hass = MagicMock()
+
+    mock_orch = MagicMock()
+    mock_orch.supports_restart = False
+    mock_orch.diagnostics.return_value.circuit_breaker_open = False
+    mock_identity = ModemIdentity(
+        manufacturer="Solent Labs",
+        model="TPS-2000",
+        docsis_version="3.0",
+        release_date="2024",
+        status="confirmed",
+    )
+
+    def _snapshot(*, ok: bool) -> ModemSnapshot:
+        if ok:
+            return ModemSnapshot(
+                connection_status=ConnectionStatus.ONLINE,
+                docsis_status=DocsisStatus.UNKNOWN,
+                modem_data={"system_info": {}},
+                collector_signal=CollectorSignal.OK,
+                error="",
+            )
+        return ModemSnapshot(
+            connection_status=ConnectionStatus.UNREACHABLE,
+            docsis_status=DocsisStatus.UNKNOWN,
+            modem_data=None,
+            collector_signal=CollectorSignal.CONNECTIVITY,
+            error="unreachable",
+        )
+
+    # down, down, down, up, up, down — two outages, one recovery.
+    sequence = [
+        _snapshot(ok=False),
+        _snapshot(ok=False),
+        _snapshot(ok=False),
+        _snapshot(ok=True),
+        _snapshot(ok=True),
+        _snapshot(ok=False),
+    ]
+    pending = list(sequence)
+    mock_orch.get_modem_data = MagicMock()
+
+    async def _mock_executor(func, *args):
+        if func is mock_orch.get_modem_data:
+            return pending.pop(0)
+        if not args:
+            return "core: v1.0.0, catalog: v1.0.0"
+        return (mock_orch, None, mock_identity)
+
+    hass.async_add_executor_job = _mock_executor
+    hass.config_entries.async_forward_entry_setups = AsyncMock()
+
+    entry = MagicMock()
+    entry.data = MOCK_ENTRY_DATA
+    entry.options = {}
+    entry.entry_id = "test_123"
+    entry.async_get_active_flows.return_value = []
+
+    mock_data_coord = MagicMock()
+    mock_data_coord.async_config_entry_first_refresh = AsyncMock()
+    mock_duc = MagicMock()
+    mock_duc.__getitem__.return_value.side_effect = [mock_data_coord]
+
+    with (
+        patch("custom_components.cable_modem_monitor.setup_log_buffer"),
+        patch("custom_components.cable_modem_monitor.DataUpdateCoordinator", mock_duc),
+        patch("custom_components.cable_modem_monitor._update_device_registry"),
+        patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener"),
+    ):
+        assert await async_setup_entry(hass, entry) is True
+        update_method = mock_duc.__getitem__.return_value.call_args_list[0].kwargs["update_method"]
+        with caplog.at_level(logging.INFO, logger="custom_components.cable_modem_monitor"):
+            for _ in sequence:
+                await update_method()
+
+    # Three consecutive failures produce one "unavailable" line, not three;
+    # the later outage produces a second one after the recovery edge.
+    assert caplog.text.count("Modem unavailable") == 2
+    assert caplog.text.count("Modem available again") == 1

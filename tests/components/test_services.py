@@ -12,6 +12,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.cable_modem_monitor.const import DOMAIN
 from custom_components.cable_modem_monitor.coordinator import (
@@ -807,16 +808,16 @@ async def test_request_refresh_triggers_refresh(
     mock_data_coordinator.async_request_refresh.assert_awaited_once()
 
 
-async def test_request_refresh_no_entries() -> None:
-    """Handler returns gracefully when no entries found."""
+async def test_request_refresh_no_entries_raises() -> None:
+    """No target entry is a user-fixable condition, so the action raises."""
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = []
 
     handler = create_request_refresh_handler(hass)
     call = _make_mock_call()
 
-    # Should not raise
-    await handler(call)
+    with pytest.raises(ServiceValidationError, match="No loaded cable modem"):
+        await handler(call)
 
 
 # -----------------------------------------------------------------------
@@ -860,16 +861,16 @@ async def test_request_health_check_no_health(
     await handler(call)
 
 
-async def test_request_health_check_no_entries() -> None:
-    """Handler returns gracefully when no entries found."""
+async def test_request_health_check_no_entries_raises() -> None:
+    """No target entry is a user-fixable condition, so the action raises."""
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = []
 
     handler = create_request_health_check_handler(hass)
     call = _make_mock_call()
 
-    # Should not raise
-    await handler(call)
+    with pytest.raises(ServiceValidationError, match="No loaded cable modem"):
+        await handler(call)
 
 
 # -----------------------------------------------------------------------
@@ -1055,8 +1056,8 @@ def test_generate_dashboard_handler_no_restart_support(
     assert "This will restart your modem" not in yaml
 
 
-def test_generate_dashboard_no_entry() -> None:
-    """Returns error YAML when no config entry loaded."""
+def test_generate_dashboard_no_entry_raises() -> None:
+    """Raises rather than smuggling an error string back as YAML."""
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = []
 
@@ -1064,14 +1065,14 @@ def test_generate_dashboard_no_entry() -> None:
     call = MagicMock()
     call.data = {}
 
-    result = handler(call)
-    assert "Error" in result["yaml"]
+    with pytest.raises(ServiceValidationError, match="No cable modem configured"):
+        handler(call)
 
 
-def test_generate_dashboard_no_snapshot(
+def test_generate_dashboard_no_snapshot_raises(
     mock_runtime_data: CableModemRuntimeData,
 ) -> None:
-    """Returns error YAML when no modem data available."""
+    """Raises rather than smuggling an error string back as YAML."""
     mock_runtime_data.data_coordinator.data = None  # type: ignore[assignment]
 
     entry = _make_mock_entry(mock_runtime_data)
@@ -1084,8 +1085,8 @@ def test_generate_dashboard_no_snapshot(
     call = MagicMock()
     call.data = {}
 
-    result = handler(call)
-    assert "Error" in result["yaml"]
+    with pytest.raises(ServiceValidationError, match="modem must be online"):
+        handler(call)
 
 
 # -----------------------------------------------------------------------
@@ -1261,26 +1262,28 @@ def _make_convert_runtime(mock_runtime_data, target_mode: str = "id"):
     return entry
 
 
-async def test_convert_no_entry_returns_error(mock_runtime_data) -> None:
-    """No loaded entry → handler returns error dict, recorder untouched."""
+async def test_convert_no_entry_raises(mock_runtime_data) -> None:
+    """No loaded entry → handler raises, recorder untouched."""
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = []
 
     handler = create_convert_channel_identity_handler(hass)
     call = _make_mock_call()
 
-    with patch(
-        "homeassistant.components.recorder.statistics.async_list_statistic_ids",
-        new_callable=AsyncMock,
-    ) as mock_list:
-        result = await handler(call)
+    with (
+        patch(
+            "homeassistant.components.recorder.statistics.async_list_statistic_ids",
+            new_callable=AsyncMock,
+        ) as mock_list,
+        pytest.raises(ServiceValidationError, match="No cable modem configured"),
+    ):
+        await handler(call)
 
-    assert result == {"error": "No cable modem configured"}
     mock_list.assert_not_called()
 
 
-async def test_convert_no_modem_data_returns_error(mock_runtime_data) -> None:
-    """Snapshot is None (modem offline) → handler returns offline-error dict."""
+async def test_convert_no_modem_data_raises(mock_runtime_data) -> None:
+    """Snapshot is None (modem offline) → handler raises, recorder untouched."""
     mock_runtime_data.data_coordinator.data = None
     entry = _make_mock_entry(mock_runtime_data)
     entry.data = {"channel_identity": "id", "entity_prefix": "none"}
@@ -1290,14 +1293,15 @@ async def test_convert_no_modem_data_returns_error(mock_runtime_data) -> None:
     handler = create_convert_channel_identity_handler(hass)
     call = _make_mock_call()
 
-    with patch(
-        "homeassistant.components.recorder.statistics.async_list_statistic_ids",
-        new_callable=AsyncMock,
-    ) as mock_list:
-        result = await handler(call)
+    with (
+        patch(
+            "homeassistant.components.recorder.statistics.async_list_statistic_ids",
+            new_callable=AsyncMock,
+        ) as mock_list,
+        pytest.raises(ServiceValidationError, match="modem must be online"),
+    ):
+        await handler(call)
 
-    assert "error" in result
-    assert "modem must be online" in result["error"]
     mock_list.assert_not_called()
 
 
@@ -1485,21 +1489,22 @@ def _make_mock_entry_minimal(mock_runtime_data):
     return entry
 
 
-async def test_list_orphaned_no_entry_returns_error() -> None:
-    """No loaded entry → error yaml, recorder untouched."""
+async def test_list_orphaned_no_entry_raises() -> None:
+    """No loaded entry → handler raises, recorder untouched."""
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = []
     handler = create_orphaned_statistics_handler(hass)
     call = _make_mock_call()
 
-    with patch(
-        "homeassistant.components.recorder.statistics.async_list_statistic_ids",
-        new_callable=AsyncMock,
-    ) as mock_list:
-        result = await handler(call)
+    with (
+        patch(
+            "homeassistant.components.recorder.statistics.async_list_statistic_ids",
+            new_callable=AsyncMock,
+        ) as mock_list,
+        pytest.raises(ServiceValidationError, match="No cable modem configured"),
+    ):
+        await handler(call)
 
-    assert "Error" in result["yaml"]
-    assert result["count"] == 0
     mock_list.assert_not_called()
 
 
