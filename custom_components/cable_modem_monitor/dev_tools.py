@@ -633,14 +633,14 @@ def create_generate_dashboard_handler(
             "ds_snr": call.data.get("include_downstream_snr", True),
             "ds_freq": call.data.get("include_downstream_frequency", True),
             "us_power": call.data.get("include_upstream_power", True),
-            "us_freq": call.data.get("include_upstream_frequency", False),
+            "us_freq": call.data.get("include_upstream_frequency", True),
             "errors": call.data.get("include_errors", True),
             "error_rates": call.data.get("include_error_rates", False),
             "latency": call.data.get("include_latency", True),
             "status": call.data.get("include_status_card", True),
         }
         graph_hours = call.data.get("graph_hours", 24)
-        short_titles = call.data.get("short_titles", False)
+        short_titles = call.data.get("short_titles", True)
         titles = _get_dashboard_titles(short_titles)
         channel_label = call.data.get("channel_label", "auto")
         channel_grouping = call.data.get("channel_grouping", "by_direction")

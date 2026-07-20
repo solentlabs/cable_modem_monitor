@@ -160,10 +160,6 @@
         "short_titles": {
           "name": "使用短标题",
           "description": "短标题：「下行功率 (dBmV)」，长标题：「下行功率水平 (dBmV)」。"
-        },
-        "status_card_exclude": {
-          "name": "状态卡排除字段",
-          "description": "从生成的状态卡中省略的字段。默认为空；添加 docsis_status 可移除 DOCSIS 状态行，或添加任意透传字段名以移除其对应行。"
         }
       }
     },

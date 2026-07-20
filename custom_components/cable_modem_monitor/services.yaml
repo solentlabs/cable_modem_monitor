@@ -6,42 +6,52 @@ generate_dashboard:
         device:
           integration: cable_modem_monitor
     include_status_card:
+      required: true
       default: true
       selector:
         boolean:
     include_downstream_power:
+      required: true
       default: true
       selector:
         boolean:
     include_downstream_snr:
+      required: true
       default: true
       selector:
         boolean:
     include_downstream_frequency:
+      required: true
       default: true
       selector:
         boolean:
     include_upstream_power:
+      required: true
       default: true
       selector:
         boolean:
     include_upstream_frequency:
+      required: true
       default: true
       selector:
         boolean:
     include_errors:
+      required: true
       default: true
       selector:
         boolean:
     include_error_rates:
+      required: true
       default: false
       selector:
         boolean:
     include_latency:
+      required: true
       default: true
       selector:
         boolean:
     graph_hours:
+      required: true
       default: 24
       selector:
         number:
@@ -49,15 +59,10 @@ generate_dashboard:
           max: 168
           unit_of_measurement: hours
     short_titles:
+      required: true
       default: true
       selector:
         boolean:
-    status_card_exclude:
-      required: false
-      default: []
-      selector:
-        text:
-          multiple: true
 
 request_refresh:
   fields:

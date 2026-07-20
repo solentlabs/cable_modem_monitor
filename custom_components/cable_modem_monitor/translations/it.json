@@ -160,10 +160,6 @@
         "short_titles": {
           "name": "Usa Titoli Brevi",
           "description": "Breve: 'DS Power (dBmV)' vs Lungo: 'Downstream Power Levels (dBmV)'."
-        },
-        "status_card_exclude": {
-          "name": "Campi esclusi dalla scheda di stato",
-          "description": "Campi da omettere dalla scheda di stato generata. Vuoto per impostazione predefinita; aggiungere docsis_status per rimuovere la riga dello stato DOCSIS, o qualsiasi nome di campo pass-through per rimuovere la sua riga."
         }
       }
     },

@@ -15,6 +15,14 @@ Releases follow a PR-based workflow:
 
 - **CI runs on push. Publishing runs on tag push.** Don't skip the tag.
 - **Never manually edit version numbers.** Use `scripts/release.py`.
+- **The working tree carries the last tag's version until a bump.**
+  `release.py` updates the version files only at release-prep time, so
+  during development the manifest, startup banner, and downloaded
+  diagnostics all report the previous tag's number (e.g. `beta.14`
+  while `beta.15` work is in flight, untagged). This is expected — the
+  version string is **not** evidence of which code is loaded. Confirm
+  loaded code by observable behavior (UI state, logs), never by the
+  reported version.
 - **Never run `gh release create` manually.** Let CI handle it.
 - **Dogfood on local HA** before stable releases (maintainer launches,
   not automated).

@@ -47,6 +47,9 @@ from .services import async_request_modem_refresh
 
 _LOGGER = logging.getLogger(__name__)
 
+# Buttons do no per-entity I/O — no throttling needed.
+PARALLEL_UPDATES = 0
+
 # Notification IDs (single ID per action so updates replace previous)
 _NOTIFY_RESTART = "cable_modem_restart"
 _NOTIFY_RESET = "cable_modem_reset"
@@ -217,6 +220,7 @@ class UpdateModemDataButton(_ButtonBase):
         self._attr_name = "Update Modem Data"
         self._attr_unique_id = f"{entry.entry_id}_update_data_button"
         self._attr_icon = "mdi:update"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     async def async_press(self) -> None:
         """Handle the button press — refresh health then data."""
