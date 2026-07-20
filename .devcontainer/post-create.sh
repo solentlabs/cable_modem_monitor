@@ -4,18 +4,10 @@
 
 set -e
 
-echo "📦 Creating Python virtual environment..."
-python3.12 -m venv .venv
-
-echo "📦 Installing Python dependencies..."
-.venv/bin/pip install --quiet --upgrade pip
-.venv/bin/pip install --quiet -r requirements-dev.txt
-.venv/bin/pip install --quiet -r tests/requirements.txt
-
-echo "📦 Installing solentlabs packages (editable)..."
-.venv/bin/pip install --quiet -e packages/cable_modem_monitor_core
-.venv/bin/pip install --quiet -e packages/cable_modem_monitor_catalog
-.venv/bin/pip install --quiet -e packages/cable_modem_monitor_catalog_tools
+# Environment bootstrap is shared with `make setup` and the local test runner
+# so the container and a host checkout can never drift.
+echo "📦 Setting up Python environment..."
+bash scripts/dev/setup_env.sh
 
 # Install CodeQL CLI if not already installed
 if ! command -v codeql > /dev/null 2>&1; then
@@ -34,9 +26,7 @@ else
     echo "⚠️  CodeQL pack directory not found, skipping pack installation"
 fi
 
-echo "📦 Installing pre-commit..."
-.venv/bin/pip install --quiet pre-commit
-
+# pre-commit itself comes from requirements-dev.txt via setup_env.sh.
 # Only install hooks if we're in a git repo (skip in CI builds)
 if git rev-parse --git-dir > /dev/null 2>&1; then
     echo "📦 Installing pre-commit hooks..."
