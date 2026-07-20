@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Arris S33v3 uptime confirmed on hardware.** Contributor
+  diagnostics show system uptime populated on real hardware, the one
+  field the June confirmation could not close and the reason the
+  mapping was restored in beta.14. Refreshes the S33v3 verified.json
+  fixture from that download: 33 downstream and 6 upstream channels
+  locked, full system_info, no field errors. (Related to #98)
+
 - **Sercomm DM1000 reboot button and system uptime.** Both built
   from contributor captures; uptime feeds Last Boot Time. The
   reboot action is HAR-verified and awaits hardware confirmation.

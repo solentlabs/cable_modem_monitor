@@ -81,6 +81,30 @@ Deferred structure becomes hidden tech debt; "we'll clean it up later"
 usually means "we won't." Pay the structural cost in the change that
 introduces the need.
 
+### Patterns Yes, Model Rosters No
+
+Core specs document *patterns*, never per-model state. A spec may name
+the pattern a behaviour branches on — "the Arris `AT01.01.*` firmware
+line uses SHA256, older lines use MD5, selected per entry by
+`auth.hmac_algorithm`" — because that is why the code has a branch.
+Firmware-line globs and protocol families don't rot.
+
+What must not appear in a Core spec is a roster of models carrying
+catalog state: verification status, channel counts, per-model config
+values. `modem.yaml` is the authority for those, and the generated
+catalog README already renders them. Copied into a spec they have no
+sync path, so they drift silently and always in the same direction — a
+modem gets confirmed and the spec never hears about it.
+
+Naming a modem as *evidence* is different and stays allowed: "S33v3
+HAR capture — SHA256 HMAC path (#98)" is provenance for a claim, dated
+and historical by nature, not a live status assertion. Evidence Base
+tables are fine; Status columns are not.
+
+This is the same rule as *No Modem-Specific References in Tests* below,
+with the same rationale, applied to prose: catalog churn must not
+ripple into Core.
+
 ### Quality Gates Are Not Negotiable
 
 If mypy, ruff, black, pytest, or any other quality gate fails, fix the
