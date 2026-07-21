@@ -70,7 +70,7 @@ What's hardcoded in `auth/form_cbn.py` and `protocol/cbn.py` that is specific to
 |---|---|---|---|
 | Encryption format | `base64(":" + hex(ciphertext))` | `encrypt_cryptoJS.js` | The colon prefix and encoding chain are firmware-specific |
 | POST encoding | `application/x-www-form-urlencoded` (not JSON) | HAR request headers | Other CryptoJS modems may use JSON |
-| Parameter order | `token` must be first parameter | Empirical testing (PR #129) | Not documented in firmware --- observed behavior |
+| Parameter order | `token` must be first parameter | Empirical testing | Not documented in firmware --- observed behavior |
 | XML setter/getter pattern | `setter.xml` with `fun=N` dispatch | Compal firmware API design | Entirely Compal-specific |
 | Success string | `"successful"` (case-insensitive) in response body | HAR response analysis | Other firmware may signal success differently |
 | SID extraction | Regex `SID=(\d+)` from response body | HAR response analysis | SID format is firmware-specific |
@@ -95,11 +95,17 @@ Fields that map to **firmware** (Compal-level):
 
 ## Evidence Base
 
-| Source | Location | Establishes |
-|---|---|---|
-| CH7465MT HAR capture | Catalog test data | Analyzed |
-| SB8200v3 HAR capture | Catalog test data | Analyzed |
-| `encrypt_cryptoJS.js` | HAR entries --- JavaScript source | Authoritative for encryption format |
+A protocol claim in this spec is evidence-backed when it traces to
+firmware JavaScript recorded in a catalog capture, or to behaviour
+observed on the wire where firmware source does not document it. The
+firmware sources below establish the crypto envelope; the assumptions
+table cites its own evidence per row. The captures
+themselves are catalog data --- derive them with the query under
+Platform Notes rather than listing them here.
+
+| Firmware source | Establishes |
+|---|---|
+| `encrypt_cryptoJS.js` | Encryption format and key/IV derivation |
 
 ## Platform Notes
 
@@ -123,6 +129,6 @@ Each `ModemSummary` carries `manufacturer`, `model`, `status`,
 
 ## Known Gaps
 
-- **Parameter order sensitivity**: The `token` parameter must be first in the form-encoded POST body. This was discovered empirically during PR #129 development --- the modem firmware rejects requests with different parameter ordering. This is not documented in the firmware source and may not apply to all firmware versions.
+- **Parameter order sensitivity**: The `token` parameter must be first in the form-encoded POST body. This was discovered empirically during strategy development --- the modem firmware rejects requests with different parameter ordering. This is not documented in the firmware source and may not apply to all firmware versions.
 - **Rotating token timing**: The session token rotates on every response. If a request fails or times out, the token state may desynchronize. The `requests.Session` cookie jar tracks the latest token, but concurrent requests could race.
 - **MD5 for IV derivation**: MD5 is cryptographically broken but required here for protocol fidelity. This is a firmware design choice, not a bug in our implementation.

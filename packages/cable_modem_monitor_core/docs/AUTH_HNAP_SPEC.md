@@ -207,7 +207,7 @@ specific to HNAP firmware family, not inherent to HMAC:
 | `uid` cookie name | `uid` | Login.js (`$.cookie('uid', ...)`) | Hardcoded; firmware variant could pick a different cookie name |
 | `PrivateKey` cookie name | `PrivateKey` | Login.js (`$.cookie('PrivateKey', ...)`) | Needed to avoid HTTP 500 on data requests on some firmware |
 | `LoginResult` success values | `OK`, `OK_CHANGED` | Login.js, observed HAR | Other values currently treated as protocol-unexpected |
-| `LoginResult` lockout values | `LOCKUP`, `REBOOT` | MB8611 / S33 firmware (observed) | Variant firmware could emit other lockout tokens --- would currently fall into `unexpected result` path |
+| `LoginResult` lockout values | `LOCKUP`, `REBOOT` | Login.js (`LoginResult == "LOCKUP"` branch) | Variant firmware could emit other lockout tokens --- would currently fall into `unexpected result` path |
 | Timestamp modulo | `2_000_000_000_000` | SOAPAction.js (`Math.floor(Date.now()) % 2000000000000`) | Matches 32-bit integer handling in firmware |
 | HNAP_AUTH header format | `"<HEX> <TIMESTAMP>"` (uppercase hex, single space) | SOAPAction.js | Lowercase hex or alternate separators are rejected |
 | HMAC algorithm family | `md5` or `sha256` only | HnapAuth model Literal | No other algorithms observed; variant firmware would need a new Literal value |
@@ -244,17 +244,19 @@ only valid session mechanism. See
 
 ## Evidence Base
 
-| Source | Location | Establishes |
-|---|---|---|
-| MB8611 HAR capture | Catalog test data | Analysed --- authoritative for Motorola `GetMoto*` action names |
-| MB8600 HAR capture | Catalog test data | Analysed --- confirms MB8600 shares MB8611 protocol |
-| S33 HAR capture | Catalog test data | Analysed |
-| S33v2 HAR capture | Catalog test data | Analysed --- MD5 HMAC path |
-| S33v3 HAR capture | Catalog test data | Analysed --- SHA256 HMAC path |
-| S34 HAR capture | Catalog test data | Analysed --- SHA256 HMAC path |
-| `Login.js` | HAR entries --- JavaScript source | Authoritative for challenge/login request shape and cookie setup |
-| `SOAPAction.js` | HAR entries --- JavaScript source | Authoritative for HNAP_AUTH header format and timestamp modulo |
-| `hmac_md5.js` / `hmac_sha256.js` | HAR entries --- JavaScript source | Authoritative for uppercase hex HMAC output |
+A protocol claim in this spec is evidence-backed when it traces to
+firmware JavaScript recorded in a catalog capture, or to behaviour
+observed on the wire where firmware source does not document it. The
+firmware sources below establish the crypto envelope; the assumptions
+table cites its own evidence per row. The captures
+themselves are catalog data --- derive them with the query under
+Platform Notes rather than listing them here.
+
+| Firmware source | Establishes |
+|---|---|
+| `Login.js` | Challenge/login request shape and cookie setup |
+| `SOAPAction.js` | HNAP_AUTH header format and timestamp modulo |
+| `hmac_md5.js` / `hmac_sha256.js` | Uppercase hex HMAC output |
 
 ## Platform Notes
 
@@ -302,7 +304,8 @@ Each `ModemSummary` carries `manufacturer`, `model`, `status`,
   observed rejecting a reused `HNAP_AUTH` header. The timestamp is
   in the HMAC but it is unclear whether the firmware validates it
   against a freshness window or only uses it as HMAC salt.
-- **MD5 security**: MB8611, MB8600, S33, and S33v2 use HMAC-MD5.
+- **MD5 security**: part of the HNAP fleet uses HMAC-MD5 (derive which
+  from `auth.hmac_algorithm`).
   HMAC-MD5 has no known practical break but MD5 itself is
   cryptographically weak. This is a firmware choice, not a bug in
   our implementation --- `hmac_algorithm` is dictated by the

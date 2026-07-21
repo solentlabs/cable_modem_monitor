@@ -76,7 +76,7 @@ Touchstone firmware family, not inherent to SJCL:
 
 | Assumption | Value | Source | Risk if variant differs |
 |---|---|---|---|
-| JS variable names | `myIv`, `mySalt`, `currentSessionId` | `base_95x.js` (TG3442DE HAR) | Different firmware may use different variable names |
+| JS variable names | `myIv`, `mySalt`, `currentSessionId` | `base_95x.js` | Different firmware may use different variable names |
 | POST field names | `EncryptData`, `Name`, `AuthData` | `base_95x.js` login() function | Other vendors may use different field names |
 | Plaintext structure | `{"Password": "<pw>", "Nonce": "<sessionId>"}` | `base_95x.js` login() function | JSON keys are firmware-specific |
 | Response encrypted field | `encryptData` (lowercase 'e') | HAR response from ajaxSet_Password.php | Field name is firmware-specific |
@@ -107,12 +107,18 @@ Fields that map to **firmware** (Arris-level):
 
 ## Evidence Base
 
-| Source | Location | Establishes |
-|---|---|---|
-| TG3442DE HAR capture (Dec 2025) | Catalog test data | Analyzed |
-| TG3442DE HAR capture (Apr 2026) | User attachment on #86 | Analyzed --- contains sjclCrypto.js |
-| `sjclCrypto.js` | HAR entry 3 (Apr 2026 capture) | Authoritative for encoding rules |
-| `base_95x.js` | HAR entry 10 (Apr 2026 capture) | Authoritative for wire format |
+A protocol claim in this spec is evidence-backed when it traces to
+firmware JavaScript recorded in a catalog capture, or to behaviour
+observed on the wire where firmware source does not document it. The
+firmware sources below establish the crypto envelope; the assumptions
+table cites its own evidence per row. The captures
+themselves are catalog data --- derive them with the query under
+Platform Notes rather than listing them here.
+
+| Firmware source | Establishes |
+|---|---|
+| `sjclCrypto.js` | Salt and IV encoding rules |
+| `base_95x.js` | Wire format, JS variable names, and POST field names |
 
 ## Platform Notes
 

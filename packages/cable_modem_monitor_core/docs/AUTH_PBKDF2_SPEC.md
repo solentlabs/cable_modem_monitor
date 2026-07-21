@@ -61,7 +61,7 @@ What's hardcoded in `auth/form_pbkdf2.py` that is specific to the Technicolor RE
 | POST field names | `"username"`, `"password"` | Technicolor login.js | Other vendors may use different field names |
 | Salt response fields | `"salt"`, `"saltwebui"` | Technicolor login.js, HAR | Different API may use different key names |
 | Salt trigger value | default `"seeksalthash"` | Technicolor login.js | Other firmware may use different trigger |
-| Success criteria | HTTP != 401 AND (`login_success` dict matches response, OR `"error"` is falsy/absent) | HAR response analysis; CGA6444VF confirmed `{"error":"ok"}` on success | Configurable via `login_success` in modem.yaml |
+| Success criteria | HTTP != 401 AND (`login_success` dict matches response, OR `"error"` is falsy/absent) | HAR response analysis; `{"error":"ok"}` confirmed on success | Configurable via `login_success` in modem.yaml |
 | Error detail field | `"message"` key in error response | HAR response analysis | Firmware-specific |
 | Form-encoded POST | `application/x-www-form-urlencoded` | HAR request headers, login.js jQuery `$.ajax({data})` | All known Technicolor REST modems use form-encoded |
 | Same endpoint for salt and login | Single `login_endpoint` for both rounds | Technicolor API design | Other designs may separate these |
@@ -84,11 +84,17 @@ Fields that map to **firmware** (Technicolor-level):
 
 ## Evidence Base
 
-| Source | Location | Establishes |
-|---|---|---|
-| CGA4236 HAR capture | Catalog test data | Analyzed |
-| CGA6444VF HAR capture | Catalog test data | Analyzed |
-| login.js (PBKDF2 flow) | HAR entries -- JavaScript source | Partially redacted in one HAR, visible in another |
+A protocol claim in this spec is evidence-backed when it traces to
+firmware JavaScript recorded in a catalog capture, or to behaviour
+observed on the wire where firmware source does not document it. The
+firmware sources below establish the crypto envelope; the assumptions
+table cites its own evidence per row. The captures
+themselves are catalog data -- derive them with the query under
+Platform Notes rather than listing them here.
+
+| Firmware source | Establishes |
+|---|---|
+| `login.js` | PBKDF2 parameters, salt encoding, and the salt fallback branch |
 
 ## Platform Notes
 
