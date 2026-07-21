@@ -322,6 +322,14 @@ responses) is a separate axis — detected in Phase 5.
 Auth detection depends on transport — the constraint table limits valid
 strategies.
 
+**Known limitation — the login POST is chosen by shape, not by evidence
+of credentials.** A modem that posts its actions to the login endpoint
+can send detection to the wrong request at `confidence: "high"` with no
+warnings. Sercomm DM1000 is the example: `/setup.cgi` serves both the
+login and the reboot, and detection returns the reboot POST. Until the
+discriminator selects by credential field names rather than recency,
+the pick is confirmed by hand — see MODEM_INTAKE_WORKFLOW.md § Step 4.
+
 #### HNAP transport
 
 Auth is always `hnap`. The only variable is `hmac_algorithm`:

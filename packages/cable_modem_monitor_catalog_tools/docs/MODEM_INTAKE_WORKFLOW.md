@@ -244,9 +244,23 @@ Two rules govern this layer:
   Pipeline Regression) — an extractor change must improve grades or
   leave them unchanged.
 
-If `auth.confidence` is not `high`, or `warnings` is non-empty for the auth
-entry, verify the detected strategy against the HAR before proceeding. Pull
-`analysis["auth"]["fields"]` and cross-check:
+**Always confirm the picked request is the login.** The detector selects by
+request shape, so a modem that posts its actions to the login endpoint can send
+it to the wrong POST at `confidence: "high"` with no warnings. Find the request
+at `analysis["auth"]["fields"]["action"]` and check its body carries a username
+and a password, under whatever names the firmware uses. If it does not, correct
+`analysis["auth"]` by hand from the real login exchange.
+
+Two signals the pick is wrong despite high confidence:
+
+- `action` is also an endpoint under `actions` (restart, logout, factory reset)
+- `hidden_fields` reads like an action payload (`todo: reboot`), or
+  `login_page` is empty on a modem that serves one
+
+Sercomm DM1000 is the worked example: `/setup.cgi` serves both the login and
+the reboot, and the detector returns the reboot POST.
+
+Then verify the strategy. Pull `analysis["auth"]["fields"]` and cross-check:
 
 | Strategy | Key signal in the HAR |
 |----------|-----------------------|

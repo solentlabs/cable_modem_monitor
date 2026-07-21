@@ -377,19 +377,16 @@ every version bump.
 staged files, and `make test` is a subset of CI.
 
 **Review the push range, not just your own commit.** Run
-`git log @{u}..HEAD` before every push. A branch can carry commits
-made outside this session — the working tree at session start, or
-another session — and they reach CI for the first time under your
-push. Their failures land on your commit. If the range holds anything
-you did not verify, say so before pushing.
+`git log @{u}..HEAD` first. Commits made outside this session ride
+along and hit CI under your push; their failures land on your commit.
+Flag anything in the range you did not verify.
 
 **`validate-ci` green does not guarantee CI green.** It mirrors what
-CI *runs*, not the environment CI runs it in. Anything set per job in
-`.github/workflows/` — `lfs:`, path filters, fresh-clone state — is
-invisible locally, where the full repo is always present and LFS
-content is always smudged in. When a change alters what a script
-*reads* (not just what it does), check the checkout step of the job
-that runs it.
+CI runs, not where CI runs it. Per-job settings in
+`.github/workflows/` — `lfs:`, path filters, fresh-clone state — are
+invisible locally, where the repo is complete and LFS content always
+present. When a change alters what a script *reads*, check the
+checkout step of the job that runs it.
 
 **Owned-deps check:** `validate-ci` ends with `scripts/check_owned_deps.py`,
 which reports only packages declared in our requirements files and
