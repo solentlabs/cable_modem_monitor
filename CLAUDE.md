@@ -370,12 +370,26 @@ make validate-ci
 
 This runs lint + format + type-check + tests + intake regression +
 PII check + catalog README freshness — the same surface CI's Tests
-workflow exercises. If `make validate-ci` is green, CI will be green.
-`scripts/release.py` runs it automatically before every version bump.
+workflow exercises. `scripts/release.py` runs it automatically before
+every version bump.
 
 **Why?** CI runs on the entire project. Pre-commit hooks only check
-staged files, and `make test` is a subset of CI. `make validate-ci`
-is the only command guaranteed to mirror CI exactly.
+staged files, and `make test` is a subset of CI.
+
+**Review the push range, not just your own commit.** Run
+`git log @{u}..HEAD` before every push. A branch can carry commits
+made outside this session — the working tree at session start, or
+another session — and they reach CI for the first time under your
+push. Their failures land on your commit. If the range holds anything
+you did not verify, say so before pushing.
+
+**`validate-ci` green does not guarantee CI green.** It mirrors what
+CI *runs*, not the environment CI runs it in. Anything set per job in
+`.github/workflows/` — `lfs:`, path filters, fresh-clone state — is
+invisible locally, where the full repo is always present and LFS
+content is always smudged in. When a change alters what a script
+*reads* (not just what it does), check the checkout step of the job
+that runs it.
 
 **Owned-deps check:** `validate-ci` ends with `scripts/check_owned_deps.py`,
 which reports only packages declared in our requirements files and

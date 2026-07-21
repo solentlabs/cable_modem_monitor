@@ -453,6 +453,8 @@ _CAPTURE_NOTES = {
 # parsing megabytes of entries just to classify the file.
 _CREATOR_RE = re.compile(r'"creator"\s*:\s*\{[^}]*?"name"\s*:\s*"([^"]*)"', re.DOTALL)
 
+_LFS_POINTER_PREFIX = "version https://git-lfs.github.com/spec/v1"
+
 
 def _capture_kind(har_path: Path) -> str:
     """Classify a HAR as real, hybrid, synthetic, or generated from its creator."""
@@ -460,6 +462,16 @@ def _capture_kind(har_path: Path) -> str:
         head = har_path.read_text(errors="ignore")[:8192]
     except OSError:
         return "generated"
+    # An unsmudged pointer has no creator, so it would otherwise classify as
+    # "generated" — a legitimate value — and silently mislabel every fixture.
+    # Raise instead: the caller is running without LFS content.
+    if head.startswith(_LFS_POINTER_PREFIX):
+        msg = (
+            f"{har_path} is an unresolved Git LFS pointer, not a HAR. "
+            f"Fetch LFS content (git lfs pull) before generating the catalog audit; "
+            f"in CI, the job's checkout step needs lfs: true."
+        )
+        raise RuntimeError(msg)
     match = _CREATOR_RE.search(head)
     if not match or not match.group(1).strip():
         # No recorded producer. These are built when the available evidence
