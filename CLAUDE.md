@@ -44,6 +44,16 @@ over convenience.
    etc.). A code change without a corresponding spec update is
    incomplete.
 
+4. **Write for clarity and brevity — then cut again.** Before
+   committing any prose (spec text, generated-doc copy, comments,
+   commit bodies), reread it and delete what does not earn its place:
+   throat-clearing openers ("A third situation is…"), restated
+   context, hedges, and clauses that repeat a neighbouring sentence.
+   Say the thing once, in the fewest words that keep it true. A
+   definition a reader has to parse twice is a definition that will
+   get asked about again. This applies to the *first* draft, not a
+   later polish pass — verbose text ships and then nobody trims it.
+
 ### Two READMEs — GitHub vs HACS (do not consolidate)
 
 The repo intentionally ships two README files for two render

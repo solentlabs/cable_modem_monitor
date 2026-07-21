@@ -84,7 +84,19 @@ that must declare itself:
   the assembled HAR and diff the output against the evidence — zero
   mismatches required.
 
-Two forms exist, differing in evidence basis and status:
+**Partial evidence.** Sometimes no full session exists: a contributor
+can share diagnostics or page source but not run a capture, a sanitizer
+destroyed the response bodies, or only some endpoints were recorded. A
+fixture built from what exists is legitimate — it is what makes the
+entry testable — but no capture tool produced it, so it has no
+`log.creator`. The audit renders these as `generated`.
+
+Declaration rules still apply: name the sources, list what was not
+observed, round-trip the parser against the evidence. Never retro-label
+by editing the HAR, since real captured bytes may be mixed in. A
+full-session capture replaces the fixture whenever one arrives.
+
+Two further forms are distinguished by evidence basis and status:
 
 **Reconstruction (sibling template).** When no HAR exists but a
 sibling model's live parse output proves structural compatibility (a
