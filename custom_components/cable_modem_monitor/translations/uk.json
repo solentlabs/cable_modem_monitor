@@ -14,12 +14,12 @@
         "data": {
           "model": "Модель модему",
           "entity_prefix": "Префікс Entity ID",
-          "channel_identity": "Channel Naming"
+          "channel_identity": "Іменування каналів"
         },
         "data_description": {
           "model": "Виберіть модель вашого модему зі списку.",
           "entity_prefix": "Додає назву моделі або IP до ідентифікаторів сутностей. Обов'язково при моніторингу кількох модемів.",
-          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
+          "channel_identity": "Номер каналу присвоює сутностям імена за позицією рядка в модемі (не змінюється після перезавантаження). Ідентифікатор каналу використовує ідентифікатор каналу DOCSIS (збігається з діагностикою провайдера, але може змінитися після перезавантаження)."
         }
       },
       "variant": {
@@ -106,94 +106,6 @@
     },
     "progress": {
       "validate": "Перевірка з'єднання..."
-    }
-  },
-  "services": {
-    "generate_dashboard": {
-      "name": "Створити панель керування",
-      "description": "Генерує готовий до використання Lovelace YAML для панелі керування кабельним модемом. Скопіюйте результат і вставте його в картку «Вручну».",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
-        },
-        "include_status_card": {
-          "name": "Картка стану",
-          "description": "Стан модему, час роботи, кількість каналів та кнопка перезавантаження."
-        },
-        "include_downstream_power": {
-          "name": "Графік потужності низхідного потоку",
-          "description": "Рівні потужності для всіх низхідних каналів."
-        },
-        "include_downstream_snr": {
-          "name": "Графік SNR низхідного потоку",
-          "description": "Співвідношення сигнал/шум для всіх низхідних каналів."
-        },
-        "include_downstream_frequency": {
-          "name": "Графік частот низхідного потоку",
-          "description": "Частоти для всіх низхідних каналів."
-        },
-        "include_upstream_power": {
-          "name": "Графік потужності висхідного потоку",
-          "description": "Рівні потужності для всіх висхідних каналів."
-        },
-        "include_upstream_frequency": {
-          "name": "Графік частот висхідного потоку",
-          "description": "Частоти для всіх висхідних каналів."
-        },
-        "include_errors": {
-          "name": "Графіки помилок",
-          "description": "Кількість виправлених та невиправлених помилок (за 7 днів)."
-        },
-        "include_error_rates": {
-          "name": "Графіки частоти помилок",
-          "description": "Додає графіки частоти помилок за хвилину (помилок/хв, за 7 днів). Вимкнено за замовчуванням. Частота коливається при кожному опитуванні."
-        },
-        "include_latency": {
-          "name": "Графік затримки",
-          "description": "Час відгуку ping та HTTP (за 6 годин)."
-        },
-        "graph_hours": {
-          "name": "Історія графіків (години)",
-          "description": "Години історії для графіків потужності/SNR (помилки та затримка використовують фіксовані періоди)."
-        },
-        "short_titles": {
-          "name": "Короткі заголовки",
-          "description": "Короткі: «Низх. потужність (dBmV)» або довгі: «Рівні потужності низхідного потоку (dBmV)»."
-        }
-      }
-    },
-    "request_refresh": {
-      "name": "Request Refresh",
-      "description": "Triggers an immediate modem data poll, bypassing any connectivity backoff. Use in automations to refresh modem data on demand."
-    },
-    "request_health_check": {
-      "name": "Request Health Check",
-      "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
-    },
-    "convert_channel_identity": {
-      "name": "Convert Channel Identity",
-      "description": "Renames recorder statistics to match the current channel identity mode after re-adding the integration in the other mode. Modem must be online.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to convert. Defaults to the first configured modem."
-        }
-      }
-    },
-    "orphaned_statistics": {
-      "name": "Orphaned Statistics",
-      "description": "Finds recorder statistics for this modem that have no registered entity — left behind by a mode switch, channel rebonding (ID mode), or a prefix change. Without execute, returns a preview of orphaned entities. With execute: true, purges them all directly. Purge is permanent.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to inspect. Defaults to the first configured modem."
-        },
-        "execute": {
-          "name": "Execute",
-          "description": "Set to true to purge all orphaned statistics immediately. Default is false (preview only). Purge is permanent and cannot be undone."
-        }
-      }
     }
   }
 }

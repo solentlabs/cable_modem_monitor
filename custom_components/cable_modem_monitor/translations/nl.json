@@ -14,12 +14,12 @@
         "data": {
           "model": "Modemmodel",
           "entity_prefix": "Entity ID-voorvoegsel",
-          "channel_identity": "Channel Naming"
+          "channel_identity": "Kanaalbenaming"
         },
         "data_description": {
           "model": "Selecteer uw modemmodel uit de lijst.",
           "entity_prefix": "Voegt modelnaam of IP toe aan Entity ID's. Vereist bij het monitoren van meerdere modems.",
-          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
+          "channel_identity": "Kanaalnummer benoemt entiteiten op basis van de rijpositie in de modem (blijft stabiel na herstarts). Kanaal-ID gebruikt de DOCSIS-kanaal-ID (komt overeen met de diagnostiek van de provider, maar kan na een herstart veranderen)."
         }
       },
       "variant": {
@@ -106,94 +106,6 @@
     },
     "progress": {
       "validate": "Verbinding valideren..."
-    }
-  },
-  "services": {
-    "generate_dashboard": {
-      "name": "Dashboard Genereren",
-      "description": "Genereert kant-en-klare Lovelace YAML voor uw kabelmodem-dashboard. Kopieer de uitvoer en plak deze in een Handmatige kaart.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
-        },
-        "include_status_card": {
-          "name": "Statuskaart",
-          "description": "Modemstatus, uptime, aantal kanalen en herstartknop."
-        },
-        "include_downstream_power": {
-          "name": "Downstream Vermogensgrafiek",
-          "description": "Vermogensniveaus voor alle downstreamkanalen."
-        },
-        "include_downstream_snr": {
-          "name": "Downstream SNR-grafiek",
-          "description": "Signaal-ruisverhouding voor alle downstreamkanalen."
-        },
-        "include_downstream_frequency": {
-          "name": "Downstream Frequentiegrafiek",
-          "description": "Frequentie van alle downstreamkanalen."
-        },
-        "include_upstream_power": {
-          "name": "Upstream Vermogensgrafiek",
-          "description": "Vermogensniveaus voor alle upstreamkanalen."
-        },
-        "include_upstream_frequency": {
-          "name": "Upstream Frequentiegrafiek",
-          "description": "Frequentie van alle upstreamkanalen."
-        },
-        "include_errors": {
-          "name": "Foutengrafieken",
-          "description": "Gecorrigeerde en ongecorrigeerde fouttellingen (7-dagen weergave)."
-        },
-        "include_error_rates": {
-          "name": "Foutpercentage Grafieken",
-          "description": "Voegt per-minuut foutpercentagegrafieken toe (fouten/min, 7-dagen weergave). Standaard uit. Percentages fluctueren bij elke poll."
-        },
-        "include_latency": {
-          "name": "Latentiegrafiek",
-          "description": "Ping- en HTTP-responstijden (6-uur weergave)."
-        },
-        "graph_hours": {
-          "name": "Grafiekgeschiedenis (uren)",
-          "description": "Uren geschiedenis voor vermogens-/SNR-grafieken (fouten en latentie gebruiken vaste perioden)."
-        },
-        "short_titles": {
-          "name": "Korte Titels Gebruiken",
-          "description": "Kort: 'DS Power (dBmV)' vs Lang: 'Downstream Power Levels (dBmV)'."
-        }
-      }
-    },
-    "request_refresh": {
-      "name": "Request Refresh",
-      "description": "Triggers an immediate modem data poll, bypassing any connectivity backoff. Use in automations to refresh modem data on demand."
-    },
-    "request_health_check": {
-      "name": "Request Health Check",
-      "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
-    },
-    "convert_channel_identity": {
-      "name": "Convert Channel Identity",
-      "description": "Renames recorder statistics to match the current channel identity mode after re-adding the integration in the other mode. Modem must be online.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to convert. Defaults to the first configured modem."
-        }
-      }
-    },
-    "orphaned_statistics": {
-      "name": "Orphaned Statistics",
-      "description": "Finds recorder statistics for this modem that have no registered entity — left behind by a mode switch, channel rebonding (ID mode), or a prefix change. Without execute, returns a preview of orphaned entities. With execute: true, purges them all directly. Purge is permanent.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to inspect. Defaults to the first configured modem."
-        },
-        "execute": {
-          "name": "Execute",
-          "description": "Set to true to purge all orphaned statistics immediately. Default is false (preview only). Purge is permanent and cannot be undone."
-        }
-      }
     }
   }
 }

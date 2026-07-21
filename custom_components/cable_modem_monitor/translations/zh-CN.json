@@ -14,12 +14,12 @@
         "data": {
           "model": "调制解调器型号",
           "entity_prefix": "Entity ID 前缀",
-          "channel_identity": "Channel Naming"
+          "channel_identity": "信道命名"
         },
         "data_description": {
           "model": "从列表中选择您的调制解调器型号。",
           "entity_prefix": "将型号名称或 IP 添加到实体 ID。监控多个调制解调器时必填。",
-          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
+          "channel_identity": "信道编号根据调制解调器中的行位置命名实体（重启后保持稳定）。信道 ID 使用 DOCSIS 信道 ID（与 ISP 诊断一致，但重启后可能改变）。"
         }
       },
       "variant": {
@@ -106,94 +106,6 @@
     },
     "progress": {
       "validate": "正在验证连接..."
-    }
-  },
-  "services": {
-    "generate_dashboard": {
-      "name": "生成仪表板",
-      "description": "生成可直接使用的 Lovelace YAML，用于您的有线调制解调器仪表板。复制输出内容并粘贴到手动卡片中。",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
-        },
-        "include_status_card": {
-          "name": "状态卡片",
-          "description": "调制解调器状态、运行时间、频道数量和重启按钮。"
-        },
-        "include_downstream_power": {
-          "name": "下行功率图",
-          "description": "所有下行频道的功率水平。"
-        },
-        "include_downstream_snr": {
-          "name": "下行 SNR 图",
-          "description": "所有下行频道的信噪比。"
-        },
-        "include_downstream_frequency": {
-          "name": "下行频率图",
-          "description": "所有下行频道的频率。"
-        },
-        "include_upstream_power": {
-          "name": "上行功率图",
-          "description": "所有上行频道的功率水平。"
-        },
-        "include_upstream_frequency": {
-          "name": "上行频率图",
-          "description": "所有上行频道的频率。"
-        },
-        "include_errors": {
-          "name": "错误图表",
-          "description": "已纠正和未纠正的错误计数（7 天视图）。"
-        },
-        "include_error_rates": {
-          "name": "错误速率图表",
-          "description": "添加每分钟错误速率图表（错误/分钟，7 天视图）。默认关闭。速率随每次轮询波动。"
-        },
-        "include_latency": {
-          "name": "延迟图",
-          "description": "Ping 和 HTTP 响应时间（6 小时视图）。"
-        },
-        "graph_hours": {
-          "name": "图表历史（小时）",
-          "description": "功率/SNR 图表的历史小时数（错误和延迟使用固定时间范围）。"
-        },
-        "short_titles": {
-          "name": "使用短标题",
-          "description": "短标题：「下行功率 (dBmV)」，长标题：「下行功率水平 (dBmV)」。"
-        }
-      }
-    },
-    "request_refresh": {
-      "name": "Request Refresh",
-      "description": "Triggers an immediate modem data poll, bypassing any connectivity backoff. Use in automations to refresh modem data on demand."
-    },
-    "request_health_check": {
-      "name": "Request Health Check",
-      "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
-    },
-    "convert_channel_identity": {
-      "name": "Convert Channel Identity",
-      "description": "Renames recorder statistics to match the current channel identity mode after re-adding the integration in the other mode. Modem must be online.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to convert. Defaults to the first configured modem."
-        }
-      }
-    },
-    "orphaned_statistics": {
-      "name": "Orphaned Statistics",
-      "description": "Finds recorder statistics for this modem that have no registered entity — left behind by a mode switch, channel rebonding (ID mode), or a prefix change. Without execute, returns a preview of orphaned entities. With execute: true, purges them all directly. Purge is permanent.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to inspect. Defaults to the first configured modem."
-        },
-        "execute": {
-          "name": "Execute",
-          "description": "Set to true to purge all orphaned statistics immediately. Default is false (preview only). Purge is permanent and cannot be undone."
-        }
-      }
     }
   }
 }

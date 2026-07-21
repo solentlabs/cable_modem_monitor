@@ -49,10 +49,12 @@ ignoreWords:
   - Vonk
   - Fzcw
   - didnt
-  # German example strings in TRANSLATION_GUIDE.md
+  # Non-English example strings and glossary terms in TRANSLATION_GUIDE.md
   - Anmeldung
   - Authentifizierung
   - fehlgeschlagen
+  - Kanalbenennung
+  - módem
 
 words:
   # Home Assistant tooling
