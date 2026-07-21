@@ -64,7 +64,7 @@ notes: |
   No lock column. QAM channels mark inactive with
   modulation=QAM_NONE, OFDM exposes the PLC indicator, OFDMA gates on
   STATE=OPERATE; Core derives docsis_status from those. system_uptime
-  and docsis_status are rendered server-side into status.html.
+  is read from status.html, which renders it server-side.
 
   OFDM/OFDMA carry no usable frequency — the firmware exposes only a
   sercomm-specific placement value, not the active-band lower edge.

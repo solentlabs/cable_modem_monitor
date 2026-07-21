@@ -17,9 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   locked, full system_info, no field errors. (Related to #98)
 
 - **Sercomm DM1000 reboot button and system uptime.** Both built
-  from contributor captures; uptime feeds Last Boot Time. The
-  reboot action is HAR-verified and awaits hardware confirmation.
-  Closes both DM1000 catalog gaps. (Related to #92)
+  from contributor captures; uptime feeds Last Boot Time. The reboot
+  was exercised on real hardware — the capture records the modem's own
+  confirm and "allow up to 60 seconds to restart" dialogs — and uptime
+  is read from the status page the same session served. Closes both
+  DM1000 catalog gaps. (Related to #92)
 
 - **Locked-out credentials now prompt for reauthentication.** When
   the auth circuit breaker opens (definitive credential rejection,
