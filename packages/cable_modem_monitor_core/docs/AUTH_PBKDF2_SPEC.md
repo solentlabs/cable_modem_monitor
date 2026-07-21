@@ -84,22 +84,29 @@ Fields that map to **firmware** (Technicolor-level):
 
 ## Evidence Base
 
-| Source | Location | Status |
+| Source | Location | Establishes |
 |---|---|---|
 | CGA4236 HAR capture | Catalog test data | Analyzed |
 | CGA6444VF HAR capture | Catalog test data | Analyzed |
 | login.js (PBKDF2 flow) | HAR entries -- JavaScript source | Partially redacted in one HAR, visible in another |
-| Issue #115 | [CGA4236](https://github.com/solentlabs/cable_modem_monitor/issues/115) | Open |
-| Issue #120 | [CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120) | Open |
 
-## Modems
+## Platform Notes
 
-| Modem | Status | Issue |
-|---|---|---|
-| Technicolor CGA4236TCH1 | In catalog, `awaiting_verification` | #115 |
-| Technicolor CGA6444VF (Vodafone DE) | In catalog, `awaiting_verification` | #120 |
+Entries on this platform share the same Technicolor REST API surface
+(`/api/v1/session/`) and an identical auth flow.
 
-Both modems share the same Technicolor REST API platform (`/api/v1/session/`).
+Which entries use this strategy is catalog data, not spec content.
+Query it:
+
+```python
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems
+
+[m for m in list_modems(CATALOG_PATH) if m.auth_strategy == "form_pbkdf2"]
+```
+
+Each `ModemSummary` carries `manufacturer`, `model`, `status`,
+`transport`, and `sibling_dirs` for entries sharing one model identity.
 
 ## Known Gaps
 

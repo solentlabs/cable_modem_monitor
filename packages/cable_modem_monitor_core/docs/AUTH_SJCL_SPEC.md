@@ -107,24 +107,31 @@ Fields that map to **firmware** (Arris-level):
 
 ## Evidence Base
 
-| Source | Location | Status |
+| Source | Location | Establishes |
 |---|---|---|
 | TG3442DE HAR capture (Dec 2025) | Catalog test data | Analyzed |
 | TG3442DE HAR capture (Apr 2026) | User attachment on #86 | Analyzed --- contains sjclCrypto.js |
 | `sjclCrypto.js` | HAR entry 3 (Apr 2026 capture) | Authoritative for encoding rules |
 | `base_95x.js` | HAR entry 10 (Apr 2026 capture) | Authoritative for wire format |
-| Issue | [#86 --- Arris Touchstone TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86) | Open, awaiting confirmation |
 
-## Modems
+## Platform Notes
 
-| Modem | Status | Issue |
-|---|---|---|
-| Arris TG3442DE (Vodafone DE) | `awaiting_verification` --- alpha.13 has salt encoding fix | #86 |
+Entries on this platform share an identical auth flow. Firmware in this
+family carries model flags suggesting sibling hardware variants exist,
+so a capture from one gateway may not represent the whole line.
 
-Potential future candidates: other Arris Touchstone TG-series gateways
-(TG2492, TG3482, TG6442). The TG3442DE firmware contains an
-`isModel6442` flag suggesting a hardware variant exists. No HAR captures
-or requests for these models.
+Which entries use this strategy is catalog data, not spec content.
+Query it:
+
+```python
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems
+
+[m for m in list_modems(CATALOG_PATH) if m.auth_strategy == "form_sjcl"]
+```
+
+Each `ModemSummary` carries `manufacturer`, `model`, `status`,
+`transport`, and `sibling_dirs` for entries sharing one model identity.
 
 ## Known Gaps
 

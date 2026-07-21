@@ -244,39 +244,39 @@ only valid session mechanism. See
 
 ## Evidence Base
 
-| Source | Location | Status |
+| Source | Location | Establishes |
 |---|---|---|
 | MB8611 HAR capture | Catalog test data | Analysed --- authoritative for Motorola `GetMoto*` action names |
 | MB8600 HAR capture | Catalog test data | Analysed --- confirms MB8600 shares MB8611 protocol |
 | S33 HAR capture | Catalog test data | Analysed |
 | S33v2 HAR capture | Catalog test data | Analysed --- MD5 HMAC path |
-| S33v3 HAR capture | Catalog test data | Analysed --- SHA256 HMAC path (#98) |
-| S34 HAR capture | Catalog test data | Analysed --- SHA256 HMAC path (#108, PR #90) |
+| S33v3 HAR capture | Catalog test data | Analysed --- SHA256 HMAC path |
+| S34 HAR capture | Catalog test data | Analysed --- SHA256 HMAC path |
 | `Login.js` | HAR entries --- JavaScript source | Authoritative for challenge/login request shape and cookie setup |
 | `SOAPAction.js` | HAR entries --- JavaScript source | Authoritative for HNAP_AUTH header format and timestamp modulo |
 | `hmac_md5.js` / `hmac_sha256.js` | HAR entries --- JavaScript source | Authoritative for uppercase hex HMAC output |
-| Issue [#6 --- MB8611 fails to connect](https://github.com/solentlabs/cable_modem_monitor/issues/6) | GitHub | Closed --- HNAP auth implementation |
-| Issue [#40 --- MB8600 (newer firmware)](https://github.com/solentlabs/cable_modem_monitor/issues/40) | GitHub | MB8600 confirmed on v3.14.0-alpha.11 |
-| Issue [#98 --- S33v3](https://github.com/solentlabs/cable_modem_monitor/issues/98) | GitHub | Open --- SHA256 variant evidence |
-| Issue [#108 --- S34](https://github.com/solentlabs/cable_modem_monitor/issues/108) | GitHub | Open |
-| Issue [#117 --- S33v2 crashing when monitor enabled](https://github.com/solentlabs/cable_modem_monitor/issues/117) | GitHub | S33v2 confirmed; drives RUNTIME_POLLING_SPEC lockout backoff |
-| PR [#90 --- Add Arris S34 support](https://github.com/solentlabs/cable_modem_monitor/pull/90) | GitHub | Merged |
 
-## Modems
+## Platform Notes
 
-| Modem | HMAC | Status | Issue |
-|---|---|---|---|
-| Arris S33 (Surfboard) | md5 | `awaiting_verification` | #32, #87 |
-| Arris S33v2 (Surfboard) | md5 | `confirmed` | #117 |
-| Arris S33v3 (Surfboard) | sha256 | `awaiting_verification` | #98 |
-| Arris S34 (Surfboard) | sha256 | `awaiting_verification` | #108, PR #90 |
-| Motorola MB8600 | md5 | `confirmed` | #40 |
-| Motorola MB8611 (MB8612 alias) | md5 | `awaiting_verification` | #4, #6, #40, #60 |
+Every HNAP modem shares the same auth envelope, parser logic, and auth
+flow. Entries diverge on exactly two axes, both config-driven:
 
-All six share the HNAP auth envelope --- they diverge only on the
-HMAC algorithm and on action names in the `actions` block
-(`GetMoto*` for Motorola, `GetCustomer*` / `SetArrisConfigurationInfo`
-for Arris). Parser logic and auth flow are identical.
+- **HMAC algorithm** --- signing uses MD5 or SHA256, selected per entry
+  by `auth.hmac_algorithm`, because firmware lines differ.
+- **Action names** --- the `actions` block carries the vendor's naming
+  (`GetMoto*`, `GetCustomer*` / `SetArrisConfigurationInfo`).
+
+Which entries use which is catalog data, not spec content. Query it:
+
+```python
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems
+
+[m for m in list_modems(CATALOG_PATH) if m.auth_strategy == "hnap"]
+```
+
+Each `ModemSummary` carries `manufacturer`, `model`, `status`,
+`transport`, and `sibling_dirs` for entries sharing one model identity.
 
 ## Known Gaps
 

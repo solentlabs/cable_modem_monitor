@@ -95,28 +95,34 @@ Fields that map to **firmware** (Compal-level):
 
 ## Evidence Base
 
-| Source | Location | Status |
+| Source | Location | Establishes |
 |---|---|---|
 | CH7465MT HAR capture | Catalog test data | Analyzed |
 | SB8200v3 HAR capture | Catalog test data | Analyzed |
 | `encrypt_cryptoJS.js` | HAR entries --- JavaScript source | Authoritative for encryption format |
-| PR #129 | [CH7465MT support](https://github.com/solentlabs/cable_modem_monitor/pull/129) | Merged |
-| Issue #77 | [Compal CH7465 (Vodafone DE)](https://github.com/solentlabs/cable_modem_monitor/issues/77) | Open |
-| Issue #80 | [Compal CH7466CE (Vodafone DE)](https://github.com/solentlabs/cable_modem_monitor/issues/80) | Open |
-| Issue #109 | [Arris SB8200v3](https://github.com/solentlabs/cable_modem_monitor/issues/109) | Open |
 
-## Modems
+## Platform Notes
 
-| Modem | Status | Issue |
-|---|---|---|
-| Compal CH7465MT (Connect Box) | In catalog, `awaiting_verification` | #77, PR #129 |
-| Arris SB8200v3 (AC01 firmware) | In catalog, `awaiting_verification` | #109 |
+Entries on this platform share an identical auth flow. Branding is not a
+reliable signal of platform: CBN/Compal firmware ships under other
+vendors' names, so a modem branded by one manufacturer can run this
+strategy. Catalog entries record the firmware variant.
 
-Both share the CBN/Compal platform with identical auth flow. The SB8200v3 uses Compal firmware (AC01 variant) despite the Arris branding.
+Which entries use this strategy is catalog data, not spec content.
+Query it:
+
+```python
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems
+
+[m for m in list_modems(CATALOG_PATH) if m.auth_strategy == "form_cbn"]
+```
+
+Each `ModemSummary` carries `manufacturer`, `model`, `status`,
+`transport`, and `sibling_dirs` for entries sharing one model identity.
 
 ## Known Gaps
 
 - **Parameter order sensitivity**: The `token` parameter must be first in the form-encoded POST body. This was discovered empirically during PR #129 development --- the modem firmware rejects requests with different parameter ordering. This is not documented in the firmware source and may not apply to all firmware versions.
-- **Neither modem confirmed**: No real-world validation yet.
 - **Rotating token timing**: The session token rotates on every response. If a request fails or times out, the token state may desynchronize. The `requests.Session` cookie jar tracks the latest token, but concurrent requests could race.
 - **MD5 for IV derivation**: MD5 is cryptographically broken but required here for protocol fidelity. This is a firmware design choice, not a bug in our implementation.
