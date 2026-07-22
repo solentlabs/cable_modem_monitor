@@ -127,14 +127,6 @@ class CircuitBreakerPollingBlocked:
 
 
 @dataclass
-class AuthStateReset:
-    """Auth state reset; circuit breaker cleared."""
-
-    model: str
-    level: EventLevel = field(default=EventLevel.INFO, init=False)
-
-
-@dataclass
 class StaleSessionRecoveryDisabled:
     """Stale-session recovery streak hit threshold; session reuse disabled for this runtime."""
 
@@ -573,7 +565,6 @@ type OrchestratorEvent = (
     | AuthLockoutDetected
     | AuthCircuitBreakerOpen
     | CircuitBreakerPollingBlocked
-    | AuthStateReset
     | StaleSessionRecoveryDisabled
     | SessionReused
     | SessionCleared

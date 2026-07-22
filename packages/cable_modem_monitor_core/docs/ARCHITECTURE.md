@@ -8,8 +8,11 @@ Different auth mechanisms, different page structures, different data formats.
 The architecture absorbs this variety through a config-driven strategy pattern
 where modem behavior is driven by YAML configuration, not code.
 
-**Evidence base:** 31 HAR captures (23 real, 8 synthetic) across
-7 manufacturers.
+**Evidence base:** the modem catalog's HAR captures — real wire
+sessions plus declared synthetic and hybrid fixtures. Current counts
+and per-entry provenance live in the auto-generated catalog
+[README](../../cable_modem_monitor_catalog/README.md) and
+[CATALOG_AUDIT](../../cable_modem_monitor_catalog/CATALOG_AUDIT.md).
 
 ---
 
@@ -166,7 +169,7 @@ Core's engine. Depends on both Core and Catalog.
 | Restart button | Maps platform button press → `orchestrator.restart()` in executor thread with `cancel_event` for clean shutdown |
 | Update button | Triggers immediate poll via `coordinator.async_request_refresh()` |
 | Reset entities button | Removes all entities from HA registry and reloads the integration |
-| Reauth flow | Circuit breaker triggers HA native `async_step_reauth`. Calls `orchestrator.reset_auth()` on success |
+| Reauth flow | Circuit breaker triggers HA native `async_step_reauth` via `entry.async_start_reauth()`. On success: entry updated + reloaded — a fresh orchestrator starts with clean auth state |
 | Diagnostics | Combines Core's `OrchestratorDiagnostics` with HA-side sanitized logs, channel dump, PII checklist |
 | Dashboard generator | Service that generates Lovelace YAML for modem dashboard based on current channels |
 
@@ -1302,34 +1305,10 @@ The test harness in Core consumes these fixtures. This means:
 
 ## Key Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| `parser.yaml` + `parser.py` for parsing, `modem.yaml` for everything else | Clean separation: parser.* is ONLY responsible for parsing. modem.yaml owns identity, auth, metadata. Implementer decides where to draw the declarative/code line per modem. |
-| Capabilities are implicit from parser.yaml/parser.py | Presence of a mapping IS the capability declaration. No separate capabilities list to maintain. No mapping = no entity. |
-| `modem-{variant}.yaml` for firmware variants | Each file represents one firmware variant with its own auth, session, and ISP config. Multi-variant modems get one file per variant. Implicit merge — no explicit references between variant files. |
-| Monorepo with two pip packages + HA integration | Single repo for cross-cutting changes; real package boundaries for AI safety; HA integration distributed via HACS |
-| `solentlabs` namespace, `cable_modem_monitor_` prefix | PyPI uniqueness, consistent branding, ties packages to the HA integration name |
-| Core is the complete engine | Platform-agnostic — could power HA, a Windows service, a CLI tool. All business logic, ABCs, strategies, loaders, orchestration, test harness. No HA imports, no catalog imports |
-| Catalog is content only | No business logic — just YAML configs, parser overrides, HAR files. Core owns the loader that reads them. Test harness lives in Core so catalog contributors can't modify assertions |
-| HA Integration is a thin adapter | Config flow, coordinator, entities, diagnostics. Swappable for any platform adapter |
-| Base64 encoding is `encoding: base64` on `form`, not a separate strategy | Simpler, already works for modems with base64 form encoding |
-| `form_pbkdf2` is a separate strategy, not a flag on `form` | Multi-round-trip challenge-response with server-provided salts and client-side key derivation. Structurally different from form POST with encoding. Affects modems using the same REST API platform with PBKDF2 challenge-response. |
-| All non-HNAP modems use `transport: http` | Both HTML-scraping modems and JSON/XML API modems use HTTP requests — the difference is response format, not transport protocol. Format lives in parser.yaml. |
-| JS-driven auth handled as `form` variant | Not distinct enough for a separate type |
-| HAR captures via `har-capture` utility | Launches fresh browser context — no stale cookies or cached sessions |
-| `HealthInfo` separate from `ModemData` | Different cadences — ping is lightweight, parsing is heavy. Each has its own lifecycle |
-| Health probe: ICMP → HEAD → data poll | Use lightest available probe; never hammer modem web server unnecessarily |
-| No auth discovery | Strategy *selection* is config-driven only. No runtime login page inspection to *determine* auth type — too fragile. Strategies may interact with login pages during *execution* (extracting hidden fields, nonces, salts). |
-| No fallback/auto-detection | If no modem.yaml exists, we can't help. User submits HAR, we add support |
-| `last_boot_time` derived in core | Transparent to consumers — same field whether modem provides it or core calculates from uptime |
-| Dynamic `SystemInfo` fields | Modem-specific fields pass through without core changes. Core only understands structured fields |
-| `AuthResult.auth_context` is typed `AuthContext` | Auth strategies store downstream state in a typed `AuthContext` dataclass with `url_token` and `private_key` fields. Runner reads by attribute based on `modem_config.transport`. Adding a transport means adding a field to `AuthContext`, not a magic string key. (`cbn` needs no new field — session token lives in cookies, managed by `requests.Session`.) |
-| Coordinator parser registry | Section type → parser function dispatch via dict, not isinstance chain. Five known section types registered; unimplemented formats are stubs that raise `NotImplementedError` with the missing parser name. Adding a format is one registry entry + parser implementation. |
-| `enrich_metadata` separates inference from config assembly | `generate_config` assembles YAML from known facts. Inferring facts from HAR analysis (default_host from request URLs, DOCSIS version from channel types) is a different concern. `enrich_metadata` provides structured guidance on inferred/missing/conflicting fields — essential for self-service contributors who need to know what's missing when their PR validation fails. |
-| `write_modem_package` for file placement | Pipeline produces configs and golden files in memory. Rather than relying on the LLM to write files with correct names and directory structure, a dedicated tool writes the standard catalog structure. Guarantees file layout matches what the test harness expects. |
-| Transport-scoped action executors with single dispatch | HTTP, HNAP, and CBN actions have different protocols (form-based, SOAP, parameterized XML POST). Separate modules (`http_action.py`, `hnap_action.py`, `cbn_action.py`) prevent coupling; single `execute_action()` dispatch provides unified interface for collector (logout) and orchestrator (restart). |
-| Config fields are parameters, not implementations | `endpoint_pattern` supplies a keyword; core provides form-action extraction as a built-in strategy. Contributors specify *what* to find, core handles *how*. Extensible via `extraction_mode` field if a future modem needs non-form extraction. |
-| Protocol primitives in shared `protocol/` module | `protocol/hnap.py`: HMAC signing and constants used by HNAP auth, loaders, and action executors. `protocol/cbn.py`: AES-256-CBC encryption used by `form_cbn` auth. Shared modules eliminate duplication while each consumer owns its transport-specific flow. |
+Architecture decisions and their rationale live in
+[ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md), organised by
+theme with the reasoning and constraints for each. This document
+describes how the system is built; that one records why.
 
 ---
 

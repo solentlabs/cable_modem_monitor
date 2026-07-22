@@ -76,7 +76,7 @@ Touchstone firmware family, not inherent to SJCL:
 
 | Assumption | Value | Source | Risk if variant differs |
 |---|---|---|---|
-| JS variable names | `myIv`, `mySalt`, `currentSessionId` | `base_95x.js` (TG3442DE HAR) | Different firmware may use different variable names |
+| JS variable names | `myIv`, `mySalt`, `currentSessionId` | `base_95x.js` | Different firmware may use different variable names |
 | POST field names | `EncryptData`, `Name`, `AuthData` | `base_95x.js` login() function | Other vendors may use different field names |
 | Plaintext structure | `{"Password": "<pw>", "Nonce": "<sessionId>"}` | `base_95x.js` login() function | JSON keys are firmware-specific |
 | Response encrypted field | `encryptData` (lowercase 'e') | HAR response from ajaxSet_Password.php | Field name is firmware-specific |
@@ -107,24 +107,37 @@ Fields that map to **firmware** (Arris-level):
 
 ## Evidence Base
 
-| Source | Location | Status |
-|---|---|---|
-| TG3442DE HAR capture (Dec 2025) | Catalog test data | Analyzed |
-| TG3442DE HAR capture (Apr 2026) | User attachment on #86 | Analyzed --- contains sjclCrypto.js |
-| `sjclCrypto.js` | HAR entry 3 (Apr 2026 capture) | Authoritative for encoding rules |
-| `base_95x.js` | HAR entry 10 (Apr 2026 capture) | Authoritative for wire format |
-| Issue | [#86 --- Arris Touchstone TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86) | Open, awaiting confirmation |
+A protocol claim in this spec is evidence-backed when it traces to
+firmware JavaScript recorded in a catalog capture, or to behaviour
+observed on the wire where firmware source does not document it. The
+firmware sources below establish the crypto envelope; the assumptions
+table cites its own evidence per row. The captures
+themselves are catalog data --- derive them with the query under
+Platform Notes rather than listing them here.
 
-## Modems
+| Firmware source | Establishes |
+|---|---|
+| `sjclCrypto.js` | Salt and IV encoding rules |
+| `base_95x.js` | Wire format, JS variable names, and POST field names |
 
-| Modem | Status | Issue |
-|---|---|---|
-| Arris TG3442DE (Vodafone DE) | `awaiting_verification` --- alpha.13 has salt encoding fix | #86 |
+## Platform Notes
 
-Potential future candidates: other Arris Touchstone TG-series gateways
-(TG2492, TG3482, TG6442). The TG3442DE firmware contains an
-`isModel6442` flag suggesting a hardware variant exists. No HAR captures
-or requests for these models.
+Entries on this platform share an identical auth flow. Firmware in this
+family carries model flags suggesting sibling hardware variants exist,
+so a capture from one gateway may not represent the whole line.
+
+Which entries use this strategy is catalog data, not spec content.
+Query it:
+
+```python
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems
+
+[m for m in list_modems(CATALOG_PATH) if m.auth_strategy == "form_sjcl"]
+```
+
+Each `ModemSummary` carries `manufacturer`, `model`, `status`,
+`transport`, and `sibling_dirs` for entries sharing one model identity.
 
 ## Known Gaps
 

@@ -35,6 +35,7 @@ from typing import Any
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.exceptions import ServiceValidationError
 
 from .const import DOMAIN
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
@@ -60,13 +61,13 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
         vol.Optional("include_downstream_snr", default=True): cv.boolean,
         vol.Optional("include_downstream_frequency", default=True): cv.boolean,
         vol.Optional("include_upstream_power", default=True): cv.boolean,
-        vol.Optional("include_upstream_frequency", default=False): cv.boolean,
+        vol.Optional("include_upstream_frequency", default=True): cv.boolean,
         vol.Optional("include_errors", default=True): cv.boolean,
         vol.Optional("include_error_rates", default=False): cv.boolean,
         vol.Optional("include_latency", default=True): cv.boolean,
         vol.Optional("include_status_card", default=True): cv.boolean,
         vol.Optional("graph_hours", default=24): cv.positive_int,
-        vol.Optional("short_titles", default=False): cv.boolean,
+        vol.Optional("short_titles", default=True): cv.boolean,
         vol.Optional("channel_label", default="auto"): vol.In(["auto", "full", "id_only", "type_id"]),
         vol.Optional("channel_grouping", default="by_direction"): vol.In(["by_direction", "by_type"]),
         vol.Optional("status_card_exclude", default=list(STATUS_CARD_DEFAULT_EXCLUDE)): vol.All(
@@ -157,8 +158,7 @@ def create_request_refresh_handler(
         """Handle the request_refresh service call."""
         entries = _resolve_target_entries(hass, call)
         if not entries:
-            _LOGGER.warning("request_refresh: no loaded config entry found for target")
-            return
+            raise ServiceValidationError("No loaded cable modem found for the requested target")
 
         for entry in entries:
             model = entry.runtime_data.modem_identity.model
@@ -177,8 +177,7 @@ def create_request_health_check_handler(
         """Handle the request_health_check service call."""
         entries = _resolve_target_entries(hass, call)
         if not entries:
-            _LOGGER.warning("request_health_check: no loaded config entry found for target")
-            return
+            raise ServiceValidationError("No loaded cable modem found for the requested target")
 
         for entry in entries:
             runtime = entry.runtime_data
@@ -203,7 +202,7 @@ def create_request_health_check_handler(
 
 
 def async_register_services(hass: HomeAssistant) -> None:
-    """Register services (called on first entry setup)."""
+    """Register services (called once at component load from async_setup)."""
     hass.services.async_register(
         DOMAIN,
         SERVICE_GENERATE_DASHBOARD,
@@ -252,13 +251,3 @@ def async_register_services(hass: HomeAssistant) -> None:
         SERVICE_CONVERT_CHANNEL_IDENTITY,
         SERVICE_ORPHANED_STATISTICS,
     )
-
-
-def async_unregister_services(hass: HomeAssistant) -> None:
-    """Unregister services (called when last entry is removed)."""
-    hass.services.async_remove(DOMAIN, SERVICE_GENERATE_DASHBOARD)
-    hass.services.async_remove(DOMAIN, SERVICE_REQUEST_REFRESH)
-    hass.services.async_remove(DOMAIN, SERVICE_REQUEST_HEALTH_CHECK)
-    hass.services.async_remove(DOMAIN, SERVICE_CONVERT_CHANNEL_IDENTITY)
-    hass.services.async_remove(DOMAIN, SERVICE_ORPHANED_STATISTICS)
-    _LOGGER.debug("Unregistered services")

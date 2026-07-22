@@ -9,6 +9,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.exceptions import HomeAssistantError
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     RestartResult,
 )
@@ -179,7 +180,7 @@ async def test_restart_button_press_failure(
     mock_data_coordinator: MagicMock,
     mock_runtime_data: CableModemRuntimeData,
 ):
-    """Failed restart sends failure notification."""
+    """Failed restart notifies, refreshes, then raises so the caller sees it."""
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
@@ -194,10 +195,14 @@ async def test_restart_button_press_failure(
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
 
-    await button.async_press()
+    with pytest.raises(HomeAssistantError, match="restart did not dispatch"):
+        await button.async_press()
 
+    # The notification stays as the persistent record, and the refresh must
+    # still run before the raise so the dashboard reflects current state.
     call_args = button.hass.services.async_call.call_args
     assert "Failed" in call_args[0][2]["title"]
+    mock_data_coordinator.async_request_refresh.assert_awaited()
 
 
 async def test_restart_button_unavailable_during_dispatch(

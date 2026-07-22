@@ -54,6 +54,17 @@ entities. Users create template entities from attributes if needed.
 
 ## Entity Catalog
 
+**Entity categories.** The device page keeps its primary group to the
+signal readout — the Status sensor and every per-channel sensor
+(power, SNR, frequency, corrected/uncorrected). Everything else is
+supporting information and carries `EntityCategory.DIAGNOSTIC`: Modem
+Info, Software Version, DS/US channel counts, error totals and rates,
+Last Boot Time, system-info pass-through fields, LAN statistics, the
+latency sensors, and the Update Modem Data button. Reset Entities is
+`CONFIG`. Diagnostic classification is applied on the shared bases
+(`_SystemInfoSensor`, `HealthSensorBase`) where the taxonomy already
+groups them, not per entity.
+
 ### System Sensors
 
 These are created when the corresponding data appears in parser
@@ -238,7 +249,7 @@ Created per network interface, 8 sensors each.
 | Entity | unique_id suffix | entity_category | Availability |
 |--------|-----------------|-----------------|--------------|
 | Restart Modem | `_restart_button` | — | Only if `actions.restart` in modem.yaml |
-| Update Modem Data | `_update_data_button` | — | Always |
+| Update Modem Data | `_update_data_button` | DIAGNOSTIC | Always |
 | Reset Entities | `_reset_entities_button` | CONFIG | Always |
 
 Restart Modem is only created when modem.yaml declares

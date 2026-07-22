@@ -221,7 +221,7 @@ After setup, configure via **Settings → Devices & Services → Cable Modem Mon
 - **Polling Interval**: How often to fetch full modem status (30 seconds – 24 hours, default: 10 minutes)
 - **Health Check Interval**: How often to run lightweight reachability probes (default: 30 seconds; uses ICMP ping and TCP connect — no HTTP requests between data polls)
 
-Channel Identity and Modem Model are install-time choices. To change either, remove the integration and add it again.
+Modem Model and Channel Identity are install-time choices, not editable here. The model is fixed; Channel Identity (number vs ID) can be switched by removing and re-adding the integration (see [Known Limitations](#known-limitations)).
 
 <!-- markdownlint-disable MD033 -->
 <picture>
@@ -350,6 +350,26 @@ Includes:
 - Complete manual dashboard YAML for monitoring all channels
 - Automations for error alerts, SNR warnings, and auto-restart
 - Last boot time display format options
+
+## Removing the Integration
+
+To remove a single modem:
+
+1. Go to **Settings → Devices & Services → Cable Modem Monitor**.
+2. Click the modem entry, open the **⋯** menu, and choose **Delete**.
+3. Confirm. The integration logs out of the modem, removes its device and entities, and deletes the small per-entry state it stored (the channel-bond baseline). Credentials held in Home Assistant's encrypted storage are removed with the entry. No restart is required.
+
+Recorded sensor history is retained according to your Home Assistant **recorder** settings — deleting the integration does not purge it. To clear leftover channel history, use the `orphaned_statistics` service or follow [Ghost Statistics in History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#ghost-statistics-in-history).
+
+To uninstall completely, delete every modem entry as above, then remove **Cable Modem Monitor** from **HACS** (open it, **⋯** menu → **Remove**) and restart Home Assistant.
+
+## Known Limitations
+
+- **Model is fixed at install time.** It identifies which modem this entry monitors. To point at a different modem, remove the integration and add it again.
+- **Channel Identity (number vs ID) is chosen at setup and not changeable afterward.** To switch modes, remove and re-add the integration in the other mode, then call the `convert_channel_identity` service to carry your recorder statistics across.
+- **Remote restart depends on the modem.** The Restart button appears only for modems whose firmware exposes a supported reboot path; others are monitored read-only.
+- **Channel-bond change alerts track totals only.** The notification fires when the total downstream or upstream channel count changes, not on a per-type reshuffle that leaves the total unchanged (for example a DOCSIS 3.1 provisioning change that swaps one QAM channel for one OFDM channel).
+- **Requires a reachable modem interface on your LAN.** Modems whose status page has been disabled by the ISP, or exposed only through the provider's cloud app, cannot be polled. See [ISP Disabled Web Interface](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#6-isp-disabled-web-interface).
 
 ## Troubleshooting
 

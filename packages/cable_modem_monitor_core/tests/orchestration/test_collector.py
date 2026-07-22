@@ -469,6 +469,51 @@ class TestSessionIsValid:
         assert collector.session_is_valid is False
         assert collector._auth_context is None
 
+    def test_close_closes_underlying_session(self) -> None:
+        """close() releases the requests.Session and its socket pool."""
+        config = _make_config(auth_type="none")
+        collector = ModemDataCollector(config, None, None, "http://localhost", "", "")
+
+        with patch.object(collector.session, "close") as mock_close:
+            collector.close()
+
+        mock_close.assert_called_once_with()
+
+    def test_close_logs_out_live_session_before_closing(self) -> None:
+        """A live session is logged out (release the server-side lock) then closed."""
+        config = _make_config(auth_type="form", cookie_name="sid")
+        collector = ModemDataCollector(config, None, None, "http://localhost", "", "")
+        collector._auth_context = MagicMock(url_token="", private_key="")
+        collector._session.cookies.set("sid", "abc123")
+        assert collector.session_is_valid is True
+
+        manager = MagicMock()
+        with (
+            patch.object(collector, "_best_effort_logout") as mock_logout,
+            patch.object(collector.session, "close") as mock_close,
+        ):
+            manager.attach_mock(mock_logout, "logout")
+            manager.attach_mock(mock_close, "close")
+            collector.close()
+
+        # Logout must precede the socket close — the session is needed to log out.
+        assert [c[0] for c in manager.mock_calls] == ["logout", "close"]
+
+    def test_close_skips_logout_without_live_session(self) -> None:
+        """No live session (never authenticated) → close the socket, no logout."""
+        config = _make_config(auth_type="form", cookie_name="sid")
+        collector = ModemDataCollector(config, None, None, "http://localhost", "", "")
+        assert collector.session_is_valid is False
+
+        with (
+            patch.object(collector, "_best_effort_logout") as mock_logout,
+            patch.object(collector.session, "close") as mock_close,
+        ):
+            collector.close()
+
+        mock_logout.assert_not_called()
+        mock_close.assert_called_once_with()
+
 
 # ------------------------------------------------------------------
 # Tests — successful collection (behavioral, inline)

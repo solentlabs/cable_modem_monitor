@@ -29,6 +29,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -62,6 +63,9 @@ from .lib.utils import get_device_name, parse_uptime_to_seconds
 from .mapping_manager import SlotKey, build_channel_map
 
 _LOGGER = logging.getLogger(__name__)
+
+# Coordinator-backed entities do no per-entity I/O — no throttling needed.
+PARALLEL_UPDATES = 0
 
 
 # ------------------------------------------------------------------
@@ -288,6 +292,7 @@ class HealthSensorBase(  # pyright: ignore[reportIncompatibleVariableOverride]
     """Base class for sensors that read from the health coordinator."""
 
     _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
         self,
@@ -413,6 +418,8 @@ class ModemInfoSensor(ModemSensorBase):
     not live poll data.
     """
 
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
     def __init__(
         self,
         coordinator: DataUpdateCoordinator[ModemSnapshot],
@@ -454,6 +461,8 @@ class ModemInfoSensor(ModemSensorBase):
 
 class _SystemInfoSensor(ModemSensorBase):
     """Base for sensors that read from modem_data system_info."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def _get_system_info(self) -> dict[str, Any]:
         """Return system_info dict, or empty dict if unavailable."""
@@ -794,6 +803,8 @@ class ChannelSensor(ModemSensorBase):
 
 class LanStatsSensor(ModemSensorBase):
     """LAN statistics sensor for a specific interface and metric."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
         self,

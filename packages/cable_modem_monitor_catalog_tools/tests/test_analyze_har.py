@@ -10,7 +10,9 @@ import json
 from pathlib import Path
 
 import pytest
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_catalog_tools.analyze_har import (
+    AnalysisResult,
     analyze_har,
 )
 from tests._helpers import collect_fixtures, load_fixture, write_har
@@ -238,3 +240,51 @@ class TestAnalysisResultSerialization:
         assert d["sections"] is None or isinstance(d["sections"], dict)
         assert isinstance(d["warnings"], list)
         assert isinstance(d["hard_stops"], list)
+
+
+# =====================================================================
+# Shared auth/action endpoint: committed sercomm/dm1000 HAR
+# =====================================================================
+
+_DM1000_HAR = CATALOG_PATH / "sercomm" / "dm1000" / "test_data" / "modem.har"
+
+
+@pytest.fixture(scope="module")
+def dm1000_result() -> AnalysisResult:
+    """Analysis of the committed dm1000 HAR, where login and reboot both POST /setup.cgi."""
+    return analyze_har(_DM1000_HAR)
+
+
+class TestSharedAuthEndpoint:
+    """The credential-shaped POST is the login, not the most recent POST to the auth endpoint."""
+
+    def test_login_post_selected(self, dm1000_result: AnalysisResult) -> None:
+        """Auth fields come from the credential POST, not the later reboot POST."""
+        auth = dm1000_result.auth
+        assert auth.strategy == "form"
+        assert auth.confidence == "high"
+        assert auth.fields["action"] == "/setup.cgi"
+        assert auth.fields["username_field"] == "login_user"
+        assert auth.fields["password_field"] == "pws"
+
+    def test_login_page_and_encoding_detected(self, dm1000_result: AnalysisResult) -> None:
+        """Login page found via its relative form action; encoding from its base64encode() call."""
+        auth = dm1000_result.auth
+        assert auth.fields["login_page"] == "/login.html"
+        assert auth.fields["encoding"] == "base64"
+
+    def test_hidden_fields_are_not_an_action_payload(self, dm1000_result: AnalysisResult) -> None:
+        """No reboot payload and no credential-shaped fields in hidden_fields."""
+        hidden = dm1000_result.auth.fields["hidden_fields"]
+        assert hidden.get("todo") != "reboot"
+        assert "passwd" not in hidden
+        assert "cur_passwd" not in hidden
+
+    def test_dropped_credential_fields_are_flagged(self, dm1000_result: AnalysisResult) -> None:
+        """Surplus credential-shaped fields are surfaced for manual review, not silently dropped."""
+        assert any("cur_passwd" in w for w in dm1000_result.warnings)
+
+    def test_no_fabricated_source_inferred_actions(self, dm1000_result: AnalysisResult) -> None:
+        """No action endpoints invented from UI labels or image paths in page source."""
+        assert dm1000_result.actions.logout is None
+        assert dm1000_result.actions.restart is None

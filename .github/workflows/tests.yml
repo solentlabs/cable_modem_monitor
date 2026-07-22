@@ -268,6 +268,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          # The audit reads each fixture's provenance from the HAR's
+          # creator field, so it needs real HAR bytes, not LFS pointers.
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v6

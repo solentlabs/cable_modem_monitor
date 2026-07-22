@@ -15,6 +15,15 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from solentlabs.cable_modem_monitor_core.orchestration.models import (
+    ModemIdentity,
+    ModemSnapshot,
+)
+from solentlabs.cable_modem_monitor_core.orchestration.signals import (
+    CollectorSignal,
+    ConnectionStatus,
+    DocsisStatus,
+)
 
 from custom_components.cable_modem_monitor.config_flow import (
     CableModemMonitorConfigFlow,
@@ -28,6 +37,7 @@ from custom_components.cable_modem_monitor.const import DOMAIN, EntityPrefix
 from .conftest import (
     FAKE_CATALOG,
     MOCK_ENTRY_DATA,
+    MOCK_MODEM_DATA,
     MOCK_MULTI_VARIANTS,
     MOCK_SINGLE_VARIANT,
     MOCK_SUMMARIES,
@@ -1134,7 +1144,7 @@ async def test_reauth_shows_form(hass: HomeAssistant):
 
 
 async def test_reauth_success(hass: HomeAssistant):
-    """Successful reauth updates entry and aborts with reauth_successful."""
+    """Successful reauth updates entry, reloads it, and aborts with reauth_successful."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         version=2,
@@ -1142,9 +1152,12 @@ async def test_reauth_success(hass: HomeAssistant):
         unique_id="192.168.100.1",
     )
     entry.add_to_hass(hass)
+    # setup is mocked, so runtime_data is never populated; the real
+    # async_unload_entry on reload needs orchestrator.close() to exist.
+    entry.runtime_data = MagicMock()
 
     with (
-        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True) as mock_setup,
         patch(
             "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
             return_value=MOCK_SUMMARIES,
@@ -1173,6 +1186,10 @@ async def test_reauth_success(hass: HomeAssistant):
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert entry.data["password"] == "newpassword"
+    # The reload is what delivers the auth reset — a fresh orchestrator
+    # is built from the updated entry (UC-16). Setup ran once when the
+    # entry was added, once more on the reauth-triggered reload.
+    assert mock_setup.call_count == 2
 
 
 async def test_reauth_failure_shows_error(hass: HomeAssistant):
@@ -1215,6 +1232,107 @@ async def test_reauth_failure_shows_error(hass: HomeAssistant):
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"]["base"] == "invalid_auth"
+
+
+async def test_reauth_full_loop_recovers_to_online(hass: HomeAssistant):
+    """UC-81 end to end: breaker-open lockout → reauth flow → reload → ONLINE."""
+    # The one test that runs the REAL async_setup_entry — twice: the
+    # initial setup and the reload triggered by reauth success.
+    # _create_core_components hands the first setup a locked-out
+    # orchestrator and the second a healthy one, standing in for
+    # "the user fixed the password."
+    identity = ModemIdentity(
+        manufacturer="Solent Labs",
+        model="TPS-2000",
+        docsis_version="3.0",
+        release_date="2024",
+        status="confirmed",
+    )
+    locked_snapshot = ModemSnapshot(
+        connection_status=ConnectionStatus.AUTH_FAILED,
+        docsis_status=DocsisStatus.UNKNOWN,
+        modem_data=None,
+        collector_signal=CollectorSignal.AUTH_FAILED,
+        error="auth failed",
+    )
+    online_snapshot = ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data=MOCK_MODEM_DATA,
+        collector_signal=CollectorSignal.OK,
+    )
+
+    locked_orch = MagicMock()
+    locked_orch.supports_restart = False
+    locked_orch.get_modem_data.return_value = locked_snapshot
+    locked_orch.diagnostics.return_value.circuit_breaker_open = True
+
+    healthy_orch = MagicMock()
+    healthy_orch.supports_restart = False
+    healthy_orch.get_modem_data.return_value = online_snapshot
+    healthy_orch.diagnostics.return_value.circuit_breaker_open = False
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        data=MOCK_ENTRY_DATA,
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
+
+    # Keyed on the received entry data, not a call-count sequence:
+    # old password → locked out, new → healthy. Reauth success can
+    # reload more than once; keying on data stays correct regardless.
+    def _fake_components(data):
+        if data.get("password") == "newpassword":
+            return (healthy_orch, None, identity)
+        return (locked_orch, None, identity)
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor._create_core_components",
+            side_effect=_fake_components,
+        ),
+        # setup_log_buffer attaches handlers to process-global loggers;
+        # patch it out so this real-setup test stays hermetic (the log
+        # buffer is orthogonal to the reauth path under test).
+        patch("custom_components.cable_modem_monitor.setup_log_buffer"),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            return_value=MOCK_VALIDATION_RESULT,
+        ),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+        # The locked-out first poll started HA's reauth flow.
+        flows = [
+            f
+            for f in hass.config_entries.flow.async_progress()
+            if f["handler"] == DOMAIN and f.get("context", {}).get("source") == config_entries.SOURCE_REAUTH
+        ]
+        assert len(flows) == 1
+
+        result: Any = await hass.config_entries.flow.async_configure(
+            flows[0]["flow_id"],
+            user_input={
+                "host": "192.168.100.1",
+                "username": "admin",
+                "password": "newpassword",
+            },
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data["password"] == "newpassword"
+    # The reload rebuilt Core components from the updated entry; the
+    # fresh orchestrator's poll came back ONLINE — recovery complete.
+    assert entry.runtime_data.data_coordinator.data.connection_status is ConnectionStatus.ONLINE
 
 
 # -----------------------------------------------------------------------

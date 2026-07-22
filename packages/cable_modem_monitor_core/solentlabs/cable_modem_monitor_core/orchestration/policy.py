@@ -141,8 +141,8 @@ class SignalPolicy:
 
         A normal successful poll or any unrecovered failure breaks the
         pattern. Once session reuse is disabled, the threshold-reaching
-        streak is left intact for diagnostics until reset_auth() or
-        process restart.
+        streak is left intact for diagnostics until orchestrator
+        reconstruction.
         """
         if self._session_reuse_disabled:
             return
@@ -253,19 +253,6 @@ class SignalPolicy:
         # Defensive — should never reach here
         _logger.warning("Unknown signal: %s", signal)
         return ConnectionStatus.UNREACHABLE
-
-    def reset(self) -> None:
-        """Reset all auth-related state.
-
-        Called after credential reconfiguration or successful auth.
-        """
-        self._auth_failure_streak = 0
-        self._circuit_open = False
-        self._circuit_trip_status_code = None
-        self._stale_session_recovery_streak = 0
-        self._session_reuse_disabled = False
-        self._connectivity_streak = 0
-        self._connectivity_backoff = 0
 
     def reset_connectivity(self) -> None:
         """Reset connectivity backoff state.

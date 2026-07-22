@@ -16,27 +16,11 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Check if virtual environment exists
-if [ ! -d ".venv" ]; then
-    echo -e "${YELLOW}Creating virtual environment...${NC}"
-
-    # Try to create .venv
-    if ! python3 -m venv .venv 2>/dev/null; then
-        echo -e "${RED}✗ Failed to create virtual environment${NC}"
-        echo ""
-        echo "The python3-venv package is required but not installed."
-        echo ""
-        echo "To install it:"
-        echo "  sudo apt install python3-venv"
-        echo ""
-        echo "Alternatively, install dependencies globally:"
-        echo "  pip3 install -r tests/requirements.txt"
-        echo "  pytest tests/ -v"
-        echo ""
-        exit 1
-    fi
-
-    echo -e "${GREEN}✓ Virtual environment created${NC}"
+# Self-heal a missing or incomplete venv (e.g. after a wipe) instead of failing
+# later with dozens of collection errors that look like broken code. Skipped
+# entirely when the environment is already healthy, so the common path is fast.
+if [ ! -d ".venv" ] || ! .venv/bin/python -c "import solentlabs.cable_modem_monitor_core" 2>/dev/null; then
+    bash scripts/dev/setup_env.sh
     echo ""
 fi
 
@@ -44,13 +28,6 @@ fi
 echo -e "${YELLOW}Activating virtual environment...${NC}"
 source .venv/bin/activate
 echo -e "${GREEN}✓ Virtual environment activated${NC}"
-echo ""
-
-# Install/update dependencies
-echo -e "${YELLOW}Installing test dependencies...${NC}"
-pip install --upgrade pip --quiet
-pip install -r tests/requirements.txt --quiet
-echo -e "${GREEN}✓ Dependencies installed${NC}"
 echo ""
 
 # Run linting

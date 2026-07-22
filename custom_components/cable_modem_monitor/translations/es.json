@@ -2,29 +2,29 @@
   "config": {
     "step": {
       "user": {
-        "title": "Monitor de Modem de Cable",
+        "title": "Monitor de Módem de Cable",
         "description": "Seleccione un fabricante o elija 'Todos'.",
         "data": {
           "manufacturer": "Fabricante"
         }
       },
       "model": {
-        "title": "Seleccionar Modem",
-        "description": "Elige un modelo de modem {manufacturer}. Los modelos marcados con * no estan verificados.",
+        "title": "Seleccionar Módem",
+        "description": "Elige un modelo de módem {manufacturer}. Los modelos marcados con * no están verificados.",
         "data": {
-          "model": "Modelo de Modem",
+          "model": "Modelo de Módem",
           "entity_prefix": "Prefijo de Entity ID",
-          "channel_identity": "Channel Naming"
+          "channel_identity": "Nomenclatura de canales"
         },
         "data_description": {
-          "model": "Selecciona tu modelo de modem de la lista.",
-          "entity_prefix": "Agrega el nombre del modelo o la IP a los Entity ID. Requerido cuando se monitorean multiples modems.",
-          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
+          "model": "Selecciona tu modelo de módem de la lista.",
+          "entity_prefix": "Agrega el nombre del modelo o la IP a los Entity ID. Requerido cuando se monitorean múltiples módems.",
+          "channel_identity": "Número de canal nombra las entidades según la posición de fila del módem (estable entre reinicios). ID de canal usa el ID de canal DOCSIS (coincide con los diagnósticos del ISP, pero puede cambiar al reiniciar)."
         }
       },
       "variant": {
         "title": "Variante de Firmware",
-        "description": "Tu modem tiene multiples variantes de firmware con diferente autenticacion. Selecciona la que corresponda a tu configuracion.",
+        "description": "Tu módem tiene múltiples variantes de firmware con diferente autenticación. Selecciona la que corresponda a tu configuración.",
         "data": {
           "variant": "Variante"
         },
@@ -33,171 +33,79 @@
         }
       },
       "connection": {
-        "title": "Conexion",
-        "description": "Variante seleccionada: {variant}\n\nIntroduce los datos de conexion de tu modem.",
+        "title": "Conexión",
+        "description": "Variante seleccionada: {variant}\n\nIntroduce los datos de conexión de tu módem.",
         "data": {
           "variant": "Variante",
-          "host": "Direccion IP del Modem",
+          "host": "Dirección IP del Módem",
           "username": "Usuario",
-          "password": "Contrasena"
+          "password": "Contraseña"
         },
         "data_description": {
           "variant": "Cámbiala solo si crees que otra variante se ajusta a tu módem.",
-          "host": "Normalmente 192.168.100.1. Incluye http:// o https:// para omitir la deteccion de protocolo.",
+          "host": "Normalmente 192.168.100.1. Incluye http:// o https:// para omitir la detección de protocolo.",
           "username": "Dejar en blanco si no es necesario.",
           "password": "Dejar en blanco si no es necesario."
         }
       },
       "reauth_confirm": {
         "title": "Reautenticar",
-        "description": "El modem rechazo tus credenciales. Por favor, introducelas de nuevo.",
+        "description": "El módem rechazó tus credenciales. Por favor, introdúcelas de nuevo.",
         "data": {
-          "host": "Direccion IP del Modem",
+          "host": "Dirección IP del Módem",
           "username": "Usuario",
-          "password": "Contrasena"
+          "password": "Contraseña"
         }
       }
     },
     "error": {
-      "network_unreachable": "No se puede alcanzar el modem.\n\nVerifica:\n1. Estas en la red del modem (no en WiFi de invitados)\n2. El VPN esta desconectado\n3. La direccion IP es correcta (normalmente 192.168.100.1)\n4. La interfaz web del modem es accesible desde tu navegador",
-      "cannot_connect": "El modem no responde.\n\nVerifica:\n1. La direccion IP es correcta\n2. Intenta incluir el protocolo (ej., http://192.168.100.1)\n3. La interfaz web del modem es accesible desde la red de Home Assistant",
-      "invalid_auth": "Error de inicio de sesion.\n\nVerifica:\n1. El usuario es correcto (normalmente 'admin')\n2. La contrasena es correcta (revisa la etiqueta del modem)\n3. Intenta iniciar sesion desde tu navegador primero para verificar las credenciales",
-      "parse_failed": "Conectado, pero no se pudieron leer los datos del modem.\n\nEsto puede significar que tu modem necesita una seleccion de variante diferente. Intenta volver atras y seleccionar otra opcion, o verifica que el firmware de tu modem sea compatible.",
-      "unknown": "Error inesperado. Revisa los registros de Home Assistant para mas detalles."
+      "network_unreachable": "No se puede alcanzar el módem.\n\nVerifica:\n1. Estás en la red del módem (no en WiFi de invitados)\n2. El VPN está desconectado\n3. La dirección IP es correcta (normalmente 192.168.100.1)\n4. La interfaz web del módem es accesible desde tu navegador",
+      "cannot_connect": "El módem no responde.\n\nVerifica:\n1. La dirección IP es correcta\n2. Intenta incluir el protocolo (ej., http://192.168.100.1)\n3. La interfaz web del módem es accesible desde la red de Home Assistant",
+      "invalid_auth": "Error de inicio de sesión.\n\nVerifica:\n1. El usuario es correcto (normalmente 'admin')\n2. La contraseña es correcta (revisa la etiqueta del módem)\n3. Intenta iniciar sesión desde tu navegador primero para verificar las credenciales",
+      "parse_failed": "Conectado, pero no se pudieron leer los datos del módem.\n\nEsto puede significar que tu módem necesita una selección de variante diferente. Intenta volver atrás y seleccionar otra opción, o verifica que el firmware de tu módem sea compatible.",
+      "unknown": "Error inesperado. Revisa los registros de Home Assistant para más detalles."
     },
     "abort": {
-      "already_configured": "Este modem ya esta configurado.",
-      "missing_input": "Faltan datos obligatorios. Por favor, reinicia la configuracion.",
-      "unknown_model": "El modem seleccionado no se encuentra en el catalogo.",
-      "reauth_successful": "Reautenticacion exitosa.",
-      "reauth_failed": "La reautenticacion fallo. Por favor, intenta de nuevo."
+      "already_configured": "Este módem ya está configurado.",
+      "missing_input": "Faltan datos obligatorios. Por favor, reinicia la configuración.",
+      "unknown_model": "El módem seleccionado no se encuentra en el catálogo.",
+      "reauth_successful": "Reautenticación exitosa.",
+      "reauth_failed": "La reautenticación falló. Por favor, intenta de nuevo."
     },
     "progress": {
-      "validate": "Conectando al modem..."
+      "validate": "Conectando al módem..."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Configuracion del Modem de Cable",
-        "description": "Actualiza los datos de conexion y los intervalos de consulta.",
+        "title": "Configuración del Módem de Cable",
+        "description": "Actualiza los datos de conexión y los intervalos de consulta.",
         "data": {
-          "host": "Direccion IP del Modem",
+          "host": "Dirección IP del Módem",
           "username": "Usuario",
-          "password": "Contrasena",
+          "password": "Contraseña",
           "scan_interval": "Intervalo de Consulta de Datos",
-          "health_check_interval": "Intervalo de Verificacion de Estado"
+          "health_check_interval": "Intervalo de Verificación de Estado"
         },
         "data_description": {
           "host": "Normalmente 192.168.100.1",
           "username": "Dejar en blanco si no es necesario.",
-          "password": "En blanco mantiene la contrasena actual.",
-          "scan_interval": "Cada cuanto consultar los datos del modem. Por defecto 10 minutos. Establecer en 00:00:00 para desactivar la consulta automatica (solo manual mediante el boton Actualizar).",
-          "health_check_interval": "Cada cuanto verificar la accesibilidad del modem. Por defecto 30 segundos. Establecer en 00:00:00 para desactivar las verificaciones de estado."
+          "password": "En blanco mantiene la contraseña actual.",
+          "scan_interval": "Cada cuánto consultar los datos del módem. Por defecto 10 minutos. Establecer en 00:00:00 para desactivar la consulta automática (solo manual mediante el botón Actualizar).",
+          "health_check_interval": "Cada cuánto verificar la accesibilidad del módem. Por defecto 30 segundos. Establecer en 00:00:00 para desactivar las verificaciones de estado."
         }
       }
     },
     "error": {
-      "network_unreachable": "No se puede alcanzar el modem. Verifica la direccion IP y la conectividad de red.",
-      "cannot_connect": "El modem no responde. Verifica la direccion IP y el protocolo.",
-      "invalid_auth": "Error de inicio de sesion. Verifica el usuario y la contrasena.",
-      "parse_failed": "Conectado, pero no se pudieron leer los datos del modem.",
+      "network_unreachable": "No se puede alcanzar el módem. Verifica la dirección IP y la conectividad de red.",
+      "cannot_connect": "El módem no responde. Verifica la dirección IP y el protocolo.",
+      "invalid_auth": "Error de inicio de sesión. Verifica el usuario y la contraseña.",
+      "parse_failed": "Conectado, pero no se pudieron leer los datos del módem.",
       "unknown": "Error inesperado. Revisa los registros de Home Assistant."
     },
     "progress": {
-      "validate": "Validando conexion..."
-    }
-  },
-  "services": {
-    "generate_dashboard": {
-      "name": "Generar Panel",
-      "description": "Genera YAML de Lovelace listo para usar para tu panel de modem de cable. Copia la salida y pegala en una tarjeta Manual.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
-        },
-        "include_status_card": {
-          "name": "Tarjeta de Estado",
-          "description": "Estado del modem, tiempo de actividad, cantidad de canales y boton de reinicio."
-        },
-        "include_downstream_power": {
-          "name": "Grafica de Potencia Descendente",
-          "description": "Niveles de potencia para todos los canales descendentes."
-        },
-        "include_downstream_snr": {
-          "name": "Grafica de SNR Descendente",
-          "description": "Relacion senal-ruido para todos los canales descendentes."
-        },
-        "include_downstream_frequency": {
-          "name": "Grafica de Frecuencia Descendente",
-          "description": "Frecuencia de todos los canales descendentes."
-        },
-        "include_upstream_power": {
-          "name": "Grafica de Potencia Ascendente",
-          "description": "Niveles de potencia para todos los canales ascendentes."
-        },
-        "include_upstream_frequency": {
-          "name": "Grafica de Frecuencia Ascendente",
-          "description": "Frecuencia de todos los canales ascendentes."
-        },
-        "include_errors": {
-          "name": "Graficas de Errores",
-          "description": "Conteo de errores corregidos y no corregidos (vista de 7 dias)."
-        },
-        "include_error_rates": {
-          "name": "Graficas de Tasa de Errores",
-          "description": "Anade graficas de tasa de errores por minuto (errores/min, vista de 7 dias). Desactivado por defecto: las tasas fluctuan entre consultas."
-        },
-        "include_latency": {
-          "name": "Grafica de Latencia",
-          "description": "Tiempos de respuesta de ping y HTTP (vista de 6 horas)."
-        },
-        "graph_hours": {
-          "name": "Historial de Graficas (horas)",
-          "description": "Horas de historial para graficas de potencia/SNR (errores y latencia usan periodos fijos)."
-        },
-        "short_titles": {
-          "name": "Usar Titulos Cortos",
-          "description": "Corto: 'DS Power (dBmV)' vs Largo: 'Downstream Power Levels (dBmV)'."
-        },
-        "status_card_exclude": {
-          "name": "Campos excluidos de la tarjeta de estado",
-          "description": "Campos que se omiten en la tarjeta de estado generada. Vacío de forma predeterminada; agregue docsis_status para quitar la fila de estado DOCSIS, o cualquier nombre de campo de paso para quitar su fila."
-        }
-      }
-    },
-    "request_refresh": {
-      "name": "Request Refresh",
-      "description": "Triggers an immediate modem data poll, bypassing any connectivity backoff. Use in automations to refresh modem data on demand."
-    },
-    "request_health_check": {
-      "name": "Request Health Check",
-      "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
-    },
-    "convert_channel_identity": {
-      "name": "Convert Channel Identity",
-      "description": "Renames recorder statistics to match the current channel identity mode after re-adding the integration in the other mode. Modem must be online.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to convert. Defaults to the first configured modem."
-        }
-      }
-    },
-    "orphaned_statistics": {
-      "name": "Orphaned Statistics",
-      "description": "Finds recorder statistics for this modem that have no registered entity — left behind by a mode switch, channel rebonding (ID mode), or a prefix change. Without execute, returns a preview of orphaned entities. With execute: true, purges them all directly. Purge is permanent.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to inspect. Defaults to the first configured modem."
-        },
-        "execute": {
-          "name": "Execute",
-          "description": "Set to true to purge all orphaned statistics immediately. Default is false (preview only). Purge is permanent and cannot be undone."
-        }
-      }
+      "validate": "Validando conexión..."
     }
   }
 }

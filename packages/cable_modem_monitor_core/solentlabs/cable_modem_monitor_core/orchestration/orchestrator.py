@@ -21,7 +21,6 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from .events import (
-    AuthStateReset,
     CircuitBreakerPollingBlocked,
     ConnectivityBackoffReset,
     CounterReset,
@@ -61,8 +60,7 @@ __all__ = ["Orchestrator", "RestartNotSupportedError"]
 class _ErrorRateBaseline:
     """Prior-poll state for inter-poll error rate computation (#164).
 
-    Always updated and cleared as a unit — see _update_error_stats and
-    reset_auth().
+    Always updated and cleared as a unit — see _update_error_stats.
     """
 
     corrected: int
@@ -112,8 +110,8 @@ class Orchestrator:
         # transitions and emit a single INFO log line.
         self._last_status: ConnectionStatus | None = None
 
-        # First-poll verbose logging — INFO on first poll and after
-        # reset_auth(), DEBUG on steady-state
+        # First-poll verbose logging — INFO on first poll (every
+        # orchestrator reconstruction counts), DEBUG on steady-state
         self._first_poll_complete: bool = False
 
         # Counter-reset detection (#110) and inter-poll error rates (#164).
@@ -186,20 +184,6 @@ class Orchestrator:
         """
         return run_restart(self._collector, self._modem_config, self._recovery)
 
-    def reset_auth(self) -> None:
-        """Reset auth state after credential reconfiguration.
-
-        Called by the client after the user updates credentials.
-        Clears all auth-related state so the next get_modem_data()
-        starts with a clean slate.
-        """
-        self._policy.reset()
-        self._collector.clear_session()
-        self._first_poll_complete = False
-        self._prev_error_baseline = None
-        self._prev_system_info_fields = None
-        log_event(_logger, AuthStateReset(model=self._modem_config.model))
-
     def reset_connectivity(self) -> None:
         """Reset connectivity backoff for immediate retry.
 
@@ -211,6 +195,10 @@ class Orchestrator:
         self._policy.reset_connectivity()
         if was_backing_off:
             log_event(_logger, ConnectivityBackoffReset(model=self._modem_config.model))
+
+    def close(self) -> None:
+        """Release held resources — logs out any live session, closes the collector's HTTP session."""
+        self._collector.close()
 
     def diagnostics(self) -> OrchestratorDiagnostics:
         """Return a read-only snapshot of operational diagnostics.
@@ -601,7 +589,7 @@ class Orchestrator:
         Otherwise the rate field is omitted (HA renders ``unknown``).
         Prior state is held in ``_prev_error_baseline`` (an
         ``_ErrorRateBaseline`` — corrected, uncorrected, monotonic),
-        updated atomically each poll and cleared by ``reset_auth()``.
+        updated atomically each poll.
         """
         system_info = modem_data.setdefault("system_info", {})
         raw_corrected = system_info.get("total_corrected")

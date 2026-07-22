@@ -9,14 +9,14 @@ files; this document explains the choices that shaped them.
 | Section | What it covers |
 |---------|----------------|
 | [Package Boundaries](#package-boundaries) | Runtime package split, dependency direction, where each piece lives |
-| [Core Schema Model](#core-schema-model) | What enters Core's schema vs what stays user-side; catalog stores source-faithful strings, display normalizes |
-| [Transport and Constraint Model](#transport-and-constraint-model) | Transport as protocol identifier, implicit capabilities |
-| [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging |
+| [Core Schema Model](#core-schema-model) | What enters Core's schema vs what stays user-side; catalog stores source-faithful strings, display normalizes; derived and dynamic fields, health as its own structure |
+| [Transport and Constraint Model](#transport-and-constraint-model) | Transport as protocol identifier, implicit capabilities, shared protocol primitives, config as parameters |
+| [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging, credential reconfiguration as reconstruction |
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
 | [Recovery Architecture](#recovery-architecture) | Restart vs recovery, generic timing, reboot-signal vote, observer callback |
-| [Testing Strategy](#testing-strategy) | HAR replay, greenfield from specs |
-| [Onboarding](#onboarding) | MCP for deterministic steps, catalog_tools owns the spec |
+| [Testing Strategy](#testing-strategy) | HAR replay, greenfield from specs, fresh-context capture |
+| [Onboarding](#onboarding) | MCP for deterministic steps, catalog_tools owns the spec, inference vs assembly, no fallback |
 | [Config Flow](#config-flow) | Cross-directory grouping, variant label design |
 | [Extension Model](#extension-model) | How to add modems, formats, parsers, auth strategies, transports |
 | [References](#references) | Pointers to authoritative specs |
@@ -42,6 +42,50 @@ HA integration is a thin adapter that maps Core output to HA platforms.
 **Constrains:** Core cannot import from Catalog or HA. Catalog cannot
 import from HA. No circular dependencies. Adding modem-specific
 knowledge to Core is a design violation.
+
+### Core is synchronous; HA integrates via executor
+
+**Decision:** Core is a synchronous library built on `requests`, and
+this is permanent. The HA integration bridges it by running every
+poll, health check, and action on Home Assistant's executor thread
+pool (`async_add_executor_job`) — never on the event loop. The two
+HA Quality Scale Platinum rules this fails by construction
+(`async-dependency`, `inject-websession`) are declined by design,
+not tracked as gaps.
+
+**Rationale:** Three forces, each sufficient alone. (1) Core serves
+non-HA consumers — the intake pipeline, the test harness, contributor
+debugging scripts — and synchronous `requests` is the surface that
+audience can read, run, and contribute against. (2) Modem firmware
+quirks are handled by the mature `requests`/`urllib3` stack: the
+legacy-SSL adapter that lowers OpenSSL's security level for old
+cipher suites, duplicate-cookie tolerance, and lenient header parsing
+that accepts responses stricter clients (including aiohttp) reject
+outright. An async rewrite would re-litigate every one of those
+battle-tested workarounds for zero functional gain. (3) Async buys
+concurrency, and the workload has none: one modem, one sequential
+login→fetch→logout conversation, a few requests per poll interval.
+The practical cost of the executor pattern is a worker thread
+occupied for a few seconds per poll — negligible.
+
+The alternatives were weighed and rejected: an aiohttp rewrite
+(high cost, regression risk in firmware-quirk handling, breaks the
+sync contributor surface) and a dual sync/async stack (doubles the
+maintenance surface and invites drift). A thin async facade over
+sync internals would satisfy the rules' letter while changing
+nothing real — quality-scale rules are checklists in service of
+outcomes, and where a rule's mechanism assumes the dependency
+exists for HA, the documented exception is the honest answer.
+
+**Constrains:** No `aiohttp`/`httpx` in Core; no `homeassistant.*`
+imports in Core (restated from the package-split decision). The HA
+adapter must never call Core from the event loop — blocking calls
+belong in executor jobs, and any blocking I/O found on the loop is
+a bug (see the config-flow `read_text` fix), not a candidate for
+loosening this rule. Everything *around* the boundary is still held
+to full strictness: executor discipline, session teardown, graceful
+failure. HA-layer quality audits assess all other quality-scale
+rules at face value and cite this entry for the two declined ones.
 
 ### Test harness lives in Core, not Catalog
 
@@ -163,6 +207,16 @@ future additions) live in `cable_modem_monitor_catalog_tools`.
 
 ---
 
+### `solentlabs` namespace with a `cable_modem_monitor_` prefix
+
+**Decision:** Packages publish under the `solentlabs` namespace, each
+named `cable_modem_monitor_*`.
+
+**Rationale:** PyPI uniqueness, consistent branding, and a name that
+ties the libraries to the HA integration they power.
+
+---
+
 ## Core Schema Model
 
 ### Core's schema tracks fleet-observed metrics, not user analytics
@@ -240,6 +294,41 @@ evidence the fleet actually exhibits.
 
 ---
 
+### `last_boot_time` is derived in Core
+
+**Decision:** Core computes `last_boot_time` from uptime when the modem
+does not report a boot timestamp directly.
+
+**Rationale:** Transparent to consumers — the same field is present
+whether the firmware provides it or Core calculates it. Consumers never
+branch on which modem they are talking to.
+
+---
+
+### `SystemInfo` carries dynamic fields
+
+**Decision:** Modem-specific `system_info` fields pass through without
+Core changes. Core only understands the structured fields it declares.
+
+**Rationale:** A modem exposing something unusual does not require a
+Core release to surface it. The cost is that unstructured fields get no
+typing or validation, which is why fleet-observed metrics are promoted
+to structured fields (see § Core's schema tracks fleet-observed
+metrics).
+
+---
+
+### `HealthInfo` is separate from `ModemData`
+
+**Decision:** Health lives in its own structure with its own lifecycle,
+not as fields on `ModemData`.
+
+**Rationale:** Different cadences. A ping is lightweight and can run
+often; parsing is heavy and runs on the slower poll. Fusing them would
+force the expensive path to run at the cheap path's frequency.
+
+---
+
 ## Transport and Constraint Model
 
 ### Transport is a protocol identifier, not a constraint funnel
@@ -287,6 +376,44 @@ supported" placeholders.
 **Constrains:** The only way to declare a capability is to implement
 the extraction. The exception is `actions.restart` in modem.yaml, which
 declares restart capability (a modem command, not parsed data).
+
+---
+
+### Protocol primitives live in a shared `protocol/` module
+
+**Decision:** Cross-cutting protocol code sits in `protocol/`:
+`protocol/hnap.py` for HMAC signing and constants, `protocol/cbn.py`
+for the AES-256-CBC encryption `form_cbn` auth needs.
+
+**Rationale:** HNAP signing is used by auth, loaders, and action
+executors alike. A shared module removes the duplication while each
+consumer still owns its transport-specific flow.
+
+---
+
+### Transport-scoped action executors with single dispatch
+
+**Decision:** `http_action.py`, `hnap_action.py`, and `cbn_action.py`
+implement their own protocols; one `execute_action()` dispatches to
+them.
+
+**Rationale:** The three protocols have nothing in common at the wire
+level — form POST, SOAP, parameterized XML POST. Separate modules stop
+them coupling, while the single entry point gives the collector
+(logout) and orchestrator (restart) one interface to call.
+
+---
+
+### Config fields are parameters, not implementations
+
+**Decision:** Config supplies *what* to find; Core owns *how*. For
+example `endpoint_pattern` supplies a keyword and Core provides
+form-action extraction as a built-in strategy.
+
+**Rationale:** Keeps behaviour in Core where it is tested once, rather
+than letting each modem encode its own procedure. Extensible via an
+`extraction_mode` field if a modem ever needs non-form extraction.
+See MODEM_YAML_SPEC § Principles.
 
 ---
 
@@ -525,6 +652,90 @@ the failure log line.
 
 ---
 
+### Credential reconfiguration is reconstruction, not mutation
+
+**Decision:** Credentials are constructor-bound. Core exposes no
+credential setter and no auth-state reset method; a credential change
+always means the consumer discards the orchestrator and builds a new
+one (in HA: config-entry update + reload after the reauth or options
+flow). A fresh instance starts with every auth-related field —
+failure streak, circuit breaker, login backoff, session, error-rate
+baseline — at its constructor default.
+
+**Rationale:** `Orchestrator.reset_auth()` was specified (2026-03,
+v3.14 Step 19) for an HA reauth flow that was planned to call it, but
+the adapter shipped with entry reload instead (Step 21) and the method
+never gained a production caller. Its contract was unfulfillable:
+without a credential setter, the consumer must rebuild anyway, at
+which point every field the reset would clear is already fresh.
+Reconstruction is also strictly stronger than an in-place reset — a
+hand-maintained clearing list must be extended for every new
+auth-adjacent field (and was, across five commits, all only reachable
+from tests), while a constructor can never miss one. Retired 2026-07;
+UC-16 rewritten around rebuild, `AuthStateReset` event removed with
+no replacement log line (the lockout WARNING, reload startup INFO,
+and verbose first-poll INFO carry the recovery story).
+
+**Constrains:** Consumers treat orchestrator instances as disposable
+— no consumer-side caching that outlives a credential change, and
+they call ``orchestrator.close()`` on discard. ``close()`` best-effort
+logs out any live session (so single-session firmware isn't left
+holding a lock — the same concern as § Session concurrency) and then
+releases the HTTP session's sockets deterministically rather than at
+GC. HA does this in ``async_unload_entry``, which runs before every
+reload. Any future "clear auth state" need is served by rebuild, not
+by re-adding a reset method.
+
+---
+
+### Base64 is an encoding on `form`, not its own strategy
+
+**Decision:** Modems that base64-encode the password use
+`encoding: base64` on the `form` strategy.
+
+**Rationale:** The flow is identical to a plain form POST; only the
+value differs. A separate strategy would duplicate the whole flow to
+change one transformation. Contrast `form_pbkdf2`, which is a genuinely
+different multi-round-trip exchange (see § Discrete strategies).
+
+---
+
+### JS-driven auth is a `form` variant
+
+**Decision:** Login flows driven by page JavaScript are configured as
+`form`, not as a distinct strategy.
+
+**Rationale:** Not distinct enough to justify its own type — the
+observable exchange is still a form POST. What the page script computes
+is captured as hidden fields or extracted values.
+
+---
+
+### No auth discovery
+
+**Decision:** Strategy *selection* is config-driven only. Core never
+inspects a login page at runtime to determine which auth type a modem
+uses.
+
+**Rationale:** Too fragile — firmware pages vary far more than the
+underlying exchange. Strategies do interact with login pages during
+*execution* (extracting hidden fields, nonces, salts); the ban is on
+using them to choose the strategy.
+
+---
+
+### `AuthResult.auth_context` is typed
+
+**Decision:** Auth strategies store downstream state in an
+`AuthContext` dataclass with named fields (`url_token`, `private_key`),
+which the runner reads by attribute based on `modem_config.transport`.
+
+**Rationale:** Adding a transport means adding a field, not inventing a
+magic string key. `cbn` needs no field at all — its session token lives
+in cookies managed by `requests.Session`.
+
+---
+
 ## Parsing Architecture
 
 ### Three roles: BaseParser, ModemParserCoordinator, parser.py
@@ -626,6 +837,44 @@ merge to work.
 
 ---
 
+### `parser.*` parses; `modem.yaml` owns everything else
+
+**Decision:** `parser.yaml` and `parser.py` are responsible for parsing
+and nothing else. `modem.yaml` owns identity, auth, session, actions,
+and metadata.
+
+**Rationale:** A clean split means a contributor changing extraction
+never touches auth, and vice versa. Where the declarative/code line
+falls inside the parser is the implementer's call per modem (see
+§ parser.yaml is primary).
+
+---
+
+### `modem-{variant}.yaml` per firmware variant
+
+**Decision:** Each firmware variant gets its own file carrying its own
+auth, session, and ISP config. Merging is implicit — variant files hold
+no references to each other.
+
+**Rationale:** Variants differ in ways that cut across the config, so
+expressing them as diffs against a base would be harder to read than
+stating each one whole. Independent files also give each variant
+independent test data and independent confirmation status.
+
+---
+
+### Coordinator parser registry
+
+**Decision:** Section type maps to parser function through a dict, not
+an isinstance chain. Unimplemented formats are registered stubs that
+raise `NotImplementedError` naming the missing parser.
+
+**Rationale:** Adding a format is one registry entry plus the parser.
+The stubs make an unsupported format fail with a useful name instead of
+falling through to a generic error.
+
+---
+
 ## Session and Action Model
 
 ### Signal/policy separation
@@ -674,6 +923,17 @@ are supported.
 
 **Constrains:** Cannot add modem commands beyond restart without
 expanding the action model. This is intentional.
+
+---
+
+### Health probe order: ICMP, then HEAD, then data poll
+
+**Decision:** Use the lightest probe the modem supports, escalating
+only when the lighter one is unavailable.
+
+**Rationale:** Never hammer a modem's web server to answer a question a
+ping can answer. Consumer modem HTTP stacks are weak, and health runs
+far more often than parsing.
 
 ---
 
@@ -887,6 +1147,18 @@ migrated test code.
 
 ---
 
+### HAR captures come from the `har-capture` utility
+
+**Decision:** Fixtures are captured with `har-capture`, which launches a
+fresh browser context.
+
+**Rationale:** A fresh context carries no stale cookies or cached
+session, so the capture contains the real auth exchange rather than a
+session that was already open. A HAR captured against a live session
+cannot prove how login works — see MODEM_INTAKE_WORKFLOW § Step 2.
+
+---
+
 ## Onboarding
 
 ### MCP tools for deterministic steps, Claude for judgment
@@ -923,6 +1195,43 @@ the authoring pipeline belongs with the package that implements it.
 **Constrains:** catalog_tools depends on Core's schema validators
 and test harness. Core does not depend on catalog_tools; the
 onboarding spec does not belong in Core's surface area.
+
+---
+
+### `enrich_metadata` separates inference from config assembly
+
+**Decision:** `generate_config` assembles YAML from known facts.
+Inferring facts from HAR analysis — `default_host` from request URLs,
+DOCSIS version from channel types — belongs to `enrich_metadata`,
+which reports inferred, missing, and conflicting fields.
+
+**Rationale:** Two different concerns with different failure modes.
+The split matters most for self-service contributors, who need to know
+*what is missing* when validation fails rather than just that it did.
+
+---
+
+### `write_modem_package` owns file placement
+
+**Decision:** A dedicated tool writes the catalog structure, rather
+than the pipeline handing configs to the LLM to place.
+
+**Rationale:** Guarantees the layout matches what the test harness
+expects. File naming and directory structure are exactly the kind of
+mechanical detail an LLM gets subtly wrong, and the failure surfaces
+later as a confusing discovery miss.
+
+---
+
+### No fallback or auto-detection
+
+**Decision:** If no `modem.yaml` matches, the integration cannot help.
+There is no generic scraper fallback.
+
+**Rationale:** A partial guess is worse than a clear failure — it
+produces plausible-looking wrong data. The answer to an unsupported
+modem is a HAR capture and a catalog entry, which is a path that ends
+in real support rather than a permanent approximation.
 
 ---
 

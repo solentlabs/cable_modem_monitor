@@ -19,12 +19,17 @@ from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.hnap import (
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.http import (
     _extract_form_pbkdf2,
     _extract_url_token_parts,
-    _has_credential_fields,
     _HttpAuthSignals,
     _is_login_url,
     _parse_auth_scheme,
     classify_form_fields,
     detect_encoding,
+)
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.patterns import (
+    _fleet_password_field_names,
+    get_fleet_password_field_names,
+    has_credential_fields,
+    is_password_field_name,
 )
 from solentlabs.cable_modem_monitor_catalog_tools.validation.har_utils import (
     parse_form_params,
@@ -301,6 +306,28 @@ class TestClassifyFormFields:
         assert pwd == "password"
         assert hidden == {"field1": "val1", "field2": "val2"}
 
+    def test_pws_is_a_password_field(self) -> None:
+        """Sercomm-style 'pws' field classified as the password."""
+        params = {"login_user": "admin", "pws": "c3dvcmRmaXNo"}
+        user, pwd, hidden = classify_form_fields(params)
+        assert user == "login_user"
+        assert pwd == "pws"
+        assert hidden == {}
+
+    def test_first_credential_field_wins(self) -> None:
+        """First password-shaped field is the password; later ones are not demoted to hidden."""
+        params = {
+            "login_user": "admin",
+            "pws": "c3dvcmRmaXNo",
+            "todo": "login",
+            "passwd": "c3dvcmRmaXNo",
+            "cur_passwd": "",
+        }
+        user, pwd, hidden = classify_form_fields(params)
+        assert user == "login_user"
+        assert pwd == "pws"
+        assert hidden == {"todo": "login"}
+
 
 class TestHasCredentialFields:
     """Credential field detection in POST data."""
@@ -308,21 +335,74 @@ class TestHasCredentialFields:
     def test_params_with_password(self) -> None:
         """Detects password field in structured params."""
         post_data = {"params": [{"name": "loginPassword", "value": "secret"}]}
-        assert _has_credential_fields(post_data) is True
+        assert has_credential_fields(post_data) is True
 
     def test_params_without_credentials(self) -> None:
         """No credential fields in non-auth form."""
         post_data = {"params": [{"name": "action", "value": "reboot"}]}
-        assert _has_credential_fields(post_data) is False
+        assert has_credential_fields(post_data) is False
 
     def test_text_with_password(self) -> None:
         """Detects password in URL-encoded text fallback."""
         post_data = {"text": "username=admin&password=secret"}
-        assert _has_credential_fields(post_data) is True
+        assert has_credential_fields(post_data) is True
+
+    def test_params_with_pws(self) -> None:
+        """Detects Sercomm-style 'pws' password field."""
+        post_data = {"params": [{"name": "pws", "value": "c3dvcmRmaXNo"}]}
+        assert has_credential_fields(post_data) is True
 
     def test_empty(self) -> None:
         """Empty postData returns False."""
-        assert _has_credential_fields({}) is False
+        assert has_credential_fields({}) is False
+
+
+class TestFleetDerivedPasswordFields:
+    """Committed catalog password_field names extend detection without a pattern edit."""
+
+    @pytest.fixture()
+    def novel_catalog(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        """Temp catalog with one modem whose password field matches no static substring."""
+        from solentlabs import cable_modem_monitor_catalog as catalog_pkg
+
+        modem_dir = tmp_path / "acme" / "a100"
+        modem_dir.mkdir(parents=True)
+        (modem_dir / "modem.yaml").write_text(
+            "auth:\n  strategy: form\n  password_field: geheimcode\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(catalog_pkg, "CATALOG_PATH", tmp_path)
+        _fleet_password_field_names.cache_clear()
+        yield
+        _fleet_password_field_names.cache_clear()
+
+    def test_exact_catalog_name_recognized(self, novel_catalog: None) -> None:
+        """A committed exact name is a password field."""
+        assert is_password_field_name("geheimcode") is True
+
+    def test_catalog_names_match_exactly_not_as_substrings(self, novel_catalog: None) -> None:
+        """Catalog-derived names never generalize; only curated substrings do."""
+        assert is_password_field_name("geheimcode2") is False
+
+    def test_static_substrings_still_apply(self, novel_catalog: None) -> None:
+        """Curated substrings work regardless of catalog contents."""
+        assert is_password_field_name("loginPassword") is True
+
+    def test_has_credential_fields_uses_catalog_names(self, novel_catalog: None) -> None:
+        """The login discriminator accepts a POST keyed by a committed exact name."""
+        post_data = {"params": [{"name": "geheimcode", "value": "secret"}]}
+        assert has_credential_fields(post_data) is True
+
+    def test_classify_uses_catalog_names(self, novel_catalog: None) -> None:
+        """A committed exact name classifies as the password, never as a hidden field."""
+        user, pwd, hidden = classify_form_fields({"user": "admin", "geheimcode": "secret"})
+        assert pwd == "geheimcode"
+        assert hidden == {}
+
+    def test_real_catalog_supplies_names(self) -> None:
+        """The real catalog scan yields the committed dm1000 name."""
+        _fleet_password_field_names.cache_clear()
+        assert "pws" in get_fleet_password_field_names()
 
 
 # -----------------------------------------------------------------------
@@ -399,6 +479,11 @@ class TestDetectEncoding:
     def test_missing_field(self) -> None:
         """Missing field defaults to plain."""
         assert detect_encoding({}, "password") == "plain"
+
+    def test_base64encode_call_on_login_page(self) -> None:
+        """Redacted POST value falls back to the login page's base64encode() call."""
+        html = "<script>document.tF.passwd.value = base64encode(document.tF.pws.value);</script>"
+        assert detect_encoding({"pws": "[REDACTED]"}, "pws", html) == "base64"
 
 
 # =====================================================================

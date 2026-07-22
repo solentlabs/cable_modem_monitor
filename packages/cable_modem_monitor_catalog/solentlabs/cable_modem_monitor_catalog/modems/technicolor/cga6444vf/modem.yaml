@@ -17,6 +17,15 @@ auth:
   login_success:
     error: "ok"
 
+session:
+  headers:
+    # Firmware rejects API GETs without these headers — 401 "session
+    # expired" moments after a successful login (#120). Every
+    # authenticated GET in the contributor HAR carries both. Same
+    # behavior as TG3442DE (#86). {base_url} resolves at session build.
+    X-Requested-With: "XMLHttpRequest"
+    Referer: "{base_url}/"
+
 actions:
   logout:
     type: http
@@ -69,6 +78,12 @@ notes: |
   Channel data from single /api/v1/sta_docsis_status endpoint.
   System info from /api/v1/sta_status endpoint.
   Single-session enforcement: MSG_LOGIN_150 if another session exists.
+  Login semantics (from the firmware's own login JS, #120): success is
+  error == "ok" with a session descriptor (uid, Dpd, intf); MSG_LOGIN_1
+  is not a failure code. Failures return error != "ok" — MSG_LOGIN_150
+  (session busy) or failedAttempts (bad credentials). login_success
+  mirrors this. The browser's salt POST also sends logout: <bool> to
+  evict a rival session; unimplemented in form_pbkdf2.
 
 references:
   issues:

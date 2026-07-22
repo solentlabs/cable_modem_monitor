@@ -35,7 +35,7 @@ sources:
   chipset: "[ModemGuides S33 review](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison) — same BCM3390 platform as S33/S34"
   detection_hints: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
-  channel_data: "[#98 jzucker2 HAR capture 2026-07-09](https://github.com/solentlabs/cable_modem_monitor/issues/98) — channel data observed on the wire; structure originally established from homeautomater screenshots and wild-confirmed by jzucker2 diagnostics (3.14.0-beta.3)"
+  channel_data: "[#98 jzucker2 HAR capture 2026-07-09](https://github.com/solentlabs/cable_modem_monitor/issues/98) — channel data observed on the wire; structure originally established from homeautomater screenshots and wild-confirmed by jzucker2 diagnostics (3.14.0-beta.3, re-confirmed 3.14.0-beta.14)"
   system_info_software: '[#98 jzucker2 HAR capture 2026-07-09](https://github.com/solentlabs/cable_modem_monitor/issues/98) — GetCustomerStatusSoftware observed with Cmswinfo.html in the capture: CustomerConnSystemUpTime "24 day(s) 10h:33m:56s" and StatusSoftwareHdVer 1.0 on firmware AT01.01.018.042324_S3.03.735'
 attribution:
   contributors:

@@ -75,8 +75,9 @@ def test_confirmed_modem_golden_spec_conformance(modem_test_case: ModemTestCase)
 def test_modem_restart_action(restart_test_case: RestartTestCase) -> None:
     """Each modem with a restart HAR fixture exercises the action pipeline against a mock server.
 
-    Adding restart action coverage for a modem = adding test_data/modem-restart.har.
-    No test code changes needed.
+    Adding restart action coverage for a modem = declaring actions.restart
+    with the restart click captured in test_data/modem.har (one HAR per
+    variant). No test code changes needed.
     """
     result = run_modem_restart_test(restart_test_case)
     assert result.passed, f"{result.test_name}: {result.error}"

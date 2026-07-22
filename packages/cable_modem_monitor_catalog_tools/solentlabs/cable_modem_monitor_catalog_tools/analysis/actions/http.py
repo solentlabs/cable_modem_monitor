@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ...validation.har_utils import parse_form_params, path_from_url
+from ...validation.har_utils import is_static_resource, parse_form_params, path_from_url
 from ..types import CoreGap
 from .callsite import find_ajax_callsites
 from .patterns import get_logout_patterns, get_restart_patterns
@@ -239,6 +239,19 @@ def _find_action_in_ajax_callsites(
     return None
 
 
+def _looks_like_endpoint(raw: str) -> bool:
+    """Check if a quoted source string reads as a request path, not a label or asset."""
+    # A bare word ("Reboot") is a UI label; ".." segments and static assets
+    # are page furniture. Matching them fabricates endpoints the firmware
+    # never exposes.
+    if ".." in raw.split("/"):
+        return False
+    if is_static_resource(raw):
+        return False
+    last_segment = raw.rstrip("/").rsplit("/", 1)[-1].split("?", 1)[0]
+    return "/" in raw or "." in last_segment
+
+
 def _find_action_in_quoted_strings(
     entries: list[dict[str, Any]],
     patterns: tuple[re.Pattern[str], ...],
@@ -251,6 +264,8 @@ def _find_action_in_quoted_strings(
             continue
         for match in _SOURCE_CANDIDATE_PATTERN.finditer(body):
             raw = match.group(1)
+            if not _looks_like_endpoint(raw):
+                continue
             path = raw if raw.startswith("/") else f"/{raw}"
             if any(p.search(path) for p in patterns):
                 return ActionDetail(

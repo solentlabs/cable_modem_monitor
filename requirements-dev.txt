@@ -36,6 +36,8 @@ pylint>=3.0.0                               # Optional static analysis
 # 🔍 Type checking
 # -------------------------------
 mypy>=2.1.0                                 # Static type checker
+pyright>=1.1.411                            # Second type checker; matches Pylance/VS Code diagnostics
+types-PyYAML>=6.0.0                         # Type stubs for PyYAML; yaml is imported across core and catalog_tools
 types-requests>=2.31.0,<2.33.0              # Type stubs for requests; capped: 2.33+ requires urllib3>=2, HA 2025.1.x requires urllib3<2
 
 # -------------------------------

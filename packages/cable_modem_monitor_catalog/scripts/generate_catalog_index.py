@@ -13,6 +13,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -428,9 +429,72 @@ def generate_index(output_path: Path | None = None) -> str:
     return markdown
 
 
+# Browser and capture-tool names that indicate a HAR recorded from real
+# hardware. Anything else is constructed to some degree.
+_REAL_CAPTURE_TOOLS = (
+    "playwright",
+    "firefox",
+    "webinspector",
+    "chrome",
+    "chromium",
+    "safari",
+    "edge",
+    "har-capture",
+)
+
+_CAPTURE_NOTES = {
+    "synthetic": "synthetic",
+    "reconstructed": "reconstructed",
+    "hybrid": "hybrid",
+    "generated": "generated",
+}
+
+# The creator block sits at the top of a HAR, so a bounded read avoids
+# parsing megabytes of entries just to classify the file.
+_CREATOR_RE = re.compile(r'"creator"\s*:\s*\{[^}]*?"name"\s*:\s*"([^"]*)"', re.DOTALL)
+
+_LFS_POINTER_PREFIX = "version https://git-lfs.github.com/spec/v1"
+
+
+def _capture_kind(har_path: Path) -> str:
+    """Classify a HAR as real, hybrid, synthetic, or generated from its creator."""
+    try:
+        head = har_path.read_text(errors="ignore")[:8192]
+    except OSError:
+        return "generated"
+    # An unsmudged pointer has no creator, so it would otherwise classify as
+    # "generated" — a legitimate value — and silently mislabel every fixture.
+    # Raise instead: the caller is running without LFS content.
+    if head.startswith(_LFS_POINTER_PREFIX):
+        msg = (
+            f"{har_path} is an unresolved Git LFS pointer, not a HAR. "
+            f"Fetch LFS content (git lfs pull) before generating the catalog audit; "
+            f"in CI, the job's checkout step needs lfs: true."
+        )
+        raise RuntimeError(msg)
+    match = _CREATOR_RE.search(head)
+    if not match or not match.group(1).strip():
+        # No recorded producer. These are built when the available evidence
+        # is partial — diagnostics, page source, or a trimmed capture rather
+        # than a full session — which happens for many reasons and is not
+        # confined to older entries. Treated as generated, not unknown.
+        return "generated"
+    creator = match.group(1).lower()
+    # Assembled forms are checked before the capture-tool list: a composite
+    # creator often names the tool it drew from ("composite (fixture +
+    # har-capture)"), which would otherwise read as a real capture.
+    # Vocabulary matches MODEM_INTAKE_WORKFLOW.md § Assembled fixtures.
+    if "reconstructed" in creator:
+        return "reconstructed"
+    if "composite" in creator:
+        return "hybrid"
+    if any(tool in creator for tool in _REAL_CAPTURE_TOOLS):
+        return "real"
+    return "synthetic"
+
+
 def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C901
     """Generate CATALOG_AUDIT.md — plain-language verification status for planning."""
-    import json as _json
 
     modems = load_catalog_modems()
     supported = [m for m in modems if m["status"] != "unsupported"]
@@ -446,14 +510,25 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         test_data = CATALOG_DIR / m["path"] / "test_data"
         return test_data.exists() and any(test_data.glob("*.verified.json"))
 
-    def has_synthetic_har(m: dict) -> bool:
-        # Synthetic if the matching expected.json _about mentions it
-        stem = m["yaml_file"].replace(".yaml", "")
-        exp = CATALOG_DIR / m["path"] / "test_data" / f"{stem}.expected.json"
-        if not exp.exists():
-            return False
-        about = (_json.loads(exp.read_text()) or {}).get("_about", "")
-        return "synthetic" in about.lower() or "synthesized" in about.lower()
+    def capture_note(m: dict) -> str:
+        # Read from each HAR's own ``creator`` rather than a hand-maintained
+        # note, so a constructed fixture cannot pass as a real capture. The
+        # previous check read expected.json ``_about``, a key present in 5 of
+        # 46 files, and surfaced nothing.
+        test_data = CATALOG_DIR / m["path"] / "test_data"
+        if not test_data.exists():
+            return ""
+        kinds = {_capture_kind(har) for har in sorted(test_data.glob("*.har"))}
+        if not kinds or kinds == {"real"}:
+            return "—"
+        # Report the weakest provenance present: a real capture alongside a
+        # constructed one does not make the entry fully evidence-backed.
+        # Order runs weakest first — a reconstruction was never observed on
+        # the target hardware, while a hybrid is entirely real bytes.
+        for kind in ("synthetic", "generated", "reconstructed", "hybrid"):
+            if kind in kinds:
+                return _CAPTURE_NOTES[kind]
+        return "—"
 
     needs_testing = [m for m in awaiting if not has_verified(m)]
     pending_review = [m for m in awaiting if has_verified(m)]
@@ -468,20 +543,38 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         "",
         "---",
         "",
+        "## Capture column",
+        "",
+        "How each fixture was produced, read from the HAR's `creator` field.",
+        "Definitions and rules:",
+        "[MODEM_INTAKE_WORKFLOW.md § Assembled fixtures](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md#assembled-fixtures).",
+        "",
+        "| Value | Meaning |",
+        "|-------|---------|",
+        "| `—` | Recorded from real hardware by a browser or capture tool |",
+        "| `hybrid` | Assembled from multiple real captures of the same unit; every byte observed |",
+        "| `reconstructed` | Built on a sibling model's template; structure never observed on this hardware |",
+        "| `synthetic` | Built from partial evidence; the fixture names its producer |",
+        "| `generated` | Built from partial evidence; no producer recorded in the file |",
+        "",
+        "An entry showing anything other than `—` would benefit from a real",
+        "capture. Where an entry has several fixtures, the weakest is shown.",
+        "",
+        "---",
+        "",
         "## Needs Testing",
         "",
         "The integration is implemented and CI passes for these modems.",
         "They just need someone with that hardware to confirm it works",
         "and share a diagnostics snapshot.",
         "",
-        "| Modem | Transport | ISPs | Note |",
-        "|-------|-----------|------|------|",
+        "| Modem | Transport | ISPs | Capture |",
+        "|-------|-----------|------|---------|",
     ]
 
     for m in needs_testing:
         isp_str = ", ".join(m["isps"]) if m["isps"] else "—"
-        note = "synthetic fixture — real capture also welcome" if has_synthetic_har(m) else ""
-        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {note} |")
+        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {capture_note(m)} |")
 
     lines += [
         "",
@@ -490,13 +583,13 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         "These have a hardware report on file but haven't been promoted to Confirmed yet.",
         "May have open repair work — review individually.",
         "",
-        "| Modem | Transport | ISPs |",
-        "|-------|-----------|------|",
+        "| Modem | Transport | ISPs | Capture |",
+        "|-------|-----------|------|---------|",
     ]
 
     for m in pending_review:
         isp_str = ", ".join(m["isps"]) if m["isps"] else "—"
-        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} |")
+        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {capture_note(m)} |")
 
     with_gaps = [m for m in confirmed if m["gaps"]]
     if with_gaps:
@@ -533,8 +626,8 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         "Working on real hardware with a report on file.",
         "Entries with an open capability gap are listed above, not here.",
         "",
-        "| Modem | Transport | ISPs |",
-        "|-------|-----------|------|",
+        "| Modem | Transport | ISPs | Capture |",
+        "|-------|-----------|------|---------|",
     ]
 
     # Gap-bearing modems are rendered in "Confirmed with Gaps" above;
@@ -543,7 +636,7 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         if m["gaps"]:
             continue
         isp_str = ", ".join(m["isps"]) if m["isps"] else "—"
-        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} |")
+        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {capture_note(m)} |")
 
     lines += [
         "",

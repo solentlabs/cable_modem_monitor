@@ -385,8 +385,9 @@ def _wait_for_socket(timeout_seconds=15):
 def _start_distro_proxy(docker_exe):
     """Recreate /var/run/docker.sock by launching Docker's per-distro proxy.
 
-    The engine is already up; only this distro's socket is missing (the usual
-    state after a Docker Desktop update wipes the WSL-integration config).
+    The engine is already up; only this distro's socket is missing — either a
+    Docker Desktop update wiped the WSL-integration config, or provisioning
+    never completed within the grace period.
     Starting the proxy directly is far less disruptive than restarting the
     backend distro. The proxy binds a socket under root-owned /var/run and runs
     for the life of the session, so it must go through sudo and stay detached.
@@ -415,7 +416,8 @@ def _start_distro_proxy(docker_exe):
         + " >/tmp/docker-distro-proxy.log 2>&1 </dev/null &"
     )
     print("")
-    print("  Reconnecting Docker to this WSL distro (may prompt for sudo)...")
+    print("  Reconnecting Docker to this WSL distro...")
+    print("  (sudo: the proxy binds a socket in root-owned /var/run)")
     try:
         subprocess.run(["sudo", "bash", "-c", inner], check=False)
     except (FileNotFoundError, OSError):
@@ -458,9 +460,12 @@ def _reconnect_engine_socket(docker_exe, grace_wait):
     print("  Docker's engine is up but not yet connected to this WSL distro.")
     if grace_wait and is_docker_desktop_running():
         print("  Docker Desktop is running and may still be provisioning it.")
-        if _wait_for_socket(30):
+        # Cold-boot provisioning routinely runs well past 30s. Match the
+        # patience already granted to the engine so Desktop can finish on
+        # its own instead of falling through to the sudo proxy.
+        if _wait_for_socket(120):
             return True
-    print("  Reconnecting it (typical after a Docker Desktop update).")
+    print("  Desktop hasn't provisioned it — starting the proxy directly.")
     return _start_distro_proxy(docker_exe)
 
 
@@ -542,16 +547,17 @@ def _prompt_start_docker_wsl(docker_exe):
                 stderr=subprocess.DEVNULL,
             )
             print(" started")
-            # A cold start (first launch after reboot) regularly needs more
-            # than 60s before the engine answers.
-            if _wait_for_docker_ready(120):
+            # A cold start (first launch after reboot) has been observed to
+            # need more than 120s before the engine answers.
+            if _wait_for_docker_ready(180):
                 return True
             # The engine may have come up mid-wait without this distro's
-            # socket (broken WSL integration never provisions it). Reconnect
-            # now instead of exiting for another manual run — Desktop already
-            # had the whole wait to provision, so skip the grace period.
+            # socket. Socket provisioning starts when the engine comes up,
+            # not when Desktop launches — an engine that answered late in the
+            # wait has had only seconds to provision, so grant the grace
+            # period before spending a sudo prompt on the proxy reconnect.
             if _engine_up_but_socket_missing():
-                return _reconnect_engine_socket(docker_exe, grace_wait=False)
+                return _reconnect_engine_socket(docker_exe, grace_wait=True)
             return False
     except (EOFError, KeyboardInterrupt):
         print("")

@@ -12,8 +12,8 @@ Common issues and solutions for Cable Modem Monitor.
 
 - [Connection and Authentication Issues](#connection-and-authentication-issues)
   - [Degraded Mode (Web Server Hung)](#2b-degraded-mode-web-server-hung)
-  - [Combo Modem/Routers (Two IP Addresses)](#6-combo-modemrouters-two-ip-addresses)
-  - [Multiple Home Assistant Instances](#8-multiple-home-assistant-instances-polling-the-same-modem)
+  - [Combo Modem/Routers (Two IP Addresses)](#5-combo-modemrouters-two-ip-addresses)
+  - [Multiple Home Assistant Instances](#7-multiple-home-assistant-instances-polling-the-same-modem)
 - [Understanding the Status Sensor](#understanding-the-status-sensor)
 - [Understanding Log Output](#understanding-log-output)
 - [Upstream Sensors Not Appearing](#upstream-sensors-not-appearing)
@@ -132,7 +132,7 @@ WARNING: Health check [MB7621]: degraded (ICMP 2ms, HTTP HEAD timeout)
    - Settings > Devices & Services > Cable Modem Monitor
    - Click Configure > Update credentials
 
-#### 5. Incorrect IP Address or Port
+#### 4. Incorrect IP Address or Port
 
 **Symptoms:**
 
@@ -153,7 +153,7 @@ WARNING: Health check [MB7621]: degraded (ICMP 2ms, HTTP HEAD timeout)
    - Windows: `ipconfig | findstr "Default Gateway"`
    - Linux/Mac: `ip route | grep default`
 
-#### 6. Combo Modem/Routers (Two IP Addresses)
+#### 5. Combo Modem/Routers (Two IP Addresses)
 
 **Symptoms:**
 
@@ -187,7 +187,7 @@ If you see `icmp_blocked` status:
 
 **Note:** This only applies to combo modem/router devices. Standalone modems (like Arris SB8200, Netgear CM2000) only have one interface.
 
-#### 7. ISP Disabled Web Interface
+#### 6. ISP Disabled Web Interface
 
 **Symptoms:**
 
@@ -200,7 +200,7 @@ If you see `icmp_blocked` status:
 - Some ISPs disable modem web interfaces (Xfinity, Rogers, etc.)
 - **No workaround available** - Contact your ISP
 
-#### 8. Multiple Home Assistant Instances Polling the Same Modem
+#### 7. Multiple Home Assistant Instances Polling the Same Modem
 
 **Symptoms:**
 

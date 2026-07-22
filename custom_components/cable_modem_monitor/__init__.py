@@ -22,10 +22,12 @@ from datetime import timedelta
 from importlib.metadata import version as pkg_version
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_core.config_loader import (
@@ -92,7 +94,7 @@ from .lib.utils import get_device_name
 from .mapping_manager import ChannelMap, build_channel_map
 from .migrations import async_run_migrations
 from .recovery_adapter import attach_recovery_cadence_listener
-from .services import async_register_services, async_unregister_services
+from .services import async_register_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -205,6 +207,62 @@ def _rebuild_channel_map(
         snapshot.modem_data.get("upstream", []),
         identity_mode,
     )
+
+
+def _start_reauth_on_lockout(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    snapshot: ModemSnapshot,
+    orchestrator: Orchestrator,
+    model: str,
+) -> None:
+    """Start HA's reauth flow when the auth circuit breaker opens."""
+    # Reauth is HA's surface for a credential lockout: a
+    # "Reauthentication required" notification with the fix form.
+    # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reauthentication-flow/
+    # Contract: HA_ADAPTER_SPEC.md § Reauth Flow, UC-81, UC-87.
+    # Core integrations trigger this by raising ConfigEntryAuthFailed,
+    # but that also flips every entity unavailable; our Status sensor is
+    # the sole outage announcer (#178), so we call the API directly.
+    if snapshot.connection_status is not ConnectionStatus.AUTH_FAILED:
+        return
+    # Breaker open — not a lone AUTH_FAILED poll — is the trigger:
+    # definitive credential rejections trip it immediately (UC-87),
+    # stale-session failures only after 6 in a row (UC-81), so
+    # transient flakes never interrupt the user.
+    if not orchestrator.diagnostics().circuit_breaker_open:
+        return
+    # HA dedupes inside async_start_reauth too; this guard keeps the
+    # WARNING to one line per lockout instead of one per poll.
+    if any(entry.async_get_active_flows(hass, {SOURCE_REAUTH})):
+        return
+    _LOGGER.warning(
+        "Auth circuit breaker open [%s] — starting reauthentication flow",
+        model,
+    )
+    entry.async_start_reauth(hass)
+
+
+def _log_availability_transition(
+    snapshot: ModemSnapshot,
+    model: str,
+    reported_unavailable: list[bool],
+) -> None:
+    """Log one line per availability edge rather than one per poll."""
+    # The coordinator never raises (Core returns snapshots carrying an
+    # error field instead), so HA's built-in once-per-transition
+    # unavailable logging never engages and we track the edge ourselves.
+    if snapshot.error:
+        if not reported_unavailable[0]:
+            reported_unavailable[0] = True
+            _LOGGER.warning(
+                "Modem unavailable [%s] — %s",
+                model,
+                snapshot.connection_status.value,
+            )
+    elif reported_unavailable[0]:
+        reported_unavailable[0] = False
+        _LOGGER.info("Modem available again [%s]", model)
 
 
 def _build_snapshot_payload(snapshot: ModemSnapshot) -> dict[str, Any]:
@@ -328,13 +386,25 @@ def _attach_health_sync_listeners(
     data_coordinator.async_add_listener(_on_data_update)
 
 
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register integration-global services at component load.
+
+    Bronze action-setup: services are registered once here, not per
+    config entry, so they exist even before any entry is set up (and a
+    re-added entry keeps them). Handlers resolve their target config
+    entry at call time. See HA_ADAPTER_SPEC.md § Services.
+    """
+    async_register_services(hass)
+    return True
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: CableModemConfigEntry,
 ) -> bool:
     """Set up Cable Modem Monitor from a config entry.
 
-    Follows the 12-step startup sequence defined in HA_ADAPTER_SPEC.md.
+    Follows the startup sequence defined in HA_ADAPTER_SPEC.md.
     Steps 1-5 (config loading, Core component creation) run in an
     executor thread because they involve file I/O.
     """
@@ -367,9 +437,14 @@ async def async_setup_entry(
         orchestrator, health_monitor, modem_identity = await hass.async_add_executor_job(
             _create_core_components, entry.data
         )
-    except Exception:
+    except Exception as err:
+        # A missing or corrupt catalog config is a permanent
+        # misconfiguration — HA's retry won't fix it — so raise
+        # ConfigEntryError (not ConfigEntryNotReady). The modem being
+        # unreachable is a different case: the first poll never raises
+        # and setup proceeds with deferred entities (see § Data Coordinator).
         _LOGGER.exception("Failed to load modem configuration from catalog")
-        return False
+        raise ConfigEntryError(f"Failed to load modem configuration from catalog: {err}") from err
 
     # Step 6: Create data DataUpdateCoordinator
     host = entry.data[CONF_HOST]
@@ -378,14 +453,14 @@ async def async_setup_entry(
 
     identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
 
+    # Mutable cell so the edge survives across polls (Silver
+    # log-when-unavailable); see _log_availability_transition.
+    reported_unavailable = [False]
+
     async def _async_update_data() -> ModemSnapshot:
         snapshot = await hass.async_add_executor_job(orchestrator.get_modem_data)
-        if snapshot.error:
-            _LOGGER.info(
-                "Update [%s] — no data (%s)",
-                model,
-                snapshot.connection_status.value,
-            )
+        _log_availability_transition(snapshot, model, reported_unavailable)
+        _start_reauth_on_lockout(hass, entry, snapshot, orchestrator, model)
         _rebuild_channel_map(entry, snapshot, identity_mode)
         await _check_channel_bond_change(hass, entry, snapshot, orchestrator, model)
         hass.bus.async_fire(
@@ -473,9 +548,8 @@ async def async_setup_entry(
     # Step 11: Update device registry
     _update_device_registry(hass, entry)
 
-    # Step 12: Register services (if first entry)
-    if not hass.services.has_service(DOMAIN, "generate_dashboard"):
-        async_register_services(hass)
+    # Services are registered in async_setup (integration-global), not
+    # here — see § Services.
 
     # Log operational summary — after this, per-poll details are DEBUG only
     _log_operational_summary(scan_interval, health_check_interval, model)
@@ -536,9 +610,15 @@ async def async_unload_entry(
     # Unload platforms
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    # Unregister services if last entry
-    if unload_ok and not hass.config_entries.async_entries(DOMAIN):
-        async_unregister_services(hass)
+    if unload_ok:
+        # Log out any live modem session and release the socket pool now
+        # rather than leaving a lock / lingering to GC — matters on reload
+        # so the fresh orchestrator doesn't collide with a dying one. Both
+        # steps are blocking network/socket work, hence the executor.
+        await hass.async_add_executor_job(entry.runtime_data.orchestrator.close)
+
+    # Services are integration-global (registered in async_setup); they
+    # outlive the entry and are not unregistered here.
 
     _LOGGER.info("Unloaded [%s]", model)
     return unload_ok

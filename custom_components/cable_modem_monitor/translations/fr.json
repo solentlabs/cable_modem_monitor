@@ -2,29 +2,29 @@
   "config": {
     "step": {
       "user": {
-        "title": "Moniteur de Modem Cable",
+        "title": "Moniteur de Modem Câble",
         "description": "Sélectionnez un fabricant ou choisissez 'Tous'.",
         "data": {
           "manufacturer": "Fabricant"
         }
       },
       "model": {
-        "title": "Selectionner le Modem",
-        "description": "Choisissez un modele de modem {manufacturer}. Les modeles marques * ne sont pas verifies.",
+        "title": "Sélectionner le Modem",
+        "description": "Choisissez un modèle de modem {manufacturer}. Les modèles marqués d'un * ne sont pas vérifiés.",
         "data": {
-          "model": "Modele de Modem",
-          "entity_prefix": "Prefixe d'Entity ID",
-          "channel_identity": "Channel Naming"
+          "model": "Modèle de Modem",
+          "entity_prefix": "Préfixe d'Entity ID",
+          "channel_identity": "Nommage des canaux"
         },
         "data_description": {
-          "model": "Selectionnez votre modele de modem dans la liste.",
-          "entity_prefix": "Ajoute le nom du modele ou l'IP aux Entity ID. Requis pour surveiller plusieurs modems.",
-          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
+          "model": "Sélectionnez votre modèle de modem dans la liste.",
+          "entity_prefix": "Ajoute le nom du modèle ou l'IP aux Entity ID. Requis pour surveiller plusieurs modems.",
+          "channel_identity": "Numéro de canal nomme les entités d'après la position de ligne du modem (stable après un redémarrage). ID de canal utilise l'ID de canal DOCSIS (correspond aux diagnostics du FAI, mais peut changer au redémarrage)."
         }
       },
       "variant": {
         "title": "Variante de Firmware",
-        "description": "Votre modem possede plusieurs variantes de firmware avec des authentifications differentes. Selectionnez celle qui correspond a votre configuration.",
+        "description": "Votre modem possède plusieurs variantes de firmware avec des authentifications différentes. Sélectionnez celle qui correspond à votre configuration.",
         "data": {
           "variant": "Variante"
         },
@@ -34,7 +34,7 @@
       },
       "connection": {
         "title": "Connexion",
-        "description": "Variante sélectionnée : {variant}\n\nEntrez les details de connexion de votre modem.",
+        "description": "Variante sélectionnée : {variant}\n\nEntrez les détails de connexion de votre modem.",
         "data": {
           "variant": "Variante",
           "host": "Adresse IP du Modem",
@@ -43,14 +43,14 @@
         },
         "data_description": {
           "variant": "Ne changez que si vous pensez qu'une autre variante correspond à votre modem.",
-          "host": "Generalement 192.168.100.1. Incluez http:// ou https:// pour ignorer la detection de protocole.",
+          "host": "Généralement 192.168.100.1. Incluez http:// ou https:// pour ignorer la détection de protocole.",
           "username": "Laisser vide si non requis.",
           "password": "Laisser vide si non requis."
         }
       },
       "reauth_confirm": {
-        "title": "Reauthentification",
-        "description": "Le modem a rejete vos identifiants. Veuillez les saisir a nouveau.",
+        "title": "Réauthentification",
+        "description": "Le modem a rejeté vos identifiants. Veuillez les saisir à nouveau.",
         "data": {
           "host": "Adresse IP du Modem",
           "username": "Nom d'utilisateur",
@@ -59,18 +59,18 @@
       }
     },
     "error": {
-      "network_unreachable": "Impossible d'atteindre le modem.\n\nVerifiez :\n1. Vous etes sur le reseau du modem (pas le WiFi invite)\n2. Le VPN est deconnecte\n3. L'adresse IP est correcte (generalement 192.168.100.1)\n4. L'interface web du modem est accessible dans votre navigateur",
-      "cannot_connect": "Le modem ne repond pas.\n\nVerifiez :\n1. L'adresse IP est correcte\n2. Essayez d'inclure le protocole (ex. : http://192.168.100.1)\n3. L'interface web du modem est accessible depuis le reseau de Home Assistant",
-      "invalid_auth": "Echec de connexion.\n\nVerifiez :\n1. Le nom d'utilisateur est correct (generalement 'admin')\n2. Le mot de passe est correct (verifiez l'etiquette du modem)\n3. Essayez de vous connecter via votre navigateur d'abord pour verifier les identifiants",
-      "parse_failed": "Connecte, mais impossible de lire les donnees du modem.\n\nCela peut signifier que votre modem necessite une selection de variante differente. Essayez de revenir en arriere et de selectionner une autre option, ou verifiez que le firmware de votre modem est compatible.",
-      "unknown": "Erreur inattendue. Verifiez les journaux de Home Assistant pour plus de details."
+      "network_unreachable": "Impossible d'atteindre le modem.\n\nVérifiez :\n1. Vous êtes sur le réseau du modem (pas le WiFi invité)\n2. Le VPN est déconnecté\n3. L'adresse IP est correcte (généralement 192.168.100.1)\n4. L'interface web du modem est accessible dans votre navigateur",
+      "cannot_connect": "Le modem ne répond pas.\n\nVérifiez :\n1. L'adresse IP est correcte\n2. Essayez d'inclure le protocole (ex. : http://192.168.100.1)\n3. L'interface web du modem est accessible depuis le réseau de Home Assistant",
+      "invalid_auth": "Échec de connexion.\n\nVérifiez :\n1. Le nom d'utilisateur est correct (généralement 'admin')\n2. Le mot de passe est correct (vérifiez l'étiquette du modem)\n3. Essayez de vous connecter via votre navigateur d'abord pour vérifier les identifiants",
+      "parse_failed": "Connecté, mais impossible de lire les données du modem.\n\nCela peut signifier que votre modem nécessite une sélection de variante différente. Essayez de revenir en arrière et de sélectionner une autre option, ou vérifiez que le firmware de votre modem est compatible.",
+      "unknown": "Erreur inattendue. Vérifiez les journaux de Home Assistant pour plus de détails."
     },
     "abort": {
-      "already_configured": "Ce modem est deja configure.",
-      "missing_input": "Des donnees obligatoires sont manquantes. Veuillez relancer la configuration.",
-      "unknown_model": "Le modem selectionne est introuvable dans le catalogue.",
-      "reauth_successful": "Reauthentification reussie.",
-      "reauth_failed": "Echec de la reauthentification. Veuillez reessayer."
+      "already_configured": "Ce modem est déjà configuré.",
+      "missing_input": "Des données obligatoires sont manquantes. Veuillez relancer la configuration.",
+      "unknown_model": "Le modem sélectionné est introuvable dans le catalogue.",
+      "reauth_successful": "Réauthentification réussie.",
+      "reauth_failed": "Échec de la réauthentification. Veuillez réessayer."
     },
     "progress": {
       "validate": "Connexion au modem..."
@@ -79,125 +79,33 @@
   "options": {
     "step": {
       "init": {
-        "title": "Parametres du Modem Cable",
-        "description": "Mettez a jour les details de connexion et les intervalles d'interrogation.",
+        "title": "Paramètres du Modem Câble",
+        "description": "Mettez à jour les détails de connexion et les intervalles d'interrogation.",
         "data": {
           "host": "Adresse IP du Modem",
           "username": "Nom d'utilisateur",
           "password": "Mot de passe",
-          "scan_interval": "Intervalle d'Interrogation des Donnees",
-          "health_check_interval": "Intervalle de Verification de l'Etat"
+          "scan_interval": "Intervalle d'Interrogation des Données",
+          "health_check_interval": "Intervalle de Vérification de l'État"
         },
         "data_description": {
-          "host": "Generalement 192.168.100.1",
+          "host": "Généralement 192.168.100.1",
           "username": "Laisser vide si non requis.",
           "password": "Vide conserve le mot de passe actuel.",
-          "scan_interval": "Frequence d'interrogation des donnees du modem. Par defaut 10 minutes. Reglez sur 00:00:00 pour desactiver l'interrogation automatique (mise a jour manuelle uniquement via le bouton Actualiser).",
-          "health_check_interval": "Frequence de verification de l'accessibilite du modem. Par defaut 30 secondes. Reglez sur 00:00:00 pour desactiver les verifications d'etat."
+          "scan_interval": "Fréquence d'interrogation des données du modem. Par défaut 10 minutes. Réglez sur 00:00:00 pour désactiver l'interrogation automatique (mise à jour manuelle uniquement via le bouton Actualiser).",
+          "health_check_interval": "Fréquence de vérification de l'accessibilité du modem. Par défaut 30 secondes. Réglez sur 00:00:00 pour désactiver les vérifications d'état."
         }
       }
     },
     "error": {
-      "network_unreachable": "Impossible d'atteindre le modem. Verifiez l'adresse IP et la connectivite reseau.",
-      "cannot_connect": "Le modem ne repond pas. Verifiez l'adresse IP et le protocole.",
-      "invalid_auth": "Echec de connexion. Verifiez le nom d'utilisateur et le mot de passe.",
-      "parse_failed": "Connecte, mais impossible de lire les donnees du modem.",
-      "unknown": "Erreur inattendue. Verifiez les journaux de Home Assistant."
+      "network_unreachable": "Impossible d'atteindre le modem. Vérifiez l'adresse IP et la connectivité réseau.",
+      "cannot_connect": "Le modem ne répond pas. Vérifiez l'adresse IP et le protocole.",
+      "invalid_auth": "Échec de connexion. Vérifiez le nom d'utilisateur et le mot de passe.",
+      "parse_failed": "Connecté, mais impossible de lire les données du modem.",
+      "unknown": "Erreur inattendue. Vérifiez les journaux de Home Assistant."
     },
     "progress": {
       "validate": "Validation de la connexion..."
-    }
-  },
-  "services": {
-    "generate_dashboard": {
-      "name": "Generer le Tableau de Bord",
-      "description": "Genere du YAML Lovelace pret a l'emploi pour votre tableau de bord de modem cable. Copiez la sortie et collez-la dans une carte Manuel.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
-        },
-        "include_status_card": {
-          "name": "Carte d'Etat",
-          "description": "Etat du modem, temps de fonctionnement, nombre de canaux et bouton de redemarrage."
-        },
-        "include_downstream_power": {
-          "name": "Graphique de Puissance Descendante",
-          "description": "Niveaux de puissance pour tous les canaux descendants."
-        },
-        "include_downstream_snr": {
-          "name": "Graphique SNR Descendant",
-          "description": "Rapport signal sur bruit pour tous les canaux descendants."
-        },
-        "include_downstream_frequency": {
-          "name": "Graphique de Frequence Descendante",
-          "description": "Frequence de tous les canaux descendants."
-        },
-        "include_upstream_power": {
-          "name": "Graphique de Puissance Montante",
-          "description": "Niveaux de puissance pour tous les canaux montants."
-        },
-        "include_upstream_frequency": {
-          "name": "Graphique de Frequence Montante",
-          "description": "Frequence de tous les canaux montants."
-        },
-        "include_errors": {
-          "name": "Graphiques d'Erreurs",
-          "description": "Compteurs d'erreurs corrigees et non corrigees (vue sur 7 jours)."
-        },
-        "include_error_rates": {
-          "name": "Graphiques de Taux d'Erreurs",
-          "description": "Ajoute les graphiques de taux d'erreurs par minute (erreurs/min, vue sur 7 jours). Desactive par defaut : les taux fluctuent a chaque interrogation."
-        },
-        "include_latency": {
-          "name": "Graphique de Latence",
-          "description": "Temps de reponse ping et HTTP (vue sur 6 heures)."
-        },
-        "graph_hours": {
-          "name": "Historique des Graphiques (heures)",
-          "description": "Heures d'historique pour les graphiques de puissance/SNR (erreurs et latence utilisent des periodes fixes)."
-        },
-        "short_titles": {
-          "name": "Utiliser des Titres Courts",
-          "description": "Court : 'DS Power (dBmV)' vs Long : 'Downstream Power Levels (dBmV)'."
-        },
-        "status_card_exclude": {
-          "name": "Champs exclus de la carte d'état",
-          "description": "Champs à omettre de la carte d'état générée. Vide par défaut ; ajoutez docsis_status pour supprimer la ligne d'état DOCSIS, ou tout nom de champ transmis pour supprimer sa ligne."
-        }
-      }
-    },
-    "request_refresh": {
-      "name": "Request Refresh",
-      "description": "Triggers an immediate modem data poll, bypassing any connectivity backoff. Use in automations to refresh modem data on demand."
-    },
-    "request_health_check": {
-      "name": "Request Health Check",
-      "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
-    },
-    "convert_channel_identity": {
-      "name": "Convert Channel Identity",
-      "description": "Renames recorder statistics to match the current channel identity mode after re-adding the integration in the other mode. Modem must be online.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to convert. Defaults to the first configured modem."
-        }
-      }
-    },
-    "orphaned_statistics": {
-      "name": "Orphaned Statistics",
-      "description": "Finds recorder statistics for this modem that have no registered entity — left behind by a mode switch, channel rebonding (ID mode), or a prefix change. Without execute, returns a preview of orphaned entities. With execute: true, purges them all directly. Purge is permanent.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to inspect. Defaults to the first configured modem."
-        },
-        "execute": {
-          "name": "Execute",
-          "description": "Set to true to purge all orphaned statistics immediately. Default is false (preview only). Purge is permanent and cannot be undone."
-        }
-      }
     }
   }
 }

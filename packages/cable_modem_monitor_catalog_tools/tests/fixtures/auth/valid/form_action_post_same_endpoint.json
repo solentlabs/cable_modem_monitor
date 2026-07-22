@@ -1,0 +1,59 @@
+{
+  "_description": "Two form POSTs to one endpoint: the credential-shaped POST is the login even when an action POST to the same endpoint comes later in the capture",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/setup.cgi",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {"name": "login_user", "value": "admin"},
+            {"name": "pws", "value": "c3dvcmRmaXNo"},
+            {"name": "todo", "value": "login"}
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "cookies": [],
+        "content": {"size": 500, "text": "<html>index</html>"}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/setup.cgi",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {"name": "todo", "value": "reboot"},
+            {"name": "this_file", "value": "adv_Product.html"}
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "cookies": [],
+        "content": {"size": 200, "text": "<html>rebooting</html>"}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "action": "/setup.cgi",
+    "username_field": "login_user",
+    "password_field": "pws",
+    "encoding": "base64",
+    "login_page": "",
+    "hidden_fields": {"todo": "login"}
+  }
+}

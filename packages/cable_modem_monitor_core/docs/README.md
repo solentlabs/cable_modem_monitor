@@ -39,3 +39,46 @@ authoring package — HA never installs it. See ARCHITECTURE_DECISIONS.md
 | [CONFIG_FLOW_SPEC.md](../../../custom_components/cable_modem_monitor/docs/CONFIG_FLOW_SPEC.md) | Setup wizard — steps, config entry, variant resolution |
 | [ENTITY_MODEL_SPEC.md](../../../custom_components/cable_modem_monitor/docs/ENTITY_MODEL_SPEC.md) | Core output → HA entities, attributes, availability |
 | [HA_ADAPTER_SPEC.md](../../../custom_components/cable_modem_monitor/docs/HA_ADAPTER_SPEC.md) | HA wiring — runtime data, coordinators, polling modes, restart, reauth |
+
+## Conventions
+
+Where content goes when adding or editing specs.
+
+### Which document
+
+- `ARCHITECTURE.md` — how the system fits together: packages,
+  boundaries, invariants, extension points.
+- `ARCHITECTURE_DECISIONS.md` — why it is that way: distilled
+  decisions, their rationale, and what they constrain. Design detail
+  links out to the spec that owns it.
+- `*_SPEC.md` files — contracts the code must satisfy: signatures,
+  schemas, rules. The test for spec text: it can be checked against
+  the implementation.
+- Runnable procedures a person executes step by step belong in
+  workflow docs (e.g. the catalog tools intake workflow), which cite
+  the governing spec rather than restating its rules.
+
+### Own file vs a section
+
+A topic earns its own file when it has its own conformance surface —
+a protocol, format, or subsystem implemented or verified in isolation
+(each auth strategy and parser format has one). Otherwise it is a
+section in the doc that already governs the surrounding surface. A
+new file always gets a row in the index above.
+
+### Anti-bloat
+
+- One home per rule. A fact stated in two docs will drift; state it
+  once and link from everywhere else.
+- Specs state the current contract only — no version history or
+  "previously" narrative; git carries that.
+- Quote code only as far as the contract requires (public signature,
+  schema); implementation detail stays in code.
+- A decision enters `ARCHITECTURE_DECISIONS.md` only if it constrains
+  future work; alternatives merely considered are omitted.
+
+### Cross-linking
+
+Cite as `FILE.md § Section Name` with a relative link. The doc that
+owns a rule is the link target; consumers point to it with at most
+one sentence of local context.

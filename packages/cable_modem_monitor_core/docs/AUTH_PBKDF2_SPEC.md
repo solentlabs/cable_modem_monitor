@@ -61,7 +61,7 @@ What's hardcoded in `auth/form_pbkdf2.py` that is specific to the Technicolor RE
 | POST field names | `"username"`, `"password"` | Technicolor login.js | Other vendors may use different field names |
 | Salt response fields | `"salt"`, `"saltwebui"` | Technicolor login.js, HAR | Different API may use different key names |
 | Salt trigger value | default `"seeksalthash"` | Technicolor login.js | Other firmware may use different trigger |
-| Success criteria | HTTP != 401 AND (`login_success` dict matches response, OR `"error"` is falsy/absent) | HAR response analysis; CGA6444VF confirmed `{"error":"ok"}` on success | Configurable via `login_success` in modem.yaml |
+| Success criteria | HTTP != 401 AND (`login_success` dict matches response, OR `"error"` is falsy/absent) | HAR response analysis; `{"error":"ok"}` confirmed on success | Configurable via `login_success` in modem.yaml |
 | Error detail field | `"message"` key in error response | HAR response analysis | Firmware-specific |
 | Form-encoded POST | `application/x-www-form-urlencoded` | HAR request headers, login.js jQuery `$.ajax({data})` | All known Technicolor REST modems use form-encoded |
 | Same endpoint for salt and login | Single `login_endpoint` for both rounds | Technicolor API design | Other designs may separate these |
@@ -84,22 +84,35 @@ Fields that map to **firmware** (Technicolor-level):
 
 ## Evidence Base
 
-| Source | Location | Status |
-|---|---|---|
-| CGA4236 HAR capture | Catalog test data | Analyzed |
-| CGA6444VF HAR capture | Catalog test data | Analyzed |
-| login.js (PBKDF2 flow) | HAR entries -- JavaScript source | Partially redacted in one HAR, visible in another |
-| Issue #115 | [CGA4236](https://github.com/solentlabs/cable_modem_monitor/issues/115) | Open |
-| Issue #120 | [CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120) | Open |
+A protocol claim in this spec is evidence-backed when it traces to
+firmware JavaScript recorded in a catalog capture, or to behaviour
+observed on the wire where firmware source does not document it. The
+firmware sources below establish the crypto envelope; the assumptions
+table cites its own evidence per row. The captures
+themselves are catalog data -- derive them with the query under
+Platform Notes rather than listing them here.
 
-## Modems
+| Firmware source | Establishes |
+|---|---|
+| `login.js` | PBKDF2 parameters, salt encoding, and the salt fallback branch |
 
-| Modem | Status | Issue |
-|---|---|---|
-| Technicolor CGA4236TCH1 | In catalog, `awaiting_verification` | #115 |
-| Technicolor CGA6444VF (Vodafone DE) | In catalog, `awaiting_verification` | #120 |
+## Platform Notes
 
-Both modems share the same Technicolor REST API platform (`/api/v1/session/`).
+Entries on this platform share the same Technicolor REST API surface
+(`/api/v1/session/`) and an identical auth flow.
+
+Which entries use this strategy is catalog data, not spec content.
+Query it:
+
+```python
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems
+
+[m for m in list_modems(CATALOG_PATH) if m.auth_strategy == "form_pbkdf2"]
+```
+
+Each `ModemSummary` carries `manufacturer`, `model`, `status`,
+`transport`, and `sibling_dirs` for entries sharing one model identity.
 
 ## Known Gaps
 

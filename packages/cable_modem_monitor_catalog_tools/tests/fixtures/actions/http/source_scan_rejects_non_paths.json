@@ -1,0 +1,20 @@
+{
+  "_description": "Quoted strings that are not endpoint references: a bare label ('Reboot'), a traversal-relative image path ('../i/Logout_Normal.png'), and a static asset must not be inferred as action endpoints",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/lang/language_en.js",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": "var BTN_REBOOT = \"Reboot\"; var IMG_LOGOUT = \"../i/Logout_Normal.png\"; var ICON = \"/i/reboot_icon.png\";"
+        }
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": null
+}

@@ -14,12 +14,12 @@
         "data": {
           "model": "Модель модема",
           "entity_prefix": "Префикс Entity ID",
-          "channel_identity": "Channel Naming"
+          "channel_identity": "Именование каналов"
         },
         "data_description": {
           "model": "Выберите модель вашего модема из списка.",
           "entity_prefix": "Добавляет название модели или IP к идентификаторам сущностей. Обязательно при мониторинге нескольких модемов.",
-          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
+          "channel_identity": "Номер канала присваивает объектам имена по позиции строки в модеме (не меняется после перезагрузки). Идентификатор канала использует идентификатор канала DOCSIS (совпадает с диагностикой провайдера, но может измениться после перезагрузки)."
         }
       },
       "variant": {
@@ -106,98 +106,6 @@
     },
     "progress": {
       "validate": "Проверка подключения..."
-    }
-  },
-  "services": {
-    "generate_dashboard": {
-      "name": "Создать панель управления",
-      "description": "Генерирует готовый к использованию Lovelace YAML для панели управления кабельным модемом. Скопируйте результат и вставьте его в карточку «Вручную».",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
-        },
-        "include_status_card": {
-          "name": "Карточка состояния",
-          "description": "Состояние модема, время работы, количество каналов и кнопка перезагрузки."
-        },
-        "include_downstream_power": {
-          "name": "График мощности нисходящего потока",
-          "description": "Уровни мощности для всех нисходящих каналов."
-        },
-        "include_downstream_snr": {
-          "name": "График SNR нисходящего потока",
-          "description": "Отношение сигнал/шум для всех нисходящих каналов."
-        },
-        "include_downstream_frequency": {
-          "name": "График частот нисходящего потока",
-          "description": "Частоты для всех нисходящих каналов."
-        },
-        "include_upstream_power": {
-          "name": "График мощности восходящего потока",
-          "description": "Уровни мощности для всех восходящих каналов."
-        },
-        "include_upstream_frequency": {
-          "name": "График частот восходящего потока",
-          "description": "Частоты для всех восходящих каналов."
-        },
-        "include_errors": {
-          "name": "Графики ошибок",
-          "description": "Количество исправленных и неисправленных ошибок (за 7 дней)."
-        },
-        "include_error_rates": {
-          "name": "Графики частоты ошибок",
-          "description": "Добавляет графики частоты ошибок в минуту (ошибок/мин, за 7 дней). По умолчанию отключено. Частота колеблется при каждом опросе."
-        },
-        "include_latency": {
-          "name": "График задержки",
-          "description": "Время отклика ping и HTTP (за 6 часов)."
-        },
-        "graph_hours": {
-          "name": "История графиков (часы)",
-          "description": "Часы истории для графиков мощности/SNR (ошибки и задержка используют фиксированные периоды)."
-        },
-        "short_titles": {
-          "name": "Короткие заголовки",
-          "description": "Короткие: «Нисх. мощность (dBmV)» или длинные: «Уровни мощности нисходящего потока (dBmV)»."
-        },
-        "status_card_exclude": {
-          "name": "Исключённые поля карточки состояния",
-          "description": "Поля, не включаемые в созданную карточку состояния. По умолчанию пусто; добавьте docsis_status, чтобы убрать строку состояния DOCSIS, или имя любого транзитного поля, чтобы убрать его строку."
-        }
-      }
-    },
-    "request_refresh": {
-      "name": "Request Refresh",
-      "description": "Triggers an immediate modem data poll, bypassing any connectivity backoff. Use in automations to refresh modem data on demand."
-    },
-    "request_health_check": {
-      "name": "Request Health Check",
-      "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
-    },
-    "convert_channel_identity": {
-      "name": "Convert Channel Identity",
-      "description": "Renames recorder statistics to match the current channel identity mode after re-adding the integration in the other mode. Modem must be online.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to convert. Defaults to the first configured modem."
-        }
-      }
-    },
-    "orphaned_statistics": {
-      "name": "Orphaned Statistics",
-      "description": "Finds recorder statistics for this modem that have no registered entity — left behind by a mode switch, channel rebonding (ID mode), or a prefix change. Without execute, returns a preview of orphaned entities. With execute: true, purges them all directly. Purge is permanent.",
-      "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "Which modem to inspect. Defaults to the first configured modem."
-        },
-        "execute": {
-          "name": "Execute",
-          "description": "Set to true to purge all orphaned statistics immediately. Default is false (preview only). Purge is permanent and cannot be undone."
-        }
-      }
     }
   }
 }

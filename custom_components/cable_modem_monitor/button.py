@@ -22,6 +22,7 @@ from collections import Counter
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import CONF_HOST, EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -46,6 +47,9 @@ from .lib.utils import get_device_name
 from .services import async_request_modem_refresh
 
 _LOGGER = logging.getLogger(__name__)
+
+# Buttons do no per-entity I/O — no throttling needed.
+PARALLEL_UPDATES = 0
 
 # Notification IDs (single ID per action so updates replace previous)
 _NOTIFY_RESTART = "cable_modem_restart"
@@ -203,6 +207,12 @@ class RestartModemButton(_ButtonBase):
         # comes back).
         await runtime.data_coordinator.async_request_refresh()
 
+        # Surface the failure to the caller once state has been refreshed.
+        # The notification above stays as the persistent record; this is
+        # what an automation or the UI actually sees as the action result.
+        if not result.success:
+            raise HomeAssistantError(f"{model} restart did not dispatch: {result.error}")
+
 
 class UpdateModemDataButton(_ButtonBase):
     """Button to manually trigger modem data update.
@@ -217,6 +227,7 @@ class UpdateModemDataButton(_ButtonBase):
         self._attr_name = "Update Modem Data"
         self._attr_unique_id = f"{entry.entry_id}_update_data_button"
         self._attr_icon = "mdi:update"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     async def async_press(self) -> None:
         """Handle the button press — refresh health then data."""

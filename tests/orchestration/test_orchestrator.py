@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from solentlabs.cable_modem_monitor_core.orchestration.events import (
-    AuthStateReset,
     ConnectivityBackoffReset,
     EventLevel,
 )
@@ -29,20 +28,6 @@ def _make_orchestrator(model: str = "SB8200") -> Orchestrator:
     modem_config.actions = None
 
     return Orchestrator(collector, health_monitor=None, modem_config=modem_config)
-
-
-# ---------------------------------------------------------------------------
-# AuthStateReset
-# ---------------------------------------------------------------------------
-
-
-def test_auth_state_reset_emitted_on_reset_auth():
-    orch = _make_orchestrator(model="MB7621")
-    with capture_events() as events:
-        orch.reset_auth()
-    assert_event_emitted(events, AuthStateReset, model="MB7621")
-    event = next(e for e in events if isinstance(e, AuthStateReset))
-    assert event.level == EventLevel.INFO
 
 
 # ---------------------------------------------------------------------------

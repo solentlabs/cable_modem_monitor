@@ -70,7 +70,7 @@ What's hardcoded in `auth/form_cbn.py` and `protocol/cbn.py` that is specific to
 |---|---|---|---|
 | Encryption format | `base64(":" + hex(ciphertext))` | `encrypt_cryptoJS.js` | The colon prefix and encoding chain are firmware-specific |
 | POST encoding | `application/x-www-form-urlencoded` (not JSON) | HAR request headers | Other CryptoJS modems may use JSON |
-| Parameter order | `token` must be first parameter | Empirical testing (PR #129) | Not documented in firmware --- observed behavior |
+| Parameter order | `token` must be first parameter | Empirical testing | Not documented in firmware --- observed behavior |
 | XML setter/getter pattern | `setter.xml` with `fun=N` dispatch | Compal firmware API design | Entirely Compal-specific |
 | Success string | `"successful"` (case-insensitive) in response body | HAR response analysis | Other firmware may signal success differently |
 | SID extraction | Regex `SID=(\d+)` from response body | HAR response analysis | SID format is firmware-specific |
@@ -95,28 +95,40 @@ Fields that map to **firmware** (Compal-level):
 
 ## Evidence Base
 
-| Source | Location | Status |
-|---|---|---|
-| CH7465MT HAR capture | Catalog test data | Analyzed |
-| SB8200v3 HAR capture | Catalog test data | Analyzed |
-| `encrypt_cryptoJS.js` | HAR entries --- JavaScript source | Authoritative for encryption format |
-| PR #129 | [CH7465MT support](https://github.com/solentlabs/cable_modem_monitor/pull/129) | Merged |
-| Issue #77 | [Compal CH7465 (Vodafone DE)](https://github.com/solentlabs/cable_modem_monitor/issues/77) | Open |
-| Issue #80 | [Compal CH7466CE (Vodafone DE)](https://github.com/solentlabs/cable_modem_monitor/issues/80) | Open |
-| Issue #109 | [Arris SB8200v3](https://github.com/solentlabs/cable_modem_monitor/issues/109) | Open |
+A protocol claim in this spec is evidence-backed when it traces to
+firmware JavaScript recorded in a catalog capture, or to behaviour
+observed on the wire where firmware source does not document it. The
+firmware sources below establish the crypto envelope; the assumptions
+table cites its own evidence per row. The captures
+themselves are catalog data --- derive them with the query under
+Platform Notes rather than listing them here.
 
-## Modems
+| Firmware source | Establishes |
+|---|---|
+| `encrypt_cryptoJS.js` | Encryption format and key/IV derivation |
 
-| Modem | Status | Issue |
-|---|---|---|
-| Compal CH7465MT (Connect Box) | In catalog, `awaiting_verification` | #77, PR #129 |
-| Arris SB8200v3 (AC01 firmware) | In catalog, `awaiting_verification` | #109 |
+## Platform Notes
 
-Both share the CBN/Compal platform with identical auth flow. The SB8200v3 uses Compal firmware (AC01 variant) despite the Arris branding.
+Entries on this platform share an identical auth flow. Branding is not a
+reliable signal of platform: CBN/Compal firmware ships under other
+vendors' names, so a modem branded by one manufacturer can run this
+strategy. Catalog entries record the firmware variant.
+
+Which entries use this strategy is catalog data, not spec content.
+Query it:
+
+```python
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems
+
+[m for m in list_modems(CATALOG_PATH) if m.auth_strategy == "form_cbn"]
+```
+
+Each `ModemSummary` carries `manufacturer`, `model`, `status`,
+`transport`, and `sibling_dirs` for entries sharing one model identity.
 
 ## Known Gaps
 
-- **Parameter order sensitivity**: The `token` parameter must be first in the form-encoded POST body. This was discovered empirically during PR #129 development --- the modem firmware rejects requests with different parameter ordering. This is not documented in the firmware source and may not apply to all firmware versions.
-- **Neither modem confirmed**: No real-world validation yet.
+- **Parameter order sensitivity**: The `token` parameter must be first in the form-encoded POST body. This was discovered empirically during strategy development --- the modem firmware rejects requests with different parameter ordering. This is not documented in the firmware source and may not apply to all firmware versions.
 - **Rotating token timing**: The session token rotates on every response. If a request fails or times out, the token state may desynchronize. The `requests.Session` cookie jar tracks the latest token, but concurrent requests could race.
 - **MD5 for IV derivation**: MD5 is cryptographically broken but required here for protocol fidelity. This is a firmware design choice, not a bug in our implementation.

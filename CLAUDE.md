@@ -44,6 +44,16 @@ over convenience.
    etc.). A code change without a corresponding spec update is
    incomplete.
 
+4. **Write for clarity and brevity — then cut again.** Before
+   committing any prose (spec text, generated-doc copy, comments,
+   commit bodies), reread it and delete what does not earn its place:
+   throat-clearing openers ("A third situation is…"), restated
+   context, hedges, and clauses that repeat a neighbouring sentence.
+   Say the thing once, in the fewest words that keep it true. A
+   definition a reader has to parse twice is a definition that will
+   get asked about again. This applies to the *first* draft, not a
+   later polish pass — verbose text ships and then nobody trims it.
+
 ### Two READMEs — GitHub vs HACS (do not consolidate)
 
 The repo intentionally ships two README files for two render
@@ -344,11 +354,11 @@ When generating shell commands:
 1. **Never embed newlines or `#` characters inside quoted strings** passed as command arguments
 2. **For multiline shell logic**, write to a `.sh` script file first, then execute the file
 3. **Prefer simple, single-line commands** with explicit arguments
-4. **For JSON parsing**, use `jq` — it is auto-allowed, needs no temp files, and handles all `gh` output parsing. Never pipe `gh` output to `python3 -c`. Example: `gh issue view 152 --json title,body | jq -r '.title, .body[:800]'`
-5. **For complex logic that `jq` cannot express**, write to a fixed path `/tmp/claude_parse.py` (overwrite each time, not per-invocation) and run `python3 /tmp/claude_parse.py`
+4. **For JSON parsing**, use `gh`'s built-in jq engine via `--jq`/`-q`. The standalone `jq` binary is **not installed** — piping to it fails with `command not found`, and inside a pipeline that failure is silent. Never pipe `gh` output to `python3 -c`. Example: `gh issue view 152 --json title,body -q '.title, .body[:800]'`
+5. **For JSON that does not come from `gh`**, or logic `--jq` cannot express, write to a fixed path `/tmp/claude_parse.py` (overwrite each time, not per-invocation) and run `python3 /tmp/claude_parse.py`
 6. **Before executing any shell command**, verify it contains no newline characters inside quoted strings and no `#` characters that could be interpreted as hidden arguments
 
-**Why?** Embedded newlines break allowlist pattern matching — `Bash(gh issue view*)` will not match a command containing newlines, so the permission prompt fires even for explicitly allowed prefixes. `jq` sidesteps this entirely.
+**Why?** Embedded newlines break allowlist pattern matching — `Bash(gh issue view*)` will not match a command containing newlines, so the permission prompt fires even for explicitly allowed prefixes. `--jq` sidesteps this entirely.
 
 ## Pre-Push Verification — ALWAYS Run Before Push
 
@@ -360,12 +370,23 @@ make validate-ci
 
 This runs lint + format + type-check + tests + intake regression +
 PII check + catalog README freshness — the same surface CI's Tests
-workflow exercises. If `make validate-ci` is green, CI will be green.
-`scripts/release.py` runs it automatically before every version bump.
+workflow exercises. `scripts/release.py` runs it automatically before
+every version bump.
 
 **Why?** CI runs on the entire project. Pre-commit hooks only check
-staged files, and `make test` is a subset of CI. `make validate-ci`
-is the only command guaranteed to mirror CI exactly.
+staged files, and `make test` is a subset of CI.
+
+**Review the push range, not just your own commit.** Run
+`git log @{u}..HEAD` first. Commits made outside this session ride
+along and hit CI under your push; their failures land on your commit.
+Flag anything in the range you did not verify.
+
+**`validate-ci` green does not guarantee CI green.** It mirrors what
+CI runs, not where CI runs it. Per-job settings in
+`.github/workflows/` — `lfs:`, path filters, fresh-clone state — are
+invisible locally, where the repo is complete and LFS content always
+present. When a change alters what a script *reads*, check the
+checkout step of the job that runs it.
 
 **Owned-deps check:** `validate-ci` ends with `scripts/check_owned_deps.py`,
 which reports only packages declared in our requirements files and

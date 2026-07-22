@@ -21,6 +21,16 @@ auth:
     message: ""
     cur_passwd: ""
 
+actions:
+  restart:
+    type: http
+    method: POST
+    endpoint: "/setup.cgi"
+    params:
+      todo: "reboot"
+      this_file: "adv_Product.html"
+      next_file: "adv_Product.html"
+
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom"
@@ -41,7 +51,7 @@ sources:
 attribution:
   contributors:
     - github: https://github.com/B0ndo2
-      contribution: "HAR capture, Python parsing script, and hardware-confirmation diagnostics (Issue #92)"
+      contribution: "HAR captures (initial + reboot/status supplemental), Python parsing script, and hardware-confirmation diagnostics (Issue #92)"
 
 isps:
   - Koodo
@@ -51,42 +61,22 @@ notes: |
   Content-Type: applation/json (typo in firmware). Upstream frequencies in MHz
   (not Hz). Inactive channels: modulation=QAM_NONE, rep_power=-inf.
 
-  OFDM/OFDMA channels carry no `frequency` field. The firmware only
-  exposes single sercomm-specific values (`OFDMFreq` downstream,
-  `Center Freq SC0` upstream) with no subcarrier metadata, and the
-  test HAR shows the downstream OFDM value at 827.6 MHz overlapping
-  real SC-QAM channels at 825-861 MHz — physically impossible if it
-  were the active-band lower edge. Most likely it's the CMTS-assigned
-  channel placement frequency, the same concept as the DOCSIS 3.1
-  legacy `docsIfDownChannelTable` shadow frequency (see g54's
-  parser.yaml). Reporting nothing beats misreporting placement-as-edge;
-  hardware verification can revisit if firmware grows a real lower-edge
-  field.
+  No lock column. QAM channels mark inactive with
+  modulation=QAM_NONE, OFDM exposes the PLC indicator, OFDMA gates on
+  STATE=OPERATE; Core derives docsis_status from those. system_uptime
+  is read from status.html, which renders it server-side.
 
-  Confirmed on real hardware via #92 diagnostics (3.14.0-alpha.15,
-  2026-04-20): 34 DS / 5 US channels, clean polls. Lock status is
-  read from the firmware's own signals: QAM channels mark inactive
-  as modulation=QAM_NONE (filtered, survivors locked), OFDM exposes
-  the PLC lock indicator, OFDMA gates on STATE=OPERATE — which lets
-  Core derive docsis_status. Remaining gaps (see gaps:) are blocked
-  on one missing capture: no system_uptime — absent from the
-  /setup.cgi?todo= JSON endpoints, known to render on status.html
-  (contributor scraping script, #92), but that page is not in the
-  HAR on file. No reboot action — the button lives on the advanced
-  page and its request was never observed; a supplemental capture
-  attempt (2026-06-18) arrived empty due to a har-capture 0.10.0
-  sanitizer bug (fixed in 0.10.1). One fresh HAR (har-capture
-  >= 0.10.1) from login through the status pages to a Reboot click
-  closes both.
+  OFDM/OFDMA carry no usable frequency — the firmware exposes only a
+  sercomm-specific placement value, not the active-band lower edge.
+  Rationale in parser.yaml.
+
+  modem.har is a maintainer-declared HYBRID fixture
+  (MODEM_INTAKE_WORKFLOW § Assembled fixtures): the 2026-07-21 session
+  (#92), with the login exchange and the version/cm_status pages from
+  the 2026-01-05 capture of the same unit. Declaration in its
+  log.comment. Replace with a single full-session capture if one
+  arrives.
 
 references:
   issues:
     - "[#92 — [Modem Request] Sercomm DM1000](https://github.com/solentlabs/cable_modem_monitor/issues/92)"
-
-gaps:
-  - capability: system_uptime
-    needs: "HAR capture (har-capture >= 0.10.1) that includes status.html"
-    issue: "https://github.com/solentlabs/cable_modem_monitor/issues/92"
-  - capability: reboot action
-    needs: "HAR capture of the Reboot button click on the advanced page"
-    issue: "https://github.com/solentlabs/cable_modem_monitor/issues/92"

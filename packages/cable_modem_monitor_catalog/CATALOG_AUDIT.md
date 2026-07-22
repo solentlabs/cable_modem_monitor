@@ -6,84 +6,92 @@
 
 ---
 
+## Capture column
+
+How each fixture was produced, read from the HAR's `creator` field.
+Definitions and rules:
+[MODEM_INTAKE_WORKFLOW.md § Assembled fixtures](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md#assembled-fixtures).
+
+| Value | Meaning |
+|-------|---------|
+| `—` | Recorded from real hardware by a browser or capture tool |
+| `hybrid` | Assembled from multiple real captures of the same unit; every byte observed |
+| `reconstructed` | Built on a sibling model's template; structure never observed on this hardware |
+| `synthetic` | Built from partial evidence; the fixture names its producer |
+| `generated` | Built from partial evidence; no producer recorded in the file |
+
+An entry showing anything other than `—` would benefit from a real
+capture. Where an entry has several fixtures, the weakest is shown.
+
+---
+
 ## Needs Testing
 
 The integration is implemented and CI passes for these modems.
 They just need someone with that hardware to confirm it works
 and share a diagnostics snapshot.
 
-| Modem | Transport | ISPs | Note |
-|-------|-----------|------|------|
-| S34 | HNAP | Comcast, Cox, Spectrum, Xfinity |  |
-| SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom |  |
-| SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity |  |
-| G54 | HTML | Cox, Spectrum, Xfinity |  |
-| C3700 | HTML | Comcast, Cox, Spectrum |  |
-| CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity |  |
-| CM600 | HTML | Comcast, Cox, Spectrum, TWC |  |
-| F3896LG-VMB | HTML | Virgin Media UK |  |
-| CGA2121 | HTML | Telia |  |
-| CGA4236 | HTML | Unknown |  |
-| CGA6444VF | HTML | Vodafone |  |
-| TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy |  |
-| XB6 | HTML | Rogers |  |
-| XB8 | HTML | Rogers, Comcast, Xfinity, Cox |  |
+| Modem | Transport | ISPs | Capture |
+|-------|-----------|------|---------|
+| S34 | HNAP | Comcast, Cox, Spectrum, Xfinity | generated |
+| SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom | hybrid |
+| SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic |
+| G54 | HTML | Cox, Spectrum, Xfinity | generated |
+| C3700 | HTML | Comcast, Cox, Spectrum | synthetic |
+| CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | synthetic |
+| CM600 | HTML | Comcast, Cox, Spectrum, TWC | synthetic |
+| F3896LG-VMB | HTML | Virgin Media UK | generated |
+| CGA2121 | HTML | Telia | generated |
+| CGA4236 | HTML | Unknown | — |
+| CGA6444VF | HTML | Vodafone | — |
+| TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy | generated |
+| XB6 | HTML | Rogers | — |
+| XB8 | HTML | Rogers, Comcast, Xfinity, Cox | reconstructed |
 
 ## Pending Review
 
 These have a hardware report on file but haven't been promoted to Confirmed yet.
 May have open repair work — review individually.
 
-| Modem | Transport | ISPs |
-|-------|-----------|------|
-| SB6190 | HTML | Comcast, Cox, Spectrum, TWC |
-| SB8200 (cookie) | HTML | Spectrum |
-| SB8200 (url-token) | HTML | Comcast, Cox, Spectrum, Xfinity |
-| SB8200 (No Authentication) | HTML | Service Electric Cablevision |
-| CM1200 | HTML | Comcast, Spectrum, Cox |
-
-## Confirmed with Gaps
-
-Core support is verified on real hardware, but a named
-capability is still missing. Each row is a self-contained
-contribution: supply the evidence in the Needs column and
-the gap closes.
-
-| Modem | Missing | Needs | Tracked |
-|-------|---------|-------|---------|
-| DM1000 | system_uptime | HAR capture (har-capture >= 0.10.1) that includes status.html | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/92) |
-| DM1000 | reboot action | HAR capture of the Reboot button click on the advanced page | [issue](https://github.com/solentlabs/cable_modem_monitor/issues/92) |
+| Modem | Transport | ISPs | Capture |
+|-------|-----------|------|---------|
+| SB6190 | HTML | Comcast, Cox, Spectrum, TWC | — |
+| SB8200 (cookie) | HTML | Spectrum | synthetic |
+| SB8200 (url-token) | HTML | Comcast, Cox, Spectrum, Xfinity | synthetic |
+| SB8200 (No Authentication) | HTML | Service Electric Cablevision | synthetic |
+| CM1200 | HTML | Comcast, Spectrum, Cox | — |
 
 ## Confirmed
 
 Working on real hardware with a report on file.
 Entries with an open capability gap are listed above, not here.
 
-| Modem | Transport | ISPs |
-|-------|-----------|------|
-| CM3500B | HTML | Vodafone Germany, Vodafone |
-| CM820B | HTML | Volya, Various |
-| S33 | HNAP | Comcast, Cox, Spectrum, Xfinity |
-| S33 (v2) | HNAP | Comcast, Cox, Spectrum, Xfinity |
-| S33 (v3) | HNAP | Comcast, Cox, Spectrum, Xfinity |
-| SB6183 | HTML | Comcast, Cox, Spectrum, Xfinity, Mediacom |
-| SB6190 (form-nonce) | HTML | Comcast, Spectrum |
-| SB8200 (body-token) | HTML | Spectrum |
-| SB8200 (HNAP) | HNAP | Cox |
-| TG3442DE | HTML | Vodafone DE |
-| TM1602A | HTML | Spectrum |
-| CH7465MT | CBN | Magenta AT |
-| CODA56 | HTML | Comcast, Xfinity |
-| MB7621 | HTML | Comcast, Cox, Spectrum, TWC, CableOne, RCN, Comcast Xfinity, Suddenlink, BrightHouse |
-| MB8600 | HNAP | Comcast, Xfinity, Cox, Spectrum |
-| MB8611 | HNAP | Comcast, Xfinity, Cox, Spectrum |
-| C7000v2 | HTML | Comcast |
-| CM1100 | HTML | Comcast |
-| CM1200 (basic) | HTML | Comcast, Spectrum, Cox |
-| CM2050V | HTML | Comcast, Xfinity |
-| CM3000 | HTML | Comcast, Cox, Spectrum, Xfinity |
-| XB10 | HTML | Xfinity |
-| XB7 | HTML | Rogers, Comcast, Xfinity |
+| Modem | Transport | ISPs | Capture |
+|-------|-----------|------|---------|
+| CM3500B | HTML | Vodafone Germany, Vodafone | generated |
+| CM820B | HTML | Volya, Various | synthetic |
+| S33 | HNAP | Comcast, Cox, Spectrum, Xfinity | — |
+| S33 (v2) | HNAP | Comcast, Cox, Spectrum, Xfinity | — |
+| S33 (v3) | HNAP | Comcast, Cox, Spectrum, Xfinity | — |
+| SB6183 | HTML | Comcast, Cox, Spectrum, Xfinity, Mediacom | synthetic |
+| SB6190 (form-nonce) | HTML | Comcast, Spectrum | — |
+| SB8200 (body-token) | HTML | Spectrum | synthetic |
+| SB8200 (HNAP) | HNAP | Cox | — |
+| TG3442DE | HTML | Vodafone DE | synthetic |
+| TM1602A | HTML | Spectrum | — |
+| CH7465MT | CBN | Magenta AT | — |
+| CODA56 | HTML | Comcast, Xfinity | — |
+| MB7621 | HTML | Comcast, Cox, Spectrum, TWC, CableOne, RCN, Comcast Xfinity, Suddenlink, BrightHouse | — |
+| MB8600 | HNAP | Comcast, Xfinity, Cox, Spectrum | synthetic |
+| MB8611 | HNAP | Comcast, Xfinity, Cox, Spectrum | synthetic |
+| C7000v2 | HTML | Comcast | — |
+| CM1100 | HTML | Comcast | — |
+| CM1200 (basic) | HTML | Comcast, Spectrum, Cox | — |
+| CM2050V | HTML | Comcast, Xfinity | — |
+| CM3000 | HTML | Comcast, Cox, Spectrum, Xfinity | — |
+| DM1000 | HTML | Koodo | hybrid |
+| XB10 | HTML | Xfinity | — |
+| XB7 | HTML | Rogers, Comcast, Xfinity | generated |
 
 ---
 

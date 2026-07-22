@@ -83,6 +83,29 @@ VS Code tasks (`Ctrl+Shift+P` → **Tasks: Run Task**):
 
 After starting, open <http://localhost:8123>.
 
+> **Code changes need a full HA restart, not an entry reload.** Run
+> **🚀 HA: Start** (or `make docker-restart` from the terminal — same
+> thing). The dev harness installs Core editable
+> (`scripts/dev/ha-entrypoint.sh` runs `pip install -e`) and mounts
+> `custom_components` live, so a running HA holds the modules it already
+> imported. Reloading the integration entry re-runs setup on that stale
+> code — only a restart re-imports your edits.
+>
+> **A changed `services.yaml` default won't appear in an action form you
+> have already used.** Developer Tools → Actions saves your last-used
+> values per action and replays them over the service definition, so the
+> form keeps showing the old value no matter how many times you restart.
+> Clear the saved data to see the new default: select the action, switch
+> to YAML mode, delete the `data:` block, then switch back to UI mode.
+>
+> Two related symptoms come from the same cause. Removing a field from
+> `services.yaml` while saved data still references it leaves HA unable
+> to render the form in UI mode, so it silently falls back to YAML mode —
+> which looks like a broken form. And every *optional* field draws as an
+> inactive control until you tick it, so a greyed toggle means "not
+> overriding the default," not "off"; mark a field `required: true` if
+> its default should be visible in the form.
+
 ---
 
 ## Daily workflow

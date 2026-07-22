@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression pii-check spell-check catalog-readme-check suppression-check ha-compat-check install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
+.PHONY: help setup test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression pii-check spell-check catalog-readme-check suppression-check ha-compat-check install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
 
 # Pin tool invocations to the project venv so that subprocesses
 # without venv on PATH (release.py shelling out, fresh clones, CI
@@ -13,6 +13,7 @@ help:
 	@echo "Cable Modem Monitor - Available Commands"
 	@echo ""
 	@echo "Development:"
+	@echo "  make setup       - Create or repair the dev environment (venv + deps)"
 	@echo "  make test        - Run full test suite with coverage (creates venv)"
 	@echo "  make test-quick  - Quick test run (assumes venv exists)"
 	@echo "  make test-simple - Simple test without venv (global install)"
@@ -44,6 +45,10 @@ help:
 	@echo ""
 	@echo "Maintenance:"
 	@echo "For more details, see scripts/README.md"
+
+# Create or repair the dev environment (venv + all dependencies)
+setup:
+	@bash scripts/dev/setup_env.sh
 
 # Run full test suite with coverage
 test:

@@ -240,7 +240,8 @@ only one authenticated session.
 
 - `snapshot.connection_status == AUTH_FAILED`
 - `diagnostics().circuit_breaker_open == True`
-- No further login attempts — polling blocked until reset_auth()
+- No further login attempts — polling blocked until the consumer
+  rebuilds the orchestrator (reauth → entry reload, UC-16)
 - WARNING log: "Auth lockout — firmware anti-brute-force triggered,
   stopping immediately"
 
@@ -312,27 +313,29 @@ If LOAD_AUTH persists (6 consecutive):
 
 ---
 
-### UC-16: Credential reconfiguration — reset_auth()
+### UC-16: Credential reconfiguration — consumer rebuilds orchestrator
 
-**Preconditions:** Circuit breaker is open. User reconfigured credentials
-via HA reauth flow.
+**Preconditions:** User updates credentials — after a lockout (circuit
+breaker open, HA reauth flow; UC-81) or proactively with no lockout
+(HA options flow, password changed before the old one ever failed).
+Credentials are constructor-bound and Core has no credential setter,
+so new credentials always mean a new orchestrator.
 
 | Step | Action | State change | Observable |
 |------|--------|-------------|------------|
-| 1 | Consumer calls `reset_auth()` | | |
-| 2 | Orchestrator: streak=0 | streak reset | |
-| 3 | Orchestrator: circuit=closed | circuit closed | |
-| 4 | Orchestrator: backoff=0 | backoff cleared | |
-| 5 | Orchestrator: collector.clear_session() | session cleared | |
-| 6 | Consumer calls `get_modem_data()` | | |
-| 7 | Collector: fresh login with new credentials | | |
+| 1 | Consumer validates new credentials (connectivity + auth + parse) | | |
+| 2 | Consumer persists them (HA: config entry update) | | |
+| 3 | Consumer discards the old orchestrator, constructs a new one with the new credentials (HA: entry reload) | all auth state at constructor defaults | |
+| 4 | Consumer calls `get_modem_data()` | | first-poll INFO |
+| 5 | Collector: fresh login with new credentials | | |
 
 **Assertions:**
 
 - `diagnostics().auth_failure_streak == 0`
 - `diagnostics().circuit_breaker_open == False`
-- `diagnostics().session_is_valid == False` (after reset, before next poll)
-- Next poll attempts fresh login (no stale session, no backoff, no circuit block)
+- `diagnostics().session_is_valid == False` (before the first poll)
+- First poll attempts fresh login — a fresh instance cannot carry a
+  stale session, backoff, or open circuit
 
 ---
 
@@ -536,7 +539,7 @@ modem's web UI. Session is still valid in memory.
 - Circuit breaker trips after ~2 lockout cycles (threshold 6)
 - User sees escalating log messages with streak count (1/6, 2/6, ... 6/6)
 - ERROR log at circuit trip is actionable: "Reconfigure credentials to resume"
-- After reset_auth() with correct password → back to normal (UC-16)
+- After rebuild with correct password → back to normal (UC-16)
 
 ---
 
@@ -1622,8 +1625,8 @@ sequenceDiagram
     C->>U: "Credentials invalid"
     U->>C: Provide new password
     C->>C: Validate (connectivity + auth + parse)
-    C->>O: reset_auth()
-    Note over O: streak=0, circuit=closed, session=cleared
+    C->>C: Persist credentials, rebuild orchestrator (entry reload)
+    Note over O: Fresh instance — streak=0, circuit=closed, session=none
     O->>M: Fresh login with new credentials
     M-->>O: ONLINE
 ```
@@ -1638,7 +1641,7 @@ sequenceDiagram
 | 6 | Consumer detects circuit breaker state | | Shows credential error |
 | 7 | User provides new password | | |
 | 8 | Consumer validates (connectivity + auth + parse) | | |
-| 9 | On success: orchestrator.reset_auth() | streak=0, circuit=closed, session=cleared | |
+| 9 | On success: consumer persists credentials, rebuilds orchestrator (HA: entry update + reload) | fresh instance — streak=0, circuit=closed, session=none | |
 | 10 | Next poll: fresh login with new credentials | | ONLINE |
 
 **Assertions:**
@@ -1646,7 +1649,8 @@ sequenceDiagram
 - Circuit breaker opens after AUTH_FAILURE_THRESHOLD (6) consecutive failures
 - Consumer surfaces credential error and provides reauth mechanism
 - Reauth validates new credentials before accepting
-- `reset_auth()` clears all auth state (streak, circuit, backoff, session)
+- The rebuild leaves no auth state behind — streak, circuit, backoff,
+  session all start at constructor defaults (UC-16)
 - No polling between circuit open and reauth completion
 - First poll after reauth attempts fresh login
 
@@ -1917,10 +1921,10 @@ if that fresh login succeeds, the condition self-corrects (UC-18).
 AUTH_FAILED is the modem
 rejecting the login itself.
 
-> **Status:** UC-20 documents the current behavior (threshold=6).
-> UC-87 is the target. Implementation requires lowering the circuit
-> breaker threshold for AUTH_FAILED signals specifically, while
-> preserving tolerance for LOAD_AUTH self-correction.
+> **Status:** Implemented. AUTH_FAILED (definitive credential
+> rejection) trips the breaker immediately; LOAD_AUTH keeps
+> threshold=6 with same-poll self-correction (UC-18). The HA adapter
+> starts the reauth flow when the breaker opens (UC-81 step 6).
 
 ### UC-88: Reboot-signal trigger
 

@@ -61,7 +61,7 @@ caused a modem that really returns bad tags to be processed
 incorrectly. The only sanctioned transformation is PII value
 sanitization at intake, which replaces values and never structure.
 
-### Reconstructed fixtures
+### Assembled fixtures
 
 Not every fixture is a wire capture. Before har-capture existed,
 entries were routinely assembled from user-supplied HTML and
@@ -70,30 +70,66 @@ diagnostics (`creator` values like `fixtures_to_har (synthetic)`,
 fleet record this). The practice is legitimate; this section
 codifies the rules it must follow.
 
-When no HAR exists but a sibling model's live parse output proves
-structural compatibility (a diagnostics capture showing the sibling's
-parser fully extracting channels on the new hardware), a fixture may
-be *reconstructed*: the sibling's HAR is used as the structural
-template and every parsed value is substituted with the real values
-observed in the diagnostics. This is not an edited capture — it is a
-new artifact that must declare itself:
+An assembled fixture is not an edited capture — it is a new artifact
+that must declare itself:
 
-- `log.creator.name` identifies the fixture as reconstructed (the
-  fleet convention: synthetic fixtures self-identify in `creator`).
-- `log.comment` in the HAR states it is reconstructed, names the
-  template model, the evidence issue, and lists every unobserved
-  template-filler field (e.g. lock status, symbol rates).
+- `log.creator.name` identifies the fixture as assembled (the fleet
+  convention: synthetic fixtures self-identify in `creator`).
+- `log.comment` in the HAR states how it was assembled, names the
+  sources and the evidence issue, and lists everything not observed
+  on the target unit.
 - The `modem.yaml` `notes:` block repeats the provenance and says the
-  fixture is replaced when a real HAR arrives.
-- The entry ships as `status: awaiting_verification`, never
-  `confirmed`.
-- The reconstruction is only valid when the parsed diagnostics values
-  round-trip: run the parser over the reconstructed HAR and diff the
-  output against the diagnostics — zero mismatches required.
+  fixture is replaced when a real full-session capture arrives.
+- The assembly is only valid when it round-trips: run the parser over
+  the assembled HAR and diff the output against the evidence — zero
+  mismatches required.
 
-First use under these codified rules: Technicolor XB8 (CGM4981COM),
-issue #101, reconstructed from the XB7 fixture plus a v3.12.0
-diagnostics capture.
+**Partial evidence.** Sometimes no full session exists: a contributor
+can share diagnostics or page source but not run a capture, a sanitizer
+destroyed the response bodies, or only some endpoints were recorded. A
+fixture built from what exists is legitimate — it is what makes the
+entry testable — but no capture tool produced it, so it has no
+`log.creator`. The audit renders these as `generated`.
+
+Declaration rules still apply: name the sources, list what was not
+observed, round-trip the parser against the evidence. Never retro-label
+by editing the HAR, since real captured bytes may be mixed in. A
+full-session capture replaces the fixture whenever one arrives.
+
+Two further forms are distinguished by evidence basis and status:
+
+**Reconstruction (sibling template).** When no HAR exists but a
+sibling model's live parse output proves structural compatibility (a
+diagnostics capture showing the sibling's parser fully extracting
+channels on the new hardware), the sibling's HAR is the structural
+template and every parsed value is substituted with the real values
+observed in the diagnostics. `log.comment` lists every unobserved
+template-filler field (e.g. lock status, symbol rates); the
+round-trip diffs against the diagnostics. Because the structure was
+never observed on the target hardware, the entry ships as
+`status: awaiting_verification`, never `confirmed`. First use:
+Technicolor XB8 (CGM4981COM), issue #101, reconstructed from the XB7
+fixture plus a v3.12.0 diagnostics capture.
+
+**Hybrid (same device, maintainer-declared).** When the evidence for
+one physical device is spread across multiple real captures — e.g.,
+an early capture with intact data endpoints and a later capture of
+the same unit that alone covers new pages or actions but whose data
+responses were destroyed by a sanitizer bug — the most complete
+session is the template and the bodies it lost are substituted from
+the other referenced capture(s). Every byte comes from a referenced
+capture; nothing is fabricated, and no values are edited beyond the
+sanctioned PII value redaction. `log.comment` lists every
+transplanted entry and states the same-device and firmware
+continuity evidence (device identity fields, byte-identical
+firmware-served assets, the evidence issue's history); the
+round-trip must reproduce the prior golden exactly, adding only
+fields the newly covered pages enable. Because every byte is a real
+observation of the specific unit, the entry keeps its status — it
+continues to rest on its own verification evidence. First use:
+Sercomm DM1000, issue #92 — the 2026-06-18 session capture as
+template, data endpoint bodies from the 2026-01-05 capture of the
+same unit.
 
 ## Inputs
 
@@ -199,7 +235,10 @@ Two rules govern this layer:
 - **Patterns come from confirmed modems only.** New URL regexes in
   `action_patterns.json` and new call-shape support in the extractor
   are authored from hardware-confirmed modems. Unconfirmed intakes
-  consume patterns; they never contribute them.
+  consume patterns; they never contribute them. Credential field
+  names need no authoring at all: every committed `modem.yaml`
+  `password_field` feeds detection automatically (see ONBOARDING_SPEC
+  § Phase 2).
 - **Every extraction rule must fire on at least one committed fleet
   HAR.** A proposed rule with zero fleet matches is dead weight built
   for a hypothesis — reject it. `make intake-regression` grades

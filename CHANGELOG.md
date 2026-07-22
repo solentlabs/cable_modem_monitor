@@ -7,6 +7,128 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-beta.15] - 2026-07-22
+
+### Added
+
+- **Arris S33v3 uptime confirmed on hardware.** Contributor
+  diagnostics show system uptime populated on real hardware, the one
+  field the June confirmation could not close and the reason the
+  mapping was restored in beta.14. Refreshes the S33v3 verified.json
+  fixture from that download: 33 downstream and 6 upstream channels
+  locked, full system_info, no field errors. (Related to #98)
+
+- **Sercomm DM1000 reboot button and system uptime.** Both built
+  from contributor captures; uptime feeds Last Boot Time. The reboot
+  was exercised on real hardware — the capture records the modem's own
+  confirm and "allow up to 60 seconds to restart" dialogs — and uptime
+  is read from the status page the same session served. Closes both
+  DM1000 catalog gaps. (Related to #92)
+
+- **Locked-out credentials now prompt for reauthentication.** When
+  the auth circuit breaker opens (definitive credential rejection,
+  or repeated stale-session failures), the integration starts Home
+  Assistant's native reauthentication flow — a "Reauthentication
+  required" notification with the credential form attached. The flow
+  itself has existed since the v3.14 adapter but nothing triggered
+  it; users had to spot the ERROR log and fix credentials by hand.
+  One WARNING per lockout, and a completed reauth reloads the
+  integration so polling resumes with the new credentials (UC-81,
+  UC-87).
+
+- **Session cleanup on unload/reload.** The orchestrator now exposes
+  `close()`, and the HA adapter calls it from `async_unload_entry` (in
+  the executor). If a session is still live — a session-reuse modem at
+  reload — it is logged out first so single-session firmware isn't left
+  holding a lock that blocks the next login; then the socket pool is
+  released immediately rather than lingering to garbage collection. The
+  logout is best-effort and timeout-bounded, and a no-op for
+  per-poll-logout modems whose session is already cleared.
+
+- **Catalog audit shows how each fixture was produced.** The audit
+  reads each HAR's own creator field and labels constructed fixtures
+  (hybrid, reconstructed, synthetic, generated) in the Needs Testing,
+  Pending Review, and Confirmed tables. An entry reports its weakest
+  fixture, so a real capture beside a constructed one does not launder
+  it.
+
+### Changed
+
+- **Supporting entities are now categorized as Diagnostic.** The
+  primary group on the device page is the signal readout: Status and
+  the per-channel sensors. Modem Info, Software Version, channel
+  counts, error totals and rates, Last Boot Time, system-info
+  pass-through, LAN statistics, the latency sensors, and the Update
+  Modem Data button move to the Diagnostic section. Entity IDs and
+  recorded history are unchanged.
+
+- **Service failures now raise errors instead of returning them.**
+  `generate_dashboard` handed its error message back as the YAML the
+  caller was meant to paste; `convert_channel_identity` and
+  `orphaned_statistics` returned error dicts; `request_refresh` and
+  `request_health_check` logged a warning and reported success. All
+  now raise, so automations and the UI see the failure. A failed
+  modem restart raises too, after the coordinator refresh and the
+  persistent notification. Legitimate empty results ("no statistics
+  to migrate") remain successes.
+
+- **Availability is logged once per transition.** The log gets one
+  warning on the first failed poll of an outage and one info line on
+  the first successful poll after it, instead of a warning per poll.
+
+- **Services register at integration setup, and a catalog-load
+  failure is a proper setup error.** The five services are available
+  as soon as the integration loads rather than per config entry, and
+  a failed catalog load now reports why in the UI instead of failing
+  generically. (HA Quality Scale Bronze.)
+
+### Fixed
+
+- **Technicolor CGA6444VF: API polls no longer bounce with "session
+  expired" right after a successful login.** The firmware rejects API
+  requests lacking `X-Requested-With` and an origin-matching
+  `Referer`; the config now sends both session headers, following the
+  TG3442DE pattern. (Related to #120)
+
+- **Translations: 81 damaged or missing strings repaired, with
+  guards against regression.** A March locale regeneration had left
+  four services in English inside every language file and silently
+  stripped accents from French, Spanish, and Italian. The translated
+  scope is restored to the config and options flows as documented,
+  and the sync check now rejects out-of-scope sections, in-scope
+  values identical to English, and accent-stripped locales.
+
+- **generate_dashboard's form matches its real defaults.** The
+  schema and handler defaults for `include_upstream_frequency` and
+  `short_titles` had drifted apart, so the UI form and an automation
+  omitting the fields produced different dashboards. Option fields
+  now render as live controls showing their actual defaults, and
+  `status_card_exclude` is dropped from the form — its valid values
+  are modem-dependent and cannot be enumerated in a static form;
+  scripted callers can still pass it.
+
+- **Catalog tools: intake selects the login POST by its credential
+  fields, not by recency.** A modem that serves both login and
+  actions from one endpoint (DM1000: `/setup.cgi` handles login and
+  reboot) previously had its reboot POST picked as the login at high
+  confidence. The analyzer now picks the POST whose body carries a
+  password-shaped field, and the action scan no longer fabricates
+  endpoints from UI labels or asset paths.
+
+### Removed
+
+- **Core public API: `Orchestrator.reset_auth()` and the
+  `AuthStateReset` event.** Spec'd for a reauth flow that was
+  ultimately built on entry reload instead, the method never gained
+  a production caller and could not fulfill its own contract:
+  credentials are constructor-bound, so a credential change always
+  rebuilds the orchestrator — at which point every field the reset
+  would clear is already at its constructor default. Credential
+  reconfiguration is now ratified as reconstruction
+  (ARCHITECTURE_DECISIONS § Auth Architecture); UC-16 is rewritten
+  around rebuild. Breaking only for external consumers of the Core
+  library, of which none are known.
+
 ## [3.14.0-beta.14] - 2026-07-14
 
 ### Fixed

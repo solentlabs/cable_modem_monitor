@@ -13,6 +13,7 @@ import base64
 import re
 from dataclasses import dataclass, field
 from typing import Any, NamedTuple
+from urllib.parse import urljoin
 
 from ...validation.har_utils import (
     HARD_STOP_PREFIX,
@@ -30,6 +31,8 @@ from .patterns import (
     get_pbkdf2_salt_triggers,
     get_sjcl_page_variables,
     get_sjcl_post_fields,
+    has_credential_fields,
+    is_password_field_name,
 )
 from .types import AuthDetail
 
@@ -118,7 +121,7 @@ def detect_http_auth(
         if signals.form_nonce_entry is not None:
             return _extract_form_nonce(signals)
         # Standard form auth
-        return _extract_form(entries, signals)
+        return _extract_form(entries, signals, warnings)
 
     # Auth signals detected but no strategy matched -> HARD STOP + evidence
     hard_stops.append(
@@ -317,23 +320,28 @@ def _check_post_signals(
                 signals.pbkdf2_entries.append(entry)
                 signals.has_any_auth_signal = True
 
-    # Form POST to login-like endpoint
+    # Form POST to login-like endpoint. An action POST can share the login
+    # endpoint (DM1000: /setup.cgi serves login and reboot), so only a
+    # credential-shaped body marks the login. Among credential POSTs the
+    # latest wins; a retried login yields the successful attempt.
     if "form" in mime or "x-www-form-urlencoded" in mime:
         if _is_login_url(url):
-            signals.form_post_entry = entry
-            signals.has_any_auth_signal = True
+            if has_credential_fields(post_data):
+                signals.form_post_entry = entry
+                signals.has_any_auth_signal = True
 
-            # Check response for nonce-style text prefixes
-            resp_text = resp.get("content", {}).get("text", "")
-            if resp_text and (
-                resp_text.strip().startswith(_NONCE_SUCCESS_PREFIX) or resp_text.strip().startswith(_NONCE_ERROR_PREFIX)
-            ):
-                signals.form_nonce_entry = entry
+                # Check response for nonce-style text prefixes
+                resp_text = resp.get("content", {}).get("text", "")
+                if resp_text and (
+                    resp_text.strip().startswith(_NONCE_SUCCESS_PREFIX)
+                    or resp_text.strip().startswith(_NONCE_ERROR_PREFIX)
+                ):
+                    signals.form_nonce_entry = entry
 
-            # 302 redirect after POST
-            if status in (301, 302):
-                signals.has_302_after_post = True
-        elif _has_credential_fields(post_data):
+                # 302 redirect after POST
+                if status in (301, 302):
+                    signals.has_302_after_post = True
+        elif has_credential_fields(post_data):
             signals.unmatched_credential_posts.append(path_from_url(url))
 
 
@@ -677,7 +685,11 @@ def _extract_form_nonce(signals: _HttpAuthSignals) -> AuthDetail:
     )
 
 
-def _extract_form(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> AuthDetail:
+def _extract_form(
+    entries: list[dict[str, Any]],
+    signals: _HttpAuthSignals,
+    warnings: list[str],
+) -> AuthDetail:
     """Extract standard form auth fields.
 
     When a login page GET precedes the form POST in the HAR, emits
@@ -701,6 +713,16 @@ def _extract_form(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> A
     # Parse form fields
     params = parse_form_params(post_data)
     username_field, password_field, hidden_fields = classify_form_fields(params)
+
+    # classify_form_fields drops surplus credential-shaped fields from
+    # hidden_fields; surface them for the manual step.
+    dropped = [n for n in params if n not in hidden_fields and n not in (username_field, password_field)]
+    if dropped:
+        warnings.append(
+            f"{WARNING_PREFIX} form auth: credential-shaped fields {dropped} omitted "
+            "from hidden_fields. If the firmware requires them in the login POST, "
+            "add them by hand from the login page source."
+        )
 
     # Detect login page from HAR (GET before POST with matching action)
     login_page_info = _find_login_page(entries, entry)
@@ -773,18 +795,6 @@ def _is_login_url(url: str) -> bool:
     return any(p in lower for p in _LOGIN_URL_PATTERNS)
 
 
-_CREDENTIAL_INDICATORS = ("password", "pass", "pwd")
-
-
-def _has_credential_fields(post_data: dict[str, Any]) -> bool:
-    """Check if form POST data contains credential-like field names."""
-    params = post_data.get("params", [])
-    if not params:
-        text = post_data.get("text", "")
-        return any(ind in text.lower() for ind in _CREDENTIAL_INDICATORS)
-    return any(any(ind in p.get("name", "").lower() for ind in _CREDENTIAL_INDICATORS) for p in params)
-
-
 def classify_form_fields(
     params: dict[str, str],
 ) -> tuple[str, str, dict[str, str]]:
@@ -797,18 +807,20 @@ def classify_form_fields(
     password_field = ""
     hidden_fields: dict[str, str] = {}
 
-    password_indicators = ("password", "pass", "pwd", "loginpassword")
-    username_indicators = ("username", "user", "login", "loginusername")
+    username_indicators = ("username", "user", "login")
 
     for name, value in params.items():
         lower_name = name.lower()
-        # Check password first - "loginPassword" contains both "login"
-        # (username indicator) and "password" (password indicator).
-        # Password is more specific and should take priority.
-        if any(ind in lower_name for ind in password_indicators):
-            password_field = name
+        # Password checked first: "loginPassword" matches both lists, and
+        # password is the more specific signal. First match wins on each
+        # axis, since credential inputs precede auxiliary fields like
+        # cur_passwd. Surplus credential-shaped fields never become
+        # hidden_fields; their captured values are credentials, not form
+        # constants.
+        if is_password_field_name(name):
+            password_field = password_field or name
         elif any(ind in lower_name for ind in username_indicators):
-            username_field = name
+            username_field = username_field or name
         else:
             hidden_fields[name] = value
 
@@ -858,10 +870,16 @@ _BASE64_KEYSTR = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 
 _JS_BTOA_PATTERN = re.compile(r"btoa\s*\(", re.IGNORECASE)
 
+# Stock base64.js firmware calls base64encode() at submit time; the keyStr
+# lives in that separate file, so the login page HTML shows only the call.
+_JS_BASE64_FN_PATTERN = re.compile(r"base64encode\s*\(", re.IGNORECASE)
+
 
 def _has_js_base64_encoding(html: str) -> bool:
     """Check if login page JavaScript encodes the password in base64."""
     if _BASE64_KEYSTR in html:
+        return True
+    if _JS_BASE64_FN_PATTERN.search(html):
         return True
     return bool(_JS_BTOA_PATTERN.search(html))
 
@@ -871,6 +889,26 @@ class _LoginPageInfo(NamedTuple):
 
     path: str
     html: str
+
+
+# Form actions may be quoted or bare, absolute or relative to the page.
+_FORM_ACTION_PATTERN = re.compile(
+    r"<form[^>]*\saction=(?:[\"']([^\"']+)[\"']|([^\s>\"']+))",
+    re.IGNORECASE,
+)
+
+
+def _page_posts_to(text: str, page_url: str, post_path: str) -> bool:
+    """Check if a page references the login path or has a form action resolving to it."""
+    if post_path in text:
+        return True
+    # A relative form action never contains the absolute post path;
+    # resolve it against the page URL.
+    for match in _FORM_ACTION_PATTERN.finditer(text):
+        action = match.group(1) or match.group(2) or ""
+        if action and path_from_url(urljoin(page_url, action)) == post_path:
+            return True
+    return False
 
 
 def _find_login_page(
@@ -903,7 +941,7 @@ def _find_login_page(
         if "html" not in mime:
             continue
         # Check if this page contains a form posting to the login URL
-        if post_path in text:
+        if _page_posts_to(text, req.get("url", ""), post_path):
             page_path = path_from_url(req.get("url", ""))
             return _LoginPageInfo(path=page_path, html=text)
 

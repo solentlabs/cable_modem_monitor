@@ -318,7 +318,8 @@ same-poll `LOAD_AUTH` recovery loop on every reused-session poll. After
 attempting session reuse for the rest of that process lifetime and
 starts each poll with a fresh login. An intervening normal successful
 poll resets the recovery streak. This state is runtime-only —
-`reset_auth()` or process restart re-enables reuse.
+orchestrator reconstruction (entry reload or process restart)
+re-enables reuse.
 
 Session reuse strategy is intentionally not exposed as a per-modem
 yaml field. Per CLAUDE.md's "no per-modem recovery tuning" principle,
@@ -377,9 +378,9 @@ returns `AuthResult.FAILURE`.
 | Session token | Auth Manager | URL token injection | Until session expires |
 | Login backoff counter | Orchestrator | Anti-brute-force suppression | Decremented each poll |
 | Auth failure streak | Orchestrator | Circuit breaker threshold tracking | Reset on successful collection |
-| Circuit open flag | Orchestrator | Stops polling on persistent auth failure | Cleared by client reauth |
-| Stale-session recovery streak | Orchestrator | Tracks consecutive recovered `LOAD_AUTH` same-poll retries | Reset by an intervening normal success, `reset_auth()`, or process restart |
-| Session reuse disabled flag | Orchestrator | Forces fresh auth on each poll after repeated consecutive stale-session recoveries | Reset by `reset_auth()` or process restart |
+| Circuit open flag | Orchestrator | Stops polling on persistent auth failure | Cleared by orchestrator reconstruction (reauth → entry reload) |
+| Stale-session recovery streak | Orchestrator | Tracks consecutive recovered `LOAD_AUTH` same-poll retries | Reset by an intervening normal success or orchestrator reconstruction |
+| Session reuse disabled flag | Orchestrator | Forces fresh auth on each poll after repeated consecutive stale-session recoveries | Reset by orchestrator reconstruction (entry reload / process restart) |
 | Connectivity streak | Orchestrator | Tracks consecutive unreachable failures | Reset on success, non-connectivity failure, reset_connectivity(), or health recovery |
 | Connectivity backoff | Orchestrator | Exponential backoff: min(2^(streak-1), 6) | Decremented each poll, cleared by reset_connectivity() or health recovery |
 | Last poll status | Orchestrator | Detect status transitions (e.g., unreachable → online) | Updated each poll |
