@@ -9,7 +9,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..analysis.auth.patterns import get_login_url_patterns, get_session_cookie_indicators
+from ..analysis.auth.patterns import (
+    get_login_url_patterns,
+    get_session_cookie_indicators,
+    has_credential_fields,
+)
 from .har_utils import (
     HARD_STOP_PREFIX,
     has_set_cookie,
@@ -106,7 +110,10 @@ def _scan_auth_artifacts(entries: list[dict[str, Any]]) -> AuthArtifacts:
         if is_hnap_request(url, req_hdrs):
             artifacts.hnap = artifacts.any = True
 
-        if method == "POST" and _is_login_url(url):
+        # A POST without credential-shaped fields is an action posted to the
+        # auth endpoint, not a login; a HAR with no login must not report
+        # an auth flow.
+        if method == "POST" and _is_login_url(url) and has_credential_fields(req.get("postData", {})):
             artifacts.login_post = artifacts.any = True
 
         if "authorization" in req_hdrs:

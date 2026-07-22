@@ -12,6 +12,12 @@
     "/php/ajaxset_password",
     "/setup.cgi"
   ],
+  "password_field_indicators": [
+    "password",
+    "pass",
+    "pwd",
+    "pws"
+  ],
   "nonce_prefixes": {
     "success": "Url:",
     "error": "Error:"

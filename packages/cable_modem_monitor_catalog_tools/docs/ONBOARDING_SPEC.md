@@ -225,7 +225,7 @@ Check the **first request** in the HAR:
 |--------------|----------------|
 | `WWW-Authenticate: Basic` response header | `basic` auth |
 | `WWW-Authenticate: Digest` response header | Digest auth — **unsupported, flag** |
-| POST to login endpoint with form body | `form` (or variant — continue analysis) |
+| POST to login endpoint with credential-shaped form body | `form` (or variant — continue analysis) |
 | `HNAP_AUTH` header on any request | `hnap` auth |
 | URL contains base64-encoded credentials | `url_token` auth |
 | JSON POST with SJCL AES-CCM encrypted payload (`EncryptData`) | `form_sjcl` auth |
@@ -322,13 +322,30 @@ responses) is a separate axis — detected in Phase 5.
 Auth detection depends on transport — the constraint table limits valid
 strategies.
 
-**Known limitation — the login POST is chosen by shape, not by evidence
-of credentials.** A modem that posts its actions to the login endpoint
-can send detection to the wrong request at `confidence: "high"` with no
-warnings. Sercomm DM1000 is the example: `/setup.cgi` serves both the
-login and the reboot, and detection returns the reboot POST. Until the
-discriminator selects by credential field names rather than recency,
-the pick is confirmed by hand — see MODEM_INTAKE_WORKFLOW.md § Step 4.
+**The login POST is selected by credential-shaped field names, not
+recency alone.** A form POST to an auth-pattern URL counts as a login
+only when its body carries a password-shaped field name — names, not
+values, because the sanitizer redacts values. Among credential POSTs
+the latest wins, so a retried login yields the successful attempt. An
+action POST sharing the login endpoint (Sercomm DM1000: `/setup.cgi`
+serves both login and reboot) is never picked, and a HAR with no
+credential POST reports no auth flow.
+
+Password-shaped means either of:
+
+- a curated substring from `password_field_indicators` in
+  `auth_patterns.json` — these generalize to firmware never seen
+  before;
+- an exact `password_field` name declared by any committed
+  `modem.yaml` — committing a modem teaches the detector its field
+  name with no separate pattern-maintenance step. Exact names never
+  generalize; only curated substrings do.
+
+One caveat follows from the catalog-derived half: the intake
+regression treats each committed HAR as a fresh submission, but a
+modem whose field name matches no curated substring is recognized via
+its own committed config, so it grades better there than a genuinely
+novel submission would.
 
 #### HNAP transport
 
@@ -353,7 +370,7 @@ Check HAR entries for login flow:
   ├── No login flow, all 200s, no session artifacts
   │   └── strategy: none
   │
-  ├── POST to /goform/*, /cgi-bin/*, or similar with form fields
+  ├── POST to /goform/*, /cgi-bin/*, or similar with credential-shaped form fields
   │   ├── Response is text with "Url:" / "Error:" prefixes?
   │   │   └── strategy: form_nonce
   │   │       Extract: action, username_field, password_field,
@@ -512,8 +529,12 @@ response bodies instead. Three passes, in order:
    fields for the manual step.
 3. **Bare quoted strings** — the legacy scan; yields endpoint only, with
    the method guessed from the action name (GET for logout, POST for
-   restart). The same action-name prior applies in pass 1 when a call
-   site has no `type:` field.
+   restart). Only strings that read as request paths qualify: a bare
+   word (`"Reboot"`) is a UI label, and `..` segments or static assets
+   (`"../i/Logout_Normal.png"`) are page furniture — matching them
+   would fabricate endpoints the firmware never exposes. The same
+   action-name prior applies in pass 1 when a call site has no
+   `type:` field.
 
 **Traffic-observed actions get pre-fetch from form evidence too.** When
 an observed action's endpoint equals a captured page's form action, that
