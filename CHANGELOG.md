@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **har-capture floor raised to 0.10.3.** The 0.10.3 sanitizer closes
+  a credential-leak gap (the Sercomm `pws` login field) found during
+  the DM1000 intake; catalog tooling now requires it. (Related to #92)
+
 ## [3.14.0-beta.15] - 2026-07-22
 
 ### Added
