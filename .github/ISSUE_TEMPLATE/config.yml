@@ -12,6 +12,9 @@ contact_links:
   - name: Testing on Home Assistant
     url: https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#test-on-local-ha
     about: How to test a development branch on your HA instance
+  - name: 🕒 What to expect after filing
+    url: https://github.com/solentlabs/cable_modem_monitor/blob/main/SUPPORT.md
+    about: One maintainer, evenings only. Reply and review times, and where each kind of question goes
   - name: Contributing Guide
     url: https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md
     about: Learn how to contribute to the project
