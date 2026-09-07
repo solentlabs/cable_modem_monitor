@@ -9,6 +9,9 @@ Before opening — gating rule:
 
 PRs without a prior Discussion may be closed in favor of starting one.
 See CONTRIBUTING.md § Before You File / § What Happens After You File.
+
+Reviews happen on weekends, about two weeks each, one active PR per
+contributor. See SUPPORT.md.
 -->
 
 # Description

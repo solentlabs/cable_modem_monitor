@@ -423,7 +423,7 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-Cable Modem Monitor is maintained by one person, in the evenings, around a day job. I read every issue, and replies are best effort; a few days is normal. Fixes land as time allows.
+Cable Modem Monitor is maintained by one person, in the evenings, around a day job. What to expect from replies and reviews, and where to ask what, is in [SUPPORT.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/SUPPORT.md).
 
 Catalog contributions are welcome and are the fastest way to get a new modem supported. If you have AI access, you can do most of the intake yourself: see [AI-Assisted Catalog Contribution](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#ai-assisted-catalog-contribution).
 

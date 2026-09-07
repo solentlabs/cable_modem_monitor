@@ -48,6 +48,10 @@ All processing happens on your Home Assistant instance. The integration reads fr
 - [Troubleshooting guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md) — connection problems, missing sensors, duplicate entities
 - [Changelog](https://github.com/solentlabs/cable_modem_monitor/blob/main/CHANGELOG.md) — what changed in each release
 
+## Support
+
+Cable Modem Monitor is maintained by one person, in the evenings, around a day job. What to expect from replies and reviews, and where to ask what, is in [SUPPORT.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/SUPPORT.md).
+
 ## Contributing and modem support
 
 - [Modem request guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) — how to capture the data needed to add your modem
