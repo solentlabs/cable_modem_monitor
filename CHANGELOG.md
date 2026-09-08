@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.1-beta.4] - 2026-09-08
+
 ### Changed
 
 - **`timeout` sits with `default_host` in `modem.yaml`.** It is a per-request
