@@ -22,6 +22,7 @@ attribution:
 
 isps:
   - "Pyür"
+
 notes: |
   ISP: Pyür (Germany). Modem in bridge mode.
   Pyür firmware hides channel info pages. On older Compal models (CH7485E, CH7467CE),

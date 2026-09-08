@@ -154,6 +154,7 @@ upstream:
         power_state: "ON"
 
         status: "1"
+
 system_info:
   sources:
     - format: json

@@ -202,40 +202,7 @@ class ModemDataCollector:
         except HNAPLoadError as exc:
             return self._classify_hnap_error(exc)
         except ResourceLoadError as exc:
-            if exc.status_code in (401, 403):
-                hint = _auth_failure_hint(self._auth_manager)
-                log_event(
-                    _logger,
-                    _build_http_status_error_event(
-                        model=self._modem_config.model,
-                        path=exc.path,
-                        status_code=exc.status_code,
-                        reason=hint,
-                        request_line=exc.request_line,
-                        content_type=exc.content_type,
-                        response_body=exc.response_body,
-                        password=self._password,
-                    ),
-                )
-                return ModemResult(
-                    success=False,
-                    signal=CollectorSignal.LOAD_AUTH,
-                    error=f"{exc.status_code} on {exc.path} — {hint}",
-                )
-            log_event(
-                _logger,
-                ResourceLoadErrorEvent(
-                    model=self._modem_config.model,
-                    path=exc.path,
-                    status_code=exc.status_code,
-                    reason=str(exc),
-                ),
-            )
-            return ModemResult(
-                success=False,
-                signal=CollectorSignal.LOAD_ERROR,
-                error=str(exc),
-            )
+            return self._classify_resource_load_error(exc)
         except (requests.ConnectionError, requests.Timeout) as exc:
             log_event(
                 _logger,
@@ -593,6 +560,67 @@ class ModemDataCollector:
         )
         resources = loader.fetch(targets)
         return resources, _to_resource_fetches(loader.resource_fetches)
+
+    def _classify_resource_load_error(self, exc: ResourceLoadError) -> ModemResult:
+        """Route an HTTP resource-load failure to the correct signal."""
+        # A wrapped connection or timeout is a network fault, not an HTTP
+        # error, so classify it CONNECTIVITY to get backoff and recovery.
+        # Matches HNAP (_classify_hnap_error) and RESOURCE_LOADING_SPEC
+        # section Error Signals. The HTTP loader wraps every requests
+        # exception with `from e`, so __cause__ carries the original and
+        # status_code is None for these.
+        cause = exc.__cause__
+        if exc.status_code is None and isinstance(cause, requests.ConnectionError | requests.Timeout):
+            log_event(
+                _logger,
+                ConnectionFailedDuringLoad(
+                    model=self._modem_config.model,
+                    path=exc.path,
+                    status_code=None,
+                    reason=str(exc),
+                ),
+            )
+            return ModemResult(
+                success=False,
+                signal=CollectorSignal.CONNECTIVITY,
+                error=str(exc),
+            )
+
+        if exc.status_code in (401, 403):
+            hint = _auth_failure_hint(self._auth_manager)
+            log_event(
+                _logger,
+                _build_http_status_error_event(
+                    model=self._modem_config.model,
+                    path=exc.path,
+                    status_code=exc.status_code,
+                    reason=hint,
+                    request_line=exc.request_line,
+                    content_type=exc.content_type,
+                    response_body=exc.response_body,
+                    password=self._password,
+                ),
+            )
+            return ModemResult(
+                success=False,
+                signal=CollectorSignal.LOAD_AUTH,
+                error=f"{exc.status_code} on {exc.path} — {hint}",
+            )
+
+        log_event(
+            _logger,
+            ResourceLoadErrorEvent(
+                model=self._modem_config.model,
+                path=exc.path,
+                status_code=exc.status_code,
+                reason=str(exc),
+            ),
+        )
+        return ModemResult(
+            success=False,
+            signal=CollectorSignal.LOAD_ERROR,
+            error=str(exc),
+        )
 
     def _classify_hnap_error(self, exc: HNAPLoadError) -> ModemResult:
         """Route an HNAP load failure to the correct signal."""

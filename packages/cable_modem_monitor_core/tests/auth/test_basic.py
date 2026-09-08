@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
+import pytest
 import requests
 from solentlabs.cable_modem_monitor_core.auth.basic import BasicAuthManager
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import BasicAuth
@@ -43,6 +46,25 @@ class TestBasicAuthManager:
 
             result = manager.authenticate(session, server.base_url, "admin", "secret")
             assert result.success is True
+
+    def test_challenge_cookie_connectivity_error_reraises(self, session: requests.Session) -> None:
+        """A connection/timeout during the challenge request propagates so the collector maps it to CONNECTIVITY."""
+        config = BasicAuth(strategy="basic", challenge_cookie=True)
+        manager = BasicAuthManager(config)
+        with (
+            patch.object(session, "get", side_effect=requests.Timeout("timed out")),
+            pytest.raises(requests.Timeout),
+        ):
+            manager.authenticate(session, "http://192.168.100.1", "admin", "secret")
+
+    def test_challenge_cookie_non_connectivity_error_returns_failure(self, session: requests.Session) -> None:
+        """A non-connectivity RequestException during the challenge request fails without propagating."""
+        config = BasicAuth(strategy="basic", challenge_cookie=True)
+        manager = BasicAuthManager(config)
+        with patch.object(session, "get", side_effect=requests.TooManyRedirects("redirect loop")):
+            result = manager.authenticate(session, "http://192.168.100.1", "admin", "secret")
+        assert result.success is False
+        assert "TooManyRedirects" in (result.error or "")
 
     def test_no_url_token(self, session: requests.Session) -> None:
         """Basic auth doesn't produce a URL token."""

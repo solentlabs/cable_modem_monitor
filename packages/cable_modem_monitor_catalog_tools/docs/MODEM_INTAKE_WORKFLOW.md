@@ -394,7 +394,10 @@ If `result.validation.valid is False`:
 - Fix the analysis dict or metadata
 - Retry
 
-Review the generated YAML before proceeding.
+Review the generated YAML before proceeding. It comes out in the
+layout [MODEM_YAML_SPEC.md § Layout](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md#layout)
+defines; keep that layout through any hand edit, the catalog suite
+gates it.
 
 ## Step 8: Generate Golden File + Write Package
 

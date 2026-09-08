@@ -94,6 +94,7 @@ attribution:
 
 isps:
   - Vodafone
+
 notes: |
   DOCSIS 3.1 gateway (Vodafone-branded). Same Technicolor REST platform
   family as CGA4236 but different API structure. JSON API at /api/v1/.

@@ -14,6 +14,7 @@ auth:
 
   success:
     redirect: "/basicUX.html"
+
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3384ZU"
@@ -26,6 +27,7 @@ sources:
   chipset: "[FCC Filing](https://fccid.io/RUI-CGA2121COM)"
 
   detection_hints: "[#75 Technicolor CGA2121](https://github.com/solentlabs/cable_modem_monitor/issues/75)"
+
 attribution:
   contributors:
     - github: https://github.com/sgofferj
@@ -33,6 +35,7 @@ attribution:
 
 isps:
   - Telia
+
 notes: |
   DOCSIS 3.0 Wireless Gateway (combo modem/router) for Telia Finland.
   24 downstream channels and 4 upstream channels.
@@ -40,6 +43,7 @@ notes: |
   - No frequency data exposed in status page
   - No codeword counts exposed in status page
   Form-based authentication to /goform/logon endpoint.
+
 references:
   issues:
     - "[#75 — [Modem Request] Technicolor CGA2121](https://github.com/solentlabs/cable_modem_monitor/issues/75)"

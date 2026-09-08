@@ -95,6 +95,7 @@ upstream:
         - key: FFT
           field: modulation
           type: modulation
+
 system_info:
   sources:
     - format: json

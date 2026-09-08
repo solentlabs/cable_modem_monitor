@@ -20,6 +20,7 @@ hardware:
   end_of_life: "2023"
 
   release_date: "2016-03"
+
 status: awaiting_verification
 
 sources:
@@ -28,6 +29,7 @@ sources:
   chipset: "[CM600 Datasheet](https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf)"
   detection_hints: "[#3 Netgear CM600](https://github.com/solentlabs/cable_modem_monitor/issues/3)"
   hardware: "[CM600 Datasheet](https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf)"
+
 attribution:
   contributors:
     - github: https://github.com/chairstacker
@@ -40,6 +42,7 @@ isps:
   - Cox
   - Spectrum
   - TWC
+
 notes: |
   DOCSIS 3.0 cable modem (modem-only, no router). 24x8 channel bonding.
   Firmware limitation: System Uptime field is in HH:MM:SS format.

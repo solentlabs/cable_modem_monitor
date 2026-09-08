@@ -203,7 +203,7 @@ Accepting AI-generated changes without reading them produces classic failure mod
 
 > Project parameter — adjust for your context.
 
-I review on weekends, with ~2-week turnarounds typical. Multiple open PRs from one contributor are sequenced, not parallelized — one active work item at a time. This isn't gatekeeping; it reflects the review-capacity reality cited above.
+Review turnaround is stated in [SUPPORT.md](SUPPORT.md). Multiple open PRs from one contributor are sequenced, not parallelized — one active work item at a time. This isn't gatekeeping; it reflects the review-capacity reality cited above.
 
 ### Templated redirect
 
@@ -383,6 +383,16 @@ the conversation — not automatic).
   interested contributor), and the gap's `issue:` URL is updated to
   match.
 
+### Discussion Closing Policy
+
+A Discussion is closed when it is answered, when what it asked for has
+shipped, or when it has gone quiet after the last question put to it.
+Closing is bookkeeping, not rejection: the closing comment says which
+of the three applies and points at what superseded it (a release, an
+issue, a catalog entry). A comment on a closed Discussion is still
+read and can reopen it. Renewed interest in an old idea gets a fresh
+Discussion, ideally opened by the person interested, with a link back.
+
 ### Commit Message Format
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
@@ -399,6 +409,32 @@ feat(catalog): add support for Arris TG1682G
 
 Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
 `build`, `ci`, `chore`, `revert`, `deps`.
+
+Wrap message body lines at 100 characters or fewer. One long unwrapped
+paragraph fails the check, and where it fails is not always obvious: the
+Conventional Commits parser treats a paragraph that opens with a
+reference such as `PR #208` as the footer rather than the body, so the
+same line can pass or fail depending on where the reference sits.
+Wrapping removes the ambiguity.
+
+The check runs on every push, not only on pull requests, so a bad
+message surfaces while `git commit --amend` still fixes it rather than
+after it is buried under later commits.
+
+The check reads every commit on the branch, so a bad commit below the tip
+fails it and `git commit --amend` does not reach it. AI coding agents
+leave scaffolding commits (`Initial plan`) that fail this way. Squash
+the branch to one commit before pushing:
+
+```bash
+git reset --soft HEAD~<n>   # n = commits in the PR
+git commit -m "type(scope): description"
+git push --force-with-lease
+```
+
+A failing check is fixed in the commits or code it flags, never by
+editing the check. A PR that changes `.github/workflows/` to pass its
+own gate is closed.
 
 ## Issue Labels
 

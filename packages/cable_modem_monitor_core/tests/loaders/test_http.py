@@ -471,6 +471,27 @@ class TestHTTPResourceLoader:
             loader.fetch(targets)
         assert expected_type_name in str(exc_info.value)
 
+    def test_fetch_timeout_wraps_with_cause_and_no_status(self) -> None:
+        """A wrapped fetch timeout keeps status_code None and __cause__ set (collector connectivity contract)."""
+        from unittest.mock import patch
+
+        # _classify_resource_load_error routes a load-phase timeout to
+        # CONNECTIVITY only when status_code is None and __cause__ is a
+        # ConnectionError/Timeout. If a refactor drops `from e`, the
+        # message-based tests still pass but the collector silently
+        # reverts to LOAD_ERROR (the load-phase timeout bug). Lock both.
+        session = requests.Session()
+        loader = HTTPResourceLoader(session, "http://127.0.0.1", timeout=1)
+        targets = [ResourceTarget(path="/status.html", format="table")]
+        timeout = requests.ReadTimeout("read timed out")
+        with (
+            patch.object(session, "get", side_effect=timeout),
+            pytest.raises(ResourceLoadError) as exc_info,
+        ):
+            loader.fetch(targets)
+        assert exc_info.value.status_code is None
+        assert exc_info.value.__cause__ is timeout
+
     def test_undecoded_response_skipped(self) -> None:
         """Page that decodes to None is excluded from resources."""
         entries = _build_entries({"/data.json": ("application/json", "not valid json")})

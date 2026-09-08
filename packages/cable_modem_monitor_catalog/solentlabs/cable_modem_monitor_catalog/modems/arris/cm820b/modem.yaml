@@ -8,13 +8,13 @@ default_host: "192.168.100.1"
 auth:
   strategy: none
 
-health:
-  supports_head: false
-
 hardware:
   docsis_version: "3.0"
   chipset: "Intel Puma 5"
   release_date: "2011"
+
+health:
+  supports_head: false
 
 status: confirmed
 
@@ -24,6 +24,7 @@ sources:
 
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_CM820A"
   detection_hints: "[PR #57 CM820B parser](https://github.com/solentlabs/cable_modem_monitor/pull/57)"
+
 attribution:
   contributors:
     - github: https://github.com/dimkalinux
@@ -34,12 +35,14 @@ attribution:
 isps:
   - Volya
   - Various
+
 notes: |
   EuroDOCSIS 3.0 cable modem (released 2011). Intel Puma 5 chipset.
   No authentication required — CGI endpoints are publicly accessible.
   Two resources: /cgi-bin/status_cgi (channels + uptime) and
   /cgi-bin/vers_cgi (firmware/hardware version). Version info requires
   parser.py post-processor to parse the "System:" blob.
+
 references:
   prs:
     - "[PR #57 — Added support for Arris CM820B modem.](https://github.com/solentlabs/cable_modem_monitor/pull/57)"

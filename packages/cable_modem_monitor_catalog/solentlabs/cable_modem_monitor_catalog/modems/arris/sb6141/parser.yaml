@@ -47,6 +47,7 @@ downstream:
         fallback:
           type: header_text
           match: "Signal Stats (Codewords)"
+
 upstream:
   format: table_transposed
   resource: "/cmSignalData.htm"

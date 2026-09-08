@@ -9,6 +9,9 @@ Before opening — gating rule:
 
 PRs without a prior Discussion may be closed in favor of starting one.
 See CONTRIBUTING.md § Before You File / § What Happens After You File.
+
+Reviews happen on weekends, about two weeks each, one active PR per
+contributor. See SUPPORT.md.
 -->
 
 # Description
@@ -32,6 +35,7 @@ Related to #
 - [ ] Tested against real modem hardware (catalog PRs and Core parsing/auth changes)
 - [ ] Catalog PR: used `/modem-intake` (or `skills/modem-intake.md` with another AI tool) or output matches its structure
 - [ ] Breaking change? Migration path described in the Description above
+- [ ] Every commit is `type(scope): description` and AI-agent scaffolding commits are squashed (CI checks each commit, see [CONTRIBUTING § Commit Message Format](../CONTRIBUTING.md#commit-message-format))
 
 ---
 

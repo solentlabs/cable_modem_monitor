@@ -65,11 +65,11 @@ for the contract.
 | [Principles](#principles) | The three rules every field obeys |
 | [Schema Overview](#schema-overview) | Complete YAML skeleton with annotations |
 | [Identity](#identity) | manufacturer, model, transport, default_host, aliases |
+| [Timeout](#timeout) | Per-request override |
 | [Auth](#auth) | 10 strategy types with full config examples |
 | [Session](#session) | Cookie, single-session, SPA patterns |
 | [Actions](#actions) | Restart and logout — http and hnap types |
 | [Hardware](#hardware) | DOCSIS version, hw_version, firmware, chipset |
-| [Timeout](#timeout) | Per-request override |
 | [Health](#health) | Health probe configuration (fragile modems) |
 | [Metadata](#metadata) | Status, attribution, sources, ISPs, notes |
 | [Validation Rules](#validation-rules) | Transport constraints, required fields, consistency checks |
@@ -96,6 +96,7 @@ brands:                           # optional — user-visible brand names; becom
   - "Surfboard"
 transport: http                    # http | hnap | cbn
 default_host: "192.168.100.1"
+timeout: 15                        # optional, default 10
 
 # Auth
 auth:
@@ -120,9 +121,6 @@ hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
 
-# Timeout (optional, default 10)
-timeout: 15
-
 # Health (optional, defaults are correct for most modems)
 health:
   http_probe: false      # disable TCP/HEAD probes for fragile modems
@@ -131,25 +129,48 @@ health:
 
 # Metadata
 status: confirmed
+
 sources:
   auth_config: "#81"
   chipset: "FCC filing"
+
 attribution:
   contributors:
     - github: "https://github.com/kwschulz"
       contribution: "Initial HAR capture and fixtures"
+
 isps:
   - "Comcast"
   - "Spectrum"
+
 pii_fields:                  # optional — system_info keys with PII beyond global defaults
   - home_ssid
+
 notes: |
   SB8200 HTTPS variant with URL token auth.
+
 references:
   issues:
     - 42
     - 81
 ```
+
+### Layout
+
+Top-level keys appear in the order above, which is `ModemConfig`'s
+field order. The identity block, `manufacturer` through `timeout`,
+is contiguous: it says what the modem is and how to reach it, and
+`timeout` belongs there because it bounds every request made to that
+host. Every later top-level key starts a section and is preceded by
+one blank line; a comment above a key sits below that blank line.
+
+`parser.yaml` follows the same rule with `ParserConfig`'s field order
+and no contiguous block: every top-level key is a section.
+
+The intake pipeline emits this layout, and the catalog test suite
+gates every shipped `modem*.yaml` and `parser.yaml` on it.
+`packages/cable_modem_monitor_catalog/scripts/check_modem_yaml_layout.py --fix`
+repairs spacing; key order is a hand edit.
 
 ---
 
@@ -221,6 +242,22 @@ choice in the config flow's manufacturer dropdown and also appears in
 the model line's parenthetical, so the modem is findable under the name
 on the box while remaining one catalog record. See
 ARCHITECTURE_DECISIONS § Brand names as manufacturer-step choices.
+
+---
+
+## Timeout
+
+```yaml
+timeout: 15
+```
+
+Per-request timeout in seconds. Applies to each individual HTTP request
+(page fetch, HNAP call), not to the total poll cycle. Default: 10
+seconds.
+
+Override for slow modems — some cable modems take 12-20 seconds to
+render data pages, particularly those with older chipsets or HTTPS
+endpoints.
 
 ---
 
@@ -1371,22 +1408,6 @@ hardware:
 | `chipset` | string | no | Modem chipset (informational) |
 | `release_date` | string | no | Year or date the hardware was released (e.g., `"2017"` or `"2017-06"`). Used in the catalog timeline. |
 | `end_of_life` | string | no | Year or date the hardware reached end-of-life. Omit if still current. |
-
----
-
-## Timeout
-
-```yaml
-timeout: 15
-```
-
-Per-request timeout in seconds. Applies to each individual HTTP request
-(page fetch, HNAP call), not to the total poll cycle. Default: 10
-seconds.
-
-Override for slow modems — some cable modems take 12-20 seconds to
-render data pages, particularly those with older chipsets or HTTPS
-endpoints.
 
 ---
 

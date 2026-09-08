@@ -4,6 +4,7 @@ brands:
   - "Nighthawk"
 transport: http
 default_host: "192.168.100.1"
+
 auth:
   strategy: form
   action: "/goform/Login"
@@ -11,6 +12,7 @@ auth:
   password_field: loginPassword
   success:
     redirect: "/DocsisStatus.htm"
+
 actions:
   restart:
     type: http
@@ -21,27 +23,33 @@ actions:
       buttonSelect: "2"
 
     pre_fetch_url: "/RouterStatus.htm"
+
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
   release_date: "2020-08"
+
 status: awaiting_verification
+
 sources:
   brands: "[Netgear product page](https://www.netgear.com/home/wifi/modems/cm2000/) — Nighthawk branding"
   auth_config: "[#38 Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
   chipset: "[Homeowner.com Review](https://www.homeowner.com/connectivity/netgear/netgear-cm2000-review)"
   detection_hints: "[#38 Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
+
 attribution:
   contributors:
     - github: https://github.com/m4dh4tt3r-88
       contribution:
         "[Issue #38](https://github.com/solentlabs/cable_modem_monitor/issues/38)
         diagnostics"
+
 isps:
   - Comcast
   - Cox
   - Spectrum
   - Xfinity
+
 notes: |
   Nighthawk DOCSIS 3.1 modem with 2.5 Gbps max downstream speed.
   32 SC-QAM downstream channels plus OFDM (DOCSIS 3.1).

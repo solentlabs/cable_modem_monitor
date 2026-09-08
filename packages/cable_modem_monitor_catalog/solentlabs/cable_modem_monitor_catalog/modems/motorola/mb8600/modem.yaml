@@ -30,28 +30,33 @@ hardware:
   release_date: "2017"
 
 status: confirmed
+
 sources:
   auth_config: "[#40 MB8600 newer firmware](https://github.com/solentlabs/cable_modem_monitor/issues/40)"
   chipset: "[AfrozAhmad MB8611 review](https://afrozahmad.com/blog/motorola-mb8611-cable-modem-review/) — same BCM3390 platform as MB8611"
   hardware: "[Motorola MB8600 page](https://www.motorola.com/us/mb8600)"
   verification: "User diagnostics capture on v3.14.0-alpha.11 (2026-04-07, Issue #40)"
+
 attribution:
   contributors:
     - github: https://github.com/BowlesCR
       contribution: "MB8600 HAR capture and HNAP auth reverse-engineering (Issue #40)"
     - github: https://github.com/RoGreat
       contribution: "Independent verification and diagnostics capture (Issue #40)"
+
 isps:
   - Comcast
   - Xfinity
   - Cox
   - Spectrum
+
 notes: |
   Same HNAP protocol as MB8611 — uses GetMoto* action names.
   Predecessor to the MB8611 (2017 vs 2020 release).
   Parser is identical to MB8611.
   Default credentials: admin / motorola
   Compatible: MB8611 (same parser and HNAP protocol).
+
 references:
   issues:
     - "[#40 — [Modem Request] MB8600 (Newer firmware?)](https://github.com/solentlabs/cable_modem_monitor/issues/40)"

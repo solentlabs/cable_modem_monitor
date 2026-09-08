@@ -19,6 +19,7 @@ actions:
       buttonSelect: "2"
 
     pre_fetch_url: "/RouterStatus.htm"
+
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3384"
@@ -31,6 +32,7 @@ sources:
   auth_config: "[#163 C7000v2 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/163)"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Netgear_C7000_v2)"
   detection_hints: "[#163 C7000v2 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/163)"
+
 attribution:
   contributors:
     - github: https://github.com/Anthranilic
@@ -41,6 +43,7 @@ attribution:
 
 isps:
   - Comcast
+
 notes: |
   Nighthawk AC1900 WiFi Cable Modem Router combo. DOCSIS 3.0, 24x8 channel bonding.
   Same page structure and JS parsing as C3700. Multi-page parsing:

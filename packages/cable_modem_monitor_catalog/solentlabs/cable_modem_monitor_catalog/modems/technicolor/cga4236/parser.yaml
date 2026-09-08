@@ -153,13 +153,6 @@ system_info:
           type: string
           path: "data"
 
-computed:
-  memory_used_pct:
-    operation: percent_used
-    inputs:
-      total: memory_total
-      free: memory_free
-
 # DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
 # at a vastly different scale and are not aggregated.
 aggregate:
@@ -169,3 +162,10 @@ aggregate:
   total_uncorrected:
     sum: uncorrected
     channels: downstream.qam
+
+computed:
+  memory_used_pct:
+    operation: percent_used
+    inputs:
+      total: memory_total
+      free: memory_free

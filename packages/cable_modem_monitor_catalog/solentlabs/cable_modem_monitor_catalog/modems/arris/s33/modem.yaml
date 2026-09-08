@@ -28,6 +28,7 @@ hardware:
   release_date: "2020"
 
 status: confirmed
+
 sources:
   brands: "[SURFboard product family](https://www.surfboard.com/products/cable-modems/sb8200/) — manufacturer styles the brand SURFboard"
   auth_config:
@@ -36,6 +37,7 @@ sources:
   chipset: "[ModemGuides](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison)"
   detection_hints: "[#87 S33 data not updating](https://github.com/solentlabs/cable_modem_monitor/issues/87)"
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
+
 attribution:
   contributors:
     - github: https://github.com/mmiller7
@@ -44,11 +46,13 @@ attribution:
       contribution: "S33 HAR capture and iterative testing (Issue #32, #87)"
     - github: https://github.com/ccpk1
       contribution: "Reboot fix (PR #148, #146), stale HNAP session recovery (PR #142, #140), beta.3 confirmation HAR + diagnostics"
+
 isps:
   - Comcast
   - Cox
   - Spectrum
   - Xfinity
+
 notes: |
   HNAP protocol uses GetCustomer* action names (vs MB8611's GetMoto*).
   JavaScript reveals identical protocol structure to MB8611.
@@ -58,6 +62,7 @@ notes: |
   S33 blocks ICMP ping - HTTP-only health checks required.
   Modem UI swaps CustomerConnSystemUpTime display with clock time (JS bug); HNAP API returns real uptime.
   Compatible: S33v2 (same parser, MD5 HMAC), S33v3 (same parser, SHA256 HMAC).
+
 references:
   issues:
     - "[#32 — [Modem Request] Arris S33 - Uptime and Frequency Fixes](https://github.com/solentlabs/cable_modem_monitor/issues/32)"

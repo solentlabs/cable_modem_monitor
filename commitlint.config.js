@@ -1,6 +1,6 @@
 // Commitlint configuration — single source of truth for both
 // the pre-commit `commit-msg` hook (local) and the CI Commit Message
-// Validation workflow (PR gate). Conventional Commits, with our
+// Validation workflow (the gate). Conventional Commits, with our
 // project's `type-enum` extended for catalog/dep work.
 module.exports = {
   extends: ['@commitlint/config-conventional'],
@@ -23,7 +23,14 @@ module.exports = {
         'deps',     // Dependency updates
       ],
     ],
-    'subject-case': [0],         // Allow any case for subject
-    'body-max-line-length': [0], // Disable body line length check
+    'subject-case': [0], // Allow any case for subject
+    // Body and footer share one limit, deliberately. The conventional
+    // parser reclassifies a paragraph as footer when it opens with a
+    // reference such as "PR #208", so disabling only the body limit left
+    // a gap: the same long line passed or failed depending on where the
+    // reference sat. Matching footer-max-line-length (100, from
+    // config-conventional) closes it and keeps one wrap rule for the
+    // whole message.
+    'body-max-line-length': [2, 'always', 100],
   },
 };

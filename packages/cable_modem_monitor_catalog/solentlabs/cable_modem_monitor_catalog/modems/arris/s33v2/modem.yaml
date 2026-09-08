@@ -29,20 +29,24 @@ hardware:
   release_date: "2020"
 
 status: confirmed
+
 sources:
   brands: "[SURFboard product family](https://www.surfboard.com/products/cable-modems/sb8200/) — manufacturer styles the brand SURFboard"
   auth_config: "[#117 S33v2 crash](https://github.com/solentlabs/cable_modem_monitor/issues/117)"
   chipset: "[ModemGuides S33 review](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison) — same BCM3390 platform as S33"
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
+
 attribution:
   contributors:
     - github: https://github.com/mmiller7
       contribution: "S33v2 HAR capture and issue #117 report"
+
 isps:
   - Comcast
   - Cox
   - Spectrum
   - Xfinity
+
 notes: |
   S33v2 is a hardware revision of the S33. Both use HMAC-MD5.
   Same firmware family (TB01.03.*) and HNAP protocol as S33.
@@ -52,6 +56,7 @@ notes: |
   are the safety net pending variant validation.
   Modem UI swaps CustomerConnSystemUpTime display with clock time (JS bug); HNAP API returns real uptime.
   Known anti-brute-force: LOCKUP (temp lock) and REBOOT (forces restart).
+
 references:
   issues:
     - "[#117 — [Bug]: Arris S33v2 crashing when monitor enabled](https://github.com/solentlabs/cable_modem_monitor/issues/117)"

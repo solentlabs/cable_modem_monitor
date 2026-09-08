@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.1-beta.4] - 2026-09-08
+
+### Changed
+
+- **`timeout` sits with `default_host` in `modem.yaml`.** It is a per-request
+  transport setting, so it belongs with how to reach the modem rather than
+  among the hardware facts. The spec skeleton, the model and every catalog
+  entry that sets it now agree on where it goes.
+
+- **Catalog file layout is checked rather than assumed.** Key order and section
+  spacing are gated for every shipped `modem.yaml` and `parser.yaml`, the
+  intake pipeline emits the layout directly, and
+  `check_modem_yaml_layout.py --fix` repairs spacing. The whole fleet was
+  brought into conformance here with no data change: every file loads to
+  exactly what it did before.
+
+- **Support expectations have one home.** `SUPPORT.md` now owns reply and
+  review times and says where each kind of question belongs, with both READMEs,
+  the issue chooser and the pull request template pointing at it.
+  `CONTRIBUTING.md` gained a Discussion closing policy alongside the existing
+  issue one.
+
+- **Guidance for contributions made with AI coding agents.** A scaffolding
+  commit that fails the commit lint should be squashed, not answered by editing
+  the check. `CONTRIBUTING.md` owns the rule, and the lint failure output, the
+  pull request checklist and a new `.github/copilot-instructions.md` all repeat
+  it.
+
+- **Commit messages are validated on every push, not only on pull requests.**
+  A bad message now surfaces while `git commit --amend` still fixes it, instead
+  of surfacing once it is buried under later commits and needs a history
+  rewrite. The body and footer line limits are also unified at 100 characters:
+  the body limit had been disabled, so whether a long line passed depended on
+  whether the parser read its paragraph as body or as footer, which in turn
+  depended on where an issue reference happened to sit.
+
+### Removed
+
+- **`normalize_yaml.py` and the `ruamel.yaml` dependency.** Measured against the
+  catalog, the rewriter changed much more than had been agreed: it re-indented
+  lists, rewrapped quoted strings and alphabetized nested maps. The layout rule
+  ships as a gate on the two things that were actually ratified instead.
+
+### Fixed
+
+- **A network drop during data collection now backs off.** The resource loader
+  wraps every network error before the orchestrator sees it, and a wrapped
+  connection failure or timeout was read as a server error rather than a
+  connectivity one. The modem was still reported unreachable, correctly, but
+  the connectivity backoff never engaged: a modem that had dropped off the
+  network kept being polled at full rate, and one that came back could wait a
+  whole poll interval before the integration noticed. It is now classified as a
+  connectivity failure, which is what `RUNTIME_POLLING_SPEC` has always
+  specified and what the HNAP and CBN transports already did. This affects
+  every modem on the `http` transport, 32 of the 41 catalog entries.
+
+- **Technicolor XB gateways time out less often (#208).** The XB6, XB7, XB8 and
+  XB10 entries now allow 15 seconds per request instead of the 10 second
+  default. These gateways can take longer than the default to answer, which
+  surfaced as read timeouts and missing data. Contributed by @squatto.
+
 ## [3.14.1-beta.3] - 2026-09-02
 
 ### Added

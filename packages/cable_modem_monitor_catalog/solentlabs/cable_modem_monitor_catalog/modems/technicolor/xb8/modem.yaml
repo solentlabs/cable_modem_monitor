@@ -7,6 +7,7 @@ brands:
   - "Panoramic Wifi"
 transport: http
 default_host: "10.0.0.1"
+timeout: 15
 
 auth:
   strategy: form
@@ -57,6 +58,7 @@ sources:
   auth_config: "[#194 XB8 error graphs](https://github.com/solentlabs/cable_modem_monitor/issues/194) HAR capture (POST /check.jst with plain username and password fields, 302 to at_a_glance.jst, DUKSID session cookie)"
   restart: '[#194 XB8 error graphs](https://github.com/solentlabs/cable_modem_monitor/issues/194) fixture HAR (GET /restore_reboot.jst, then POST /actionHandler/ajaxSet_Reset_Restore.jst carrying resetInfo and the csrfp_token cookie echoed in the body; modem answered {"reboot":true})'
   release_date: "Xfinity rollout began 2022: [DSLReports — Next Gateway XB8](https://www.dslreports.com/forum/r33227126-Next-Gateway-XB8-Technicolor-CGM4981COM-Wi-Fi-6E); [Xfinity Community Forum — NEW xFi Gateway XB8](https://forums.xfinity.com/conversations/your-home-network/new-xfi-gateway-xb8/6216d91580db9c3cdd5e96fc)"
+
 attribution:
   contributors:
     - github: https://github.com/dondonini
@@ -74,6 +76,7 @@ isps:
   - Comcast
   - Xfinity
   - Cox
+
 notes: |
   DOCSIS 3.1 Wi-Fi 6E cable modem + router gateway (CGM4981COM),
   successor to the XB7 (CGM4331COM). Same web UI family as the XB6 and
@@ -98,6 +101,7 @@ notes: |
   and never as the answer to a logout. Restart is HAR-observed: the fixture records the
   reboot POST and the modem's success response. The integration's
   Restart button has not been pressed on XB8 hardware.
+
 references:
   issues:
     - "[#101 — [Modem Request] Technicolor CGM4981COM](https://github.com/solentlabs/cable_modem_monitor/issues/101)"

@@ -14,6 +14,7 @@ auth:
 
   success:
     redirect: "/cgi-bin/luci/admin/gateway/wan_status"
+
 hardware:
   docsis_version: "3.1"
   release_date: "2023"
@@ -26,6 +27,7 @@ sources:
   brands: 'Firmware `customer` field in test_data/modem.har ("ARRIS Group, Inc.") — box branding'
   detection_hints: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
   hardware: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
+
 attribution:
   contributors:
     - github: https://github.com/MrAct1on
@@ -35,6 +37,7 @@ isps:
   - Cox
   - Spectrum
   - Xfinity
+
 notes: |
   Gateway device (modem + router combo) with DOCSIS 3.1.
   Uses LuCI (OpenWrt-based) web interface with JSON endpoints.
@@ -44,6 +47,7 @@ notes: |
   Firmware self-reports product "G54_COMMSCOPE" on platform "G5X" and
   customer "ARRIS Group, Inc." (see test_data/modem.har).
   Default IPs: 192.168.100.1 (modem mode) or 192.168.0.1 (router mode).
+
 references:
   issues:
     - "[#72 — [Modem Request] Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
