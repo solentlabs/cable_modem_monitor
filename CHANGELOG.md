@@ -35,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pull request checklist and a new `.github/copilot-instructions.md` all repeat
   it.
 
+- **Commit messages are validated on every push, not only on pull requests.**
+  A bad message now surfaces while `git commit --amend` still fixes it, instead
+  of surfacing once it is buried under later commits and needs a history
+  rewrite. The body and footer line limits are also unified at 100 characters:
+  the body limit had been disabled, so whether a long line passed depended on
+  whether the parser read its paragraph as body or as footer, which in turn
+  depended on where an issue reference happened to sit.
+
 ### Removed
 
 - **`normalize_yaml.py` and the `ruamel.yaml` dependency.** Measured against the

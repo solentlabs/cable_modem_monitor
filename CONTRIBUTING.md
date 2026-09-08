@@ -410,7 +410,18 @@ feat(catalog): add support for Arris TG1682G
 Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
 `build`, `ci`, `chore`, `revert`, `deps`.
 
-The check reads every commit in the PR, so a bad commit below the tip
+Wrap message body lines at 100 characters or fewer. One long unwrapped
+paragraph fails the check, and where it fails is not always obvious: the
+Conventional Commits parser treats a paragraph that opens with a
+reference such as `PR #208` as the footer rather than the body, so the
+same line can pass or fail depending on where the reference sits.
+Wrapping removes the ambiguity.
+
+The check runs on every push, not only on pull requests, so a bad
+message surfaces while `git commit --amend` still fixes it rather than
+after it is buried under later commits.
+
+The check reads every commit on the branch, so a bad commit below the tip
 fails it and `git commit --amend` does not reach it. AI coding agents
 leave scaffolding commits (`Initial plan`) that fail this way. Squash
 the branch to one commit before pushing:
