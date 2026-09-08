@@ -12,7 +12,6 @@ dependencies = [
     "solentlabs-cable-modem-monitor-core>=3.14.0a0",
     "solentlabs-cable-modem-monitor-catalog>=3.14.0a0",
     "pydantic>=2.0",
-    "ruamel.yaml>=0.17",
 ]
 classifiers = [
     "Private :: Do Not Upload",

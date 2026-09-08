@@ -9,12 +9,6 @@ default_host: "192.168.100.1"
 auth:
   strategy: none
 
-hardware:
-  docsis_version: "3.0"
-  chipset: "Broadcom BCM3380"
-  end_of_life: "2019"
-
-  release_date: "2011"
 actions:
   restart:
     type: http
@@ -22,6 +16,13 @@ actions:
     endpoint: "/reset.htm"
     params:
       reset_modem: "Restart Cable Modem"
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Broadcom BCM3380"
+  end_of_life: "2019"
+
+  release_date: "2011"
 
 status: awaiting_verification
 
@@ -31,6 +32,7 @@ sources:
   brands: "[Motorola-branded SB6141 user guide](https://d15yx0mnc9teae.cloudfront.net/sites/default/files/Motorola_SB6141_manual.pdf) and [ARRIS SURFboard SB6141 manual](https://www.manualslib.com/manual/777279/Arris-Surfboard-Sb6141.html) — same modem sold under both brands"
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6141"
   detection_hints: "[HA Community thread](https://community.home-assistant.io/)"
+
 attribution:
   contributors:
     - github: https://github.com/captain-coredump
@@ -48,6 +50,7 @@ isps:
   - Spectrum
   - TWC
   - Mediacom
+
 notes: |
   DOCSIS 3.0 8x4 cable modem (released 2011, EOL 2019). Broadcom BCM3380.
   No authentication required; the status page is publicly accessible.
@@ -58,6 +61,7 @@ notes: |
   selector fallback.
   system_info from cmHelpData.htm (firmware, HW version) and indexData.htm (uptime).
   HW 7.0 and HW 8.0 confirmed on firmware SB_KOMODO-1.0.7.3-SCM02-NOSH.
+
 references:
   prs:
     - "[PR #57 — Added support for Arris CM820B modem.](https://github.com/solentlabs/cable_modem_monitor/pull/57)"

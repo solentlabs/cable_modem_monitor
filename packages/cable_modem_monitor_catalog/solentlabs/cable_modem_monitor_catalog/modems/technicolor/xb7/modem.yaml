@@ -7,7 +7,6 @@ brands:
   - "Panoramic Wifi"
 transport: http
 default_host: "10.0.0.1"
-
 timeout: 15
 
 auth:
@@ -19,6 +18,7 @@ auth:
 
   success:
     redirect: "/at_a_glance.jst"
+
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
@@ -32,6 +32,7 @@ sources:
   auth_config: "[#2 Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
   chipset: "[WikiDevi](https://wikidevi.wi-cat.ru/Technicolor_CGM4331COM)"
   detection_hints: "[#2 Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
+
 attribution:
   contributors:
     - github: https://github.com/esand
@@ -43,6 +44,7 @@ isps:
   - Rogers
   - Comcast
   - Xfinity
+
 notes: |
   DOCSIS 3.1 cable modem + router gateway (CGM4331COM).
   Transposed table format: rows are metrics, columns are channels.
@@ -72,6 +74,7 @@ notes: |
   34 downstream / 5 upstream, docsis_status Operational), not on this
   fixture. Replace the fixture with a real full-session HAR when an XB7
   owner contributes one.
+
 references:
   issues:
     - "[#2 — Add support for Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"

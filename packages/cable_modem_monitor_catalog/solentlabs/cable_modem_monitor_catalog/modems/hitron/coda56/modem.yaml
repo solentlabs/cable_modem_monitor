@@ -43,6 +43,7 @@ attribution:
 isps:
   - Comcast
   - Xfinity
+
 notes: |
   DOCSIS 3.1 cable modem. GoAhead-Webs server with HTTPS + HSTS.
   JSON API via /data/*.asp endpoints (Content-Type: text/html but JSON body).

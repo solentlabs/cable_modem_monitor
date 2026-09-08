@@ -11,13 +11,6 @@ auth:
   cookie_name: "credential"
   success_indicator: "Downstream Bonded Channels"
 
-hardware:
-  docsis_version: "3.1"
-  hw_version: v7
-  firmware: AB01.02.053.01
-  chipset: "Broadcom BCM3390"
-  release_date: "2017"
-
 actions:
   logout:
     type: http
@@ -25,7 +18,19 @@ actions:
     endpoint: "/logout.html"
     requires_session: false
 
+hardware:
+  docsis_version: "3.1"
+  hw_version: v7
+  firmware: AB01.02.053.01
+  chipset: "Broadcom BCM3390"
+  release_date: "2017"
+
 status: confirmed
+
+sources:
+  auth_config: "[#170 — SB8200 v6 body-token auth variant (Spectrum)](https://github.com/solentlabs/cable_modem_monitor/issues/170)"
+  chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
+  hardware: "[ARRIS SB8200 page](https://www.arris.com/surfboard/products/cable-modems/sb8200/)"
 
 attribution:
   contributors:
@@ -33,11 +38,6 @@ attribution:
       contribution: "HW v6 HAR capture, logout flow HAR, and diagnostics confirmation — verified on beta.11 hardware (Issue #170)"
     - github: https://github.com/rct
       contribution: "HW v7 / AB01.02 confirmation — diagnostics verified (Issue #124)"
-
-sources:
-  auth_config: "[#170 — SB8200 v6 body-token auth variant (Spectrum)](https://github.com/solentlabs/cable_modem_monitor/issues/170)"
-  chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
-  hardware: "[ARRIS SB8200 page](https://www.arris.com/surfboard/products/cable-modems/sb8200/)"
 
 isps:
   - Spectrum

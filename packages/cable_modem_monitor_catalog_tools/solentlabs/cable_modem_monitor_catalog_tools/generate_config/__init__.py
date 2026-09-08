@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from solentlabs.cable_modem_monitor_core.validation.cross_file import validate_cross_file
+from solentlabs.cable_modem_monitor_core.validation.layout import IDENTITY_KEYS, apply_section_spacing
 
 from ..analysis.types import FleetPatterns
 from .modem import build_modem_dict
@@ -91,8 +92,12 @@ def generate_config(
         errors.extend(cross_errors)
 
     # Normalize key ordering and serialize to YAML
-    modem_yaml = to_yaml(normalize_key_order(modem_dict, MODEM_KEY_ORDER))
-    parser_yaml = to_yaml(normalize_key_order(parser_dict, PARSER_KEY_ORDER)) if parser_dict else None
+    modem_yaml = apply_section_spacing(
+        to_yaml(normalize_key_order(modem_dict, MODEM_KEY_ORDER)), contiguous=IDENTITY_KEYS
+    )
+    parser_yaml = (
+        apply_section_spacing(to_yaml(normalize_key_order(parser_dict, PARSER_KEY_ORDER))) if parser_dict else None
+    )
 
     return GenerateConfigResult(
         modem_yaml=modem_yaml,

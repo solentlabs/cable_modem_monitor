@@ -14,6 +14,7 @@ hardware:
   end_of_life: "2023"
 
   release_date: "2016"
+
 status: awaiting_verification
 
 sources:
@@ -24,6 +25,7 @@ sources:
 
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6190"
   detection_hints: "[PR #22 SB6190 parser](https://github.com/solentlabs/cable_modem_monitor/pull/22)"
+
 attribution:
   contributors:
     - github: https://github.com/sfennell
@@ -36,6 +38,7 @@ isps:
   - Cox
   - Spectrum
   - TWC
+
 notes: |
   Two firmware variants with different auth requirements:
   - Older firmware: No authentication required
@@ -55,6 +58,7 @@ notes: |
   hundreds. Two channels dominate any aggregate, making totals
   misleading. Aggregate intentionally omitted; per-channel data is
   available. Well-documented chipset issue across the industry.
+
 references:
   issues:
     - "[#83 — [Bug]: SB6190 parser error](https://github.com/solentlabs/cable_modem_monitor/issues/83)"

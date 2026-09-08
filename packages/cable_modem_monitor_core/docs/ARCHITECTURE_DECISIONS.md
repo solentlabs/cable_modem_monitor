@@ -236,8 +236,8 @@ declaration.
 
 **Constrains:** Anyone installing `solentlabs-cable-modem-monitor-core`
 receives pydantic as a transitive install. The `[mcp]` optional
-extra is removed; intake-pipeline heavy deps (ruamel.yaml and any
-future additions) live in `cable_modem_monitor_catalog_tools`.
+extra is removed; intake-pipeline heavy deps live in
+`cable_modem_monitor_catalog_tools`.
 
 ---
 

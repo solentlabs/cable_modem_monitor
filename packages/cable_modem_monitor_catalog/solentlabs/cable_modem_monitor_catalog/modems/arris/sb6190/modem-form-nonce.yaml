@@ -16,6 +16,7 @@ auth:
   nonce_field: ar_nonce
   nonce_length: 8
   success_prefix: "Url:"
+
 hardware:
   docsis_version: "3.0"
   chipset: "Intel Puma 6"
@@ -30,6 +31,7 @@ sources:
     cookie"
 
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6190"
+
 attribution:
   contributors:
     - github: https://github.com/HenryGeorge1978
@@ -40,6 +42,7 @@ attribution:
 isps:
   - Comcast
   - Spectrum
+
 notes: |
   DOCSIS 3.0 cable modem (released 2016, EOL 2023). Intel Puma 6.
   Auth-required variant: firmware 9.1.103+ requires form_nonce login.
@@ -54,6 +57,7 @@ notes: |
   Logout: POST /cgi-bin/logout requires nonce (not expressible in
   current HttpAction model). Session expiry handled by LOAD_AUTH
   recovery — one failed poll per cycle, then self-heals.
+
 references:
   issues:
     - "[#83 — [Bug]: SB6190 parser error](https://github.com/solentlabs/cable_modem_monitor/issues/83)"

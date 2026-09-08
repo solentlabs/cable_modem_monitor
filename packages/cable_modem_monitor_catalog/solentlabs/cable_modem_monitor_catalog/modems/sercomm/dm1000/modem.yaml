@@ -55,6 +55,7 @@ attribution:
 
 isps:
   - Koodo
+
 notes: |
   DOCSIS 3.1 cable modem. JSON API via /setup.cgi?todo= endpoints.
   IP-based session tracking (no cookies, no auth headers after login).

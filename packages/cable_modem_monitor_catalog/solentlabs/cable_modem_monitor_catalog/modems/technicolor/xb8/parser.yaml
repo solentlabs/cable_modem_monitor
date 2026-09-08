@@ -51,6 +51,7 @@ downstream:
       selector:
         match: "CM Error Codewords"
         type: header_text
+
 upstream:
   format: table_transposed
   resource: "/network_setup.jst"

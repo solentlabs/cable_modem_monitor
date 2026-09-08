@@ -49,6 +49,7 @@ attribution:
 
 isps:
   - Ziggo
+
 notes: |
   DOCSIS 3.1 gateway made by Sagemcom, issued by Ziggo and running the
   Liberty Global RDK firmware line (LG-RDK_12.13.16-2504.5). Same
@@ -75,6 +76,7 @@ notes: |
   The capture arrived sanitized by har-capture. The session token in
   the logout URL path was redacted here afterwards: the sanitizer
   covers header and body values, not URL paths.
+
 references:
   issues:
     - "[#185 — [Modem Request] ZIGGO SAGEMCOM F3896LG-ZG](https://github.com/solentlabs/cable_modem_monitor/issues/185)"

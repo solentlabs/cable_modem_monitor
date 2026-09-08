@@ -37,6 +37,7 @@ downstream:
     - key: uncorrect
       field: uncorrected
       type: integer
+
 upstream:
   format: json
   resource: "/data/usinfo.asp"

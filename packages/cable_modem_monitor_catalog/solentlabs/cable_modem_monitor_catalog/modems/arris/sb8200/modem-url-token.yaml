@@ -27,6 +27,7 @@ sources:
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
   detection_hints: "[#42 SB8200 support](https://github.com/solentlabs/cable_modem_monitor/issues/42)"
   hardware: "[ARRIS SB8200 page](https://www.arris.com/surfboard/products/cable-modems/sb8200/)"
+
 attribution:
   contributors:
     - github: https://github.com/undotcom
@@ -39,11 +40,13 @@ attribution:
       contribution:
         "Hardware testing through v3.13 betas; surfaced v3.14.0-beta.2
         url_token reuse regression (Issue #81)"
+
 isps:
   - Comcast
   - Cox
   - Spectrum
   - Xfinity
+
 notes: |
   Reboot Capability: DISABLED (server-side blocked by ISP firmware)
 
@@ -66,6 +69,7 @@ notes: |
   counts despite different frequencies (300 MHz, 950 MHz). Same pattern
   as XB7 (also BCM3390). Does not affect aggregates since both are OFDM
   and excluded by the downstream.qam scope.
+
 references:
   issues:
     - "[#42 — Arris SB8200](https://github.com/solentlabs/cable_modem_monitor/issues/42)"

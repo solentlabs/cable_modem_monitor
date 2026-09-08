@@ -39,6 +39,7 @@ downstream:
 
       channel_type:
         fixed: "qam"
+
 upstream:
   format: table
   resource: "/DocsisStatus.asp"

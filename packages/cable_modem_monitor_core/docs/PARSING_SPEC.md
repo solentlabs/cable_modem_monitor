@@ -300,6 +300,9 @@ the same parser.yaml can use different formats.
 
 **parser.yaml never contains auth, session config, or metadata.**
 
+Top-level key order and section spacing follow
+[MODEM_YAML_SPEC.md § Layout](MODEM_YAML_SPEC.md#layout).
+
 ### Common Concepts
 
 #### Field Types

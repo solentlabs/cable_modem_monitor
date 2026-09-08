@@ -57,6 +57,7 @@ attribution:
 isps:
   - Comcast
   - Xfinity
+
 notes: |
   Nighthawk DOCSIS 3.1 modem. 32 SC-QAM + OFDM downstream,
   ATDMA + OFDMA upstream. Same tagValueList format as CM2000/CM1200.

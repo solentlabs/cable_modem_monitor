@@ -98,6 +98,7 @@ def _extract_metadata_from_config(config: dict[str, Any]) -> dict[str, Any]:
         "brands",
         "transport",
         "default_host",
+        "timeout",
         "hardware",
         "status",
         "sources",
@@ -106,7 +107,6 @@ def _extract_metadata_from_config(config: dict[str, Any]) -> dict[str, Any]:
         "notes",
         "references",
         "gaps",
-        "timeout",
     ):
         if key in config:
             metadata[key] = config[key]

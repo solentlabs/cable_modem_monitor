@@ -29,6 +29,7 @@ hardware:
   release_date: "2020"
 
 status: confirmed
+
 sources:
   brands: "[SURFboard product family](https://www.surfboard.com/products/cable-modems/sb8200/) — manufacturer styles the brand SURFboard"
   auth_config: "[#98 S33v3 HAR capture by jzucker2](https://github.com/solentlabs/cable_modem_monitor/issues/98)"
@@ -37,6 +38,7 @@ sources:
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
   channel_data: "[#201 jzucker2 HAR capture 2026-08-29](https://github.com/solentlabs/cable_modem_monitor/issues/201) — channel data observed on the wire; structure originally established from homeautomater screenshots, wild-confirmed by jzucker2 diagnostics (3.14.0-beta.3, re-confirmed 3.14.0-beta.14). The 2026-08-29 capture that replaced the fixture holds the same 33 downstream and 6 upstream channels; every value is a fresh sample"
   system_info_software: '[#201 jzucker2 HAR capture 2026-08-29](https://github.com/solentlabs/cable_modem_monitor/issues/201) — GetCustomerStatusSoftware observed with Cmswinfo.html in the capture: CustomerConnSystemUpTime "12 day(s) 19h:53m:41s" and StatusSoftwareHdVer 1.0 on firmware AT01.01.018.042324_S3.03.735, unchanged from the 2026-07-09 capture this replaced'
+
 attribution:
   contributors:
     - github: https://github.com/jzucker2
@@ -45,11 +47,13 @@ attribution:
       contribution: "Initial modem request (Issue #98)"
     - github: https://github.com/starsprung
       contribution: "Confirmed SHA256 HMAC and S34 compatibility (Issue #98)"
+
 isps:
   - Comcast
   - Cox
   - Spectrum
   - Xfinity
+
 notes: |
   S33v3 is a hardware revision of the S33 that uses HMAC-SHA256 (same as S34)
   instead of HMAC-MD5 (used by S33/S33v2). Firmware pattern: AT01.01.* (same
@@ -81,6 +85,7 @@ notes: |
   Playwright recorded the wrong body for the Action="login" response in
   both captures: Content-Length 45, a longer GetMultipleHNAPs body. Not
   edited; the harness synthesizes the HNAP login anyway.
+
 references:
   issues:
     - "[#98 — [Modem Request] Arris S33v3](https://github.com/solentlabs/cable_modem_monitor/issues/98)"

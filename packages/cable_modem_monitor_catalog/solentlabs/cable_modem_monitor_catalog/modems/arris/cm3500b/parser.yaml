@@ -139,6 +139,7 @@ upstream:
           unit: dBmV
       channel_type:
         fixed: ofdma
+
 system_info:
   sources:
     - format: html_fields

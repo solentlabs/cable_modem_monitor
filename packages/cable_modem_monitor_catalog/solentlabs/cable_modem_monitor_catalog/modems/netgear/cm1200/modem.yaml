@@ -2,28 +2,35 @@ manufacturer: Netgear
 model: CM1200
 transport: http
 default_host: "192.168.100.1"
+timeout: 20
+
 auth:
   strategy: none
+
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
   release_date: "2019"
-timeout: 20
+
 status: awaiting_verification
+
 sources:
   auth_config: "[#63 CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
   chipset: "[PC Perspective CM1200 announcement](https://pcper.com/2019/05/netgear-readies-nighthawk-cm1200-multi-gigabit-docsis-31-cable-modem/)"
   detection_hints: "[#63 CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
+
 attribution:
   contributors:
     - github: https://github.com/DeFlanko
       contribution:
         "[Issue #63](https://github.com/solentlabs/cable_modem_monitor/issues/63)
         diagnostics"
+
 isps:
   - Comcast
   - Spectrum
   - Cox
+
 notes: |
   DOCSIS 3.1 modem with SC-QAM and OFDM/OFDMA support.
   Channel data embedded in JavaScript functions (NOT HTML tables).
@@ -32,6 +39,7 @@ notes: |
   Auth clarified via har-capture v0.4.4 probe (#121).
   Supports up to 32 SC-QAM downstream, 2 OFDM, 8 ATDMA upstream, 2 OFDMA.
   Upstream ATDMA symbol rate appears before frequency (differs from CM2000).
+
 references:
   issues:
     - "[#63 — [Modem Request] CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"

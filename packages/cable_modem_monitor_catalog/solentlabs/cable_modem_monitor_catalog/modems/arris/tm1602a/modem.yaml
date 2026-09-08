@@ -29,6 +29,7 @@ attribution:
 
 isps:
   - Spectrum
+
 notes: |
   DOCSIS 3.0 / PacketCable 2.0 Telephony Modem.
   No authentication required — CGI endpoints are publicly accessible.

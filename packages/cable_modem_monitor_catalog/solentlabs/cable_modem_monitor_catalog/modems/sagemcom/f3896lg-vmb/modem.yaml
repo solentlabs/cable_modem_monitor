@@ -41,6 +41,7 @@ sources:
   chipset: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
   detection_hints: "[Issue #82](https://github.com/solentlabs/cable_modem_monitor/issues/82)"
   hardware: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
+
 attribution:
   contributors:
     - github: https://github.com/Dinth
@@ -52,6 +53,7 @@ attribution:
 
 isps:
   - Virgin Media UK
+
 notes: |
   DOCSIS 3.1 gateway made by Sagemcom. Chipset: Broadcom BCM3390.
   Sold by Virgin Media as the "Hub 5" (community name "SuperHub 5").
@@ -74,6 +76,7 @@ notes: |
   the shape @edent's curl proved. It once carried a username because
   it was written to match what Core sent, not what the firmware
   accepts, and that made the fixture certify the client's own bug.
+
 references:
   issues:
     - "[#82 — [Modem Request] Virgin Media SuperHub - modem mode 5](https://github.com/solentlabs/cable_modem_monitor/issues/82)"

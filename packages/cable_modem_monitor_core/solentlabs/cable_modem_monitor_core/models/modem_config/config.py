@@ -43,6 +43,9 @@ class ModemConfig(BaseModel):
     transport: Literal["http", "hnap", "cbn"]
     default_host: str
 
+    # Timeout
+    timeout: int = 10
+
     # Auth
     auth: AuthConfig | None = None
 
@@ -57,9 +60,6 @@ class ModemConfig(BaseModel):
 
     # Health
     health: HealthConfig | None = None
-
-    # Timeout
-    timeout: int = 10
 
     # Metadata
     status: ModemStatus

@@ -99,6 +99,7 @@ system_info:
         - field: software_version
           label: "Software Version"
           type: string
+
 aggregate:
   total_corrected:
     channels: downstream

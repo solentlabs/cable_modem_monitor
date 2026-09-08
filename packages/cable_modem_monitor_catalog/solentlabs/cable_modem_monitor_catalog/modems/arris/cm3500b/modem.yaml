@@ -21,6 +21,7 @@ sources:
   auth_config: "[#73 CM3500B HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/73)"
 
   release_date: "[ARRIS CM3500 Datasheet](https://vectortechsolutions.com/wp-content/uploads/import/files/1314/231004_cm3500_datasheet.pdf)"
+
 attribution:
   contributors:
     - github: https://github.com/ChBi89
@@ -31,6 +32,7 @@ attribution:
 isps:
   - Vodafone Germany
   - Vodafone
+
 notes: |
   EuroDOCSIS 3.1 cable modem. HTTPS with self-signed certificate.
   4 table sections: DS QAM (24ch), DS OFDM (2ch), US QAM (4ch), US OFDMA (1ch).

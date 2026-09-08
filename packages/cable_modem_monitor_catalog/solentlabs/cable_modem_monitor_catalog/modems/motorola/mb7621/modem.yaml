@@ -61,6 +61,7 @@ isps:
   - Comcast Xfinity
   - Suddenlink
   - BrightHouse
+
 notes: |
   DOCSIS 3.0 24x8 cable modem (released 2017). Broadcom BCM3384 chipset.
   Form-based authentication with base64 password encoding.

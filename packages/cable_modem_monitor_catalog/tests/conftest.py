@@ -33,6 +33,11 @@ def _discover_modem_yamls() -> list[Path]:
     return sorted(CATALOG_MODEMS_PATH.rglob("modem*.yaml"))
 
 
+def _discover_parser_yamls() -> list[Path]:
+    """Find all parser.yaml files in the catalog."""
+    return sorted(CATALOG_MODEMS_PATH.rglob("parser.yaml"))
+
+
 def _discover_config_pairs() -> list[tuple[Path, Path]]:
     """Pair every modem*.yaml with the parser.yaml in its directory.
 
@@ -52,6 +57,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "modem_yaml_path" in metafunc.fixturenames:
         paths = _discover_modem_yamls()
         metafunc.parametrize("modem_yaml_path", paths, ids=lambda p: str(p.relative_to(CATALOG_MODEMS_PATH)))
+    if "parser_yaml_path" in metafunc.fixturenames:
+        paths = _discover_parser_yamls()
+        metafunc.parametrize("parser_yaml_path", paths, ids=lambda p: str(p.relative_to(CATALOG_MODEMS_PATH)))
     if "config_pair" in metafunc.fixturenames:
         pairs = _discover_config_pairs()
         metafunc.parametrize("config_pair", pairs, ids=lambda p: str(p[0].relative_to(CATALOG_MODEMS_PATH)))

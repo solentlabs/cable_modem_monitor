@@ -41,6 +41,7 @@ downstream:
         field: modulation
         map:
           QAM256: qam
+
 upstream:
   format: table
   resource: /
@@ -72,6 +73,7 @@ upstream:
           unit: dBmV
       channel_type:
         fixed: atdma
+
 system_info:
   sources:
     - format: html_fields
@@ -101,6 +103,7 @@ system_info:
           label: Up Time
           type: uptime
           format: "{days} days {hours}h:{minutes}m:{seconds}s"
+
 aggregate:
   total_corrected:
     channels: downstream
