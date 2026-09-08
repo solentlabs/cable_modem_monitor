@@ -398,6 +398,71 @@ def test_hnap_signal_classification(
 
 
 # ------------------------------------------------------------------
+# Tests — HTTP resource-load error classification (UC-30/UC-31)
+#
+# The HTTP loader wraps every fetch failure in ResourceLoadError with
+# `from e`, so __cause__ carries the original requests exception and
+# status_code is None for a connection/timeout (http.py, and the
+# ResourceLoadError docstring). A connection/timeout cause must
+# classify as CONNECTIVITY — the rule RESOURCE_LOADING_SPEC § Error
+# Signals states generally and HNAP already applies via
+# _classify_hnap_error. A genuine HTTP status error, or a
+# non-connectivity cause (UC-19b malformed request), stays
+# LOAD_ERROR / LOAD_AUTH. Injecting a *raw* timeout here would test a
+# branch the HTTP transport never takes, since the loader always wraps.
+# ------------------------------------------------------------------
+
+
+def _make_resource_load_error(
+    *,
+    status_code: int | None = None,
+    path: str = "/d.htm",
+    cause: Exception | None = None,
+) -> ResourceLoadError:
+    """Build a ResourceLoadError shaped like the HTTP loader's output."""
+    err = ResourceLoadError(f"Failed to fetch {path}", status_code=status_code, path=path)
+    if cause is not None:
+        err.__cause__ = cause
+    return err
+
+
+_RL_READ_TIMEOUT = _make_resource_load_error(cause=requests.ReadTimeout("read timed out"))
+_RL_CONNECT_TIMEOUT = _make_resource_load_error(cause=requests.ConnectTimeout("timed out"))
+_RL_CONN_ERROR = _make_resource_load_error(cause=requests.ConnectionError("refused"))
+_RL_500 = _make_resource_load_error(status_code=500)
+_RL_401 = _make_resource_load_error(status_code=401)
+_RL_VALUE_ERR = _make_resource_load_error(cause=ValueError("malformed request"))
+
+# fmt: off
+HTTP_LOAD_SIGNAL_CASES = [
+    # (load_error,        expected_signal,              desc)
+    (_RL_READ_TIMEOUT,    CollectorSignal.CONNECTIVITY, "UC-31: read timeout during load"),
+    (_RL_CONNECT_TIMEOUT, CollectorSignal.CONNECTIVITY, "UC-31: connect timeout during load"),
+    (_RL_CONN_ERROR,      CollectorSignal.CONNECTIVITY, "UC-30: connection error during load"),
+    (_RL_500,             CollectorSignal.LOAD_ERROR,   "server error (500) stays LOAD_ERROR"),
+    (_RL_401,             CollectorSignal.LOAD_AUTH,    "stale session (401) stays LOAD_AUTH"),
+    (_RL_VALUE_ERR,       CollectorSignal.LOAD_ERROR,   "UC-19b: non-connectivity cause stays LOAD_ERROR"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "load_error,expected_signal,desc",
+    HTTP_LOAD_SIGNAL_CASES,
+    ids=[c[2] for c in HTTP_LOAD_SIGNAL_CASES],
+)
+def test_http_load_signal_classification(
+    load_error: ResourceLoadError,
+    expected_signal: CollectorSignal,
+    desc: str,
+) -> None:
+    """A wrapped connection/timeout classifies as CONNECTIVITY, not LOAD_ERROR (UC-30/UC-31)."""
+    result = _run_collector_with_failure(load_side_effect=load_error)
+    assert result.signal == expected_signal
+    assert result.success is False
+
+
+# ------------------------------------------------------------------
 # Tests — session lifecycle (behavioral, inline)
 # ------------------------------------------------------------------
 
