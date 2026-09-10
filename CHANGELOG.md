@@ -12,9 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Error totals and error rates on the Technicolor XB7, XB8 and XB10
   (#194).** In every capture on file from the XB6, XB7, XB8 and XB10, the
   first column of the error codeword table repeats the last column's counts,
-  so the primary channel's own counts never appear. These entries used to publish no totals at all to avoid
-  summing the copy. Now only that column is skipped, and the totals and
-  rates sum every other QAM channel. Thanks to @Boby360 for the captures.
+  so the primary channel's own counts never appear. These entries used to
+  publish no totals at all to avoid summing the copy. Now only that column
+  is skipped, and the totals and rates sum every other QAM channel. Thanks
+  to @Boby360 for the captures.
 
 - **`skip_columns` for transposed companion tables.** A parser can declare
   the data columns whose cells the firmware copies from another column, and
