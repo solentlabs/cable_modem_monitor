@@ -4,13 +4,11 @@
       "channel_id": 29,
       "channel_number": 1,
       "channel_type": "qam",
-      "corrected": 3309689161,
       "frequency": 321000000,
       "lock_status": "locked",
       "modulation": "QAM256",
       "power": 13.2,
-      "snr": 42.4,
-      "uncorrected": 310472831
+      "snr": 42.4
     },
     {
       "channel_id": 1,
@@ -391,6 +389,8 @@
     "model_name": "CGM4981COM",
     "software_version": "Prod_24.2_PD & Prod_24.2_PD",
     "system_uptime": "20 days 07h:58m:28s",
+    "total_corrected": 1567170,
+    "total_uncorrected": 228,
     "upstream_channel_count": 4,
     "upstream_status": "Operational"
   },

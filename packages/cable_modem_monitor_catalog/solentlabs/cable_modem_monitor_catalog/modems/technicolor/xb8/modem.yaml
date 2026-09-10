@@ -58,6 +58,7 @@ sources:
   auth_config: "[#194 XB8 error graphs](https://github.com/solentlabs/cable_modem_monitor/issues/194) HAR capture (POST /check.jst with plain username and password fields, 302 to at_a_glance.jst, DUKSID session cookie)"
   restart: '[#194 XB8 error graphs](https://github.com/solentlabs/cable_modem_monitor/issues/194) fixture HAR (GET /restore_reboot.jst, then POST /actionHandler/ajaxSet_Reset_Restore.jst carrying resetInfo and the csrfp_token cookie echoed in the body; modem answered {"reboot":true})'
   release_date: "Xfinity rollout began 2022: [DSLReports — Next Gateway XB8](https://www.dslreports.com/forum/r33227126-Next-Gateway-XB8-Technicolor-CGM4981COM-Wi-Fi-6E); [Xfinity Community Forum — NEW xFi Gateway XB8](https://forums.xfinity.com/conversations/your-home-network/new-xfi-gateway-xb8/6216d91580db9c3cdd5e96fc)"
+  error_codewords: "[#194](https://github.com/solentlabs/cable_modem_monitor/issues/194) captures (test_data/modem.har and modem.verified.json, ten days apart); the same first-column duplication on the XB6 in [Xfinity Community, April 2020](https://forums.xfinity.com/conversations/your-home-network/correctable-codewords-50-of-codewords-on-2-channels/602daed0c5375f08cdf6df9e) (index 1 equals index 33) and the XB7 in [DSLReports, November 2021](https://www.dslreports.com/forum/r33254515-Connectivity-Seeing-nearly-as-many-Correctable-as-Unerrored-Codewords-on-Ch1) (index 1 equals index 32); the page pairs Channel IDs with CMErrorCodewords counters by row index in the [RDK-B web UI template](https://github.com/rdkcentral/webui/blob/8ac407e5f75f243a8d01615d664b2e6e61522b8b/source/Styles/xb6/jst/network_setup.jst#L1073-L1107)"
 
 attribution:
   contributors:
@@ -86,16 +87,15 @@ notes: |
   Firmware renders the SC-QAM fallback "TDMA" channel type for OFDMA
   upstream channels (upstream channel 4 reports Modulation OFDMA with
   Channel Type TDMA, symbol rate 0).
-  Quirk, error count duplication, observed on XB8 as on XB7: QAM
-  channel 29 reports unerrored, correctable and uncorrectable codeword
-  counts identical to OFDM channel 34 (3309689161 correctable and
-  310472831 uncorrectable on both in the fixture). Two captures ten
-  days apart duplicate at different values, so this is firmware
-  behaviour, not a transient read.
-  Aggregate intentionally omitted for the same reason as the XB7 entry:
-  a downstream.qam sum reads 3.31 billion against a true QAM total of
-  1.57 million, so the modem exposes no error-total or error-rate
-  sensors. Per-channel error counts are unaffected.
+  Error codeword duplication: the first data column of the CM Error
+  Codewords table repeats the last column's unerrored, correctable and
+  uncorrectable counts. In the fixture that is QAM channel 29 and OFDM
+  channel 34, 3309689161 correctable and 310472831 uncorrectable on
+  both. Two captures ten days apart duplicate at different values, so
+  this is firmware behaviour, not a transient read. The first column is
+  the primary channel, and its own counts never reach the page, so
+  parser.yaml skips that column: channel 29 carries no error counts and
+  the QAM totals sum the other 29 QAM channels.
   The Logout endpoint is source_inferred: the fixture reaches
   /home_loggedout.jst as the pre-login landing page, body not captured,
   and never as the answer to a logout. Restart is HAR-observed: the fixture records the

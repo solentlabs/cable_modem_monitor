@@ -4,13 +4,11 @@
       "channel_id": 17,
       "channel_number": 1,
       "channel_type": "qam",
-      "corrected": 243167206,
       "frequency": 957000000,
       "lock_status": "locked",
       "modulation": "QAM256",
       "power": -5.8,
-      "snr": 41.9,
-      "uncorrected": 357715169
+      "snr": 41.9
     },
     {
       "channel_id": 18,
@@ -135,6 +133,8 @@
     "software_image_name": "CGM601TCOM_8.5p1s3_PROD_sey",
     "software_version": "Prod_25.1_PD & SMC-BL: 7.0.0",
     "system_uptime": "4 days 16h:05m:28s",
+    "total_corrected": 2118850,
+    "total_uncorrected": 1312880,
     "upstream_channel_count": 8,
     "upstream_status": "Operational"
   },

@@ -1141,6 +1141,31 @@ lookup key — primary table wins on field conflicts.
 `resource`. Companion tables must have matching key fields for the
 merge to work.
 
+### Duplicated companion columns are declared by position
+
+**Decision:** A parser.yaml companion table declares the columns whose
+cells the firmware duplicates from another column
+(`skip_columns`, [FORMAT_TABLE_SPEC.md § Skipping duplicated columns](FORMAT_TABLE_SPEC.md#skipping-duplicated-columns-skip_columns)).
+The table contributes nothing for those columns. The modem's
+`modem.yaml` `sources:` cites the evidence.
+
+**Rationale:** On the
+[XB8](../../cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb8/modem.yaml)
+the error-codeword table's first column repeats the last column's
+counters in every capture, so the primary channel's real counts never
+reach the page. The page pairs channel labels with counters by row
+index, so position is the only thing that identifies the bad column.
+Omitting the aggregate discarded every valid channel to exclude one
+invalid column. Matching values cannot stand in for the declaration:
+identical counter pairs occur by coincidence between healthy channels
+across the fleet at low counts.
+
+**Constrains:**
+
+- Core does not detect duplicated cells from their values.
+- `skip_columns` applies only to companion tables. It never removes a
+  channel.
+
 ---
 
 ### `parser.*` parses; `modem.yaml` owns everything else

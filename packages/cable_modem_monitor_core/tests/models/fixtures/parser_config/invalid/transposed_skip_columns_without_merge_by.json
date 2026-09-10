@@ -1,0 +1,18 @@
+{
+  "_expected_error": "skip_columns requires merge_by",
+  "_config": {
+    "downstream": {
+      "format": "table_transposed",
+      "resource": "/data.htm",
+      "tables": [
+        {
+          "selector": {"type": "header_text", "match": "Downstream"},
+          "skip_columns": [0],
+          "rows": [
+            {"label": "Channel ID", "field": "channel_id", "type": "integer"}
+          ]
+        }
+      ]
+    }
+  }
+}

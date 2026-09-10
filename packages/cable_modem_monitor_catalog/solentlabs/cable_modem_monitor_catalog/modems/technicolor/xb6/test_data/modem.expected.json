@@ -4,13 +4,11 @@
       "channel_id": 1,
       "channel_number": 1,
       "channel_type": "qam",
-      "corrected": 44,
       "frequency": 489000000,
       "lock_status": "locked",
       "modulation": "QAM256",
       "power": 7.1,
-      "snr": 41.0,
-      "uncorrected": 20
+      "snr": 41.0
     },
     {
       "channel_id": 2,
@@ -392,8 +390,8 @@
     "model_name": "CGM4140COM",
     "software_version": "Prod_23.2_231009 & Prod_23.2_231009",
     "system_uptime": "0 days 20h:05m:44s",
-    "total_corrected": 1675,
-    "total_uncorrected": 1095,
+    "total_corrected": 1631,
+    "total_uncorrected": 1075,
     "upstream_channel_count": 5,
     "upstream_status": "Operational"
   },

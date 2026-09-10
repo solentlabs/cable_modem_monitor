@@ -40,6 +40,11 @@ downstream:
         match: "CM Error Codewords"
       merge_by:
         - channel_id
+      # The first data column repeats the last column's counters in every
+      # capture, so the primary channel's own counts never appear. The
+      # evidence is in modem.yaml notes and sources.error_codewords.
+      skip_columns:
+        - 0
       rows:
         - field: channel_id
           label: "Channel ID"
@@ -150,6 +155,16 @@ system_info:
           label: "Flash Available Memory"
           type: string
 
+# QAM-only totals (PARSING_SPEC § Aggregate). The skipped first error
+# column leaves the primary channel without counters, so it is not summed.
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream.qam
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream.qam
+
 computed:
   docsis_status:
     operation: combined_status
@@ -161,7 +176,3 @@ computed:
     inputs:
       total: memory_total
       free: memory_free
-# DOCSIS 3.1: aggregate intentionally omitted. Firmware duplicates OFDM
-# error data onto QAM channel IDs (channel 17 and OFDM channel 194 report
-# identical corrected/uncorrected counts — same pattern as XB7), making
-# QAM totals unreliable. Per-channel data is still available.

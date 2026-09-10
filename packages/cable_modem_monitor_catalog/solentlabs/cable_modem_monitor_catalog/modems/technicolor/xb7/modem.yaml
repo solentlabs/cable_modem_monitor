@@ -32,6 +32,7 @@ sources:
   auth_config: "[#2 Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
   chipset: "[WikiDevi](https://wikidevi.wi-cat.ru/Technicolor_CGM4331COM)"
   detection_hints: "[#2 Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
+  error_codewords: "test_data/modem.verified.json; another XB7 in [DSLReports, November 2021](https://www.dslreports.com/forum/r33254515-Connectivity-Seeing-nearly-as-many-Correctable-as-Unerrored-Codewords-on-Ch1) (index 1 equals index 32, described there as the OFDM channel shown twice) and an XB6 in [Xfinity Community, April 2020](https://forums.xfinity.com/conversations/your-home-network/correctable-codewords-50-of-codewords-on-2-channels/602daed0c5375f08cdf6df9e) (index 1 equals index 33); the page pairs Channel IDs with CMErrorCodewords counters by row index in the [RDK-B web UI template](https://github.com/rdkcentral/webui/blob/8ac407e5f75f243a8d01615d664b2e6e61522b8b/source/Styles/xb6/jst/network_setup.jst#L1073-L1107)"
 
 attribution:
   contributors:
@@ -52,11 +53,12 @@ notes: |
   Form-based authentication to /check.jst endpoint.
   System uptime format: "X days Xh: Xm: Xs" (note spaces around colons).
   May have localized variants (Italian translations found in Rogers/Italian market).
-  Quirk — BCM3390 error count duplication: channel 17 (primary QAM256)
-  reports corrected and uncorrected counts identical to channel 34 (OFDM).
-  Confirmed per-model (observed across two independent units). Same
-  chipset-level pattern as SB8200. Aggregate intentionally omitted because
-  the duplicated OFDM data makes QAM totals unreliable.
+  Error codeword duplication: the first data column of the CM Error
+  Codewords table repeats the last column's counts. In
+  test_data/modem.verified.json that is QAM channel 17 and OFDM channel
+  34. The first column is the primary channel, and its own counts never
+  reach the page, so parser.yaml skips that column and the QAM totals
+  sum the remaining QAM channels.
   The factory Wi-Fi SSID and default password in the Device Label
   Information block on network_setup.jst were redacted by hand:
   har-capture had no labeled-credential detector at capture time.

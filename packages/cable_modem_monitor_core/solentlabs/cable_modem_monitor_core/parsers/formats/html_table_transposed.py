@@ -81,9 +81,14 @@ class HTMLTableTransposedParser(BaseParser):
         if channel_count == 0:
             return []
 
-        # Pivot: for each column index, build one channel dict.
+        # Pivot: for each column index, build one channel dict. Declared
+        # duplicate columns contribute nothing (FORMAT_TABLE_SPEC
+        # § Skipping duplicated columns).
+        skip = frozenset(self._table.skip_columns or ())
         channels: list[dict[str, Any]] = []
         for col_idx in range(channel_count):
+            if col_idx in skip:
+                continue
             channel = _extract_channel(label_map, self._table.rows, col_idx)
             if channel is None:
                 continue
