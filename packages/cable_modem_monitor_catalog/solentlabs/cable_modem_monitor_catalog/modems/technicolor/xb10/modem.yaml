@@ -70,6 +70,7 @@ sources:
     and 5-85 MHz and 108-684 MHz upstream'; governing spec CM-SP-PHYv4.0,
     [CableLabs DOCSIS 4.0](https://www.cablelabs.com/technologies/docsis-4-0-technology)).
     [FCC ID G95601TX](https://fccid.io/G95601TX) confirms the CGM601TCOM filing."
+  error_codewords: "[#173](https://github.com/solentlabs/cable_modem_monitor/issues/173) capture (test_data/modem.har) and modem.verified.json; the same first-column duplication on the XB6 in [Xfinity Community, April 2020](https://forums.xfinity.com/conversations/your-home-network/correctable-codewords-50-of-codewords-on-2-channels/602daed0c5375f08cdf6df9e) (index 1 equals index 33) and the XB7 in [DSLReports, November 2021](https://www.dslreports.com/forum/r33254515-Connectivity-Seeing-nearly-as-many-Correctable-as-Unerrored-Codewords-on-Ch1) (index 1 equals index 32); the page pairs Channel IDs with CMErrorCodewords counters by row index in the [RDK-B web UI template](https://github.com/rdkcentral/webui/blob/8ac407e5f75f243a8d01615d664b2e6e61522b8b/source/Styles/xb6/jst/network_setup.jst#L1073-L1107)"
 
 attribution:
   contributors:
@@ -91,9 +92,12 @@ notes: |
   Transposed table format: rows are metrics, columns are channels.
   Session cookie: DUKSID. CSRF: csrfp_token (OWASP CSRFP).
   Default IP: 10.0.0.1 (router mode).
-  Error count duplication: channel 17 (primary QAM256) reports corrected and
-  uncorrected counts identical to OFDM channel 194 — same firmware pattern as
-  XB7. Aggregate totals intentionally omitted; per-channel data is reliable.
+  Error codeword duplication: the first data column of the CM Error
+  Codewords table repeats the last column's unerrored, correctable and
+  uncorrectable counts, here QAM channel 17 and OFDM channel 194. The
+  first column is the primary channel, and its own counts never reach
+  the page, so parser.yaml skips that column and the QAM totals sum the
+  remaining QAM channels.
   OFDM downstream frequencies reported in Hz without unit suffix (e.g.,
   "774000000") rather than in MHz like QAM channels; stored as-is in Hz.
   System uptime format: "X days Xh: Xm: Xs" (spaces after colons);

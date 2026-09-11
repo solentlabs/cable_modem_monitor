@@ -37,6 +37,11 @@ downstream:
         type: header_text
     - merge_by:
         - channel_id
+      # The first data column repeats the last column's counters in every
+      # capture, so the primary channel's own counts never appear. The
+      # evidence is in modem.yaml notes and sources.error_codewords.
+      skip_columns:
+        - 0
       rows:
         - field: channel_id
           label: "Channel ID"
@@ -118,14 +123,19 @@ system_info:
           label: "Model"
           type: string
 
+# QAM-only totals (PARSING_SPEC § Aggregate). The skipped first error
+# column leaves the primary channel without counters, so it is not summed.
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream.qam
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream.qam
+
 computed:
   docsis_status:
     operation: combined_status
     inputs:
       ds: downstream_status
       us: upstream_status
-# DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
-# at a vastly different scale and are not aggregated.
-# Aggregate intentionally omitted. Firmware duplicates OFDM error
-# data onto QAM channel IDs (see modem.yaml quirks), making QAM
-# totals unreliable. Per-channel data is still available.

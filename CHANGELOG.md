@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.1-beta.5] - 2026-09-10
+
+### Added
+
+- **Error totals and error rates on the Technicolor XB7, XB8 and XB10
+  (#194).** In every capture on file from the XB6, XB7, XB8 and XB10, the
+  first column of the error codeword table repeats the last column's counts,
+  so the primary channel's own counts never appear. These entries used to
+  publish no totals at all to avoid summing the copy. Now only that column
+  is skipped, and the totals and rates sum every other QAM channel. Thanks
+  to @Boby360 for the captures.
+
+- **`skip_columns` for transposed companion tables.** A parser can declare
+  the data columns whose cells the firmware copies from another column, and
+  the table contributes nothing for them. It applies to companion tables
+  only and never removes a channel. See `FORMAT_TABLE_SPEC.md`.
+
+### Fixed
+
+- **The Technicolor XB6 error total no longer counts another channel's
+  codewords.** The same duplicated first column was summed into the XB6's
+  QAM totals, and on a lineup with two OFDM channels it carried the OFDM
+  channel's counts, putting the total in the billions. It is now skipped
+  like on the other XB gateways.
+
+### Upgrade Notes
+
+**Technicolor XB gateways.** The primary downstream channel's Corrected and
+Uncorrected sensors now read unknown, because the value they showed belonged
+to another channel. On the XB6, Total Corrected Errors and Total
+Uncorrected Errors drop to the real QAM figure on the first poll after
+upgrading, which Home Assistant records as a counter reset. XB7, XB8 and XB10
+installs gain the total and rate error sensors; run `generate_dashboard`
+again to add the error graphs.
+
 ## [3.14.1-beta.4] - 2026-09-08
 
 ### Changed

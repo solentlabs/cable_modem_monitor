@@ -37,6 +37,11 @@ downstream:
         type: header_text
     - merge_by:
         - channel_id
+      # The first data column repeats the last column's counters in every
+      # capture, so the primary channel's own counts never appear. The
+      # evidence is in modem.yaml notes and sources.error_codewords.
+      skip_columns:
+        - 0
       rows:
         - field: channel_id
           label: "Channel ID"
@@ -118,14 +123,19 @@ system_info:
           label: "Model"
           type: string
 
+# QAM-only totals (PARSING_SPEC § Aggregate). The skipped first error
+# column leaves the primary channel without counters, so it is not summed.
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream.qam
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream.qam
+
 computed:
   docsis_status:
     operation: combined_status
     inputs:
       ds: downstream_status
       us: upstream_status
-# No aggregate. Firmware duplicates OFDM channel 34's error counts onto
-# QAM channel 29 (issue #194 capture; see modem.yaml quirks), so a
-# downstream.qam sum overstates the QAM total by three orders of
-# magnitude. Per-channel error counts stay available; the modem
-# exposes no error-total or error-rate sensors.

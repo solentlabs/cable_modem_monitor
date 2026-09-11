@@ -1266,6 +1266,7 @@ only generate parser.py when necessary.
 | Situation | parser.yaml solution |
 |-----------|---------------------|
 | Multi-table field merging | `merge_by` on companion table |
+| Companion column the firmware fills with another column's values | `skip_columns` on companion table |
 | Different column layouts per channel type | Multiple `tables[]` entries |
 | Unit stripping | `unit` field on column/row mapping |
 | OFDM vs QAM detection | `channel_type.map` |

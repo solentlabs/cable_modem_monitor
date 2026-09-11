@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, NonNegativeInt, model_validator
 
 from .common import ChannelTypeConfig, RowMapping, TableSelector
 from .format_registry import DecodeKind
@@ -23,6 +23,16 @@ class TransposedTableDefinition(BaseModel):
     rows: list[RowMapping]
     channel_type: ChannelTypeConfig | None = None
     merge_by: list[str] | None = None
+    # 0-based data columns whose cells the firmware copies from another
+    # column. FORMAT_TABLE_SPEC § Skipping duplicated columns.
+    skip_columns: list[NonNegativeInt] | None = None
+
+    @model_validator(mode="after")
+    def validate_skip_columns_companion_only(self) -> TransposedTableDefinition:
+        """Reject skip_columns on a primary table, where it would drop a channel."""
+        if self.skip_columns is not None and self.merge_by is None:
+            raise ValueError("skip_columns requires merge_by: only a companion table can skip columns")
+        return self
 
 
 class HTMLTableTransposedSection(BaseModel):

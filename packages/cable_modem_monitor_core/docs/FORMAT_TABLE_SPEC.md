@@ -371,6 +371,7 @@ downstream:
 | `tables[].rows` | list | yes | Row label→field mappings |
 | `tables[].channel_type` | object | no | Channel type detection rules |
 | `tables[].merge_by` | list[string] | no | Merge into primary channels by these key fields. See [Companion Tables](#companion-tables-merge_by). |
+| `tables[].skip_columns` | list[int] | no | Data columns this companion table does not contribute. Requires `merge_by`. See [Skipping duplicated columns](#skipping-duplicated-columns-skip_columns). |
 
 Either `selector`/`rows` (flat form) or `tables` (multi-table form)
 must be present, but not both. The flat form is syntactic sugar for a
@@ -428,6 +429,35 @@ modem requires it.
 
 All current modems with companion tables use `merge_by: [channel_id]`
 because their channel IDs are unique within each companion table.
+
+### Skipping duplicated columns (skip_columns)
+
+Some firmware fills one column of a transposed companion table with
+another column's values, so that column carries no data for the channel
+it is labelled with. `skip_columns` lists those columns, and the table
+contributes nothing for them:
+
+```yaml
+    - selector:
+        type: header_text
+        match: "CM Error Codewords"
+      merge_by: [channel_id]
+      skip_columns: [0]
+      rows: ...
+```
+
+- Indexes are 0-based data columns, counted from the first cell after
+  the row label, the same convention as `columns[].index`.
+- The primary channel matching a skipped column keeps its primary-table
+  fields and receives none of the companion's, so aggregates over that
+  field skip it.
+- `merge_by` is required. In a primary table a skipped column would
+  remove a channel, which this field never does.
+- An index past the table's last column skips nothing.
+
+Columns are declared by position; Core never detects duplicated cells
+from their values. See
+[ARCHITECTURE_DECISIONS.md § Duplicated companion columns are declared by position](ARCHITECTURE_DECISIONS.md#duplicated-companion-columns-are-declared-by-position).
 
 ### Merge logic (in ModemParserCoordinator)
 

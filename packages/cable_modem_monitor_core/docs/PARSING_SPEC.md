@@ -1259,6 +1259,11 @@ filtered. The `lock_status` filter is the correct mitigation:
 unlocked channels have unreliable historical data regardless of their
 current type assignment.
 
+**Duplicated counter columns:** a companion-table column whose cells
+the firmware copies from another column is declared with
+`skip_columns`, so the channel carries no counters and sums skip it
+([FORMAT_TABLE_SPEC.md § Skipping duplicated columns](FORMAT_TABLE_SPEC.md#skipping-duplicated-columns-skip_columns)).
+
 **Execution:** The coordinator runs aggregate computation after all
 sections are extracted and parser.py hooks have run. Results are
 merged into `system_info` alongside channel counts, before the
