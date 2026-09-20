@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 from requests.cookies import RequestsCookieJar
+from requests.structures import CaseInsensitiveDict
 from solentlabs.cable_modem_monitor_core.auth.base import AuthFailureMode
 from solentlabs.cable_modem_monitor_core.orchestration.actions.base import ActionResult
 from solentlabs.cable_modem_monitor_core.orchestration.events import (
@@ -94,10 +95,11 @@ def _make_collector(modem_config=None):
             password="secret",
         )
 
-    # requests.Session.cookies is an instance attr set in Session.__init__, so it's
-    # absent from the spec'd mock. Set a real RequestsCookieJar so clear_session()
-    # and cookie-presence checks work without AttributeError.
+    # requests.Session.cookies and .headers are instance attrs set in
+    # Session.__init__, so they're absent from the spec'd mock. Set real ones so
+    # clear_session() and cookie-presence checks work without AttributeError.
     collector._session.cookies = RequestsCookieJar()
+    collector._session.headers = CaseInsensitiveDict()
 
     return collector
 
