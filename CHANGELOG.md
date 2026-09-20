@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Overview
+
+A patch release on the v3.14 line, gathered from five betas. The theme is
+modems that were working fine while the integration gave up on them.
+
+### Highlights since v3.14.0
+
+- **Modems no longer stop updating when the password is fine.** An Arris
+  S33v3 answering a login oddly, a Compal or an Arris SB8200 briefly off
+  the network, a modem locking itself out after too many login attempts,
+  and a connection dropped partway through an update each used to stop
+  polling and ask you to re-enter credentials that were correct. All four
+  keep going and recover on their own. (#200, #201)
+- **Error counters on the Technicolor XB7, XB8 and XB10 (#194).** Leaving
+  out the channel the firmware duplicates makes the totals meaningful for
+  the first time, and corrects the XB6's.
+- **Dashboards survive renaming the device (#205).** The generator built
+  card references from the name you configured rather than the entities
+  that exist, so renaming filled the dashboard with "Entity not found".
+- **A Restart button for the Technicolor XB8 (#194),** and more time for
+  the XB6, XB7, XB8 and XB10 to answer, so they miss fewer updates (#208,
+  contributed by @squatto).
+
+### Upgrade Notes
+
+**Upgrading from v3.14.0.**
+
+- **The channel-bond change notification is gone.** If an automation
+  triggers on it, switch it to the DS and US Channel Count sensors, which
+  report the same totals on every update.
+- **Technicolor XB6, XB7, XB8 and XB10.** The gateway's own firmware
+  reports the first downstream channel's error counts as a copy of another
+  channel's, a bug XB owners have reported since 2020. Those numbers were
+  never real, so that channel's Corrected and Uncorrected sensors now read
+  unknown. On the XB6, the error totals drop to the real, much lower
+  figure, which Home Assistant records as a counter reset. XB7, XB8 and
+  XB10 gain error total and error rate sensors.
+- **Regenerate your dashboard** with `generate_dashboard` if a card says
+  "Entity not found", or to add the XB error graphs.
+
+**Upgrading from v3.13.1.** The v3.14.0 notes below still apply, plus one
+they do not mention: **v3.14 dropped the generic modem option.** Your
+modem has to be in the supported list to be set up. If it is a cable modem
+that is missing, open a modem request and it can be added. If it is a
+router or a gateway, Home Assistant's own Ping integration does what the
+generic option did. (#199)
+
 ## [3.14.1-beta.5] - 2026-09-10
 
 ### Added
