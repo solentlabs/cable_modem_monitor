@@ -501,6 +501,17 @@ class TestSessionIsValid:
         assert collector.session_is_valid is False
         assert collector._auth_context is None
 
+    def test_clear_session_drops_bearer_header(self) -> None:
+        """clear_session() removes the bearer credential, not just cookies."""
+        config = _make_config(auth_type="bearer")
+        collector = ModemDataCollector(config, None, None, "http://localhost", "", "")
+        collector._auth_context = MagicMock(url_token="", private_key="")
+        collector._session.headers["Authorization"] = "Bearer dead-token"
+
+        collector.clear_session()
+
+        assert "Authorization" not in collector._session.headers
+
     def test_close_closes_underlying_session(self) -> None:
         """close() releases the requests.Session and its socket pool."""
         config = _make_config(auth_type="none")

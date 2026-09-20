@@ -323,6 +323,11 @@ class ModemDataCollector:
     def clear_session(self) -> None:
         """Invalidate the current session."""
         self._session.cookies.clear()
+        # Bearer strategies carry the credential in a session header rather
+        # than a cookie. Leaving it set means every request between here and
+        # the next successful authenticate() puts a token we have already
+        # invalidated back on the wire.
+        self._session.headers.pop("Authorization", None)
         self._auth_context = None
         self._last_auth_result = None
         log_event(_logger, SessionCleared(model=self._modem_config.model))
