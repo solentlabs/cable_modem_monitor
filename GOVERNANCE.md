@@ -65,11 +65,13 @@ Users of the integration who may report issues, suggest features, or help others
 2. Create a feature branch
 3. Make your changes with tests
 4. Run pre-commit hooks and tests locally
-5. Update CHANGELOG.md
-6. Submit a pull request
-7. Respond to review feedback
-8. Maintainer merges when approved
+5. Submit a pull request
+6. Respond to review feedback
+7. Maintainer merges when approved
 ```
+
+Contributors don't write CHANGELOG entries — see
+[RELEASING.md § CHANGELOG ownership](docs/reference/RELEASING.md#changelog-ownership).
 
 ### 3. Review Process
 
@@ -84,7 +86,6 @@ Pull requests must meet these requirements before merging:
 
 - [ ] All CI checks pass (tests, linting, type checking)
 - [ ] Code coverage meets minimum threshold (60%)
-- [ ] Changes are documented in CHANGELOG.md
 - [ ] Documentation is updated if needed
 - [ ] Commit messages follow conventional commits format
 - [ ] Maintainer approval

@@ -403,6 +403,29 @@ Contributors don't write CHANGELOG entries. The maintainer reconciles
   `packages/` must also change `CHANGELOG.md`. PRs into a beta branch
   are exempt; that is where contributor work lands.
 
+### What earns an entry
+
+Keep a Changelog's test: changelogs are for humans, and an entry is a
+*notable* change. This file has two kinds of human — someone deciding
+whether to update, who sees only the release body (see
+[Verify Release](#5-verify-release)), and a contributor reading the
+per-version detail.
+
+Write an entry when a reader would act differently: change an automation,
+regenerate a dashboard, expect a new sensor, follow a new contribution
+rule. Internal and process changes pass that test too, which is why the
+commit-lint and catalog-gate work is logged.
+
+Always write one for a **deprecation, a removal, or a security fix**, even
+when nothing else in the release is notable. Semver promises those.
+
+Skip behaviour-identical refactors, test-only changes and comment edits.
+Describe the change, not the commit — a section that reads like `git log`
+has failed its reader.
+
+`Highlights` and `Upgrade Notes` carry a higher bar: those are read
+mid-update. A change can be real, logged, and still not belong there.
+
 ## Hotfix Releases
 
 For urgent fixes to a released version:
