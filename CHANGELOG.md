@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.1] - 2026-09-20
+
 ### Overview
 
 A patch release on the v3.14 line, gathered from five betas. The theme is
