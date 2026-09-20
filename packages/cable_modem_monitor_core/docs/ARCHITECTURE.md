@@ -1328,10 +1328,12 @@ decisions that affect directory structure and package boundaries.
 
 #### 1. Core — isolated unit tests
 
-Strategy extraction logic, auth strategies, config schema validation,
-data model invariants. Tests use synthetic inputs (hand-crafted HTML
-snippets, JSON structures, delimiter strings) designed to exercise
-specific code paths. No real modem data, no HAR files, no network.
+Strategy extraction logic, auth strategies, orchestration (collector,
+policy, recovery, restart, and the events each emits), config schema
+validation, data model invariants. Tests use synthetic inputs
+(hand-crafted HTML snippets, JSON structures, delimiter strings)
+designed to exercise specific code paths. No real modem data, no HAR
+files, no network.
 
 Core also owns the **test harness** — shared infrastructure for HAR
 replay, golden file comparison, and structural assertions. The harness
@@ -1388,6 +1390,20 @@ Config flow, coordinator, entity model, device registry. Tests mock
 Core's engine interface — they verify HA-specific behavior (entity
 creation, state updates, availability) without running the real
 pipeline. See [HA_ADAPTER_SPEC.md § Testing](../../../custom_components/cable_modem_monitor/docs/HA_ADAPTER_SPEC.md#testing).
+
+Importing a Core enum or dataclass to assert an entity's state is
+normal here. Driving a Core component through its real code path is
+not: that is a scope 1 test and belongs in Core's tree, wherever it
+was first written. The mocking convention follows the tree, so a Core
+test placed here is written against HA's fakes and stops exercising
+what it claims to.
+
+### Repo tooling tests
+
+The root `tests/` tree also holds tests for `scripts/` — the release
+and validation gates, which belong to no package. They live outside
+the three scopes by nature: their subject is the repository, not a
+shipped artifact.
 
 ### No test code in Catalog
 

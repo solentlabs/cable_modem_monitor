@@ -33,7 +33,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.events import (
     StubPageDetected,
 )
 
-from tests.fixture_helpers import load_fixture
+from tests._helpers import load_fixture
 
 from .event_capture import assert_event_emitted, capture_events
 

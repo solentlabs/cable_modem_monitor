@@ -13,7 +13,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.events import (
     EventLevel,
 )
 
-from ..orchestration.event_capture import assert_event_emitted, capture_events
+from .event_capture import assert_event_emitted, capture_events
 
 
 def _make_session(*, status_code: int = 200, raise_exc: Exception | None = None) -> MagicMock:
