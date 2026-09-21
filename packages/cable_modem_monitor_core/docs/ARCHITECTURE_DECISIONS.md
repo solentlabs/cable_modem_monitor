@@ -15,7 +15,7 @@ files; this document explains the choices that shaped them.
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
 | [Recovery Architecture](#recovery-architecture) | Restart vs recovery, generic timing, reboot-signal vote, observer callback, no session preservation |
-| [Testing Strategy](#testing-strategy) | HAR replay, conformance gates every modem, greenfield from specs, fresh-context capture |
+| [Testing Strategy](#testing-strategy) | HAR replay, conformance gates every modem, greenfield from specs, fresh-context capture, test placement by code under test |
 | [Onboarding](#onboarding) | MCP for deterministic steps, catalog_tools owns the spec, inference vs assembly, no fallback |
 | [Config Flow](#config-flow) | Cross-directory grouping, variant label design |
 | [Extension Model](#extension-model) | How to add modems, formats, parsers, auth strategies, transports |
@@ -1595,6 +1595,37 @@ fresh browser context.
 session, so the capture contains the real auth exchange rather than a
 session that was already open. A HAR captured against a live session
 cannot prove how login works — see MODEM_INTAKE_WORKFLOW § Step 2.
+
+---
+
+### Test placement follows the code under test, enforced by review
+
+**Decision:** A test that drives a Core component through its real code
+path is a Core test and lives in Core's tree, whichever tree it was
+first written in. The root `tests/` tree holds HA adapter tests and
+tests for `scripts/`. No CI check enforces this; review does.
+
+**Rationale:** Each tree's mocking convention follows its scope, so
+placement decides how a test gets written. Core orchestration tests
+that sat in the HA tree were handed `MagicMock(spec=requests.Session)`
+— correct for an adapter test, wrong for one calling
+`ModemDataCollector.execute()`, whose session needs the `headers` and
+`cookies` that `Session.__init__` sets. A one-line Core change passed
+all 2338 package tests and broke only there.
+
+The boundary is not mechanically checkable. Adapter tests legitimately
+import Core enums and dataclasses to assert entity state, so importing
+Core is not the signal; driving Core's real code path is, and that is
+not visible to a linter. The no-`homeassistant`-in-Core rule is
+enforceable only because Core's CI job installs less, making a
+forbidden import a missing module. The root job installs Core by
+design, so nothing is absent when a Core test sits there.
+
+**Constrains:** A misplaced test is caught in review or not at all. A
+grep or import gate is not available for this: any such check must
+either forbid imports scope 3 legitimately needs, or infer intent from
+call shape. Scope definitions live in
+[ARCHITECTURE.md § Testing](ARCHITECTURE.md#testing).
 
 ---
 
