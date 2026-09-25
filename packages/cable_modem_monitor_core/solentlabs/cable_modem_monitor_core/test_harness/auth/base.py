@@ -134,8 +134,10 @@ class AuthHandler:
         """Return the 401 challenge response for unauthenticated requests."""
         return RouteEntry(status=401, headers=[], body="Unauthorized")
 
-    def is_authenticated(self, headers: dict[str, str]) -> bool:
+    def is_authenticated(self, headers: dict[str, str], *, query: str = "") -> bool:
         """Check if the request is authenticated."""
+        # query is the raw request query string, for strategies that carry
+        # the credential in the URL; header- and session-based handlers ignore it.
         return True
 
     def set_authenticated(self) -> dict[str, str]:

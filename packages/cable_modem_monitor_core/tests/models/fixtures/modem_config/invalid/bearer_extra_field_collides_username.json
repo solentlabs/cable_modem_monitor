@@ -1,0 +1,33 @@
+{
+  "_expected_error": "extra_fields key 'user' collides with a credential key",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {
+      "strategy": "bearer",
+      "login_endpoint": "/api/v1/login",
+      "token_path": "data.token",
+      "username_field": "user",
+      "extra_fields": {
+        "user": "x"
+      }
+    },
+    "hardware": {
+      "docsis_version": "3.1"
+    },
+    "status": "awaiting_verification",
+    "attribution": {
+      "contributors": [
+        {
+          "github": "test-user",
+          "contribution": "HAR capture"
+        }
+      ]
+    },
+    "isps": [
+      "Various"
+    ]
+  }
+}

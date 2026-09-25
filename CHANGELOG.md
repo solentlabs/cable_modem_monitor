@@ -19,6 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that only fills its channel tables after a "show channels" button
   posts back to the page. Paths it does not name are fetched as before.
   (#213)
+- **`bearer` covers JSON logins that hand the token back differently.**
+  An entry can log in with `PUT`, send extra body fields (`{host}` for
+  the modem's address), read the token from a response header, and send
+  it back in a named header or the URL query. Entries that set none of
+  these send exactly the login they sent before. (#213)
+
+### Changed
+
+- **The setup picker labels `bearer` variants "JSON Login"**, not
+  "Bearer Token". The strategy now covers logins whose token never rides
+  in an `Authorization: Bearer` header, so the old label described only
+  one of them. Existing entries keep working; only the label changes.
 
 ## [3.14.1] - 2026-09-20
 

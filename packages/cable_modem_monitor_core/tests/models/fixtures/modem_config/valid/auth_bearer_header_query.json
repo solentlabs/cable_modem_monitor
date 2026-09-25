@@ -1,0 +1,38 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T1",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {
+    "strategy": "bearer",
+    "login_endpoint": "/api/v1/login",
+    "method": "PUT",
+    "username_field": "",
+    "extra_fields": {
+      "ipAddress": "{host}"
+    },
+    "token_source": "header",
+    "token_header": "X-Session-Token",
+    "token_placement": "query",
+    "token_prefix": "ct_",
+    "cookie_name": "sessionid",
+    "login_busy": {
+      "status": "busy"
+    }
+  },
+  "hardware": {
+    "docsis_version": "3.1"
+  },
+  "status": "awaiting_verification",
+  "attribution": {
+    "contributors": [
+      {
+        "github": "test-user",
+        "contribution": "HAR capture"
+      }
+    ]
+  },
+  "isps": [
+    "Various"
+  ]
+}

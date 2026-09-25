@@ -1,0 +1,30 @@
+{
+  "_expected_error": "token_header is only valid with token_source: header or token_placement: header",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {
+      "strategy": "bearer",
+      "login_endpoint": "/api/v1/login",
+      "token_path": "data.token",
+      "token_header": "X-Session-Token"
+    },
+    "hardware": {
+      "docsis_version": "3.1"
+    },
+    "status": "awaiting_verification",
+    "attribution": {
+      "contributors": [
+        {
+          "github": "test-user",
+          "contribution": "HAR capture"
+        }
+      ]
+    },
+    "isps": [
+      "Various"
+    ]
+  }
+}

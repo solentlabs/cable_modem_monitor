@@ -109,7 +109,7 @@ class FormAuthHandler(AuthHandler):
         _logger.debug("Mock server: login accepted at %s", path)
         return None
 
-    def is_authenticated(self, headers: dict[str, str]) -> bool:
+    def is_authenticated(self, headers: dict[str, str], *, query: str = "") -> bool:
         """Check session state."""
         if self._authenticated:
             return True

@@ -53,7 +53,7 @@ class BasicAuthHandler(AuthHandler):
             )
         return RouteEntry(status=401, headers=headers, body="Unauthorized")
 
-    def is_authenticated(self, headers: dict[str, str]) -> bool:
+    def is_authenticated(self, headers: dict[str, str], *, query: str = "") -> bool:
         """Check for valid Basic auth header."""
         auth_header = headers.get("authorization", "")
         return auth_header.lower().startswith("basic ")

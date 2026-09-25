@@ -2,15 +2,25 @@
 
 Covers: happy path (token extracted), auth-context population for
 ``{auth:...}`` action placeholders, missing token path, HTTP error,
-bad JSON response, and interface compliance (headers method).
+bad JSON response, interface compliance (headers method), and the
+opt-in fields (method, extra_fields, token_source, token_placement,
+login_busy) in both directions: working when declared, and the
+request unchanged when not.
+
+TEST DATA TABLES
+================
+Tables sit above the class that consumes them, with ASCII
+box-drawing comments for readability.
 """
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 import requests
+from requests.structures import CaseInsensitiveDict
 from solentlabs.cable_modem_monitor_core.auth.bearer import BearerAuthManager
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import BearerAuth
 
@@ -20,13 +30,17 @@ def _config(
     token_path: str = "created.token",
     username_field: str = "username",
     user_id_path: str = "",
+    **fields: Any,
 ) -> BearerAuth:
-    return BearerAuth(
-        strategy="bearer",
-        login_endpoint=login_endpoint,
-        token_path=token_path,
-        username_field=username_field,
-        user_id_path=user_id_path,
+    return BearerAuth.model_validate(
+        {
+            "strategy": "bearer",
+            "login_endpoint": login_endpoint,
+            "token_path": token_path,
+            "username_field": username_field,
+            "user_id_path": user_id_path,
+            **fields,
+        }
     )
 
 
@@ -36,15 +50,34 @@ def _session() -> MagicMock:
     return session
 
 
-def _response(status_code: int, json_body: object | None = None, text: str = "") -> MagicMock:
+def _response(
+    status_code: int,
+    json_body: object | None = None,
+    text: str = "",
+    headers: dict[str, str] | None = None,
+) -> MagicMock:
     resp = MagicMock()
     resp.status_code = status_code
+    resp.headers = CaseInsensitiveDict(headers or {})
     if json_body is not None:
         resp.json.return_value = json_body
     else:
         resp.json.side_effect = ValueError("not json")
     resp.text = text
     return resp
+
+
+# Declared-field presets shared by the tables below.
+_HEADER_SOURCE: dict[str, Any] = {"token_path": "", "token_source": "header", "token_header": "X-Session-Token"}
+_HEADER_PLACEMENT: dict[str, Any] = {"token_placement": "header", "token_header": "X-Session-Token"}
+_QUERY_PLACEMENT: dict[str, Any] = {"token_placement": "query", "token_prefix": "ct_"}
+_BUSY: dict[str, Any] = {"login_busy": {"status": "session_overtake"}}
+_BUSY_HEADER: dict[str, Any] = {**_BUSY, **_HEADER_SOURCE}
+_DECLARED = frozenset({"authorization", "cookie"})
+_IP = "http://192.168.100.1"
+_CREDS = {"username": "admin", "password": "pw"}
+_OVERTAKE = {"status": "session_overtake"}
+_TOKEN_HDR = {"X-Session-Token": "t"}
 
 
 # =============================================================================
@@ -306,3 +339,310 @@ class TestBearerInterface:
         manager.authenticate(session, "http://192.168.100.1", "", "pass", timeout=30)
 
         assert session.post.call_args[1]["timeout"] == 30
+
+    # fmt: off
+    HEADERS_CASES: list[tuple[dict[str, Any], frozenset[str], str]] = [
+        # (fields,            expected,                                     description)
+        ({},                  _DECLARED,                                    "default placement"),
+        (_HEADER_PLACEMENT,   _DECLARED | {"x-session-token"},              "header placement adds it lowercased"),
+        (_HEADER_SOURCE,      _DECLARED,                                    "header source alone adds nothing"),
+        (_QUERY_PLACEMENT,    _DECLARED,                                    "query placement adds nothing"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "fields,expected,description",
+        HEADERS_CASES,
+        ids=[c[2] for c in HEADERS_CASES],
+    )
+    def test_headers_declared(self, fields: dict[str, Any], expected: frozenset[str], description: str) -> None:
+        """headers() declares the placement header so redaction and clear_session reach it."""
+        assert BearerAuthManager(_config(**fields)).headers() == expected
+
+
+# =============================================================================
+# Unset request is byte-identical to the pre-extension request
+# =============================================================================
+#
+# One test per shape the catalog ships today: the default body, and the
+# password-only body both current entries declare (username_field: "").
+# Any declared-field regression shows here before it reaches a replay.
+
+
+class TestBearerUnsetRequestUnchanged:
+    """With no new field declared, bearer sends and stores exactly what it did before."""
+
+    @pytest.mark.parametrize(
+        "username_field,expected_body",
+        [
+            ("username", {"username": "admin", "password": "secret"}),
+            ("", {"password": "secret"}),
+        ],
+        ids=["default body", "password-only body"],
+    )
+    def test_unset_request_is_identical(self, username_field: str, expected_body: dict[str, str]) -> None:
+        """POST to the same URL with the same JSON body, then only the Authorization header."""
+        session = _session()
+        session.post.return_value = _response(201, {"created": {"token": "tok"}})
+
+        result = BearerAuthManager(_config(username_field=username_field)).authenticate(
+            session, "http://192.168.100.1", "admin", "secret"
+        )
+
+        session.post.assert_called_once_with(
+            "http://192.168.100.1/rest/v1/user/login",
+            json=expected_body,
+            timeout=10,
+        )
+        # Key order is what serializes on the wire; dict equality ignores it.
+        assert list(session.post.call_args[1]["json"]) == list(expected_body)
+        session.put.assert_not_called()
+        assert session.headers == {"Authorization": "Bearer tok"}
+        assert result.success is True
+        assert result.auth_context.token == "tok"
+        assert result.auth_context.url_token == ""
+        assert result.busy is False
+
+
+def _extra(fields: dict[str, str]) -> dict[str, Any]:
+    return {"extra_fields": fields}
+
+
+_HOST = "192.168.100.1"
+_PASSWORD_ONLY_PUT: dict[str, Any] = {"method": "PUT", "username_field": "", **_extra({"ip": "{host}"})}
+
+
+# =============================================================================
+# Login request shape (method, extra_fields, {host})
+# =============================================================================
+#
+# ┌──────────────────────────────────┬──────────────────────────┬────────┬──────────────────────────────────┐
+# │ fields                           │ base_url                 │ method │ body                             │
+# ├──────────────────────────────────┼──────────────────────────┼────────┼──────────────────────────────────┤
+# │ method PUT                       │ http://192.168.100.1     │ PUT    │ username + password              │
+# │ literal extra field              │ http://192.168.100.1     │ POST   │ + lang: en                       │
+# │ {host} on a bare IP              │ http://192.168.100.1     │ POST   │ + ip: 192.168.100.1              │
+# │ {host} drops scheme and port     │ https://host:8443        │ POST   │ + ip: host                       │
+# │ {host} inside a longer value     │ http://192.168.100.1     │ POST   │ + o: ip=192.168.100.1            │
+# │ IPv6 host keeps its brackets     │ http://[FE80::1]:80      │ POST   │ + ip: [fe80::1]                  │
+# │ password-only plus extra field   │ http://192.168.100.1     │ PUT    │ password + ip                    │
+# └──────────────────────────────────┴──────────────────────────┴────────┴──────────────────────────────────┘
+#
+# fmt: off
+REQUEST_CASES: list[tuple[dict[str, Any], str, str, dict[str, str], str]] = [
+    # (fields,                   base_url,            method, body,                            description)
+    ({"method": "PUT"},          _IP,                 "PUT",  _CREDS,                          "method PUT"),
+    (_extra({"lang": "en"}),     _IP,                 "POST", {**_CREDS, "lang": "en"},        "literal extra field"),
+    (_extra({"ip": "{host}"}),   _IP,                 "POST", {**_CREDS, "ip": _HOST},         "host on a bare IP"),
+    (_extra({"ip": "{host}"}),   "https://host:8443", "POST", {**_CREDS, "ip": "host"},        "host drops scheme"),
+    (_extra({"ip": "{host}"}),   "http://[FE80::1]:80", "POST", {**_CREDS, "ip": "[fe80::1]"}, "IPv6 keeps brackets"),
+    (_extra({"o": "ip={host}"}), _IP,                 "POST", {**_CREDS, "o": f"ip={_HOST}"},  "host inside a value"),
+    (_PASSWORD_ONLY_PUT,         _IP,                 "PUT",  {"password": "pw", "ip": _HOST}, "password-only extra"),
+]
+# fmt: on
+
+
+class TestBearerLoginRequest:
+    """Declared method and extra_fields shape the login request."""
+
+    @pytest.mark.parametrize(
+        "fields,base_url,method,body,description",
+        REQUEST_CASES,
+        ids=[c[4] for c in REQUEST_CASES],
+    )
+    def test_login_request(
+        self,
+        fields: dict[str, Any],
+        base_url: str,
+        method: str,
+        body: dict[str, str],
+        description: str,
+    ) -> None:
+        """The request goes out with the declared method and body keys."""
+        session = _session()
+        sender, idle = (session.put, session.post) if method == "PUT" else (session.post, session.put)
+        sender.return_value = _response(201, {"created": {"token": "tok"}})
+
+        result = BearerAuthManager(_config(**fields)).authenticate(session, base_url, "admin", "pw")
+
+        assert result.success is True
+        sender.assert_called_once_with(f"{base_url}/rest/v1/user/login", json=body, timeout=10)
+        assert list(sender.call_args[1]["json"]) == list(body)
+        idle.assert_not_called()
+
+
+# =============================================================================
+# Token source
+# =============================================================================
+#
+# token_source: header reads the named response header and never the body,
+# so an empty or non-JSON body is fine there. token_source: body (default)
+# never reads a header.
+#
+# fmt: off
+_BODY_TOKEN = {"created": {"token": "body"}}
+
+TOKEN_SOURCE_CASES: list[tuple[dict[str, Any], MagicMock, bool, str, str]] = [
+    # (fields,        response,                                           ok,    token, description)
+    (_HEADER_SOURCE, _response(200, None, "", _TOKEN_HDR),               True,  "t",   "header token, empty body"),
+    (_HEADER_SOURCE, _response(200, _BODY_TOKEN, "", _TOKEN_HDR),        True,  "t",   "body token ignored"),
+    (_HEADER_SOURCE, _response(200, None, "", {"x-session-token": "t"}), True,  "t",   "header name case-insensitive"),
+    (_HEADER_SOURCE, _response(200, _BODY_TOKEN),                        False, "",    "header absent"),
+    (_HEADER_SOURCE, _response(200, None, "", {"X-Session-Token": ""}),  False, "",    "empty header value"),
+    ({},             _response(200, {"other": 1}, "", _TOKEN_HDR),       False, "",    "body source ignores headers"),
+]
+# fmt: on
+
+
+class TestBearerTokenSource:
+    """token_source picks where the token is read from."""
+
+    @pytest.mark.parametrize(
+        "fields,response,success,token,description",
+        TOKEN_SOURCE_CASES,
+        ids=[c[4] for c in TOKEN_SOURCE_CASES],
+    )
+    def test_token_source(
+        self,
+        fields: dict[str, Any],
+        response: MagicMock,
+        success: bool,
+        token: str,
+        description: str,
+    ) -> None:
+        """The token comes from the declared source or the login fails."""
+        session = _session()
+        session.post.return_value = response
+
+        result = BearerAuthManager(_config(**fields)).authenticate(session, "http://192.168.100.1", "", "pw")
+
+        assert result.success is success
+        assert result.auth_context.token == token
+        if not success:
+            assert result.response is response
+            assert session.headers == {}
+
+    def test_missing_header_names_it_in_the_error(self) -> None:
+        """The failure says which header was expected."""
+        session = _session()
+        session.post.return_value = _response(200, None)
+
+        result = BearerAuthManager(_config(**_HEADER_SOURCE)).authenticate(session, "http://192.168.100.1", "", "pw")
+
+        assert "X-Session-Token" in result.error
+
+
+# =============================================================================
+# Token placement
+# =============================================================================
+#
+# ┌───────────────┬────────────────────────────────────┬───────────┐
+# │ placement     │ session headers after login        │ url_token │
+# ├───────────────┼────────────────────────────────────┼───────────┤
+# │ authorization │ Authorization: Bearer tok          │ ""        │
+# │ header        │ X-Session-Token: tok               │ ""        │
+# │ query         │ (none)                             │ tok       │
+# └───────────────┴────────────────────────────────────┴───────────┘
+#
+# fmt: off
+PLACEMENT_CASES: list[tuple[dict[str, Any], dict[str, str], str, str]] = [
+    # (fields,                                 session_headers,                  url_token, description)
+    ({"token_placement": "authorization"},     {"Authorization": "Bearer tok"},  "",        "authorization"),
+    (_HEADER_PLACEMENT,                        {"X-Session-Token": "tok"},       "",        "named header"),
+    (_QUERY_PLACEMENT,                         {},                               "tok",     "query"),
+]
+# fmt: on
+
+
+class TestBearerTokenPlacement:
+    """token_placement picks where the token is sent back."""
+
+    @pytest.mark.parametrize(
+        "fields,session_headers,url_token,description",
+        PLACEMENT_CASES,
+        ids=[c[3] for c in PLACEMENT_CASES],
+    )
+    def test_token_placement(
+        self,
+        fields: dict[str, Any],
+        session_headers: dict[str, str],
+        url_token: str,
+        description: str,
+    ) -> None:
+        """The token lands in exactly one place, and always on AuthContext.token."""
+        session = _session()
+        session.post.return_value = _response(201, {"created": {"token": "tok"}})
+
+        result = BearerAuthManager(_config(**fields)).authenticate(session, "http://192.168.100.1", "", "pw")
+
+        assert result.success is True
+        assert session.headers == session_headers
+        assert result.auth_context.url_token == url_token
+        assert result.auth_context.token == "tok"
+
+    @pytest.mark.parametrize(
+        "fields",
+        [c[0] for c in PLACEMENT_CASES] + [_HEADER_SOURCE],
+        ids=[c[3] for c in PLACEMENT_CASES] + ["header source"],
+    )
+    def test_success_does_not_advertise_reuse(self, fields: dict[str, Any]) -> None:
+        """A token login is not a data page, so no branch sets response/response_url."""
+        session = _session()
+        session.post.return_value = _response(201, {"created": {"token": "tok"}}, "", {"X-Session-Token": "tok"})
+
+        result = BearerAuthManager(_config(**fields)).authenticate(session, "http://192.168.100.1", "", "pw")
+
+        assert result.success is True
+        assert result.response is None
+        assert result.response_url == ""
+
+
+# =============================================================================
+# login_busy
+# =============================================================================
+#
+# Busy is checked after the status rule and before the token. A body that is
+# empty, not JSON, or not an object never matches.
+#
+# fmt: off
+BUSY_CASES: list[tuple[dict[str, Any], MagicMock, bool, bool, str]] = [
+    # (fields,      response,                                          ok,    busy,  description)
+    (_BUSY,         _response(200, _OVERTAKE),                         False, True,  "declared and matching"),
+    (_BUSY_HEADER,  _response(200, _OVERTAKE, "", _TOKEN_HDR),         False, True,  "busy wins over a header token"),
+    (_BUSY,         _response(200, {"status": "ok", **_BODY_TOKEN}),   True,  False, "declared, not matching"),
+    (_BUSY_HEADER,  _response(200, None, "", _TOKEN_HDR),              True,  False, "empty body, header decides"),
+    (_BUSY_HEADER,  _response(200, None),                              False, False, "empty body, no header token"),
+    (_BUSY,         _response(200, ["session_overtake"]),              False, False, "non-object JSON never matches"),
+    (_BUSY,         _response(409, _OVERTAKE),                         False, False, "non-2xx fails before busy"),
+    ({},            _response(200, _OVERTAKE),                         False, False, "undeclared is today's failure"),
+]
+# fmt: on
+
+
+class TestBearerLoginBusy:
+    """A declared login_busy body reports busy instead of failure."""
+
+    @pytest.mark.parametrize(
+        "fields,response,success,busy,description",
+        BUSY_CASES,
+        ids=[c[4] for c in BUSY_CASES],
+    )
+    def test_login_busy(
+        self,
+        fields: dict[str, Any],
+        response: MagicMock,
+        success: bool,
+        busy: bool,
+        description: str,
+    ) -> None:
+        """Busy is reported only for a declared, matching 2xx JSON object."""
+        session = _session()
+        session.post.return_value = response
+
+        result = BearerAuthManager(_config(**fields)).authenticate(session, "http://192.168.100.1", "", "pw")
+
+        assert result.success is success
+        assert result.busy is busy
+        if busy:
+            assert result.response is response
+            assert session.headers == {}

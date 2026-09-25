@@ -17,13 +17,21 @@ Without a captured login response the handler synthesizes one from
 token by the same walk it uses against hardware. Answers
 ``201 Created`` — the status the Sagemcom F3896LG firmware returns for
 token creation (issue #185).
+
+The declared shape is simulated too. The login answers only the
+configured ``method``. With ``token_source: header`` the token travels
+in the ``token_header`` response header, taken from the captured login
+when it carries one, otherwise synthesized over an empty ``200`` body.
+Later requests must carry the token where ``token_placement`` puts it:
+``Authorization: Bearer``, the named request header, or the bare
+``{token_prefix}{token}`` query key.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from ..routes import RouteEntry, build_routes, normalize_path
 from .base import AuthHandler
@@ -48,16 +56,37 @@ def _nest(token_path: str, token: str) -> dict[str, Any]:
 class BearerAuthHandler(AuthHandler):
     """Issues a bearer token at the login endpoint and enforces it thereafter."""
 
-    def __init__(self, login_path: str, token_path: str, captured_login: RouteEntry | None = None) -> None:
+    def __init__(
+        self,
+        login_path: str,
+        token_path: str,
+        captured_login: RouteEntry | None = None,
+        *,
+        method: Literal["POST", "PUT"] = "POST",
+        token_source: Literal["body", "header"] = "body",
+        token_header: str = "",
+        token_placement: Literal["authorization", "header", "query"] = "authorization",
+        token_prefix: str = "",
+    ) -> None:
         super().__init__()
         self._login_path = normalize_path(login_path)
         self._token_path = token_path
         self._captured_login = captured_login
-        self._token = _extract_token(captured_login, token_path) if captured_login else ""
+        self._method = method
+        self._token_source = token_source
+        self._token_header = token_header
+        self._token_placement = token_placement
+        self._token_prefix = token_prefix
+        self._token = ""
+        if captured_login is not None:
+            if token_source == "header":
+                self._token = _header_value(captured_login, token_header)
+            else:
+                self._token = _extract_token(captured_login, token_path)
 
     def is_login_request(self, method: str, path: str) -> bool:
-        """Check if this is a POST to the login endpoint."""
-        return method == "POST" and normalize_path(path) == self._login_path
+        """Check if this is the configured method to the login endpoint."""
+        return method == self._method and normalize_path(path) == self._login_path
 
     def handle_login(
         self,
@@ -66,24 +95,33 @@ class BearerAuthHandler(AuthHandler):
         body: bytes,
         headers: dict[str, str],
     ) -> RouteEntry | None:
-        """Serve the captured login response, or a synthesized 201 when there is none."""
+        """Serve the captured login response, or a synthesized one when it carries no token."""
         if not self.is_login_request(method, path):
             return None
 
-        if self._token:
+        if self._token and self._captured_login is not None:
             _logger.debug("Mock server: bearer login served from capture at %s", path)
             return self._captured_login
 
         _logger.debug("Mock server: bearer login accepted at %s", path)
+        if self._token_source == "header":
+            return RouteEntry(status=200, headers=[(self._token_header, _MOCK_TOKEN)], body="")
         return RouteEntry(
             status=201,
             headers=[("Content-Type", "application/json")],
             body=json.dumps(_nest(self._token_path, _MOCK_TOKEN)),
         )
 
-    def is_authenticated(self, headers: dict[str, str]) -> bool:
-        """Require the issued token back on the Authorization header."""
-        return headers.get("authorization", "") == f"Bearer {self._token or _MOCK_TOKEN}"
+    def is_authenticated(self, headers: dict[str, str], *, query: str = "") -> bool:
+        """Require the issued token back where token_placement puts it."""
+        token = self._token or _MOCK_TOKEN
+        if self._token_placement == "header":
+            return headers.get(self._token_header.lower(), "") == token
+        if self._token_placement == "query":
+            # The firmware sends a bare key (``?ct_<token>``), not key=value,
+            # possibly alongside other params such as a cache-buster.
+            return f"{self._token_prefix}{token}" in query.split("&")
+        return headers.get("authorization", "") == f"Bearer {token}"
 
     def get_challenge_response(self) -> RouteEntry:
         """Return 401 for requests arriving without the bearer token."""
@@ -108,14 +146,21 @@ def _extract_token(login_response: RouteEntry, token_path: str) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _header_value(login_response: RouteEntry, name: str) -> str:
+    """Return the captured login's value for response header ``name``; empty if absent."""
+    wanted = name.lower()
+    return next((value for key, value in login_response.headers if key.lower() == wanted), "")
+
+
 def _captured_login_response(
     har_entries: list[dict[str, Any]] | None,
     login_path: str,
+    method: str = "POST",
 ) -> RouteEntry | None:
-    """Return the captured POST response for the login endpoint, if the capture has one."""
+    """Return the captured response to the login request, if the capture has one."""
     if not har_entries:
         return None
-    return build_routes(har_entries, login_path=login_path).get(("POST", normalize_path(login_path)))
+    return build_routes(har_entries, login_path=login_path).get((method, normalize_path(login_path)))
 
 
 def create_handler(
@@ -130,5 +175,10 @@ def create_handler(
     return BearerAuthHandler(
         login_path=auth.login_endpoint,
         token_path=auth.token_path,
-        captured_login=_captured_login_response(har_entries, auth.login_endpoint),
+        captured_login=_captured_login_response(har_entries, auth.login_endpoint, auth.method),
+        method=auth.method,
+        token_source=auth.token_source,
+        token_header=auth.token_header,
+        token_placement=auth.token_placement,
+        token_prefix=auth.token_prefix,
     )

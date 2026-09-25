@@ -134,7 +134,7 @@ class _MockHandler(BaseHTTPRequestHandler):
             return
 
         # Non-login request — check auth
-        if not auth.is_authenticated(headers):
+        if not auth.is_authenticated(headers, query=parsed.query):
             challenge = auth.get_challenge_response()
             self._send_response(
                 challenge.status,
@@ -198,7 +198,8 @@ class _MockHandler(BaseHTTPRequestHandler):
         # Not a login — fall through to authenticated request handling.
         # This path is used by HNAP when is_login_request matches all
         # POST /HNAP1/ but handle_login returns None for data requests.
-        if not auth.is_authenticated(headers):
+        # route_path carries the request's query string when it has one.
+        if not auth.is_authenticated(headers, query=route_path.partition("?")[2]):
             self._send_response(401, [], "Unauthorized")
             return
 

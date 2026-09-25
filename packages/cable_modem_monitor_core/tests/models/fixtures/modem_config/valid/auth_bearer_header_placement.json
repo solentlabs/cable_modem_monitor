@@ -1,0 +1,28 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T1",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {
+    "strategy": "bearer",
+    "login_endpoint": "/api/v1/login",
+    "token_path": "data.token",
+    "token_placement": "header",
+    "token_header": "X-Session-Token"
+  },
+  "hardware": {
+    "docsis_version": "3.1"
+  },
+  "status": "awaiting_verification",
+  "attribution": {
+    "contributors": [
+      {
+        "github": "test-user",
+        "contribution": "HAR capture"
+      }
+    ]
+  },
+  "isps": [
+    "Various"
+  ]
+}

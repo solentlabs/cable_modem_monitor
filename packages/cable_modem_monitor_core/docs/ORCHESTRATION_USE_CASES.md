@@ -2363,10 +2363,10 @@ in about 20 s, so classification alone breaks the loop.
 > **Status:** Implemented. The collector classifies a 5xx login
 > response, or an `AuthResult` the strategy marked `busy`, as
 > `AUTH_UNAVAILABLE`; `SignalPolicy.apply` maps it to `UNREACHABLE`
-> with no side effects, matching `LOAD_ERROR`. Three strategies mark
-> busy: `form_pbkdf2` when the body matches the entry's `login_busy`,
-> `hnap` on `LoginResult: "RELOAD"`, and `form_cbn` on a `cbnLogin` or
-> `cbnFirstInstall` login body.
+> with no side effects, matching `LOAD_ERROR`. Four strategies mark
+> busy: `form_pbkdf2` and `bearer` when the body matches the entry's
+> `login_busy`, `hnap` on `LoginResult: "RELOAD"`, and `form_cbn` on a
+> `cbnLogin` or `cbnFirstInstall` login body.
 
 ---
 
