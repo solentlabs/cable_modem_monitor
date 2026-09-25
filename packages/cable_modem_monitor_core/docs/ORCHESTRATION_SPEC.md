@@ -98,11 +98,10 @@ class ModemDataCollector:
     def session_is_valid(self) -> bool:
         """Whether the Auth Manager believes the current session is usable.
 
-        Strategy-specific local check: HNAP verifies uid cookie +
-        private key (the private key is also set as a PrivateKey
-        cookie); cookie-based strategies verify the session cookie
-        (``auth.cookie_name``) is present; basic and none are always
-        valid.
+        Delegates to the auth manager's ``session_is_valid()``: the
+        answer is each strategy's own (ARCHITECTURE_DECISIONS § Strategy
+        knowledge lives with the strategy). An entry with no auth
+        configured is always valid.
 
         This is a local check — the server may have expired the session
         even if this returns True. Used for diagnostics and by clients

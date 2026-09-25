@@ -403,17 +403,38 @@ config fields.
   for the merge order.
 
   For `form_nonce`, credential encoding is detected once at setup
-  time — the HA config flow pre-fetches the login page during
-  validation and stores the result in the config entry. The test
-  harness detects from HAR entries. At runtime, the auth manager
-  reads `credential_encoding` from the config — no pre-fetch occurs
-  during polling. See MODEM_YAML_SPEC.md for detection logic.
+  time through Core's generic `detect_setup_params`, which dispatches
+  to the strategy module's own entry point; the HA config flow stores
+  the returned params in the config entry and hands them back through
+  `apply_setup_params` at startup, and the test harness runs the same
+  detection over HAR entries. Neither consumer knows which strategy
+  needed it. No pre-fetch occurs during polling. See MODEM_YAML_SPEC.md
+  for detection logic.
 - Multi-variant modems use separate `modem-{variant}.yaml` files — one per
   firmware variant, each with a single `auth` block. The config flow presents
   variants as user choices during setup. Protocol (HTTP vs HTTPS) is detected
   automatically and is independent of firmware variant — the user selects based
   on their network, not their protocol. See `CONFIG_FLOW_SPEC.md` for the
   full setup flow.
+
+**Auth manager hooks.** Everything code outside `auth/` needs to know
+about a strategy at runtime is a `BaseAuthManager` method with a safe
+default (ARCHITECTURE_DECISIONS § Strategy knowledge lives with the
+strategy). Each default reproduces what generic code did before the
+knowledge moved:
+
+| Hook | Default | Overridden by |
+|---|---|---|
+| `headers()` | `{"cookie"}` | every strategy that puts a credential elsewhere |
+| `auth_failure_mode()` | `CREDENTIALS_SUSPECT` | strategies that prove a login-time rejection |
+| `session_cookie_name()` | `""` | strategies whose config declares `cookie_name`. `form_cbn` does not: its session reads valid after login until the CBN session work detects expiry. |
+| `session_is_valid(session, context)` | no context: `False`; else the `session_cookie_name()` cookie is in the jar when one is named; else `True` | `none` (always `True`), `hnap` (uid cookie and `context.private_key`) |
+| `loader_url_token(session, context)` | no token | `url_token`, and `bearer` with `token_placement: query`: the configured `token_prefix` with `context.url_token`, falling back to the session cookie's value when the login gave none |
+
+A new hook is added with its first implementer, never ahead of one.
+
+Setup-time detection is a module entry point, not a method, because
+it runs before any manager or session exists.
 
 #### Crypto Library vs Firmware Wire Format
 

@@ -539,18 +539,21 @@ flow or test harness) by pre-fetching the login page (GET to the
   `base64(encodeURIComponent("username=X:password=Y"))` into that
   field: `arguments=<base64>&nonce=Z`.
 
-The detected encoding is stored in the HA config entry as
+Detection lives in `auth/form_nonce.py` as the strategy's setup entry
+point, reached through Core's generic `detect_setup_params` /
+`apply_setup_params` (ARCHITECTURE § Auth manager hooks). It returns
 `credential_encoding` (`"plain"` or `"b64_packed"`) and
-`credential_field` (the hidden field name, empty for plain). At
-runtime, the auth manager reads these from the `FormNonceAuth`
-config — no pre-fetch or detection occurs during polling.
+`credential_field` (the hidden field name, empty for plain); the HA
+config entry stores them under those keys and passes them back at
+startup, and `apply_setup_params` sets them on the `FormNonceAuth`
+config. No pre-fetch or detection occurs during polling.
 
 Detection falls back to plain encoding on any parse failure
 (backward compatible). No YAML config field is needed — the
 encoding is per-installation (firmware-dependent), not per-modem.
 
-The test harness detects encoding from HAR entries at test
-execution time, using the same `_analyze_login_form()` function.
+The test harness runs the same detection over HAR entries at test
+execution time.
 
 Evidence: observed in Arris SB6190 firmware 9.1.103AA65L (plain
 form fields) and 9.1.103AA72 (base64-packed `arguments` field).

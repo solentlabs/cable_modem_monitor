@@ -612,6 +612,60 @@ Core strategy.
 pattern requires a Core change — but this is intentional, as it
 becomes available to all future modems using the same protocol.
 
+### Strategy knowledge lives with the strategy
+
+**Decision:** Code outside `auth/` never reads an auth strategy's
+config fields and never type-checks a strategy. What it needs to know
+about a strategy has exactly one of three homes:
+
+| Kind of knowledge | Home | Existing examples |
+|---|---|---|
+| A static fact about the strategy | ClassVar on its model | `display_name`, `transport`, `stateless` |
+| Behaviour that needs the live session or the strategy's secret | overridable `BaseAuthManager` method, safe default | `headers()`, `auth_failure_mode()`, `session_is_valid()`, `session_cookie_name()`, `loader_url_token()` |
+| A protocol-locked transport's own parameters | that transport's module (`loaders/hnap.py`, `loaders/cbn.py`, `actions/hnap_action.py`, `actions/cbn_action.py`), with typed access | `hmac_algorithm`, the CBN getter/setter endpoints and session cookie |
+
+Setup-time work a strategy needs (form_nonce's credential-encoding
+detection) is an optional module entry point in `auth/{strategy}.py`,
+resolved by strategy literal the way `create_manager` is: Core's
+generic `detect_setup_params` / `apply_setup_params` dispatch to it,
+and a strategy without one has no setup step. Consumers, including the
+HA adapter, treat the resulting params as opaque data.
+
+`AuthContext` is data only: values a login produced that generic code
+reads (`url_token`, `private_key`, `token`, `user_id`), described by
+what consumes them.
+
+**Rationale:** Knowledge placed outside its strategy spreads as
+`getattr` string lookups and `isinstance` chains, and works only while
+strategies happen to share field names: `bearer` got URL-token loading
+from the collector because it reused the names `token_prefix` and
+`cookie_name`, not because anything said it should. § Post-login 401 is
+read per auth strategy set the
+direction ("the knowledge lives on the strategy, not in an isinstance
+chain"); this entry completes it.
+
+Protocol-locked transports are not an exception to the rule but its
+third home: HNAP and CBN each have exactly one strategy, the protocol
+itself (§ Transport is a protocol identifier), and their modules are
+protocol code by design (§ Transport-scoped action executors). The
+generic collector and dispatcher route by transport and read nothing.
+
+This reverses the v3.14 Step 20 choice to keep `session_is_valid` as a
+branch table in the collector. Its premise was that auth managers held
+no session config such as `cookie_name`; § Session is lifecycle, auth
+owns the cookie then moved `cookie_name` onto each strategy's own
+config, so the collector was reading strategy data from outside.
+
+**Constrains:** A new strategy answers these questions by overriding
+hooks or setting ClassVars, never by matching a field name something
+else reads. Each hook's default reproduces the behaviour generic code
+had before the move, so a strategy that overrides nothing behaves as
+before. The one-strategy-per-transport premise behind the third home
+is asserted by a test; a second strategy on HNAP or CBN fails it and
+forces this entry to be revisited. The collector keeps one check that
+is no strategy's knowledge: an entry with no auth configured is
+always a valid session.
+
 ### Session is lifecycle, auth owns the cookie
 
 **Decision:** `cookie_name` and `token_prefix` live on the auth
@@ -675,10 +729,10 @@ is not valid, since it would fail anyway and the retry proceeds regardless).
 read the cookie jar, which is equivalent for every cookie-based strategy but
 wrong for header-authenticated ones: `bearer` holds a live session in
 `session.headers["Authorization"]` with an empty jar, so a cookie test would
-silently skip logout on exactly the modems that most need it. `session_is_valid`
-already answers this per strategy — HNAP checks uid plus private key, cookie
-strategies check `auth.cookie_name`, `url_token` checks the token — so the
-guard delegates to it rather than reimplementing a narrower check.
+silently skip logout on exactly the modems that most need it. Each strategy's
+`session_is_valid()` already answers this (§ Strategy knowledge lives with the
+strategy), so the guard delegates to it rather than reimplementing a narrower
+check.
 CBN transport always embeds the session token by protocol; `requires_session`
 is absent from `CbnAction` by type-system design.
 

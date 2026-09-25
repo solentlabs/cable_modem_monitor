@@ -170,8 +170,9 @@ async_setup_entry(hass, entry)
  │     → modem_config, parser_config, post_processor
  │     (runs in executor — file I/O)
  │
- ├─ 1a. Inject credential encoding (Core concern)
- │      apply_credential_encoding(modem_config, ...)
+ ├─ 1a. Re-apply setup params detected at config time (Core concern)
+ │      apply_setup_params(modem_config, entry.data)
+ │      (opaque to HA; a strategy without a setup step ignores them)
  │
  ├─ 2. Resolve health probe defaults
  │     modem.yaml health config → defaults
