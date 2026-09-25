@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**46 configurations supported** — 28 confirmed on real hardware, 18 awaiting verification.
+**47 configurations supported** — 28 confirmed on real hardware, 19 awaiting verification.
 
 ---
 
@@ -37,6 +37,7 @@ and share a diagnostics snapshot.
 | SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom | hybrid |
 | SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic |
 | SB8200 (JSON Login) | HTML | RCN | — |
+| TG3442S | HTML | LIWEST | — |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated |
 | C3700 | HTML | Comcast, Cox, Spectrum | synthetic |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | synthetic |

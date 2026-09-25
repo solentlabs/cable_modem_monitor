@@ -21,9 +21,9 @@ Auto-generated index of the v3.14 modem catalog.
 
 - `modem.yaml` — Single source of truth (manufacturer, model, hardware, ISPs, status)
 
-**41 modems, 46 configurations** (28 ✅ confirmed, 18 ⏳ awaiting)
+**42 modems, 47 configurations** (28 ✅ confirmed, 19 ⏳ awaiting)
 
-**Auth strategies:** form (15), none (8), hnap (7), basic (5), url_token (3), form_cbn (2), bearer (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1)
+**Auth strategies:** form (15), none (8), hnap (7), basic (5), url_token (3), form_cbn (2), bearer (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1), json_sjcl (1)
 
 ## Directory Structure
 
@@ -63,6 +63,7 @@ packages/cable_modem_monitor_catalog/.../modems/
 | Arris | [SB8200 (HNAP)](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/sb8200-hnap/modem.yaml) | 3.1 | ![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth") | [BCM3390](#bcm3390) | ![hnap](https://img.shields.io/badge/-hnap-5B8FBF?style=flat-square "HNAP") | [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) | SB8200 | ✅ Confirmed |
 | Arris | [SB8200 (JSON Login)](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/sb8200-php/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![bearer](https://img.shields.io/badge/-bearer-1A7FAA?style=flat-square "JSON Login") | [![RCN](https://img.shields.io/badge/-RCN-556688?style=flat-square "RCN Corporation")](#rcn) | SB8200 | ⏳ Awaiting |
 | Arris | [TG3442DE](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/tg3442de/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 7](#puma-7) | ![sjcl](https://img.shields.io/badge/-sjcl-7B4FB8?style=flat-square "Form Login (SJCL)") | [![VDF](https://img.shields.io/badge/-VDF-aa6666?style=flat-square "Vodafone Kabel")](#vodafone) | TG3442DE | ✅ Confirmed |
+| Arris | [TG3442S](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/tg3442s/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 7](#puma-7) | ![json-sjcl](https://img.shields.io/badge/-json--sjcl-9B6FD8?style=flat-square "JSON Login (SJCL)") | [![LIW](https://img.shields.io/badge/-LIW-5577aa?style=flat-square "LIWEST")](#liwest) | TG3442S | ⏳ Awaiting |
 | Arris | [TM1602A](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/tm1602a/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 6](#puma-6) | ![none](https://img.shields.io/badge/-none-808080?style=flat-square "No Authentication") | [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | TM1602A | ✅ Confirmed |
 | CommScope | [G54](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/commscope/g54/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) | G54 | ⏳ Awaiting |
 | Compal | [CH7465MT](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/compal/ch7465mt/modem.yaml) | 3.0 | ![CBN](https://img.shields.io/badge/-CBN-8B6914?style=flat-square "CBN SOAP-based protocol") | [Puma 6](#puma-6) | ![cbn](https://img.shields.io/badge/-cbn-8B6914?style=flat-square "Form Login CBN") | [![MAG](https://img.shields.io/badge/-MAG-aa5588?style=flat-square "Magenta Telekom")](#magenta) | CH7465MT | ✅ Confirmed |
@@ -195,6 +196,7 @@ _Scale: 2010-2026 (16 years)_
 | <span id="pyür"></span>PYÜR | Pyür | Germany | [Official list](https://www.pyur.com/) | Formerly Tele Columbus |
 | <span id="vodafone"></span>VDF | Vodafone Kabel | Germany | [Official list](https://www.vodafone.de/) | BYOM allowed since 2016; absorbed Unitymedia |
 | <span id="magenta"></span>MAG | Magenta Telekom | Austria | [Official list](https://www.magenta.at/hilfe-service/services/hardwaresupport/device/internet-fiber/box) | Formerly UPC Austria / T-Mobile Austria; distributes CH7465MT as Internet Fiber Box |
+| <span id="liwest"></span>LIW | LIWEST Kabelmedien | Austria (Upper Austria) | [Official list](https://www.liwest.at/) | Cable and fiber operator based in Linz. Source: <https://liwest.at/ueberliwest/das-unternehmen> |
 | <span id="unitymedia"></span>UM | Unitymedia | Germany (West) | — | Merged into Vodafone (2019) |
 | <span id="virgin"></span>VM | Virgin Media | UK | [Official list](https://www.virginmedia.com/) | No BYOM; modem mode available |
 | <span id="ziggo"></span>ZIG | Ziggo | Netherlands | [Official list](https://www.ziggo.nl/) | VodafoneZiggo joint venture. Source: <https://en.wikipedia.org/wiki/Ziggo> |
@@ -210,4 +212,4 @@ _Scale: 2010-2026 (16 years)_
 
 ---
 
-Generated by `scripts/generate_catalog_index.py` from 47 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).
+Generated by `scripts/generate_catalog_index.py` from 48 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).

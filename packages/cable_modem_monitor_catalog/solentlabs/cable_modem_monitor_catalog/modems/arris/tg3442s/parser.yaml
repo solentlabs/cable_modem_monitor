@@ -1,0 +1,134 @@
+# wan.php assigns every channel array to one object (modem.har [140],
+# line 846): let channelData = {ds_channels, us_channels, ofdm_channels,
+# ofdma_channels, error_codewords, cm_status}. Frequencies are MHz
+# (table headers "Frequency (MHz)").
+
+downstream:
+  format: javascript_json
+  resource: "/wan.php"
+  variable: "channelData"
+  arrays:
+    - array_path: "ds_channels"
+      channel_type:
+        fixed: "qam"
+      mappings:
+        - key: ChannelID
+          field: channel_id
+          type: integer
+        - key: Frequency
+          field: frequency
+          type: frequency
+        - key: PowerLevel
+          field: power
+          type: float
+        - key: SNRLevel
+          field: snr
+          type: float
+        - key: Modulation
+          field: modulation
+          type: modulation
+        - key: LockStatus
+          field: lock_status
+          type: lock_status
+    - array_path: "ofdm_channels"
+      channel_type:
+        fixed: "ofdm"
+      mappings:
+        - key: ChannelID
+          field: channel_id
+          type: integer
+        # MinFreq is the "First Active Subcarrier (MHz)" column: the lower
+        # edge, per FIELD_REGISTRY.md § frequency semantics.
+        - key: MinFreq
+          field: frequency
+          type: frequency
+        # Mapped as reported (138), though MaxFreq - MinFreq is 135.
+        - key: ChannelWidth
+          field: channel_width
+          type: frequency
+        - key: NumActiveSubcarrier
+          field: active_subcarriers
+          type: integer
+        - key: FftType
+          field: fft_type
+          type: string
+        # Average RxMER of the data subcarriers; the page also reports
+        # pilot and PLC averages.
+        - key: DataScAvgMer
+          field: snr
+          type: float
+        - key: Power
+          field: power
+          type: float
+        - key: Modulation
+          field: modulation
+          type: modulation
+        - key: LockStatus
+          field: lock_status
+          type: lock_status
+    - array_path: "error_codewords"
+      merge_by: [channel_id]
+      mappings:
+        - key: ChannelID
+          field: channel_id
+          type: integer
+        - key: CorrectableCodewords
+          field: corrected
+          type: integer
+        - key: UncorrectableCodewords
+          field: uncorrected
+          type: integer
+
+upstream:
+  format: javascript_json
+  resource: "/wan.php"
+  variable: "channelData"
+  arrays:
+    - array_path: "us_channels"
+      mappings:
+        - key: ChannelID
+          field: channel_id
+          type: integer
+        - key: Frequency
+          field: frequency
+          type: frequency
+        - key: PowerLevel
+          field: power
+          type: float
+        - key: ChannelType
+          field: channel_type
+          type: string
+          map:
+            "US_TYPE_ATDMA": "atdma"
+        - key: SymbolRate
+          field: symbol_rate
+          type: integer
+          unit: "KSym/sec"
+        - key: Modulation
+          field: modulation
+          type: modulation
+        - key: LockStatus
+          field: lock_status
+          type: lock_status
+
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/wan.php"
+      fields:
+        - label: "System Uptime"
+          field: system_uptime
+          type: uptime
+          format: "{days}d {hours}h {minutes}m {seconds}s"
+        - label: "DOCSIS FW Version"
+          field: software_version
+          type: string
+        - label: "HW Version"
+          field: hardware_version
+          type: string
+        - label: "Model"
+          field: model_name
+          type: string
+        - label: "DOCSIS Operating Mode"
+          field: docsis_version
+          type: string

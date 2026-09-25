@@ -1,0 +1,121 @@
+manufacturer: ARRIS
+model: TG3442S
+transport: http
+default_host: "192.168.1.1"
+
+auth:
+  strategy: json_sjcl
+  login_page: "/login.php"
+  login_endpoint: "/actionHandler/ajaxSet_login.php"
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+  aad: "ARRIS"
+  token_header: "X-CSRF-Token"
+  cookie_name: "PHPSESSID"
+  login_busy:
+    session_overtake: true
+
+session:
+  headers:
+    X-Requested-With: "XMLHttpRequest"
+
+actions:
+  logout:
+    type: http
+    method: PUT
+    endpoint: "/actionHandler/ajaxSet_logout.php"
+    requires_session: true
+  restart:
+    type: http
+    method: PUT
+    endpoint: "/actionHandler/ajaxSet_Reset_Restore.php"
+    json_body:
+      action: "restart"
+      module: "gateway"
+    body_encoding: session
+
+hardware:
+  docsis_version: "3.1"
+  chipset: "Intel Puma 7 (FHCE2752M)"
+
+status: awaiting_verification
+
+sources:
+  auth_config:
+    '[#210 TG3442S HAR](https://github.com/solentlabs/cable_modem_monitor/issues/210)
+    — test_data/modem.har: [0] [1] redirect to /login.php; login.php [2]
+    lines 248-253 sjclEncryptObj salt and IV, 306 AAD "ARRIS", 840-856
+    lowercased user, session_overtake branch, X-CSRF-Token from the
+    response header; sjclCrypto.js [25] lines 16-18 PBKDF2 1000
+    iterations, 128-bit key, 128-bit tag; [56] rejected login 471; [57]
+    busy login; [303] accepted login, Set-Cookie PHPSESSID and X-CSRF-Token'
+  logout_action:
+    "test_data/modem.har — logout() in at_a_glance.php [59] lines 855-861;
+    [274] [277] [389] PUT with the PHPSESSID cookie and X-CSRF-Token, 200"
+  restart_action:
+    "test_data/modem.har — restore_reboot.php [361] line 937 builds
+    {action: 'restart', module: 'gateway'} and setResetInfo() (line 1044)
+    sends it through updateServerRecord(), which encrypts it
+    (encryptParametersIfNeeded, line 300); [387] PUT {EncryptedData, user}
+    with X-CSRF-Token, 200"
+  session_headers:
+    "test_data/modem.har — X-Requested-With: XMLHttpRequest on the login
+    [56] [57] [303], logout [274] and restart [387] requests (jQuery $.ajax)"
+  hardware: "test_data/modem.har [140] wan.php — DOCSIS Operating Mode 3.1, OFDM channel present"
+  chipset: "[DeviWiki, Arris TG3442 (S/CE variant)](https://deviwiki.com/wiki/Arris_TG3442)"
+  isps: "[#210 issue form, ISP field](https://github.com/solentlabs/cable_modem_monitor/issues/210)"
+
+attribution:
+  contributors:
+    - github: https://github.com/guger
+      contribution: "HAR capture of the TG3442S (Issue #210)"
+
+isps:
+  - LIWEST
+
+notes: |
+  ARRIS TG3442S gateway, firmware 01.05.048.01.EURO.NCS (LIWEST). HTTPS
+  actionHandler web UI; a different firmware family from arris/tg3442de,
+  whose form_sjcl login this build does not serve (#210).
+  Entry indices below are into test_data/modem.har.
+
+  Login: json_sjcl. The page encrypts {"username","password"} under a
+  PBKDF2 key from the login page's per-session salt and IV and PUTs
+  {"EncryptedData","user"} to ajaxSet_login.php. Wrong credentials answer
+  471 "Parameter decryption failed" [56]. A login while another session
+  is active answers an encrypted {"session_overtake": true} [57]; the
+  browser then offers a takeover through ajaxSet_SessionActive.php [58].
+  Core reads that answer as busy and never sends the takeover. The
+  accepted login [303] sets PHPSESSID and the X-CSRF-Token header. Its
+  recorded body is byte-identical to [57]'s although the session key
+  differs, so the entry relies only on the status and the token header.
+  Single admin session at a time; logout runs after every poll.
+
+  Data: everything comes from wan.php [140]. Channels are the
+  channelData object (line 846): 31 SC-QAM downstream, 1 OFDM, 6 ATDMA
+  upstream, per-channel codewords merged by channel id. OFDM
+  ChannelWidth is 138 while MaxFreq - MinFreq (the page's first and last
+  active subcarrier, MHz) is 135; ChannelWidth is mapped as reported.
+  The ofdma_channels array was empty in the capture, so its keys are
+  unobserved and it is not mapped. system_info comes from the page's
+  Cable Modem block and System Uptime row; the modem state (cm_status)
+  sits inside channelData, so docsis_status is derived from lock status.
+
+  Restart: restore_reboot.php [361] sends {action: 'restart', module:
+  'gateway'} encrypted under the session key [387]; the action declares
+  body_encoding: session.
+
+  Hand-applied sanitization: every EncryptedData value (requests [56]
+  [57] [58] [303] [387], responses [57] [273] [303] [387]) is replaced
+  with a same-length hex placeholder, sha256("sanitized") hex digest
+  repeated and truncated to the original length. The automated pass left
+  them intact; they are ciphertext of the login credentials and of other
+  request and response bodies. The TLS certificate subjectName (the
+  device's bare-hex identifier) is replaced with same-length X on every
+  HTTPS entry, as in the fleet fixtures. Nothing else differs from the
+  capture. The replay serves its own crypto, so the placeholders are not
+  load-bearing.
+
+references:
+  issues:
+    - "[#210 — [Modem Request] Arris TG3442S](https://github.com/solentlabs/cable_modem_monitor/issues/210)"

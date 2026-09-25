@@ -22,6 +22,7 @@
     "ziggo":       {"abbrev": "ZIG",  "name": "Ziggo",                  "color": "cc7744"},
     "vodafone":    {"abbrev": "VDF",  "name": "Vodafone Kabel",         "color": "aa6666"},
     "magenta":     {"abbrev": "MAG",  "name": "Magenta Telekom",        "color": "aa5588"},
+    "liwest":      {"abbrev": "LIW",  "name": "LIWEST",                 "color": "5577aa"},
     "unitymedia":  {"abbrev": "UM",   "name": "Unitymedia",             "color": "778899"},
     "telia":       {"abbrev": "TEL",  "name": "Telia",                  "color": "9966aa"},
     "kood":        {"abbrev": "KOOD", "name": "Koodo",                  "color": "77aa88"},
@@ -31,7 +32,7 @@
   },
   "display_order": [
     "comcast", "xfinity", "cox", "spectrum", "twc", "rogers", "shaw",
-    "videotron", "volia", "pyür", "vodafone", "magenta", "unitymedia",
+    "videotron", "volia", "pyür", "vodafone", "magenta", "liwest", "unitymedia",
     "virgin", "ziggo", "telia", "mediacom", "suddenlink", "rcn", "cableone",
     "kood", "brighthouse", "service electric", "teksavvy"
   ],
@@ -53,6 +54,7 @@
     "ziggo":       {"name": "Ziggo",                   "region": "Netherlands",        "approval_url": "https://www.ziggo.nl/", "notes": "VodafoneZiggo joint venture. Source: https://en.wikipedia.org/wiki/Ziggo"},
     "vodafone":    {"name": "Vodafone Kabel",          "region": "Germany",            "approval_url": "https://www.vodafone.de/", "notes": "BYOM allowed since 2016; absorbed Unitymedia"},
     "magenta":     {"name": "Magenta Telekom",         "region": "Austria",            "approval_url": "https://www.magenta.at/hilfe-service/services/hardwaresupport/device/internet-fiber/box", "notes": "Formerly UPC Austria / T-Mobile Austria; distributes CH7465MT as Internet Fiber Box"},
+    "liwest":      {"name": "LIWEST Kabelmedien",      "region": "Austria (Upper Austria)", "approval_url": "https://www.liwest.at/", "notes": "Cable and fiber operator based in Linz. Source: https://liwest.at/ueberliwest/das-unternehmen"},
     "unitymedia":  {"name": "Unitymedia",              "region": "Germany (West)",     "approval_url": "", "notes": "Merged into Vodafone (2019)"},
     "telia":       {"name": "Telia",                   "region": "Nordic/Baltic",      "approval_url": "https://www.teliacompany.com/", "notes": "Sweden, Finland, Norway, Baltics"},
     "kood":        {"name": "Koodo",                   "region": "Canada",             "approval_url": "", "notes": "Telus subsidiary"},
