@@ -41,6 +41,7 @@ from ..orchestration.factory import create_orchestrator
 from ..orchestration.signals import ConnectionStatus
 from ..parsers.coordinator import ModemParserCoordinator
 from ..post_processor import load_post_processor
+from ..protocol.hnap import hmac_algorithm
 from .discovery import ModemTestCase, RestartTestCase
 from .golden_file import ComparisonResult, compare_golden_file
 from .server import HARMockServer
@@ -409,30 +410,19 @@ def _run_pipeline(
 
         if modem_config.transport == "hnap":
             # HNAP: batched SOAP request, no per-page fetching
-            hmac_algorithm = "md5"
-            if hasattr(modem_config.auth, "hmac_algorithm"):
-                hmac_algorithm = modem_config.auth.hmac_algorithm
             hnap_loader = HNAPLoader(
                 session=session,
                 base_url=base_url,
                 private_key=auth_result.auth_context.private_key,
-                hmac_algorithm=hmac_algorithm,
+                hmac_algorithm=hmac_algorithm(modem_config.auth),
                 timeout=modem_config.timeout,
             )
             resources = hnap_loader.fetch(parser_config)
         else:
             # HTTP: per-page fetching
             targets = collect_fetch_targets(parser_config, post_processor)
-            # Prefer body-derived token from auth_context; fall back to cookie
-            url_token = ""
-            token_prefix = getattr(modem_config.auth, "token_prefix", "")
-            if token_prefix:
-                if auth_result.auth_context.url_token:
-                    url_token = auth_result.auth_context.url_token
-                else:
-                    cookie_name = getattr(modem_config.auth, "cookie_name", "")
-                    if cookie_name:
-                        url_token = session.cookies.get(cookie_name, "") or ""
+            # Same hook the collector uses: body-derived token, else the session cookie.
+            token_prefix, url_token = auth_manager.loader_url_token(session, auth_result.auth_context)
 
             loader = HTTPResourceLoader(
                 session=session,

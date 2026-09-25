@@ -490,10 +490,7 @@ class ModemDataCollector:
     def _load_hnap_resources(self) -> tuple[dict[str, Any], list[ResourceFetch]]:
         """Fetch HNAP resources via batched SOAP request."""
         from ..loaders.hnap import HNAPLoader
-
-        hmac_algorithm = "md5"
-        if hasattr(self._modem_config.auth, "hmac_algorithm"):
-            hmac_algorithm = self._modem_config.auth.hmac_algorithm
+        from ..protocol.hnap import hmac_algorithm
 
         private_key = ""
         if self._auth_context:
@@ -503,7 +500,7 @@ class ModemDataCollector:
             session=self._session,
             base_url=self._base_url,
             private_key=private_key,
-            hmac_algorithm=hmac_algorithm,
+            hmac_algorithm=hmac_algorithm(self._modem_config.auth),
             timeout=self._modem_config.timeout,
             headers=self._auth_manager.headers(),
         )
@@ -517,12 +514,10 @@ class ModemDataCollector:
         via ``_execute_logout_if_needed()`` using ``actions.logout``.
         """
         from ..loaders.cbn import CBNLoader
-        from ..models.modem_config.auth import FormCbnAuth
+        from ..protocol.cbn import cbn_params
 
         targets = collect_fetch_targets(self._parser_config, self._post_processor)
-
-        auth = self._modem_config.auth
-        assert isinstance(auth, FormCbnAuth)
+        auth = cbn_params(self._modem_config.auth)
 
         loader = CBNLoader(
             session=self._session,

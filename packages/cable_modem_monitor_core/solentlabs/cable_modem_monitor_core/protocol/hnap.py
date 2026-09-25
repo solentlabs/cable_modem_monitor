@@ -3,7 +3,8 @@
 Shared by ``auth.hnap``, ``loaders.hnap``, and
 ``orchestration.actions.hnap_action``.  Centralises the protocol
 constants and signing logic that were previously duplicated across
-those modules.
+those modules, and owns typed access to the HNAP auth block's
+parameters for generic callers (``hmac_algorithm``).
 
 See MODEM_YAML_SPEC.md ``hnap`` strategy for protocol background.
 """
@@ -13,6 +14,12 @@ from __future__ import annotations
 import hashlib
 import hmac
 import time
+from typing import TYPE_CHECKING
+
+from ..models.modem_config.auth import HnapAuth
+
+if TYPE_CHECKING:
+    from ..models.modem_config.auth import AuthConfig
 
 # Fixed by protocol — all HNAP modems use this namespace.
 HNAP_NAMESPACE = "http://purenetworks.com/HNAP1/"
@@ -23,6 +30,13 @@ HNAP_ENDPOINT = "/HNAP1/"
 # Timestamp modulo to match firmware's 32-bit integer handling.
 # From SOAPAction.js: Math.floor(Date.now()) % 2000000000000
 _TIMESTAMP_MODULO = 2_000_000_000_000
+
+
+def hmac_algorithm(auth: AuthConfig | None) -> str:
+    """The HNAP auth block's ``hmac_algorithm``; ``"md5"`` when the entry has none."""
+    # HNAP has exactly one strategy (TestProtocolLockedTransports), so the
+    # transport owns this read and generic code routes here reading nothing.
+    return auth.hmac_algorithm if isinstance(auth, HnapAuth) else "md5"
 
 
 def hmac_hex(key: str, message: str, algorithm: str = "md5") -> str:

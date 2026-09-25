@@ -101,7 +101,7 @@ but modem-specific behavior comes from config, not from Core code.
 | Config schemas | `ModemConfig`, `AuthConfig`, `PageConfig`, `ParserConfig` |
 | ABCs / base classes | `BaseParser`, `BaseAuthManager`, `AuthStrategyBase` (model ClassVars) |
 | Action executors | `orchestration/actions/` — transport-scoped executors (`http_action`, `hnap_action`, `cbn_action`) with single `execute_action()` dispatch. `ActionResult` return type. |
-| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth. `protocol/sjcl` — SJCL PBKDF2 and AES-CCM used by `form_sjcl` and `json_sjcl`. |
+| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing; `hmac_algorithm()` gives typed access to the auth block's algorithm. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth; `cbn_params()` gives typed access to the getter/setter endpoints and session cookie. `protocol/sjcl` — SJCL PBKDF2 and AES-CCM used by `form_sjcl` and `json_sjcl`. |
 | Auth shared helpers | `auth/response` — JSON response parsing (double-decode, type check, diagnostics) shared by `form_sjcl`, `form_pbkdf2`, `hnap`. |
 | Parser coordinator | `ModemParserCoordinator` — factory + orchestration: parser.yaml → `BaseParser` instances → parser.py chaining → `ModemData` |
 | Auth strategies | One audited implementation per strategy in `auth/`. See the [Auth Manager](#auth-manager) table for the full set. |

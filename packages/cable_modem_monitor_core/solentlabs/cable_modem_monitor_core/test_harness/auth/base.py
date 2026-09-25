@@ -40,9 +40,11 @@ def extract_action_config(modem_config: ModemConfig) -> ActionConfig:
     Reads session cookie name and action endpoints (logout, restart)
     from the config.
     """
+    from ...auth.factory import create_auth_manager
     from ...models.modem_config.actions import HttpAction
 
-    cookie_name = getattr(modem_config.auth, "cookie_name", "")
+    # The production hook, so the harness reads the cookie Core reads.
+    cookie_name = create_auth_manager(modem_config).session_cookie_name()
     logout_path = ""
     logout_method = "GET"
     restart_path = ""
@@ -96,6 +98,12 @@ class AuthHandler:
     ``basic`` and ``none`` never matched at all, so a declared restart
     fell through to the route table, 404'd, and passed anyway.
     """
+
+    # Login shape the mock server builds its routes around. Each strategy's
+    # create_handler sets these from its own typed config; "" means none.
+    login_page: str = ""
+    login_action: str = ""
+    token_prefix: str = ""
 
     def __init__(self) -> None:
         self._actions = ActionConfig("", "GET", "", "POST", "")

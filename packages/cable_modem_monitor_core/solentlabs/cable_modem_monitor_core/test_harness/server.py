@@ -531,13 +531,15 @@ class HARMockServer(HTTPServer):
         host: str = "127.0.0.1",
         port: int = 0,
     ) -> None:
-        self.login_action = normalize_path(_extract_login_action(modem_config))
+        # The handler comes first: the login shape the routes are built
+        # around is strategy knowledge, set by each strategy's handler.
+        self.auth_handler = create_auth_handler(modem_config, har_entries)
+        self.login_action = normalize_path(self.auth_handler.login_action)
         self.routes = build_routes(har_entries, login_path=self.login_action)
         self.json_body_keys = build_json_body_keys(har_entries)
-        self.auth_handler = create_auth_handler(modem_config, har_entries)
         self.login_query_shapes = build_login_query_shapes(har_entries, self.login_action)
-        self.login_page = _extract_login_page(modem_config)
-        self.token_prefix = _extract_token_prefix(modem_config)
+        self.login_page = self.auth_handler.login_page
+        self.token_prefix = self.auth_handler.token_prefix
         self.post_login_endpoints = _extract_post_login_endpoints(modem_config)
         self._thread: threading.Thread | None = None
 
@@ -562,28 +564,6 @@ class HARMockServer(HTTPServer):
         if self._thread is not None:
             self._thread.join(timeout=5)
         self.server_close()
-
-
-def _extract_login_page(modem_config: ModemConfig | None) -> str:
-    """Return the ``auth.login_page`` if the strategy declares one."""
-    if modem_config is None or modem_config.auth is None:
-        return ""
-    return getattr(modem_config.auth, "login_page", "") or ""
-
-
-def _extract_login_action(modem_config: ModemConfig | None) -> str:
-    """Return the login POST path (``auth.action`` or ``auth.login_endpoint``)."""
-    if modem_config is None or modem_config.auth is None:
-        return ""
-    auth = modem_config.auth
-    return getattr(auth, "action", "") or getattr(auth, "login_endpoint", "") or ""
-
-
-def _extract_token_prefix(modem_config: ModemConfig | None) -> str:
-    """Return ``auth.token_prefix`` (url_token strategy) if declared."""
-    if modem_config is None or modem_config.auth is None:
-        return ""
-    return getattr(modem_config.auth, "token_prefix", "") or ""
 
 
 def _extract_post_login_endpoints(modem_config: ModemConfig | None) -> frozenset[str]:

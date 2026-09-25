@@ -172,7 +172,7 @@ def create_handler(
 
     auth = modem_config.auth
     assert isinstance(auth, BearerAuth)
-    return BearerAuthHandler(
+    handler = BearerAuthHandler(
         login_path=auth.login_endpoint,
         token_path=auth.token_path,
         captured_login=_captured_login_response(har_entries, auth.login_endpoint, auth.method),
@@ -182,3 +182,6 @@ def create_handler(
         token_placement=auth.token_placement,
         token_prefix=auth.token_prefix,
     )
+    handler.login_action = auth.login_endpoint
+    handler.token_prefix = auth.token_prefix
+    return handler

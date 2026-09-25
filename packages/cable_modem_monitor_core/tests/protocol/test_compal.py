@@ -1,4 +1,4 @@
-"""Tests for CBN protocol primitives (compal_encrypt).
+"""Tests for CBN protocol primitives (compal_encrypt, cbn_params).
 
 Table-driven with known test vectors and round-trip verification.
 """
@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import base64
 import hashlib
+from typing import Any
 
 import pytest
-from solentlabs.cable_modem_monitor_core.protocol.cbn import compal_encrypt
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import FormCbnAuth
+from solentlabs.cable_modem_monitor_core.protocol.cbn import cbn_params, compal_encrypt
 
 # ---------------------------------------------------------------------------
 # Known test vectors — generated from the Python implementation and verified
@@ -103,3 +105,42 @@ def test_output_format() -> None:
     hex_part = decoded[1:]
     assert len(hex_part) % 2 == 0
     bytes.fromhex(hex_part)  # raises ValueError if invalid hex
+
+
+# ---------------------------------------------------------------------------
+# cbn_params: typed access to the CBN auth block's transport parameters
+# ---------------------------------------------------------------------------
+
+# ┌──────────────┬─────────────────┬─────────────────┬──────────────┬─────────────────────┐
+# │ auth block   │ getter          │ setter          │ session      │ description         │
+# ├──────────────┼─────────────────┼─────────────────┼──────────────┼─────────────────────┤
+# │ declared     │ /alt/get.xml    │ /alt/set.xml    │ tokA         │ declared values     │
+# │ form_cbn     │ /xml/getter.xml │ /xml/setter.xml │ sessionToken │ model defaults      │
+# │ none         │ /xml/getter.xml │ /xml/setter.xml │ sessionToken │ no auth: defaults   │
+# └──────────────┴─────────────────┴─────────────────┴──────────────┴─────────────────────┘
+#
+# fmt: off
+CBN_DECLARED = {
+    "strategy": "form_cbn",
+    "getter_endpoint": "/alt/get.xml",
+    "setter_endpoint": "/alt/set.xml",
+    "session_cookie_name": "tokA",
+}
+CBN_PARAMS_CASES: list[tuple[dict[str, Any] | None, tuple[str, str, str], str]] = [
+    # (auth,                   (getter, setter, session cookie),                        description)
+    (CBN_DECLARED,             ("/alt/get.xml", "/alt/set.xml", "tokA"),                "declared values"),
+    ({"strategy": "form_cbn"}, ("/xml/getter.xml", "/xml/setter.xml", "sessionToken"),  "model defaults"),
+    (None,                     ("/xml/getter.xml", "/xml/setter.xml", "sessionToken"),  "no auth block"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "auth,expected,desc",
+    CBN_PARAMS_CASES,
+    ids=[c[2] for c in CBN_PARAMS_CASES],
+)
+def test_cbn_params(auth: dict[str, Any] | None, expected: tuple[str, str, str], desc: str) -> None:
+    """The resolver returns the declared parameters, the model defaults without a CBN auth block."""
+    params = cbn_params(FormCbnAuth.model_validate(auth) if auth is not None else None)
+    assert (params.getter_endpoint, params.setter_endpoint, params.session_cookie_name) == expected, desc

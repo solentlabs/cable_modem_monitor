@@ -178,7 +178,7 @@ def create_handler(
     assert isinstance(auth, FormSjclAuth)
 
     action_cfg = extract_action_config(modem_config)
-    return FormSjclAuthHandler(
+    handler = FormSjclAuthHandler(
         login_page_path=auth.login_page,
         login_endpoint=auth.login_endpoint,
         pbkdf2_iterations=auth.pbkdf2_iterations,
@@ -189,3 +189,6 @@ def create_handler(
         cookie_name=action_cfg.cookie_name,
         session_validation_endpoint=auth.session_validation_endpoint,
     )
+    handler.login_page = auth.login_page
+    handler.login_action = auth.login_endpoint
+    return handler

@@ -1,4 +1,4 @@
-"""Tests for HNAP protocol primitives — signing and constants."""
+"""Tests for HNAP protocol primitives — signing, constants, auth-block access."""
 
 from __future__ import annotations
 
@@ -6,10 +6,12 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import HnapAuth
 from solentlabs.cable_modem_monitor_core.protocol.hnap import (
     HNAP_ENDPOINT,
     HNAP_NAMESPACE,
     compute_auth_header,
+    hmac_algorithm,
     hmac_hex,
 )
 
@@ -123,3 +125,36 @@ class TestComputeAuthHeader:
         timestamp = int(header.split(" ")[1])
         expected = 2_500_000_000_123 % 2_000_000_000_000
         assert timestamp == expected
+
+
+# ------------------------------------------------------------------
+# Tests — hmac_algorithm (typed access to the HNAP auth block)
+# ------------------------------------------------------------------
+
+# ┌──────────────────┬───────────┬──────────────────────────────┐
+# │ auth block       │ expected  │ description                  │
+# ├──────────────────┼───────────┼──────────────────────────────┤
+# │ hnap md5         │ md5       │ declared algorithm           │
+# │ hnap sha256      │ sha256    │ declared algorithm           │
+# │ none             │ md5       │ no auth block: protocol md5  │
+# └──────────────────┴───────────┴──────────────────────────────┘
+#
+# fmt: off
+HMAC_ALGORITHM_CASES: list[tuple[dict[str, Any] | None, str, str]] = [
+    # (auth,                                           expected, description)
+    ({"strategy": "hnap", "hmac_algorithm": "md5"},    "md5",    "declared md5"),
+    ({"strategy": "hnap", "hmac_algorithm": "sha256"}, "sha256", "declared sha256"),
+    (None,                                             "md5",    "no auth block"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "auth,expected,desc",
+    HMAC_ALGORITHM_CASES,
+    ids=[c[2] for c in HMAC_ALGORITHM_CASES],
+)
+def test_hmac_algorithm(auth: dict[str, Any] | None, expected: str, desc: str) -> None:
+    """The resolver returns the declared algorithm, md5 without an HNAP auth block."""
+    config = HnapAuth.model_validate(auth) if auth is not None else None
+    assert hmac_algorithm(config) == expected, desc

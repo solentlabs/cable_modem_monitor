@@ -622,7 +622,7 @@ about a strategy has exactly one of three homes:
 |---|---|---|
 | A static fact about the strategy | ClassVar on its model | `display_name`, `transport`, `stateless` |
 | Behaviour that needs the live session or the strategy's secret | overridable `BaseAuthManager` method, safe default | `headers()`, `auth_failure_mode()`, `session_is_valid()`, `session_cookie_name()`, `loader_url_token()` |
-| A protocol-locked transport's own parameters | that transport's module (`loaders/hnap.py`, `loaders/cbn.py`, `actions/hnap_action.py`, `actions/cbn_action.py`), with typed access | `hmac_algorithm`, the CBN getter/setter endpoints and session cookie |
+| A protocol-locked transport's own parameters | that transport's protocol module, with typed access: `protocol/hnap.py` `hmac_algorithm()`, `protocol/cbn.py` `cbn_params()` | `hmac_algorithm`, the CBN getter/setter endpoints and session cookie |
 
 Setup-time work a strategy needs (form_nonce's credential-encoding
 detection) is an optional module entry point in `auth/{strategy}.py`,
@@ -1924,7 +1924,10 @@ access do not belong here.
 2. **`auth/{strategy}.py`** — new manager module with a
    `create_manager(config)` entry point.
 3. **`test_harness/auth/{strategy}.py`** — new handler module with a
-   `create_handler(modem_config, har_entries)` entry point.
+   `create_handler(modem_config, har_entries)` entry point. It sets
+   the handler's `login_page`, `login_action` and `token_prefix` from
+   its own config where the strategy has them; the mock server builds
+   its routes around them.
 4. **Regenerate the published tables** —
    `python scripts/generate_constraint_tables.py`.
 

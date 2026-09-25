@@ -333,7 +333,7 @@ def create_handler(
         if modem_config.actions.restart and isinstance(modem_config.actions.restart, CbnAction):
             restart_fun = modem_config.actions.restart.fun
 
-    return FormCbnAuthHandler(
+    handler = FormCbnAuthHandler(
         login_page_path=auth.login_page,
         setter_endpoint=auth.setter_endpoint,
         getter_endpoint=auth.getter_endpoint,
@@ -343,3 +343,5 @@ def create_handler(
         restart_fun=restart_fun,
         har_entries=har_entries,
     )
+    handler.login_page = auth.login_page
+    return handler

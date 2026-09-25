@@ -21,4 +21,11 @@ def create_handler(
     har_entries: list[dict[str, Any]] | None = None,
 ) -> AuthHandler:
     """Entry point for dynamic auth handler dispatch."""
-    return AuthHandler()
+    from ...models.modem_config.auth import UrlTokenAuth
+
+    auth = modem_config.auth
+    assert isinstance(auth, UrlTokenAuth)
+    handler = AuthHandler()
+    handler.login_page = auth.login_page
+    handler.token_prefix = auth.token_prefix
+    return handler
