@@ -552,8 +552,8 @@ Detection falls back to plain encoding on any parse failure
 (backward compatible). No YAML config field is needed — the
 encoding is per-installation (firmware-dependent), not per-modem.
 
-The test harness runs the same detection over HAR entries at test
-execution time.
+The test harness runs the same detection against its mock server's
+login page at test execution time.
 
 Evidence: observed in Arris SB6190 firmware 9.1.103AA65L (plain
 form fields) and 9.1.103AA72 (base64-packed `arguments` field).

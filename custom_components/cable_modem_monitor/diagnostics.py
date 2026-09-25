@@ -29,7 +29,6 @@ from solentlabs.cable_modem_monitor_core.models.field_registry import (
 
 from .const import (
     CONF_CHANNEL_IDENTITY,
-    CONF_CREDENTIAL_ENCODING,
     CONF_LEGACY_SSL,
     CONF_MANUFACTURER,
     CONF_MODEL,
@@ -324,7 +323,8 @@ def _build_diagnostics_dict(
             "has_credentials": _has_credentials(entry.data),
             "supports_icmp": entry.data.get(CONF_SUPPORTS_ICMP, False),
             "supports_head": entry.data.get(CONF_SUPPORTS_HEAD, False),
-            "credential_encoding": entry.data.get(CONF_CREDENTIAL_ENCODING, "plain"),
+            # Auth strategy setup params, named by the strategy (none for most)
+            **{key: entry.data[key] for key in runtime.setup_param_keys if key in entry.data},
             "channel_identity": entry.data.get(CONF_CHANNEL_IDENTITY, "id"),
         },
         "core_diagnostics": core_diag.to_dict(),

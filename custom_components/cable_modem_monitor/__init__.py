@@ -37,8 +37,9 @@ from solentlabs.cable_modem_monitor_core.config_loader import (
 from solentlabs.cable_modem_monitor_core.orchestration import (
     HealthMonitor,
     Orchestrator,
-    apply_credential_encoding,
+    apply_setup_params,
     create_orchestrator,
+    setup_param_keys,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     HealthInfo,
@@ -68,8 +69,6 @@ from .channel_bond_storage import (
 from .const import (
     CONF_CHANNEL_IDENTITY,
     CONF_CHANNEL_ONBOARDING_ELIGIBLE,
-    CONF_CREDENTIAL_ENCODING,
-    CONF_CREDENTIAL_FIELD,
     CONF_ENTITY_PREFIX,
     CONF_HEALTH_CHECK_INTERVAL,
     CONF_LEGACY_SSL,
@@ -483,7 +482,7 @@ async def async_setup_entry(
 
     # Steps 1-5: Load config and create Core components (sync I/O)
     try:
-        orchestrator, health_monitor, modem_identity = await hass.async_add_executor_job(
+        orchestrator, health_monitor, modem_identity, setup_keys = await hass.async_add_executor_job(
             _create_core_components, entry.data
         )
     except Exception as err:
@@ -592,6 +591,7 @@ async def async_setup_entry(
         health_monitor=health_monitor,
         modem_identity=modem_identity,
         channel_map=initial_channel_map,
+        setup_param_keys=setup_keys,
     )
 
     # Step 10: Forward platform setup
@@ -700,7 +700,7 @@ async def _async_update_listener(
 
 def _create_core_components(
     data: Mapping[str, Any],
-) -> tuple[Orchestrator, HealthMonitor | None, ModemIdentity]:
+) -> tuple[Orchestrator, HealthMonitor | None, ModemIdentity, tuple[str, ...]]:
     """Load modem config and create Core components.
 
     Implements startup Steps 1-5 from HA_ADAPTER_SPEC.md.  Runs in an
@@ -725,12 +725,9 @@ def _create_core_components(
     parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
     post_processor = load_post_processor(parser_py) if parser_py.exists() else None
 
-    # Step 1a: Inject credential encoding (Core concern)
-    apply_credential_encoding(
-        modem_config,
-        credential_encoding=data.get(CONF_CREDENTIAL_ENCODING, "plain"),
-        credential_field=data.get(CONF_CREDENTIAL_FIELD, ""),
-    )
+    # Step 1a: Re-apply setup params detected at config time (Core concern).
+    # Core reads only its strategy's keys; the rest of entry.data is ignored.
+    apply_setup_params(modem_config, data)
 
     # Steps 2-5: Delegate assembly to Core factory
     protocol = data.get(CONF_PROTOCOL, "http")
@@ -743,7 +740,7 @@ def _create_core_components(
     default_icmp = health_cfg.supports_icmp if health_cfg else True
     default_head = health_cfg.supports_head if health_cfg else True
 
-    return create_orchestrator(
+    orchestrator, health_monitor, identity = create_orchestrator(
         modem_config=modem_config,
         parser_config=parser_config,
         post_processor=post_processor,
@@ -756,6 +753,8 @@ def _create_core_components(
         http_probe=http_probe,
         model=modem_config.model,
     )
+    # Diagnostics reports the stored setup params by these names.
+    return orchestrator, health_monitor, identity, setup_param_keys(modem_config)
 
 
 # ------------------------------------------------------------------

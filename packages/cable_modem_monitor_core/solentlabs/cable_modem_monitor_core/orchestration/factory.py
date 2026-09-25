@@ -2,7 +2,7 @@
 
 Owns the YAML-to-running-components path.  Consumers supply *what*
 (loaded configs, credentials, protocol settings), Core handles *how*
-(credential encoding, collector creation, health monitor, orchestrator).
+(collector creation, health monitor, orchestrator).
 
 Two entry points:
 
@@ -23,39 +23,6 @@ from .collector import ModemDataCollector
 from .models import ModemIdentity
 from .modem_health import HealthMonitor
 from .orchestrator import Orchestrator
-
-
-def apply_credential_encoding(
-    modem_config: Any,
-    credential_encoding: str = "plain",
-    credential_field: str = "",
-) -> None:
-    """Inject credential encoding into form_nonce config.
-
-    At setup time (HA config flow or test harness), the login page
-    form structure is inspected to determine whether credentials are
-    sent as plain form fields or base64-packed into a hidden field.
-    The detected encoding is stored and re-applied here at runtime.
-
-    No-op for non-form_nonce strategies.
-
-    Args:
-        modem_config: Loaded ``ModemConfig`` instance.
-        credential_encoding: Detected encoding (``"plain"`` or
-            ``"b64_packed"``).
-        credential_field: Hidden field name for packed credentials.
-            Empty for plain encoding.
-    """
-    from ..models.modem_config.auth import FormNonceAuth
-
-    if not isinstance(modem_config.auth, FormNonceAuth):
-        return
-
-    if credential_encoding == "b64_packed":
-        modem_config.auth.credential_encoding = "b64_packed"
-        modem_config.auth.credential_field = credential_field
-    else:
-        modem_config.auth.credential_encoding = "plain"
 
 
 def create_collector(

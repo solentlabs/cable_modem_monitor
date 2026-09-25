@@ -13,6 +13,12 @@ RUNTIME_POLLING_SPEC.md for behavioral rules.
 
 from __future__ import annotations
 
+from ..auth.setup import (
+    apply_setup_params,
+    detect_setup_params,
+    detect_setup_params_from_html,
+    setup_param_keys,
+)
 from .actions import ActionResult, execute_action, execute_hnap_action, execute_http_action
 from .collector import LoginLockoutError, ModemDataCollector
 from .event_payload import (
@@ -23,7 +29,6 @@ from .event_payload import (
     SnapshotEventPayload,
 )
 from .factory import (
-    apply_credential_encoding,
     create_collector,
     create_orchestrator,
 )
@@ -72,13 +77,16 @@ __all__ = [
     "RestartNotSupportedError",
     "RestartResult",
     "SignalPolicy",
-    "apply_credential_encoding",
+    "apply_setup_params",
     "create_collector",
     "create_orchestrator",
     "derive_connection_status",
+    "detect_setup_params",
+    "detect_setup_params_from_html",
     "enrich_docsis_status",
     "execute_action",
     "execute_hnap_action",
     "execute_http_action",
     "run_restart",
+    "setup_param_keys",
 ]

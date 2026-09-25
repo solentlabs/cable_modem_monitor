@@ -6,7 +6,7 @@ All Core I/O is mocked: detect_protocol, config loaders, ModemDataCollector.
 Pipeline behaviour: protocol detection observes the modem's TLS via
 TCP probe + handshake; auth runs exactly once; a structured rejection
 is surfaced to the user (UC-86).
-Pre-fetch encoding detection — connectivity vs non-connectivity error handling.
+Setup-time detection — connectivity vs non-connectivity error handling.
 """
 
 from __future__ import annotations
@@ -18,12 +18,14 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from solentlabs.cable_modem_monitor_core.auth.base import AuthFailureMode
 from solentlabs.cable_modem_monitor_core.catalog_manager import (
     ModemSummary,
     VariantInfo,
 )
 from solentlabs.cable_modem_monitor_core.connectivity import ConnectivityResult
+from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
 from solentlabs.cable_modem_monitor_core.orchestration.models import ModemResult
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     CollectorSignal,
@@ -33,7 +35,7 @@ from custom_components.cable_modem_monitor.config_flow_helpers import (
     _POST_LOGIN_SIGNALS,
     _SIGNAL_ERROR_MAP,
     _attempt_validation,
-    _detect_and_inject_form_nonce_encoding,
+    _detect_and_apply_setup_params,
     _post_login_error_key,
     _raise_validation_failure,
     _run_validation,
@@ -737,6 +739,8 @@ class TestSingleAttempt:
             )
             assert result["protocol"] == expected_protocol
             assert result["legacy_ssl"] == expected_legacy_ssl
+            # A stub config has no auth strategy module, so no setup step.
+            assert result["setup_params"] == {}
 
         assert mock_attempt.call_count == 1
 
@@ -934,71 +938,102 @@ class TestAuthFailureDetailLog:
 
 
 # =====================================================================
-# Pre-fetch encoding detection — _detect_and_inject_form_nonce_encoding
+# Setup-time detection — _detect_and_apply_setup_params
 # =====================================================================
+#
+# The helper is strategy-agnostic: Core decides whether the auth
+# strategy has a setup step. Rows use a real ModemConfig per strategy.
+#
+# ┌──────────────┬───────────────────────────┬──────────────────────────────┬──────────────────────────────┐
+# │ strategy     │ login page GET            │ result                       │ description                  │
+# ├──────────────┼───────────────────────────┼──────────────────────────────┼──────────────────────────────┤
+# │ form_nonce   │ requests.ConnectionError  │ raises ConnectionError       │ unreachable surfaces         │
+# │ form_nonce   │ requests.Timeout          │ raises ConnectionError       │ unresponsive surfaces        │
+# │ form_nonce   │ ValueError                │ plain params                 │ non-connectivity -> plain    │
+# │ form_nonce   │ packed login form         │ packed params, applied       │ packed detection stored      │
+# │ basic        │ (no request)              │ {}                           │ no setup step, no params     │
+# │ no auth      │ (no request)              │ {}                           │ no setup step, no params     │
+# └──────────────┴───────────────────────────┴──────────────────────────────┴──────────────────────────────┘
+
+_FORM_NONCE_AUTH = {"strategy": "form_nonce", "action": "/login", "nonce_field": "ar_nonce"}
+_PACKED_PAGE = '<form><input type="hidden" name="ar_nonce"><input type="hidden" name="arguments"></form>'
+_PLAIN_PARAMS = {"credential_encoding": "plain", "credential_field": ""}
+_PACKED_PARAMS = {"credential_encoding": "b64_packed", "credential_field": "arguments"}
 
 
-class TestDetectAndInjectFormNonceEncoding:
-    """Verify pre-fetch behavior for form_nonce encoding detection."""
+def _modem_config(auth: dict[str, Any] | None) -> ModemConfig:
+    """Minimal valid http modem config around an auth block."""
+    return ModemConfig.model_validate(
+        {
+            "manufacturer": "Solent Labs",
+            "model": "T100",
+            "transport": "http",
+            "default_host": "192.168.100.1",
+            "status": "unsupported",
+            "auth": auth,
+        }
+    )
 
-    def _form_nonce_config(self) -> MagicMock:
-        """Build a MagicMock that passes the isinstance(auth, FormNonceAuth) check."""
-        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
-            FormNonceAuth,
-        )
 
-        auth = FormNonceAuth(
-            strategy="form_nonce",
-            action="/login",
-            nonce_field="ar_nonce",
-        )
-        config = MagicMock()
-        config.auth = auth
-        return config
+def _get_raising(exc: Exception) -> MagicMock:
+    session = MagicMock()
+    session.get.side_effect = exc
+    return session
 
+
+def _get_returning(text: str) -> MagicMock:
+    session = MagicMock()
+    session.get.return_value = MagicMock(text=text)
+    return session
+
+
+# fmt: off
+SETUP_PARAM_CASES = [
+    # (auth,              session,                                          expected,         id)
+    (_FORM_NONCE_AUTH,    _get_raising(requests.ConnectionError("refused")), ConnectionError,  "connection_error"),
+    (_FORM_NONCE_AUTH,    _get_raising(requests.Timeout("Read timed out")), ConnectionError,  "timeout"),
+    (_FORM_NONCE_AUTH,    _get_raising(ValueError("Unexpected response")),  _PLAIN_PARAMS,    "other_error_plain"),
+    (_FORM_NONCE_AUTH,    _get_returning(_PACKED_PAGE),                     _PACKED_PARAMS,   "packed_detected"),
+    ({"strategy": "basic"}, _get_returning(_PACKED_PAGE),                   {},               "basic_no_params"),
+    (None,                _get_returning(_PACKED_PAGE),                     {},               "no_auth_no_params"),
+]
+# fmt: on
+
+
+class TestDetectAndApplySetupParams:
+    """The config flow's setup-time detection surfaces connectivity and stores opaque params."""
+
+    @pytest.mark.parametrize(
+        "auth,session,expected,desc",
+        SETUP_PARAM_CASES,
+        ids=[c[3] for c in SETUP_PARAM_CASES],
+    )
     @patch("solentlabs.cable_modem_monitor_core.connectivity.create_session")
-    def test_connection_error_raises(self, mock_create_session):
-        """ConnectionError from requests propagates as builtins.ConnectionError."""
-        import requests
-
-        session = MagicMock()
-        session.get.side_effect = requests.ConnectionError("Connection refused")
+    def test_outcome(
+        self,
+        mock_create_session: MagicMock,
+        auth: dict[str, Any] | None,
+        session: MagicMock,
+        expected: Any,
+        desc: str,
+    ) -> None:
+        """Connectivity raises; otherwise the params come back and land on the config."""
         mock_create_session.return_value = session
+        config = _modem_config(auth)
 
-        with pytest.raises(ConnectionError, match="Connection refused"):
-            _detect_and_inject_form_nonce_encoding("http://192.168.100.1", self._form_nonce_config())
+        if isinstance(expected, type):
+            with pytest.raises(expected):
+                _detect_and_apply_setup_params("http://192.168.100.1", config)
+            return
 
-    @patch("solentlabs.cable_modem_monitor_core.connectivity.create_session")
-    def test_timeout_raises(self, mock_create_session):
-        """Timeout from requests propagates as builtins.ConnectionError."""
-        import requests
-
-        session = MagicMock()
-        session.get.side_effect = requests.Timeout("Read timed out")
-        mock_create_session.return_value = session
-
-        with pytest.raises(ConnectionError, match="Read timed out"):
-            _detect_and_inject_form_nonce_encoding("http://192.168.100.1", self._form_nonce_config())
-
-    @patch("solentlabs.cable_modem_monitor_core.connectivity.create_session")
-    def test_non_connectivity_error_falls_back_to_plain(self, mock_create_session):
-        """Non-connectivity errors (e.g. bad HTML) fall back to plain encoding."""
-        session = MagicMock()
-        session.get.side_effect = ValueError("Unexpected response")
-        mock_create_session.return_value = session
-
-        encoding, field = _detect_and_inject_form_nonce_encoding("http://192.168.100.1", self._form_nonce_config())
-        assert encoding == "plain"
-        assert field == ""
-
-    def test_non_form_nonce_skips(self):
-        """Non-form_nonce auth returns defaults without any network call."""
-        config = MagicMock()
-        config.auth = MagicMock()  # Not a FormNonceAuth instance
-
-        encoding, field = _detect_and_inject_form_nonce_encoding("http://192.168.100.1", config)
-        assert encoding == "plain"
-        assert field == ""
+        params = _detect_and_apply_setup_params("http://192.168.100.1", config)
+        assert params == expected, desc
+        if not expected:
+            mock_create_session.assert_not_called()
+            return
+        assert config.auth is not None
+        dump = config.auth.model_dump()
+        assert {key: dump[key] for key in expected} == expected, desc
 
 
 # =====================================================================

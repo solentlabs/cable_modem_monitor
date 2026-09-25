@@ -50,8 +50,6 @@ from .config_flow_helpers import (
 from .const import (
     CONF_CHANNEL_IDENTITY,
     CONF_CHANNEL_ONBOARDING_ELIGIBLE,
-    CONF_CREDENTIAL_ENCODING,
-    CONF_CREDENTIAL_FIELD,
     CONF_ENTITY_PREFIX,
     CONF_HEALTH_CHECK_INTERVAL,
     CONF_LEGACY_SSL,
@@ -653,8 +651,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             CONF_LEGACY_SSL: validation.get("legacy_ssl", False),
             CONF_SUPPORTS_ICMP: validation["supports_icmp"],
             CONF_SUPPORTS_HEAD: validation["supports_head"],
-            CONF_CREDENTIAL_ENCODING: validation.get("credential_encoding", "plain"),
-            CONF_CREDENTIAL_FIELD: validation.get("credential_field", ""),
+            # Auth strategy setup params, each under its own key (opaque here)
+            **validation.get("setup_params", {}),
             # Polling defaults — health interval adapts to probe capability
             CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
             CONF_HEALTH_CHECK_INTERVAL: default_health_check_interval(
@@ -753,8 +751,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                 CONF_LEGACY_SSL: result.get("legacy_ssl", False),
                 CONF_SUPPORTS_ICMP: result["supports_icmp"],
                 CONF_SUPPORTS_HEAD: result["supports_head"],
-                CONF_CREDENTIAL_ENCODING: result.get("credential_encoding", "plain"),
-                CONF_CREDENTIAL_FIELD: result.get("credential_field", ""),
+                # Auth strategy setup params, each under its own key (opaque here)
+                **result.get("setup_params", {}),
             }
             self.hass.config_entries.async_update_entry(entry, data=updated)
             await self.hass.config_entries.async_reload(entry.entry_id)
@@ -991,8 +989,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             CONF_LEGACY_SSL: validation.get("legacy_ssl", False),
             CONF_SUPPORTS_ICMP: validation["supports_icmp"],
             CONF_SUPPORTS_HEAD: validation["supports_head"],
-            CONF_CREDENTIAL_ENCODING: validation.get("credential_encoding", "plain"),
-            CONF_CREDENTIAL_FIELD: validation.get("credential_field", ""),
+            # Auth strategy setup params, each under its own key (opaque here)
+            **validation.get("setup_params", {}),
         }
 
         mfr = entry.data[CONF_MANUFACTURER]

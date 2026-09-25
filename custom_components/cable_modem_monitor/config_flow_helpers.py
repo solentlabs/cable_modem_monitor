@@ -39,7 +39,9 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     get_strategy_display_labels,
 )
 from solentlabs.cable_modem_monitor_core.orchestration import (
+    apply_setup_params,
     create_collector,
+    detect_setup_params,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.models import ModemResult
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
@@ -326,64 +328,19 @@ def detect_probes(
 # ---------------------------------------------------------------------------
 
 
-def _detect_and_inject_form_nonce_encoding(
+def _detect_and_apply_setup_params(
     base_url: str,
     modem_config: ModemConfig,
     *,
     legacy_ssl: bool = False,
-) -> tuple[str, str]:
-    """Pre-fetch the login page for form_nonce auth and detect credential encoding; no-op for other strategies."""
-    # Raises ConnectionError on connectivity failure — caller must surface it
-    # rather than proceeding to a doomed auth attempt.
-    # Falls back to ("plain", "") for non-connectivity errors (malformed HTML, etc.).
-    from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
-        FormNonceAuth,
-    )
-
-    if not isinstance(modem_config.auth, FormNonceAuth):
-        return ("plain", "")
-
-    import requests as req_lib
-    from solentlabs.cable_modem_monitor_core.auth.form_nonce import (
-        _analyze_login_form,
-    )
-    from solentlabs.cable_modem_monitor_core.connectivity import create_session
-
-    auth = modem_config.auth
-    login_url = f"{base_url}{auth.action}"
-
-    try:
-        session = create_session(legacy_ssl=legacy_ssl)
-        response = session.get(login_url, timeout=10)
-    except (req_lib.ConnectionError, req_lib.Timeout) as exc:
-        # Modem unreachable or unresponsive — no point proceeding to validation
-        _LOGGER.info("Login page unreachable during validation (%s): %s", login_url, exc)
-        raise ConnectionError(str(exc)) from exc
-    except Exception as exc:
-        _LOGGER.debug(
-            "Login page pre-fetch failed during validation, using plain encoding: %s",
-            exc,
-        )
-        return ("plain", "")
-
-    detection = _analyze_login_form(
-        response.text,
-        auth.username_field,
-        auth.nonce_field,
-    )
-
-    if detection.encoding != "plain":
-        _LOGGER.info(
-            "Credential encoding detected: %s (field=%r)",
-            detection.encoding,
-            detection.credential_field,
-        )
-
-    # Inject into config so the collector uses the correct encoding
-    auth.credential_encoding = detection.encoding
-    auth.credential_field = detection.credential_field
-
-    return (detection.encoding, detection.credential_field)
+) -> dict[str, str]:
+    """Run the auth strategy's setup-time detection and apply it to the config; ``{}`` when it has none."""
+    # Raises ConnectionError on connectivity failure; the caller surfaces it
+    # rather than proceeding to a doomed auth attempt. The params are opaque
+    # here: the config flow stores each under its own key in entry.data.
+    params = detect_setup_params(modem_config, base_url, legacy_ssl=legacy_ssl)
+    apply_setup_params(modem_config, params)
+    return params
 
 
 def _raise_validation_failure(
@@ -464,10 +421,8 @@ def _run_validation(
     parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
     post_processor = load_post_processor(parser_py) if parser_py.exists() else None
 
-    # -- Step 2a: Detect form_nonce credential encoding ----------------------
-    credential_encoding, credential_field = _detect_and_inject_form_nonce_encoding(
-        base_url, modem_config, legacy_ssl=legacy_ssl
-    )
+    # -- Step 2a: Auth strategy setup-time detection --------------------------
+    setup_params = _detect_and_apply_setup_params(base_url, modem_config, legacy_ssl=legacy_ssl)
 
     # -- Step 3: Test data collection -----------------------------------------
     # Single attempt against the chosen transport. UC-86: if the modem
@@ -504,8 +459,7 @@ def _run_validation(
         "legacy_ssl": legacy_ssl,
         "supports_icmp": supports_icmp,
         "supports_head": supports_head,
-        "credential_encoding": credential_encoding,
-        "credential_field": credential_field,
+        "setup_params": setup_params,
     }
 
 

@@ -34,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "Bearer Token". The strategy now covers logins whose token never rides
   in an `Authorization: Bearer` header, so the old label described only
   one of them. Existing entries keep working; only the label changes.
+- **Diagnostics show `credential_encoding` only for modems that detect
+  it.** It was reported as `plain` for every modem; now the
+  `form_nonce` entries that detect it report it along with
+  `credential_field`, and other entries omit both.
+- **Core: `apply_credential_encoding` is replaced by
+  `apply_setup_params`.** Setup-time detection is now generic
+  (`detect_setup_params`, `apply_setup_params`, `setup_param_keys`),
+  so consumers store and re-apply a strategy's setup params without
+  knowing which strategy needs them.
 
 ## [3.14.1] - 2026-09-20
 

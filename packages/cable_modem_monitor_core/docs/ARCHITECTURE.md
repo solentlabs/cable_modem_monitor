@@ -193,7 +193,7 @@ from solentlabs.cable_modem_monitor_core.orchestration import (
 modem_config = load_modem_config(CATALOG_PATH / "arris" / "sb8200" / "modem.yaml")
 parser_config = load_parser_config(CATALOG_PATH / "arris" / "sb8200" / "parser.yaml")
 
-# For form_nonce modems: apply_credential_encoding(modem_config, ...) here
+# Strategies with a setup step: apply_setup_params(modem_config, stored_params)
 
 # Create orchestration graph via Core factory
 orchestrator, health_monitor, identity = create_orchestrator(
@@ -407,7 +407,7 @@ config fields.
   to the strategy module's own entry point; the HA config flow stores
   the returned params in the config entry and hands them back through
   `apply_setup_params` at startup, and the test harness runs the same
-  detection over HAR entries. Neither consumer knows which strategy
+  detection against its mock server. Neither consumer knows which strategy
   needed it. No pre-fetch occurs during polling. See MODEM_YAML_SPEC.md
   for detection logic.
 - Multi-variant modems use separate `modem-{variant}.yaml` files — one per
@@ -433,8 +433,10 @@ knowledge moved:
 
 A new hook is added with its first implementer, never ahead of one.
 
-Setup-time detection is a module entry point, not a method, because
-it runs before any manager or session exists.
+Setup-time detection is a set of module entry points (`setup_page`,
+`detect_setup_params`, `apply_setup_params`, `setup_param_keys`), not
+methods, because it runs before any manager or session exists.
+`auth/setup.py` dispatches to them.
 
 #### Crypto Library vs Firmware Wire Format
 

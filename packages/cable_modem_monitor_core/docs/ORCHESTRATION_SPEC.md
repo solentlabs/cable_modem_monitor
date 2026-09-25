@@ -394,15 +394,12 @@ exception directly.
 
 `orchestration.factory` owns the YAML-to-running-components path.
 Consumers supply *what* (loaded configs, credentials, protocol
-settings), Core handles *how* (credential encoding, collector
-creation, health monitor assembly, identity extraction).
+settings), Core handles *how* (collector creation, health monitor
+assembly, identity extraction). Setup params a strategy needs are
+detected and re-applied through `auth/setup.py`
+(ARCHITECTURE § Auth manager hooks).
 
 ```python
-def apply_credential_encoding(
-    modem_config, credential_encoding="plain", credential_field="",
-) -> None:
-    """Inject form_nonce encoding. No-op for other strategies."""
-
 def create_collector(
     modem_config, parser_config, post_processor,
     base_url, username="", password="", *, legacy_ssl=False,
