@@ -21,9 +21,9 @@ Auto-generated index of the v3.14 modem catalog.
 
 - `modem.yaml` — Single source of truth (manufacturer, model, hardware, ISPs, status)
 
-**40 modems, 45 configurations** (28 ✅ confirmed, 17 ⏳ awaiting)
+**41 modems, 46 configurations** (28 ✅ confirmed, 18 ⏳ awaiting)
 
-**Auth strategies:** form (15), none (8), hnap (7), basic (5), url_token (3), form_cbn (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1), bearer (1)
+**Auth strategies:** form (15), none (8), hnap (7), basic (5), url_token (3), form_cbn (2), bearer (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1)
 
 ## Directory Structure
 
@@ -61,6 +61,7 @@ packages/cable_modem_monitor_catalog/.../modems/
 | Arris | [SB8200 (No Authentication)](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/sb8200/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![none](https://img.shields.io/badge/-none-808080?style=flat-square "No Authentication") | [![SERV](https://img.shields.io/badge/-SERV-778899?style=flat-square "Service Electric Cablevision")](#service-electric) | SB8200 | ⏳ Awaiting |
 | Arris | [SB8200 (Form Login CBN)](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/sb8200-cbn/modem.yaml) | 3.1 | ![CBN](https://img.shields.io/badge/-CBN-8B6914?style=flat-square "CBN SOAP-based protocol") | [BCM3390](#bcm3390) | ![cbn](https://img.shields.io/badge/-cbn-8B6914?style=flat-square "Form Login CBN") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) | SB8200 | ⏳ Awaiting |
 | Arris | [SB8200 (HNAP)](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/sb8200-hnap/modem.yaml) | 3.1 | ![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth") | [BCM3390](#bcm3390) | ![hnap](https://img.shields.io/badge/-hnap-5B8FBF?style=flat-square "HNAP") | [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) | SB8200 | ✅ Confirmed |
+| Arris | [SB8200 (JSON Login)](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/sb8200-php/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![bearer](https://img.shields.io/badge/-bearer-1A7FAA?style=flat-square "JSON Login") | [![RCN](https://img.shields.io/badge/-RCN-556688?style=flat-square "RCN Corporation")](#rcn) | SB8200 | ⏳ Awaiting |
 | Arris | [TG3442DE](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/tg3442de/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 7](#puma-7) | ![sjcl](https://img.shields.io/badge/-sjcl-7B4FB8?style=flat-square "Form Login (SJCL)") | [![VDF](https://img.shields.io/badge/-VDF-aa6666?style=flat-square "Vodafone Kabel")](#vodafone) | TG3442DE | ✅ Confirmed |
 | Arris | [TM1602A](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/tm1602a/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 6](#puma-6) | ![none](https://img.shields.io/badge/-none-808080?style=flat-square "No Authentication") | [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | TM1602A | ✅ Confirmed |
 | CommScope | [G54](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/commscope/g54/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) | G54 | ⏳ Awaiting |
@@ -118,6 +119,7 @@ DOCSIS 3.0
 DOCSIS 3.1
 ├── 2016  ARRIS       CM3500B    ░░░░░░░█████████████  10yr  Current
 ├── 2017  Motorola    MB8600     ░░░░░░░░████████████   9yr  Current
+├── 2017  ARRIS       SB8200     ░░░░░░░░████████████   9yr  Current
 ├── 2017  ARRIS       SB8200     ░░░░░░░░████████████   9yr  Current
 ├── 2017  ARRIS       SB8200     ░░░░░░░░████████████   9yr  Current
 ├── 2017  Technicolor TC4400     ░░░░░░░░████████████   9yr  Current
@@ -208,4 +210,4 @@ _Scale: 2010-2026 (16 years)_
 
 ---
 
-Generated by `scripts/generate_catalog_index.py` from 46 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).
+Generated by `scripts/generate_catalog_index.py` from 47 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).

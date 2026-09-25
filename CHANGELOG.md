@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Arris SB8200 on its PHP firmware** (RCN/Astound, AB01.06.013). If
+  your modem's pages end in `.php`, pick the SB8200 variant labeled
+  "JSON Login". Awaiting confirmation on hardware. (#213)
 - **`javascript_json` reads channel arrays inside a JavaScript object.**
   A `parser.yaml` section can name an object variable and select each
   array with `array_path`, merging a companion array such as error

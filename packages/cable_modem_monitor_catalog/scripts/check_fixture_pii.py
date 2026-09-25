@@ -150,6 +150,13 @@ PII_ALLOWLIST = set(_allowlist.get("static_placeholders", {}).get("values", []))
 for prefix in _allowlist.get("hash_prefixes", {}).get("values", []):
     PII_ALLOWLIST.add(prefix.rstrip("_"))
 
+# har-capture's hash placeholder (<PREFIX>_ + 8 hex, patterns/hasher.py) at
+# the end of a URL candidate. Firmware that puts a token behind a fixed
+# prefix (?ct_<token>) yields ct_AUTH_1a2b3c4d once sanitized.
+_HASH_PLACEHOLDER_SUFFIX_RE = re.compile(
+    "(?:" + "|".join(re.escape(p) for p in _allowlist.get("hash_prefixes", {}).get("values", [])) + ")[0-9a-f]{8}$"
+)
+
 # ---------------------------------------------------------------------------
 # Reference data (from JSON)
 # ---------------------------------------------------------------------------
@@ -617,6 +624,11 @@ def _looks_like_opaque_token(candidate: str) -> bool:
     if not _URL_TOKEN_CHARSET_RE.match(candidate):
         return False
     if not _URL_TOKEN_DIGIT_RE.search(candidate):
+        return False
+    # A sanitizer placeholder behind a prefix too short to hold a secret of
+    # its own is sanitized; a long prefix is judged as a token by itself.
+    placeholder = _HASH_PLACEHOLDER_SUFFIX_RE.search(candidate)
+    if placeholder and len(candidate[: placeholder.start()]) < _URL_TOKEN_MIN_LENGTH:
         return False
     return candidate.lower() not in SAFE_VALUES
 

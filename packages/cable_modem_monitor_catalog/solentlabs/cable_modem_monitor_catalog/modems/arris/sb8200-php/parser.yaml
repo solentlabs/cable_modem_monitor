@@ -1,0 +1,120 @@
+# A plain GET serves empty channel tables; the page's own form POSTs
+# more=1 back to the same URL to fill them (modem.har [33] vs [46]).
+requests:
+  "/cmconnectionstatus.php":
+    method: POST
+    form:
+      more: "1"
+      submit: "Please wait for a few seconds..."
+
+downstream:
+  format: table
+  resource: "/cmconnectionstatus.php"
+  tables:
+    - selector:
+        match: "downstreamTable"
+        type: id
+      row_start: 2
+      columns:
+        - index: 1
+          field: channel_id
+          type: integer
+        - index: 2
+          field: lock_status
+          type: lock_status
+        - index: 3
+          field: channel_type
+          type: string
+          map:
+            "OFDM Downstream": "ofdm"
+            "SC-QAM Downstream": "qam"
+        - index: 5
+          field: frequency
+          type: frequency
+        - index: 6
+          field: channel_width
+          type: frequency
+        - index: 7
+          field: snr
+          type: float
+          unit: dB
+        - index: 8
+          field: power
+          type: float
+          unit: dBmV
+        - index: 9
+          field: modulation
+          type: modulation
+        - index: 11
+          field: corrected
+          type: integer
+        - index: 12
+          field: uncorrected
+          type: integer
+
+upstream:
+  format: table
+  resource: "/cmconnectionstatus.php"
+  tables:
+    - selector:
+        match: "Upstream Channel Status"
+        type: header_text
+      row_start: 2
+      columns:
+        - index: 1
+          field: channel_id
+          type: integer
+        - index: 2
+          field: lock_status
+          type: lock_status
+        # The Modulation ProfileID column reads ATDMA on SC-QAM rows [46].
+        - index: 3
+          field: channel_type
+          type: string
+          map:
+            "OFDM Upstream": "ofdma"
+            "SC-QAM Upstream": "atdma"
+        - index: 5
+          field: frequency
+          type: frequency
+        - index: 6
+          field: channel_width
+          type: frequency
+        - index: 7
+          field: power
+          type: float
+          unit: dBmV
+
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/cmconnectionstatus.php"
+      fields:
+        - field: docsis_status
+          label: "DOCSIS Network Access Enabled"
+          type: string
+          map:
+            "Allowed": "Operational"
+    - format: html_fields
+      resource: "/cmswinfo.php"
+      fields:
+        - css: "table.simpleTable:nth-of-type(1) tr:nth-of-type(3) td:nth-of-type(2)"
+          field: hardware_version
+          type: string
+        - css: "table.simpleTable:nth-of-type(1) tr:nth-of-type(4) td:nth-of-type(2)"
+          field: software_version
+          type: string
+        - css: "table.simpleTable:nth-of-type(2) tr:nth-of-type(2) td:nth-of-type(2)"
+          field: system_uptime
+          type: uptime
+          format: "{days} days {hours} hours {minutes} mins {seconds} secs"
+
+# DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
+# at a vastly different scale and are not aggregated.
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream.qam
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream.qam

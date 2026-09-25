@@ -153,6 +153,8 @@ SAFE_URLS = [
     pytest.param("https://192.168.100.1/cmconnectionstatus.html?YWRtaW46c2FuaXRpemVk", id="sanitized-placeholder"),
     pytest.param("https://192.168.100.1/login_YWRtaW46c2FuaXRpemVk", id="sanitized-placeholder-prefixed"),
     pytest.param("https://192.168.100.1/rest/v1/user/3/token/[REDACTED]", id="redacted-placeholder"),
+    # har-capture's hash placeholder behind a token prefix (?ct_<token> firmware).
+    pytest.param("https://192.168.100.1/cmconnectionstatus.php?ct_AUTH_d353b071", id="prefixed-hash-placeholder"),
 ]
 
 
@@ -186,6 +188,18 @@ def test_placeholder_guard_does_not_swallow_a_real_credential() -> None:
     """
     assert not pii.find_url_secrets("https://192.168.100.1/x?YWRtaW46c2FuaXRpemVk")
     assert pii.find_url_secrets("https://192.168.100.1/x?YWRtaW46RmFrZVBhc3My")
+
+
+def test_hash_placeholder_guard_does_not_swallow_a_real_token() -> None:
+    """Live counterpart to the prefixed hash-placeholder guard.
+
+    The guard accepts a sanitizer placeholder behind a short prefix. A real
+    token behind the same prefix, or a real token merely ending in a
+    placeholder-shaped suffix, must still be reported.
+    """
+    assert not pii.find_url_secrets("https://192.168.100.1/x.php?ct_AUTH_d353b071")
+    assert pii.find_url_secrets("https://192.168.100.1/x.php?ct_a3f9c2e18b7d4056")
+    assert pii.find_url_secrets("https://192.168.100.1/x.php?a3f9c2e18b7d4056af12AUTH_d353b071")
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,102 @@
+manufacturer: ARRIS
+model: SB8200
+brands:
+  - "SURFboard"
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: bearer
+  login_endpoint: "/actionHandler/ajaxSet_login.php"
+  method: PUT
+  cookie_name: "PHPSESSID"
+  extra_fields:
+    ipAddress: "{host}"
+  token_source: header
+  token_header: "X-CSRF-Token"
+  token_placement: query
+  token_prefix: "ct_"
+
+session:
+  headers:
+    X-Requested-With: "XMLHttpRequest"
+
+actions:
+  logout:
+    type: http
+    method: PUT
+    endpoint: "/actionHandler/ajaxSet_logout.php"
+    requires_session: true
+    json_body:
+      DoLogOut: 1
+
+hardware:
+  docsis_version: "3.1"
+  hw_version: v6
+  firmware: AB01
+  chipset: "Broadcom BCM3390"
+  release_date: "2017"
+
+status: awaiting_verification
+
+sources:
+  auth_config:
+    "[#213 SB8200 PHP firmware HAR](https://github.com/solentlabs/cable_modem_monitor/issues/213)
+    — test_data/modem.har: login script [5]; [31] rejected
+    login 409; [32] accepted login, PHPSESSID cookie and X-CSRF-Token
+    header; [33] [46] [60] data pages requested with ?ct_<token>"
+  logout_action:
+    'test_data/modem.har — main_arris.js [3] logout(); [74] [76] PUT
+    {"DoLogOut":1} with the PHPSESSID cookie, 200'
+  session_headers:
+    "test_data/modem.har — X-Requested-With: XMLHttpRequest on the
+    login [31] [32] and logout [74] [76] requests (jQuery $.ajax)"
+  hardware: "test_data/modem.har [60] cmswinfo.php — Docsis 3.1, Hardware
+    Version 6, Software Version AB01.06.013_051923_223.0A.NSH; release
+    year per [ARRIS SB8200 page](https://www.arris.com/surfboard/products/cable-modems/sb8200/)"
+  brands: "[SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/) — SURFboard styling"
+  chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
+  isps: "[#213 issue form, ISP field](https://github.com/solentlabs/cable_modem_monitor/issues/213)"
+
+attribution:
+  contributors:
+    - github: https://github.com/mtrumpler
+      contribution: "HAR captures of the PHP firmware build (Issue #213)"
+
+isps:
+  - RCN
+
+notes: |
+  PHP build of the ARRIS SB8200 AB01 firmware (AB01.06.013_051923_223.0A.NSH,
+  HW 6, RCN/Astound provisioning). HTTPS only; pages are .php
+  (X-Powered-By: PHP/7.4.9) where the arris/sb8200 AB01 builds serve .html.
+  Entry indices below are into test_data/modem.har.
+
+  Login: validate() in the login script [5] PUTs JSON {username, password,
+  ipAddress: document.location.hostname} to /actionHandler/ajaxSet_login.php,
+  keeps the X-CSRF-Token response header, and opens
+  cmconnectionstatus.php?ct_<token>. A wrong password answers 409
+  "Invalid Login Credentials!" [31]; the accepted login [32] answers 200
+  with Set-Cookie PHPSESSID and the X-CSRF-Token header. Its JSON body was
+  not captured. The login JS has no busy or session-overtake branch, so
+  login_busy is not set. A body with redirect == true sends the browser to
+  the password-change page instead; not observed.
+  Unauthenticated GET of the status page [16] answers 401.
+
+  Channels: a plain GET of cmconnectionstatus.php [33] serves empty channel
+  tables. The page's "Show Downstream and Upstream Channel status" form
+  POSTs more=1 back to the same URL [46]; its click handler rewrites the submit
+  value to "Please wait for a few seconds...", which is what the wire
+  carries. parser.yaml's requests: map sends that POST.
+  System info: cmswinfo.php [60]; the browser aborted the first attempt [59].
+
+  Logout: main_arris.js [3] logout(), observed at [74] and [76].
+  Restart: not captured, so no restart action. The arris/sb8200 notes
+  record reboot as disabled on AB01 .html builds; unverified here.
+  Entries [14] [15] are an unrelated external site loaded during capture
+  to separate the unauthenticated request; kept, the capture is immutable.
+
+references:
+  issues:
+    - "[#213 — Unusual Arris SB8200 [Modem Request]](https://github.com/solentlabs/cable_modem_monitor/issues/213)"
+    - "[#81 — SB8200 AB01 .html firmware (separate entry, arris/sb8200)](https://github.com/solentlabs/cable_modem_monitor/issues/81)"
