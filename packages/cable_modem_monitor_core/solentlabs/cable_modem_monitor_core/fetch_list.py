@@ -12,8 +12,8 @@ See RESOURCE_LOADING_SPEC.md Fetch List Derivation section.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from .models.parser_config import ParserConfig
@@ -30,11 +30,17 @@ class ResourceTarget:
             ``json``, ``html_fields``).
         encoding: Optional response encoding (e.g., ``base64``).
             Empty string for no special encoding.
+        method: Request method, from parser.yaml ``requests``; GET
+            when the path has no declared request.
+        form: Form fields a POST sends, in declaration order.
     """
 
     path: str
     format: str
     encoding: str = ""
+    method: Literal["GET", "POST"] = "GET"
+    # Pairs, not a dict, so the frozen target stays hashable.
+    form: tuple[tuple[str, str], ...] = ()
 
 
 def collect_fetch_targets(
@@ -50,6 +56,10 @@ def collect_fetch_targets(
 
     HNAP sections are skipped (HNAP uses batched SOAP, not per-page
     fetches).
+
+    Each target carries the request parser.yaml ``requests`` declares
+    for its path, GET when none. A ``requests`` key no target reads
+    raises ``ValueError``.
 
     Args:
         config: Validated ``ParserConfig`` instance.
@@ -75,8 +85,28 @@ def collect_fetch_targets(
             _add_section_target(source, seen_paths)
 
     _add_post_processor_resources(post_processor, seen_paths)
+    _apply_declared_requests(config, seen_paths)
 
     return list(seen_paths.values())
+
+
+def _apply_declared_requests(
+    config: ParserConfig,
+    seen_paths: dict[str, ResourceTarget],
+) -> None:
+    """Attach each parser.yaml ``requests`` entry to the target for its path."""
+    # The check lives here, not on ParserConfig, because only this merge
+    # sees parser.py resources too. A key nothing reads would otherwise
+    # be dropped silently, and the page it names fetched with GET.
+    unread = sorted(path for path in config.requests if path not in seen_paths)
+    if unread:
+        raise ValueError(f"parser.yaml requests declares paths no section or parser.py resource reads: {unread}")
+    for path, request in config.requests.items():
+        seen_paths[path] = replace(
+            seen_paths[path],
+            method=request.method,
+            form=tuple(request.form.items()),
+        )
 
 
 def _add_post_processor_resources(

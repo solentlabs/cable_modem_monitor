@@ -127,6 +127,15 @@ class ComputedField(BaseModel):
     precision: int = 1
 
 
+class ResourceRequest(BaseModel):
+    """How one resource path is fetched when GET is not enough (PARSING_SPEC § Fetch List Derivation)."""
+
+    model_config = ConfigDict(extra="forbid")
+    method: Literal["POST"]
+    # Sent application/x-www-form-urlencoded, verbatim as the capture shows it.
+    form: dict[str, str] = Field(default_factory=dict)
+
+
 class ParserConfig(BaseModel):
     """Full parser.yaml schema.
 
@@ -139,6 +148,11 @@ class ParserConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    # First field: parser.yaml key order follows this field order
+    # (MODEM_YAML_SPEC § Layout). Keyed by the path a section or a
+    # parser.py resource reads; fetch_list.collect_fetch_targets rejects
+    # a key nothing reads, because only it also sees parser.py.
+    requests: dict[str, ResourceRequest] = Field(default_factory=dict)
     downstream: ChannelSection | None = None
     upstream: ChannelSection | None = None
     system_info: SystemInfoSection | None = None

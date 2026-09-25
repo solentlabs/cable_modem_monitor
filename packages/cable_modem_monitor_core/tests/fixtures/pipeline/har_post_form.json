@@ -1,0 +1,40 @@
+{
+  "_description": "One data path answered two ways: GET renders 1 channel, the form POST renders 2. No auth.",
+  "log": {
+    "version": "1.2",
+    "entries": [
+      {
+        "request": {
+          "method": "GET",
+          "url": "http://192.168.100.1/status.html"
+        },
+        "response": {
+          "status": 200,
+          "headers": [],
+          "content": {
+            "text": "<html><body>\n<table>\n<tr><th colspan=\"3\">Downstream Channels</th></tr>\n<tr><th>Channel</th><th>Frequency</th><th>Power</th></tr>\n<tr><td>1</td><td>507000000 Hz</td><td>2.5 dBmV</td></tr>\n</table>\n</body></html>\n",
+            "mimeType": "text/html"
+          }
+        }
+      },
+      {
+        "request": {
+          "method": "POST",
+          "url": "http://192.168.100.1/status.html",
+          "postData": {
+            "mimeType": "application/x-www-form-urlencoded",
+            "text": "more=1"
+          }
+        },
+        "response": {
+          "status": 200,
+          "headers": [],
+          "content": {
+            "text": "<html><body>\n<table>\n<tr><th colspan=\"3\">Downstream Channels</th></tr>\n<tr><th>Channel</th><th>Frequency</th><th>Power</th></tr>\n<tr><td>1</td><td>507000000 Hz</td><td>2.5 dBmV</td></tr>\n<tr><td>2</td><td>513000000 Hz</td><td>2.6 dBmV</td></tr>\n</table>\n</body></html>\n",
+            "mimeType": "text/html"
+          }
+        }
+      }
+    ]
+  }
+}

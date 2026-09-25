@@ -230,7 +230,9 @@ If the auth step's response already returned a data page (e.g., a
 post-login redirect lands on a page in the fetch list), the loader
 reuses that response instead of re-fetching. This avoids an extra HTTP
 round-trip and is common with form auth modems that redirect to a
-dashboard page after login.
+dashboard page after login. Only GET targets are reused: a path
+declared under parser.yaml `requests:` answers its data only to that
+request, and the login landing is the page as a GET renders it.
 
 **Contract — load-bearing.** Reuse keys on `AuthResult.response` and
 `AuthResult.response_url`. Auth managers MUST populate these fields

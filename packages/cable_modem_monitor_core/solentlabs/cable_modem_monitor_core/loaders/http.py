@@ -115,8 +115,11 @@ class HTTPResourceLoader:
             reuse_response = auth_result.response
 
         for target in targets:
-            # Auth response reuse — skip fetch if login landed here
-            if reuse_path and reuse_response is not None and target.path == reuse_path:
+            # Auth response reuse — skip fetch if login landed here.
+            # GET targets only: the login landing is the page as a GET
+            # renders it, and a path declared under ``requests`` answers
+            # its data only to that request.
+            if reuse_path and reuse_response is not None and target.path == reuse_path and target.method == "GET":
                 _logger.debug(
                     "Reusing auth response for %s [%s]",
                     target.path,
@@ -129,7 +132,7 @@ class HTTPResourceLoader:
             url = self._build_url(target.path)
             start = time.monotonic()
             try:
-                response = self._session.get(url, timeout=self._timeout)
+                response = self._send(target, url)
             except requests.RequestException as e:
                 raise ResourceLoadError(
                     f"Failed to fetch {target.path}: {type(e).__name__}: {e}",
@@ -205,6 +208,14 @@ class HTTPResourceLoader:
             self._store_decoded(resources, target.path, response.text, target.format, target.encoding)
 
         return resources
+
+    def _send(self, target: ResourceTarget, url: str) -> requests.Response:
+        """Send the request the target declares; everything after it is shared."""
+        if target.method == "POST":
+            # requests encodes a dict passed as data= as
+            # application/x-www-form-urlencoded and sets the header.
+            return self._session.post(url, data=dict(target.form), timeout=self._timeout)
+        return self._session.get(url, timeout=self._timeout)
 
     def _store_decoded(
         self,

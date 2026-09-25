@@ -272,7 +272,10 @@ downstream:
 `application/x-www-form-urlencoded`, verbatim as the capture shows it.
 A path absent from `requests` is fetched with GET, as before. A
 `requests` key that no section or parser.py resource reads is a
-config error. The URL is built exactly as for a GET, so a url-token
+config error, raised when the fetch list is built (the one place that
+sees parser.py resources too), so the entry's catalog replay fails on
+it. `requests:` is valid on the `http` transport only; the cross-file
+check rejects it elsewhere, since no other loader reads it. The URL is built exactly as for a GET, so a url-token
 suffix and `session.query_params` still apply. Resource keys stay
 paths: a request is how a path is fetched, not a second identity for
 it.

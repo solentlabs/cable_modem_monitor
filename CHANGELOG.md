@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   array with `array_path`, merging a companion array such as error
   counters by `merge_by`. Firmware that serves every channel list in one
   object no longer needs a `parser.py`. (#210)
+- **`parser.yaml` can fetch a data page with a form POST.** A top-level
+  `requests:` map declares the form a path is posted with, for firmware
+  that only fills its channel tables after a "show channels" button
+  posts back to the page. Paths it does not name are fetched as before.
+  (#213)
 
 ## [3.14.1] - 2026-09-20
 
