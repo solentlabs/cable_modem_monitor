@@ -1,0 +1,21 @@
+{
+  "_description": "array_path navigates nested objects with dot notation, as in the json format",
+  "_html": "<html><body><script>let channelData = {\"data\": {\"dsList\": [{\"ChannelID\": \"4\"}]}};</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "channelData",
+    "arrays": [
+      {
+        "array_path": "data.dsList",
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      }
+    ]
+  },
+  "_expected_warning": null,
+  "_expected": [
+    {"channel_id": 4, "channel_number": 1}
+  ]
+}

@@ -323,11 +323,19 @@ class ModemDataCollector:
     def clear_session(self) -> None:
         """Invalidate the current session."""
         self._session.cookies.clear()
-        # Bearer strategies carry the credential in a session header rather
-        # than a cookie. Leaving it set means every request between here and
-        # the next successful authenticate() puts a token we have already
-        # invalidated back on the wire.
-        self._session.headers.pop("Authorization", None)
+        # Strategies that carry a credential in a header (bearer's
+        # Authorization, a CSRF token) would otherwise put a token we have
+        # already invalidated back on the wire until the next login. Reset,
+        # not delete: a declared header that session.headers also sets
+        # statically goes back to that value, because the next login may
+        # need it (form_sjcl's pre-auth csrfNonce). Restore under the
+        # configured name: headers() is lowercase, firmware may not be.
+        static = {name.lower(): (name, value) for name, value in self._static_session_headers().items()}
+        for declared in self._auth_manager.headers():
+            self._session.headers.pop(declared, None)
+            if declared in static:
+                name, value = static[declared]
+                self._session.headers[name] = value
         self._auth_context = None
         self._last_auth_result = None
         log_event(_logger, SessionCleared(model=self._modem_config.model))
@@ -351,11 +359,15 @@ class ModemDataCollector:
     def _build_session(self) -> requests.Session:
         """Build the ``requests.Session`` for this modem's polling lifetime."""
         session = create_session(legacy_ssl=self._legacy_ssl)
-        session_headers: dict[str, str] = {}
-        if self._modem_config.session and self._modem_config.session.headers:
-            session_headers = self._modem_config.session.resolved_headers(base_url=self._base_url)
-        self._auth_manager.configure_session(session, session_headers)
+        self._auth_manager.configure_session(session, self._static_session_headers())
         return session
+
+    def _static_session_headers(self) -> dict[str, str]:
+        """Return the entry's ``session.headers`` with ``{base_url}`` resolved."""
+        headers: dict[str, str] = {}
+        if self._modem_config.session and self._modem_config.session.headers:
+            headers = self._modem_config.session.resolved_headers(base_url=self._base_url)
+        return headers
 
     def authenticate(
         self,

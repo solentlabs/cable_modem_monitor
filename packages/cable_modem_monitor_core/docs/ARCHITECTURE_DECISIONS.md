@@ -530,7 +530,8 @@ entity.
 
 **Decision:** Cross-cutting protocol code sits in `protocol/`:
 `protocol/hnap.py` for HMAC signing and constants, `protocol/cbn.py`
-for the AES-256-CBC encryption `form_cbn` auth needs.
+for the AES-256-CBC encryption `form_cbn` auth needs, `protocol/sjcl.py`
+for the SJCL PBKDF2 and AES-CCM that `form_sjcl` and `json_sjcl` share.
 
 **Rationale:** HNAP signing is used by auth, loaders, and action
 executors alike. A shared module removes the duplication while each
@@ -695,8 +696,8 @@ single-session semantics.
 
 **Decision:** When firmware refuses a login without judging the
 credential but does so under a 2xx, the catalog entry declares the
-refusal body (`form_pbkdf2.login_busy`) and the strategy reports
-`AuthResult.busy`. The collector classifies `busy` as
+refusal body (`login_busy` on `form_pbkdf2`, `bearer` and `json_sjcl`,
+one shared matcher) and the strategy reports `AuthResult.busy`. The collector classifies `busy` as
 `AUTH_UNAVAILABLE`, the same signal a 5xx earns (UC-87a). Core holds no
 table of firmware busy codes.
 
@@ -946,6 +947,16 @@ this set as opaque — a Core-layer ``headers`` parameter, no
 modified; redaction only applies when ``describe_request`` formats
 the failure log line.
 
+The same set tells ``clear_session()`` what to reset. A credential
+header left on the session after it is cleared goes back on the wire
+with every request until the next login; clearing a hardcoded
+``Authorization`` covered only the default ``bearer`` placement. Reset
+means back to the entry's configured state, not deleted: a declared
+header that ``session.headers`` also sets statically returns to that
+static value. ``arris/tg3442de`` depends on it, since its login needs
+the pre-auth ``csrfNonce: "undefined"`` that ``form_sjcl`` overwrites
+after login.
+
 ---
 
 ### Credential reconfiguration is reconstruction, not mutation
@@ -995,6 +1006,39 @@ change one transformation. Contrast `form_pbkdf2`, which is a genuinely
 different multi-round-trip exchange (see § Discrete strategies).
 
 ---
+
+### Token source and placement are values; encryption is a strategy
+
+**Decision:** `bearer` is the one-round-trip JSON login: send
+credentials as JSON, get a token, send it back. Where the token is read
+(`token_source`: JSON path or response header) and where it goes back
+(`token_placement`: `Authorization`, a named header, or the URL query)
+are opt-in values on it, as are `method`, `extra_fields`, `cookie_name`
+and `login_busy`. A JSON login whose body is SJCL-encrypted is a
+separate strategy, `json_sjcl`, on the shared `protocol/sjcl.py`.
+
+**Rationale:** The test is § Discrete strategies: structural behaviour
+decides, not which values differ. The plaintext Arris actionHandler
+login (#213 SB8200 PHP, the SBG8300) runs `bearer`'s exact flow with
+other values, so a new strategy would copy that flow to change
+parameters. The encrypted build (#210 TG3442S) adds a login-page round
+trip, key derivation, body encryption and response decryption: the
+same difference that separates `form_sjcl` from `form`. The firmware's
+own `encryptParametersIfNeeded` switch is how the vendor wrote its JS,
+not evidence that encryption is a value of the protocol.
+
+Extending `form` instead was rejected on blast radius: `form` carries
+most of the fleet, `bearer` two entries, and every extension is a
+gated branch the unset path must skip.
+
+**Constrains:** Every new `bearer` field is opt-in and the unset
+request is the pre-extension request, asserted per current entry
+(§ How to extend an existing auth strategy). A token source is a named
+value, never a second flag (§ Auth extraction sources are named, not
+flagged). `json_sjcl` reuses `bearer`'s header-placement code rather
+than keeping its own. `{host}` in `extra_fields` is the one
+placeholder; a second would be a new key in that fixed set, not a
+template syntax (MODEM_YAML_SPEC § a fixed key set).
 
 ### JS-driven auth is a `form` variant
 

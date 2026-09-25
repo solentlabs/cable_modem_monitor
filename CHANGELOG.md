@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`javascript_json` reads channel arrays inside a JavaScript object.**
+  A `parser.yaml` section can name an object variable and select each
+  array with `array_path`, merging a companion array such as error
+  counters by `merge_by`. Firmware that serves every channel list in one
+  object no longer needs a `parser.py`. (#210)
+
 ## [3.14.1] - 2026-09-20
 
 ### Overview

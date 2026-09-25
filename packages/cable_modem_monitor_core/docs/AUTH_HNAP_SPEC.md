@@ -248,8 +248,8 @@ by doing what the firmware asked.
 is fixed by the protocol, so there is nothing for a catalog entry to
 declare (§ Config Reference). `form_cbn` sets it the same way and for
 the same reason (AUTH_CBN_SPEC.md § Login Token Vocabulary). The
-structural difference is with `form_pbkdf2`, whose busy body is entry
-data (`login_busy`).
+structural difference is with `form_pbkdf2`, `bearer` and `json_sjcl`,
+whose busy body is entry data (`login_busy`).
 
 ## Firmware Assumptions
 

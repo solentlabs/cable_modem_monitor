@@ -1,0 +1,27 @@
+{
+  "_description": "A present but empty array is data (no channels of that kind), not a failure: no channels, no warning",
+  "_html": "<html><body><script>let channelData = {\"dsList\": [{\"ChannelID\": \"1\"}], \"ofdmList\": []};</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "channelData",
+    "arrays": [
+      {
+        "array_path": "dsList",
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      },
+      {
+        "array_path": "ofdmList",
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      }
+    ]
+  },
+  "_expected_warning": null,
+  "_expected": [
+    {"channel_id": 1, "channel_number": 1}
+  ]
+}

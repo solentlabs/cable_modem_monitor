@@ -78,7 +78,7 @@ extras:
 
 | Extra | Install | What it adds | Who uses it |
 |-------|---------|--------------|-------------|
-| `[sjcl]` | `pip install solentlabs-cable-modem-monitor-core[sjcl]` | `cryptography>=41.0` | `form_sjcl` auth strategy (AES-CCM) |
+| `[sjcl]` | `pip install solentlabs-cable-modem-monitor-core[sjcl]` | `cryptography>=41.0` | `form_sjcl` and `json_sjcl` auth strategies (AES-CCM) |
 | `[cbn]` | `pip install solentlabs-cable-modem-monitor-core[cbn]` | `cryptography>=41.0` | `form_cbn` auth strategy (AES-256-CBC) |
 
 ### Core — `solentlabs-cable-modem-monitor-core`
@@ -101,7 +101,7 @@ but modem-specific behavior comes from config, not from Core code.
 | Config schemas | `ModemConfig`, `AuthConfig`, `PageConfig`, `ParserConfig` |
 | ABCs / base classes | `BaseParser`, `BaseAuthManager`, `AuthStrategyBase` (model ClassVars) |
 | Action executors | `orchestration/actions/` — transport-scoped executors (`http_action`, `hnap_action`, `cbn_action`) with single `execute_action()` dispatch. `ActionResult` return type. |
-| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth. |
+| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth. `protocol/sjcl` — SJCL PBKDF2 and AES-CCM used by `form_sjcl` and `json_sjcl`. |
 | Auth shared helpers | `auth/response` — JSON response parsing (double-decode, type check, diagnostics) shared by `form_sjcl`, `form_pbkdf2`, `hnap`. |
 | Parser coordinator | `ModemParserCoordinator` — factory + orchestration: parser.yaml → `BaseParser` instances → parser.py chaining → `ModemData` |
 | Auth strategies | One audited implementation per strategy in `auth/`. See the [Auth Manager](#auth-manager) table for the full set. |
@@ -367,6 +367,12 @@ config fields.
   payload and decrypts the response, while `form_pbkdf2` hashes the password
   and sends it in plaintext JSON. Requires the `cryptography` package
   (install Core with `[sjcl]` extra)
+- `bearer` covers every one-round-trip JSON login that yields a token.
+  Where the token is read from (JSON path or response header) and where
+  it is sent back (`Authorization`, a named header, or the URL query)
+  are config values on it. `json_sjcl` is separate because SJCL
+  encryption adds a round trip and crypto, the same line that separates
+  `form_sjcl` from `form`
 - All other form differences (encoding, CSRF, field names, session cookies)
   are config flags on `form`. Specifically: base64 password encoding is
   `encoding: base64`, dynamic endpoint discovery is `login_page` +
@@ -388,6 +394,7 @@ config fields.
   | `form` | `<input type="hidden">` fields (CSRF tokens, mode flags); the form's `action` URL when `action_source: login_page` | Every auth attempt |
   | `form_nonce` | Form structure (credential encoding: plain vs b64-packed) | Setup time only (config flow / test harness) |
   | `form_sjcl` | JS crypto variables (`myIv`, `mySalt`, `currentSessionId`) | Every auth attempt |
+  | `json_sjcl` | JS crypto assignments (`sjclEncryptObj.salt`, `.iv`) | Every auth attempt |
   | `form_cbn` | Session token cookie | Every auth attempt |
   | `url_token` | Auth token from response body | Every auth attempt |
 
@@ -420,16 +427,18 @@ Each complex auth strategy has two layers:
   variable names, success criteria.  These are specific to a firmware
   family (Arris Touchstone, Technicolor REST, Compal).
 
-Currently, each complex strategy serves exactly one firmware family,
-so wire format assumptions are embedded in the strategy code.  When a
-second modem appears on the same crypto library with a different wire
-format, the refactoring point is the wire format layer — extract it
-to config or to a separate handler.  The crypto library layer should
-not change.
+Each complex strategy serves one firmware family, so wire format
+assumptions are embedded in the strategy code.  When a second modem
+appears on the same crypto library with a different wire format, the
+refactoring point is the wire format layer — extract it to config or
+to a separate handler.  The crypto library layer should not change.
+SJCL is the worked case: the actionHandler wire format became
+`json_sjcl`, and both SJCL strategies call `protocol/sjcl.py`.
 
 | Strategy | Crypto library | Firmware family | Spec |
 |----------|---------------|-----------------|------|
 | `form_sjcl` | SJCL (PBKDF2 + AES-CCM) | Arris Touchstone | [AUTH_SJCL_SPEC.md](AUTH_SJCL_SPEC.md) |
+| `json_sjcl` | SJCL (PBKDF2 + AES-CCM) | Arris PHP actionHandler | [AUTH_SJCL_SPEC.md](AUTH_SJCL_SPEC.md) |
 | `form_pbkdf2` | SJCL (PBKDF2 only) | Technicolor REST | [AUTH_PBKDF2_SPEC.md](AUTH_PBKDF2_SPEC.md) |
 | `form_cbn` | CryptoJS (AES-256-CBC) | Compal/CBN | [AUTH_CBN_SPEC.md](AUTH_CBN_SPEC.md) |
 
@@ -1297,6 +1306,7 @@ values, not different behaviors. Every variation maps to a config field:
 | Logout mechanism | `actions.logout` (shared action schema) |
 | Single-session semantics | `actions.logout` presence |
 | CSRF token | `auth.csrf_header` (strategy-specific; `form_pbkdf2` currently) |
+| Where a login token is read and sent | `auth.token_source`, `auth.token_placement` (`bearer`) |
 
 No auth hooks means:
 

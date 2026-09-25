@@ -103,7 +103,9 @@ For each unique path on the fetch list:
    - **URL token** — append token as query parameter (e.g., `?ct_<token>`)
    - **Cookie-based** — session cookies are on the `requests.Session`
    - **Basic auth** — credentials are on the `requests.Session`
-3. Send `GET` request with the modem's configured timeout
+3. Send the request with the modem's configured timeout: `GET`, or
+   the form `POST` parser.yaml declares for that path under
+   `requests:` (PARSING_SPEC § Fetch List Derivation)
 4. If `encoding: base64` is set on the section, decode first:
    `b64decode(response.text)` → raw text
 5. Parse the response (format-dependent):
@@ -266,7 +268,8 @@ The orchestrator builds the fetch list at startup from two sources:
 1. **parser.yaml** — every mapped section declares the resource it
    extracts from:
    - **HTTP:** Collects all unique `resource` paths from parser.yaml
-     sections (downstream, upstream, system_info sources)
+     sections (downstream, upstream, system_info sources), each with
+     the request `requests:` declares for it (GET when none)
    - **HNAP:** Derives action names from parser.yaml `response_key`
      values (strip `Response` suffix) and batches them in a single
      `GetMultipleHNAPs` request
@@ -306,7 +309,9 @@ The token prefix (e.g., `ct_`) and cookie name are configured on the
 auth strategy (`auth.token_prefix`, `auth.cookie_name`). The collector
 prefers `auth_context.url_token` (body-derived) over cookie extraction.
 The loader doesn't know how the token was obtained — it just appends
-whatever the collector provides.
+whatever the collector provides. `bearer` with
+`token_placement: query` uses the same path: it stores its token as
+`auth_context.url_token` and declares `auth.token_prefix`.
 
 ---
 

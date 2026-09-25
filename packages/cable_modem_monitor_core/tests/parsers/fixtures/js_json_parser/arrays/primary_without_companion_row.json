@@ -1,0 +1,31 @@
+{
+  "_description": "A primary channel with no companion row keeps its own fields and stays in the list",
+  "_html": "<html><body><script>let channelData = {\"dsList\": [{\"ChannelID\": \"1\", \"Frequency\": 570}, {\"ChannelID\": \"2\", \"Frequency\": 578}], \"errList\": [{\"ChannelID\": \"2\", \"Correctable\": \"7\"}]};</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "channelData",
+    "arrays": [
+      {
+        "array_path": "dsList",
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+          {"key": "Frequency", "field": "frequency", "type": "frequency"}
+        ]
+      },
+      {
+        "array_path": "errList",
+        "merge_by": ["channel_id"],
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+          {"key": "Correctable", "field": "corrected", "type": "integer"}
+        ]
+      }
+    ]
+  },
+  "_expected_warning": null,
+  "_expected": [
+    {"channel_id": 1, "frequency": 570000000, "channel_number": 1},
+    {"channel_id": 2, "frequency": 578000000, "corrected": 7, "channel_number": 2}
+  ]
+}

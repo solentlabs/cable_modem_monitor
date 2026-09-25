@@ -2,23 +2,27 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from cryptography.exceptions import InvalidTag
-from cryptography.hazmat.primitives.ciphers.aead import AESCCM
 from solentlabs.cable_modem_monitor_core.auth.form_sjcl import (
     FormSjclAuthManager,
-    _derive_key,
     _fetch_page_vars,
 )
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     FormSjclAuth,
 )
+
+from tests._helpers import load_fixture
+
+# sjclCrypto.js reference vectors, shared with tests/protocol/test_sjcl.py.
+_KAT_VECTORS: list[dict[str, Any]] = load_fixture(Path(__file__).parent / "fixtures" / "sjcl_known_answers.json")[
+    "vectors"
+]
 
 # Pre-computed test values.
 # password="password", salt="1122334455667788", iterations=1000,
@@ -61,74 +65,6 @@ def _login_page_html(
         f"currentSessionId = '{session_id}';\n"
         f"</script></html>"
     )
-
-
-class TestDeriveKey:
-    """PBKDF2 key derivation utility."""
-
-    def test_basic_derivation(self) -> None:
-        """Derives raw bytes from password and hex-encoded salt."""
-        result = _derive_key("password", _TEST_SALT, 1000, 128)
-        assert len(result) == 16  # 128 bits = 16 bytes
-        assert isinstance(result, bytes)
-
-    def test_deterministic(self) -> None:
-        """Same inputs produce same output."""
-        a = _derive_key("password", _TEST_SALT, 1000, 128)
-        b = _derive_key("password", _TEST_SALT, 1000, 128)
-        assert a == b
-
-    def test_matches_hashlib(self) -> None:
-        """Matches hashlib.pbkdf2_hmac with hex-decoded salt."""
-        expected = hashlib.pbkdf2_hmac(
-            "sha256",
-            b"pass",
-            bytes.fromhex(_TEST_SALT),
-            1000,
-            dklen=16,
-        )
-        result = _derive_key("pass", _TEST_SALT, 1000, 128)
-        assert result == expected
-
-
-class TestAesCcm:
-    """AES-CCM encrypt/decrypt round-trip using cryptography directly."""
-
-    def test_round_trip(self) -> None:
-        """Encrypt then decrypt returns original plaintext."""
-        key = _derive_key("password", _TEST_SALT, 1000, 128)
-        iv = bytes.fromhex(_TEST_IV)
-        plaintext = b"hello world"
-        aad = b"test"
-
-        cipher = AESCCM(key, tag_length=16)
-        encrypted = cipher.encrypt(iv, plaintext, aad)
-        decrypted = cipher.decrypt(iv, encrypted, aad)
-        assert decrypted == plaintext
-
-    def test_wrong_aad_fails(self) -> None:
-        """Decrypt with wrong AAD raises InvalidTag."""
-        key = _derive_key("password", _TEST_SALT, 1000, 128)
-        iv = bytes.fromhex(_TEST_IV)
-
-        cipher = AESCCM(key, tag_length=16)
-        encrypted = cipher.encrypt(iv, b"data", b"correct_aad")
-
-        with pytest.raises(InvalidTag):
-            cipher.decrypt(iv, encrypted, b"wrong_aad")
-
-    def test_wrong_key_fails(self) -> None:
-        """Decrypt with wrong key raises InvalidTag."""
-        key1 = _derive_key("password1", _TEST_SALT, 1000, 128)
-        key2 = _derive_key("password2", _TEST_SALT, 1000, 128)
-        iv = bytes.fromhex(_TEST_IV)
-
-        cipher1 = AESCCM(key1, tag_length=16)
-        encrypted = cipher1.encrypt(iv, b"secret", b"aad")
-
-        cipher2 = AESCCM(key2, tag_length=16)
-        with pytest.raises(InvalidTag):
-            cipher2.decrypt(iv, encrypted, b"aad")
 
 
 def _page_response(html: str) -> MagicMock:
@@ -606,3 +542,35 @@ class TestFormSjclAuthManager:
             result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
 
         assert result.success is True
+
+
+@pytest.mark.parametrize("vec", _KAT_VECTORS, ids=[f"vector{i}" for i in range(len(_KAT_VECTORS))])
+def test_login_matches_sjcl_reference(session: requests.Session, vec: dict[str, Any]) -> None:
+    """The strategy posts the reference ciphertext and decrypts the reference nonce."""
+    # Anchored to sjclCrypto.js values, not to protocol/sjcl.py: the mock
+    # server shares that module, so only an independent vector catches an
+    # input the strategy feeds it wrong (salt, IV, AAD, plaintext shape).
+    # #86 shipped because auth and mock made the same encoding error.
+    config = _make_config(
+        pbkdf2_iterations=vec["iterations"],
+        pbkdf2_key_length=vec["key_length_bits"],
+        ccm_tag_length=vec["ccm_tag_length"],
+        encrypt_aad=vec["encrypt_aad"],
+        decrypt_aad=vec["decrypt_aad"],
+    )
+    session_id = json.loads(vec["plaintext"])["Nonce"]
+    page_resp = _page_response(_login_page_html(iv=vec["iv_hex"], salt=vec["salt_hex"], session_id=session_id))
+
+    login_resp = MagicMock()
+    login_resp.status_code = 200
+    login_resp.json.return_value = {"p_status": "Match", "encryptData": vec["expected_nonce_ciphertext_hex"]}
+    session_resp = MagicMock()
+    session_resp.status_code = 200
+
+    with patch.object(session, "get", return_value=page_resp), patch.object(session, "post") as mock_post:
+        mock_post.side_effect = [login_resp, session_resp]
+        result = FormSjclAuthManager(config).authenticate(session, "http://192.168.0.1", "admin", vec["password"])
+
+    assert result.success is True
+    assert mock_post.call_args_list[0].kwargs["json"]["EncryptData"] == vec["expected_ciphertext_hex"]
+    assert session.headers.get("csrfNonce") == vec["nonce_plaintext"]

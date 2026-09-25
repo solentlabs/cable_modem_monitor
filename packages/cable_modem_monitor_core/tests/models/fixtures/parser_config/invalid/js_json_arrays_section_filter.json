@@ -1,0 +1,20 @@
+{
+  "_expected_error": "channel_type, filter must be set per array",
+  "_config": {
+    "downstream": {
+      "format": "javascript_json",
+      "resource": "/status.html",
+      "variable": "channelData",
+      "channel_type": {"fixed": "qam"},
+      "filter": {"lock_status": "Locked"},
+      "arrays": [
+        {
+          "array_path": "dsList",
+          "mappings": [
+            {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "_description": "An object whose arrays nest brackets, and a string holding '];', decodes whole; a later assignment in the script is not consumed",
+  "_html": "<html><body><script>let channelData = {\"dsList\": [{\"ChannelID\": \"1\", \"Modulation\": \"a];b\", \"Codes\": [[1, 2], [3]]}], \"meta\": {\"ids\": [1, [2]]}}; var other = [1];</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "channelData",
+    "arrays": [
+      {
+        "array_path": "dsList",
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+          {"key": "Modulation", "field": "modulation", "type": "string"}
+        ]
+      }
+    ]
+  },
+  "_expected_warning": null,
+  "_expected": [
+    {"channel_id": 1, "modulation": "a];b", "channel_number": 1}
+  ]
+}

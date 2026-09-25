@@ -97,8 +97,9 @@ reached from a protocol token rather than a status code.
 `busy` is set in the strategy, not declared per entry: the tokens come
 from firmware shared across the CBN platform, not from entry config, so
 a catalog entry has nothing to declare. `hnap` sets it the same way for
-`RELOAD` (AUTH_HNAP_SPEC.md § Restart the login); `form_pbkdf2` differs,
-its busy body being entry data (`login_busy`).
+`RELOAD` (AUTH_HNAP_SPEC.md § Restart the login); `form_pbkdf2`,
+`bearer` and `json_sjcl` differ, their busy body being entry data
+(`login_busy`).
 
 ### Lockout
 

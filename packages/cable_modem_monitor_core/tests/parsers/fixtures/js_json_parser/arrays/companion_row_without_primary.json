@@ -1,0 +1,29 @@
+{
+  "_description": "A companion row with no matching primary channel is ignored; companions never create channels",
+  "_html": "<html><body><script>let channelData = {\"dsList\": [{\"ChannelID\": \"1\"}], \"errList\": [{\"ChannelID\": \"1\", \"Correctable\": \"5\"}, {\"ChannelID\": \"99\", \"Correctable\": \"1\"}]};</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "channelData",
+    "arrays": [
+      {
+        "array_path": "dsList",
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      },
+      {
+        "array_path": "errList",
+        "merge_by": ["channel_id"],
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+          {"key": "Correctable", "field": "corrected", "type": "integer"}
+        ]
+      }
+    ]
+  },
+  "_expected_warning": null,
+  "_expected": [
+    {"channel_id": 1, "corrected": 5, "channel_number": 1}
+  ]
+}

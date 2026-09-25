@@ -1,0 +1,19 @@
+{
+  "_description": "Variable absent from every script tag warns and yields nothing",
+  "_html": "<html><body><script>var otherVar = {\"dsList\": []};</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "channelData",
+    "arrays": [
+      {
+        "array_path": "dsList",
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      }
+    ]
+  },
+  "_expected_warning": "Variable 'channelData' not found",
+  "_expected": []
+}

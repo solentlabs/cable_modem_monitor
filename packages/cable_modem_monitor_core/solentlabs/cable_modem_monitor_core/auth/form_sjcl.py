@@ -30,7 +30,6 @@ See MODEM_YAML_SPEC.md ``form_sjcl`` strategy.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import re
@@ -39,6 +38,7 @@ from typing import Any
 import requests
 
 from ..models.modem_config.auth import FormSjclAuth
+from ..protocol import sjcl
 from .base import AuthResult, BaseAuthManager
 from .response import post_json
 
@@ -95,9 +95,9 @@ class FormSjclAuthManager(BaseAuthManager):
             AuthResult with login response.
         """
         # Lazy import — only needed when this strategy is active.
-        aesccm_cls = _import_aesccm()
-        if isinstance(aesccm_cls, AuthResult):
-            return aesccm_cls
+        crypto_error = _check_crypto_available()
+        if crypto_error is not None:
+            return crypto_error
 
         config = self._config
         page_url = f"{base_url}{config.login_page}"
@@ -114,13 +114,12 @@ class FormSjclAuthManager(BaseAuthManager):
         salt = page_vars["mySalt"]
         session_id = page_vars.get("currentSessionId", "")
 
-        iv_result = _validate_iv(iv_hex)
-        if isinstance(iv_result, AuthResult):
-            return iv_result
-        iv_bytes = iv_result
+        iv_error = _validate_iv(iv_hex)
+        if iv_error is not None:
+            return iv_error
 
         # Step 2: Derive AES key via PBKDF2
-        key = _derive_key(
+        key = sjcl.derive_key(
             password,
             salt,
             config.pbkdf2_iterations,
@@ -130,16 +129,17 @@ class FormSjclAuthManager(BaseAuthManager):
         # Step 3: Encrypt credentials
         plaintext = json.dumps({"Password": password, "Nonce": session_id})
 
-        cipher = aesccm_cls(key, tag_length=config.ccm_tag_length)
-        encrypted = cipher.encrypt(
-            iv_bytes,
-            plaintext.encode("utf-8"),
-            config.encrypt_aad.encode("utf-8"),
+        encrypted_hex = sjcl.encrypt(
+            key,
+            iv_hex,
+            plaintext,
+            config.encrypt_aad,
+            config.ccm_tag_length,
         )
 
         # Step 4: POST login and check status
         login_payload = {
-            "EncryptData": encrypted.hex(),
+            "EncryptData": encrypted_hex,
             "Name": username,
             "AuthData": config.encrypt_aad,
         }
@@ -158,10 +158,11 @@ class FormSjclAuthManager(BaseAuthManager):
         enc_data_hex = login_json.get("encryptData", "")
         if enc_data_hex and config.csrf_header:
             nonce_result = _decrypt_csrf_nonce(
-                cipher,
-                iv_bytes,
+                key,
+                iv_hex,
                 enc_data_hex,
                 config.decrypt_aad,
+                config.ccm_tag_length,
             )
             if isinstance(nonce_result, AuthResult):
                 return nonce_result
@@ -188,16 +189,11 @@ class FormSjclAuthManager(BaseAuthManager):
         )
 
 
-def _import_aesccm() -> Any | AuthResult:
-    """Import AESCCM class from cryptography, or return error.
-
-    Single import point — avoids repeated lazy imports in encrypt
-    and decrypt helpers.
-    """
+def _check_crypto_available() -> AuthResult | None:
+    """Return a failed AuthResult when the ``[sjcl]`` extra is not installed."""
+    # Checked before any network I/O so a missing extra never reaches the modem.
     try:
-        from cryptography.hazmat.primitives.ciphers.aead import AESCCM
-
-        return AESCCM
+        sjcl.ensure_available()
     except ImportError:
         return AuthResult(
             success=False,
@@ -207,47 +203,35 @@ def _import_aesccm() -> Any | AuthResult:
                 "solentlabs-cable-modem-monitor-core[sjcl]"
             ),
         )
+    return None
 
 
-def _validate_iv(iv_hex: str) -> bytes | AuthResult:
-    """Validate and decode IV hex string for AES-CCM.
-
-    AES-CCM nonce must be 7-13 bytes per RFC 3610.
-    """
+def _validate_iv(iv_hex: str) -> AuthResult | None:
+    """Return a failed AuthResult when ``myIv`` is not a valid AES-CCM IV."""
     try:
-        iv_bytes = bytes.fromhex(iv_hex)
-    except ValueError:
-        return AuthResult(
-            success=False,
-            error=f"myIv is not valid hex: {iv_hex!r}",
-        )
-    if not 7 <= len(iv_bytes) <= 13:
-        return AuthResult(
-            success=False,
-            error=f"myIv decoded to {len(iv_bytes)} bytes, " "AES-CCM nonce must be 7-13 bytes",
-        )
-    return iv_bytes
+        sjcl.decode_iv(iv_hex, name="myIv")
+    except sjcl.SjclInputError as e:
+        return AuthResult(success=False, error=str(e))
+    return None
 
 
 def _decrypt_csrf_nonce(
-    cipher: Any,
-    iv: bytes,
+    key: bytes,
+    iv_hex: str,
     enc_hex: str,
     aad_str: str,
+    tag_length: int,
 ) -> str | AuthResult:
-    """Decrypt the CSRF nonce from the login response.
-
-    Returns the nonce string, or AuthResult on failure.
-    """
+    """Decrypt the CSRF nonce from the login response, or return AuthResult on failure."""
+    # The IV was validated before login, so SjclInputError here can only
+    # mean the ciphertext hex is malformed.
     try:
-        enc_bytes = bytes.fromhex(enc_hex)
-    except ValueError:
+        nonce_bytes = sjcl.decrypt(key, iv_hex, enc_hex, aad_str, tag_length)
+    except sjcl.SjclInputError:
         return AuthResult(
             success=False,
             error="encryptData in login response is not valid hex",
         )
-    try:
-        nonce_bytes = cipher.decrypt(iv, enc_bytes, aad_str.encode("utf-8"))
     except Exception:
         return AuthResult(
             success=False,
@@ -298,35 +282,6 @@ def _fetch_page_vars(
         )
 
     return variables
-
-
-def _derive_key(
-    password: str,
-    salt_hex: str,
-    iterations: int,
-    key_length_bits: int,
-) -> bytes:
-    """Derive an AES key using PBKDF2-HMAC-SHA256.
-
-    Args:
-        password: Plaintext password (UTF-8 encoded for PBKDF2).
-        salt_hex: Salt as a hex string from the login page's
-            ``mySalt`` JS variable.  Hex-decoded to binary bytes
-            to match SJCL's ``sjcl.codec.hex.toBits(salt)``
-            before calling ``sjcl.misc.pbkdf2()``.
-        iterations: PBKDF2 iteration count.
-        key_length_bits: Desired key length in bits.
-
-    Returns:
-        Raw key bytes (not hex).
-    """
-    return hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        bytes.fromhex(salt_hex),
-        iterations,
-        dklen=key_length_bits // 8,
-    )
 
 
 def _submit_login(

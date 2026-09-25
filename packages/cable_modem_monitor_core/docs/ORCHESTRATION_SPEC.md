@@ -115,7 +115,10 @@ class ModemDataCollector:
         Called by the orchestrator when it has external evidence that
         the session is dead: LOAD_AUTH signal (HTTP 401/403 on data
         page, or HNAP HTTP error on reused session) or connectivity
-        transition (unreachable → responsive).
+        transition (unreachable → responsive). Clears cookies and resets
+        every header the auth strategy declares in ``headers()`` to the
+        entry's static ``session.headers`` value, or removes it when the
+        entry sets none.
         """
 
     def attempt_logout_before_retry(self) -> None:
@@ -1322,8 +1325,8 @@ issue or reconfigures.
 
 **Transient auth failure:**
 Modem is busy and declines to serve the login: a 5xx, a response body
-the entry declares busy (`login_busy`, MODEM_YAML_SPEC
-§ `form_pbkdf2`), or a protocol token the strategy reads as a
+the entry declares busy (`login_busy` on `form_pbkdf2`, `bearer` or
+`json_sjcl`, MODEM_YAML_SPEC), or a protocol token the strategy reads as a
 restart-the-login (`hnap` `RELOAD`; `form_cbn` `cbnLogin` and
 `cbnFirstInstall`).
 

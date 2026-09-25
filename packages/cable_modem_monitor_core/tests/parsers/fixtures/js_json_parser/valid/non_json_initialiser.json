@@ -1,0 +1,15 @@
+{
+  "_description": "An earlier assignment whose value is not JSON is skipped; the later array assignment is parsed",
+  "_html": "<html><body><script>var json_ds = undefined; json_ds = [{\"ChannelID\": \"3\"}];</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "json_ds",
+    "mappings": [
+      {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 3}
+  ]
+}

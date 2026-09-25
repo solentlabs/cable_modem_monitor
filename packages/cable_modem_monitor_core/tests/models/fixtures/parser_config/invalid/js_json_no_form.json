@@ -1,0 +1,10 @@
+{
+  "_expected_error": "must have either mappings or arrays",
+  "_config": {
+    "downstream": {
+      "format": "javascript_json",
+      "resource": "/status.html",
+      "variable": "json_ds"
+    }
+  }
+}

@@ -221,30 +221,88 @@ downstream:
       type: power
 ```
 
+**Object variable, several arrays.** Some firmware assigns one object
+holding every channel array (Arris actionHandler UI, `wan.php`):
+
+```html
+<script>
+let channelData = {"ds_channels": [{"ChannelID": "1", ...}],
+                   "ofdm_channels": [{"ChannelID": "33", ...}],
+                   "error_codewords": [{"ChannelID": "1", "Correctable": "0", ...}]};
+</script>
+```
+
+The `arrays` form reads it. Each entry selects one array by
+`array_path` (dot-separated, as in the `json` format) and carries its
+own mappings. Entries without `merge_by` are primary: their channels
+are concatenated in order. An entry with `merge_by` is a companion:
+its rows only add fields to primary channels with the same key values,
+under the rules in
+[FORMAT_TABLE_SPEC.md § Companion Tables](FORMAT_TABLE_SPEC.md#companion-tables-merge_by)
+(primary wins on conflicts, unmatched primaries stay, companions never
+create channels).
+
+```yaml
+downstream:
+  format: javascript_json
+  resource: "/wan.php"
+  variable: "channelData"
+  arrays:
+    - array_path: "ds_channels"
+      channel_type: {fixed: qam}
+      mappings: [...]
+    - array_path: "ofdm_channels"
+      channel_type: {fixed: ofdm}
+      mappings: [...]
+    - array_path: "error_codewords"
+      merge_by: [channel_id]
+      mappings:
+        - {key: ChannelID, field: channel_id, type: integer}
+        - {key: Correctable, field: corrected, type: integer}
+        - {key: Uncorrectable, field: uncorrected, type: integer}
+```
+
 **Config fields:**
 
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `format` | string | yes | `javascript_json` — selects `JSJsonParser` |
 | `resource` | string | yes | URL path key in the resource dict |
-| `variable` | string | yes | JS variable name holding the JSON array |
-| `mappings` | list | yes | JSON key→field mappings (same as `json` format) |
+| `variable` | string | yes | JS variable name: an array in the flat form, an object in the `arrays` form |
+| `mappings` | list | flat form | JSON key→field mappings (same as `json` format) |
 | `mappings[].key` | string | yes | JSON object key name |
 | `mappings[].field` | string | yes | Canonical output field name |
 | `mappings[].type` | string | yes | Field type (see Common Concepts) |
-| `channel_type` | object | no | Channel type detection config |
-| `filter` | dict | no | Row filter for mixed-type arrays |
+| `channel_type` | object | no | Channel type detection config (flat form) |
+| `filter` | dict | no | Row filter for mixed-type arrays (flat form) |
+| `arrays` | list | `arrays` form | One entry per array in the object |
+| `arrays[].array_path` | string | yes | Dot-separated path to the array inside the object |
+| `arrays[].mappings` | list | yes | Mappings for that array, as above |
+| `arrays[].channel_type` | object | no | Channel type for that array |
+| `arrays[].filter` | dict | no | Row filter for that array |
+| `arrays[].merge_by` | list[string] | no | Makes the array a companion merged by these canonical fields |
+
+The flat form (`mappings` at section level) and the `arrays` form are
+mutually exclusive, and a section with `arrays` needs at least one
+primary entry.
 
 **Extraction algorithm:**
 
 1. Decode response as HTML (BeautifulSoup)
 2. Find `<script>` tag containing the variable name
-3. Extract JSON array via regex: `{variable}\s*=\s*(\[.*?\])\s*;`
-4. Parse the extracted string as JSON
-5. Map each object's keys to canonical fields via `mappings`
+3. Locate the assignment `{variable}\s*=\s*` and parse the JSON value
+   that follows it with a JSON decoder's `raw_decode`, which ends
+   where the value ends. A regex cannot delimit an object whose
+   arrays nest brackets.
+4. Flat form: the value must be an array. `arrays` form: the value
+   must be an object; each `array_path` selects an array in it.
+5. Map each object's keys to canonical fields via its mappings, then
+   merge companions into the primary channels.
 
 The `variable` field distinguishes downstream from upstream when both
 share the same resource URL (e.g., `json_dsData` vs `json_usData`).
+In the `arrays` form both sections name the same object and select
+different arrays.
 
 ### Channel number assignment (javascript_json)
 
@@ -271,8 +329,13 @@ empty for that source. No exception is raised. Per-format detail:
 - `JSEmbeddedParser`: `_extract_tag_value_list` returns `None`,
   parser logs `"Function '{name}' not found in resource '{path}'"`,
   contributes no channels.
-- `JSJsonParser`: variable regex match fails, parser logs the
-  equivalent warning, contributes no channels.
+- `JSJsonParser`: variable not found, or its value does not decode,
+  parser logs the equivalent warning, contributes no channels. In the
+  `arrays` form an `array_path` that resolves to nothing warns and
+  contributes nothing for that entry. An array that is present but
+  empty is data, not a failure: the modem has no channels of that
+  kind. Each primary entry is its own anchor, so a page missing all of
+  them still reads as a stub.
 
 This is intentional best-effort behavior — firmware variants may
 legitimately omit individual functions or variables (e.g., a

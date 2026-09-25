@@ -1,0 +1,42 @@
+{
+  "_description": "Two primaries concatenate in order with their own channel_type; the companion adds fields by channel_id and loses conflicts to the primary",
+  "_html": "<html><body><script>let channelData = {\"dsList\": [{\"ChannelID\": \"1\", \"Frequency\": 570}, {\"ChannelID\": \"2\", \"Frequency\": 578}], \"ofdmList\": [{\"ChannelID\": \"33\", \"Frequency\": 690}], \"errList\": [{\"ChannelID\": \"1\", \"Correctable\": \"5\", \"Frequency\": 999}, {\"ChannelID\": \"2\", \"Correctable\": \"7\"}, {\"ChannelID\": \"33\", \"Correctable\": \"9\"}]};</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "channelData",
+    "arrays": [
+      {
+        "array_path": "dsList",
+        "channel_type": {"fixed": "qam"},
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+          {"key": "Frequency", "field": "frequency", "type": "frequency"}
+        ]
+      },
+      {
+        "array_path": "ofdmList",
+        "channel_type": {"fixed": "ofdm"},
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+          {"key": "Frequency", "field": "frequency", "type": "frequency"}
+        ]
+      },
+      {
+        "array_path": "errList",
+        "merge_by": ["channel_id"],
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+          {"key": "Correctable", "field": "corrected", "type": "integer"},
+          {"key": "Frequency", "field": "frequency", "type": "frequency"}
+        ]
+      }
+    ]
+  },
+  "_expected_warning": null,
+  "_expected": [
+    {"channel_id": 1, "frequency": 570000000, "channel_type": "qam", "corrected": 5, "channel_number": 1},
+    {"channel_id": 2, "frequency": 578000000, "channel_type": "qam", "corrected": 7, "channel_number": 2},
+    {"channel_id": 33, "frequency": 690000000, "channel_type": "ofdm", "corrected": 9, "channel_number": 3}
+  ]
+}

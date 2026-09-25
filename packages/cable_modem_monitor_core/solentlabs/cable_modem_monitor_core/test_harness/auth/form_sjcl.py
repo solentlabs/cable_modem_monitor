@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from ...protocol import sjcl
 from ..routes import RouteEntry, normalize_path
 from .base import extract_action_config
 from .form import FormAuthHandler
@@ -138,29 +139,24 @@ class FormSjclAuthHandler(FormAuthHandler):
         then encrypts a CSRF nonce (if csrf_header is configured)
         so the auth manager's decryption succeeds end-to-end.
         """
-        import hashlib
         import json
 
         response_data: dict[str, str] = {"p_status": "Match"}
 
         if self._csrf_header:
-            from cryptography.hazmat.primitives.ciphers.aead import AESCCM
-
-            key = hashlib.pbkdf2_hmac(
-                "sha256",
-                self._TEST_PASSWORD.encode("utf-8"),
-                bytes.fromhex(self._TEST_SALT),
+            key = sjcl.derive_key(
+                self._TEST_PASSWORD,
+                self._TEST_SALT,
                 self._pbkdf2_iterations,
-                dklen=self._pbkdf2_key_length // 8,
+                self._pbkdf2_key_length,
             )
-            cipher = AESCCM(key, tag_length=self._ccm_tag_length)
-            iv_bytes = bytes.fromhex(self._TEST_IV_HEX)
-            encrypted = cipher.encrypt(
-                iv_bytes,
-                self._TEST_CSRF_NONCE.encode("utf-8"),
-                self._decrypt_aad.encode("utf-8"),
+            response_data["encryptData"] = sjcl.encrypt(
+                key,
+                self._TEST_IV_HEX,
+                self._TEST_CSRF_NONCE,
+                self._decrypt_aad,
+                self._ccm_tag_length,
             )
-            response_data["encryptData"] = encrypted.hex()
 
         body = json.dumps(response_data)
         response_headers: list[tuple[str, str]] = [("Content-Type", "application/json")]

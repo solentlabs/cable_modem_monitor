@@ -34,7 +34,7 @@ from typing import Any
 
 from ..models.parser_config.config import CHANNEL_SECTION_MODELS
 from ..models.parser_config.javascript import JSEmbeddedSection
-from ..models.parser_config.js_json import JSJsonSection
+from ..models.parser_config.js_json import JSJsonArrayDefinition, JSJsonSection
 from ..models.parser_config.json_format import JSONSection
 from ..models.parser_config.json_transposed import JSONTransposedSection
 from ..models.parser_config.system_info import (
@@ -150,8 +150,7 @@ def _parse_html_table_channels(
     resources: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], AnchorCount]:
     """Parse channels from HTML table section(s) with merge_by support."""
-    primary_channels: list[dict[str, Any]] = []
-    companion_tables: list[tuple[list[dict[str, Any]], list[str]]] = []
+    parts: list[tuple[list[dict[str, Any]], list[str] | None]] = []
 
     soup = resources.get(section.resource)
     fulfilled = 0
@@ -167,21 +166,9 @@ def _parse_html_table_channels(
         if soup is not None and find_table(soup, table_def.selector) is not None:
             fulfilled += 1
 
-        if table_def.merge_by is not None:
-            companion_tables.append((channels, table_def.merge_by))
-        else:
-            primary_channels.extend(channels)
+        parts.append((channels, table_def.merge_by))
 
-    for companion_channels, merge_by in companion_tables:
-        _merge_channels(primary_channels, companion_channels, merge_by)
-
-    # Auto-assign channel_number from 1-based row position when not
-    # already mapped by parser.yaml.  See CHANNEL_IDENTIFICATION_SPEC §10.
-    for idx, channel in enumerate(primary_channels, start=1):
-        if "channel_number" not in channel:
-            channel["channel_number"] = idx
-
-    return primary_channels, AnchorCount(expected=len(section.tables), fulfilled=fulfilled)
+    return _join_companions(parts), AnchorCount(expected=len(section.tables), fulfilled=fulfilled)
 
 
 def _parse_transposed_channels(
@@ -204,8 +191,7 @@ def _parse_transposed_channels(
             )
         ]
 
-    primary_channels: list[dict[str, Any]] = []
-    companion_tables: list[tuple[list[dict[str, Any]], list[str]]] = []
+    parts: list[tuple[list[dict[str, Any]], list[str] | None]] = []
 
     for table_def in tables:
         parser = HTMLTableTransposedParser(section.resource, table_def)
@@ -213,21 +199,9 @@ def _parse_transposed_channels(
         if not isinstance(channels, list):
             continue
 
-        if table_def.merge_by is not None:
-            companion_tables.append((channels, table_def.merge_by))
-        else:
-            primary_channels.extend(channels)
+        parts.append((channels, table_def.merge_by))
 
-    for companion_channels, merge_by in companion_tables:
-        _merge_channels(primary_channels, companion_channels, merge_by)
-
-    # Auto-assign channel_number from 1-based row position when not
-    # already mapped by parser.yaml.  See CHANNEL_IDENTIFICATION_SPEC §10.
-    for idx, channel in enumerate(primary_channels, start=1):
-        if "channel_number" not in channel:
-            channel["channel_number"] = idx
-
-    return primary_channels, resource_present(resources, section.resource)
+    return _join_companions(parts), resource_present(resources, section.resource)
 
 
 def _parse_js_embedded_channels(
@@ -316,11 +290,15 @@ def _parse_js_json_channels(
 ) -> tuple[list[dict[str, Any]], AnchorCount]:
     """Parse channels from a js_json section — JSON arrays in JS variables.
 
-    Anchor count: the section's ``variable`` is one expected anchor.
-    Fulfilled when the variable assignment is present in the soup.
+    Anchor count, flat form: the section's ``variable`` is one expected
+    anchor, fulfilled when the variable assignment is present in the
+    soup. Arrays form: see ``_parse_js_json_arrays``.
     See PARSING_SPEC.md § Parser Diagnostics, FORMAT_JAVASCRIPT_SPEC.md
     § Failure modes.
     """
+    if section.arrays is not None:
+        return _parse_js_json_arrays(section, section.arrays, resources)
+
     parser = JSJsonParser(section)
     channels = parser.parse(resources)
     if not isinstance(channels, list):
@@ -335,6 +313,33 @@ def _parse_js_json_channels(
     soup = resources.get(section.resource)
     anchors = _count_js_variable_anchors(soup, [section.variable])
     return channels, anchors
+
+
+def _parse_js_json_arrays(
+    section: JSJsonSection,
+    arrays: list[JSJsonArrayDefinition],
+    resources: dict[str, Any],
+) -> tuple[list[dict[str, Any]], AnchorCount]:
+    """Parse the arrays form: primaries concatenated, companions merged by ``merge_by``."""
+    parts: list[tuple[list[dict[str, Any]], list[str] | None]] = []
+    expected = 0
+    fulfilled = 0
+
+    for array_def in arrays:
+        parser = JSJsonParser(section, array_def)
+        channels = parser.parse(resources)
+        # Each primary entry is one anchor, fulfilled when its array_path
+        # resolves to a list (an empty list is data, not a stub). A page
+        # missing the variable fulfils none. Companions are not anchors:
+        # they only enrich primaries, so their absence never makes a page
+        # a stub. See FORMAT_JAVASCRIPT_SPEC.md § Failure modes.
+        if array_def.merge_by is None:
+            expected += 1
+            if parser.array_found:
+                fulfilled += 1
+        parts.append((channels, array_def.merge_by))
+
+    return _join_companions(parts), AnchorCount(expected=expected, fulfilled=fulfilled)
 
 
 def _parse_xml_channels(
@@ -532,8 +537,30 @@ SYSINFO_PARSERS: dict[type, Callable[..., tuple[dict[str, Any], AnchorCount, dic
 
 
 # ---------------------------------------------------------------------------
-# Merge utility (used by table and transposed factory functions)
+# Merge utilities (used by table, transposed, and javascript_json wrappers)
 # ---------------------------------------------------------------------------
+
+
+def _join_companions(parts: list[tuple[list[dict[str, Any]], list[str] | None]]) -> list[dict[str, Any]]:
+    """Concatenate primary parts in order, merge companion parts, assign channel_number."""
+    primary_channels: list[dict[str, Any]] = []
+    companion_tables: list[tuple[list[dict[str, Any]], list[str]]] = []
+    for channels, merge_by in parts:
+        if merge_by is not None:
+            companion_tables.append((channels, merge_by))
+        else:
+            primary_channels.extend(channels)
+
+    for companion_channels, merge_by in companion_tables:
+        _merge_channels(primary_channels, companion_channels, merge_by)
+
+    # Auto-assign channel_number from 1-based row position when not
+    # already mapped by parser.yaml.  See CHANNEL_IDENTIFICATION_SPEC §10.
+    for idx, channel in enumerate(primary_channels, start=1):
+        if "channel_number" not in channel:
+            channel["channel_number"] = idx
+
+    return primary_channels
 
 
 def _merge_channels(

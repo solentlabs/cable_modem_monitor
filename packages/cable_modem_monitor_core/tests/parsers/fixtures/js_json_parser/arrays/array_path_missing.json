@@ -1,0 +1,27 @@
+{
+  "_description": "An array_path absent from the object warns and contributes nothing; other entries still yield channels",
+  "_html": "<html><body><script>let channelData = {\"dsList\": [{\"ChannelID\": \"1\"}]};</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "channelData",
+    "arrays": [
+      {
+        "array_path": "dsList",
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      },
+      {
+        "array_path": "ofdmList",
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      }
+    ]
+  },
+  "_expected_warning": "Array path 'ofdmList' not found",
+  "_expected": [
+    {"channel_id": 1, "channel_number": 1}
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "downstream": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "channelData",
+    "arrays": [
+      {
+        "array_path": "dsList",
+        "channel_type": {"fixed": "qam"},
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      },
+      {
+        "array_path": "ofdmList",
+        "channel_type": {"fixed": "ofdm"},
+        "filter": {"lock_status": "Locked"},
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      },
+      {
+        "array_path": "errList",
+        "merge_by": ["channel_id"],
+        "mappings": [
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+          {"key": "Correctable", "field": "corrected", "type": "integer"}
+        ]
+      }
+    ]
+  }
+}

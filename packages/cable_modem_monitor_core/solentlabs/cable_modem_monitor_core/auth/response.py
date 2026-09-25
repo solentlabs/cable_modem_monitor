@@ -5,10 +5,12 @@ error reporting across auth strategies.  Strategy-specific
 validation (``p_status``, error fields, ``LoginResult``, etc.)
 stays in each strategy module.
 
-Four entry points:
+Five entry points:
 
 * :func:`safe_preview` — truncate arbitrary values for error
   messages and logs.
+* :func:`matches_criteria` — subset-match a parsed body against a
+  declared criterion (``login_success``, ``login_busy``).
 * :func:`parse_json_dict` — parse an existing ``Response`` as a
   JSON dict (with double-decode, type check, DEBUG log).
 * :func:`post_json` — POST JSON payload **and** parse the
@@ -40,6 +42,11 @@ def safe_preview(value: object, max_len: int = _VALUE_PREVIEW_MAX) -> str:
     if len(text) > max_len:
         return text[:max_len] + "..."
     return text
+
+
+def matches_criteria(body: dict[str, Any], criterion: dict[str, Any]) -> bool:
+    """True when every key-value pair of the criterion is present in the body."""
+    return all(body.get(k) == v for k, v in criterion.items())
 
 
 def parse_json_dict(
