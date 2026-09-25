@@ -115,7 +115,7 @@ class _MockHandler(BaseHTTPRequestHandler):
         # either way (clearing state, invalidating a token).
         for kind, matches, handle in (
             ("logout", auth.is_logout_request, auth.handle_logout),
-            ("restart", auth.is_restart_request, auth.handle_restart),
+            ("restart", auth.is_restart_request, lambda: auth.handle_restart(body=body)),
         ):
             if not matches(method, path):
                 continue
@@ -128,7 +128,11 @@ class _MockHandler(BaseHTTPRequestHandler):
                 login_page=server.login_page,
                 token_prefix=server.token_prefix,
             )
-            response = captured if captured is not None else synthesized
+            # A restart refusal is the simulated modem judging this request's
+            # body; a captured 200 answered a different one and must not rescue
+            # it. Restart only: no logout needs it, so none changes behaviour.
+            refused = kind == "restart" and synthesized.status >= 400
+            response = captured if captured is not None and not refused else synthesized
             auth.record_action(kind, response.status)
             self._send_response(response.status, response.headers, response.body)
             return

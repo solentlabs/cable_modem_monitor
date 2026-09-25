@@ -870,10 +870,12 @@ auth:
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `login_busy` | dict | `{}` | Same matching as on [`form_pbkdf2`](#form_pbkdf2), against the **decrypted** response JSON. Checked before the token. |
 
-**Success detection:** a non-2xx response fails, with the response
-attached. A decrypted response matching `login_busy` is busy
-(`AUTH_UNAVAILABLE`). Otherwise a 2xx carrying `token_header`
-succeeds. The strategy does not send the firmware's session-takeover
+**Success detection:** a response of 400 or above fails, with the
+response attached (ARCHITECTURE_DECISIONS § How to add an auth
+strategy). A decrypted response matching `login_busy` is busy
+(`AUTH_UNAVAILABLE`). Otherwise a response carrying `token_header`
+succeeds; the token is also stored as `AuthContext.token`, so actions
+can name `{auth:token}`. The strategy does not send the firmware's session-takeover
 request: taking the slot would log the user out of the modem's web UI
 on every poll.
 
@@ -1273,7 +1275,7 @@ actions:
 | `requires_session` | bool | `false` | *Logout only.* `false` = endpoint is unauthenticated and can clear any active server-side session without credentials. `true` = endpoint needs a live session; Core skips the pre-retry logout call when the session is not valid. |
 | `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`. Mutually exclusive with `json_body`. |
 | `json_body` | map | no | JSON request body. If present, body is `application/json`. Mutually exclusive with `params`. Use for REST APIs that accept JSON. |
-| `body_encryption` | enum | `none` | `sjcl`: send `json_body` encrypted under the login's SJCL session, in the envelope the auth strategy logs in with ([`json_sjcl`](#json_sjcl)). Requires `json_body` and `auth.strategy: json_sjcl`. |
+| `body_encoding` | enum | `plain` | `session`: send `json_body` wrapped the way the session's auth strategy encodes request bodies (e.g. [`json_sjcl`](#json_sjcl)'s SJCL envelope). Requires `json_body`, and an auth strategy that encodes action bodies (the one in `action_auth` when set). |
 | `headers` | map | no | Per-action headers. Merged with session-level `headers` (action wins on conflict). |
 | `pre_fetch_url` | string | no | URL to fetch before the action (establish session state or extract dynamic endpoint) |
 | `endpoint_pattern` | string | no | Keyword to match within form action attributes on the pre-fetch page. Core wraps this in a form-action regex — not a raw regex. See Architecture Decision below. |
@@ -1720,7 +1722,7 @@ rules below.
 |-----------|-----------------------|---------------|---------------|--------------------|
 | `cbn` | `form_cbn` | cookie (rotating sessionToken + stable SID) | `xml` | `cbn` |
 | `hnap` | `hnap` | implicit (uid cookie + HNAP_AUTH header) | `hnap` | `hnap` |
-| `http` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `none`, `url_token` | stateless, cookie, CSRF, or url_token | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
+| `http` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `json_sjcl`, `none`, `url_token` | stateless, cookie, CSRF, or url_token | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
 <!-- END GENERATED: yaml-constraints -->
 
 The format field in parser.yaml determines how the response is decoded.

@@ -16,6 +16,7 @@ from solentlabs.cable_modem_monitor_core.auth import (
     create_auth_manager,
 )
 from solentlabs.cable_modem_monitor_core.auth.form_sjcl import FormSjclAuthManager
+from solentlabs.cable_modem_monitor_core.auth.json_sjcl import JsonSjclAuthManager
 from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
 
 from tests._helpers import load_fixture
@@ -34,6 +35,7 @@ FIXTURES_DIR = Path(__file__).parent.parent / "models" / "fixtures" / "modem_con
 # │ auth_hnap.json       │ HnapAuthManager          │
 # │ auth_form_pbkdf2.json│ FormPbkdf2AuthManager    │
 # │ auth_form_sjcl.json  │ FormSjclAuthManager      │
+# │ auth_json_sjcl.json  │ JsonSjclAuthManager      │
 # └──────────────────────┴──────────────────────────┘
 #
 # fmt: off
@@ -46,6 +48,7 @@ FACTORY_CASES = [
     ("auth_hnap.json",        HnapAuthManager),
     ("auth_form_pbkdf2.json", FormPbkdf2AuthManager),
     ("auth_form_sjcl.json",   FormSjclAuthManager),
+    ("auth_json_sjcl.json",   JsonSjclAuthManager),
 ]
 # fmt: on
 

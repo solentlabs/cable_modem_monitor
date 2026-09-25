@@ -11,7 +11,8 @@ See MODEM_YAML_SPEC.md Actions section and ORCHESTRATION_SPEC.md.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from ...connectivity import create_session
 from ...protocol.cbn import cbn_params
@@ -65,6 +66,12 @@ def execute_action(
         # {auth:...} placeholders resolve from the session that sends the
         # request, so a per-action session brings its own context.
         auth_context: AuthContext | None = collector._auth_context
+        # body_encoding: session is encoded by the manager whose login the
+        # request rides on. Without a live context the collector's session
+        # was cleared, so its manager's encoder is not offered.
+        encode_body: Callable[[dict[str, Any]], dict[str, Any] | None] | None = (
+            collector._auth_manager.encode_action_body if auth_context is not None else None
+        )
         if action.action_auth is not None:
             from ...auth.factory import create_auth_manager_for_action
 
@@ -85,6 +92,7 @@ def execute_action(
                 )
             session = fresh
             auth_context = auth_result.auth_context
+            encode_body = manager.encode_action_body
         return execute_http_action(
             session,
             collector._base_url,
@@ -94,6 +102,7 @@ def execute_action(
             model=model,
             query_params=query_params or None,
             auth_context=auth_context,
+            encode_body=encode_body,
         )
 
     if isinstance(action, HnapAction):

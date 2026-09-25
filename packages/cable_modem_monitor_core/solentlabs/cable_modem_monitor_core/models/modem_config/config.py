@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .actions import ActionsConfig
+from .actions import ActionsConfig, HttpAction
 from .auth import AuthConfig, get_transport_strategy_sets
 from .health import HealthConfig
 from .metadata import AttributionConfig, GapEntry, HardwareConfig, ReferencesConfig
@@ -77,6 +77,7 @@ class ModemConfig(BaseModel):
         _check_auth_strategy(self, errors)
         _check_session_block(self, errors)
         _check_action_types(self, errors)
+        _check_action_encoding(self, errors)
         if errors:
             raise ValueError("; ".join(errors))
         return self
@@ -144,3 +145,25 @@ def _check_action_types(config: ModemConfig, errors: list[str]) -> None:
                 f"transport '{config.transport}' requires action type "
                 f"'{expected_type}' for '{action_name}', got '{action.type}'"
             )
+
+
+def _check_action_encoding(config: ModemConfig, errors: list[str]) -> None:
+    """Validate a session-encoded action body runs under a strategy that supplies the encoder."""
+    if config.actions is None:
+        return
+    for action_name in ("restart", "logout"):
+        action = getattr(config.actions, action_name, None)
+        if not isinstance(action, HttpAction) or action.body_encoding != "session":
+            continue
+        # The encoder comes from whichever login runs the action: its own
+        # action_auth when declared, otherwise the collector's session. The
+        # strategy's ClassVar decides, so no strategy is named here.
+        auth = action.action_auth if action.action_auth is not None else config.auth
+        if auth is not None and type(auth).encodes_action_bodies:
+            continue
+        got = f"'{auth.strategy}'" if auth is not None else "none"
+        source = " (action_auth)" if action.action_auth is not None else ""
+        errors.append(
+            f"body_encoding 'session' on '{action_name}' requires an auth strategy that encodes action bodies, "
+            f"got {got}{source}"
+        )

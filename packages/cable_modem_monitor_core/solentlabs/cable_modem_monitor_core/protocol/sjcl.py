@@ -21,6 +21,7 @@ See AUTH_SJCL_SPEC.md § Crypto Library, the implementation authority.
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -33,6 +34,19 @@ _IV_MAX_BYTES = 13
 
 class SjclInputError(ValueError):
     """Malformed hex or IV length, raised before any cipher operation."""
+
+
+@dataclass(frozen=True)
+class SjclSession:
+    """SJCL parameters a login derived, reused to encrypt the session's later request bodies."""
+
+    # The key is the password's PBKDF2 output: kept out of repr so no log,
+    # exception or diagnostics dump that renders an AuthContext prints it.
+    key: bytes = field(repr=False)
+    iv_hex: str
+    user: str
+    aad: str
+    tag_length: int
 
 
 def ensure_available() -> None:

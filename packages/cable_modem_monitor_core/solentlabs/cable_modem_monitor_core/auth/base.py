@@ -12,6 +12,7 @@ import abc
 import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 import requests
 
@@ -213,6 +214,10 @@ class BaseAuthManager(abc.ABC):
     def loader_url_token(self, session: requests.Session, context: AuthContext | None) -> tuple[str, str]:
         """``(token_prefix, token)`` the HTTP loader appends to data URLs; empty when none is sent."""
         return ("", "")
+
+    def encode_action_body(self, body: dict[str, Any]) -> dict[str, Any] | None:
+        """Wrap ``body`` the way this session's firmware expects; ``None`` when it cannot encode."""
+        return None
 
     def _prefixed_url_token(
         self,

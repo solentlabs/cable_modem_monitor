@@ -58,6 +58,16 @@ FORM_SJCL = {
     "pbkdf2_key_length": 128,
     "cookie_name": _SID,
 }
+JSON_SJCL = {
+    "strategy": "json_sjcl",
+    "login_page": "/login.php",
+    "login_endpoint": "/login",
+    "pbkdf2_iterations": 1000,
+    "pbkdf2_key_length": 128,
+    "aad": "AAD",
+    "token_header": "X-Token",
+    "cookie_name": _SID,
+}
 NONE = {"strategy": "none"}
 URL_TOKEN = {"strategy": "url_token", "login_page": "/login.html", "cookie_name": _SID}
 URL_TOKEN_PREFIX = {**URL_TOKEN, "token_prefix": _PREFIX}
@@ -95,6 +105,7 @@ URL_TOKEN_CASES: list[tuple[dict[str, Any] | None, AuthContext | None, dict[str,
     (FORM_NONCE,                      CTX_TOKEN, COOKIE,  "",         "form_nonce-unset"),
     (FORM_PBKDF2,                     CTX_TOKEN, COOKIE,  "",         "form_pbkdf2-unset"),
     (FORM_SJCL,                       CTX_TOKEN, COOKIE,  "",         "form_sjcl-unset"),
+    (JSON_SJCL,                       CTX_TOKEN, COOKIE,  "",         "json_sjcl-unset"),
     (URL_TOKEN,                       CTX_TOKEN, COOKIE,  "",         "url_token-unset"),
     # -- url_token with token_prefix ----------------------------------------------
     (URL_TOKEN_PREFIX,                CTX_TOKEN, COOKIE,  "tok=T1",   "url_token-context_token"),

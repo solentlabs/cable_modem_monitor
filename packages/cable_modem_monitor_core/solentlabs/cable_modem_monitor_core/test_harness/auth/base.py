@@ -168,8 +168,11 @@ class AuthHandler:
             return False
         return _template_match(_segments(self._actions.restart_path), _segments(path))
 
-    def handle_restart(self) -> RouteEntry:
+    def handle_restart(self, *, body: bytes = b"") -> RouteEntry:
         """Handle a restart request. Returns 200 and clears session."""
+        # body is the restart request's body, for strategies whose modem
+        # checks it (json_sjcl decrypts it). A status >= 400 returned here
+        # is a refusal and wins over a captured response.
         return RouteEntry(status=200, headers=[], body="OK")
 
     def get_route_override(

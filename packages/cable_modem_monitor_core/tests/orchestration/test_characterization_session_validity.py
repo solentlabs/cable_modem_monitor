@@ -49,6 +49,16 @@ FORM_PBKDF2_SID = {**FORM_PBKDF2, "cookie_name": _SID}
 FORM_SJCL = {"strategy": "form_sjcl", "login_endpoint": "/login", "pbkdf2_iterations": 1000, "pbkdf2_key_length": 128}
 FORM_SJCL_SID = {**FORM_SJCL, "cookie_name": _SID}
 HNAP = {"strategy": "hnap", "hmac_algorithm": "md5"}
+JSON_SJCL = {
+    "strategy": "json_sjcl",
+    "login_page": "/login.php",
+    "login_endpoint": "/login",
+    "pbkdf2_iterations": 1000,
+    "pbkdf2_key_length": 128,
+    "aad": "AAD",
+    "token_header": "X-Token",
+}
+JSON_SJCL_SID = {**JSON_SJCL, "cookie_name": _SID}
 NONE = {"strategy": "none"}
 URL_TOKEN = {"strategy": "url_token", "login_page": "/login.html"}
 URL_TOKEN_SID = {**URL_TOKEN, "cookie_name": _SID}
@@ -137,6 +147,12 @@ SESSION_VALIDITY_CASES: list[tuple[dict[str, Any] | None, AuthContext | None, di
     (HNAP,              CTX_KEY,   {},                                  False, "hnap-no_uid-key"),
     (HNAP,              CTX,       {},                                  False, "hnap-no_uid-no_key"),
     (HNAP,              CTX_KEY,   {"PrivateKey": "K1"},                False, "hnap-privatekey_cookie_only"),
+    # -- json_sjcl ----------------------------------------------------------------
+    (JSON_SJCL,         NEVER,     {},                                  False, "json_sjcl-never"),
+    (JSON_SJCL,         CTX,       {},                                  True,  "json_sjcl-ctx-no_cookie_name"),
+    (JSON_SJCL_SID,     NEVER,     {_SID: "C1"},                        False, "json_sjcl_sid-never-cookie"),
+    (JSON_SJCL_SID,     CTX,       {_SID: "C1"},                        True,  "json_sjcl_sid-ctx-cookie"),
+    (JSON_SJCL_SID,     CTX,       {},                                  False, "json_sjcl_sid-ctx-no_cookie"),
     # -- url_token ----------------------------------------------------------------
     (URL_TOKEN,         NEVER,     {},                                  False, "url_token-never"),
     (URL_TOKEN,         CTX_TOKEN, {},                                  True,  "url_token-token-no_cookie_name"),

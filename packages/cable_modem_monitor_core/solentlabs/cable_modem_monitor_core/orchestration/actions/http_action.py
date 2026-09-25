@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import requests
 import requests.cookies
@@ -51,11 +52,25 @@ def execute_http_action(
     model: str = "",
     query_params: dict[str, str] | None = None,
     auth_context: AuthContext | None = None,
+    encode_body: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
 ) -> ActionResult:
     """Execute an HTTP action (logout, restart); connection errors on restart are treated as success."""
     stripped_base = base_url.rstrip("/")
     level = EventLevel(log_level)
     action_name = action.method
+
+    # Encode before anything goes on the wire: without an encoder, or one
+    # that cannot encode for this session, the action fails, and plaintext
+    # is never the fallback.
+    json_body = action.json_body
+    if action.body_encoding == "session" and json_body is not None:
+        encoded = encode_body(json_body) if encode_body is not None else None
+        if encoded is None:
+            return ActionResult(
+                success=False,
+                message="body_encoding: session needs an authenticated session that encodes bodies; nothing was sent",
+            )
+        json_body = encoded
 
     # Phase 1 + 2: Pre-fetch and endpoint extraction
     endpoint = _resolve_endpoint(
@@ -84,11 +99,11 @@ def execute_http_action(
     log_event(_logger, ActionStarted(model=model, transport="http", action_name=action_name, level=level))
 
     try:
-        if action.json_body is not None:
+        if json_body is not None:
             resp = session.request(
                 action.method,
                 url,
-                json=action.json_body,
+                json=json_body,
                 headers=headers,
                 timeout=timeout,
             )

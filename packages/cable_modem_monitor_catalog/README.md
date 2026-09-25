@@ -164,7 +164,7 @@ _Scale: 2010-2026 (16 years)_
   - No auth: ![none](https://img.shields.io/badge/-none-808080?style=flat-square) No Authentication
   - Simple: ![basic](https://img.shields.io/badge/-basic-C07820?style=flat-square) Basic Authentication
   - Form-based: ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square) Form Login | ![nonce](https://img.shields.io/badge/-nonce-3A6A9E?style=flat-square) Form Login (Nonce) | ![pbkdf2](https://img.shields.io/badge/-pbkdf2-4A9A5B?style=flat-square) Form Login (PBKDF2) | ![sjcl](https://img.shields.io/badge/-sjcl-7B4FB8?style=flat-square) Form Login (SJCL) | ![cbn](https://img.shields.io/badge/-cbn-8B6914?style=flat-square) Form Login CBN
-  - Token-based: ![token](https://img.shields.io/badge/-token-0E9A8B?style=flat-square) URL Token | ![bearer](https://img.shields.io/badge/-bearer-1A7FAA?style=flat-square) JSON Login
+  - Token-based: ![token](https://img.shields.io/badge/-token-0E9A8B?style=flat-square) URL Token | ![bearer](https://img.shields.io/badge/-bearer-1A7FAA?style=flat-square) JSON Login | ![json-sjcl](https://img.shields.io/badge/-json--sjcl-9B6FD8?style=flat-square) JSON Login (SJCL)
   - Protocol: ![hnap](https://img.shields.io/badge/-hnap-5B8FBF?style=flat-square) HNAP
 
 ## Chipset Reference

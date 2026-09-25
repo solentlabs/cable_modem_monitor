@@ -620,8 +620,8 @@ about a strategy has exactly one of three homes:
 
 | Kind of knowledge | Home | Existing examples |
 |---|---|---|
-| A static fact about the strategy | ClassVar on its model | `display_name`, `transport`, `stateless` |
-| Behaviour that needs the live session or the strategy's secret | overridable `BaseAuthManager` method, safe default | `headers()`, `auth_failure_mode()`, `session_is_valid()`, `session_cookie_name()`, `loader_url_token()` |
+| A static fact about the strategy | ClassVar on its model | `display_name`, `transport`, `stateless`, `encodes_action_bodies` |
+| Behaviour that needs the live session or the strategy's secret | overridable `BaseAuthManager` method, safe default | `headers()`, `auth_failure_mode()`, `session_is_valid()`, `session_cookie_name()`, `loader_url_token()`, `encode_action_body()` |
 | A protocol-locked transport's own parameters | that transport's protocol module, with typed access: `protocol/hnap.py` `hmac_algorithm()`, `protocol/cbn.py` `cbn_params()` | `hmac_algorithm`, the CBN getter/setter endpoints and session cookie |
 
 Setup-time work a strategy needs (form_nonce's credential-encoding
@@ -1089,8 +1089,9 @@ gated branch the unset path must skip.
 request is the pre-extension request, asserted per current entry
 (§ How to extend an existing auth strategy). A token source is a named
 value, never a second flag (§ Auth extraction sources are named, not
-flagged). `json_sjcl` reuses `bearer`'s header-placement code rather
-than keeping its own. `{host}` in `extra_fields` is the one
+flagged). Header placement is one helper in `auth/response.py` that
+both `bearer` and `json_sjcl` call; no strategy imports a sibling
+strategy. `{host}` in `extra_fields` is the one
 placeholder; a second would be a new key in that fixed set, not a
 template syntax (MODEM_YAML_SPEC § a fixed key set).
 
@@ -1140,14 +1141,19 @@ by JSON path, was rejected in MODEM_YAML_SPEC.md § Architecture Decision:
 a fixed key set, not a template language. A third value is a third field
 here, not a new syntax there.
 
-**Extended for encrypted action bodies (#210).** `sjcl_session` holds the
-SJCL parameters `json_sjcl` derived at login (key, IV, user, AAD, tag
-length), because the firmware encrypts post-login requests under the
-same session key. An action declaring `body_encryption: sjcl` is wrapped
-by the one function `json_sjcl` logs in with, so the envelope has a single
-implementation. The key lives exactly as long as the session:
-`clear_session()` drops the context, and no failure log prints a request
-body.
+**Encrypted action bodies are not a field (#210).** The actionHandler
+firmware encrypts post-login request bodies under the login's session
+key. Encoding one needs the strategy's secret, so it is the manager
+hook `encode_action_body()` (§ Strategy knowledge lives with the
+strategy), and the key stays on the `json_sjcl` manager, which wraps
+the body with the one function it logs in with. A field holding the
+strategy's session type was rejected because it made the base module
+and the executor import one strategy's internals; a callable field was
+rejected because the context is data only. Which strategies encode is
+the model ClassVar `encodes_action_bodies`, so config validation names
+no strategy. A failed login drops the key, the dispatcher offers the
+collector's encoder only while a login context exists, and neither
+`repr` nor any failure log prints the key.
 
 ---
 

@@ -1,0 +1,27 @@
+{
+  "_description": "SJCL JSON-login modem: a captured login page whose sjclEncryptObj salt and IV differ from the handler's synthesized ones, one data page, and a captured restart answered 200",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/login.php"},
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {
+          "text": "<script>function addUserInfoToEncryptObj(user, password) {\n  sjclEncryptObj.salt = \"0f1e2d3c4b5a6978\";\n  sjclEncryptObj.iv = \"0102030405060708\";\n}</script>"
+        }
+      }
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/status.php"},
+      "response": {"status": 200, "headers": [], "content": {"text": "<html>DS data</html>"}}
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "http://192.168.100.1/actionHandler/restart.php",
+        "postData": {"mimeType": "application/json", "text": "{\"EncryptedData\":\"00\",\"user\":\"admin\"}"}
+      },
+      "response": {"status": 200, "headers": [], "content": {"text": "{}"}}
+    }
+  ]
+}

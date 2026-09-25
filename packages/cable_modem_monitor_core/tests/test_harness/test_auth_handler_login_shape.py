@@ -52,6 +52,15 @@ FORM_SJCL = {
     "pbkdf2_key_length": 128,
 }
 HNAP = {"strategy": "hnap", "hmac_algorithm": "md5"}
+JSON_SJCL = {
+    "strategy": "json_sjcl",
+    "login_page": "/login.php",
+    "login_endpoint": "/json_login",
+    "pbkdf2_iterations": 1000,
+    "pbkdf2_key_length": 128,
+    "aad": "AAD",
+    "token_header": "X-Session-Token",
+}
 NONE = {"strategy": "none"}
 URL_TOKEN = {"strategy": "url_token", "login_page": "/status.html", "token_prefix": "ct_"}
 
@@ -71,6 +80,7 @@ URL_TOKEN = {"strategy": "url_token", "login_page": "/status.html", "token_prefi
 # │ form_pbkdf2  │ ""                      │ /api/v1/session/login │ ""           │ login_endpoint                │
 # │ form_sjcl    │ /                       │ /sjcl_login           │ ""           │ default login_page, endpoint  │
 # │ hnap         │ ""                      │ ""                    │ ""           │ declares none of the three    │
+# │ json_sjcl    │ /login.php              │ /json_login           │ ""           │ login_page, login_endpoint    │
 # │ none         │ ""                      │ ""                    │ ""           │ declares none of the three    │
 # │ url_token    │ /status.html            │ ""                    │ ct_          │ login_page, token_prefix      │
 # └──────────────┴─────────────────────────┴───────────────────────┴──────────────┴───────────────────────────────┘
@@ -87,6 +97,7 @@ LOGIN_SHAPE_CASES: list[tuple[dict[str, Any] | None, str, str, str, str]] = [
     (FORM_PBKDF2,  "",                        "/api/v1/session/login", "",           "form_pbkdf2"),
     (FORM_SJCL,    "/",                       "/sjcl_login",           "",           "form_sjcl"),
     (HNAP,         "",                        "",                      "",           "hnap"),
+    (JSON_SJCL,    "/login.php",              "/json_login",           "",           "json_sjcl"),
     (NONE,         "",                        "",                      "",           "none"),
     (URL_TOKEN,    "/status.html",            "",                      "ct_",        "url_token"),
 ]

@@ -226,7 +226,7 @@ graph TD
     HA --> HS["<b>SESSION</b><hr/>• uid + PrivateKey cookies<br/>• HNAP_AUTH header"]
     HS --> HF["<b>FORMAT</b><hr/>• hnap (JSON + delimiters)"]
 
-    HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• bearer<br/>• form / form_nonce<br/>• form_pbkdf2 🔗<br/>• form_sjcl 🔗<br/>• url_token 🔗"]
+    HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• bearer<br/>• form / form_nonce<br/>• form_pbkdf2 🔗<br/>• form_sjcl 🔗<br/>• json_sjcl 🔗<br/>• url_token 🔗"]
     HTA --> HTS["<b>SESSION</b><hr/>• stateless<br/>• cookie<br/>• CSRF 🔗<br/>• url_token 🔗"]
     HTS --> HTF["<b>FORMAT</b><hr/>• table<br/>• table_transposed<br/>• javascript<br/>• javascript_json<br/>• javascript_vars<br/>• html_fields<br/>• json<br/>• json_transposed"]
 
@@ -274,7 +274,7 @@ choosing `json` format doesn't require `form_pbkdf2` auth.
 |-----------|--------|------------|---------------|--------------------|
 | `cbn` | `CBNLoader` → `Element` | `form_cbn` | `xml` | `cbn` |
 | `hnap` | `HNAPLoader` → `dict` | `hnap` | `hnap` | `hnap` |
-| `http` | `HTTPResourceLoader` → `BeautifulSoup` or `dict` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `none`, `url_token` | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
+| `http` | `HTTPResourceLoader` → `BeautifulSoup` or `dict` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `json_sjcl`, `none`, `url_token` | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
 <!-- END GENERATED: constraint-summary -->
 
 At runtime, the format declared in parser.yaml determines how the response
@@ -344,6 +344,7 @@ from modem.yaml:
 | `form_pbkdf2` | `http` | No |
 | `form_sjcl` | `http` | No |
 | `hnap` | `hnap` | No |
+| `json_sjcl` | `http` | No |
 | `none` | `http` | Yes |
 | `url_token` | `http` | No |
 <!-- END GENERATED: auth-strategies -->
@@ -430,6 +431,7 @@ knowledge moved:
 | `session_cookie_name()` | `""` | strategies whose config declares `cookie_name`. `form_cbn` does not: its session reads valid after login until the CBN session work detects expiry. |
 | `session_is_valid(session, context)` | no context: `False`; else the `session_cookie_name()` cookie is in the jar when one is named; else `True` | `none` (always `True`), `hnap` (uid cookie and `context.private_key`) |
 | `loader_url_token(session, context)` | no token | `url_token`, and `bearer` with `token_placement: query`: the configured `token_prefix` with `context.url_token`, falling back to the session cookie's value when the login gave none |
+| `encode_action_body(body)` | `None`: this session cannot encode, so a `body_encoding: session` action fails and sends nothing | `json_sjcl`: the SJCL envelope under the last successful login's key. Its model sets `encodes_action_bodies`, which config validation reads. |
 
 A new hook is added with its first implementer, never ahead of one.
 
@@ -950,8 +952,13 @@ the capture:
 - **The capture answers when it has the exchange.** The handler is
   consulted for the session side effect either way — clearing state,
   invalidating a token — but a captured response wins over a
-  synthesized one. Most captures record data collection only, so a
-  synthesized response remains the common case for restart.
+  synthesized one, unless the handler refuses a restart (status 400 or
+  above): a captured 200 answered a different request and must not
+  rescue one the simulated modem would reject, such as a plaintext
+  body where the firmware expects an encrypted one. Logout keeps the
+  capture's answer unconditionally. Most captures
+  record data collection only, so a synthesized response remains the
+  common case for restart.
 - **Action matching is uniform.** Logout and restart are matched from
   the declared `actions:` block for every strategy, not re-implemented
   per handler. When each handler matched for itself, `basic` and
@@ -983,6 +990,15 @@ omits or invents matches the capture regardless. Where a modem
 validates one of those, no capture can fail the test, and the
 assertion has to be written against the request Core builds. See
 ARCHITECTURE_DECISIONS.md § How to extend an existing auth strategy.
+
+**Nor does replay verify crypto.** The `form_sjcl` and `json_sjcl`
+handlers decrypt with the same `protocol/sjcl.py` Core encrypts with, so
+a replay proves the two agree on wire shape and flow, not that the
+encryption matches the firmware: an encoding error both sides share
+passes (#86). The `form_cbn` handler accepts any encrypted password, so
+its replay says nothing about the crypto at all. Crypto correctness
+rests on known-answer tests anchored to reference values from the
+firmware's own JavaScript, and finally on hardware.
 
 The pass criterion follows. `ActionResult.success` now carries the
 response status for HTTP actions, and the runner asserts it, plus the

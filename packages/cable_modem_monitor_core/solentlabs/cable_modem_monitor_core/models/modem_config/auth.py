@@ -1,6 +1,6 @@
 """Auth strategy models for modem.yaml.
 
-Ten strategies as a discriminated union on the 'strategy' field.
+Eleven strategies as a discriminated union on the 'strategy' field.
 Each model carries ``display_name``, ``transport``, and ``stateless``
 ClassVars so display labels, transport validation sets, factory
 dispatch, login-page detection, and the published constraint tables
@@ -30,6 +30,10 @@ class AuthStrategyBase(BaseModel):
     display_name: ClassVar[str]
     transport: ClassVar[str]
     stateless: ClassVar[bool]
+    # True when the strategy's manager overrides encode_action_body(), so an
+    # action may declare body_encoding: session. Validation reads this, never
+    # a strategy name.
+    encodes_action_bodies: ClassVar[bool] = False
 
 
 class NoneAuth(AuthStrategyBase):
@@ -297,6 +301,28 @@ class BearerAuth(AuthStrategyBase):
         return self
 
 
+class JsonSjclAuth(AuthStrategyBase):
+    """JSON login with an SJCL-encrypted body. See MODEM_YAML_SPEC.md § json_sjcl."""
+
+    model_config = ConfigDict(extra="forbid")
+    strategy: Literal["json_sjcl"]
+    login_page: str
+    login_endpoint: str
+    method: Literal["PUT", "POST"] = "PUT"
+    pbkdf2_iterations: int
+    pbkdf2_key_length: int
+    ccm_tag_length: int = 16
+    aad: str
+    token_header: str
+    cookie_name: str = ""
+    login_busy: dict[str, Any] = Field(default_factory=dict)
+
+    display_name: ClassVar[str] = "JSON Login (SJCL)"
+    transport: ClassVar[str] = "http"
+    stateless: ClassVar[bool] = False
+    encodes_action_bodies: ClassVar[bool] = True
+
+
 AuthConfig = Annotated[
     Annotated[BasicAuth, Tag("basic")]
     | Annotated[BearerAuth, Tag("bearer")]
@@ -306,6 +332,7 @@ AuthConfig = Annotated[
     | Annotated[FormPbkdf2Auth, Tag("form_pbkdf2")]
     | Annotated[FormSjclAuth, Tag("form_sjcl")]
     | Annotated[HnapAuth, Tag("hnap")]
+    | Annotated[JsonSjclAuth, Tag("json_sjcl")]
     | Annotated[NoneAuth, Tag("none")]
     | Annotated[UrlTokenAuth, Tag("url_token")],
     Discriminator("strategy"),
@@ -326,6 +353,7 @@ _AUTH_MODELS: list[type[AuthStrategyBase]] = [
     FormPbkdf2Auth,
     FormSjclAuth,
     HnapAuth,
+    JsonSjclAuth,
     NoneAuth,
     UrlTokenAuth,
 ]

@@ -127,7 +127,7 @@ class BearerAuthHandler(AuthHandler):
         """Return 401 for requests arriving without the bearer token."""
         return RouteEntry(status=401, headers=[], body="Unauthorized")
 
-    def handle_restart(self) -> RouteEntry:
+    def handle_restart(self, *, body: bytes = b"") -> RouteEntry:
         """Accept restart — the modem is rebooting, so the token dies with it."""
         _logger.debug("Mock server: restart accepted — bearer token invalidated")
         return RouteEntry(status=200, headers=[], body="OK")

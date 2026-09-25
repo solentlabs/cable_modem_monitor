@@ -10,7 +10,7 @@ import requests
 
 from ..models.modem_config.auth import BearerAuth
 from .base import AuthContext, AuthResult, BaseAuthManager
-from .response import matches_criteria, safe_preview
+from .response import matches_criteria, place_token_header, safe_preview
 
 _logger = logging.getLogger(__name__)
 
@@ -137,7 +137,7 @@ class BearerAuthManager(BaseAuthManager):
         if config.token_placement == "authorization":
             session.headers["Authorization"] = f"Bearer {token}"
         elif config.token_placement == "header":
-            session.headers[config.token_header] = token
+            place_token_header(session, config.token_header, token)
         else:
             # A query-placed token reaches data URLs through url_token and the
             # declared token_prefix, the same path url_token auth uses.

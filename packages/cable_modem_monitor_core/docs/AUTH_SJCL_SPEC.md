@@ -141,7 +141,8 @@ Fields that map to **firmware** (Arris-level):
    PBKDF2-HMAC-SHA256(password.utf8, hex_decode(salt), iterations, key_len)
 
 3. Encrypt credentials:
-   plaintext = compact JSON {"username": lower(<user>), "password": "<pw>"}
+   plaintext = compact JSON {"username": lower(<user>), "password": "<pw>"},
+     non-ASCII kept as raw UTF-8, matching JSON.stringify byte for byte
    ciphertext = AES-CCM(key, hex_decode(iv), plaintext.utf8, aad=aad.utf8)
 
 4. <method> login (login_endpoint), Content-Type: application/json:
@@ -165,9 +166,9 @@ under its own session's key (see Known Gaps).
 
 **Post-login requests.** The firmware encrypts later AJAX bodies with
 the same key, IV and user saved at login (`getEncryptionParamsFromSession`,
-login.php:255, 309-311). `json_sjcl` keeps them in
-`AuthContext.sjcl_session`, and an HTTP action declaring
-`body_encryption: sjcl` sends
+login.php:255, 309-311). The `json_sjcl` manager keeps them for its
+`encode_action_body()` hook, and an HTTP action declaring
+`body_encoding: session` sends
 `{"EncryptedData": hex(AES-CCM(compact JSON(json_body))), "user": <user>}`
 through the same function as step 3-4. Evidence: the restart page builds
 `{action: 'restart', module: 'gateway'}` (restore_reboot.php:937, entry
@@ -202,8 +203,8 @@ table. Crypto-library fields: `pbkdf2_iterations`, `pbkdf2_key_length`,
 `login_busy`.
 
 Token handling after login is shared with `bearer`'s
-`token_placement: header` (MODEM_YAML_SPEC § `bearer`): one
-implementation, two strategies.
+`token_placement: header` (MODEM_YAML_SPEC § `bearer`) through one
+helper in `auth/response.py`: one implementation, two strategies.
 
 ## Evidence Base
 

@@ -134,7 +134,7 @@ class FormAuthHandler(AuthHandler):
         _logger.debug("Mock server: logout — session cleared")
         return RouteEntry(status=200, headers=[], body="OK")
 
-    def handle_restart(self) -> RouteEntry:
+    def handle_restart(self, *, body: bytes = b"") -> RouteEntry:
         """Accept restart and clear session (modem is rebooting)."""
         self._authenticated = False
         _logger.debug("Mock server: restart accepted — session cleared")

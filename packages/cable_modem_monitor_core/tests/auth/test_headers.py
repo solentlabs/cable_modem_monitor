@@ -23,6 +23,7 @@ from solentlabs.cable_modem_monitor_core.auth.form_nonce import FormNonceAuthMan
 from solentlabs.cable_modem_monitor_core.auth.form_pbkdf2 import FormPbkdf2AuthManager
 from solentlabs.cable_modem_monitor_core.auth.form_sjcl import FormSjclAuthManager
 from solentlabs.cable_modem_monitor_core.auth.hnap import HnapAuthManager
+from solentlabs.cable_modem_monitor_core.auth.json_sjcl import JsonSjclAuthManager
 from solentlabs.cable_modem_monitor_core.auth.none import NoneAuthManager
 from solentlabs.cable_modem_monitor_core.auth.url_token import UrlTokenAuthManager
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
@@ -33,6 +34,7 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     FormPbkdf2Auth,
     FormSjclAuth,
     HnapAuth,
+    JsonSjclAuth,
     UrlTokenAuth,
 )
 
@@ -94,6 +96,21 @@ _CASES: list[tuple[BaseAuthManager, frozenset[str], str]] = [
     (_sjcl(""), frozenset({"cookie"}), "form_sjcl — no csrf_header configured"),
     (_pbkdf2("X-CSRF-Token"), frozenset({"cookie", "x-csrf-token"}), "form_pbkdf2 — adds configured csrf_header"),
     (_pbkdf2(""), frozenset({"cookie"}), "form_pbkdf2 — no csrf_header configured"),
+    (
+        JsonSjclAuthManager(
+            JsonSjclAuth(
+                strategy="json_sjcl",
+                login_page="/login.php",
+                login_endpoint="/login",
+                pbkdf2_iterations=1000,
+                pbkdf2_key_length=128,
+                aad="AAD",
+                token_header="X-Session-Token",
+            )
+        ),
+        frozenset({"cookie", "x-session-token"}),
+        "json_sjcl — adds configured token_header (lowercased)",
+    ),
 ]
 
 

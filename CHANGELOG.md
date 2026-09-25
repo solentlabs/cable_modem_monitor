@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the modem's address), read the token from a response header, and send
   it back in a named header or the URL query. Entries that set none of
   these send exactly the login they sent before. (#213)
+- **`json_sjcl` auth for firmware that encrypts its JSON login with
+  SJCL.** Salt and IV come from the login page and the session token
+  from a response header. An HTTP action can declare
+  `body_encoding: session` to send its body encrypted under the same
+  session, which is how this firmware restarts. (#210)
 
 ### Changed
 

@@ -44,6 +44,15 @@ OTHER_STRATEGIES: list[dict[str, Any] | None] = [
     {"strategy": "form_pbkdf2", "login_endpoint": "/api/login", "pbkdf2_iterations": 1000, "pbkdf2_key_length": 128},
     {"strategy": "form_sjcl", "login_endpoint": "/login", "pbkdf2_iterations": 1000, "pbkdf2_key_length": 128},
     {"strategy": "hnap", "hmac_algorithm": "md5"},
+    {
+        "strategy": "json_sjcl",
+        "login_page": "/login.php",
+        "login_endpoint": "/login",
+        "pbkdf2_iterations": 1000,
+        "pbkdf2_key_length": 128,
+        "aad": "AAD",
+        "token_header": "X-Token",
+    },
     {"strategy": "none"},
     {"strategy": "url_token", "login_page": "/login.html"},
 ]

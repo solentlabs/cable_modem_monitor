@@ -1,9 +1,9 @@
 """Tests for the ``BaseAuthManager`` session hooks and each strategy's overrides.
 
-Covers ``session_cookie_name()``, ``session_is_valid()`` and
-``loader_url_token()`` (ARCHITECTURE.md § Auth manager hooks): the
-defaults on a bare subclass, then every strategy built through the
-auth factory from a validated config.
+Covers ``session_cookie_name()``, ``session_is_valid()``,
+``loader_url_token()`` and ``encode_action_body()`` (ARCHITECTURE.md
+§ Auth manager hooks): the defaults on a bare subclass, then every
+strategy built through the auth factory from a validated config.
 
 TEST DATA TABLES
 ================
@@ -44,6 +44,15 @@ FORM_PBKDF2 = {
 }
 FORM_SJCL = {"strategy": "form_sjcl", "login_endpoint": "/login", "pbkdf2_iterations": 1000, "pbkdf2_key_length": 128}
 HNAP = {"strategy": "hnap", "hmac_algorithm": "md5"}
+JSON_SJCL = {
+    "strategy": "json_sjcl",
+    "login_page": "/login.php",
+    "login_endpoint": "/login",
+    "pbkdf2_iterations": 1000,
+    "pbkdf2_key_length": 128,
+    "aad": "AAD",
+    "token_header": "X-Token",
+}
 NONE = {"strategy": "none"}
 URL_TOKEN = {"strategy": "url_token", "login_page": "/login.html"}
 URL_TOKEN_PREFIX = {**URL_TOKEN, "token_prefix": _PREFIX}
@@ -118,6 +127,7 @@ COOKIE_NAME_CASES: list[tuple[dict[str, Any], str, str]] = [
     ({**FORM_NONCE, "cookie_name": _SID},  _SID, "form_nonce"),
     ({**FORM_PBKDF2, "cookie_name": _SID}, _SID, "form_pbkdf2"),
     ({**FORM_SJCL, "cookie_name": _SID},   _SID, "form_sjcl"),
+    ({**JSON_SJCL, "cookie_name": _SID},   _SID, "json_sjcl"),
     ({**URL_TOKEN, "cookie_name": _SID},   _SID, "url_token"),
     (BASIC,                                "",   "basic-unset"),
     (BEARER,                               "",   "bearer-unset"),
@@ -125,6 +135,7 @@ COOKIE_NAME_CASES: list[tuple[dict[str, Any], str, str]] = [
     (FORM_NONCE,                           "",   "form_nonce-unset"),
     (FORM_PBKDF2,                          "",   "form_pbkdf2-unset"),
     (FORM_SJCL,                            "",   "form_sjcl-unset"),
+    (JSON_SJCL,                            "",   "json_sjcl-unset"),
     (URL_TOKEN,                            "",   "url_token-unset"),
     (FORM_CBN,                             "",   "form_cbn"),
     (HNAP,                                 "",   "hnap"),
@@ -177,6 +188,7 @@ URL_TOKEN_CASES: list[tuple[dict[str, Any], AuthContext | None, dict[str, str], 
     ({**FORM_NONCE, "cookie_name": _SID},  CTX_TOKEN, COOKIE, ("", ""),         "form_nonce"),
     ({**FORM_PBKDF2, "cookie_name": _SID}, CTX_TOKEN, COOKIE, ("", ""),         "form_pbkdf2"),
     ({**FORM_SJCL, "cookie_name": _SID},   CTX_TOKEN, COOKIE, ("", ""),         "form_sjcl"),
+    ({**JSON_SJCL, "cookie_name": _SID},   CTX_TOKEN, COOKIE, ("", ""),         "json_sjcl"),
     (FORM_CBN,                             CTX_TOKEN, COOKIE, ("", ""),         "form_cbn"),
     (HNAP,                                 CTX_TOKEN, COOKIE, ("", ""),         "hnap"),
     (NONE,                                 CTX_TOKEN, COOKIE, ("", ""),         "none"),
@@ -221,6 +233,10 @@ class TestDefaults:
     def test_loader_url_token(self) -> None:
         """No URL token, even when the login produced one."""
         assert _BareManager().loader_url_token(_session(COOKIE), CTX_TOKEN) == ("", "")
+
+    def test_encode_action_body(self) -> None:
+        """The session cannot encode an action body."""
+        assert _BareManager().encode_action_body({"action": "restart"}) is None
 
 
 class TestSessionCookieName:
@@ -279,3 +295,21 @@ class TestLoaderUrlToken:
     ) -> None:
         """The manager returns the prefix and the resolved token."""
         assert _manager(auth).loader_url_token(_session(cookies), context) == expected, desc
+
+
+_MINIMAL_BY_STRATEGY: dict[str, dict[str, Any]] = {
+    auth["strategy"]: auth
+    for auth in (BASIC, BEARER, FORM, FORM_CBN, FORM_NONCE, FORM_PBKDF2, FORM_SJCL, HNAP, JSON_SJCL, NONE, URL_TOKEN)
+}
+
+
+class TestEncodeActionBody:
+    """The model's ``encodes_action_bodies`` ClassVar and the manager hook agree."""
+
+    @pytest.mark.parametrize("strategy", sorted(r.strategy for r in get_auth_strategy_rows()))
+    def test_classvar_matches_override(self, strategy: str) -> None:
+        """Validation admits body_encoding: session exactly where the manager can encode."""
+        config = TypeAdapter(AuthConfig).validate_python(_MINIMAL_BY_STRATEGY[strategy])
+        manager_cls = type(create_auth_manager_for_action(config))
+        overrides = manager_cls.encode_action_body is not BaseAuthManager.encode_action_body
+        assert type(config).encodes_action_bodies is overrides

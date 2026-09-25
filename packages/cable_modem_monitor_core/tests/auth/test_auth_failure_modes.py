@@ -57,6 +57,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.auth_failure import (
 # │ form_cbn      │ CREDENTIALS_SUSPECT  │ checks, but unproven — see below   │
 # │ form_sjcl     │ CREDENTIALS_SUSPECT  │ checks, but unproven — see below   │
 # │ bearer        │ CREDENTIALS_SUSPECT  │ checks, but unproven — see below   │
+# │ json_sjcl     │ CREDENTIALS_SUSPECT  │ checks, but unproven — see below   │
 # │ form_pbkdf2   │ SESSION_REJECTED     │ proven — login_success mismatch    │
 # │ hnap          │ SESSION_REJECTED     │ proven — LoginResult mismatch      │
 # └───────────────┴──────────────────────┴────────────────────────────────────┘
@@ -77,6 +78,7 @@ DECLARED_MODES: dict[str, AuthFailureMode] = {
     "form_cbn":    AuthFailureMode.CREDENTIALS_SUSPECT,
     "form_sjcl":   AuthFailureMode.CREDENTIALS_SUSPECT,
     "bearer":      AuthFailureMode.CREDENTIALS_SUSPECT,
+    "json_sjcl":   AuthFailureMode.CREDENTIALS_SUSPECT,
     "form_pbkdf2": AuthFailureMode.SESSION_REJECTED,
     "hnap":        AuthFailureMode.SESSION_REJECTED,
 }
@@ -91,6 +93,8 @@ _MINIMAL_AUTH: dict[str, dict[str, Any]] = {
     "form_cbn":    {},
     "form_sjcl":   {"login_endpoint": "/login", "pbkdf2_iterations": 1000, "pbkdf2_key_length": 128},
     "bearer":      {"login_endpoint": "/login", "token_path": "token"},
+    "json_sjcl":   {"login_page": "/login.php", "login_endpoint": "/login", "pbkdf2_iterations": 1000,
+                    "pbkdf2_key_length": 128, "aad": "AAD", "token_header": "X-Token"},
     "form_pbkdf2": {"login_endpoint": "/login", "pbkdf2_iterations": 1000, "pbkdf2_key_length": 128},
     "hnap":        {"hmac_algorithm": "md5"},
 }
