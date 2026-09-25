@@ -151,6 +151,14 @@ class BearerAuthManager(BaseAuthManager):
             declared.add(self._config.token_header.lower())
         return frozenset(declared)
 
+    def session_cookie_name(self) -> str:
+        """The declared ``cookie_name``."""
+        return self._config.cookie_name
+
+    def loader_url_token(self, session: requests.Session, context: AuthContext | None) -> tuple[str, str]:
+        """The query-placed token; ``token_prefix`` is set only with ``token_placement: query``."""
+        return self._prefixed_url_token(session, context, self._config.token_prefix)
+
 
 def _resolve_extra_fields(extra_fields: dict[str, str], base_url: str) -> dict[str, str]:
     """Substitute ``{host}`` with the base URL's hostname (the browser's location.hostname)."""

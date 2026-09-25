@@ -84,6 +84,12 @@ def _make_collector(modem_config=None):
         # Real enum member, not a bare mock: the collector renders its
         # 401/403 hint from this, and the mode is a closed set.
         auth_manager.auth_failure_mode.return_value = AuthFailureMode.CREDENTIALS_SUSPECT
+        # The collector asks the manager these (ARCHITECTURE § Auth manager
+        # hooks); a bare mock would answer truthy and read as a live session.
+        # Default: valid once a login produced a context. A test that needs a
+        # context but an invalid session says so on the stub.
+        auth_manager.session_is_valid.side_effect = lambda _session, context: context is not None
+        auth_manager.loader_url_token.return_value = ("", "")
         mock_cam.return_value = auth_manager
         mock_coord.return_value = MagicMock()
         collector = ModemDataCollector(
@@ -142,13 +148,14 @@ def test_session_reused_emitted_when_session_valid():
 def _fresh_login_collector(response_url: str = "/status.html"):
     """Collector whose authenticate() always takes the fresh-login branch.
 
-    The cookie jar stays empty, so session_is_valid keeps returning False
-    and repeat calls re-authenticate instead of short-circuiting on reuse.
+    The manager reports the session invalid on every call, so repeat calls
+    re-authenticate instead of short-circuiting on reuse.
     """
     collector = _make_collector()
     collector._auth_context = None
-    collector._modem_config.auth = MagicMock(strategy="form", cookie_name="sessionid")
-    collector._session.cookies = RequestsCookieJar()  # no session cookie → not valid
+    session_is_valid = cast(MagicMock, collector._auth_manager).session_is_valid
+    session_is_valid.side_effect = None
+    session_is_valid.return_value = False
 
     resp = MagicMock()
     resp.status_code = 200
@@ -512,10 +519,13 @@ def test_hnap_load_error_emitted_on_fresh_session_error():
 
     collector = _make_collector(_make_modem_config(transport="hnap"))
     collector._auth_context = MagicMock(private_key="key")
-    # No uid cookie → session_is_valid False for HNAP → authenticate() goes through
+    # Invalid session (for HNAP: no uid cookie) → authenticate() goes through
     # full auth path → _session_reused = False → fresh-session error path in
     # _classify_hnap_error (status_code=200 not in (401, 403)).
     collector._session.cookies = RequestsCookieJar()
+    session_is_valid = cast(MagicMock, collector._auth_manager).session_is_valid
+    session_is_valid.side_effect = None
+    session_is_valid.return_value = False
 
     exc = HNAPLoadError("bad JSON", status_code=200)
     exc.__cause__ = None

@@ -27,7 +27,6 @@ from ..loaders.http import (
     ResourceLoadError,
 )
 from ..models.modem_config.actions import HttpAction
-from ..models.modem_config.auth import NoneAuth
 from ..parsers.coordinator import ModemParserCoordinator
 from ..parsers.diagnostics import ParseDiagnostics
 from .actions import execute_action
@@ -255,42 +254,10 @@ class ModemDataCollector:
 
     @property
     def session_is_valid(self) -> bool:
-        """Whether the Auth Manager believes the current session is usable.
-
-        Strategy-specific local check: HNAP verifies uid cookie +
-        private key (the private key is also set as a PrivateKey
-        cookie by the auth manager); cookie-based strategies verify
-        the session cookie is present; basic and none are always valid
-        after first auth.
-
-        This is a local check -- the server may have expired the session
-        even if this returns True.
-        """
-        # Never authenticated — only NoneAuth can skip authenticate()
-        # entirely. BasicAuth is stateless per-request but still needs
-        # the initial authenticate() call to set session.auth.
-        if self._auth_context is None:
-            if self._modem_config.auth is None:
-                return True
-            return isinstance(self._modem_config.auth, NoneAuth)
-
-        # HNAP: verify session cookies and private key
-        if self._modem_config.transport == "hnap":
-            has_uid = "uid" in self._session.cookies
-            has_key = bool(self._auth_context.private_key)
-            return has_uid and has_key
-
-        # Cookie-based: verify session cookie (cookie_name is on auth config)
-        cookie_name = getattr(self._modem_config.auth, "cookie_name", "")
-        if cookie_name:
-            return cookie_name in self._session.cookies
-
-        # URL token: verify token exists
-        if self._auth_context.url_token:
+        """Whether the auth manager believes the current session is usable; a local check only."""
+        if self._modem_config.auth is None:
             return True
-
-        # Already authenticated — assume valid until server rejects
-        return True
+        return self._auth_manager.session_is_valid(self._session, self._auth_context)
 
     @property
     def last_resource_fetches(self) -> list[ResourceFetch]:
@@ -486,16 +453,7 @@ class ModemDataCollector:
         """Fetch HTTP resources."""
         targets = collect_fetch_targets(self._parser_config, self._post_processor)
 
-        # Prefer body-derived token from auth_context; fall back to cookie
-        url_token = ""
-        token_prefix = getattr(self._modem_config.auth, "token_prefix", "")
-        if token_prefix:
-            if self._auth_context and self._auth_context.url_token:
-                url_token = self._auth_context.url_token
-            else:
-                cookie_name = getattr(self._modem_config.auth, "cookie_name", "")
-                if cookie_name:
-                    url_token = self._session.cookies.get(cookie_name, "") or ""
+        token_prefix, url_token = self._auth_manager.loader_url_token(self._session, self._auth_context)
 
         query_params: dict[str, str] = {}
         if self._modem_config.session and self._modem_config.session.query_params:

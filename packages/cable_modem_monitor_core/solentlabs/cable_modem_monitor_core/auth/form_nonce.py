@@ -60,6 +60,10 @@ class FormNonceAuthManager(BaseAuthManager):
     def __init__(self, config: FormNonceAuth) -> None:
         self._config = config
 
+    def session_cookie_name(self) -> str:
+        """The declared ``cookie_name``."""
+        return self._config.cookie_name
+
     def authenticate(
         self,
         session: requests.Session,

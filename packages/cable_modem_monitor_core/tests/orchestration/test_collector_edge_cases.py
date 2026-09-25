@@ -318,9 +318,11 @@ class TestUrlTokenExtraction:
     """URL token extraction from session cookie."""
 
     def test_url_token_from_cookie(self) -> None:
-        """token_prefix + cookie_name → url_token extracted."""
+        """token_prefix + cookie_name, no body token → the session cookie is the URL token."""
+        # url_token owns this fallback (its loader_url_token hook); a form
+        # config has no token_prefix, so it can never reach this path.
         config = _make_config(
-            auth_type="form",
+            auth_type="url_token",
             cookie_name="auth_token",
             token_prefix="?token=",
         )
