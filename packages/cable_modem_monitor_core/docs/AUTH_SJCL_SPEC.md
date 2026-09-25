@@ -163,6 +163,19 @@ The success body's content is never relied on beyond the busy check:
 in the evidence capture one recorded success body does not decrypt
 under its own session's key (see Known Gaps).
 
+**Post-login requests.** The firmware encrypts later AJAX bodies with
+the same key, IV and user saved at login (`getEncryptionParamsFromSession`,
+login.php:255, 309-311). `json_sjcl` keeps them in
+`AuthContext.sjcl_session`, and an HTTP action declaring
+`body_encryption: sjcl` sends
+`{"EncryptedData": hex(AES-CCM(compact JSON(json_body))), "user": <user>}`
+through the same function as step 3-4. Evidence: the restart page builds
+`{action: 'restart', module: 'gateway'}` (restore_reboot.php:937, entry
+361) and sends it to `ajaxSet_Reset_Restore.php` through that wrapper
+(:1044-1045); the captured request [387] carries `{EncryptedData, user}`
+and `X-CSRF-Token`. The encrypted response is not read: success is the
+action's HTTP status.
+
 ### Firmware Assumptions
 
 Hardcoded in `auth/json_sjcl.py`, specific to the actionHandler

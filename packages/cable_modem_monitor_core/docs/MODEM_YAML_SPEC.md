@@ -1270,6 +1270,7 @@ actions:
 | `requires_session` | bool | `false` | *Logout only.* `false` = endpoint is unauthenticated and can clear any active server-side session without credentials. `true` = endpoint needs a live session; Core skips the pre-retry logout call when the session is not valid. |
 | `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`. Mutually exclusive with `json_body`. |
 | `json_body` | map | no | JSON request body. If present, body is `application/json`. Mutually exclusive with `params`. Use for REST APIs that accept JSON. |
+| `body_encryption` | enum | `none` | `sjcl`: send `json_body` encrypted under the login's SJCL session, in the envelope the auth strategy logs in with ([`json_sjcl`](#json_sjcl)). Requires `json_body` and `auth.strategy: json_sjcl`. |
 | `headers` | map | no | Per-action headers. Merged with session-level `headers` (action wins on conflict). |
 | `pre_fetch_url` | string | no | URL to fetch before the action (establish session state or extract dynamic endpoint) |
 | `endpoint_pattern` | string | no | Keyword to match within form action attributes on the pre-fetch page. Core wraps this in a form-action regex — not a raw regex. See Architecture Decision below. |

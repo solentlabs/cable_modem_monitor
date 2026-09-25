@@ -1086,6 +1086,15 @@ by JSON path, was rejected in MODEM_YAML_SPEC.md § Architecture Decision:
 a fixed key set, not a template language. A third value is a third field
 here, not a new syntax there.
 
+**Extended for encrypted action bodies (#210).** `sjcl_session` holds the
+SJCL parameters `json_sjcl` derived at login (key, IV, user, AAD, tag
+length), because the firmware encrypts post-login requests under the
+same session key. An action declaring `body_encryption: sjcl` is wrapped
+by the one function `json_sjcl` logs in with, so the envelope has a single
+implementation. The key lives exactly as long as the session:
+`clear_session()` drops the context, and no failure log prints a request
+body.
+
 ---
 
 ## Parsing Architecture
