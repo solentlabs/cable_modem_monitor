@@ -356,6 +356,17 @@ def ensure_dev_config(log_level: str = "info") -> None:
     print_success(f"Created configuration.yaml (logger: {log_level})")
 
 
+def report_docker_engine() -> None:
+    """Print the Docker Desktop hint only when the engine is actually unreachable."""
+    try:
+        result = subprocess.run(["docker", "info"], capture_output=True, timeout=15)
+        responding = result.returncode == 0
+    except subprocess.SubprocessError:
+        responding = False
+    if not responding:
+        print_info("Docker engine isn't responding. Check Docker Desktop is running.")
+
+
 def start_container() -> bool:
     """Start the HA container from scratch."""
     fix_paths_for_docker_in_docker()
@@ -379,6 +390,19 @@ def start_container() -> bool:
         run_with_progress("Removing existing container", ["docker", "stop", "-t", "30", CONTAINER_NAME], timeout=60)
         subprocess.run(["docker", "rm", "-f", CONTAINER_NAME], capture_output=True, timeout=30)
 
+    # Pull only a missing image, with live output and no timeout. A first
+    # download is network-bound and can take minutes; inside the up -d
+    # timeout it gets killed mid-pull and leaves nothing cached.
+    print_info("Checking image (downloads only if missing)")
+    pull = subprocess.run(
+        compose_cmd + ["-f", compose_file, "pull", "--policy", "missing"],
+        cwd=get_project_dir(),
+    )
+    if pull.returncode != 0:
+        print_error("Image pull failed (see output above)")
+        report_docker_engine()
+        return False
+
     # Start container
     result = run_with_progress(
         "Creating container",
@@ -391,11 +415,16 @@ def start_container() -> bool:
         print_error("Docker compose failed")
         if result.stderr:
             print(result.stderr)
+        report_docker_engine()
         return False
 
     # Give it a moment to start
     time.sleep(2)
-    return is_container_running()
+    if not is_container_running():
+        print_error("Container exited right after starting")
+        print_info(f"Check logs: docker logs {CONTAINER_NAME}")
+        return False
+    return True
 
 
 def restart_container() -> bool:
@@ -467,7 +496,6 @@ def main() -> int:
         ensure_dev_config(log_level)
         if not start_container():
             print_error_header("START FAILED")
-            print_info("Check Docker Desktop is running")
             return 1
         print_success("Container started (entrypoint installs packages)")
 
