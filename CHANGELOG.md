@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "JSON Login". Awaiting confirmation on hardware. (#213)
 - **Arris TG3442S** (LIWEST, 01.05.048.01.EURO.NCS), with restart.
   Awaiting confirmation on hardware. (#210)
+- **Arris SBG8300** (01.02.078.04.NCS), with restart. Built from an
+  unprovisioned bench unit; awaiting confirmation on hardware.
 - **`javascript_json` reads channel arrays inside a JavaScript object.**
   A `parser.yaml` section can name an object variable and select each
   array with `array_path`, merging a companion array such as error

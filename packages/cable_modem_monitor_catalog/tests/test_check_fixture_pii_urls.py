@@ -149,6 +149,8 @@ SAFE_URLS = [
     pytest.param("https://192.168.100.1/fonts/TeleNeo-Regular.woff2", id="asset-font"),
     pytest.param("https://192.168.100.1/img/329136_2024-09-30_master_Home_M.jpg", id="asset-image"),
     pytest.param("https://192.168.100.1/customerID.txt?_=1772950969655", id="cache-buster"),
+    # Server-side page names read like tokens once they carry a digit (Arris actionHandler UI).
+    pytest.param("https://192.168.0.1/firewall_settings_ipv4.php", id="page-php"),
     # The sanctioned format-preserving placeholder: base64 of admin:sanitized.
     pytest.param("https://192.168.100.1/cmconnectionstatus.html?YWRtaW46c2FuaXRpemVk", id="sanitized-placeholder"),
     pytest.param("https://192.168.100.1/login_YWRtaW46c2FuaXRpemVk", id="sanitized-placeholder-prefixed"),
@@ -177,6 +179,8 @@ def test_asset_extension_guard_does_not_swallow_a_real_secret() -> None:
     string would be skipped too — so assert the detector still fires.
     """
     assert pii.find_url_secrets("https://192.168.100.1/a3f9c2e18b7d4056af12ce9930bb77e1.js.token")
+    # A page extension exempts the page name only, not a token in its query.
+    assert pii.find_url_secrets("https://192.168.0.1/firewall_settings_ipv4.php?a3f9c2e18b7d4056af12ce9930bb77e1")
 
 
 def test_placeholder_guard_does_not_swallow_a_real_credential() -> None:

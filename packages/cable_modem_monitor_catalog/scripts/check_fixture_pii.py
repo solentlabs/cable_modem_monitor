@@ -540,8 +540,9 @@ def check_cert_identifiers(har_data: dict | list) -> list[str]:
 #   2. an opaque high-entropy token (the Sagemcom F3896LG-ZG session
 #      token in a logout path)
 
-# Asset names dominate the false-positive surface: versioned library
-# files, fonts and images all look like high-entropy tokens. Matched on
+# Asset and page names dominate the false-positive surface: versioned
+# library files, fonts, images and page names such as
+# firewall_settings_ipv4.php all look like high-entropy tokens. Matched on
 # the final extension only — a substring test would let a real token
 # hide behind an embedded ".js".
 _ASSET_EXTENSIONS: tuple[str, ...] = (
@@ -553,6 +554,7 @@ _ASSET_EXTENSIONS: tuple[str, ...] = (
     ".txt",
     ".htm",
     ".html",
+    ".php",
     ".png",
     ".jpg",
     ".jpeg",
