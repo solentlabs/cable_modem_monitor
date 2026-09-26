@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.1] - 2026-09-25
+
 ### Added
 
 - **Arris SB8200 on its PHP firmware** (RCN/Astound, AB01.06.013). If
