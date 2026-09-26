@@ -1,0 +1,19 @@
+{
+  "_expected_error": "at least one primary array",
+  "_config": {
+    "downstream": {
+      "format": "javascript_json",
+      "resource": "/status.html",
+      "variable": "channelData",
+      "arrays": [
+        {
+          "array_path": "errList",
+          "merge_by": ["channel_id"],
+          "mappings": [
+            {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+          ]
+        }
+      ]
+    }
+  }
+}

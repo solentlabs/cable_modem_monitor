@@ -42,7 +42,12 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
 )
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     BasicAuth,
+    BearerAuth,
+    FormPbkdf2Auth,
     NoneAuth,
+)
+from solentlabs.cable_modem_monitor_core.models.modem_config.session import (
+    SessionConfig,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.actions.base import ActionResult
 from solentlabs.cable_modem_monitor_core.orchestration.collector import (
@@ -463,6 +468,76 @@ def test_http_load_signal_classification(
 
 
 # ------------------------------------------------------------------
+# Tests — clear_session header reset (table-driven)
+# ------------------------------------------------------------------
+
+_TOKEN = "X-Session-Token"
+_XRW = "X-Requested-With"
+_BEARER = BearerAuth(strategy="bearer", login_endpoint="/login", token_path="token")
+# form_pbkdf2 declares its csrf_header via headers(), lowercased.
+_PBKDF2 = FormPbkdf2Auth(
+    strategy="form_pbkdf2",
+    login_endpoint="/login",
+    pbkdf2_iterations=1000,
+    pbkdf2_key_length=128,
+    csrf_header=_TOKEN,
+)
+
+
+# ┌──────────────────────────┬──────────────────────────────────┬──────────────────┬─────────────┬─────────────────┐
+# │ auth (declared header)   │ static session.headers           │ header           │ value set   │ after clear     │
+# ├──────────────────────────┼──────────────────────────────────┼──────────────────┼─────────────┼─────────────────┤
+# │ bearer (authorization)   │ none                             │ Authorization    │ Bearer x    │ removed         │
+# │ pbkdf2 (x-session-token) │ none                             │ X-Session-Token  │ live        │ removed         │
+# │ pbkdf2 (x-session-token) │ x-session-token: undefined       │ X-Session-Token  │ live        │ static value    │
+# │ pbkdf2 (x-session-token) │ X-Session-Token: {base_url}      │ X-Session-Token  │ live        │ resolved static │
+# │ bearer (authorization)   │ X-Requested-With: XMLHttpRequest │ X-Requested-With │ (none)      │ untouched       │
+# └──────────────────────────┴──────────────────────────────────┴──────────────────┴─────────────┴─────────────────┘
+# A value set of None puts nothing on the wire beyond what session.headers
+# configured; an expected of None means the header is absent.
+# fmt: off
+CLEAR_SESSION_HEADER_CASES: list[tuple[Any, dict[str, str], str, str | None, str | None, str]] = [
+    (_BEARER, {},                               "Authorization", "Bearer x", None,               "bearer auth removed"),
+    (_PBKDF2, {},                               _TOKEN,          "live",     None,               "declared removed"),
+    (_PBKDF2, {"x-session-token": "undefined"}, _TOKEN,          "live",     "undefined",        "static restored"),
+    (_PBKDF2, {_TOKEN: "{base_url}"},           _TOKEN,          "live",     "http://localhost", "restored resolved"),
+    (_BEARER, {_XRW: "XMLHttpRequest"},         _XRW,            None,       "XMLHttpRequest",   "undeclared kept"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "auth,static_headers,header,wire_value,expected,desc",
+    CLEAR_SESSION_HEADER_CASES,
+    ids=[c[5] for c in CLEAR_SESSION_HEADER_CASES],
+)
+def test_clear_session_resets_declared_headers(
+    auth: Any,
+    static_headers: dict[str, str],
+    header: str,
+    wire_value: str | None,
+    expected: str | None,
+    desc: str,
+) -> None:
+    """clear_session() returns every auth-declared header to its configured state and clears cookies."""
+    config = _make_config()
+    config.auth = auth
+    config.session = SessionConfig(headers=static_headers)
+    collector = ModemDataCollector(config, None, None, "http://localhost", "", "")
+    collector._session.cookies.set("sid", "abc123")
+    if wire_value is not None:
+        collector._session.headers[header] = wire_value
+
+    collector.clear_session()
+
+    assert collector._session.headers.get(header) == expected
+    assert len(collector._session.cookies) == 0
+    # A restored header goes back on the wire under its configured name,
+    # not the lowercase name headers() declares.
+    assert set(static_headers) <= set(collector._session.headers.keys())
+
+
+# ------------------------------------------------------------------
 # Tests — session lifecycle (behavioral, inline)
 # ------------------------------------------------------------------
 
@@ -500,6 +575,17 @@ class TestSessionIsValid:
         collector.clear_session()
         assert collector.session_is_valid is False
         assert collector._auth_context is None
+
+    def test_clear_session_drops_bearer_header(self) -> None:
+        """clear_session() removes the bearer credential, not just cookies."""
+        config = _make_config(auth_type="bearer")
+        collector = ModemDataCollector(config, None, None, "http://localhost", "", "")
+        collector._auth_context = MagicMock(url_token="", private_key="")
+        collector._session.headers["Authorization"] = "Bearer dead-token"
+
+        collector.clear_session()
+
+        assert "Authorization" not in collector._session.headers
 
     def test_close_closes_underlying_session(self) -> None:
         """close() releases the requests.Session and its socket pool."""

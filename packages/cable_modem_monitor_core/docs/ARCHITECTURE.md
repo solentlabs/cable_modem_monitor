@@ -78,7 +78,7 @@ extras:
 
 | Extra | Install | What it adds | Who uses it |
 |-------|---------|--------------|-------------|
-| `[sjcl]` | `pip install solentlabs-cable-modem-monitor-core[sjcl]` | `cryptography>=41.0` | `form_sjcl` auth strategy (AES-CCM) |
+| `[sjcl]` | `pip install solentlabs-cable-modem-monitor-core[sjcl]` | `cryptography>=41.0` | `form_sjcl` and `json_sjcl` auth strategies (AES-CCM) |
 | `[cbn]` | `pip install solentlabs-cable-modem-monitor-core[cbn]` | `cryptography>=41.0` | `form_cbn` auth strategy (AES-256-CBC) |
 
 ### Core — `solentlabs-cable-modem-monitor-core`
@@ -101,7 +101,7 @@ but modem-specific behavior comes from config, not from Core code.
 | Config schemas | `ModemConfig`, `AuthConfig`, `PageConfig`, `ParserConfig` |
 | ABCs / base classes | `BaseParser`, `BaseAuthManager`, `AuthStrategyBase` (model ClassVars) |
 | Action executors | `orchestration/actions/` — transport-scoped executors (`http_action`, `hnap_action`, `cbn_action`) with single `execute_action()` dispatch. `ActionResult` return type. |
-| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth. |
+| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing; `hmac_algorithm()` gives typed access to the auth block's algorithm. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth; `cbn_params()` gives typed access to the getter/setter endpoints and session cookie. `protocol/sjcl` — SJCL PBKDF2 and AES-CCM used by `form_sjcl` and `json_sjcl`. |
 | Auth shared helpers | `auth/response` — JSON response parsing (double-decode, type check, diagnostics) shared by `form_sjcl`, `form_pbkdf2`, `hnap`. |
 | Parser coordinator | `ModemParserCoordinator` — factory + orchestration: parser.yaml → `BaseParser` instances → parser.py chaining → `ModemData` |
 | Auth strategies | One audited implementation per strategy in `auth/`. See the [Auth Manager](#auth-manager) table for the full set. |
@@ -193,7 +193,7 @@ from solentlabs.cable_modem_monitor_core.orchestration import (
 modem_config = load_modem_config(CATALOG_PATH / "arris" / "sb8200" / "modem.yaml")
 parser_config = load_parser_config(CATALOG_PATH / "arris" / "sb8200" / "parser.yaml")
 
-# For form_nonce modems: apply_credential_encoding(modem_config, ...) here
+# Strategies with a setup step: apply_setup_params(modem_config, stored_params)
 
 # Create orchestration graph via Core factory
 orchestrator, health_monitor, identity = create_orchestrator(
@@ -226,7 +226,7 @@ graph TD
     HA --> HS["<b>SESSION</b><hr/>• uid + PrivateKey cookies<br/>• HNAP_AUTH header"]
     HS --> HF["<b>FORMAT</b><hr/>• hnap (JSON + delimiters)"]
 
-    HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• bearer<br/>• form / form_nonce<br/>• form_pbkdf2 🔗<br/>• form_sjcl 🔗<br/>• url_token 🔗"]
+    HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• bearer<br/>• form / form_nonce<br/>• form_pbkdf2 🔗<br/>• form_sjcl 🔗<br/>• json_sjcl 🔗<br/>• url_token 🔗"]
     HTA --> HTS["<b>SESSION</b><hr/>• stateless<br/>• cookie<br/>• CSRF 🔗<br/>• url_token 🔗"]
     HTS --> HTF["<b>FORMAT</b><hr/>• table<br/>• table_transposed<br/>• javascript<br/>• javascript_json<br/>• javascript_vars<br/>• html_fields<br/>• json<br/>• json_transposed"]
 
@@ -274,7 +274,7 @@ choosing `json` format doesn't require `form_pbkdf2` auth.
 |-----------|--------|------------|---------------|--------------------|
 | `cbn` | `CBNLoader` → `Element` | `form_cbn` | `xml` | `cbn` |
 | `hnap` | `HNAPLoader` → `dict` | `hnap` | `hnap` | `hnap` |
-| `http` | `HTTPResourceLoader` → `BeautifulSoup` or `dict` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `none`, `url_token` | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
+| `http` | `HTTPResourceLoader` → `BeautifulSoup` or `dict` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `json_sjcl`, `none`, `url_token` | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
 <!-- END GENERATED: constraint-summary -->
 
 At runtime, the format declared in parser.yaml determines how the response
@@ -344,6 +344,7 @@ from modem.yaml:
 | `form_pbkdf2` | `http` | No |
 | `form_sjcl` | `http` | No |
 | `hnap` | `hnap` | No |
+| `json_sjcl` | `http` | No |
 | `none` | `http` | Yes |
 | `url_token` | `http` | No |
 <!-- END GENERATED: auth-strategies -->
@@ -367,6 +368,12 @@ config fields.
   payload and decrypts the response, while `form_pbkdf2` hashes the password
   and sends it in plaintext JSON. Requires the `cryptography` package
   (install Core with `[sjcl]` extra)
+- `bearer` covers every one-round-trip JSON login that yields a token.
+  Where the token is read from (JSON path or response header) and where
+  it is sent back (`Authorization`, a named header, or the URL query)
+  are config values on it. `json_sjcl` is separate because SJCL
+  encryption adds a round trip and crypto, the same line that separates
+  `form_sjcl` from `form`
 - All other form differences (encoding, CSRF, field names, session cookies)
   are config flags on `form`. Specifically: base64 password encoding is
   `encoding: base64`, dynamic endpoint discovery is `login_page` +
@@ -388,6 +395,7 @@ config fields.
   | `form` | `<input type="hidden">` fields (CSRF tokens, mode flags); the form's `action` URL when `action_source: login_page` | Every auth attempt |
   | `form_nonce` | Form structure (credential encoding: plain vs b64-packed) | Setup time only (config flow / test harness) |
   | `form_sjcl` | JS crypto variables (`myIv`, `mySalt`, `currentSessionId`) | Every auth attempt |
+  | `json_sjcl` | JS crypto assignments (`sjclEncryptObj.salt`, `.iv`) | Every auth attempt |
   | `form_cbn` | Session token cookie | Every auth attempt |
   | `url_token` | Auth token from response body | Every auth attempt |
 
@@ -396,17 +404,41 @@ config fields.
   for the merge order.
 
   For `form_nonce`, credential encoding is detected once at setup
-  time — the HA config flow pre-fetches the login page during
-  validation and stores the result in the config entry. The test
-  harness detects from HAR entries. At runtime, the auth manager
-  reads `credential_encoding` from the config — no pre-fetch occurs
-  during polling. See MODEM_YAML_SPEC.md for detection logic.
+  time through Core's generic `detect_setup_params`, which dispatches
+  to the strategy module's own entry point; the HA config flow stores
+  the returned params in the config entry and hands them back through
+  `apply_setup_params` at startup, and the test harness runs the same
+  detection against its mock server. Neither consumer knows which strategy
+  needed it. No pre-fetch occurs during polling. See MODEM_YAML_SPEC.md
+  for detection logic.
 - Multi-variant modems use separate `modem-{variant}.yaml` files — one per
   firmware variant, each with a single `auth` block. The config flow presents
   variants as user choices during setup. Protocol (HTTP vs HTTPS) is detected
   automatically and is independent of firmware variant — the user selects based
   on their network, not their protocol. See `CONFIG_FLOW_SPEC.md` for the
   full setup flow.
+
+**Auth manager hooks.** Everything code outside `auth/` needs to know
+about a strategy at runtime is a `BaseAuthManager` method with a safe
+default (ARCHITECTURE_DECISIONS § Strategy knowledge lives with the
+strategy). Each default reproduces what generic code did before the
+knowledge moved:
+
+| Hook | Default | Overridden by |
+|---|---|---|
+| `headers()` | `{"cookie"}` | every strategy that puts a credential elsewhere |
+| `auth_failure_mode()` | `CREDENTIALS_SUSPECT` | strategies that prove a login-time rejection |
+| `session_cookie_name()` | `""` | strategies whose config declares `cookie_name`. `form_cbn` does not: its session reads valid after login until the CBN session work detects expiry. |
+| `session_is_valid(session, context)` | no context: `False`; else the `session_cookie_name()` cookie is in the jar when one is named; else `True` | `none` (always `True`), `hnap` (uid cookie and `context.private_key`) |
+| `loader_url_token(session, context)` | no token | `url_token`, and `bearer` with `token_placement: query`: the configured `token_prefix` with `context.url_token`, falling back to the session cookie's value when the login gave none |
+| `encode_action_body(body)` | `None`: this session cannot encode, so a `body_encoding: session` action fails and sends nothing | `json_sjcl`: the SJCL envelope under the last successful login's key. Its model sets `encodes_action_bodies`, which config validation reads. |
+
+A new hook is added with its first implementer, never ahead of one.
+
+Setup-time detection is a set of module entry points (`setup_page`,
+`detect_setup_params`, `apply_setup_params`, `setup_param_keys`), not
+methods, because it runs before any manager or session exists.
+`auth/setup.py` dispatches to them.
 
 #### Crypto Library vs Firmware Wire Format
 
@@ -420,16 +452,18 @@ Each complex auth strategy has two layers:
   variable names, success criteria.  These are specific to a firmware
   family (Arris Touchstone, Technicolor REST, Compal).
 
-Currently, each complex strategy serves exactly one firmware family,
-so wire format assumptions are embedded in the strategy code.  When a
-second modem appears on the same crypto library with a different wire
-format, the refactoring point is the wire format layer — extract it
-to config or to a separate handler.  The crypto library layer should
-not change.
+Each complex strategy serves one firmware family, so wire format
+assumptions are embedded in the strategy code.  When a second modem
+appears on the same crypto library with a different wire format, the
+refactoring point is the wire format layer — extract it to config or
+to a separate handler.  The crypto library layer should not change.
+SJCL is the worked case: the actionHandler wire format became
+`json_sjcl`, and both SJCL strategies call `protocol/sjcl.py`.
 
 | Strategy | Crypto library | Firmware family | Spec |
 |----------|---------------|-----------------|------|
 | `form_sjcl` | SJCL (PBKDF2 + AES-CCM) | Arris Touchstone | [AUTH_SJCL_SPEC.md](AUTH_SJCL_SPEC.md) |
+| `json_sjcl` | SJCL (PBKDF2 + AES-CCM) | Arris PHP actionHandler | [AUTH_SJCL_SPEC.md](AUTH_SJCL_SPEC.md) |
 | `form_pbkdf2` | SJCL (PBKDF2 only) | Technicolor REST | [AUTH_PBKDF2_SPEC.md](AUTH_PBKDF2_SPEC.md) |
 | `form_cbn` | CryptoJS (AES-256-CBC) | Compal/CBN | [AUTH_CBN_SPEC.md](AUTH_CBN_SPEC.md) |
 
@@ -918,8 +952,13 @@ the capture:
 - **The capture answers when it has the exchange.** The handler is
   consulted for the session side effect either way — clearing state,
   invalidating a token — but a captured response wins over a
-  synthesized one. Most captures record data collection only, so a
-  synthesized response remains the common case for restart.
+  synthesized one, unless the handler refuses a restart (status 400 or
+  above): a captured 200 answered a different request and must not
+  rescue one the simulated modem would reject, such as a plaintext
+  body where the firmware expects an encrypted one. Logout keeps the
+  capture's answer unconditionally. Most captures
+  record data collection only, so a synthesized response remains the
+  common case for restart.
 - **Action matching is uniform.** Logout and restart are matched from
   the declared `actions:` block for every strategy, not re-implemented
   per handler. When each handler matched for itself, `basic` and
@@ -951,6 +990,15 @@ omits or invents matches the capture regardless. Where a modem
 validates one of those, no capture can fail the test, and the
 assertion has to be written against the request Core builds. See
 ARCHITECTURE_DECISIONS.md § How to extend an existing auth strategy.
+
+**Nor does replay verify crypto.** The `form_sjcl` and `json_sjcl`
+handlers decrypt with the same `protocol/sjcl.py` Core encrypts with, so
+a replay proves the two agree on wire shape and flow, not that the
+encryption matches the firmware: an encoding error both sides share
+passes (#86). The `form_cbn` handler accepts any encrypted password, so
+its replay says nothing about the crypto at all. Crypto correctness
+rests on known-answer tests anchored to reference values from the
+firmware's own JavaScript, and finally on hardware.
 
 The pass criterion follows. `ActionResult.success` now carries the
 response status for HTTP actions, and the runner asserts it, plus the
@@ -1297,6 +1345,7 @@ values, not different behaviors. Every variation maps to a config field:
 | Logout mechanism | `actions.logout` (shared action schema) |
 | Single-session semantics | `actions.logout` presence |
 | CSRF token | `auth.csrf_header` (strategy-specific; `form_pbkdf2` currently) |
+| Where a login token is read and sent | `auth.token_source`, `auth.token_placement` (`bearer`) |
 
 No auth hooks means:
 
@@ -1328,10 +1377,12 @@ decisions that affect directory structure and package boundaries.
 
 #### 1. Core — isolated unit tests
 
-Strategy extraction logic, auth strategies, config schema validation,
-data model invariants. Tests use synthetic inputs (hand-crafted HTML
-snippets, JSON structures, delimiter strings) designed to exercise
-specific code paths. No real modem data, no HAR files, no network.
+Strategy extraction logic, auth strategies, orchestration (collector,
+policy, recovery, restart, and the events each emits), config schema
+validation, data model invariants. Tests use synthetic inputs
+(hand-crafted HTML snippets, JSON structures, delimiter strings)
+designed to exercise specific code paths. No real modem data, no HAR
+files, no network.
 
 Core also owns the **test harness** — shared infrastructure for HAR
 replay, golden file comparison, and structural assertions. The harness
@@ -1388,6 +1439,20 @@ Config flow, coordinator, entity model, device registry. Tests mock
 Core's engine interface — they verify HA-specific behavior (entity
 creation, state updates, availability) without running the real
 pipeline. See [HA_ADAPTER_SPEC.md § Testing](../../../custom_components/cable_modem_monitor/docs/HA_ADAPTER_SPEC.md#testing).
+
+Importing a Core enum or dataclass to assert an entity's state is
+normal here. Driving a Core component through its real code path is
+not: that is a scope 1 test and belongs in Core's tree, wherever it
+was first written. The mocking convention follows the tree, so a Core
+test placed here is written against HA's fakes and stops exercising
+what it claims to.
+
+### Repo tooling tests
+
+The root `tests/` tree also holds tests for `scripts/` — the release
+and validation gates, which belong to no package. They live outside
+the three scopes by nature: their subject is the repository, not a
+shipped artifact.
 
 ### No test code in Catalog
 

@@ -15,7 +15,7 @@ files; this document explains the choices that shaped them.
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
 | [Recovery Architecture](#recovery-architecture) | Restart vs recovery, generic timing, reboot-signal vote, observer callback, no session preservation |
-| [Testing Strategy](#testing-strategy) | HAR replay, conformance gates every modem, greenfield from specs, fresh-context capture |
+| [Testing Strategy](#testing-strategy) | HAR replay, conformance gates every modem, greenfield from specs, fresh-context capture, test placement by code under test |
 | [Onboarding](#onboarding) | MCP for deterministic steps, catalog_tools owns the spec, inference vs assembly, no fallback |
 | [Config Flow](#config-flow) | Cross-directory grouping, variant label design |
 | [Extension Model](#extension-model) | How to add modems, formats, parsers, auth strategies, transports |
@@ -530,7 +530,8 @@ entity.
 
 **Decision:** Cross-cutting protocol code sits in `protocol/`:
 `protocol/hnap.py` for HMAC signing and constants, `protocol/cbn.py`
-for the AES-256-CBC encryption `form_cbn` auth needs.
+for the AES-256-CBC encryption `form_cbn` auth needs, `protocol/sjcl.py`
+for the SJCL PBKDF2 and AES-CCM that `form_sjcl` and `json_sjcl` share.
 
 **Rationale:** HNAP signing is used by auth, loaders, and action
 executors alike. A shared module removes the duplication while each
@@ -611,6 +612,60 @@ Core strategy.
 pattern requires a Core change — but this is intentional, as it
 becomes available to all future modems using the same protocol.
 
+### Strategy knowledge lives with the strategy
+
+**Decision:** Code outside `auth/` never reads an auth strategy's
+config fields and never type-checks a strategy. What it needs to know
+about a strategy has exactly one of three homes:
+
+| Kind of knowledge | Home | Existing examples |
+|---|---|---|
+| A static fact about the strategy | ClassVar on its model | `display_name`, `transport`, `stateless`, `encodes_action_bodies` |
+| Behaviour that needs the live session or the strategy's secret | overridable `BaseAuthManager` method, safe default | `headers()`, `auth_failure_mode()`, `session_is_valid()`, `session_cookie_name()`, `loader_url_token()`, `encode_action_body()` |
+| A protocol-locked transport's own parameters | that transport's protocol module, with typed access: `protocol/hnap.py` `hmac_algorithm()`, `protocol/cbn.py` `cbn_params()` | `hmac_algorithm`, the CBN getter/setter endpoints and session cookie |
+
+Setup-time work a strategy needs (form_nonce's credential-encoding
+detection) is an optional module entry point in `auth/{strategy}.py`,
+resolved by strategy literal the way `create_manager` is: Core's
+generic `detect_setup_params` / `apply_setup_params` dispatch to it,
+and a strategy without one has no setup step. Consumers, including the
+HA adapter, treat the resulting params as opaque data.
+
+`AuthContext` is data only: values a login produced that generic code
+reads (`url_token`, `private_key`, `token`, `user_id`), described by
+what consumes them.
+
+**Rationale:** Knowledge placed outside its strategy spreads as
+`getattr` string lookups and `isinstance` chains, and works only while
+strategies happen to share field names: `bearer` got URL-token loading
+from the collector because it reused the names `token_prefix` and
+`cookie_name`, not because anything said it should. § Post-login 401 is
+read per auth strategy set the
+direction ("the knowledge lives on the strategy, not in an isinstance
+chain"); this entry completes it.
+
+Protocol-locked transports are not an exception to the rule but its
+third home: HNAP and CBN each have exactly one strategy, the protocol
+itself (§ Transport is a protocol identifier), and their modules are
+protocol code by design (§ Transport-scoped action executors). The
+generic collector and dispatcher route by transport and read nothing.
+
+This reverses the v3.14 Step 20 choice to keep `session_is_valid` as a
+branch table in the collector. Its premise was that auth managers held
+no session config such as `cookie_name`; § Session is lifecycle, auth
+owns the cookie then moved `cookie_name` onto each strategy's own
+config, so the collector was reading strategy data from outside.
+
+**Constrains:** A new strategy answers these questions by overriding
+hooks or setting ClassVars, never by matching a field name something
+else reads. Each hook's default reproduces the behaviour generic code
+had before the move, so a strategy that overrides nothing behaves as
+before. The one-strategy-per-transport premise behind the third home
+is asserted by a test; a second strategy on HNAP or CBN fails it and
+forces this entry to be revisited. The collector keeps one check that
+is no strategy's knowledge: an entry with no auth configured is
+always a valid session.
+
 ### Session is lifecycle, auth owns the cookie
 
 **Decision:** `cookie_name` and `token_prefix` live on the auth
@@ -674,10 +729,10 @@ is not valid, since it would fail anyway and the retry proceeds regardless).
 read the cookie jar, which is equivalent for every cookie-based strategy but
 wrong for header-authenticated ones: `bearer` holds a live session in
 `session.headers["Authorization"]` with an empty jar, so a cookie test would
-silently skip logout on exactly the modems that most need it. `session_is_valid`
-already answers this per strategy — HNAP checks uid plus private key, cookie
-strategies check `auth.cookie_name`, `url_token` checks the token — so the
-guard delegates to it rather than reimplementing a narrower check.
+silently skip logout on exactly the modems that most need it. Each strategy's
+`session_is_valid()` already answers this (§ Strategy knowledge lives with the
+strategy), so the guard delegates to it rather than reimplementing a narrower
+check.
 CBN transport always embeds the session token by protocol; `requires_session`
 is absent from `CbnAction` by type-system design.
 
@@ -695,8 +750,8 @@ single-session semantics.
 
 **Decision:** When firmware refuses a login without judging the
 credential but does so under a 2xx, the catalog entry declares the
-refusal body (`form_pbkdf2.login_busy`) and the strategy reports
-`AuthResult.busy`. The collector classifies `busy` as
+refusal body (`login_busy` on `form_pbkdf2`, `bearer` and `json_sjcl`,
+one shared matcher) and the strategy reports `AuthResult.busy`. The collector classifies `busy` as
 `AUTH_UNAVAILABLE`, the same signal a 5xx earns (UC-87a). Core holds no
 table of firmware busy codes.
 
@@ -946,6 +1001,16 @@ this set as opaque — a Core-layer ``headers`` parameter, no
 modified; redaction only applies when ``describe_request`` formats
 the failure log line.
 
+The same set tells ``clear_session()`` what to reset. A credential
+header left on the session after it is cleared goes back on the wire
+with every request until the next login; clearing a hardcoded
+``Authorization`` covered only the default ``bearer`` placement. Reset
+means back to the entry's configured state, not deleted: a declared
+header that ``session.headers`` also sets statically returns to that
+static value. ``arris/tg3442de`` depends on it, since its login needs
+the pre-auth ``csrfNonce: "undefined"`` that ``form_sjcl`` overwrites
+after login.
+
 ---
 
 ### Credential reconfiguration is reconstruction, not mutation
@@ -996,6 +1061,40 @@ different multi-round-trip exchange (see § Discrete strategies).
 
 ---
 
+### Token source and placement are values; encryption is a strategy
+
+**Decision:** `bearer` is the one-round-trip JSON login: send
+credentials as JSON, get a token, send it back. Where the token is read
+(`token_source`: JSON path or response header) and where it goes back
+(`token_placement`: `Authorization`, a named header, or the URL query)
+are opt-in values on it, as are `method`, `extra_fields`, `cookie_name`
+and `login_busy`. A JSON login whose body is SJCL-encrypted is a
+separate strategy, `json_sjcl`, on the shared `protocol/sjcl.py`.
+
+**Rationale:** The test is § Discrete strategies: structural behaviour
+decides, not which values differ. The plaintext Arris actionHandler
+login (#213 SB8200 PHP, the SBG8300) runs `bearer`'s exact flow with
+other values, so a new strategy would copy that flow to change
+parameters. The encrypted build (#210 TG3442S) adds a login-page round
+trip, key derivation, body encryption and response decryption: the
+same difference that separates `form_sjcl` from `form`. The firmware's
+own `encryptParametersIfNeeded` switch is how the vendor wrote its JS,
+not evidence that encryption is a value of the protocol.
+
+Extending `form` instead was rejected on blast radius: `form` carries
+most of the fleet, `bearer` two entries, and every extension is a
+gated branch the unset path must skip.
+
+**Constrains:** Every new `bearer` field is opt-in and the unset
+request is the pre-extension request, asserted per current entry
+(§ How to extend an existing auth strategy). A token source is a named
+value, never a second flag (§ Auth extraction sources are named, not
+flagged). Header placement is one helper in `auth/response.py` that
+both `bearer` and `json_sjcl` call; no strategy imports a sibling
+strategy. `{host}` in `extra_fields` is the one
+placeholder; a second would be a new key in that fixed set, not a
+template syntax (MODEM_YAML_SPEC § a fixed key set).
+
 ### JS-driven auth is a `form` variant
 
 **Decision:** Login flows driven by page JavaScript are configured as
@@ -1041,6 +1140,20 @@ executor. The alternative, letting modem.yaml address the login response
 by JSON path, was rejected in MODEM_YAML_SPEC.md § Architecture Decision:
 a fixed key set, not a template language. A third value is a third field
 here, not a new syntax there.
+
+**Encrypted action bodies are not a field (#210).** The actionHandler
+firmware encrypts post-login request bodies under the login's session
+key. Encoding one needs the strategy's secret, so it is the manager
+hook `encode_action_body()` (§ Strategy knowledge lives with the
+strategy), and the key stays on the `json_sjcl` manager, which wraps
+the body with the one function it logs in with. A field holding the
+strategy's session type was rejected because it made the base module
+and the executor import one strategy's internals; a callable field was
+rejected because the context is data only. Which strategies encode is
+the model ClassVar `encodes_action_bodies`, so config validation names
+no strategy. A failed login drops the key, the dispatcher offers the
+collector's encoder only while a login context exists, and neither
+`repr` nor any failure log prints the key.
 
 ---
 
@@ -1598,6 +1711,37 @@ cannot prove how login works — see MODEM_INTAKE_WORKFLOW § Step 2.
 
 ---
 
+### Test placement follows the code under test, enforced by review
+
+**Decision:** A test that drives a Core component through its real code
+path is a Core test and lives in Core's tree, whichever tree it was
+first written in. The root `tests/` tree holds HA adapter tests and
+tests for `scripts/`. No CI check enforces this; review does.
+
+**Rationale:** Each tree's mocking convention follows its scope, so
+placement decides how a test gets written. Core orchestration tests
+that sat in the HA tree were handed `MagicMock(spec=requests.Session)`
+— correct for an adapter test, wrong for one calling
+`ModemDataCollector.execute()`, whose session needs the `headers` and
+`cookies` that `Session.__init__` sets. A one-line Core change passed
+all 2338 package tests and broke only there.
+
+The boundary is not mechanically checkable. Adapter tests legitimately
+import Core enums and dataclasses to assert entity state, so importing
+Core is not the signal; driving Core's real code path is, and that is
+not visible to a linter. The no-`homeassistant`-in-Core rule is
+enforceable only because Core's CI job installs less, making a
+forbidden import a missing module. The root job installs Core by
+design, so nothing is absent when a Core test sits there.
+
+**Constrains:** A misplaced test is caught in review or not at all. A
+grep or import gate is not available for this: any such check must
+either forbid imports scope 3 legitimately needs, or infer intent from
+call shape. Scope definitions live in
+[ARCHITECTURE.md § Testing](ARCHITECTURE.md#testing).
+
+---
+
 ## Onboarding
 
 ### Deterministic steps are code, Claude supplies judgment
@@ -1786,7 +1930,10 @@ access do not belong here.
 2. **`auth/{strategy}.py`** — new manager module with a
    `create_manager(config)` entry point.
 3. **`test_harness/auth/{strategy}.py`** — new handler module with a
-   `create_handler(modem_config, har_entries)` entry point.
+   `create_handler(modem_config, har_entries)` entry point. It sets
+   the handler's `login_page`, `login_action` and `token_prefix` from
+   its own config where the strategy has them; the mock server builds
+   its routes around them.
 4. **Regenerate the published tables** —
    `python scripts/generate_constraint_tables.py`.
 

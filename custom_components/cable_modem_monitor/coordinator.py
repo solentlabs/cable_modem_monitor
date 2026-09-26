@@ -53,6 +53,8 @@ class CableModemRuntimeData:
     health_monitor: HealthMonitor | None
     modem_identity: ModemIdentity
     channel_map: ChannelMap = field(default_factory=ChannelMap)
+    # Names of the auth strategy's setup params stored in entry.data.
+    setup_param_keys: tuple[str, ...] = ()
     # Set while a destructive button handler (Restart, Reset) is
     # running; cleared in the handler's ``finally`` block. Read by
     # other buttons that must refuse overlapping presses.

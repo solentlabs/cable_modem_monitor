@@ -82,6 +82,7 @@ _AUTH_COLORS: dict[str, str] = {
     "hnap": "5B8FBF",
     "url_token": "0E9A8B",
     "bearer": "1A7FAA",
+    "json_sjcl": "9B6FD8",
 }
 
 _AUTH_COLOR_FALLBACK = "9E9E9E"
@@ -91,13 +92,25 @@ _AUTH_COLOR_FALLBACK = "9E9E9E"
 _AUTH_DISPLAY_LABELS: dict[str, str] = get_strategy_display_labels()
 
 
+# Where the last-segment rule would collide: json_sjcl and form_sjcl both
+# end in "sjcl".
+_AUTH_BADGE_LABELS: dict[str, str] = {"json_sjcl": "json-sjcl"}
+
+
 def _auth_badge_label(strategy: str) -> str:
     """Derive a short badge label from a strategy name.
 
     Returns the last underscore-delimited segment: url_token→token, form_nonce→nonce, etc.
     Single-word strategies (none, basic, form, hnap, bearer) are returned as-is.
     """
+    if strategy in _AUTH_BADGE_LABELS:
+        return _AUTH_BADGE_LABELS[strategy]
     return strategy.rsplit("_", 1)[-1] if "_" in strategy else strategy
+
+
+def _shields_text(label: str) -> str:
+    """Escape a label for a shields.io static badge path, where "-" separates fields."""
+    return label.replace("-", "--")
 
 
 def auth_to_badge(strategy: str) -> str:
@@ -105,21 +118,21 @@ def auth_to_badge(strategy: str) -> str:
     label = _auth_badge_label(strategy)
     color = _AUTH_COLORS.get(strategy, _AUTH_COLOR_FALLBACK)
     tooltip = _AUTH_DISPLAY_LABELS.get(strategy, strategy)
-    return f'![{label}](https://img.shields.io/badge/-{label}-{color}?style=flat-square "{tooltip}")'
+    return f'![{label}](https://img.shields.io/badge/-{_shields_text(label)}-{color}?style=flat-square "{tooltip}")'
 
 
 def generate_auth_legend() -> list[str]:
     """Build Auth legend lines, grouped by family.
 
     Returns a list of markdown lines suitable for extending into the Legend
-    section. Groups the 10 strategies so the legend stays readable even
+    section. Groups the strategies so the legend stays readable even
     as new strategies are added over time.
     """
     _groups: list[tuple[str, list[str]]] = [
         ("No auth", ["none"]),
         ("Simple", ["basic"]),
         ("Form-based", ["form", "form_nonce", "form_pbkdf2", "form_sjcl", "form_cbn"]),
-        ("Token-based", ["url_token", "bearer"]),
+        ("Token-based", ["url_token", "bearer", "json_sjcl"]),
         ("Protocol", ["hnap"]),
     ]
     # Append Core-registered strategies not yet in any group (gray fallback).
@@ -134,7 +147,7 @@ def generate_auth_legend() -> list[str]:
             label = _auth_badge_label(strategy)
             color = _AUTH_COLORS.get(strategy, _AUTH_COLOR_FALLBACK)
             tooltip = _AUTH_DISPLAY_LABELS.get(strategy, strategy)
-            badge = f"![{label}](https://img.shields.io/badge/-{label}-{color}?style=flat-square)"
+            badge = f"![{label}](https://img.shields.io/badge/-{_shields_text(label)}-{color}?style=flat-square)"
             parts.append(f"{badge} {tooltip}")
         lines.append(f"  - {group_name}: " + " | ".join(parts))
     return lines

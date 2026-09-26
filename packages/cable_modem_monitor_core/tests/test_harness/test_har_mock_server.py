@@ -14,6 +14,10 @@ from typing import Any
 
 import pytest
 import requests
+from solentlabs.cable_modem_monitor_core.auth.bearer import BearerAuthManager
+from solentlabs.cable_modem_monitor_core.fetch_list import ResourceTarget
+from solentlabs.cable_modem_monitor_core.loaders.http import HTTPResourceLoader
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import BearerAuth
 from solentlabs.cable_modem_monitor_core.test_harness.auth import (
     AuthHandler,
     BasicAuthHandler,
@@ -903,6 +907,73 @@ class TestHARMockServerBearerCaptureSeeding:
             resp = requests.post(f"{server.base_url}/rest/v1/user/login", json={"password": "pw"})
             assert resp.status_code == 201
             assert resp.json()["created"]["token"]
+
+
+class TestHARMockServerBearerHeaderToken:
+    """The real bearer manager logs in against the handler's header-token shape.
+
+    Handler unit tests prove each side alone; this proves they agree on
+    the wire: the method, the response header the token is read from,
+    and the request header or query key it is sent back in.
+    """
+
+    def test_header_token_round_trip(self) -> None:
+        """PUT login, token from a response header, sent back as a named header."""
+        config = _make_config(
+            {
+                "auth": {
+                    "strategy": "bearer",
+                    "login_endpoint": "/api/login",
+                    "method": "PUT",
+                    "token_source": "header",
+                    "token_header": "X-Session-Token",
+                    "token_placement": "header",
+                },
+            }
+        )
+        entries = _load_entries("har_entries_no_auth.json")
+        with HARMockServer(entries, modem_config=config) as server:
+            session = requests.Session()
+            assert isinstance(config.auth, BearerAuth)
+            result = BearerAuthManager(config.auth).authenticate(session, server.base_url, "admin", "pw")
+            assert result.success is True
+
+            assert session.get(f"{server.base_url}/status.html").status_code == 200
+            assert requests.get(f"{server.base_url}/status.html").status_code == 401
+
+    def test_query_token_round_trip(self) -> None:
+        """Header-issued token, appended by the loader as ``?{prefix}{token}``, opens data pages."""
+        config = _make_config(
+            {
+                "auth": {
+                    "strategy": "bearer",
+                    "login_endpoint": "/api/login",
+                    "method": "PUT",
+                    "token_source": "header",
+                    "token_header": "X-Session-Token",
+                    "token_placement": "query",
+                    "token_prefix": "ct_",
+                },
+            }
+        )
+        entries = _load_entries("har_entries_no_auth.json")
+        target = ResourceTarget(path="/status.html", format="table", encoding="")
+        with HARMockServer(entries, modem_config=config) as server:
+            session = requests.Session()
+            assert isinstance(config.auth, BearerAuth)
+            result = BearerAuthManager(config.auth).authenticate(session, server.base_url, "admin", "pw")
+            assert result.success is True
+
+            loader = HTTPResourceLoader(
+                session=session,
+                base_url=server.base_url,
+                url_token=result.auth_context.url_token,
+                token_prefix=config.auth.token_prefix,
+            )
+            assert "/status.html" in loader.fetch([target])
+
+            # The same session without the query key is refused.
+            assert session.get(f"{server.base_url}/status.html").status_code == 401
 
 
 class TestHARMockServerRequestBodyShape:

@@ -554,6 +554,58 @@ async def test_diagnostics_has_credentials(mock_runtime_data, overrides, expecte
     assert result["config_entry"]["has_credentials"] is expected
 
 
+# ┌─────────────────┬─────────────────────────────┬─────────────────┬─────────────────────────────┐
+# │ runtime keys    │ stored entry keys           │ reported        │ description                 │
+# ├─────────────────┼─────────────────────────────┼─────────────────┼─────────────────────────────┤
+# │ encoding, field │ b64_packed, arguments       │ both, as stored │ strategy with a setup step  │
+# │ encoding, field │ (none)                      │ nothing         │ keyless entry reports none  │
+# │ ()              │ plain, "" (old HA)          │ nothing         │ no setup step, keys ignored │
+# └─────────────────┴─────────────────────────────┴─────────────────┴─────────────────────────────┘
+#
+_STORED_PACKED = {"credential_encoding": "b64_packed", "credential_field": "arguments"}
+_STORED_PLAIN = {"credential_encoding": "plain", "credential_field": ""}
+_SETUP_KEYS = ("credential_encoding", "credential_field")
+
+# fmt: off
+SETUP_PARAM_REPORT_CASES = [
+    # (setup_param_keys, stored,          reported,        id)
+    (_SETUP_KEYS,        _STORED_PACKED,  _STORED_PACKED,  "reported_by_strategy_keys"),
+    (_SETUP_KEYS,        {},              {},              "keyless_entry"),
+    ((),                 _STORED_PLAIN,   {},              "no_setup_step"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("keys", "stored", "reported"),
+    [(c[0], c[1], c[2]) for c in SETUP_PARAM_REPORT_CASES],
+    ids=[c[3] for c in SETUP_PARAM_REPORT_CASES],
+)
+async def test_diagnostics_setup_params(mock_runtime_data, keys, stored, reported):
+    """config_entry reports the stored setup params the strategy names, and no others."""
+    mock_runtime_data.setup_param_keys = keys
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.runtime_data = mock_runtime_data
+    entry.data = {**MOCK_ENTRY_DATA, **stored}
+    entry.title = "Solent Labs TPS-2000"
+    entry.entry_id = "test_123"
+
+    async def fake_executor(fn, *args):
+        return fn(*args)
+
+    hass.async_add_executor_job = fake_executor
+
+    with patch(
+        "custom_components.cable_modem_monitor.diagnostics.get_log_entries",
+        return_value=SAMPLE_LOG_BUFFER_ENTRY,
+    ):
+        result = await async_get_config_entry_diagnostics(hass, entry)
+
+    config_entry = result["config_entry"]
+    assert {key: config_entry[key] for key in _SETUP_KEYS if key in config_entry} == reported
+
+
 async def test_diagnostics_health_coord_data_none(mock_runtime_data):
     """Falls back to snapshot health_info when health coordinator has no data."""
     hass = MagicMock()

@@ -46,7 +46,16 @@ def validate_cross_file(modem: ModemConfig, parser: ParserConfig) -> list[str]:
     _check_transport_format(modem, parser, errors)
     _check_aggregate_collisions(modem, parser, errors)
     _check_provisioned_speed_direction(parser, errors)
+    _check_requests_transport(modem, parser, errors)
     return errors
+
+
+def _check_requests_transport(modem: ModemConfig, parser: ParserConfig, errors: list[str]) -> None:
+    """Reject parser.yaml ``requests`` on transports whose loader does not read it."""
+    # Only the HTTP loader sends a declared request. On cbn or hnap the map
+    # would validate and then change nothing, which reads as working config.
+    if parser.requests and modem.transport != "http":
+        errors.append(f"requests: is only valid for transport 'http', not '{modem.transport}'")
 
 
 def _check_transport_format(modem: ModemConfig, parser: ParserConfig, errors: list[str]) -> None:

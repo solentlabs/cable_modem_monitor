@@ -11,9 +11,12 @@ See MODEM_YAML_SPEC.md Actions section and ORCHESTRATION_SPEC.md.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from ...connectivity import create_session
+from ...protocol.cbn import cbn_params
+from ...protocol.hnap import hmac_algorithm
 from .base import ActionResult
 from .cbn_action import execute_cbn_action
 from .hnap_action import execute_hnap_action
@@ -63,6 +66,12 @@ def execute_action(
         # {auth:...} placeholders resolve from the session that sends the
         # request, so a per-action session brings its own context.
         auth_context: AuthContext | None = collector._auth_context
+        # body_encoding: session is encoded by the manager whose login the
+        # request rides on. Without a live context the collector's session
+        # was cleared, so its manager's encoder is not offered.
+        encode_body: Callable[[dict[str, Any]], dict[str, Any] | None] | None = (
+            collector._auth_manager.encode_action_body if auth_context is not None else None
+        )
         if action.action_auth is not None:
             from ...auth.factory import create_auth_manager_for_action
 
@@ -83,6 +92,7 @@ def execute_action(
                 )
             session = fresh
             auth_context = auth_result.auth_context
+            encode_body = manager.encode_action_body
         return execute_http_action(
             session,
             collector._base_url,
@@ -92,33 +102,32 @@ def execute_action(
             model=model,
             query_params=query_params or None,
             auth_context=auth_context,
+            encode_body=encode_body,
         )
 
     if isinstance(action, HnapAction):
         private_key = ""
         if collector._auth_context:
             private_key = collector._auth_context.private_key
-        hmac_algorithm = getattr(modem_config.auth, "hmac_algorithm", "md5")
         return execute_hnap_action(
             collector._session,
             collector._base_url,
             action,
             private_key=private_key,
-            hmac_algorithm=hmac_algorithm,
+            hmac_algorithm=hmac_algorithm(modem_config.auth),
             timeout=modem_config.timeout,
             log_level=log_level,
             model=model,
         )
 
     if isinstance(action, CbnAction):
-        setter_endpoint = getattr(modem_config.auth, "setter_endpoint", "/xml/setter.xml")
-        session_cookie_name = getattr(modem_config.auth, "session_cookie_name", "sessionToken")
+        cbn = cbn_params(modem_config.auth)
         return execute_cbn_action(
             collector._session,
             collector._base_url,
             action,
-            setter_endpoint=setter_endpoint,
-            session_cookie_name=session_cookie_name,
+            setter_endpoint=cbn.setter_endpoint,
+            session_cookie_name=cbn.session_cookie_name,
             timeout=modem_config.timeout,
             log_level=log_level,
             model=model,

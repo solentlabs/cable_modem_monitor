@@ -12,12 +12,28 @@ Algorithm
 4. ``result = base64(":" + hex(ciphertext))``
 
 Requires the ``cryptography`` package: install Core with ``[cbn]``.
+
+Also owns typed access to the CBN auth block's transport parameters
+(``cbn_params``) for the generic collector and action dispatcher.
 """
 
 from __future__ import annotations
 
 import base64
 import hashlib
+from typing import TYPE_CHECKING
+
+from ..models.modem_config.auth import FormCbnAuth
+
+if TYPE_CHECKING:
+    from ..models.modem_config.auth import AuthConfig
+
+
+def cbn_params(auth: AuthConfig | None) -> FormCbnAuth:
+    """The CBN auth block, or its model defaults when the entry declares none."""
+    # CBN has exactly one strategy (TestProtocolLockedTransports), so the
+    # transport owns these reads; generic code routes here reading nothing.
+    return auth if isinstance(auth, FormCbnAuth) else FormCbnAuth(strategy="form_cbn")
 
 
 def compal_encrypt(password: str, session_token: str) -> str:

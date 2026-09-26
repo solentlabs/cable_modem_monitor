@@ -9,22 +9,28 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
+from functools import partial
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
 import requests.cookies
-from solentlabs.cable_modem_monitor_core.auth.base import AuthContext
+from solentlabs.cable_modem_monitor_core.auth.base import AuthContext, AuthResult
+from solentlabs.cable_modem_monitor_core.auth.json_sjcl import JsonSjclAuthManager, encrypt_payload
 from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
     HnapAction,
     HttpAction,
 )
-from solentlabs.cable_modem_monitor_core.models.modem_config.auth import HnapAuth, NoneAuth
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import HnapAuth, JsonSjclAuth, NoneAuth
 from solentlabs.cable_modem_monitor_core.orchestration.actions import (
     execute_action,
     execute_hnap_action,
     execute_http_action,
 )
+from solentlabs.cable_modem_monitor_core.protocol import sjcl
+from solentlabs.cable_modem_monitor_core.protocol.sjcl import SjclSession
 
 # ------------------------------------------------------------------
 # Tests — execute_http_action
@@ -780,7 +786,7 @@ class TestExecuteAction:
     """Single dispatch routing for HTTP and HNAP actions."""
 
     def test_http_action_dispatches(self) -> None:
-        """HTTP action routes to execute_http_action with the collector's auth context."""
+        """HTTP action routes to execute_http_action with the collector's auth context and encoder."""
         collector = MagicMock()
         collector._session = MagicMock(spec=requests.Session)
         collector._base_url = "http://192.168.100.1"
@@ -805,6 +811,7 @@ class TestExecuteAction:
             model=modem_config.model,
             query_params=None,
             auth_context=collector._auth_context,
+            encode_body=collector._auth_manager.encode_action_body,
         )
 
     def test_hnap_action_dispatches(self) -> None:
@@ -1114,3 +1121,226 @@ class TestHttpActionWithActionAuth:
         execute_action(collector, self._make_modem_config(), action)
 
         original_session.request.assert_called_once()
+
+
+# ------------------------------------------------------------------
+# Tests — body_encoding: session (json_body wrapped by the session's encoder)
+# ------------------------------------------------------------------
+
+_SJCL_KEY = bytes(range(16))
+_SJCL_IV = "aabbccddeeff0011"
+_SJCL_ENCODER = partial(
+    encrypt_payload, SjclSession(key=_SJCL_KEY, iv_hex=_SJCL_IV, user="admin", aad="AAD", tag_length=16)
+)
+_RESTART_BODY = {"action": "restart", "module": "gateway"}
+_SJCL_AUTH = JsonSjclAuth(
+    strategy="json_sjcl",
+    login_page="/login.php",
+    login_endpoint="/actionHandler/login.php",
+    pbkdf2_iterations=1000,
+    pbkdf2_key_length=128,
+    aad="AAD",
+    token_header="X-Session-Token",
+)
+
+
+def _sjcl_action(**fields: object) -> HttpAction:
+    return HttpAction.model_validate(
+        {
+            "type": "http",
+            "method": "PUT",
+            "endpoint": "/actionHandler/restart.php",
+            "json_body": _RESTART_BODY,
+            **fields,
+        }
+    )
+
+
+def _ok_session() -> MagicMock:
+    session = MagicMock(spec=requests.Session)
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.ok = True
+    session.request.return_value = resp
+    return session
+
+
+# ┌──────────────────────────────────────┬─────────────────────────────────┬──────────┐
+# │ encode_body                          │ outcome                         │ sent     │
+# ├──────────────────────────────────────┼─────────────────────────────────┼──────────┤
+# │ None                                 │ failure, names the session      │ nothing  │
+# │ json_sjcl manager before any login   │ failure, names the session      │ nothing  │
+# └──────────────────────────────────────┴─────────────────────────────────┴──────────┘
+_NO_SESSION_CASES = [
+    (None, "no encoder"),
+    (JsonSjclAuthManager(_SJCL_AUTH).encode_action_body, "encoder without a login"),
+]
+
+
+class TestHttpActionBodyEncryption:
+    """body_encoding: session wraps json_body with the session encoder; plain is today's request."""
+
+    def test_sjcl_sends_only_the_envelope(self) -> None:
+        """The request body is exactly {EncryptedData, user}, never the plaintext keys."""
+        session = _ok_session()
+
+        result = execute_http_action(
+            session,
+            "http://192.168.100.1",
+            _sjcl_action(body_encoding="session"),
+            encode_body=_SJCL_ENCODER,
+        )
+
+        assert result.success is True
+        sent = session.request.call_args.kwargs["json"]
+        assert set(sent) == {"EncryptedData", "user"}
+        assert sent["user"] == "admin"
+
+    def test_sjcl_envelope_decrypts_to_json_body(self) -> None:
+        """EncryptedData decrypts under the session to the compact json_body."""
+        session = _ok_session()
+
+        execute_http_action(
+            session,
+            "http://192.168.100.1",
+            _sjcl_action(body_encoding="session"),
+            encode_body=_SJCL_ENCODER,
+        )
+
+        sent = session.request.call_args.kwargs["json"]
+        plaintext = sjcl.decrypt(_SJCL_KEY, _SJCL_IV, sent["EncryptedData"], "AAD", 16)
+        assert plaintext == b'{"action":"restart","module":"gateway"}'
+
+    @pytest.mark.parametrize("encode_body,desc", _NO_SESSION_CASES, ids=[c[1] for c in _NO_SESSION_CASES])
+    def test_sjcl_without_session_fails_and_sends_nothing(
+        self, encode_body: Callable[[dict[str, Any]], dict[str, Any] | None] | None, desc: str
+    ) -> None:
+        """No encoder, or one that cannot encode, means no request at all, never a plaintext fallback."""
+        session = _ok_session()
+
+        result = execute_http_action(
+            session,
+            "http://192.168.100.1",
+            _sjcl_action(body_encoding="session", pre_fetch_url="/restore_reboot.php"),
+            encode_body=encode_body,
+        )
+
+        assert result.success is False, desc
+        assert "body_encoding" in result.message
+        session.request.assert_not_called()
+        session.get.assert_not_called()
+
+    def test_none_is_the_unset_request(self) -> None:
+        """Declaring body_encoding: plain sends the same request as leaving it unset."""
+        unset, declared = _ok_session(), _ok_session()
+
+        execute_http_action(unset, "http://192.168.100.1", _sjcl_action(), encode_body=_SJCL_ENCODER)
+        execute_http_action(
+            declared, "http://192.168.100.1", _sjcl_action(body_encoding="plain"), encode_body=_SJCL_ENCODER
+        )
+
+        assert unset.request.call_args == declared.request.call_args
+        assert unset.request.call_args.kwargs["json"] == _RESTART_BODY
+
+    def test_default_is_none(self) -> None:
+        """An action that does not declare body_encoding is sent plain."""
+        assert _sjcl_action().body_encoding == "plain"
+
+    def test_sjcl_requires_json_body(self) -> None:
+        """body_encoding: session without json_body has nothing to encode, so it does not load."""
+        import pydantic
+
+        with pytest.raises(pydantic.ValidationError, match="requires json_body"):
+            HttpAction.model_validate(
+                {"type": "http", "method": "PUT", "endpoint": "/restart.php", "body_encoding": "session"}
+            )
+
+
+# ------------------------------------------------------------------
+# Tests — execute_action hands the running manager's encoder to the executor
+# ------------------------------------------------------------------
+
+_COLLECTOR_ENVELOPE = {"EncryptedData": "from-collector", "user": "admin"}
+_ACTION_AUTH_ENVELOPE = {"EncryptedData": "from-action-auth", "user": "admin"}
+
+
+def _manager_encoding_to(envelope: dict[str, str]) -> MagicMock:
+    manager = MagicMock()
+    manager.encode_action_body.return_value = envelope
+    manager.authenticate.return_value = AuthResult(success=True)
+    return manager
+
+
+def _encoding_collector(session: MagicMock, context: AuthContext | None) -> MagicMock:
+    collector = MagicMock()
+    collector._session = session
+    collector._base_url = "http://192.168.100.1"
+    collector._auth_context = context
+    collector._auth_manager = _manager_encoding_to(_COLLECTOR_ENVELOPE)
+    return collector
+
+
+def _encoding_config() -> MagicMock:
+    config = MagicMock()
+    config.timeout = 10
+    config.model = "T100"
+    config.session = None
+    return config
+
+
+# ┌──────────────────────┬──────────────────┬───────────────────────────┐
+# │ action_auth          │ collector login  │ body sent                 │
+# ├──────────────────────┼──────────────────┼───────────────────────────┤
+# │ unset                │ live context     │ collector manager's       │
+# │ unset                │ none (cleared)   │ nothing, action fails     │
+# │ json_sjcl            │ live context     │ per-action manager's      │
+# │ json_sjcl            │ none (cleared)   │ per-action manager's      │
+# └──────────────────────┴──────────────────┴───────────────────────────┘
+#
+# fmt: off
+DISPATCH_ENCODER_CASES: list[tuple[bool, AuthContext | None, dict[str, str] | None, str]] = [
+    # (action_auth, collector context, envelope sent,         id)
+    (False,         AuthContext(),     _COLLECTOR_ENVELOPE,   "collector"),
+    (False,         None,              None,                  "collector_cleared"),
+    (True,          AuthContext(),     _ACTION_AUTH_ENVELOPE, "action_auth"),
+    (True,          None,              _ACTION_AUTH_ENVELOPE, "action_auth_collector_cleared"),
+]
+# fmt: on
+
+
+class TestExecuteActionEncoder:
+    """The encoder is the manager whose login the request rides on."""
+
+    _FACTORY = "solentlabs.cable_modem_monitor_core.auth.factory.create_auth_manager_for_action"
+    _SESSION = "solentlabs.cable_modem_monitor_core.orchestration.actions.create_session"
+
+    @pytest.mark.parametrize(
+        "action_auth,context,expected,desc",
+        DISPATCH_ENCODER_CASES,
+        ids=[c[3] for c in DISPATCH_ENCODER_CASES],
+    )
+    def test_encoder_source(
+        self,
+        action_auth: bool,
+        context: AuthContext | None,
+        expected: dict[str, str] | None,
+        desc: str,
+    ) -> None:
+        """The body on the wire comes from the row's manager, or nothing is sent."""
+        collector_session, fresh_session = _ok_session(), _ok_session()
+        collector = _encoding_collector(collector_session, context)
+        action = _sjcl_action(body_encoding="session", action_auth=_SJCL_AUTH if action_auth else None)
+
+        with (
+            patch(self._FACTORY, return_value=_manager_encoding_to(_ACTION_AUTH_ENVELOPE)),
+            patch(self._SESSION, return_value=fresh_session),
+        ):
+            result = execute_action(collector, _encoding_config(), action)
+
+        sender = fresh_session if action_auth else collector_session
+        if expected is None:
+            assert result.success is False, desc
+            sender.request.assert_not_called()
+        else:
+            assert result.success is True, desc
+            assert sender.request.call_args.kwargs["json"] == expected, desc

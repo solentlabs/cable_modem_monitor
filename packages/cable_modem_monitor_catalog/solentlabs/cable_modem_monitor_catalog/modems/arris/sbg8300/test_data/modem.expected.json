@@ -1,0 +1,83 @@
+{
+  "downstream": [
+    {
+      "channel_number": 1,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 2,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 3,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 4,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 5,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 6,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 7,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 8,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 9,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 10,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 11,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 12,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 13,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 14,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 15,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 16,
+      "lock_status": "not_locked"
+    },
+    {
+      "channel_number": 17,
+      "lock_status": "not_locked"
+    }
+  ],
+  "system_info": {
+    "docsis_status": "not_locked",
+    "docsis_version": "unknown",
+    "downstream_channel_count": 0,
+    "hardware_version": "6",
+    "model_name": "SBG8300",
+    "software_version": "01.02.078.04.NCS",
+    "system_uptime": "0 days 00h:06m:44s",
+    "upstream_channel_count": 0
+  },
+  "upstream": []
+}

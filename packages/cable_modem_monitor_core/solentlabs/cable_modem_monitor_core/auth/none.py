@@ -10,7 +10,7 @@ import logging
 import requests
 
 from ..models.modem_config.auth import NoneAuth
-from .base import AuthFailureMode, AuthResult, BaseAuthManager
+from .base import AuthContext, AuthFailureMode, AuthResult, BaseAuthManager
 
 
 class NoneAuthManager(BaseAuthManager):
@@ -23,6 +23,10 @@ class NoneAuthManager(BaseAuthManager):
     def auth_failure_mode(self) -> AuthFailureMode:
         """No credentials exist, so a 401 means the catalog entry is wrong."""
         return AuthFailureMode.NOT_CONFIGURED
+
+    def session_is_valid(self, session: requests.Session, context: AuthContext | None) -> bool:
+        """Always valid: there is no login to have happened."""
+        return True
 
     def authenticate(
         self,

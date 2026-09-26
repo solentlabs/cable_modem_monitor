@@ -1,0 +1,29 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T800",
+  "transport": "http",
+  "default_host": "192.168.0.1",
+  "auth": {"strategy": "bearer", "login_endpoint": "/api/v1/login", "token_path": "data.token"},
+  "actions": {
+    "restart": {
+      "type": "http",
+      "method": "PUT",
+      "endpoint": "/actionHandler/restart.php",
+      "json_body": {"action": "restart", "module": "gateway"},
+      "body_encoding": "session",
+      "action_auth": {
+        "strategy": "json_sjcl",
+        "login_page": "/login.php",
+        "login_endpoint": "/actionHandler/ajaxSet_login.php",
+        "pbkdf2_iterations": 1000,
+        "pbkdf2_key_length": 128,
+        "aad": "AAD",
+        "token_header": "X-CSRF-Token"
+      }
+    }
+  },
+  "hardware": {"docsis_version": "3.1"},
+  "status": "awaiting_verification",
+  "attribution": {"contributors": [{"github": "test-user", "contribution": "HAR capture"}]},
+  "isps": ["Various"]
+}

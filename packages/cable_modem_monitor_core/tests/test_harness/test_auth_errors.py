@@ -2,7 +2,8 @@
 
 Covers HNAP handler error branches (invalid signatures, wrong
 password, missing headers), auth factory dispatch for all strategy
-types, and form handler cookie re-authentication.
+types, form handler cookie re-authentication, and the bearer handler's
+declared method, token source and token placement.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from solentlabs.cable_modem_monitor_core.test_harness.auth.base import AuthHandler
+from solentlabs.cable_modem_monitor_core.test_harness.auth.basic import BasicAuthHandler
 from solentlabs.cable_modem_monitor_core.test_harness.auth.bearer import BearerAuthHandler
 from solentlabs.cable_modem_monitor_core.test_harness.auth.factory import (
     create_auth_handler,
@@ -29,6 +31,7 @@ from solentlabs.cable_modem_monitor_core.test_harness.auth.form_sjcl import (
 from solentlabs.cable_modem_monitor_core.test_harness.auth.hnap import (
     HnapAuthHandler,
 )
+from solentlabs.cable_modem_monitor_core.test_harness.routes import RouteEntry
 
 from tests._helpers import load_fixture
 
@@ -382,6 +385,230 @@ class TestBearerHandler:
     def test_challenge_is_401(self) -> None:
         """Unauthenticated requests get a 401 challenge."""
         assert self._handler().get_challenge_response().status == 401
+
+
+# ┌──────────┬─────────────┬──────────────────────┐
+# │ method   │ request     │ is_login_request     │
+# ├──────────┼─────────────┼──────────────────────┤
+# │ POST     │ POST        │ True                 │
+# │ POST     │ PUT         │ False                │
+# │ PUT      │ PUT         │ True                 │
+# │ PUT      │ POST        │ False                │
+# └──────────┴─────────────┴──────────────────────┘
+#
+# fmt: off
+BEARER_LOGIN_METHOD_CASES: list[tuple[Literal["POST", "PUT"], str, bool, str]] = [
+    # (configured, request, expected, description)
+    ("POST",       "POST",  True,     "default POST matches"),
+    ("POST",       "PUT",   False,    "default ignores PUT"),
+    ("PUT",        "PUT",   True,     "declared PUT matches"),
+    ("PUT",        "POST",  False,    "declared PUT ignores POST"),
+]
+# fmt: on
+
+# Enforcement per placement: what a data request must carry after login.
+#
+# fmt: off
+BEARER_PLACEMENT_CASES: list[tuple[Literal["authorization", "header"], dict[str, str], bool, str]] = [
+    # (placement,       request_headers,                     expected, description)
+    ("authorization",   {"authorization": "Bearer {t}"},     True,     "authorization carries it"),
+    ("authorization",   {"x-session-token": "{t}"},          False,    "authorization ignores the named header"),
+    ("header",          {"x-session-token": "{t}"},          True,     "named header carries it"),
+    ("header",          {"authorization": "Bearer {t}"},     False,    "named header ignores authorization"),
+    ("header",          {"x-session-token": "wrong"},        False,    "named header with a wrong token"),
+    ("header",          {},                                  False,    "named header absent"),
+]
+# fmt: on
+
+# Query placement: the firmware sends the token as a bare key, ``?ct_<token>``.
+#
+# fmt: off
+BEARER_QUERY_CASES: list[tuple[str, dict[str, str], bool, str]] = [
+    # (query,            request_headers,                   expected, description)
+    ("ct_{t}",           {},                                True,     "bare key"),
+    ("_n=1&ct_{t}",      {},                                True,     "after other params"),
+    ("ct_{t}&_n=1",      {},                                True,     "before other params"),
+    ("",                 {},                                False,    "no query"),
+    ("_n=1",             {},                                False,    "other params only"),
+    ("ct_wrong",         {},                                False,    "wrong token"),
+    ("x_{t}",            {},                                False,    "wrong prefix"),
+    ("ct_{t}=1",         {},                                False,    "key carrying a value"),
+    ("",                 {"authorization": "Bearer {t}"},   False,    "header is not the query"),
+]
+# fmt: on
+
+
+class TestBearerHandlerDeclaredShapes:
+    """The handler simulates the declared method, token source and placement."""
+
+    @pytest.mark.parametrize(
+        "configured,request_method,expected,description",
+        BEARER_LOGIN_METHOD_CASES,
+        ids=[c[3] for c in BEARER_LOGIN_METHOD_CASES],
+    )
+    def test_login_method(
+        self,
+        configured: Literal["POST", "PUT"],
+        request_method: str,
+        expected: bool,
+        description: str,
+    ) -> None:
+        """Only the configured method reaches the login endpoint."""
+        handler = BearerAuthHandler(login_path="/api/login", token_path="token", method=configured)
+        assert handler.is_login_request(request_method, "/api/login") is expected
+        assert (handler.handle_login(request_method, "/api/login", b"{}", {}) is not None) is expected
+
+    def test_header_source_issues_token_in_the_header(self) -> None:
+        """A synthesized header-source login answers with the token header and an empty body."""
+        handler = BearerAuthHandler(
+            login_path="/api/login",
+            token_path="",
+            token_source="header",
+            token_header="X-Session-Token",
+        )
+        response = handler.handle_login("POST", "/api/login", b"{}", {})
+
+        assert response is not None
+        assert 200 <= response.status < 300
+        assert response.body == ""
+        issued = dict(response.headers)["X-Session-Token"]
+        assert issued
+        assert handler.is_authenticated({"authorization": f"Bearer {issued}"}) is True
+
+    def test_header_source_serves_the_captured_header_token(self) -> None:
+        """A captured login's header token is the one issued and enforced."""
+        captured = RouteEntry(status=200, headers=[("x-session-token", "CAPTURED")], body="")
+        handler = BearerAuthHandler(
+            login_path="/api/login",
+            token_path="",
+            captured_login=captured,
+            token_source="header",
+            token_header="X-Session-Token",
+        )
+
+        assert handler.handle_login("POST", "/api/login", b"{}", {}) is captured
+        assert handler.is_authenticated({"authorization": "Bearer CAPTURED"}) is True
+        assert handler.is_authenticated({"authorization": "Bearer mock-bearer-token"}) is False
+
+    def test_header_source_without_captured_header_synthesizes(self) -> None:
+        """A captured login lacking the header falls back to a synthesized token."""
+        captured = RouteEntry(status=200, headers=[], body="")
+        handler = BearerAuthHandler(
+            login_path="/api/login",
+            token_path="",
+            captured_login=captured,
+            token_source="header",
+            token_header="X-Session-Token",
+        )
+        response = handler.handle_login("POST", "/api/login", b"{}", {})
+
+        assert response is not captured
+        assert response is not None
+        assert dict(response.headers)["X-Session-Token"]
+
+    @pytest.mark.parametrize(
+        "placement,request_headers,expected,description",
+        BEARER_PLACEMENT_CASES,
+        ids=[c[3] for c in BEARER_PLACEMENT_CASES],
+    )
+    def test_placement_enforced(
+        self,
+        placement: Literal["authorization", "header"],
+        request_headers: dict[str, str],
+        expected: bool,
+        description: str,
+    ) -> None:
+        """A data request is authenticated only when the token rides where it is placed."""
+        handler = BearerAuthHandler(
+            login_path="/api/login",
+            token_path="token",
+            token_header="X-Session-Token",
+            token_placement=placement,
+        )
+        response = handler.handle_login("POST", "/api/login", b"{}", {})
+        assert response is not None
+        token = json.loads(response.body)["token"]
+        sent = {k: v.replace("{t}", token) for k, v in request_headers.items()}
+
+        assert handler.is_authenticated(sent) is expected
+
+    @pytest.mark.parametrize(
+        "query,request_headers,expected,description",
+        BEARER_QUERY_CASES,
+        ids=[c[3] for c in BEARER_QUERY_CASES],
+    )
+    def test_query_placement_enforced(
+        self,
+        query: str,
+        request_headers: dict[str, str],
+        expected: bool,
+        description: str,
+    ) -> None:
+        """A query-placed token must arrive as the bare ``{prefix}{token}`` key."""
+        handler = BearerAuthHandler(
+            login_path="/api/login",
+            token_path="token",
+            token_placement="query",
+            token_prefix="ct_",
+        )
+        response = handler.handle_login("POST", "/api/login", b"{}", {})
+        assert response is not None
+        token = json.loads(response.body)["token"]
+        sent = {k: v.replace("{t}", token) for k, v in request_headers.items()}
+
+        assert handler.is_authenticated(sent, query=query.replace("{t}", token)) is expected
+
+    def test_factory_passes_declared_fields(self) -> None:
+        """create_auth_handler builds the handler from the declared bearer fields."""
+        config = _make_config(
+            {
+                "auth": {
+                    "strategy": "bearer",
+                    "login_endpoint": "/api/login",
+                    "method": "PUT",
+                    "token_source": "header",
+                    "token_header": "X-Session-Token",
+                    "token_placement": "header",
+                },
+            }
+        )
+        handler = create_auth_handler(config)
+        assert isinstance(handler, BearerAuthHandler)
+        assert handler.is_login_request("PUT", "/api/login") is True
+        response = handler.handle_login("PUT", "/api/login", b"{}", {})
+        assert response is not None
+        issued = dict(response.headers)["X-Session-Token"]
+        assert handler.is_authenticated({"x-session-token": issued}) is True
+
+
+# Handlers that authenticate on headers or session state must answer the
+# same whatever query the request carries; only bearer query placement reads it.
+#
+# fmt: off
+_QUERY_BLIND_HANDLERS: list[tuple[Any, str]] = [
+    # (factory,                                                           description)
+    (AuthHandler,                                                         "base"),
+    (BasicAuthHandler,                                                    "basic"),
+    (lambda: FormAuthHandler(login_path="/login.htm", cookie_name="sid"), "form"),
+    (_make_hnap_handler,                                                  "hnap"),
+    (lambda: BearerAuthHandler(login_path="/api/login", token_path="t"),  "bearer authorization"),
+]
+_QUERY_BLIND_HEADERS: list[dict[str, str]] = [
+    {},
+    {"authorization": "Basic YWRtaW46cHc="},
+    {"authorization": "Bearer mock-bearer-token"},
+    {"cookie": "sid=abc"},
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("factory,description", _QUERY_BLIND_HANDLERS, ids=[c[1] for c in _QUERY_BLIND_HANDLERS])
+@pytest.mark.parametrize("request_headers", _QUERY_BLIND_HEADERS)
+def test_query_does_not_change_header_handlers(factory: Any, description: str, request_headers: dict[str, str]) -> None:
+    """The query keyword leaves every non-query handler's verdict unchanged."""
+    without = factory().is_authenticated(dict(request_headers))
+    with_query = factory().is_authenticated(dict(request_headers), query="ct_mock-bearer-token&_n=1")
+    assert with_query is without
 
 
 # ------------------------------------------------------------------

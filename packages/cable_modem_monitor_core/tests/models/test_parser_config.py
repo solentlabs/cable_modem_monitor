@@ -88,3 +88,29 @@ class TestAggregateBehavior:
         """AggregateField rejects unknown fields."""
         with pytest.raises(ValidationError, match="extra"):
             AggregateField(sum="corrected", channels="downstream", bogus="x")  # type: ignore[call-arg]
+
+
+class TestRequestsBehavior:
+    """Top-level ``requests`` map on ParserConfig."""
+
+    def test_requests_field_access(self) -> None:
+        """A declared request is readable by path after parse."""
+        config = ParserConfig.model_validate(load_fixture(VALID_DIR / "requests_post_form.json"))
+        request = config.requests["/status.html"]
+        assert request.method == "POST"
+        assert request.form == {"more": "1", "submit": "Show channels"}
+
+    def test_requests_default_empty(self) -> None:
+        """ParserConfig without requests has an empty map."""
+        config = ParserConfig.model_validate(load_fixture(VALID_DIR / "table_single.json"))
+        assert config.requests == {}
+
+    def test_form_defaults_empty(self) -> None:
+        """A request without form posts an empty body."""
+        data = load_fixture(VALID_DIR / "table_single.json")
+        data["requests"] = {"/status.html": {"method": "POST"}}
+        assert ParserConfig.model_validate(data).requests["/status.html"].form == {}
+
+    def test_requests_is_first_field(self) -> None:
+        """parser.yaml layout puts ``requests`` first (MODEM_YAML_SPEC § Layout)."""
+        assert next(iter(ParserConfig.model_fields)) == "requests"

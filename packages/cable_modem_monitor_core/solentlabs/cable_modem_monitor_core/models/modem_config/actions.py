@@ -22,6 +22,7 @@ class HttpAction(BaseModel):
     requires_session: bool = False
     params: dict[str, str] = Field(default_factory=dict)
     json_body: dict[str, Any] | None = None
+    body_encoding: Literal["plain", "session"] = "plain"
     headers: dict[str, str] = Field(default_factory=dict)
     pre_fetch_url: str = ""
     endpoint_pattern: str = ""
@@ -31,6 +32,15 @@ class HttpAction(BaseModel):
     def _params_and_json_body_exclusive(self) -> HttpAction:
         if self.params and self.json_body is not None:
             raise ValueError("params and json_body are mutually exclusive — set one or neither")
+        return self
+
+    @model_validator(mode="after")
+    def _encoding_needs_json_body(self) -> HttpAction:
+        # The session's encoder wraps json_body; without one the declared
+        # encoding would have nothing to act on and read as configured while
+        # doing nothing.
+        if self.body_encoding == "session" and self.json_body is None:
+            raise ValueError("body_encoding: session requires json_body")
         return self
 
 

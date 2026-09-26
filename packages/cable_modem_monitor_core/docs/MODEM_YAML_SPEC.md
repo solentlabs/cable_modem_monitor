@@ -66,7 +66,7 @@ for the contract.
 | [Schema Overview](#schema-overview) | Complete YAML skeleton with annotations |
 | [Identity](#identity) | manufacturer, model, transport, default_host, aliases |
 | [Timeout](#timeout) | Per-request override |
-| [Auth](#auth) | 10 strategy types with full config examples |
+| [Auth](#auth) | 11 strategy types with full config examples |
 | [Session](#session) | Cookie, single-session, SPA patterns |
 | [Actions](#actions) | Restart and logout — http and hnap types |
 | [Hardware](#hardware) | DOCSIS version, hw_version, firmware, chipset |
@@ -539,18 +539,21 @@ flow or test harness) by pre-fetching the login page (GET to the
   `base64(encodeURIComponent("username=X:password=Y"))` into that
   field: `arguments=<base64>&nonce=Z`.
 
-The detected encoding is stored in the HA config entry as
+Detection lives in `auth/form_nonce.py` as the strategy's setup entry
+point, reached through Core's generic `detect_setup_params` /
+`apply_setup_params` (ARCHITECTURE § Auth manager hooks). It returns
 `credential_encoding` (`"plain"` or `"b64_packed"`) and
-`credential_field` (the hidden field name, empty for plain). At
-runtime, the auth manager reads these from the `FormNonceAuth`
-config — no pre-fetch or detection occurs during polling.
+`credential_field` (the hidden field name, empty for plain); the HA
+config entry stores them under those keys and passes them back at
+startup, and `apply_setup_params` sets them on the `FormNonceAuth`
+config. No pre-fetch or detection occurs during polling.
 
 Detection falls back to plain encoding on any parse failure
 (backward compatible). No YAML config field is needed — the
 encoding is per-installation (firmware-dependent), not per-modem.
 
-The test harness detects encoding from HAR entries at test
-execution time, using the same `_analyze_login_form()` function.
+The test harness runs the same detection against its mock server's
+login page at test execution time.
 
 Evidence: observed in Arris SB6190 firmware 9.1.103AA65L (plain
 form fields) and 9.1.103AA72 (base64-packed `arguments` field).
@@ -828,48 +831,134 @@ Evidence: Arris Touchstone gateway firmwares that embed the SJCL
 library in their web interface. Constants are found in `base_95x.js`
 or similar JS files in HAR captures.
 
-### `bearer`
+### `json_sjcl`
 
-Bearer token auth for REST APIs (RFC 6750). The strategy POSTs a JSON
-body to a login endpoint, extracts a token from the JSON response by
-walking a dot-separated path, and injects
-`Authorization: Bearer <token>` into the session headers for
-subsequent requests.
+See [AUTH_SJCL_SPEC.md § `json_sjcl`](AUTH_SJCL_SPEC.md#json_sjcl--arris-actionhandler-wire-format)
+for the protocol, encoding rules, and firmware assumptions.
 
-The login request sends `{"username": "<username>", "password": "<password>"}` as the
-JSON body. Set `username_field: ""` for password-only firmwares — the
-username key is then omitted entirely rather than sent empty.
+JSON login with an SJCL-encrypted body (display name "JSON Login
+(SJCL)"). Same crypto library as `form_sjcl`, different wire format:
+salt and IV come from the login page's `sjclEncryptObj`, the body is
+`{"EncryptedData": <hex>, "user": <username>}`, the response is
+encrypted JSON, and the session token arrives in a response header.
+Requires the `[sjcl]` extra.
 
 ```yaml
+auth:
+  strategy: json_sjcl
+  login_page: "/login.php"
+  login_endpoint: "/actionHandler/ajaxSet_login.php"
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+  aad: "ARRIS"
+  token_header: "X-CSRF-Token"
+  cookie_name: "PHPSESSID"
+  login_busy:
+    session_overtake: true
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `login_page` | string | required | Page to GET for the per-session salt and IV |
+| `login_endpoint` | string | required | URL the encrypted credential body is sent to |
+| `method` | enum | `PUT` | `PUT` or `POST` |
+| `pbkdf2_iterations` | int | required | PBKDF2 iteration count |
+| `pbkdf2_key_length` | int | required | Derived key length in bits |
+| `ccm_tag_length` | int | `16` | AES-CCM tag length in bytes |
+| `aad` | string | required | AAD (UTF-8) for encrypting the body and decrypting the response |
+| `token_header` | string | required | Response header carrying the session token; sent back as a request header of the same name |
+| `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
+| `login_busy` | dict | `{}` | Same matching as on [`form_pbkdf2`](#form_pbkdf2), against the **decrypted** response JSON. Checked before the token. |
+
+**Success detection:** a response of 400 or above fails, with the
+response attached (ARCHITECTURE_DECISIONS § How to add an auth
+strategy). A decrypted response matching `login_busy` is busy
+(`AUTH_UNAVAILABLE`). Otherwise a response carrying `token_header`
+succeeds; the token is also stored as `AuthContext.token`, so actions
+can name `{auth:token}`. The strategy does not send the firmware's session-takeover
+request: taking the slot would log the user out of the modem's web UI
+on every poll.
+
+### `bearer`
+
+JSON login that returns a session token (display name "JSON Login").
+One round trip: the strategy sends the credentials as a JSON body,
+reads a token from the response, and sends it back on every later
+request. The default is the RFC 6750 shape: `POST`, token from a JSON
+path, `Authorization: Bearer <token>`.
+
+Firmware that varies a value of that flow declares it: the method,
+where the token is read from, where it is sent back, extra body keys,
+a busy body, a session cookie. Each field is opt-in. With none set,
+the request is the default one, byte for byte. A flow with more round
+trips or client-side crypto is a different strategy
+([`json_sjcl`](#json_sjcl)), not a field here — see
+ARCHITECTURE_DECISIONS § Token source and placement are values;
+encryption is a strategy.
+
+```yaml
+# REST API (default shape)
 auth:
   strategy: bearer
   login_endpoint: "/api/v1/login"
   token_path: "data.token"
+
+# Token issued in a response header and sent back in the URL query
+auth:
+  strategy: bearer
+  login_endpoint: "/actionHandler/ajaxSet_login.php"
+  method: PUT
+  extra_fields:
+    ipAddress: "{host}"
+  token_source: header
+  token_header: "X-CSRF-Token"
+  token_placement: query
+  token_prefix: "ct_"
+  cookie_name: "PHPSESSID"
 ```
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `strategy` | string | yes | Always `"bearer"` |
-| `login_endpoint` | string | yes | Path to POST the JSON login body to |
-| `token_path` | string | yes | Dot-separated JSON path to the token in the response (e.g., `"created.token"` extracts `response["created"]["token"]`) |
+| `login_endpoint` | string | yes | Path the JSON login body is sent to |
+| `method` | enum | no | `POST` (default) or `PUT` |
 | `username_field` | string | no | Key carrying the username, default `"username"`. Empty string omits the username from the body — required for firmwares that authenticate on a password alone. |
+| `extra_fields` | map | no | Further body keys the firmware expects. Values are literal, except `{host}`, which resolves to the host of the configured modem URL with no scheme or port (the browser's `location.hostname`). A key that collides with a credential key is a schema error. |
+| `token_source` | enum | no | `body` (default): read the token at `token_path` in the JSON response. `header`: read it from the `token_header` response header. |
+| `token_path` | string | with `body` | Dot-separated JSON path to the token in the response (e.g., `"created.token"` extracts `response["created"]["token"]`). Must be empty with `token_source: header`. |
+| `token_header` | string | with `header` source or placement | Name of the response header the token is read from, and of the request header it is sent in with `token_placement: header` |
+| `token_placement` | enum | no | `authorization` (default): `Authorization: Bearer <token>`. `header`: `<token_header>: <token>`. `query`: appended to data URLs as `?{token_prefix}{token}`. |
+| `token_prefix` | string | with `query` | Query prefix for `token_placement: query` (e.g. `ct_`). Only valid with `query`. |
+| `cookie_name` | string | no | Session cookie the login sets. When set, session validity checks it, as for cookie-based strategies. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
+| `login_busy` | dict | no | Same meaning and matching as on [`form_pbkdf2`](#form_pbkdf2): when every key-value pair matches the response JSON, the modem declined to serve the login and the collector classifies it `AUTH_UNAVAILABLE`. Checked before the token. |
 | `user_id_path` | string | no | Dot-separated JSON path to a user identifier in the login response, resolved the same way as `token_path`. Set it only when an action endpoint needs the value. |
 
 **Login request:**
 
 ```http
-POST <base_url><login_endpoint>
+<method> <base_url><login_endpoint>
 Content-Type: application/json
-{"username": "<username>", "password": "<password>"}
+{"username": "<username>", "password": "<password>", ...extra_fields}
 ```
 
-With `username_field: ""` the body is `{"password": "<password>"}`.
+With `username_field: ""` the body is `{"password": "<password>"}`
+plus `extra_fields`.
 
-**Token extraction:** the `token_path` value is split on `.` and used
-to walk the parsed JSON response. For example, `"created.token"` with
-response `{"created": {"token": "abc", "userLevel": "regular"}}`
-extracts `"abc"`. Returns an error if any key in the path is missing
-or the response is not valid JSON.
+**Token extraction:** with `token_source: body`, `token_path` is split
+on `.` and used to walk the parsed JSON response. For example,
+`"created.token"` with response
+`{"created": {"token": "abc", "userLevel": "regular"}}` extracts
+`"abc"`. With `token_source: header`, the token is the value of the
+`token_header` response header and the body is not read for it: a
+header-issued login may answer with an empty body.
+
+**Token placement:** `authorization` and `header` set the token as a
+session header, so it rides on every request after login, data pages
+included. `query` stores it as `AuthContext.url_token`, and the loader
+appends `?{token_prefix}{token}` to every data resource exactly as for
+`url_token` (RESOURCE_LOADING_SPEC § URL Token Auth). Actions do not
+receive a query-placed token; an action that needs it names
+`{auth:token}` in its endpoint.
 
 **Downstream values:** the extracted token is also stored in
 `AuthContext.token`, and `user_id_path` (when set) in
@@ -883,23 +972,34 @@ number is stored as its string form. Missing or unresolvable
 `user_id_path` leaves `AuthContext.user_id` empty and does not fail the
 login.
 
-**Success detection:** any 2xx carrying the token succeeds — token
-creation legitimately answers `201 Created`. Non-2xx →
-`AuthResult(success=False)`. Missing token path →
-`AuthResult(success=False)`. Non-JSON response →
-`AuthResult(success=False)`.
+**Success detection:** a non-2xx response fails, with the response
+attached. When `login_busy` is set and matches the response JSON, the
+login is busy, not failed; a body that is empty or not JSON never
+matches. Otherwise any 2xx carrying the token succeeds — token creation
+legitimately answers `201 Created`. A missing token fails, and so does
+a non-JSON response when `token_source: body`.
 
 **Transport:** `http` only.
 
-**Header injected:** `Authorization: Bearer <token>`. The strategy's
-`headers()` method returns `frozenset({"authorization", "cookie"})`.
+**Headers declared:** `headers()` returns `authorization` and `cookie`,
+plus the lowercased `token_header` with `token_placement: header`.
+Loader failure logs redact those values, and `clear_session()` removes
+every declared header so a token never outlives its session. A
+query-placed token stays visible in failure-log URLs, as a `url_token`
+token does (`describe_request` keeps query strings).
 
-Evidence: Sagemcom F3896LG REST API, shipped by two Liberty Global
-operators. On Virgin Media (Hub 5) the monitoring endpoints are public
-and only the restart endpoint at `/rest/v1/system/reboot` needs a token
-(issue #82). On Ziggo the capture shows the token on every request
-(issue #185). Both firmwares authenticate on a password alone and
-answer `POST /rest/v1/user/login` with `201`.
+Evidence: Sagemcom F3896LG REST API (the default shape), shipped by two
+Liberty Global operators. On Virgin Media (Hub 5) the monitoring
+endpoints are public and only the restart endpoint at
+`/rest/v1/system/reboot` needs a token (issue #82). On Ziggo the
+capture shows the token on every request (issue #185). Both firmwares
+authenticate on a password alone and answer `POST /rest/v1/user/login`
+with `201`. Arris PHP `actionHandler` firmware with a plaintext body:
+`PUT /actionHandler/ajaxSet_login.php`, token in the `X-CSRF-Token`
+response header, 409 on a rejected password. The SB8200 PHP build
+(#213) sends `ipAddress` (the page hostname) and the token back as
+`?ct_<token>`; the SBG8300 sends it back as an `X-CSRF-Token` request
+header, and its login JS answers `session_overtake` on a busy slot.
 
 ---
 
@@ -1096,7 +1196,9 @@ is refused. Firmware that reports this as 5xx is classified
 recovery happens on its own when the other session ends (explicit
 logout or modem-side timeout). Firmware that refuses under HTTP 200
 gets the same classification when the entry declares the refusal body
-(`login_busy` on `form_pbkdf2`).
+(`login_busy` on `form_pbkdf2`, `bearer` or `json_sjcl`). Core does not
+answer a busy login by evicting the other session, even where the
+firmware offers a takeover request.
 That classification is driven by the login response, not by logout
 presence, so it applies to any firmware that answers this way.
 See UC-87a.
@@ -1173,6 +1275,7 @@ actions:
 | `requires_session` | bool | `false` | *Logout only.* `false` = endpoint is unauthenticated and can clear any active server-side session without credentials. `true` = endpoint needs a live session; Core skips the pre-retry logout call when the session is not valid. |
 | `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`. Mutually exclusive with `json_body`. |
 | `json_body` | map | no | JSON request body. If present, body is `application/json`. Mutually exclusive with `params`. Use for REST APIs that accept JSON. |
+| `body_encoding` | enum | `plain` | `session`: send `json_body` wrapped the way the session's auth strategy encodes request bodies (e.g. [`json_sjcl`](#json_sjcl)'s SJCL envelope). Requires `json_body`, and an auth strategy that encodes action bodies (the one in `action_auth` when set). |
 | `headers` | map | no | Per-action headers. Merged with session-level `headers` (action wins on conflict). |
 | `pre_fetch_url` | string | no | URL to fetch before the action (establish session state or extract dynamic endpoint) |
 | `endpoint_pattern` | string | no | Keyword to match within form action attributes on the pre-fetch page. Core wraps this in a form-action regex — not a raw regex. See Architecture Decision below. |
@@ -1619,7 +1722,7 @@ rules below.
 |-----------|-----------------------|---------------|---------------|--------------------|
 | `cbn` | `form_cbn` | cookie (rotating sessionToken + stable SID) | `xml` | `cbn` |
 | `hnap` | `hnap` | implicit (uid cookie + HNAP_AUTH header) | `hnap` | `hnap` |
-| `http` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `none`, `url_token` | stateless, cookie, CSRF, or url_token | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
+| `http` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `json_sjcl`, `none`, `url_token` | stateless, cookie, CSRF, or url_token | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
 <!-- END GENERATED: yaml-constraints -->
 
 The format field in parser.yaml determines how the response is decoded.

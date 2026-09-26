@@ -22,6 +22,7 @@ import logging
 import sys
 from pathlib import Path
 
+from ..auth.factory import create_auth_manager
 from .loader import ServerConfig, load_server_from_modem_dir
 from .server import HARMockServer
 
@@ -38,7 +39,7 @@ def _print_banner(config: ServerConfig, server: HARMockServer) -> None:
     default_host = mc.default_host
     docsis = getattr(mc.hardware, "docsis_version", "unknown") if mc.hardware else "unknown"
     status = mc.status if hasattr(mc, "status") else "unknown"
-    cookie = getattr(mc.auth, "cookie_name", "")
+    cookie = create_auth_manager(mc).session_cookie_name()
     route_count = len(server.routes)
 
     def _row(label: str, value: str) -> str:

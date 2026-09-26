@@ -237,7 +237,7 @@ def create_handler(
     assert isinstance(auth, FormPbkdf2Auth)
 
     action_cfg = extract_action_config(modem_config)
-    return FormPbkdf2AuthHandler(
+    handler = FormPbkdf2AuthHandler(
         login_endpoint=auth.login_endpoint,
         salt_trigger=auth.salt_trigger,
         pbkdf2_iterations=auth.pbkdf2_iterations,
@@ -248,3 +248,5 @@ def create_handler(
         cookie_name=action_cfg.cookie_name,
         login_success=auth.login_success or None,
     )
+    handler.login_action = auth.login_endpoint
+    return handler

@@ -27,7 +27,6 @@ from ..loaders.http import (
     ResourceLoadError,
 )
 from ..models.modem_config.actions import HttpAction
-from ..models.modem_config.auth import NoneAuth
 from ..parsers.coordinator import ModemParserCoordinator
 from ..parsers.diagnostics import ParseDiagnostics
 from .actions import execute_action
@@ -255,42 +254,10 @@ class ModemDataCollector:
 
     @property
     def session_is_valid(self) -> bool:
-        """Whether the Auth Manager believes the current session is usable.
-
-        Strategy-specific local check: HNAP verifies uid cookie +
-        private key (the private key is also set as a PrivateKey
-        cookie by the auth manager); cookie-based strategies verify
-        the session cookie is present; basic and none are always valid
-        after first auth.
-
-        This is a local check -- the server may have expired the session
-        even if this returns True.
-        """
-        # Never authenticated — only NoneAuth can skip authenticate()
-        # entirely. BasicAuth is stateless per-request but still needs
-        # the initial authenticate() call to set session.auth.
-        if self._auth_context is None:
-            if self._modem_config.auth is None:
-                return True
-            return isinstance(self._modem_config.auth, NoneAuth)
-
-        # HNAP: verify session cookies and private key
-        if self._modem_config.transport == "hnap":
-            has_uid = "uid" in self._session.cookies
-            has_key = bool(self._auth_context.private_key)
-            return has_uid and has_key
-
-        # Cookie-based: verify session cookie (cookie_name is on auth config)
-        cookie_name = getattr(self._modem_config.auth, "cookie_name", "")
-        if cookie_name:
-            return cookie_name in self._session.cookies
-
-        # URL token: verify token exists
-        if self._auth_context.url_token:
+        """Whether the auth manager believes the current session is usable; a local check only."""
+        if self._modem_config.auth is None:
             return True
-
-        # Already authenticated — assume valid until server rejects
-        return True
+        return self._auth_manager.session_is_valid(self._session, self._auth_context)
 
     @property
     def last_resource_fetches(self) -> list[ResourceFetch]:
@@ -323,6 +290,19 @@ class ModemDataCollector:
     def clear_session(self) -> None:
         """Invalidate the current session."""
         self._session.cookies.clear()
+        # Strategies that carry a credential in a header (bearer's
+        # Authorization, a CSRF token) would otherwise put a token we have
+        # already invalidated back on the wire until the next login. Reset,
+        # not delete: a declared header that session.headers also sets
+        # statically goes back to that value, because the next login may
+        # need it (form_sjcl's pre-auth csrfNonce). Restore under the
+        # configured name: headers() is lowercase, firmware may not be.
+        static = {name.lower(): (name, value) for name, value in self._static_session_headers().items()}
+        for declared in self._auth_manager.headers():
+            self._session.headers.pop(declared, None)
+            if declared in static:
+                name, value = static[declared]
+                self._session.headers[name] = value
         self._auth_context = None
         self._last_auth_result = None
         log_event(_logger, SessionCleared(model=self._modem_config.model))
@@ -346,11 +326,15 @@ class ModemDataCollector:
     def _build_session(self) -> requests.Session:
         """Build the ``requests.Session`` for this modem's polling lifetime."""
         session = create_session(legacy_ssl=self._legacy_ssl)
-        session_headers: dict[str, str] = {}
-        if self._modem_config.session and self._modem_config.session.headers:
-            session_headers = self._modem_config.session.resolved_headers(base_url=self._base_url)
-        self._auth_manager.configure_session(session, session_headers)
+        self._auth_manager.configure_session(session, self._static_session_headers())
         return session
+
+    def _static_session_headers(self) -> dict[str, str]:
+        """Return the entry's ``session.headers`` with ``{base_url}`` resolved."""
+        headers: dict[str, str] = {}
+        if self._modem_config.session and self._modem_config.session.headers:
+            headers = self._modem_config.session.resolved_headers(base_url=self._base_url)
+        return headers
 
     def authenticate(
         self,
@@ -469,16 +453,7 @@ class ModemDataCollector:
         """Fetch HTTP resources."""
         targets = collect_fetch_targets(self._parser_config, self._post_processor)
 
-        # Prefer body-derived token from auth_context; fall back to cookie
-        url_token = ""
-        token_prefix = getattr(self._modem_config.auth, "token_prefix", "")
-        if token_prefix:
-            if self._auth_context and self._auth_context.url_token:
-                url_token = self._auth_context.url_token
-            else:
-                cookie_name = getattr(self._modem_config.auth, "cookie_name", "")
-                if cookie_name:
-                    url_token = self._session.cookies.get(cookie_name, "") or ""
+        token_prefix, url_token = self._auth_manager.loader_url_token(self._session, self._auth_context)
 
         query_params: dict[str, str] = {}
         if self._modem_config.session and self._modem_config.session.query_params:
@@ -515,10 +490,7 @@ class ModemDataCollector:
     def _load_hnap_resources(self) -> tuple[dict[str, Any], list[ResourceFetch]]:
         """Fetch HNAP resources via batched SOAP request."""
         from ..loaders.hnap import HNAPLoader
-
-        hmac_algorithm = "md5"
-        if hasattr(self._modem_config.auth, "hmac_algorithm"):
-            hmac_algorithm = self._modem_config.auth.hmac_algorithm
+        from ..protocol.hnap import hmac_algorithm
 
         private_key = ""
         if self._auth_context:
@@ -528,7 +500,7 @@ class ModemDataCollector:
             session=self._session,
             base_url=self._base_url,
             private_key=private_key,
-            hmac_algorithm=hmac_algorithm,
+            hmac_algorithm=hmac_algorithm(self._modem_config.auth),
             timeout=self._modem_config.timeout,
             headers=self._auth_manager.headers(),
         )
@@ -542,12 +514,10 @@ class ModemDataCollector:
         via ``_execute_logout_if_needed()`` using ``actions.logout``.
         """
         from ..loaders.cbn import CBNLoader
-        from ..models.modem_config.auth import FormCbnAuth
+        from ..protocol.cbn import cbn_params
 
         targets = collect_fetch_targets(self._parser_config, self._post_processor)
-
-        auth = self._modem_config.auth
-        assert isinstance(auth, FormCbnAuth)
+        auth = cbn_params(self._modem_config.auth)
 
         loader = CBNLoader(
             session=self._session,

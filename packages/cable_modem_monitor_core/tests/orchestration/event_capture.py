@@ -62,9 +62,7 @@ def assert_event_emitted(
         }
         field_mismatches.append(mismatches)
 
-    assert (
-        False
-    ), f"No {event_type.__name__} event matched {fields!r}.\nClosest mismatches: {field_mismatches}"  # noqa: B011
+    raise AssertionError(f"No {event_type.__name__} event matched {fields!r}.\nClosest mismatches: {field_mismatches}")
 
 
 class _Missing:

@@ -34,6 +34,10 @@ class FormAuthManager(BaseAuthManager):
     def __init__(self, config: FormAuth) -> None:
         self._config = config
 
+    def session_cookie_name(self) -> str:
+        """The declared ``cookie_name``."""
+        return self._config.cookie_name
+
     def auth_failure_mode(self) -> AuthFailureMode:
         """Login is verified only when success criteria are declared."""
         # Proven by test_auth_failure_modes — with a criterion set, a modem

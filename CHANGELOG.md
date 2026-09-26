@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.1] - 2026-09-25
+
+### Added
+
+- **Arris SB8200 on its PHP firmware** (RCN/Astound, AB01.06.013). If
+  your modem's pages end in `.php`, pick the SB8200 variant labeled
+  "JSON Login". Awaiting confirmation on hardware. (#213)
+- **Arris TG3442S** (LIWEST, 01.05.048.01.EURO.NCS), with restart.
+  Awaiting confirmation on hardware. (#210)
+- **Arris SBG8300** (01.02.078.04.NCS), with restart. Built from an
+  unprovisioned bench unit; awaiting confirmation on hardware.
+- **`javascript_json` reads channel arrays inside a JavaScript object.**
+  A `parser.yaml` section can name an object variable and select each
+  array with `array_path`, merging a companion array such as error
+  counters by `merge_by`. Firmware that serves every channel list in one
+  object no longer needs a `parser.py`. (#210)
+- **`parser.yaml` can fetch a data page with a form POST.** A top-level
+  `requests:` map declares the form a path is posted with, for firmware
+  that only fills its channel tables after a "show channels" button
+  posts back to the page. Paths it does not name are fetched as before.
+  (#213)
+- **`bearer` covers JSON logins that hand the token back differently.**
+  An entry can log in with `PUT`, send extra body fields (`{host}` for
+  the modem's address), read the token from a response header, and send
+  it back in a named header or the URL query. Entries that set none of
+  these send exactly the login they sent before. (#213)
+- **`json_sjcl` auth for firmware that encrypts its JSON login with
+  SJCL.** Salt and IV come from the login page and the session token
+  from a response header. An HTTP action can declare
+  `body_encoding: session` to send its body encrypted under the same
+  session, which is how this firmware restarts. (#210)
+
+### Changed
+
+- **The setup picker labels `bearer` variants "JSON Login"**, not
+  "Bearer Token". The strategy now covers logins whose token never rides
+  in an `Authorization: Bearer` header, so the old label described only
+  one of them. Existing entries keep working; only the label changes.
+- **Diagnostics show `credential_encoding` only for modems that detect
+  it.** It was reported as `plain` for every modem; now the
+  `form_nonce` entries that detect it report it along with
+  `credential_field`, and other entries omit both.
+- **Core: `apply_credential_encoding` is replaced by
+  `apply_setup_params`.** Setup-time detection is now generic
+  (`detect_setup_params`, `apply_setup_params`, `setup_param_keys`),
+  so consumers store and re-apply a strategy's setup params without
+  knowing which strategy needs them.
+
 ## [3.14.1] - 2026-09-20
 
 ### Overview

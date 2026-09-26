@@ -1,0 +1,23 @@
+{
+  "_expected_error": "Input should be 'PUT' or 'POST'",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {
+      "strategy": "json_sjcl",
+      "login_page": "/login.php",
+      "login_endpoint": "/actionHandler/ajaxSet_login.php",
+      "method": "GET",
+      "pbkdf2_iterations": 1000,
+      "pbkdf2_key_length": 128,
+      "aad": "AAD",
+      "token_header": "X-CSRF-Token"
+    },
+    "hardware": {"docsis_version": "3.1"},
+    "status": "awaiting_verification",
+    "attribution": {"contributors": [{"github": "test-user", "contribution": "HAR capture"}]},
+    "isps": ["Various"]
+  }
+}

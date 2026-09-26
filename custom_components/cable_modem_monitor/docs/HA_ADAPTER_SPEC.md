@@ -170,8 +170,9 @@ async_setup_entry(hass, entry)
  │     → modem_config, parser_config, post_processor
  │     (runs in executor — file I/O)
  │
- ├─ 1a. Inject credential encoding (Core concern)
- │      apply_credential_encoding(modem_config, ...)
+ ├─ 1a. Re-apply setup params detected at config time (Core concern)
+ │      apply_setup_params(modem_config, entry.data)
+ │      (opaque to HA; a strategy without a setup step ignores them)
  │
  ├─ 2. Resolve health probe defaults
  │     modem.yaml health config → defaults
@@ -1005,7 +1006,7 @@ into `modem_data`.
 
 | Key | Contents | Source |
 |-----|----------|--------|
-| `config_entry` | Host, protocol, model, credentials flag | HA config entry |
+| `config_entry` | Host, protocol, model, credentials flag, the auth strategy's stored setup params (named by `setup_param_keys`; none for most strategies) | HA config entry |
 | `core_diagnostics` | Poll timing, auth state, circuit breaker | `orchestrator.diagnostics()` |
 | `data_coordinator` | Last success, update interval | HA coordinator |
 | `health_coordinator` | Last success, update interval | HA coordinator (conditional) |
@@ -1560,7 +1561,7 @@ The HA adapter layer consists of these modules:
 | `sensor.py` | Entity classes for all sensor types |
 | `button.py` | Restart, Update, Reset Entities buttons |
 | `config_flow.py` | Setup wizard and options flow |
-| `config_flow_helpers.py` | Validation pipeline, probe detection, encoding detection — async wrappers around Core I/O |
+| `config_flow_helpers.py` | Validation pipeline, probe detection, auth setup-param detection — async wrappers around Core I/O |
 | `diagnostics.py` | Diagnostics download combining Core + HA-side data |
 | `const.py` | Domain constants, config keys, defaults |
 | `services.py` | Service registration wiring — constants, schemas, `async_request_modem_refresh`, `request_refresh` / `request_health_check` handler factories, `async_register_services` |

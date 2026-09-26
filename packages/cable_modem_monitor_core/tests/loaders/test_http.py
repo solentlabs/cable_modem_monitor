@@ -25,22 +25,27 @@ from tests._helpers import load_fixture
 
 def _build_entries(
     pages: dict[str, tuple[str, str]],
+    *,
+    method: str = "GET",
+    status: int = 200,
 ) -> list[dict[str, Any]]:
     """Build HAR entries.
 
     Args:
         pages: Mapping of path to (content_type, body).
+        method: Request method every entry was captured with.
+        status: Response status every entry was captured with.
     """
     entries: list[dict[str, Any]] = []
     for path, (content_type, body) in pages.items():
         entries.append(
             {
                 "request": {
-                    "method": "GET",
+                    "method": method,
                     "url": f"http://192.168.100.1{path}",
                 },
                 "response": {
-                    "status": 200,
+                    "status": status,
                     "headers": [
                         {"name": "Content-Type", "value": content_type},
                     ],
@@ -642,3 +647,149 @@ class TestHTTPResourceLoader:
             assert size_bytes > 0
             assert status_code == 200
             assert "text/html" in content_type
+
+
+# ---------------------------------------------------------------------------
+# Declared requests: form POST vs GET
+# ---------------------------------------------------------------------------
+
+_FORM_PAIRS = (("more", "1"), ("submit", "Show channels"))
+_GET_BODY = "<html><table><tr><td>empty</td></tr></table></html>"
+_POST_BODY = "<html><table><tr><td>posted</td></tr></table></html>"
+_LOGIN_HTML = '<html><form><input type="password" name="pw"></form></html>'
+
+
+def _post_target(path: str = "/status.html") -> ResourceTarget:
+    """Build a table target fetched with a form POST."""
+    return ResourceTarget(path=path, format="table", method="POST", form=_FORM_PAIRS)
+
+
+def _get_and_post_entries() -> list[dict[str, Any]]:
+    """Capture one path answered differently to GET and to the form POST."""
+    return _build_entries({"/status.html": ("text/html", _GET_BODY)}) + _build_entries(
+        {"/status.html": ("text/html", _POST_BODY)}, method="POST"
+    )
+
+
+class TestDeclaredRequest:
+    """A target's declared request picks the method; everything after is shared."""
+
+    def test_post_sends_form_to_token_and_query_url(self) -> None:
+        """POST carries the url-encoded form to the same URL a GET would use."""
+        with HARMockServer(_get_and_post_entries()) as server:
+            session = requests.Session()
+            loader = HTTPResourceLoader(
+                session,
+                server.base_url,
+                timeout=10,
+                url_token="abc123",
+                token_prefix="ct_",
+                query_params={"_n": "1"},
+            )
+            with patch.object(session, "send", wraps=session.send) as send:
+                resources = loader.fetch([_post_target()])
+
+        sent = send.call_args.args[0]
+        assert sent.method == "POST"
+        assert sent.url == f"{server.base_url}/status.html?ct_abc123&_n=1"
+        assert sent.headers["Content-Type"] == "application/x-www-form-urlencoded"
+        assert sent.body == "more=1&submit=Show+channels"
+        assert "posted" in resources["/status.html"].get_text()
+
+    def test_get_call_unchanged(self) -> None:
+        """A target with no declared request calls session.get exactly as before."""
+        with HARMockServer(_get_and_post_entries()) as server:
+            session = requests.Session()
+            loader = HTTPResourceLoader(session, server.base_url, timeout=10, query_params={"_n": "1"})
+            with (
+                patch.object(session, "get", wraps=session.get) as get,
+                patch.object(session, "post", wraps=session.post) as post,
+            ):
+                resources = loader.fetch([ResourceTarget(path="/status.html", format="table")])
+
+        get.assert_called_once_with(f"{server.base_url}/status.html?_n=1", timeout=10)
+        post.assert_not_called()
+        assert "empty" in resources["/status.html"].get_text()
+
+    def test_post_records_resource_fetch(self) -> None:
+        """A POST fetch lands in the per-resource timing record like a GET."""
+        with HARMockServer(_get_and_post_entries()) as server:
+            loader = HTTPResourceLoader(requests.Session(), server.base_url, timeout=10)
+            loader.fetch([_post_target()])
+
+        assert [(f[0], f[3]) for f in loader.resource_fetches] == [("/status.html", 200)]
+
+    def test_post_connection_error_carries_path(self) -> None:
+        """A transport failure on the POST is the same handled load error."""
+        with HARMockServer(_get_and_post_entries()) as server:
+            session = requests.Session()
+            loader = HTTPResourceLoader(session, server.base_url, timeout=10)
+            with (
+                patch.object(session, "post", side_effect=requests.ConnectTimeout("timed out")),
+                pytest.raises(ResourceLoadError) as excinfo,
+            ):
+                loader.fetch([_post_target()])
+
+        assert excinfo.value.path == "/status.html"
+
+    def test_auth_response_not_reused_for_post_target(self) -> None:
+        """A login landing is a GET rendering, so a POST target is still fetched."""
+        landing = requests.Response()
+        landing.status_code = 200
+        landing._content = b"<html>Auth Landing</html>"
+        landing.encoding = "utf-8"
+        auth_result = AuthResult(success=True, response=landing, response_url="/status.html")
+
+        with HARMockServer(_get_and_post_entries()) as server:
+            loader = HTTPResourceLoader(requests.Session(), server.base_url, timeout=10)
+            resources = loader.fetch([_post_target()], auth_result=auth_result)
+
+        assert "posted" in resources["/status.html"].get_text()
+
+
+# ┌────────┬────────┬─────────────────┬──────────────────────────┬───────────────────────────┐
+# │ method │ status │ body            │ expected error           │ description               │
+# ├────────┼────────┼─────────────────┼──────────────────────────┼───────────────────────────┤
+# │ GET    │ 404    │ "Not Found"     │ ResourceLoadError 404    │ GET error status          │
+# │ POST   │ 404    │ "Not Found"     │ ResourceLoadError 404    │ POST error status         │
+# │ GET    │ 401    │ "Unauthorized"  │ ResourceLoadError 401    │ GET auth status           │
+# │ POST   │ 401    │ "Unauthorized"  │ ResourceLoadError 401    │ POST auth status          │
+# │ GET    │ 200    │ login form      │ LoginPageDetectedError   │ GET login page detected   │
+# │ POST   │ 200    │ login form      │ LoginPageDetectedError   │ POST login page detected  │
+# └────────┴────────┴─────────────────┴──────────────────────────┴───────────────────────────┘
+#
+# fmt: off
+RESPONSE_HANDLING_CASES = [
+    # (method, status, body,            error,                  description)
+    ("GET",    404,    "Not Found",     ResourceLoadError,      "GET error status"),
+    ("POST",   404,    "Not Found",     ResourceLoadError,      "POST error status"),
+    ("GET",    401,    "Unauthorized",  ResourceLoadError,      "GET auth status"),
+    ("POST",   401,    "Unauthorized",  ResourceLoadError,      "POST auth status"),
+    ("GET",    200,    _LOGIN_HTML,     LoginPageDetectedError, "GET login page detected"),
+    ("POST",   200,    _LOGIN_HTML,     LoginPageDetectedError, "POST login page detected"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "method,status,body,error,desc",
+    RESPONSE_HANDLING_CASES,
+    ids=[c[4] for c in RESPONSE_HANDLING_CASES],
+)
+def test_response_handling_same_for_both_methods(
+    method: str, status: int, body: str, error: type[ResourceLoadError], desc: str
+) -> None:
+    """Status, 401 and login-page handling do not depend on the request method."""
+    entries = _build_entries({"/status.html": ("text/html", body)}, method=method, status=status)
+    target = _post_target() if method == "POST" else ResourceTarget(path="/status.html", format="table")
+
+    with HARMockServer(entries) as server:
+        loader = HTTPResourceLoader(requests.Session(), server.base_url, timeout=10, detect_login_pages=True)
+        with pytest.raises(error) as excinfo:
+            loader.fetch([target])
+
+    exc = excinfo.value
+    assert type(exc) is error, f"Failed: {desc}"
+    assert (exc.status_code, exc.path) == (status, "/status.html"), f"Failed: {desc}"
+    if status == 401:
+        assert exc.request_line.startswith(method), f"Failed: {desc}"

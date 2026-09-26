@@ -40,9 +40,11 @@ def extract_action_config(modem_config: ModemConfig) -> ActionConfig:
     Reads session cookie name and action endpoints (logout, restart)
     from the config.
     """
+    from ...auth.factory import create_auth_manager
     from ...models.modem_config.actions import HttpAction
 
-    cookie_name = getattr(modem_config.auth, "cookie_name", "")
+    # The production hook, so the harness reads the cookie Core reads.
+    cookie_name = create_auth_manager(modem_config).session_cookie_name()
     logout_path = ""
     logout_method = "GET"
     restart_path = ""
@@ -97,6 +99,12 @@ class AuthHandler:
     fell through to the route table, 404'd, and passed anyway.
     """
 
+    # Login shape the mock server builds its routes around. Each strategy's
+    # create_handler sets these from its own typed config; "" means none.
+    login_page: str = ""
+    login_action: str = ""
+    token_prefix: str = ""
+
     def __init__(self) -> None:
         self._actions = ActionConfig("", "GET", "", "POST", "")
         self.served_actions: dict[str, int] = {}
@@ -134,8 +142,10 @@ class AuthHandler:
         """Return the 401 challenge response for unauthenticated requests."""
         return RouteEntry(status=401, headers=[], body="Unauthorized")
 
-    def is_authenticated(self, headers: dict[str, str]) -> bool:
+    def is_authenticated(self, headers: dict[str, str], *, query: str = "") -> bool:
         """Check if the request is authenticated."""
+        # query is the raw request query string, for strategies that carry
+        # the credential in the URL; header- and session-based handlers ignore it.
         return True
 
     def set_authenticated(self) -> dict[str, str]:
@@ -158,8 +168,11 @@ class AuthHandler:
             return False
         return _template_match(_segments(self._actions.restart_path), _segments(path))
 
-    def handle_restart(self) -> RouteEntry:
+    def handle_restart(self, *, body: bytes = b"") -> RouteEntry:
         """Handle a restart request. Returns 200 and clears session."""
+        # body is the restart request's body, for strategies whose modem
+        # checks it (json_sjcl decrypts it). A status >= 400 returned here
+        # is a refusal and wins over a captured response.
         return RouteEntry(status=200, headers=[], body="OK")
 
     def get_route_override(

@@ -95,6 +95,7 @@ class TestXmlFormatHardStop:
         parser.upstream = None
         parser.system_info = None
         parser.aggregate = {}
+        parser.requests = {}
 
         errors = validate_cross_file(modem, parser)
         assert len(errors) == 1

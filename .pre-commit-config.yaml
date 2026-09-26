@@ -87,10 +87,12 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # HAR captures are immutable evidence (MODEM_INTAKE_WORKFLOW):
+      # the whitespace fixers must never rewrite them.
       - id: trailing-whitespace
-        exclude: ^tests/.*\.html$
+        exclude: (^tests/.*\.html$|\.har$)
       - id: end-of-file-fixer
-        exclude: ^tests/.*\.html$
+        exclude: (^tests/.*\.html$|\.har$)
       - id: check-yaml
         exclude: ^\.github/workflows/
       - id: check-json
@@ -100,6 +102,7 @@ repos:
       - id: check-case-conflict
       - id: mixed-line-ending
         args: ["--fix=lf"]
+        exclude: \.har$
       # Python-specific checks
       - id: debug-statements
       - id: check-ast

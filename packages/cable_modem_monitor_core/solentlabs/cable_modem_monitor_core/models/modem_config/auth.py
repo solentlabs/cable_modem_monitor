@@ -1,6 +1,6 @@
 """Auth strategy models for modem.yaml.
 
-Ten strategies as a discriminated union on the 'strategy' field.
+Eleven strategies as a discriminated union on the 'strategy' field.
 Each model carries ``display_name``, ``transport``, and ``stateless``
 ClassVars so display labels, transport validation sets, factory
 dispatch, login-page detection, and the published constraint tables
@@ -30,6 +30,10 @@ class AuthStrategyBase(BaseModel):
     display_name: ClassVar[str]
     transport: ClassVar[str]
     stateless: ClassVar[bool]
+    # True when the strategy's manager overrides encode_action_body(), so an
+    # action may declare body_encoding: session. Validation reads this, never
+    # a strategy name.
+    encodes_action_bodies: ClassVar[bool] = False
 
 
 class NoneAuth(AuthStrategyBase):
@@ -246,18 +250,77 @@ class FormCbnAuth(AuthStrategyBase):
 
 
 class BearerAuth(AuthStrategyBase):
-    """Bearer token auth for REST JSON APIs (RFC 6750). See MODEM_YAML_SPEC.md § bearer."""
+    """JSON login returning a session token. See MODEM_YAML_SPEC.md § bearer."""
 
     model_config = ConfigDict(extra="forbid")
     strategy: Literal["bearer"]
     login_endpoint: str
-    token_path: str
+    method: Literal["POST", "PUT"] = "POST"
+    token_path: str = ""
     username_field: str = "username"
     user_id_path: str = ""
+    extra_fields: dict[str, str] = Field(default_factory=dict)
+    token_source: Literal["body", "header"] = "body"
+    token_header: str = ""
+    token_placement: Literal["authorization", "header", "query"] = "authorization"
+    token_prefix: str = ""
+    cookie_name: str = ""
+    login_busy: dict[str, Any] = Field(default_factory=dict)
 
-    display_name: ClassVar[str] = "Bearer Token"
+    display_name: ClassVar[str] = "JSON Login"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
+
+    @model_validator(mode="after")
+    def _token_fields_agree(self) -> BearerAuth:
+        # Each source and placement names the one field it reads; a field set
+        # where nothing reads it would look configured while doing nothing.
+        if self.token_source == "body" and not self.token_path:
+            raise ValueError("token_source: body requires token_path")
+        if self.token_source == "header" and self.token_path:
+            raise ValueError("token_path must be empty with token_source: header")
+        if self.token_source == "header" and not self.token_header:
+            raise ValueError("token_source: header requires token_header")
+        if self.token_placement == "header" and not self.token_header:
+            raise ValueError("token_placement: header requires token_header")
+        if self.token_header and "header" not in (self.token_source, self.token_placement):
+            raise ValueError("token_header is only valid with token_source: header or token_placement: header")
+        if self.token_placement == "query" and not self.token_prefix:
+            raise ValueError("token_placement: query requires token_prefix")
+        if self.token_prefix and self.token_placement != "query":
+            raise ValueError("token_prefix is only valid with token_placement: query")
+        return self
+
+    @model_validator(mode="after")
+    def _extra_fields_do_not_shadow_credentials(self) -> BearerAuth:
+        # A colliding key would silently overwrite the credential in the body.
+        credential_keys = {"password", self.username_field} - {""}
+        for key in self.extra_fields:
+            if key in credential_keys:
+                raise ValueError(f"extra_fields key '{key}' collides with a credential key")
+        return self
+
+
+class JsonSjclAuth(AuthStrategyBase):
+    """JSON login with an SJCL-encrypted body. See MODEM_YAML_SPEC.md § json_sjcl."""
+
+    model_config = ConfigDict(extra="forbid")
+    strategy: Literal["json_sjcl"]
+    login_page: str
+    login_endpoint: str
+    method: Literal["PUT", "POST"] = "PUT"
+    pbkdf2_iterations: int
+    pbkdf2_key_length: int
+    ccm_tag_length: int = 16
+    aad: str
+    token_header: str
+    cookie_name: str = ""
+    login_busy: dict[str, Any] = Field(default_factory=dict)
+
+    display_name: ClassVar[str] = "JSON Login (SJCL)"
+    transport: ClassVar[str] = "http"
+    stateless: ClassVar[bool] = False
+    encodes_action_bodies: ClassVar[bool] = True
 
 
 AuthConfig = Annotated[
@@ -269,6 +332,7 @@ AuthConfig = Annotated[
     | Annotated[FormPbkdf2Auth, Tag("form_pbkdf2")]
     | Annotated[FormSjclAuth, Tag("form_sjcl")]
     | Annotated[HnapAuth, Tag("hnap")]
+    | Annotated[JsonSjclAuth, Tag("json_sjcl")]
     | Annotated[NoneAuth, Tag("none")]
     | Annotated[UrlTokenAuth, Tag("url_token")],
     Discriminator("strategy"),
@@ -289,6 +353,7 @@ _AUTH_MODELS: list[type[AuthStrategyBase]] = [
     FormPbkdf2Auth,
     FormSjclAuth,
     HnapAuth,
+    JsonSjclAuth,
     NoneAuth,
     UrlTokenAuth,
 ]

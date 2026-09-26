@@ -13,7 +13,7 @@ import requests
 
 from ..models.modem_config.auth import FormPbkdf2Auth
 from .base import AuthFailureMode, AuthResult, BaseAuthManager
-from .response import parse_json_dict, post_form
+from .response import matches_criteria, parse_json_dict, post_form
 
 _logger = logging.getLogger(__name__)
 
@@ -43,6 +43,10 @@ class FormPbkdf2AuthManager(BaseAuthManager):
         if self._config.csrf_header:
             names.add(self._config.csrf_header.lower())
         return frozenset(names)
+
+    def session_cookie_name(self) -> str:
+        """The declared ``cookie_name``."""
+        return self._config.cookie_name
 
     def authenticate(
         self,
@@ -228,7 +232,7 @@ def _submit_login(
     # Busy before success: single-session firmware refuses the newcomer
     # under 200 with a body the entry declares (e.g. {"message": "MSG_LOGIN_150"}),
     # which also fails login_success. Busy is not a credential verdict (UC-87a).
-    if login_busy and _matches(result_json, login_busy):
+    if login_busy and matches_criteria(result_json, login_busy):
         return AuthResult(
             success=False,
             busy=True,
@@ -239,7 +243,7 @@ def _submit_login(
     if login_success:
         # Firmware signals success via a specific key-value pair (e.g. {"error": "ok"}).
         # Fail if any required field is absent or has a different value.
-        if not _matches(result_json, login_success):
+        if not matches_criteria(result_json, login_success):
             return AuthResult(
                 success=False,
                 error=f"Login rejected: {result_json.get('message', 'unknown error')}",
@@ -255,11 +259,6 @@ def _submit_login(
             )
 
     return response
-
-
-def _matches(body: dict[str, Any], criterion: dict[str, Any]) -> bool:
-    """True when every key-value pair of the criterion is present in the body."""
-    return all(body.get(k) == v for k, v in criterion.items())
 
 
 def _derive_key(

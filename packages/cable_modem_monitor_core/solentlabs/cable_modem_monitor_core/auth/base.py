@@ -12,6 +12,7 @@ import abc
 import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 import requests
 
@@ -44,17 +45,18 @@ class LoginLockoutError(Exception):
 
 @dataclass
 class AuthContext:
-    """Typed downstream state from auth managers.
+    """Values a login produced that code outside the strategy reads.
 
-    Each auth strategy populates the fields it produces; the runner
-    reads them by attribute based on ``modem_config.transport``, and
-    action endpoints reference them as ``{auth:...}`` placeholders.
+    Data only: each strategy fills the fields it produces and leaves
+    the rest empty.
 
     Attributes:
-        url_token: Session token for URL query string auth (``url_token`` strategy).
-        private_key: HMAC signing key for HNAP requests (``hnap`` strategy).
-        token: Session token from the login response (``bearer`` strategy).
-        user_id: Account identifier from the login response (``bearer`` strategy).
+        url_token: Appended to HTTP data URLs, through the strategy's
+            ``loader_url_token()``.
+        private_key: Signs HNAP data and action requests; ``hnap``'s
+            ``session_is_valid()`` also requires it.
+        token: Substituted for ``{auth:token}`` in action endpoints.
+        user_id: Substituted for ``{auth:user_id}`` in action endpoints.
     """
 
     url_token: str = ""
@@ -193,3 +195,41 @@ class BaseAuthManager(abc.ABC):
         it is not.
         """
         return AuthFailureMode.CREDENTIALS_SUSPECT
+
+    def session_cookie_name(self) -> str:
+        """Name of the cookie that carries this strategy's session, ``""`` when none is declared."""
+        return ""
+
+    def session_is_valid(self, session: requests.Session, context: AuthContext | None) -> bool:
+        """Whether the session looks usable locally; the server may still have expired it."""
+        # No login yet. Only `none` may skip authenticate(); even stateless
+        # basic needs it once to set session.auth.
+        if context is None:
+            return False
+        cookie_name = self.session_cookie_name()
+        if cookie_name:
+            return cookie_name in session.cookies
+        return True
+
+    def loader_url_token(self, session: requests.Session, context: AuthContext | None) -> tuple[str, str]:
+        """``(token_prefix, token)`` the HTTP loader appends to data URLs; empty when none is sent."""
+        return ("", "")
+
+    def encode_action_body(self, body: dict[str, Any]) -> dict[str, Any] | None:
+        """Wrap ``body`` the way this session's firmware expects; ``None`` when it cannot encode."""
+        return None
+
+    def _prefixed_url_token(
+        self,
+        session: requests.Session,
+        context: AuthContext | None,
+        token_prefix: str,
+    ) -> tuple[str, str]:
+        """Pair ``token_prefix`` with the login's URL token, else the session cookie's value."""
+        if not token_prefix:
+            return ("", "")
+        if context is not None and context.url_token:
+            return (token_prefix, context.url_token)
+        cookie_name = self.session_cookie_name()
+        token = (session.cookies.get(cookie_name, "") or "") if cookie_name else ""
+        return (token_prefix, token)

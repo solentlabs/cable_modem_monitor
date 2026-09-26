@@ -49,6 +49,14 @@ class UrlTokenAuthManager(BaseAuthManager):
     def __init__(self, config: UrlTokenAuth) -> None:
         self._config = config
 
+    def session_cookie_name(self) -> str:
+        """The declared ``cookie_name``."""
+        return self._config.cookie_name
+
+    def loader_url_token(self, session: requests.Session, context: AuthContext | None) -> tuple[str, str]:
+        """The declared ``token_prefix`` with the login's token, else the session cookie's value."""
+        return self._prefixed_url_token(session, context, self._config.token_prefix)
+
     def authenticate(
         self,
         session: requests.Session,

@@ -11,6 +11,7 @@ import pytest
 import requests
 from solentlabs.cable_modem_monitor_core.auth.base import AuthResult
 from solentlabs.cable_modem_monitor_core.auth.response import (
+    matches_criteria,
     parse_json_dict,
     post_form,
     post_json,
@@ -426,3 +427,51 @@ class TestPostHelpers:
             post_fn(session, "http://modem/api", {}, 10)
 
         assert any("POST http://modem/api" in r.message for r in caplog.records)
+
+
+# ── matches_criteria ─────────────────────────────────────────
+
+
+class TestMatchesCriteria:
+    """matches_criteria() subset match shared by login_busy and login_success."""
+
+    # ┌──────────────────────────────┬──────────────────────────────┬──────────┬─────────────────────────┐
+    # │ body                         │ criterion                    │ expected │ description             │
+    # ├──────────────────────────────┼──────────────────────────────┼──────────┼─────────────────────────┤
+    # │ {"result": "busy", "x": 1}   │ {"result": "busy"}           │ True     │ all pairs match         │
+    # │ {"result": "ok", "code": 7}  │ {"result": "ok", "code": 8}  │ False    │ one pair mismatches     │
+    # │ {"code": 7}                  │ {"result": "busy"}           │ False    │ criterion key missing   │
+    # │ {"result": None}             │ {"result": None}             │ True     │ explicit None matches   │
+    # │ {"result": "ok"}             │ {}                           │ True     │ empty criterion matches │
+    # └──────────────────────────────┴──────────────────────────────┴──────────┴─────────────────────────┘
+    #
+    # fmt: off
+    MATCH_CASES = [
+        ({"result": "busy", "x": 1},  {"result": "busy"},          True,  "all pairs match"),
+        ({"result": "ok", "code": 7}, {"result": "ok", "code": 8}, False, "one pair mismatches"),
+        ({"code": 7},                 {"result": "busy"},          False, "criterion key missing"),
+        ({"result": None},            {"result": None},            True,  "explicit None matches"),
+        ({"result": "ok"},            {},                          True,  "empty criterion matches"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "body,criterion,expected,desc",
+        MATCH_CASES,
+        ids=[c[3] for c in MATCH_CASES],
+    )
+    def test_matches_criteria(
+        self,
+        body: dict[str, Any],
+        criterion: dict[str, Any],
+        expected: bool,
+        desc: str,
+    ) -> None:
+        """True only when every criterion pair is present in the body."""
+        assert matches_criteria(body, criterion) is expected
+
+    def test_non_dict_body_raises(self) -> None:
+        """A non-dict body raises; callers only pass parse_json_dict's dict."""
+        body: Any = ["result", "busy"]
+        with pytest.raises(AttributeError):
+            matches_criteria(body, {"result": "busy"})

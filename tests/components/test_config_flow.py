@@ -581,6 +581,73 @@ async def test_full_flow_creates_entry(hass: HomeAssistant):
     assert result["data"]["health_check_interval"] == 30
 
 
+# ┌─────────────────────────────────┬────────────────────────────────────┬──────────────────────────────┐
+# │ validation setup_params         │ entry data                         │ description                  │
+# ├─────────────────────────────────┼────────────────────────────────────┼──────────────────────────────┤
+# │ b64_packed, arguments           │ each param under its own key       │ detected params stored       │
+# │ {}                              │ no setup-param keys                │ no setup step, nothing stored│
+# └─────────────────────────────────┴────────────────────────────────────┴──────────────────────────────┘
+#
+_PACKED_SETUP_PARAMS = {"credential_encoding": "b64_packed", "credential_field": "arguments"}
+
+# fmt: off
+SETUP_PARAM_STORE_CASES = [
+    # (setup_params,          id)
+    (_PACKED_SETUP_PARAMS,    "form_nonce_params_stored"),
+    ({},                      "no_setup_step_stores_nothing"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "setup_params",
+    [c[0] for c in SETUP_PARAM_STORE_CASES],
+    ids=[c[1] for c in SETUP_PARAM_STORE_CASES],
+)
+async def test_full_flow_stores_setup_params(hass: HomeAssistant, setup_params: dict[str, str]):
+    """Validation's setup params land in entry data under their own keys, and nothing else does."""
+    validation = {**MOCK_VALIDATION_RESULT, "setup_params": setup_params}
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_SINGLE_VARIANT,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            return_value=validation,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.async_setup_entry",
+            return_value=True,
+        ),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"manufacturer": "__all__"},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"model": "Solent Labs/TPS-2000", "entity_prefix": "none"},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"host": "192.168.100.1"},
+        )
+        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
+            result = await hass.config_entries.flow.async_configure(result["flow_id"])
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    stored = {key: result["data"][key] for key in _PACKED_SETUP_PARAMS if key in result["data"]}
+    assert stored == setup_params
+    assert "setup_params" not in result["data"]
+
+
 async def test_full_flow_sibling_variant_uses_sibling_modem_dir(hass: HomeAssistant):
     """Config entry modem_dir reflects the sibling directory when a sibling variant is chosen.
 
@@ -1412,8 +1479,8 @@ async def test_reauth_full_loop_recovers_to_online(hass: HomeAssistant):
     # reload more than once; keying on data stays correct regardless.
     def _fake_components(data):
         if data.get("password") == "newpassword":
-            return (healthy_orch, None, identity)
-        return (locked_orch, None, identity)
+            return (healthy_orch, None, identity, ())
+        return (locked_orch, None, identity, ())
 
     with (
         patch(

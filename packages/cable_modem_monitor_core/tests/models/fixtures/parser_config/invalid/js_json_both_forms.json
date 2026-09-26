@@ -1,0 +1,21 @@
+{
+  "_expected_error": "not both",
+  "_config": {
+    "downstream": {
+      "format": "javascript_json",
+      "resource": "/status.html",
+      "variable": "channelData",
+      "mappings": [
+        {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+      ],
+      "arrays": [
+        {
+          "array_path": "dsList",
+          "mappings": [
+            {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+          ]
+        }
+      ]
+    }
+  }
+}

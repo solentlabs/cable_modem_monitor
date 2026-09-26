@@ -65,6 +65,7 @@ class TestChannelTypeGuards:
     def test_js_json_non_list_returns_empty(self) -> None:
         """JSJson parser returning string → empty list."""
         section = MagicMock()
+        section.arrays = None  # flat form
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.JSJsonParser") as mock_cls:
             mock_cls.return_value.parse.return_value = "not a list"
             result, _ = _parse_js_json_channels(section, {})
@@ -140,6 +141,118 @@ def test_html_table_anchor_counting(html: str | None, expected: int, fulfilled: 
     )
     resources = {} if html is None else {"/data.htm": BeautifulSoup(html, "html.parser")}
     _, count = _parse_html_table_channels(section, resources)
+    assert count.expected == expected
+    assert count.fulfilled == fulfilled
+
+
+# ------------------------------------------------------------------
+# js_json anchor counting — stub-page detection (UC-19a)
+# ------------------------------------------------------------------
+
+# Flat form: the variable is the one anchor.
+# ┌─────────────────────────────────┬──────────┬───────────┐
+# │ scenario                        │ expected │ fulfilled │
+# ├─────────────────────────────────┼──────────┼───────────┤
+# │ variable assigned               │ 1        │ 1         │
+# │ variable absent                 │ 1        │ 0         │
+# │ resource missing from dict      │ 1        │ 0         │
+# └─────────────────────────────────┴──────────┴───────────┘
+
+# fmt: off
+_JS_JSON_FLAT_ANCHOR_CASES = [
+    # (html,                                                         expected, fulfilled, id)
+    ('<script>dsVar = [{"ChannelID": "1"}];</script>',              1,        1,         "variable-assigned"),
+    ("<script>var other = [];</script>",                             1,        0,         "variable-absent"),
+    (None,                                                           1,        0,         "resource-missing"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "html,expected,fulfilled,_id",
+    _JS_JSON_FLAT_ANCHOR_CASES,
+    ids=[c[3] for c in _JS_JSON_FLAT_ANCHOR_CASES],
+)
+def test_js_json_flat_anchor_counting(html: str | None, expected: int, fulfilled: int, _id: str) -> None:
+    """Flat js_json form counts its one variable as the anchor."""
+    from bs4 import BeautifulSoup
+    from solentlabs.cable_modem_monitor_core.models.parser_config.js_json import JSJsonSection
+
+    section = JSJsonSection.model_validate(
+        {
+            "format": "javascript_json",
+            "resource": "/data.htm",
+            "variable": "dsVar",
+            "mappings": [{"key": "ChannelID", "field": "channel_id", "type": "integer"}],
+        }
+    )
+    resources = {} if html is None else {"/data.htm": BeautifulSoup(html, "html.parser")}
+    _, count = _parse_js_json_channels(section, resources)
+    assert count.expected == expected
+    assert count.fulfilled == fulfilled
+
+
+# Arrays form: each primary entry (dsList, ofdmList) is one anchor,
+# fulfilled when its array_path resolves to a list. The companion
+# (errList) is never an anchor.
+# ┌─────────────────────────────────┬──────────┬───────────┐
+# │ scenario                        │ expected │ fulfilled │
+# ├─────────────────────────────────┼──────────┼───────────┤
+# │ both primaries present          │ 2        │ 2         │
+# │ one primary path missing        │ 2        │ 1         │
+# │ one primary array empty         │ 2        │ 2         │
+# │ primary path holds a non-list   │ 2        │ 1         │
+# │ companion missing               │ 2        │ 2         │
+# │ variable absent                 │ 2        │ 0         │
+# │ resource missing from dict      │ 2        │ 0         │
+# └─────────────────────────────────┴──────────┴───────────┘
+
+_JS_JSON_BOTH = '<script>let obj = {"dsList": [{"ChannelID": "1"}], "ofdmList": [{}], "errList": [{}]};</script>'
+_JS_JSON_ONE = '<script>let obj = {"dsList": [{"ChannelID": "1"}], "errList": []};</script>'
+_JS_JSON_EMPTY = '<script>let obj = {"dsList": [{"ChannelID": "1"}], "ofdmList": [], "errList": []};</script>'
+_JS_JSON_NON_LIST = '<script>let obj = {"dsList": [{"ChannelID": "1"}], "ofdmList": {}, "errList": []};</script>'
+_JS_JSON_NO_COMPANION = '<script>let obj = {"dsList": [{"ChannelID": "1"}], "ofdmList": [{"ChannelID": "2"}]};</script>'
+_JS_JSON_ABSENT = "<script>var other = {};</script>"
+
+# fmt: off
+_JS_JSON_ARRAYS_ANCHOR_CASES = [
+    # (html,                  expected, fulfilled, id)
+    (_JS_JSON_BOTH,           2,        2,         "both-primaries"),
+    (_JS_JSON_ONE,            2,        1,         "one-path-missing"),
+    (_JS_JSON_EMPTY,          2,        2,         "empty-array-fulfils"),
+    (_JS_JSON_NON_LIST,       2,        1,         "non-list-path"),
+    (_JS_JSON_NO_COMPANION,   2,        2,         "companion-missing"),
+    (_JS_JSON_ABSENT,         2,        0,         "variable-absent"),
+    (None,                    2,        0,         "resource-missing"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "html,expected,fulfilled,_id",
+    _JS_JSON_ARRAYS_ANCHOR_CASES,
+    ids=[c[3] for c in _JS_JSON_ARRAYS_ANCHOR_CASES],
+)
+def test_js_json_arrays_anchor_counting(html: str | None, expected: int, fulfilled: int, _id: str) -> None:
+    """Arrays js_json form counts one anchor per primary array that resolves."""
+    from bs4 import BeautifulSoup
+    from solentlabs.cable_modem_monitor_core.models.parser_config.js_json import JSJsonSection
+
+    mappings = [{"key": "ChannelID", "field": "channel_id", "type": "integer"}]
+    section = JSJsonSection.model_validate(
+        {
+            "format": "javascript_json",
+            "resource": "/data.htm",
+            "variable": "obj",
+            "arrays": [
+                {"array_path": "dsList", "mappings": mappings},
+                {"array_path": "ofdmList", "mappings": mappings},
+                {"array_path": "errList", "merge_by": ["channel_id"], "mappings": mappings},
+            ],
+        }
+    )
+    resources = {} if html is None else {"/data.htm": BeautifulSoup(html, "html.parser")}
+    _, count = _parse_js_json_channels(section, resources)
     assert count.expected == expected
     assert count.fulfilled == fulfilled
 
@@ -274,6 +387,7 @@ class TestJsJsonChannelNumberAssignment:
         )
 
         section = MagicMock()
+        section.arrays = None  # flat form
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.JSJsonParser") as mock_cls:
             mock_cls.return_value.parse.return_value = [
                 {"channel_id": 10},

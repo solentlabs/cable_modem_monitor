@@ -31,6 +31,7 @@ import requests
 
 from ..auth.base import AuthResult
 from ..auth.factory import create_auth_manager
+from ..auth.setup import apply_setup_params, detect_setup_params
 from ..config_loader import load_modem_config, load_parser_config
 from ..fetch_list import collect_fetch_targets
 from ..har import load_har_json
@@ -40,6 +41,7 @@ from ..orchestration.factory import create_orchestrator
 from ..orchestration.signals import ConnectionStatus
 from ..parsers.coordinator import ModemParserCoordinator
 from ..post_processor import load_post_processor
+from ..protocol.hnap import hmac_algorithm
 from .discovery import ModemTestCase, RestartTestCase
 from .golden_file import ComparisonResult, compare_golden_file
 from .server import HARMockServer
@@ -339,40 +341,15 @@ def _load_test_case(
     return entries, expected, modem_config, parser_config, post_processor
 
 
-def _detect_form_nonce_encoding(
+def _run_setup_detection(
     modem_config: Any,
     base_url: str,
 ) -> None:
-    """Pre-fetch the login page from the mock server and set encoding.
-
-    Mirrors the config flow detection path: GETs the login page,
-    analyzes the form structure, and sets ``credential_encoding``
-    and ``credential_field`` on the config.  This exercises the
-    mock server's ``FormNonceAuthHandler`` GET route — the same
-    pattern the HA config flow uses against a real modem.
-
-    No-op for non-form_nonce auth strategies.
-    """
-    from ..auth.form_nonce import _analyze_login_form
-    from ..models.modem_config.auth import FormNonceAuth
-
-    if not isinstance(modem_config.auth, FormNonceAuth):
-        return
-
-    auth = modem_config.auth
-    login_url = f"{base_url}{auth.action}"
-
-    response = requests.get(login_url, timeout=5)
-    if not response.text:
-        return
-
-    detection = _analyze_login_form(
-        response.text,
-        auth.username_field,
-        auth.nonce_field,
-    )
-    auth.credential_encoding = detection.encoding
-    auth.credential_field = detection.credential_field
+    """Run the strategy's setup-time detection against the mock server, as the HA config flow does against a modem."""
+    # Same Core call the config flow makes, so harness and runtime share
+    # one detection path (ARCHITECTURE § Core Extraction Pipeline). A
+    # strategy without a setup step makes no request.
+    apply_setup_params(modem_config, detect_setup_params(modem_config, base_url))
 
 
 def _run_pipeline(
@@ -399,8 +376,8 @@ def _run_pipeline(
     with HARMockServer(entries, modem_config=modem_config) as server:
         base_url = server.base_url
 
-        # Detect encoding via mock server GET (mirrors config flow)
-        _detect_form_nonce_encoding(modem_config, base_url)
+        # Auth setup detection via mock server GET (mirrors config flow)
+        _run_setup_detection(modem_config, base_url)
 
         session = requests.Session()
 
@@ -433,30 +410,19 @@ def _run_pipeline(
 
         if modem_config.transport == "hnap":
             # HNAP: batched SOAP request, no per-page fetching
-            hmac_algorithm = "md5"
-            if hasattr(modem_config.auth, "hmac_algorithm"):
-                hmac_algorithm = modem_config.auth.hmac_algorithm
             hnap_loader = HNAPLoader(
                 session=session,
                 base_url=base_url,
                 private_key=auth_result.auth_context.private_key,
-                hmac_algorithm=hmac_algorithm,
+                hmac_algorithm=hmac_algorithm(modem_config.auth),
                 timeout=modem_config.timeout,
             )
             resources = hnap_loader.fetch(parser_config)
         else:
             # HTTP: per-page fetching
             targets = collect_fetch_targets(parser_config, post_processor)
-            # Prefer body-derived token from auth_context; fall back to cookie
-            url_token = ""
-            token_prefix = getattr(modem_config.auth, "token_prefix", "")
-            if token_prefix:
-                if auth_result.auth_context.url_token:
-                    url_token = auth_result.auth_context.url_token
-                else:
-                    cookie_name = getattr(modem_config.auth, "cookie_name", "")
-                    if cookie_name:
-                        url_token = session.cookies.get(cookie_name, "") or ""
+            # Same hook the collector uses: body-derived token, else the session cookie.
+            token_prefix, url_token = auth_manager.loader_url_token(session, auth_result.auth_context)
 
             loader = HTTPResourceLoader(
                 session=session,
@@ -502,8 +468,8 @@ def _run_orchestrated(
         RuntimeError: If collection failed or status is not ONLINE.
     """
     with HARMockServer(entries, modem_config=modem_config) as server:
-        # Detect encoding via mock server GET (mirrors config flow)
-        _detect_form_nonce_encoding(modem_config, server.base_url)
+        # Auth setup detection via mock server GET (mirrors config flow)
+        _run_setup_detection(modem_config, server.base_url)
 
         orchestrator, _, _ = create_orchestrator(
             modem_config=modem_config,

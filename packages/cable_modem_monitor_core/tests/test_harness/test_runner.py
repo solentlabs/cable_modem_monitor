@@ -44,7 +44,9 @@ _MODEM_URL_TOKEN_YAML = (_PIPELINE_FIXTURES / "modem_url_token.yaml").read_text(
 _MODEM_HNAP_YAML = (_PIPELINE_FIXTURES / "modem_hnap.yaml").read_text()
 _PARSER_YAML = (_PIPELINE_FIXTURES / "parser.yaml").read_text()
 _PARSER_HNAP_YAML = (_PIPELINE_FIXTURES / "parser_hnap.yaml").read_text()
+_PARSER_POST_FORM_YAML = (_PIPELINE_FIXTURES / "parser_post_form.yaml").read_text()
 _HAR_DATA: dict[str, Any] = load_fixture(_PIPELINE_FIXTURES / "har_2ch.json")
+_HAR_POST_FORM_DATA: dict[str, Any] = load_fixture(_PIPELINE_FIXTURES / "har_post_form.json")
 _HAR_RESTART_DATA: dict[str, Any] = load_fixture(_PIPELINE_FIXTURES / "har_restart.json")
 _HAR_HNAP_DATA: dict[str, Any] = load_fixture(_PIPELINE_FIXTURES / "har_hnap_2ch.json")
 _GOLDEN_FILE: dict[str, Any] = load_fixture(_PIPELINE_FIXTURES / "golden_2ch.json")
@@ -104,6 +106,36 @@ class TestHappyPath:
         assert result.comparison is not None
         assert result.comparison.passed is True
         assert result.test_name == case.name
+
+
+# ---------------------------------------------------------------------------
+# Form POST data page: parser.yaml ``requests`` replays the captured POST
+# ---------------------------------------------------------------------------
+
+# The capture answers GET with 1 channel and the form POST with 2; the
+# 2-channel golden passes only if the replay served the POST route.
+# fmt: off
+POST_FORM_RUNNERS = [
+    # (runner,                       description)
+    (run_modem_test,                 "direct pipeline"),
+    (run_modem_test_orchestrated,    "orchestrated cycle"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "runner,desc",
+    POST_FORM_RUNNERS,
+    ids=[c[1] for c in POST_FORM_RUNNERS],
+)
+def test_post_form_data_page_replays(tmp_path: Path, runner: Any, desc: str) -> None:
+    """A path declared under ``requests`` replays the captured form POST."""
+    case = _build_test_dir(tmp_path, parser_yaml=_PARSER_POST_FORM_YAML, har_data=_HAR_POST_FORM_DATA)
+
+    result = runner(case)
+
+    assert result.error == "", f"{desc}: {result.error}"
+    assert result.passed is True, f"Failed: {desc}"
 
 
 # ---------------------------------------------------------------------------

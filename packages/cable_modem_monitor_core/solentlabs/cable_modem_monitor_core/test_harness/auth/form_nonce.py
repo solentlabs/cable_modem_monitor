@@ -100,8 +100,10 @@ def create_handler(
     if har_entries:
         login_page_html = extract_har_response_text(har_entries, "GET", login_path)
 
-    return FormNonceAuthHandler(
+    handler = FormNonceAuthHandler(
         login_path=login_path,
         login_page_html=login_page_html,
         cookie_name=action_cfg.cookie_name,
     )
+    handler.login_action = auth.action
+    return handler

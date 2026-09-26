@@ -1,0 +1,16 @@
+{
+  "_description": "A '];' inside a string value does not end the array (raw_decode, not a regex, delimits the value)",
+  "_html": "<html><body><script>json_ds = [{\"ChannelID\": \"1\", \"Modulation\": \"a];b\"}];</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "json_ds",
+    "mappings": [
+      {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+      {"key": "Modulation", "field": "modulation", "type": "string"}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "modulation": "a];b"}
+  ]
+}

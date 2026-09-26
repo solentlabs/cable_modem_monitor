@@ -34,7 +34,8 @@ _logger = logging.getLogger(__name__)
 _AUTH_PACKAGE = "solentlabs.cable_modem_monitor_core.auth"
 
 
-def _load_module(strategy: str) -> Any:
+def load_strategy_module(strategy: str) -> Any:
+    """Import ``auth/{strategy}.py``; raises ``ModuleNotFoundError`` when the strategy has no module."""
     return importlib.import_module(f".{strategy}", package=_AUTH_PACKAGE)
 
 
@@ -46,7 +47,7 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
 
     strategy = auth.strategy
     try:
-        module = _load_module(strategy)
+        module = load_strategy_module(strategy)
     except ModuleNotFoundError:
         _logger.warning(
             "No auth module for strategy '%s', falling back to NoneAuthManager",
@@ -59,5 +60,5 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
 def create_auth_manager_for_action(auth_config: AuthConfig) -> BaseAuthManager:
     """Create an auth manager from a standalone auth config; raises ``ModuleNotFoundError`` on missing module."""
     strategy = auth_config.strategy
-    module = _load_module(strategy)
+    module = load_strategy_module(strategy)
     return module.create_manager(auth_config)  # type: ignore[no-any-return]  # importlib returns Any; all auth modules provide create_manager() → BaseAuthManager

@@ -1,0 +1,19 @@
+{
+  "_expected_error": "body_encoding 'session' on 'logout' requires an auth strategy that encodes action bodies, got none",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "actions": {
+      "logout": {
+        "type": "http",
+        "method": "PUT",
+        "endpoint": "/logout.php",
+        "json_body": {"action": "logout"},
+        "body_encoding": "session"
+      }
+    },
+    "status": "unsupported"
+  }
+}

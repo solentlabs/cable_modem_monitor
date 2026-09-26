@@ -81,6 +81,11 @@ class HnapAuthManager(BaseAuthManager):
         # HNAP_AUTH carries an HMAC signed with the per-session PrivateKey.
         return frozenset({"cookie", "hnap_auth"})
 
+    def session_is_valid(self, session: requests.Session, context: AuthContext | None) -> bool:
+        """Valid while the ``uid`` session cookie and the login's private key are both held."""
+        # The PrivateKey cookie alone does not count: signing reads context.private_key.
+        return context is not None and "uid" in session.cookies and bool(context.private_key)
+
     def authenticate(
         self,
         session: requests.Session,

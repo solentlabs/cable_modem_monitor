@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.exceptions import ConfigEntryError, HomeAssistantError
+from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemIdentity,
     ModemSnapshot,
@@ -262,20 +263,21 @@ _PATCH_LOAD_POST = "custom_components.cable_modem_monitor.load_post_processor"
 
 
 def test_wiring_loads_config_and_returns_tuple():
-    """Happy path: loads config, returns (orchestrator, health_monitor, identity)."""
+    """Happy path: loads config, returns (orchestrator, health_monitor, identity, setup_param_keys)."""
     with (
         patch(_PATCH_LOAD_MODEM, return_value=STUB_MODEM_CONFIG),
         patch(_PATCH_LOAD_PARSER, return_value=None),
         patch(_PATCH_LOAD_POST, return_value=None),
         patch("pathlib.Path.exists", return_value=False),
     ):
-        orchestrator, health_monitor, identity = _create_core_components(MOCK_ENTRY_DATA)
+        orchestrator, health_monitor, identity, setup_keys = _create_core_components(MOCK_ENTRY_DATA)
 
     assert orchestrator is not None
     assert health_monitor is not None
     assert identity.manufacturer == "Solent Labs"
     assert identity.model == "TPS-2000"
     assert identity.status == "confirmed"
+    assert setup_keys == ()
 
 
 def test_wiring_variant_uses_variant_yaml():
@@ -334,7 +336,10 @@ def test_wiring_passes_entry_credentials_to_factory():
         patch(_PATCH_LOAD_PARSER, return_value=None),
         patch(_PATCH_LOAD_POST, return_value=None),
         patch("pathlib.Path.exists", return_value=False),
-        patch("custom_components.cable_modem_monitor.create_orchestrator") as mock_factory,
+        patch(
+            "custom_components.cable_modem_monitor.create_orchestrator",
+            return_value=(MagicMock(), None, MagicMock()),
+        ) as mock_factory,
     ):
         _create_core_components(data)
 
@@ -381,7 +386,7 @@ def test_health_monitor_conditional(supports_icmp, http_probe, expect_created, d
         patch(_PATCH_LOAD_POST, return_value=None),
         patch("pathlib.Path.exists", return_value=False),
     ):
-        _, health_monitor, _ = _create_core_components(data)
+        _, health_monitor, _, _ = _create_core_components(data)
 
     if expect_created:
         assert health_monitor is not None
@@ -399,7 +404,7 @@ def test_health_monitor_no_health_config():
         patch(_PATCH_LOAD_POST, return_value=None),
         patch("pathlib.Path.exists", return_value=False),
     ):
-        _, health_monitor, _ = _create_core_components(MOCK_ENTRY_DATA)
+        _, health_monitor, _, _ = _create_core_components(MOCK_ENTRY_DATA)
 
     # health=None → defaults to http_probe=True, supports_icmp=True
     assert health_monitor is not None
@@ -415,7 +420,7 @@ def test_identity_without_hardware():
         patch(_PATCH_LOAD_POST, return_value=None),
         patch("pathlib.Path.exists", return_value=False),
     ):
-        _, _, identity = _create_core_components(MOCK_ENTRY_DATA)
+        _, _, identity, _ = _create_core_components(MOCK_ENTRY_DATA)
 
     assert identity.docsis_version is None
     assert identity.release_date is None
@@ -429,6 +434,77 @@ def test_config_load_error_propagates():
         pytest.raises(FileNotFoundError),
     ):
         _create_core_components(MOCK_ENTRY_DATA)
+
+
+# -----------------------------------------------------------------------
+# Step 1a — stored setup params re-applied from entry.data
+# -----------------------------------------------------------------------
+#
+# Existing entries store the form_nonce params under credential_encoding
+# and credential_field; they must load unchanged with no migration.
+#
+# ┌────────────┬───────────────────────────────┬──────────────────────┬────────────────────────────────┐
+# │ strategy   │ stored entry keys             │ config after startup │ description                    │
+# ├────────────┼───────────────────────────────┼──────────────────────┼────────────────────────────────┤
+# │ form_nonce │ b64_packed, arguments         │ b64_packed, arguments│ packed entry loads packed      │
+# │ form_nonce │ plain, ""                     │ plain, ""            │ plain entry loads plain        │
+# │ form_nonce │ (none)                        │ plain, ""            │ keyless entry reads plain      │
+# │ basic      │ plain, "" (written by old HA) │ config unchanged     │ leftover keys ignored          │
+# └────────────┴───────────────────────────────┴──────────────────────┴────────────────────────────────┘
+
+_FORM_NONCE_AUTH = {"strategy": "form_nonce", "action": "/login", "nonce_field": "ar_nonce"}
+_FORM_NONCE_KEYS = ("credential_encoding", "credential_field")
+_STORED_PACKED = {"credential_encoding": "b64_packed", "credential_field": "arguments"}
+_STORED_PLAIN = {"credential_encoding": "plain", "credential_field": ""}
+
+# fmt: off
+STORED_PARAM_CASES = [
+    # (auth,                 stored,          expected_auth,          keys,             id)
+    (_FORM_NONCE_AUTH,       _STORED_PACKED,  _STORED_PACKED,         _FORM_NONCE_KEYS, "form_nonce_packed"),
+    (_FORM_NONCE_AUTH,       _STORED_PLAIN,   _STORED_PLAIN,          _FORM_NONCE_KEYS, "form_nonce_plain"),
+    (_FORM_NONCE_AUTH,       {},              _STORED_PLAIN,          _FORM_NONCE_KEYS, "form_nonce_keyless"),
+    ({"strategy": "basic"},  _STORED_PLAIN,   {"strategy": "basic"},  (),               "basic_leftover_keys"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "auth,stored,expected_auth,keys,desc",
+    STORED_PARAM_CASES,
+    ids=[c[4] for c in STORED_PARAM_CASES],
+)
+def test_stored_setup_params_reapplied(
+    auth: dict[str, Any],
+    stored: dict[str, str],
+    expected_auth: dict[str, str],
+    keys: tuple[str, ...],
+    desc: str,
+) -> None:
+    """Existing entries' setup-param keys reach the auth config unchanged."""
+    config = ModemConfig.model_validate(
+        {
+            "manufacturer": "Solent Labs",
+            "model": "TPS-2000",
+            "transport": "http",
+            "default_host": "192.168.100.1",
+            "status": "unsupported",
+            "auth": auth,
+        }
+    )
+    with (
+        patch(_PATCH_LOAD_MODEM, return_value=config),
+        patch(_PATCH_LOAD_PARSER, return_value=None),
+        patch(_PATCH_LOAD_POST, return_value=None),
+        patch("pathlib.Path.exists", return_value=False),
+    ):
+        _, _, _, setup_keys = _create_core_components({**MOCK_ENTRY_DATA, **stored})
+
+    assert config.auth is not None
+    dump = config.auth.model_dump()
+    assert {key: dump[key] for key in expected_auth} == expected_auth, desc
+    if not keys:
+        assert "credential_encoding" not in dump, desc
+    assert setup_keys == keys, desc
 
 
 # -----------------------------------------------------------------------
@@ -510,7 +586,7 @@ async def test_setup_entry_happy_path():
         call_count += 1
         if call_count == 1:
             return "core: v1.0.0, catalog: v1.0.0"
-        return (mock_orch, mock_health_mon, mock_identity)
+        return (mock_orch, mock_health_mon, mock_identity, ())
 
     hass.async_add_executor_job = _mock_executor
     hass.config_entries.async_forward_entry_setups = AsyncMock()
@@ -1532,7 +1608,7 @@ async def test_update_data_triggers_reauth_on_breaker_open():
             return "core: v1.0.0, catalog: v1.0.0"
         # _create_core_components — health_monitor None keeps the test
         # to a single (data) coordinator.
-        return (mock_orch, None, mock_identity)
+        return (mock_orch, None, mock_identity, ())
 
     hass.async_add_executor_job = _mock_executor
     hass.config_entries.async_forward_entry_setups = AsyncMock()
@@ -1611,7 +1687,7 @@ async def test_unavailable_logged_once_per_transition(caplog):
             return pending.pop(0)
         if not args:
             return "core: v1.0.0, catalog: v1.0.0"
-        return (mock_orch, None, mock_identity)
+        return (mock_orch, None, mock_identity, ())
 
     hass.async_add_executor_job = _mock_executor
     hass.config_entries.async_forward_entry_setups = AsyncMock()

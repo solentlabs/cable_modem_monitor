@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 
 # IMPORTANT: Do not edit VERSION manually!
 # Use: python scripts/release.py <version>
-VERSION = "3.14.1"
+VERSION = "3.14.15-beta.1"
 
 DOMAIN = "cable_modem_monitor"
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
@@ -27,8 +27,8 @@ CONF_PROTOCOL = "protocol"
 CONF_LEGACY_SSL = "legacy_ssl"
 CONF_SUPPORTS_ICMP = "supports_icmp"
 CONF_SUPPORTS_HEAD = "supports_head"
-CONF_CREDENTIAL_ENCODING = "credential_encoding"
-CONF_CREDENTIAL_FIELD = "credential_field"
+# Auth strategy setup params are stored alongside, under the names
+# Core's setup_param_keys() gives; HA treats them as opaque.
 
 # Config entry key — channel-bond onboarding eligibility.
 # Set to ``True`` by the config flow on fresh setup; absent for

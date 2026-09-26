@@ -219,3 +219,98 @@ class TestPostProcessorResources:
         """A wrongly shaped resources declaration raises at startup."""
         with pytest.raises(TypeError, match="resources"):
             collect_fetch_targets(_table_single_config(), _make_post_processor(declared))
+
+
+# =============================================================================
+# parser.yaml ``requests``: how each path is fetched
+# =============================================================================
+
+# ┌──────────────────────┬──────────────┬─────────────┬───────────────────────────┬─────────────────────┐
+# │ fixture              │ posted path  │ parser.py   │ expected paths            │ description         │
+# ├──────────────────────┼──────────────┼─────────────┼───────────────────────────┼─────────────────────┤
+# │ table_single         │ /status.html │ none        │ /status.html              │ section path        │
+# │ table_single         │ (none)       │ none        │ /status.html              │ no request: GET     │
+# │ shared (ds + us)     │ /status.html │ none        │ /status.html (once)       │ shared path         │
+# │ system_info_fields   │ /info.html   │ none        │ /home.html, /info.html    │ system_info source  │
+# │ json_arrays          │ /api/qam     │ none        │ /api/qam, /api/ofdm       │ per-array resource  │
+# │ table_single         │ /extra.html  │ /extra.html │ /status.html, /extra.html │ parser.py-only path │
+# └──────────────────────┴──────────────┴─────────────┴───────────────────────────┴─────────────────────┘
+#
+# The posted path is declared under ``requests`` and fetched with POST and
+# its form; every other path is a GET with no form.
+#
+# fmt: off
+_FORM = {"more": "1", "submit": "Show channels"}
+_FORM_PAIRS = (("more", "1"), ("submit", "Show channels"))
+_POST = {"method": "POST", "form": _FORM}
+_TABLE = FIXTURES_DIR / "table_single.json"
+_SHARED = LOCAL_FIXTURES_DIR / "parser_config_shared_resource.json"
+_SYSINFO = FIXTURES_DIR / "system_info_html_fields.json"
+_ARRAYS = FIXTURES_DIR / "json_multi_resource_arrays.json"
+_EXTRA = {"/extra.html": "table"}
+
+REQUEST_CASES = [
+    # (fixture, posted,         declared, expected paths,                     description)
+    (_TABLE,    "/status.html", None,     {"/status.html"},                   "section path"),
+    (_TABLE,    None,           None,     {"/status.html"},                   "no request: GET"),
+    (_SHARED,   "/status.html", None,     {"/status.html"},                   "shared path"),
+    (_SYSINFO,  "/info.html",   None,     {"/home.html", "/info.html"},       "system_info source"),
+    (_ARRAYS,   "/api/qam",     None,     {"/api/qam", "/api/ofdm"},          "per-array resource"),
+    (_TABLE,    "/extra.html",  _EXTRA,   {"/status.html", "/extra.html"},    "parser.py-only path"),
+]
+
+UNREAD_REQUEST_CASES = [
+    # (requests,                                     declared,                  description)
+    ({"/other.html": _POST},                         None,                      "no parser.py, path unread"),
+    ({"/other.html": _POST},                         {"/extra.html": "table"},  "parser.py reads a different path"),
+    ({"/status.html": _POST, "/other.html": _POST},  None,                      "one read key, one unread"),
+]
+# fmt: on
+
+
+def _config_with_requests(fixture: Path, requests_map: dict[str, Any]) -> ParserConfig:
+    """Load a parser config fixture and attach a ``requests`` map."""
+    data = load_fixture(fixture)
+    data["requests"] = requests_map
+    return ParserConfig.model_validate(data)
+
+
+class TestDeclaredRequests:
+    """parser.yaml ``requests`` travels on the fetch target for its path."""
+
+    @pytest.mark.parametrize(
+        "fixture,posted,declared,expected,desc",
+        REQUEST_CASES,
+        ids=[c[4] for c in REQUEST_CASES],
+    )
+    def test_target_carries_request(
+        self,
+        fixture: Path,
+        posted: str | None,
+        declared: Any,
+        expected: set[str],
+        desc: str,
+    ) -> None:
+        """Each path is fetched once, with its declared request or GET."""
+        config = _config_with_requests(fixture, {posted: _POST} if posted else {})
+        targets = collect_fetch_targets(config, _make_post_processor(declared))
+        assert sorted(t.path for t in targets) == sorted(expected), f"Failed: {desc}"
+        for t in targets:
+            want = ("POST", _FORM_PAIRS) if t.path == posted else ("GET", ())
+            assert (t.method, t.form) == want, f"Failed: {desc}: {t.path}"
+
+    @pytest.mark.parametrize(
+        "requests_map,declared,desc",
+        UNREAD_REQUEST_CASES,
+        ids=[c[2] for c in UNREAD_REQUEST_CASES],
+    )
+    def test_unread_request_key_fails_fast(self, requests_map: dict[str, Any], declared: Any, desc: str) -> None:
+        """A requests key no section or parser.py resource reads is a config error."""
+        config = _config_with_requests(FIXTURES_DIR / "table_single.json", requests_map)
+        with pytest.raises(ValueError, match="/other.html"):
+            collect_fetch_targets(config, _make_post_processor(declared))
+
+    def test_default_target_is_get(self) -> None:
+        """A target built without a request is a plain GET."""
+        target = ResourceTarget(path="/status.html", format="table")
+        assert (target.method, target.form) == ("GET", ())

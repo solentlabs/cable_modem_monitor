@@ -109,7 +109,7 @@ class FormAuthHandler(AuthHandler):
         _logger.debug("Mock server: login accepted at %s", path)
         return None
 
-    def is_authenticated(self, headers: dict[str, str]) -> bool:
+    def is_authenticated(self, headers: dict[str, str], *, query: str = "") -> bool:
         """Check session state."""
         if self._authenticated:
             return True
@@ -134,7 +134,7 @@ class FormAuthHandler(AuthHandler):
         _logger.debug("Mock server: logout — session cleared")
         return RouteEntry(status=200, headers=[], body="OK")
 
-    def handle_restart(self) -> RouteEntry:
+    def handle_restart(self, *, body: bytes = b"") -> RouteEntry:
         """Accept restart and clear session (modem is rebooting)."""
         self._authenticated = False
         _logger.debug("Mock server: restart accepted — session cleared")
@@ -146,17 +146,21 @@ def create_handler(
     har_entries: list[dict[str, Any]] | None = None,
 ) -> FormAuthHandler:
     """Entry point for dynamic auth handler dispatch."""
+    from ...models.modem_config.auth import FormAuth
     from ..routes import extract_har_response_text
 
     auth = modem_config.auth
-    login_path = getattr(auth, "action", "") or getattr(auth, "login_endpoint", "")
-    login_page = getattr(auth, "login_page", "") or ""
+    assert isinstance(auth, FormAuth)
+    login_page = auth.login_page
     # The first captured GET of the page is the pre-auth one; a later
     # authenticated visit may answer with a dashboard instead.
     login_page_html = extract_har_response_text(har_entries, "GET", login_page) if har_entries and login_page else ""
-    return FormAuthHandler(
-        login_path=login_path,
+    handler = FormAuthHandler(
+        login_path=auth.action,
         cookie_name=extract_action_config(modem_config).cookie_name,
         login_page=login_page,
         login_page_html=login_page_html,
     )
+    handler.login_page = login_page
+    handler.login_action = auth.action
+    return handler

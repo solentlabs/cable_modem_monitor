@@ -98,6 +98,8 @@ def test_invalid_modem_config(fixture_path: Path):
 # │ health_config.json       │ health.http_probe           │ False          │
 # │ health_config.json       │ health.supports_head        │ False          │
 # │ health_config.json       │ health.supports_icmp        │ False          │
+# │ auth_bearer.json         │ auth.method / token_* ..    │ defaults       │
+# │ auth_bearer_header_query │ auth.method / token_* ..    │ declared       │
 # └──────────────────────────┴─────────────────────────────┴────────────────┘
 
 # fmt: off
@@ -123,6 +125,22 @@ FIELD_ACCESS_CASES = [
     ("auth_hnap_sha256.json",            "auth.hmac_algorithm",     "sha256"),
     ("auth_form_pbkdf2.json",            "auth.login_success",      {"error": "ok"}),
     ("auth_form_pbkdf2.json",            "auth.login_busy",         {"message": "MSG_LOGIN_150"}),
+    ("auth_bearer.json",                 "auth.method",             "POST"),
+    ("auth_bearer.json",                 "auth.extra_fields",       {}),
+    ("auth_bearer.json",                 "auth.token_source",       "body"),
+    ("auth_bearer.json",                 "auth.token_placement",    "authorization"),
+    ("auth_bearer.json",                 "auth.token_header",       ""),
+    ("auth_bearer.json",                 "auth.token_prefix",       ""),
+    ("auth_bearer.json",                 "auth.cookie_name",        ""),
+    ("auth_bearer.json",                 "auth.login_busy",         {}),
+    ("auth_bearer_header_query.json",    "auth.method",             "PUT"),
+    ("auth_bearer_header_query.json",    "auth.extra_fields",       {"ipAddress": "{host}"}),
+    ("auth_bearer_header_query.json",    "auth.token_path",         ""),
+    ("auth_bearer_header_query.json",    "auth.token_source",       "header"),
+    ("auth_bearer_header_query.json",    "auth.token_placement",    "query"),
+    ("auth_bearer_header_query.json",    "auth.token_prefix",       "ct_"),
+    ("auth_bearer_header_query.json",    "auth.cookie_name",        "sessionid"),
+    ("auth_bearer_header_placement.json", "auth.token_header",      "X-Session-Token"),
     ("health_config.json",               "health.http_probe",       False),
     ("health_config.json",               "health.supports_head",    False),
     ("health_config.json",               "health.supports_icmp",    False),

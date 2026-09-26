@@ -25,6 +25,7 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     FormPbkdf2Auth,
     FormSjclAuth,
     HnapAuth,
+    JsonSjclAuth,
     NoneAuth,
     UrlTokenAuth,
     get_auth_strategy_rows,
@@ -51,6 +52,15 @@ AUTH_MODELS_BY_STRATEGY: dict[str, Any] = {
         strategy="form_sjcl", login_endpoint="/login", pbkdf2_iterations=1000, pbkdf2_key_length=128
     ),
     "hnap": HnapAuth(strategy="hnap", hmac_algorithm="md5"),
+    "json_sjcl": JsonSjclAuth(
+        strategy="json_sjcl",
+        login_page="/login.php",
+        login_endpoint="/login",
+        pbkdf2_iterations=1000,
+        pbkdf2_key_length=128,
+        aad="AAD",
+        token_header="X-Token",
+    ),
     "none": NoneAuth(strategy="none"),
     "url_token": UrlTokenAuth(strategy="url_token", login_page="/login"),
 }
@@ -74,6 +84,7 @@ def _config_with(auth: Any) -> Any:
 # │ "form_pbkdf2" │ True     │ cookie session over HTTP            │
 # │ "form_sjcl"   │ True     │ cookie session over HTTP            │
 # │ "hnap"        │ False    │ hnap transport, HNAPLoader path     │
+# │ "json_sjcl"   │ True     │ cookie + token-header session       │
 # │ "none"        │ False    │ stateless, no credential at all     │
 # │ "url_token"   │ True     │ token session over HTTP             │
 # └───────────────┴──────────┴─────────────────────────────────────┘
@@ -89,6 +100,7 @@ LOGIN_PAGE_DETECTION_CASES = [
     ("form_pbkdf2",  True),
     ("form_sjcl",    True),
     ("hnap",         False),
+    ("json_sjcl",    True),
     ("none",         False),
     ("url_token",    True),
 ]

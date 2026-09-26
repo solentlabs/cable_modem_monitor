@@ -10,8 +10,9 @@ import logging
 import secrets
 import string
 import urllib.parse
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -46,8 +47,9 @@ class FormNonceAuthManager(BaseAuthManager):
     When the login page form contains a hidden ``arguments``-style
     field instead of named credential inputs, credentials are packed
     as ``base64(encodeURIComponent("u=val:p=val"))`` into that field.
-    Encoding is determined at setup time (HA config flow or test
-    harness) and stored in ``FormNonceAuth.credential_encoding``.
+    Encoding is determined at setup time by this module's
+    ``detect_setup_params`` entry point and stored in
+    ``FormNonceAuth.credential_encoding``.
 
     Args:
         config: Validated ``FormNonceAuth`` config.  The
@@ -59,6 +61,10 @@ class FormNonceAuthManager(BaseAuthManager):
 
     def __init__(self, config: FormNonceAuth) -> None:
         self._config = config
+
+    def session_cookie_name(self) -> str:
+        """The declared ``cookie_name``."""
+        return self._config.cookie_name
 
     def authenticate(
         self,
@@ -285,3 +291,43 @@ def _pack_b64_credentials(
 def create_manager(config: FormNonceAuth) -> FormNonceAuthManager:
     """Entry point for dynamic auth factory dispatch."""
     return FormNonceAuthManager(config)
+
+
+# ---------------------------------------------------------------------------
+# Setup-time entry points, reached through auth/setup.py
+# ---------------------------------------------------------------------------
+
+_SETUP_PARAM_KEYS = ("credential_encoding", "credential_field")
+
+
+def setup_param_keys() -> tuple[str, ...]:
+    """Names of the params ``detect_setup_params`` returns."""
+    return _SETUP_PARAM_KEYS
+
+
+def setup_page(config: FormNonceAuth) -> str:
+    """The page whose form structure decides the credential encoding."""
+    return config.action
+
+
+def detect_setup_params(config: FormNonceAuth, page_html: str) -> dict[str, str]:
+    """Detect the credential encoding from the login page HTML."""
+    detection = _analyze_login_form(page_html, config.username_field, config.nonce_field)
+    if detection.encoding != "plain":
+        _logger.info(
+            "Credential encoding detected: %s (field=%r)",
+            detection.encoding,
+            detection.credential_field,
+        )
+    return {
+        "credential_encoding": detection.encoding,
+        "credential_field": detection.credential_field,
+    }
+
+
+def apply_setup_params(config: FormNonceAuth, params: Mapping[str, Any]) -> None:
+    """Set detected (or stored) params on the config."""
+    # Anything but b64_packed reads plain, and plain carries no field.
+    packed = params.get("credential_encoding") == "b64_packed"
+    config.credential_encoding = "b64_packed" if packed else "plain"
+    config.credential_field = params.get("credential_field", "") if packed else ""

@@ -115,7 +115,7 @@ class _MockHandler(BaseHTTPRequestHandler):
         # either way (clearing state, invalidating a token).
         for kind, matches, handle in (
             ("logout", auth.is_logout_request, auth.handle_logout),
-            ("restart", auth.is_restart_request, auth.handle_restart),
+            ("restart", auth.is_restart_request, lambda: auth.handle_restart(body=body)),
         ):
             if not matches(method, path):
                 continue
@@ -128,13 +128,17 @@ class _MockHandler(BaseHTTPRequestHandler):
                 login_page=server.login_page,
                 token_prefix=server.token_prefix,
             )
-            response = captured if captured is not None else synthesized
+            # A restart refusal is the simulated modem judging this request's
+            # body; a captured 200 answered a different one and must not rescue
+            # it. Restart only: no logout needs it, so none changes behaviour.
+            refused = kind == "restart" and synthesized.status >= 400
+            response = captured if captured is not None and not refused else synthesized
             auth.record_action(kind, response.status)
             self._send_response(response.status, response.headers, response.body)
             return
 
         # Non-login request — check auth
-        if not auth.is_authenticated(headers):
+        if not auth.is_authenticated(headers, query=parsed.query):
             challenge = auth.get_challenge_response()
             self._send_response(
                 challenge.status,
@@ -198,7 +202,8 @@ class _MockHandler(BaseHTTPRequestHandler):
         # Not a login — fall through to authenticated request handling.
         # This path is used by HNAP when is_login_request matches all
         # POST /HNAP1/ but handle_login returns None for data requests.
-        if not auth.is_authenticated(headers):
+        # route_path carries the request's query string when it has one.
+        if not auth.is_authenticated(headers, query=route_path.partition("?")[2]):
             self._send_response(401, [], "Unauthorized")
             return
 
@@ -530,13 +535,15 @@ class HARMockServer(HTTPServer):
         host: str = "127.0.0.1",
         port: int = 0,
     ) -> None:
-        self.login_action = normalize_path(_extract_login_action(modem_config))
+        # The handler comes first: the login shape the routes are built
+        # around is strategy knowledge, set by each strategy's handler.
+        self.auth_handler = create_auth_handler(modem_config, har_entries)
+        self.login_action = normalize_path(self.auth_handler.login_action)
         self.routes = build_routes(har_entries, login_path=self.login_action)
         self.json_body_keys = build_json_body_keys(har_entries)
-        self.auth_handler = create_auth_handler(modem_config, har_entries)
         self.login_query_shapes = build_login_query_shapes(har_entries, self.login_action)
-        self.login_page = _extract_login_page(modem_config)
-        self.token_prefix = _extract_token_prefix(modem_config)
+        self.login_page = self.auth_handler.login_page
+        self.token_prefix = self.auth_handler.token_prefix
         self.post_login_endpoints = _extract_post_login_endpoints(modem_config)
         self._thread: threading.Thread | None = None
 
@@ -561,28 +568,6 @@ class HARMockServer(HTTPServer):
         if self._thread is not None:
             self._thread.join(timeout=5)
         self.server_close()
-
-
-def _extract_login_page(modem_config: ModemConfig | None) -> str:
-    """Return the ``auth.login_page`` if the strategy declares one."""
-    if modem_config is None or modem_config.auth is None:
-        return ""
-    return getattr(modem_config.auth, "login_page", "") or ""
-
-
-def _extract_login_action(modem_config: ModemConfig | None) -> str:
-    """Return the login POST path (``auth.action`` or ``auth.login_endpoint``)."""
-    if modem_config is None or modem_config.auth is None:
-        return ""
-    auth = modem_config.auth
-    return getattr(auth, "action", "") or getattr(auth, "login_endpoint", "") or ""
-
-
-def _extract_token_prefix(modem_config: ModemConfig | None) -> str:
-    """Return ``auth.token_prefix`` (url_token strategy) if declared."""
-    if modem_config is None or modem_config.auth is None:
-        return ""
-    return getattr(modem_config.auth, "token_prefix", "") or ""
 
 
 def _extract_post_login_endpoints(modem_config: ModemConfig | None) -> frozenset[str]:

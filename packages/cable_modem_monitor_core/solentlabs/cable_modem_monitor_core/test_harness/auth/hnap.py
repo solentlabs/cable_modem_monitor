@@ -148,7 +148,7 @@ class HnapAuthHandler(AuthHandler):
             body='{"LoginResponse": {"LoginResult": "ERROR"}}',
         )
 
-    def is_authenticated(self, headers: dict[str, str]) -> bool:
+    def is_authenticated(self, headers: dict[str, str], *, query: str = "") -> bool:
         """Validate HNAP_AUTH signature on authenticated requests."""
         if not self._authenticated:
             return False

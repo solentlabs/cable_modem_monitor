@@ -248,6 +248,38 @@ system_info:
     - resource: "/info.html"
 ```
 
+**Requests other than GET:** some firmware serves the data only in
+answer to a form POST. The page ships its tables empty, and a "show
+channels" button posts a field back to the same URL. A top-level
+`requests:` map declares how a path is fetched, once per path however
+many sections read it:
+
+```yaml
+requests:
+  "/cmconnectionstatus.php":
+    method: POST
+    form:
+      more: "1"
+      submit: "Please wait for a few seconds..."
+
+downstream:
+  format: table
+  resource: "/cmconnectionstatus.php"
+  ...
+```
+
+`method` is required and `POST` is the only value; `form` is sent
+`application/x-www-form-urlencoded`, verbatim as the capture shows it.
+A path absent from `requests` is fetched with GET, as before. A
+`requests` key that no section or parser.py resource reads is a
+config error, raised when the fetch list is built (the one place that
+sees parser.py resources too), so the entry's catalog replay fails on
+it. `requests:` is valid on the `http` transport only; the cross-file
+check rejects it elsewhere, since no other loader reads it. The URL is built exactly as for a GET, so a url-token
+suffix and `session.query_params` still apply. Resource keys stay
+paths: a request is how a path is fetched, not a second identity for
+it.
+
 **parser.py:** A `PostProcessor` declares the resources its hooks read
 in a `resources` class attribute — a dict of URL path → format (see
 [parser.py — Post-Processing Hooks](#parserpy--post-processing-hooks)).
@@ -888,7 +920,7 @@ declarations — the coordinator reports two counts:
 
 | Field | Meaning |
 |-------|---------|
-| `expected_anchors` | Number of named extraction targets declared for this resource — sum of `functions[].name` across format-specific sources (`format: javascript`), `variable` declarations (`format: javascript_json`), `<table>` matchers (`format: table`), HNAP `data_key` references, etc. |
+| `expected_anchors` | Number of named extraction targets declared for this resource — sum of `functions[].name` across format-specific sources (`format: javascript`), `variable` declarations (`format: javascript_json` flat form) or primary `arrays[]` entries (its `arrays` form), `<table>` matchers (`format: table`), HNAP `data_key` references, etc. |
 | `fulfilled_anchors` | Number of those targets the parser actually located in the response body |
 
 Reported as a flat collection of `(resource_path, expected, fulfilled)`
