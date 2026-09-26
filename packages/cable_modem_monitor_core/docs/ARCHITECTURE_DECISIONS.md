@@ -1412,8 +1412,8 @@ expanding the action model. This is intentional.
 **Decision:** ICMP, HEAD, and TCP each measure a different layer. All
 run when the modem supports them; none is a fallback for another.
 Status comes from ICMP + TCP. HEAD measures latency only and never
-changes status. A recent successful collection skips HEAD and TCP,
-which would only re-prove what it already showed. For probe order and
+changes status. An active collection skips HEAD and TCP, which would
+contend with it for the modem's web server. For probe order and
 per-configuration outcomes, see ORCHESTRATION_SPEC § Probe
 Configurations.
 
@@ -1429,10 +1429,14 @@ server is listening.
 
 **Constrains:** Never hammer a modem's web server for something a
 cheaper probe answers. That rule lives in the skip gate and the
-`supports_head` guard, not in probe ordering. Two things look like bugs
-and are not: HEAD runs before TCP so a single-threaded modem gets an
-uncontested connection, and a failed ICMP forces TCP past the skip gate
-so stale evidence cannot outvote a live probe (UC-59a).
+`supports_head` guard, not in probe ordering. A completed collection
+never skips the next probe: health and poll intervals are independent
+settings, and at health interval >= poll interval a post-collection
+skip stops TCP and HEAD after the first reading (UC-59). Two things
+look like bugs and are not: HEAD runs before TCP so a single-threaded
+modem gets an uncontested connection, and a failed ICMP forces TCP past
+the skip gate so an in-flight collection cannot stand in for a live
+probe (UC-59a).
 
 ---
 

@@ -533,8 +533,8 @@ class Orchestrator:
         accelerates subsequent polls until the modem answers again.
 
         Steps 4 and 6 notify the HealthMonitor of collection activity
-        so it can skip the HTTP probe when a collection is active or
-        recently succeeded (see HealthMonitor § Collection Evidence).
+        so it can skip the TCP/HEAD probes while a collection is active
+        (see HealthMonitor § Collection Evidence).
         The end signal is in a finally block — it always runs.
 
         The HealthMonitor runs on its own cadence. The orchestrator
@@ -1541,11 +1541,10 @@ a full authentication and parse cycle. The probes serve the same
 goal — check modem health with the minimum possible impact.
 
 The orchestrator notifies the HealthMonitor when data collections
-start and end. TCP and HEAD probes are skipped when a collection is
-active (avoids contention on the modem's web server) or recently
-succeeded (redundant — the collection already proved L4/HTTP
-reachability). A failing ICMP probe overrides the skip for TCP —
-see Collection Evidence § ICMP contradiction override below.
+start and end. TCP and HEAD probes are skipped while a collection is
+active (avoids contention on the modem's web server). A failing ICMP
+probe overrides the skip for TCP; see Collection Evidence § ICMP
+contradiction override below.
 
 ### Probe Strategy
 
@@ -1772,20 +1771,18 @@ class HealthMonitor:
         Runs enabled probes and returns a combined result:
         1. ICMP ping (if supports_icmp) — network-layer check
         2. HTTP HEAD (if supports_head AND http_probe AND no
-           collection evidence suppresses it) — latency only
-        3. TCP connect (if http_probe AND no collection evidence
-           suppresses it) — L4 reachability check
+           collection is active) — latency only
+        3. TCP connect (if http_probe AND no collection is active)
+           — L4 reachability check
 
-        TCP and HEAD share the skip gate — both are skipped when a
-        data collection is active or recently succeeded, since the
-        collection already proves L4/HTTP reachability. When
-        skipped, collection evidence substitutes for the TCP probe
-        in status derivation but tcp_latency_ms / http_latency_ms
-        stay None (not measured, not fabricated).
+        TCP and HEAD share the skip gate: both are skipped while a
+        data collection is active, to avoid contention. When
+        skipped, the in-flight collection substitutes for the TCP
+        probe in status derivation but tcp_latency_ms /
+        http_latency_ms stay None (not measured, not fabricated).
 
         Exception: a failing ICMP probe forces the TCP probe past
-        the skip gate — stale collection evidence must not outvote
-        a live probe. HEAD stays skipped. See Collection Evidence
+        the skip gate. HEAD stays skipped. See Collection Evidence
         § ICMP contradiction override.
 
         Returns:
@@ -1829,8 +1826,8 @@ class HealthInfo:
             excluding TCP connection setup overhead. Populated only
             on modems where supports_head=True (HEAD bypasses the
             handler and gives a clean unimodal signal). None on
-            GET-only modems, HEAD failure, or when suppressed by
-            collection evidence.
+            GET-only modems, HEAD failure, or while a collection is
+            active.
     """
 
     health_status: HealthStatus
@@ -1867,66 +1864,64 @@ purely about reachability.
 
 ### Collection Evidence
 
-A successful data collection is stronger evidence of modem liveness
-than any health probe — it authenticates, fetches pages, and parses
-data. The HealthMonitor uses this to avoid redundant or contentious
-HTTP probes.
+The HealthMonitor skips its TCP and HEAD probes while a data
+collection is running, so they don't compete with the poll for the
+modem's web server. Every other health reading is live.
 
 **Mechanism:** The orchestrator calls `record_collection_start()`
 before the collector runs and `record_collection_end(success)` in
-a finally block after it completes. The HealthMonitor tracks this
-via two fields:
+a finally block after it completes. The HealthMonitor tracks:
 
-- `_collection_active` (bool) — True between start and end signals.
+- `_collection_active` (bool) — True between start and end signals;
+  the skip gate.
 - `_last_collection_success` (monotonic timestamp) — set when a
-  collection succeeds.
+  collection succeeds. It never gates a probe; it is exposed as
+  `last_collection_success_at` for callers that wait for a quiet
+  modem before their own login (the HA options flow).
 
 **TCP/HEAD probe suppression:** `ping()` skips both TCP and HEAD
-probes when:
-
-1. **Collection is active** — the modem is already handling HTTP
-   traffic from the data poll. Running additional probes would
-   compete for the modem's web server and produce misleadingly slow
-   latency values.
-2. **Collection succeeded since the previous `ping()`** — L4/HTTP
-   reachability was already proven. The evidence is consumed once:
-   the first `ping()` after a successful collection skips both TCP
-   and HEAD; the next `ping()` runs them normally.
+probes only while a collection is active: the modem is already
+handling the poll's HTTP traffic, and extra probes would slow both
+and produce misleading latency values. A completed collection never
+skips the next `ping()`. The health and poll intervals are
+independent user settings, and at health interval >= poll interval a
+poll completes between every pair of pings, so a post-collection skip
+would stop the TCP and HEAD probes after the first reading.
 
 **Baseline guarantee:** The very first `ping()` call never skips
 TCP/HEAD, regardless of collection state. Consumers (e.g., HA
 sensor entities) need at least one real measurement to establish
 baseline values.
 
-**Status derivation with evidence:** When TCP/HEAD are skipped,
-collection evidence substitutes as `tcp_ok=True` in the status
+**Status derivation during a collection:** When TCP/HEAD are skipped,
+the active collection substitutes as `tcp_ok=True` in the status
 derivation matrix. The status reflects that the modem is L4-
 reachable, but `tcp_latency_ms` and `http_latency_ms` stay `None`
 (not measured).
 
-**ICMP contradiction override (UC-59a):** Collection evidence is a
-statement about the past — the modem was reachable when the poll
-ran. A failing ICMP probe is a current observation that contradicts
-it: the modem may have gone down since. When ICMP fails while the
+**ICMP contradiction override (UC-59a):** An in-flight collection
+has not proven anything yet, and a failing ICMP probe is a current
+observation that the modem may be down. When ICMP fails while the
 skip gate is engaged, `ping()` runs the TCP probe anyway and feeds
 its real result into status derivation instead of substituting
 `tcp_ok=True`. This distinguishes a genuinely ICMP-filtered network
 (`icmp_blocked`, confirmed by a live TCP pass) from an outage that
-began just after a successful poll (`unresponsive`). Without the
-override, any outage starting within one health interval of a
-successful collection reports a false `icmp_blocked` — and logs a
-spurious Status Activity line — until the evidence expires. HEAD
-stays skipped: it is latency-only and cannot affect status. The
-override applies to both skip reasons; it never bypasses the
-config-level `http_probe=False` disable, and the forced TCP result
-populates `tcp_latency_ms` when the connect succeeds.
+began mid-poll (`unresponsive`). HEAD stays skipped: it is
+latency-only and cannot affect status. The override never bypasses
+the config-level `http_probe=False` disable, and the forced TCP
+result populates `tcp_latency_ms` when the connect succeeds.
 
-| ICMP | TCP probe | Collection evidence | Status |
-|------|-----------|-------------------|--------|
-| pass | skipped | active or recent success | `responsive` |
-| fail | forced — pass | active or recent success | `icmp_blocked` |
-| fail | forced — fail | active or recent success | `unresponsive` |
-| N/A | skipped | active or recent success | `responsive` |
+| ICMP | TCP probe | Collection | Status |
+|------|-----------|------------|--------|
+| pass | skipped | active | `responsive` |
+| fail | forced — pass | active | `icmp_blocked` |
+| fail | forced — fail | active | `unresponsive` |
+| N/A | skipped | active | `responsive` |
+
+**The newest reading wins.** A live TCP failure in the first `ping()`
+after a successful collection reads `degraded` (ICMP pass) or
+`unresponsive`, not `responsive`: the probe is newer evidence than
+the poll.
 
 **ICMP always runs.** It is lightweight (no web server involvement)
 and provides network-layer visibility regardless of collection
@@ -1940,23 +1935,18 @@ Health check [MODEL]: responsive — ICMP 1.5ms, TCP 1.8ms, HTTP HEAD 4.3ms
 ```
 
 On GET-only modems (`supports_head=False`), the HEAD entry is
-omitted (only ICMP and TCP appear). When TCP/HEAD are skipped, the
-log shows the skip reason:
+omitted (only ICMP and TCP appear). When TCP/HEAD are skipped
+during a collection, the log shows the skip reason:
 
 ```text
 Health check [MODEL]: responsive — ICMP 1.5ms, TCP/HEAD skipped (collection active)
-Health check [MODEL]: responsive — ICMP 1.5ms, TCP/HEAD skipped (recent collection)
 ```
-
-`collection active` means the probes were skipped to avoid contention
-during an in-progress collection. `recent collection` means a
-collection succeeded since the last ping, making them redundant.
 
 When the ICMP contradiction override forces the TCP probe, the log
 shows the real TCP result alongside the skip reason:
 
 ```text
-Health check [MODEL]: unresponsive — ICMP timeout, TCP timeout, HEAD skipped (recent collection; TCP forced by ICMP failure)
+Health check [MODEL]: unresponsive — ICMP timeout, TCP timeout, HEAD skipped (collection active; TCP forced by ICMP failure)
 ```
 
 ### State Ownership
@@ -1971,8 +1961,8 @@ via `record_collection_start()` / `record_collection_end()`.
 | Last probe result | `latest` property — read by orchestrator during get_modem_data() | Updated each `ping()` call |
 | supports_head | Gates whether the HEAD probe runs (no GET fallback) | HealthMonitor lifetime |
 | Collection active | Suppresses TCP/HEAD probes during data poll | Between start/end signals |
-| Last collection success | Suppresses TCP/HEAD probes after successful poll | Updated on successful collection end |
-| Last ping time | Determines if collection evidence is fresh | Updated at end of each `ping()` call |
+| Last collection success | Read via `last_collection_success_at` by callers waiting for a quiet modem | Updated on successful collection end |
+| Last ping time | Baseline guarantee: the first `ping()` never skips | Updated at end of each `ping()` call |
 
 ### Consumer Entity Guidance
 
@@ -2007,7 +1997,7 @@ based — the same status at the same level would flood logs every 30s:
 | Transition to responsive (recovery) | INFO | `"Health check [MODEL]: responsive — ICMP 3.0ms, TCP 2.0ms"` |
 | Transition to degraded | WARNING | `"Health check [MODEL]: degraded — ICMP 2.0ms, TCP timeout"` |
 | Transition to unresponsive | WARNING | `"Health check [MODEL]: unresponsive — ICMP timeout, TCP timeout"` |
-| TCP/HEAD skipped (collection evidence) | DEBUG | `"Health check [MODEL]: responsive — ICMP 1.5ms, TCP/HEAD skipped (collection active\|recent collection)"` |
+| TCP/HEAD skipped (collection evidence) | DEBUG | `"Health check [MODEL]: responsive — ICMP 1.5ms, TCP/HEAD skipped (collection active)"` |
 | First check (UNKNOWN → any) | INFO or WARNING | Depending on the target status |
 | Steady-state (no change) | DEBUG | Same format, but only visible with debug logging enabled |
 

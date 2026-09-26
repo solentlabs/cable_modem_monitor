@@ -369,8 +369,8 @@ def _attach_health_sync_listeners(
     to a full health interval, displaying "Unresponsive" over a modem
     that is actively serving polls (UC-59a's principle — stale
     evidence must not outvote a live signal — in reverse). The refresh
-    is cheap: the fresh collection evidence puts the TCP/HEAD skip
-    gate up, so it is an ICMP-only probe.
+    runs the full probe set; a live TCP failure then keeps health down,
+    because the probe is newer evidence than the poll.
 
     The shared flag: that health refresh flips down → RESPONSIVE,
     which would trip the health → data direction into forcing a poll

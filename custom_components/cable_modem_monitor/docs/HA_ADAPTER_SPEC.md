@@ -630,9 +630,9 @@ a full health interval, displaying "Unresponsive" over a modem that
 is actively serving polls (observed live 2026-07-11: poll recovered
 at 10:51:12, Status stale until the 10:53:29 scheduled probe). This
 is UC-59a's principle — stale evidence must not outvote a live
-signal — applied in the reverse direction. The refresh is cheap: the
-fresh collection evidence engages the TCP/HEAD skip gate, so it is an
-ICMP-only probe. ICMP_BLOCKED is not contradicted by a successful
+signal — applied in the reverse direction. The refresh runs the full
+probe set, and its reading is newer than the poll: a live TCP failure
+keeps health down (ORCHESTRATION_SPEC § Collection Evidence). ICMP_BLOCKED is not contradicted by a successful
 poll (TCP was up); UNKNOWN means probes are not applicable, so a
 refresh adds no information and would fire on every poll.
 
@@ -1140,7 +1140,7 @@ health_info:              # null if no health monitor configured
   health_status: responsive
   icmp_latency_ms: 3.003
   tcp_latency_ms: 4.128
-  http_latency_ms: null   # non-null only when supports_head=True and no recent collection
+  http_latency_ms: null   # non-null only when supports_head=True and no collection is active
 
 modem_data:               # null on collection failure
   downstream:

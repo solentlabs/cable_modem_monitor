@@ -653,7 +653,7 @@ Two collection models with independent lifecycles:
   - `docsis_lock_state` — derived from channel lock status during parsing
 - **`HealthInfo`** — operational health, updated on the health check cadence
   - `icmp_latency_ms` — ICMP round-trip time
-  - `http_latency_ms` — HTTP probe response time (None when collection evidence suppresses the probe)
+  - `http_latency_ms` — HTTP probe response time (None while an active collection suppresses the probe)
   - `health_status` — derived composite state (see below)
 
 **Why two models?** Ping is lightweight. Parsing is heavy. A flaky modem

@@ -1214,8 +1214,8 @@ Silence here reads as success to the only person who can fix it (#82).
 
 - Health checks and data collection run independently on their own cadences
 - Health probes always run their full set (subject to capability flags)
-  regardless of collection state, except when collection evidence
-  suppresses TCP/HEAD (UC-58, UC-59)
+  regardless of collection state, except while an active collection
+  suppresses TCP/HEAD (UC-58)
 - No coupling between the two pipelines — neither blocks the other
 - Health provides fast outage detection; collection provides modem data
 
@@ -1369,7 +1369,7 @@ reload both coordinators start from the same instant).
 | 3 | Health timer fires → `ping()` | | |
 | 4 | `_should_skip_probes()` → True (active) | TCP and HEAD not called | |
 | 5 | ICMP runs normally | | ICMP latency measured |
-| 6 | Status derived: ICMP pass + evidence → RESPONSIVE | | `tcp_latency_ms = None`, `http_latency_ms = None` |
+| 6 | Status derived: ICMP pass + active collection → RESPONSIVE | | `tcp_latency_ms = None`, `http_latency_ms = None` |
 | 7 | Log: `"responsive (ICMP 1.5ms, TCP/HEAD skipped (collection active))"` | | |
 | 8 | Collection completes → `record_collection_end(True)` | `_collection_active = False`, `_last_collection_success` set | |
 
@@ -1379,34 +1379,32 @@ reload both coordinators start from the same instant).
   during active collection
 - ICMP probe runs regardless of collection state
 - `tcp_latency_ms` and `http_latency_ms` are None (not measured)
-- `health_status` is RESPONSIVE (collection evidence = tcp_ok)
+- `health_status` is RESPONSIVE (active collection = tcp_ok)
 - If ICMP fails during active collection, the TCP probe is forced
   and its real result decides status (UC-59a)
 - No contention on the modem's web server
 
 ---
 
-### UC-59: TCP/HEAD probes skipped after recent successful collection
+### UC-59: TCP/HEAD probes run live after a completed collection
 
-**Preconditions:** Data poll completed successfully. Next health
-check fires before another poll starts.
+**Preconditions:** A data poll completed successfully. The next
+health check fires before another poll starts. At health interval >=
+poll interval this is every health check.
 
 | Step | Action | State change | Observable |
 |------|--------|-------------|------------|
-| 1 | Previous `ping()` completed | `_last_ping_time` set | |
-| 2 | `record_collection_end(True)` | `_last_collection_success` > `_last_ping_time` | |
-| 3 | Health timer fires → `ping()` | | |
-| 4 | `_should_skip_probes()` → True (recent success) | TCP and HEAD not called | |
-| 5 | Status derived with evidence → RESPONSIVE | | `tcp_latency_ms = None`, `http_latency_ms = None` |
-| 6 | `_last_ping_time` updated at end of `ping()` | Evidence consumed | |
-| 7 | Next `ping()` → `_last_collection_success` < `_last_ping_time` | TCP and HEAD run normally | |
+| 1 | `record_collection_end(True)` | `_collection_active = False`, `_last_collection_success` set | |
+| 2 | Health timer fires → `ping()` | | |
+| 3 | `_should_skip_probes()` → None (no collection active) | TCP and HEAD run | |
+| 4 | Status derived from the live ICMP + TCP results | | `tcp_latency_ms`, `http_latency_ms` measured |
 
 **Assertions:**
 
-- Collection evidence is consumed once (first ping after collection)
-- Second ping after collection runs TCP and HEAD probes normally
-- Failed collection (`record_collection_end(False)`) does not
-  suppress probes
+- A completed collection never skips TCP or HEAD; every ping after
+  one measures both
+- ICMP pass + live TCP fail → DEGRADED: the probe is newer evidence
+  than the poll
 - `http_probe=False` modems are unaffected (TCP and HEAD already
   disabled at config level)
 
@@ -1414,19 +1412,18 @@ check fires before another poll starts.
 
 ### UC-59a: ICMP failure overrides the skip gate
 
-**Preconditions:** The TCP/HEAD skip gate is engaged (collection
-active or recently succeeded). The modem then drops off the network
-— an outage beginning seconds after a successful poll.
+**Preconditions:** The TCP/HEAD skip gate is engaged (a collection
+is active). The modem then drops off the network mid-poll.
 
 | Step | Action | State change | Observable |
 |------|--------|-------------|------------|
 | 1 | Health timer fires → `ping()` | | |
 | 2 | ICMP probe runs → **fails** | | ICMP timeout |
 | 3 | `_should_skip_probes()` → skip reason present | | |
-| 4 | ICMP failure contradicts collection evidence → TCP probe forced | `socket.create_connection` called | |
+| 4 | ICMP failure contradicts the assumed L4 reachability → TCP probe forced | `socket.create_connection` called | |
 | 5 | TCP fails → status derived from real probe results | | UNRESPONSIVE, not a false ICMP_BLOCKED |
 | 6 | HEAD stays skipped (latency-only) | `session.head` not called | |
-| 7 | Log: `"unresponsive (ICMP timeout, TCP timeout, HEAD skipped (recent collection; TCP forced by ICMP failure))"` | | |
+| 7 | Log: `"unresponsive (ICMP timeout, TCP timeout, HEAD skipped (collection active; TCP forced by ICMP failure))"` | | |
 
 **Assertions:**
 
@@ -1434,9 +1431,8 @@ active or recently succeeded). The modem then drops off the network
 - ICMP fail + forced TCP pass → ICMP_BLOCKED (genuinely filtered
   network, confirmed by a live probe; `tcp_latency_ms` populated)
 - HEAD is not called in either case; `http_latency_ms` stays None
-- Applies to both skip reasons (collection active, recent success)
 - `http_probe=False` modems are unaffected — the override bypasses
-  only the collection-evidence skip, never the config-level disable
+  only the active-collection skip, never the config-level disable
 
 **Why:** Collection evidence is a statement about the past. A
 failing ICMP probe is a current observation that contradicts it —

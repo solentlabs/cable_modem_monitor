@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the form, the way Home Assistant integrations usually do, so the
   "Connecting to modem..." step is gone. The log now records why the
   modem couldn't be reached.
+- **TCP and HTTP latency sensors keep updating when the health check
+  interval is as long as the poll interval or longer.** At those
+  settings the sensors showed their first reading indefinitely,
+  because a health check right after a poll skipped the probes. Health
+  checks now skip them only while a poll is running. A TCP failure
+  seen right after a successful poll now shows as Degraded instead of
+  being hidden by that poll.
 
 ## [3.14.15-beta.1] - 2026-09-25
 
