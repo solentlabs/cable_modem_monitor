@@ -419,7 +419,7 @@ Please see the [Contributing Guide](https://github.com/solentlabs/cable_modem_mo
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License - see LICENSE file for details. The project's names and logos are not covered by it; see [TRADEMARKS.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/TRADEMARKS.md).
 
 ## Support
 

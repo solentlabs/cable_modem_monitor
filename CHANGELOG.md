@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`make commit-lint` checks commit messages before a push.** It runs
   commitlint over the branch's commits with the same config and range
   as CI, and `make validate-ci` now includes it. Requires Node.js.
+- **`TRADEMARKS.md` says how forks may use the project's names.** The
+  MIT License covers the code, not the "Solent Labs" and "Cable Modem
+  Monitor" names or logos. Forks are welcome under their own name, with
+  a link back as attribution.
 
 ### Changed
 
