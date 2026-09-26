@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`make commit-lint` checks commit messages before a push.** It runs
+  commitlint over the branch's commits with the same config and range
+  as CI, and `make validate-ci` now includes it. Requires Node.js.
+
 ### Changed
 
 - **The SB8200 PHP firmware variant is now "JSON Login (php)" in the
