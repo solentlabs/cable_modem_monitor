@@ -36,7 +36,7 @@ and share a diagnostics snapshot.
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity | synthetic |
 | SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom | hybrid |
 | SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic |
-| SB8200 (JSON Login) | HTML | RCN | — |
+| SB8200 (php) | HTML | RCN | — |
 | SBG8300 | HTML | Comcast, Cox, Spectrum | — |
 | TG3442S | HTML | LIWEST | — |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated |

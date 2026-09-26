@@ -399,6 +399,12 @@ layout [MODEM_YAML_SPEC.md § Layout](../../cable_modem_monitor_core/docs/MODEM_
 defines; keep that layout through any hand edit, the catalog suite
 gates it.
 
+If the model already has variants (other `modem-*.yaml` files, or
+sibling directories for the same model), render its setup picker
+(`format_variant_labels` over `list_variants`) and read every label as
+a user would. Each must name what sets that variant apart:
+[ARCHITECTURE_DECISIONS.md § The variant name is the user-facing discriminator](../../cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md#the-variant-name-is-the-user-facing-discriminator).
+
 ## Step 8: Generate Golden File + Write Package
 
 ```python
