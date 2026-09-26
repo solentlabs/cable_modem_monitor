@@ -73,9 +73,6 @@
       "unknown_model": "Wybrany modem nie został znaleziony w katalogu.",
       "reauth_successful": "Ponowna autoryzacja zakończona pomyślnie.",
       "reauth_failed": "Ponowna autoryzacja nie powiodła się. Spróbuj ponownie."
-    },
-    "progress": {
-      "validate": "Łączenie z modemem..."
     }
   },
   "options": {
@@ -107,9 +104,6 @@
       "session_rejected": "Logowanie powiodło się, ale modem odrzucił żądanie danych. To nie problem z danymi logowania; sprawdź ostrzeżenie w dzienniku Home Assistant.",
       "parse_failed": "Połączono, ale nie udało się odczytać danych modemu.",
       "unknown": "Nieoczekiwany błąd. Sprawdź logi Home Assistant."
-    },
-    "progress": {
-      "validate": "Sprawdzanie połączenia..."
     }
   }
 }

@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this update: delete the integration entry and add it again, picking
   "JSON Login (php)". (#213)
 
+### Fixed
+
+- **Setup and Configure no longer hang when the modem can't be
+  reached right away.** If the address refused the connection
+  instantly, the dialog could spin forever instead of showing
+  "Can't reach modem". Both now check the connection while you wait on
+  the form, the way Home Assistant integrations usually do, so the
+  "Connecting to modem..." step is gone. The log now records why the
+  modem couldn't be reached.
+
 ## [3.14.15-beta.1] - 2026-09-25
 
 ### Added

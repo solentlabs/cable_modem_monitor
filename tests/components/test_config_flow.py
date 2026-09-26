@@ -30,7 +30,7 @@ from custom_components.cable_modem_monitor.config_flow import (
     _build_prefix_options,
     _duration_to_seconds,
     _seconds_to_duration,
-    _ValidationProgress,
+    _validation_failure_key,
 )
 from custom_components.cable_modem_monitor.const import DOMAIN, EntityPrefix
 
@@ -122,128 +122,44 @@ def test_prefix_options_none_in_use():
 
 
 # -----------------------------------------------------------------------
-# _ValidationProgress
+# _validation_failure_key
 # -----------------------------------------------------------------------
 
-
-def test_validation_progress_lifecycle():
-    """Progress tracks task state and collects results."""
-    progress = _ValidationProgress()
-    assert not progress.is_running()
-    assert progress.result is None
-    assert progress.error is None
-
-    progress.reset()
-    assert progress.task is None
-    assert progress.error_key == "unknown"
-
-
-async def test_validation_progress_collect_no_task():
-    """Collect returns False when no task was started."""
-    progress = _ValidationProgress()
-    assert await progress.collect() is False
-
-
-async def test_validation_progress_runtime_error():
-    """RuntimeError extracts error key from colon-delimited message."""
-    progress = _ValidationProgress()
-
-    async def _raise():
-        raise RuntimeError("error_type:modem_locked:Too many attempts")
-
-    loop = asyncio.get_event_loop()
-    progress.task = loop.create_task(_raise())
-    await asyncio.sleep(0)  # let task complete
-
-    assert await progress.collect() is False
-    assert progress.error_key == "modem_locked"
-    assert progress.task is None
-
-
-async def test_validation_progress_unexpected_error():
-    """Generic exceptions default to 'unknown' error key."""
-    progress = _ValidationProgress()
-
-    async def _raise():
-        raise ValueError("something unexpected")
-
-    loop = asyncio.get_event_loop()
-    progress.task = loop.create_task(_raise())
-    await asyncio.sleep(0)
-
-    assert await progress.collect() is False
-    assert progress.error_key == "unknown"
-    assert isinstance(progress.error, ValueError)
-
-
-async def test_validation_progress_connection_error():
-    """ConnectionError maps to network_unreachable."""
-    progress = _ValidationProgress()
-
-    async def _raise():
-        raise ConnectionError("Modem unreachable")
-
-    loop = asyncio.get_event_loop()
-    progress.task = loop.create_task(_raise())
-    await asyncio.sleep(0)
-
-    assert await progress.collect() is False
-    assert progress.error_key == "network_unreachable"
-    assert isinstance(progress.error, ConnectionError)
-
-
-async def test_validation_progress_permission_error():
-    """PermissionError extracts error key from colon-delimited format."""
-    progress = _ValidationProgress()
-
-    async def _raise():
-        raise PermissionError("auth_error:invalid_auth:Bad password")
-
-    loop = asyncio.get_event_loop()
-    progress.task = loop.create_task(_raise())
-    await asyncio.sleep(0)
-
-    assert await progress.collect() is False
-    assert progress.error_key == "invalid_auth"
-    assert isinstance(progress.error, PermissionError)
-
-
-# ┌──────────────────┬───────────┬────────────────┬─────────────────────────┐
-# │ exception type   │ message   │ expected key   │ description             │
-# ├──────────────────┼───────────┼────────────────┼─────────────────────────┤
-# │ PermissionError  │ "denied"  │ invalid_auth   │ auth-shaped fallback    │
-# │ RuntimeError     │ "boom"    │ unknown        │ generic fallback        │
-# └──────────────────┴───────────┴────────────────┴─────────────────────────┘
+# ┌──────────────────┬─────────────────────────────────────────┬─────────────────────┬──────────────────────────┐
+# │ exception        │ message                                 │ expected key        │ description              │
+# ├──────────────────┼─────────────────────────────────────────┼─────────────────────┼──────────────────────────┤
+# │ RuntimeError     │ "error_type:modem_locked:Too many ..."  │ modem_locked        │ encoded key extracted    │
+# │ PermissionError  │ "auth_error:invalid_auth:Bad password"  │ invalid_auth        │ encoded key extracted    │
+# │ ConnectionError  │ "Modem unreachable"                     │ network_unreachable │ detection failure        │
+# │ ValueError       │ "something unexpected"                  │ unknown             │ unexpected exception     │
+# │ PermissionError  │ "denied"                                │ invalid_auth        │ auth-shaped fallback     │
+# │ RuntimeError     │ "boom"                                  │ unknown             │ generic fallback         │
+# └──────────────────┴─────────────────────────────────────────┴─────────────────────┴──────────────────────────┘
+#
+# The last two reach the handler without the "{kind}:{key}:{msg}" encoding,
+# e.g. protocol detection failing ahead of the collector run.
 #
 # fmt: off
-UNCLASSIFIED_ERROR_CASES = [
-    # (exc_type,       message,  expected_key,   desc)
-    (PermissionError, "denied", "invalid_auth", "bare_permission_error"),
-    (RuntimeError,    "boom",   "unknown",      "bare_runtime_error"),
+VALIDATION_ERROR_CASES = [
+    # (exc_type,       message,                                   expected_key,          desc)
+    (RuntimeError,    "error_type:modem_locked:Too many attempts", "modem_locked",        "encoded_runtime_error"),
+    (PermissionError, "auth_error:invalid_auth:Bad password",      "invalid_auth",        "encoded_permission_error"),
+    (ConnectionError, "Modem unreachable",                         "network_unreachable", "connection_error"),
+    (ValueError,      "something unexpected",                      "unknown",             "unexpected_error"),
+    (PermissionError, "denied",                                    "invalid_auth",        "bare_permission_error"),
+    (RuntimeError,    "boom",                                      "unknown",             "bare_runtime_error"),
 ]
 # fmt: on
 
 
 @pytest.mark.parametrize(
     "exc_type,message,expected_key,desc",
-    UNCLASSIFIED_ERROR_CASES,
-    ids=[c[3] for c in UNCLASSIFIED_ERROR_CASES],
+    VALIDATION_ERROR_CASES,
+    ids=[c[3] for c in VALIDATION_ERROR_CASES],
 )
-async def test_validation_progress_unclassified_error(exc_type, message, expected_key, desc):
-    """An exception carrying no encoded key falls back by exception type."""
-    # These reach the handler without the "{kind}:{key}:{msg}" encoding,
-    # e.g. protocol detection failing ahead of the collector run.
-    progress = _ValidationProgress()
-
-    async def _raise():
-        raise exc_type(message)
-
-    loop = asyncio.get_event_loop()
-    progress.task = loop.create_task(_raise())
-    await asyncio.sleep(0)
-
-    assert await progress.collect() is False
-    assert progress.error_key == expected_key
+def test_validation_failure_key(exc_type, message, expected_key, desc):
+    """A validation failure maps to its strings.json error key."""
+    assert _validation_failure_key(exc_type(message)) == expected_key
 
 
 # -----------------------------------------------------------------------
@@ -559,17 +475,12 @@ async def test_full_flow_creates_entry(hass: HomeAssistant):
             result["flow_id"],
             user_input={"model": "Solent Labs/TPS-2000", "entity_prefix": "none"},
         )
-        # Step 3 → connection details (triggers step 4 validation)
+        # Step 3 → connection details. Validation runs inside this step, so
+        # the one call returns the created entry with no progress step.
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"host": "192.168.100.1"},
         )
-
-        # Step 4 — drive through progress spinner states.
-        # Mock validate_connection resolves instantly, so HA may skip
-        # the spinner or condense the steps.
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
 
     # Successful validation creates config entry
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -639,8 +550,6 @@ async def test_full_flow_stores_setup_params(hass: HomeAssistant, setup_params: 
             result["flow_id"],
             user_input={"host": "192.168.100.1"},
         )
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     stored = {key: result["data"][key] for key in _PACKED_SETUP_PARAMS if key in result["data"]}
@@ -719,8 +628,6 @@ async def test_full_flow_sibling_variant_uses_sibling_modem_dir(hass: HomeAssist
             result["flow_id"],
             user_input={"host": "192.168.100.1"},
         )
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     # modem_dir must point to the sibling directory, not the primary summary path
@@ -773,8 +680,6 @@ async def test_full_flow_get_only_modem_uses_default_cadence(hass: HomeAssistant
             result["flow_id"],
             user_input={"host": "192.168.100.1"},
         )
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"]["health_check_interval"] == 30
@@ -817,14 +722,11 @@ async def test_validation_connection_error_shows_form(hass: HomeAssistant):
             user_input={"host": "192.168.100.1"},
         )
 
-        # Drive through progress states after validation failure
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
-
-    # Connection error returns to step 3 with error banner
+    # An instant connection error returns to step 3 with the error banner
+    # from the same call; a progress step here is what hung the dialog.
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "connection"
-    assert "base" in result.get("errors", {})
+    assert result["errors"]["base"] == "network_unreachable"
 
 
 async def test_validation_auth_error(hass: HomeAssistant):
@@ -859,14 +761,90 @@ async def test_validation_auth_error(hass: HomeAssistant):
             user_input={"host": "192.168.100.1"},
         )
 
-        # Drive through progress states after auth failure
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
-
     # Auth error returns to step 3 with specific error key
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "connection"
     assert result["errors"]["base"] == "invalid_auth"
+
+
+# -----------------------------------------------------------------------
+# Validation answers in the submitting call, never via a progress step
+# -----------------------------------------------------------------------
+
+
+def _deferred_validation(outcome: dict[str, Any] | Exception) -> Any:
+    """validate_connection stand-in that yields to the loop once before finishing."""
+
+    # The real validation runs in an executor job, so it is still pending
+    # when the flow returns. An instant mock completes eagerly and hides
+    # the progress step the frontend can miss (dialog hang on a 2 ms refusal).
+    async def _validate(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        await asyncio.sleep(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    return _validate
+
+
+# ┌──────────────────────────────────┬────────────────┬─────────────────────┬───────────────────┐
+# │ validation outcome               │ result type    │ error key           │ description       │
+# ├──────────────────────────────────┼────────────────┼─────────────────────┼───────────────────┤
+# │ ConnectionError (refused, 2 ms)  │ FORM           │ network_unreachable │ instant failure   │
+# │ MOCK_VALIDATION_RESULT           │ CREATE_ENTRY   │ —                   │ instant success   │
+# └──────────────────────────────────┴────────────────┴─────────────────────┴───────────────────┘
+#
+# fmt: off
+SUBMIT_OUTCOME_CASES = [
+    # (outcome,                                expected_type,               error_key,             desc)
+    (ConnectionError("Connection refused"),   FlowResultType.FORM,         "network_unreachable", "instant_failure"),
+    (MOCK_VALIDATION_RESULT,                  FlowResultType.CREATE_ENTRY, None,                  "instant_success"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "outcome,expected_type,error_key,desc",
+    SUBMIT_OUTCOME_CASES,
+    ids=[c[3] for c in SUBMIT_OUTCOME_CASES],
+)
+async def test_connection_submit_returns_outcome_directly(
+    hass: HomeAssistant,
+    outcome: dict[str, Any] | Exception,
+    expected_type: FlowResultType,
+    error_key: str | None,
+    desc: str,
+):
+    """Submitting the connection form returns the validation outcome, not a progress step."""
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_variant_list",
+            return_value=MOCK_SINGLE_VARIANT,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            side_effect=_deferred_validation(outcome),
+        ),
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+        patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
+    ):
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input={"manufacturer": "__all__"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input={"model": "Solent Labs/TPS-2000", "entity_prefix": "none"}
+        )
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={"host": "192.168.100.1"})
+
+    assert result["type"] is expected_type
+    if error_key is not None:
+        assert result["step_id"] == "connection"
+        assert result["errors"]["base"] == error_key
 
 
 # -----------------------------------------------------------------------
@@ -893,10 +871,7 @@ async def _drive_multi_variant_to_failure(hass: HomeAssistant, *, connection: di
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={"variant": "solentlabs/tps-3000/v2"}
     )
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input=connection)
-    while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    return result
+    return await hass.config_entries.flow.async_configure(result["flow_id"], user_input=connection)
 
 
 async def test_multi_variant_failure_shows_error_form_with_variant_switch(hass: HomeAssistant):
@@ -951,8 +926,6 @@ async def test_single_variant_failure_has_no_variant_switch(hass: HomeAssistant)
             result["flow_id"], user_input={"model": "Solent Labs/TPS-2000", "entity_prefix": "none"}
         )
         result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={"host": "192.168.100.1"})
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["step_id"] == "connection"
     assert result["errors"]["base"] == "network_unreachable"
@@ -1011,8 +984,6 @@ async def test_switch_variant_on_failure_form_revalidates(hass: HomeAssistant):
             result["flow_id"],
             user_input={"variant": "solentlabs/tps-3000/__default__", "host": "192.168.100.1"},
         )
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     # The switched-to default variant (name=None) is what got recorded.
@@ -1060,8 +1031,6 @@ async def test_switch_to_credentialed_variant_rerenders_before_validating(hass: 
         )
         assert "username" not in _schema_fields(result)
         result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={"host": "192.168.100.1"})
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
         assert result["step_id"] == "connection"
         assert mock_validate.call_count == 1
         # Switch to the credentialed variant: form must re-render with the password
@@ -1120,7 +1089,8 @@ async def test_options_full_flow_success(hass: HomeAssistant):
         ),
         patch(
             "custom_components.cable_modem_monitor.config_flow.validate_connection",
-            return_value=MOCK_VALIDATION_RESULT,
+            # Deferred like the real executor job; see _deferred_validation.
+            side_effect=_deferred_validation(MOCK_VALIDATION_RESULT),
         ),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -1136,10 +1106,6 @@ async def test_options_full_flow_success(hass: HomeAssistant):
                 "health_check_interval": {"hours": 0, "minutes": 1, "seconds": 0},
             },
         )
-
-        # Drive through progress spinner
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.options.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"]["scan_interval"] == 300
@@ -1158,7 +1124,8 @@ async def test_options_flow_validation_failure(hass: HomeAssistant):
         ),
         patch(
             "custom_components.cable_modem_monitor.config_flow.validate_connection",
-            side_effect=ConnectionError("Modem unreachable"),
+            # Deferred like the real executor job; see _deferred_validation.
+            side_effect=_deferred_validation(ConnectionError("Modem unreachable")),
         ),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -1174,9 +1141,6 @@ async def test_options_flow_validation_failure(hass: HomeAssistant):
                 "health_check_interval": {"hours": 0, "minutes": 0, "seconds": 30},
             },
         )
-
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.options.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
@@ -1211,9 +1175,6 @@ async def test_options_password_preserved(hass: HomeAssistant):
                 "health_check_interval": {"hours": 0, "minutes": 0, "seconds": 30},
             },
         )
-
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.options.async_configure(result["flow_id"])
 
     # Validate was called with the original password, not blank
     call_kwargs = mock_validate.call_args
@@ -1581,9 +1542,6 @@ async def test_duplicate_entity_prefix_aborts(hass: HomeAssistant):
             user_input={"host": "192.168.100.1"},
         )
 
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
-
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
@@ -1634,8 +1592,5 @@ async def test_different_entity_prefix_at_same_host_succeeds(hass: HomeAssistant
             result["flow_id"],
             user_input={"host": "192.168.100.1"},
         )
-
-        while result["type"] in (FlowResultType.SHOW_PROGRESS, FlowResultType.SHOW_PROGRESS_DONE):
-            result = await hass.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY

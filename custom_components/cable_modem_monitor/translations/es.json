@@ -73,9 +73,6 @@
       "unknown_model": "El módem seleccionado no se encuentra en el catálogo.",
       "reauth_successful": "Reautenticación exitosa.",
       "reauth_failed": "La reautenticación falló. Por favor, intenta de nuevo."
-    },
-    "progress": {
-      "validate": "Conectando al módem..."
     }
   },
   "options": {
@@ -107,9 +104,6 @@
       "session_rejected": "Inicio de sesión correcto, pero el módem rechazó la solicitud de datos. No es un problema de credenciales; consulta la advertencia en el registro de Home Assistant.",
       "parse_failed": "Conectado, pero no se pudieron leer los datos del módem.",
       "unknown": "Error inesperado. Revisa los registros de Home Assistant."
-    },
-    "progress": {
-      "validate": "Validando conexión..."
     }
   }
 }

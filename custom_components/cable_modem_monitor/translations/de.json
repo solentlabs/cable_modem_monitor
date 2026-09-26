@@ -73,9 +73,6 @@
       "unknown_model": "Ausgewähltes Modem nicht im Katalog gefunden.",
       "reauth_successful": "Erneute Authentifizierung erfolgreich.",
       "reauth_failed": "Erneute Authentifizierung fehlgeschlagen. Bitte versuche es erneut."
-    },
-    "progress": {
-      "validate": "Verbinde mit Modem..."
     }
   },
   "options": {
@@ -107,9 +104,6 @@
       "session_rejected": "Anmeldung erfolgreich, aber das Modem hat die Datenanfrage abgelehnt. Kein Problem mit den Anmeldedaten; siehe die Warnung im Home Assistant Protokoll.",
       "parse_failed": "Verbunden, aber Modemdaten konnten nicht gelesen werden.",
       "unknown": "Unerwarteter Fehler. Home Assistant-Logs prüfen."
-    },
-    "progress": {
-      "validate": "Verbindung wird überprüft..."
     }
   }
 }

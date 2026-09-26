@@ -214,8 +214,7 @@ The translation files follow Home Assistant's [translation format](https://devel
       }
     },
     "error": { ... },
-    "abort": { ... },
-    "progress": { ... }
+    "abort": { ... }
   },
   "options": {
     "step": {

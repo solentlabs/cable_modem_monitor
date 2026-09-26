@@ -73,9 +73,6 @@
       "unknown_model": "Vald modemmodell hittades inte i katalogen.",
       "reauth_successful": "Återautentisering lyckades.",
       "reauth_failed": "Återautentisering misslyckades. Försök igen."
-    },
-    "progress": {
-      "validate": "Ansluter till modem..."
     }
   },
   "options": {
@@ -107,9 +104,6 @@
       "session_rejected": "Inloggningen lyckades, men modemet avvisade databegäran. Inget problem med inloggningsuppgifterna; se varningen i Home Assistant-loggen.",
       "parse_failed": "Ansluten men kunde inte läsa modemdata.",
       "unknown": "Oväntat fel. Kontrollera Home Assistant-loggarna."
-    },
-    "progress": {
-      "validate": "Validerar anslutning..."
     }
   }
 }

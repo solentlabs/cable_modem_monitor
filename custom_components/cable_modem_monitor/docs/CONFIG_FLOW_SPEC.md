@@ -61,8 +61,7 @@ with authenticated polling.
                       │
                       ▼
 ┌─────────────────────────────────────────────────┐
-│ Step 4: Validate  (progress spinner)            │
-│   "Connecting to modem..."                      │
+│ Step 4: Validate  (inside the Step 3 submit)    │
 │                                                 │
 │   1. Test connectivity (HTTP/HTTPS)             │
 │   2. Authenticate with variant's auth config    │
@@ -221,6 +220,15 @@ See ENTITY_MODEL_SPEC.md Entity Prefix section for naming behavior.
 
 Runs in an executor thread to avoid blocking the HA event loop.
 
+The step that receives the form awaits validation and returns its outcome
+(the entry, or the form with an error) from that same submit. The config,
+options and reauth flows all validate this way; none uses a progress step.
+HA reports a progress task's completion with a single event, and the
+frontend subscribes only after it renders the progress step, so a
+validation that fails in milliseconds (a refused connection) finishes
+first and leaves the dialog spinning. While a submit is pending, HA's
+frontend shows its own loading indicator.
+
 **Validation pipeline:**
 
 1. **Protocol detection** — if the user entered a bare IP/hostname
@@ -331,7 +339,7 @@ rather than a form it must not invite the user to submit).
 Reauth matters most here. An already configured modem that starts refusing
 data trips the auth streak, opens the breaker, and prompts for
 reauthentication, so a user with correct credentials arrives at
-`reauth_confirm`. Both that handler and `_ValidationProgress.collect` resolve
+`reauth_confirm`. Every flow resolves
 the displayed key through `_validation_error_key`, rather than assuming an
 auth-shaped exception means bad credentials.
 

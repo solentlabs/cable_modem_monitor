@@ -73,9 +73,6 @@
       "unknown_model": "Le modem sélectionné est introuvable dans le catalogue.",
       "reauth_successful": "Réauthentification réussie.",
       "reauth_failed": "Échec de la réauthentification. Veuillez réessayer."
-    },
-    "progress": {
-      "validate": "Connexion au modem..."
     }
   },
   "options": {
@@ -107,9 +104,6 @@
       "session_rejected": "Connexion réussie, mais le modem a refusé la requête de données. Ce n'est pas un problème d'identifiants ; consultez l'avertissement dans le journal Home Assistant.",
       "parse_failed": "Connecté, mais impossible de lire les données du modem.",
       "unknown": "Erreur inattendue. Vérifiez les journaux de Home Assistant."
-    },
-    "progress": {
-      "validate": "Validation de la connexion..."
     }
   }
 }
