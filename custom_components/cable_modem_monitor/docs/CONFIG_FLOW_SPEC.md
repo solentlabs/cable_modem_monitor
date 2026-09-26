@@ -409,13 +409,9 @@ restart without reconfiguration.
 - `variant: "url-token"` → loads `modem-url-token.yaml`
 - `variant: null` → loads `modem.yaml`
 
-**`modem.yaml` is the default variant.** When a single-variant modem is
-later split into multiple variants, the variant matching the original
-behavior stays as `modem.yaml`. New variants get `modem-{name}.yaml`
-suffixes. Existing config entries with `variant: null` continue to load
-`modem.yaml` — no migration needed. The constraint: when splitting, never
-delete or rename `modem.yaml`. Rename the new behavior, not the existing
-one.
+Existing entries keep loading only while their file keeps its name; when
+a file may be renamed is set in
+[MODEM_DIRECTORY_SPEC.md § modem.yaml / modem-{variant}.yaml](../../../packages/cable_modem_monitor_core/docs/MODEM_DIRECTORY_SPEC.md#modemyaml--modem-variantyaml-required).
 
 ---
 
