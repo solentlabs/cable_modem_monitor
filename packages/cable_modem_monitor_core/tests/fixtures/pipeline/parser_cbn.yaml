@@ -1,0 +1,18 @@
+downstream:
+  format: xml
+  tables:
+    - resource: "10"
+      root_element: downstream_table
+      child_element: downstream
+      columns:
+        - source: chid
+          field: channel_id
+          type: integer
+        - source: freq
+          field: frequency
+          type: frequency
+        - source: pow
+          field: power
+          type: float
+      channel_type:
+        fixed: "qam"

@@ -35,6 +35,7 @@ from ..auth.setup import apply_setup_params, detect_setup_params
 from ..config_loader import load_modem_config, load_parser_config
 from ..fetch_list import collect_fetch_targets
 from ..har import load_har_json
+from ..loaders.cbn import CBNLoader
 from ..loaders.hnap import HNAPLoader
 from ..loaders.http import HTTPResourceLoader
 from ..loaders.jsonrpc import JSONRPCLoader
@@ -42,6 +43,7 @@ from ..orchestration.factory import create_orchestrator
 from ..orchestration.signals import ConnectionStatus
 from ..parsers.coordinator import ModemParserCoordinator
 from ..post_processor import load_post_processor
+from ..protocol.cbn import cbn_params
 from ..protocol.hnap import hmac_algorithm
 from ..protocol.jsonrpc import jsonrpc_params
 from .discovery import ModemTestCase, RestartTestCase
@@ -434,7 +436,18 @@ def _run_pipeline(
                 timeout=modem_config.timeout,
                 model=modem_config.model,
             ).fetch(collect_fetch_targets(parser_config, post_processor))
-        else:
+        elif modem_config.transport == "cbn":
+            # CBN: POST fun=N to the getter endpoint, rotating session token
+            cbn = cbn_params(modem_config.auth)
+            resources = CBNLoader(
+                session=session,
+                base_url=base_url,
+                getter_endpoint=cbn.getter_endpoint,
+                session_cookie_name=cbn.session_cookie_name,
+                timeout=modem_config.timeout,
+                model=modem_config.model,
+            ).fetch(collect_fetch_targets(parser_config, post_processor))
+        elif modem_config.transport == "http":
             # HTTP: per-page fetching
             targets = collect_fetch_targets(parser_config, post_processor)
             # Same hook the collector uses: body-derived token, else the session cookie.
@@ -448,6 +461,10 @@ def _run_pipeline(
                 token_prefix=token_prefix,
             )
             resources = loader.fetch(targets, auth_result)
+        else:
+            # A transport with no branch here used to fall through to the HTTP
+            # loader and fetch its resource keys as URL paths (CBN fun codes).
+            raise RuntimeError(f"run_modem_test has no loader for transport '{modem_config.transport}'")
 
         # Parse — discard diagnostics, this harness only surfaces the
         # extracted data; downstream callers (CLI, golden-file generator)

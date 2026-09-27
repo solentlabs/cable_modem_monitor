@@ -48,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   logged the full address, token included. The address's query is now
   shown only as its length, the way session headers already were. The
   request itself is unchanged.
+- **catalog_tools `run_tests` replays CBN entries.** Its pipeline
+  fetched a CBN modem's `fun` codes as web page paths, so every CBN
+  replay failed there while passing the catalog suite. A transport the
+  pipeline does not know now stops with an error instead of falling
+  back to web pages.
 - **Setup and Configure no longer hang when the modem can't be
   reached right away.** If the address refused the connection
   instantly, the dialog could spin forever instead of showing
