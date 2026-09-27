@@ -62,7 +62,7 @@ def protocol_to_badge(protocol: str) -> str:
     badges = {
         "HTML": '![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping")',
         "HNAP": '![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth")',
-        "CBN": '![CBN](https://img.shields.io/badge/-CBN-8B6914?style=flat-square "CBN SOAP-based protocol")',
+        "CBN": '![CBN](https://img.shields.io/badge/-CBN-8B6914?style=flat-square "Compal XML POST protocol")',
         "JSON-RPC": '![JSON-RPC](https://img.shields.io/badge/-JSON--RPC-C0507A?style=flat-square "JSON-RPC 2.0")',
         "REST_API": '![REST](https://img.shields.io/badge/-REST-5B9A5B?style=flat-square "JSON REST API")',
     }
