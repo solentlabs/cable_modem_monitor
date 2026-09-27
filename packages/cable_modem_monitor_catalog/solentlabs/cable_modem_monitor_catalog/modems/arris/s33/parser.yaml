@@ -57,7 +57,7 @@ upstream:
       field: channel_id
       type: integer
     - index: 4
-      field: symbol_rate
+      field: channel_width
       type: frequency
     - index: 5
       field: frequency

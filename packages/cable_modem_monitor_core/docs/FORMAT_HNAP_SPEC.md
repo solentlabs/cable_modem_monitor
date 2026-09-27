@@ -61,7 +61,7 @@ Finding 3). Unlike other formats, HNAP parsers do **not** auto-assign
 | 1 | lock_status | `Locked` | `Locked` |
 | 2 | channel_type | `SC-QAM` | `OFDMA` |
 | 3 | channel_id | `1` | `7` |
-| 4 | symbol_rate (Hz) | `6400000` | `34000000` |
+| 4 | channel_width (Hz) | `6400000` | `34000000` |
 | 5 | frequency (Hz) | `38400000` | `41800000` |
 | 6 | power (dBmV) | `47.0` | `40.0` |
 
@@ -138,7 +138,7 @@ upstream:
       field: channel_id
       type: integer
     - index: 4
-      field: symbol_rate
+      field: channel_width
       type: frequency
     - index: 5
       field: frequency

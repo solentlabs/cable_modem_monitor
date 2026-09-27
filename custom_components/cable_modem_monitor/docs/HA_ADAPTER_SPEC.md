@@ -1177,7 +1177,9 @@ modem_data:               # null on collection failure
 ```
 
 Channel fields are sparse — not all modems report all fields. All channel
-fields except `channel_number` are optional. `system_info` keys vary by
+fields except `channel_number` are optional. Channel entries carry Tier 1
+fields only; pass-through fields such as `channel_width` are not in the
+payload. `system_info` keys vary by
 modem; see FIELD_REGISTRY.md § system_info for the baseline set.
 
 ### PII

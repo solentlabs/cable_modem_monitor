@@ -155,7 +155,7 @@ def _detect_channel_data(
     proven field positions from committed configs instead of heuristic
     inference — this handles fields like ``channel_number`` that look
     like row counters, and large error counters that would otherwise be
-    misclassified as ``frequency`` or ``symbol_rate``.
+    misclassified as ``frequency`` or ``channel_width``.
 
     Returns section dict or None if no delimited data found.
     """
@@ -425,26 +425,25 @@ def _assign_pass2_field(
 def _resolve_large_integers(
     definitive: dict[int, dict[str, Any]],
 ) -> None:
-    """Resolve provisional ``_large_int`` fields to frequency or symbol_rate.
-
-    When only one large-integer position exists, it is ``frequency``.
-    When two exist, the one with larger max values is ``frequency``
-    and the smaller is ``symbol_rate`` (DOCSIS upstream convention:
-    frequencies are typically higher than symbol rates/channel widths).
-    """
+    """Resolve provisional ``_large_int`` fields to frequency or channel_width."""
+    # One large-integer position is frequency. With several, the largest is
+    # frequency and the rest are channel_width in Hz: every fleet HNAP record
+    # with two large ints is Arris upstream, whose firmware labels the smaller
+    # one "Width" (6400000 = 1.25 x 5.12 Msym/s). HNAP symbol rates are ksym
+    # (Motorola 5120) and never reach the large-integer range.
     large_int_indices = [idx for idx, m in definitive.items() if m["field"] == "_large_int"]
 
     if len(large_int_indices) == 1:
         definitive[large_int_indices[0]]["field"] = "frequency"
         definitive[large_int_indices[0]].pop("_max_val", None)
     elif len(large_int_indices) >= 2:
-        # Sort by max value — larger = frequency, smaller = symbol_rate
+        # Sort by max value: larger = frequency, smaller = channel_width
         sorted_indices = sorted(
             large_int_indices,
             key=lambda i: definitive[i].get("_max_val", 0),
         )
         for idx in sorted_indices[:-1]:
-            definitive[idx]["field"] = "symbol_rate"
+            definitive[idx]["field"] = "channel_width"
             definitive[idx].pop("_max_val", None)
         definitive[sorted_indices[-1]]["field"] = "frequency"
         definitive[sorted_indices[-1]].pop("_max_val", None)
@@ -458,12 +457,12 @@ def _classify_definitive(
     """Pass 1: classify fields with unambiguous signal patterns.
 
     Returns a mapping dict for: lock_status, channel_type,
-    frequency, symbol_rate (large integers). Returns None if the
+    frequency, channel_width (large integers). Returns None if the
     field cannot be definitively classified.
 
     Uses ``assigned_fields`` to avoid duplicate assignment — e.g.,
     if ``frequency`` is already assigned, the next large-integer
-    position becomes ``symbol_rate`` instead.
+    position becomes ``channel_width`` instead.
     """
     # Lock status
     if all(_LOCK_PATTERN.match(s) for s in samples):
@@ -474,14 +473,14 @@ def _classify_definitive(
         return {"field": "channel_type", "type": "string", "index": index}
 
     # Filter placeholder zeros (unlocked/inactive channels report 0
-    # for frequency, symbol_rate, etc.)
+    # for frequency, channel_width, etc.)
     non_zero = [s for s in samples if s not in ("0", "0.0")]
     if not non_zero:
         return None
 
-    # Large integers (>= 100k, <= 2B): frequency or symbol_rate.
+    # Large integers (>= 100k, <= 2B): frequency or channel_width.
     # Capped at 2 GHz — cumulative error counters can exceed this and
-    # must not be misclassified as frequency/symbol_rate.
+    # must not be misclassified as frequency/channel_width.
     # Deferred to pass 1.5 (_resolve_large_integers) when multiple
     # large-integer positions exist. Return a provisional classification.
     if all(_FREQUENCY_PATTERN.match(s) for s in non_zero):
@@ -536,9 +535,9 @@ def _classify_remaining_numeric(
         if not _is_sequential_from_one(int_vals) and max(int_vals) < 1000 and any(v > 0 for v in int_vals):
             return {"field": "channel_id", "type": "int", "index": index}
 
-    # Large values that aren't frequency → symbol_rate
+    # Large values that aren't frequency → channel_width (see _resolve_large_integers)
     if max_val >= 100_000 and not frequency_assigned:
-        return {"field": "symbol_rate", "type": "frequency", "index": index}
+        return {"field": "channel_width", "type": "frequency", "index": index}
 
     # Assign from remaining standard DOCSIS field order
     # (power, snr, corrected, uncorrected)

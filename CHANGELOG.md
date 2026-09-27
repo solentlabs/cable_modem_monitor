@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   variants. If you set it up on 3.14.15-beta.1, it will not load after
   this update: delete the integration entry and add it again, picking
   "JSON Login (php)". (#213)
+- **Arris S33, S34 and SB8200 (HNAP) upstream channels report
+  `channel_width` instead of `symbol_rate`.** The value these modems
+  gave as symbol rate is the channel width in Hz (the firmware labels
+  it "Width"), so the attribute is renamed and the number is
+  unchanged. OFDMA upstream channels on these modems now also show
+  their `channel_width`, which was dropped before.
 
 ### Fixed
 

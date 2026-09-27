@@ -661,9 +661,10 @@ structural details from HAR response bodies:
    delimiter (typically `^`) from the first record
 4. **Infer field mappings** — two-pass positional classification:
    - Pass 1: identify definitive fields (lock_status by text pattern,
-     channel_type by known values, frequency/symbol_rate by magnitude)
+     channel_type by known values, frequency/channel_width by magnitude)
    - Pass 1.5: resolve large-integer ambiguity (larger max values →
-     frequency, smaller → symbol_rate)
+     frequency, smaller → channel_width; the Arris firmware labels
+     it "Width")
    - Pass 2: assign remaining numeric fields by DOCSIS convention
      (channel_id first, then power, snr, corrected, uncorrected)
 5. **Detect channel type** — if a field has multiple distinct values
@@ -2143,7 +2144,7 @@ upstream:
     - { index: 1, field: lock_status, type: string }
     - { index: 2, field: channel_type, type: string }
     - { index: 3, field: channel_id, type: integer }
-    - { index: 4, field: symbol_rate, type: frequency }
+    - { index: 4, field: channel_width, type: frequency }
     - { index: 5, field: frequency, type: frequency }
     - { index: 6, field: power, type: float }
   channel_type:

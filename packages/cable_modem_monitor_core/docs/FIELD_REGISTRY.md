@@ -129,7 +129,7 @@ registered_fields:
     channel_width:
       type: integer
       unit: "Hz"
-      description: "OFDMA channel bandwidth"
+      description: "Upstream channel bandwidth (SC-QAM or OFDMA)"
     ranging_status:
       type: string
       description: "Upstream ranging status"
