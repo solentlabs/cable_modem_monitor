@@ -437,6 +437,12 @@ matched flexibly. ``[...]`` brackets mark an optional segment — the
 content inside is skipped if not present in the input. Brackets do not
 nest. Compiled patterns are cached.
 
+The value (surrounding whitespace stripped) must begin with the
+format. A match found later in the string is rejected, so a clock time
+inside a longer value (the S33/S33v2 page writes `Fri Feb 27 20:54:00
+2026` where uptime belongs) is never read as uptime. Text after the
+format is ignored: the SB8200 firmware writes `50 days 11h:15m:21s.00`.
+
 #### Filter Rules
 
 Channel-level filtering removes invalid or placeholder records:

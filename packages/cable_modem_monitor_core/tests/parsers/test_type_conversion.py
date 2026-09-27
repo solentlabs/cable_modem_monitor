@@ -369,6 +369,11 @@ UPTIME_CASES = [
     ("1308:19:22",
      "{hours}:{minutes}:{seconds}",
      "54 days 12h:19m:22s", "netgear/cm600 — hours past 24, no days"),
+    # Trailing text after the format is tolerated: the SB8200 HTML firmware
+    # appends ".00" in every capture (a golden-checked value, not a guess).
+    ("50 days 11h:15m:21s.00",
+     "{days} days {hours}h:{minutes}m:{seconds}s",
+     "50 days 11h:15m:21s", "arris/sb8200 — trailing .00 tolerated"),
 ]
 # fmt: on
 
@@ -390,6 +395,33 @@ def test_convert_uptime(
 
 
 # --- Uptime defensive paths ---
+
+
+# The S33/S33v2 firmware's own JS writes the clock time into the element
+# named SystemUpTime (captured value, S33v2 HAR). The value must begin
+# with the format, so a clock time is never read as uptime, whatever the
+# format; a match found mid-string would take 20:54:00.
+_CLOCK_TIME = "Fri Feb 27 20:54:00 2026"
+
+_CATALOG_UPTIME_FORMATS = [
+    "{days} d: {hours} h: {minutes} m",
+    "{days} days {hours}h:{minutes}m:{seconds}s",
+    "{days} day(s) {hours}h:{minutes}m:{seconds}s",
+    "{days}day(s){hours}h:{minutes}m:{seconds}s",
+    "{days} days {hours} hours {minutes} mins {seconds} secs",
+    "{days}d {hours}h {minutes}m {seconds}s",
+    "{days}d {hours}h:{minutes}m:{seconds}s",
+    "D: {days} H: {hours} M: {minutes} S: {seconds}",
+    "{hours}h:{minutes}m:{seconds}s",
+    "[{days} days ]{hours}:{minutes}:{seconds}",
+    "{hours}:{minutes}:{seconds}",
+]
+
+
+@pytest.mark.parametrize("input_format", _CATALOG_UPTIME_FORMATS)
+def test_uptime_rejects_a_clock_time(input_format: str) -> None:
+    """A value that does not begin with the format is not uptime."""
+    assert convert_value(_CLOCK_TIME, "uptime", input_format=input_format) is None
 
 
 def test_uptime_no_format_returns_value_unchanged(caplog) -> None:

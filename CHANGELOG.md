@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **An uptime `format:` must now match from the start of the value.**
+  A match found partway through was accepted, so a clock time inside a
+  longer value could be read as uptime. Text after the format is still
+  ignored (the SB8200 writes `…21s.00`). Every catalog entry reads the
+  same uptime as before.
 - **The SB8200 PHP firmware variant is now "JSON Login (php)" in the
   setup picker,** so it names what sets it apart from the other SB8200
   variants. If you set it up on 3.14.15-beta.1, it will not load after
