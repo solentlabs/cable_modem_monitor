@@ -34,6 +34,8 @@ def mapping_to_column(mapping: dict[str, Any]) -> dict[str, Any]:
         result["unit"] = mapping["unit"]
     if mapping.get("map"):
         result["map"] = mapping["map"]
+    if mapping.get("scale") is not None:
+        result["scale"] = mapping["scale"]
     return result
 
 
@@ -48,6 +50,8 @@ def mapping_to_row(mapping: dict[str, Any]) -> dict[str, Any]:
         result["unit"] = mapping["unit"]
     if mapping.get("map"):
         result["map"] = mapping["map"]
+    if mapping.get("scale") is not None:
+        result["scale"] = mapping["scale"]
     return result
 
 
@@ -62,6 +66,8 @@ def mapping_to_channel(mapping: dict[str, Any]) -> dict[str, Any]:
         result["unit"] = mapping["unit"]
     if mapping.get("map"):
         result["map"] = mapping["map"]
+    if mapping.get("scale") is not None:
+        result["scale"] = mapping["scale"]
     return result
 
 
@@ -76,4 +82,6 @@ def mapping_to_json_channel(mapping: dict[str, Any]) -> dict[str, Any]:
         result["unit"] = mapping["unit"]
     if mapping.get("map"):
         result["map"] = mapping["map"]
+    if mapping.get("scale") is not None:
+        result["scale"] = mapping["scale"]
     return result

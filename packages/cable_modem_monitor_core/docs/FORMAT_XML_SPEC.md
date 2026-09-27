@@ -110,7 +110,7 @@ upstream:
         - source: srate
           field: symbol_rate
           type: float
-          scale: 1000             # Msym/s → ksym/s
+          scale: 1000000          # Msym/s → Sym/s
       channel_type:
         field: modulation
         map:
@@ -143,7 +143,7 @@ Each item in `tables`:
 | `columns[].source` | string | yes | XML child element tag name (e.g., `"freq"`, `"pow"`) |
 | `columns[].field` | string | yes | Canonical field name (from field registry) |
 | `columns[].type` | string | yes | Target type: `integer`, `float`, `string`, `frequency`, `boolean`, `lock_status`, `uptime` |
-| `columns[].scale` | number | no | Multiplier applied after type conversion (e.g., `1000` for Msym/s → ksym/s). Whole-number results cast to int. |
+| `columns[].scale` | number | no | Multiplier applied after type conversion (e.g., `1000000` for Msym/s → Sym/s). Whole-number results cast to int. |
 | `channel_type` | object | no | Fixed or field-derived channel type assignment |
 | `lock_status` | object | no | `all_of`: list of sub-element tag names whose boolean values are ANDed — all true → `"locked"`, otherwise `"not_locked"` |
 | `fixed_fields` | map | no | Static field values for every channel. Applied after column extraction and channel_type. |

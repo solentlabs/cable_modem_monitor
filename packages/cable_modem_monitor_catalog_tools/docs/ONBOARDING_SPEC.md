@@ -795,7 +795,7 @@ names/positions to canonical output fields.
 | `uncorrected` | integer | no | Uncorrectable codeword errors |
 | `modulation` | string | no | Modulation type |
 | `lock_status` | string | no | Channel lock status |
-| `symbol_rate` | integer | upstream only | Symbol rate |
+| `symbol_rate` | integer | upstream only | Symbol rate (normalized to Sym/s) |
 | `channel_type` | string | derived | `qam`/`ofdm` (downstream), `atdma`/`ofdma` (upstream) |
 
 **System info (Tier 1 canonical):**
@@ -1033,6 +1033,26 @@ Examine data values for unit suffixes:
 | `"3.2 dBmV"` | `type: float, unit: "dBmV"` |
 | `"-15.3 dB"` | `type: float, unit: "dB"` |
 | Plain numbers without units | No `unit` field needed |
+
+`symbol_rate` is stored in Sym/s, and firmware reports ksym/s, so the
+generator sets `scale` from the captured samples in every format, in
+this order:
+
+1. **Label.** A ksym unit in the header (`Symb. Rate (Ksym/sec)`) or on
+   the values (`"5120 kSym/s"`) sets `unit` to that spelling and
+   `scale: 1000`.
+2. **Magnitude.** Bare numbers decide by the DOCSIS range: every
+   non-zero sample below 160000 (the lowest upstream rate, 160 ksym/s)
+   is ksym/s and gets `scale: 1000`; samples at or above it are already
+   Sym/s. Zero placeholders are ignored.
+3. **Conflict.** A ksym label on Sym/s-sized values, or samples on both
+   sides of 160000, leaves `scale` unset and adds a warning for the
+   author to settle.
+
+A fleet layout supplies positions, not units: the rule runs on the new
+capture's samples even when the field's position comes from a committed
+config. The spec-conformance gate rejects any unscaled value that gets
+through.
 
 #### Filter detection
 

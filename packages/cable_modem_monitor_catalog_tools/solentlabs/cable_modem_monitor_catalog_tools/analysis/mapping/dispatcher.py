@@ -26,6 +26,7 @@ from .field_resolution import (
     match_json_key_to_field,
 )
 from .filter_detection import detect_filter_table
+from .symbol_rate import symbol_rate_unit_and_scale
 from .types import FieldMapping, SectionDetail
 
 # -----------------------------------------------------------------------
@@ -88,6 +89,9 @@ def _extract_table_mappings(
         # Detect type and unit from data values; header unit takes priority
         sample_values = [row[idx] for row in table.rows if idx < len(row)]
         field_type, unit = detect_field_type(field_name, sample_values, header_unit)
+        scale = None
+        if field_name == "symbol_rate":
+            unit, scale = symbol_rate_unit_and_scale(sample_values, unit, warnings)
 
         mappings.append(
             FieldMapping(
@@ -96,6 +100,7 @@ def _extract_table_mappings(
                 tier=tier,
                 unit=unit,
                 index=idx,
+                scale=scale,
             )
         )
 
@@ -153,13 +158,20 @@ def _extract_transposed_mappings(
         # Sample values from the data columns
         sample_values = row[1:] if len(row) > 1 else []
         field_type, unit = detect_field_type(field_name, sample_values, header_unit)
+        # Transposed rows emit no unit, except symbol_rate, which needs one
+        # to strip a ksym suffix before scaling to Sym/s.
+        row_unit, scale = "", None
+        if field_name == "symbol_rate":
+            row_unit, scale = symbol_rate_unit_and_scale(sample_values, unit, warnings)
 
         mappings.append(
             FieldMapping(
                 field=field_name,
                 type=field_type,
                 tier=tier,
+                unit=row_unit,
                 label=label.strip(),
+                scale=scale,
             )
         )
 
@@ -219,7 +231,7 @@ def _extract_js_mappings(
     # Fleet-based layout: use proven field offsets from committed configs
     if fleet and js_func.name in fleet.js_function_layouts:
         return _extract_js_mappings_from_fleet(
-            js_func, resource, direction, fleet.js_function_layouts[js_func.name], record_count
+            js_func, resource, direction, fleet.js_function_layouts[js_func.name], record_count, warnings
         )
 
     # Inference-based layout (fallback)
@@ -254,6 +266,7 @@ def _extract_js_mappings(
 
     if not mappings:
         return None
+    _resolve_js_symbol_rate(mappings, data_values, fields_per_record, warnings)
 
     channel_type = detect_channel_type_fixed(direction)
 
@@ -275,6 +288,7 @@ def _extract_js_mappings_from_fleet(
     direction: str,
     layout: dict[str, Any],
     record_count: int,
+    warnings: list[str],
 ) -> SectionDetail | None:
     """Build JS section from a fleet-proven function layout.
 
@@ -299,6 +313,9 @@ def _extract_js_mappings_from_fleet(
     if not mappings:
         return None
 
+    # The fleet proves positions, not units: resolve symbol_rate from this capture.
+    _resolve_js_symbol_rate(mappings, js_func.values[1:], layout.get("fields_per_channel", 0), warnings)
+
     ct_value = layout.get("channel_type", "")
     channel_type: dict[str, Any] = {"fixed": ct_value} if ct_value else (detect_channel_type_fixed(direction) or {})
 
@@ -312,6 +329,19 @@ def _extract_js_mappings_from_fleet(
         channel_type=channel_type,
         channel_count=record_count,
     )
+
+
+def _resolve_js_symbol_rate(
+    mappings: list[FieldMapping],
+    data_values: list[str],
+    fields_per_record: int,
+    warnings: list[str],
+) -> None:
+    """Set unit and scale on a JS symbol_rate mapping from every record's value."""
+    for m in mappings:
+        if m.field == "symbol_rate" and fields_per_record and m.offset is not None:
+            samples = data_values[m.offset :: fields_per_record]
+            m.unit, m.scale = symbol_rate_unit_and_scale(samples, m.unit, warnings)
 
 
 # -----------------------------------------------------------------------
@@ -343,12 +373,19 @@ def _extract_json_mappings(
             continue
 
         field_type, unit = detect_field_type(field_name, [str(value)] if value is not None else [])
+        # JSON keys emit no unit, except symbol_rate (see transposed).
+        key_unit, scale = "", None
+        if field_name == "symbol_rate":
+            samples = [str(ch[key]) for ch in channel_array if isinstance(ch, dict) and ch.get(key) is not None]
+            key_unit, scale = symbol_rate_unit_and_scale(samples, unit, warnings)
         mappings.append(
             FieldMapping(
                 field=field_name,
                 type=field_type,
                 tier=tier,
+                unit=key_unit,
                 key=key,
+                scale=scale,
             )
         )
 

@@ -424,7 +424,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 45.770599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 4,
@@ -434,7 +434,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 46.020599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 3,
@@ -444,7 +444,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 46.520599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 1,
@@ -454,7 +454,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 45.520599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "active_subcarriers": 1760,

@@ -403,7 +403,7 @@
       "frequency": 15000000,
       "lock_status": "locked",
       "power": 32.3,
-      "symbol_rate": 2560
+      "symbol_rate": 2560000
     },
     {
       "channel_id": 2,
@@ -412,7 +412,7 @@
       "frequency": 23000000,
       "lock_status": "locked",
       "power": 33.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 3,
@@ -421,7 +421,7 @@
       "frequency": 30000000,
       "lock_status": "locked",
       "power": 33.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 4,
@@ -430,7 +430,7 @@
       "frequency": 36000000,
       "lock_status": "locked",
       "power": 33.3,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 7,

@@ -405,7 +405,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 40.020599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 4,
@@ -415,7 +415,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 40.020599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 1,
@@ -425,7 +425,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 41.270599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 6,
@@ -435,7 +435,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 40.020599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 5,
@@ -445,7 +445,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 39.520599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 2,
@@ -455,7 +455,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 40.520599,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     }
   ]
 }

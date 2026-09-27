@@ -85,6 +85,7 @@ upstream:
     - key: "symbolRate"
       field: symbol_rate
       type: integer
+      scale: 1000 # ksym/s → Sym/s
 ```
 
 **Config fields (flat form):**

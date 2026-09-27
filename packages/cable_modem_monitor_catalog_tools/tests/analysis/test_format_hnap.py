@@ -583,7 +583,7 @@ def test_detect_channel_data_edge(
     expected: dict[str, Any] | None,
 ) -> None:
     """_detect_channel_data returns None for edge-case inputs."""
-    result = _detect_channel_data("GetTestResponse", response_data)
+    result = _detect_channel_data("GetTestResponse", response_data, [])
     assert result is expected
 
 

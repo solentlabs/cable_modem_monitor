@@ -397,8 +397,9 @@ json, xml, hnap, javascript).
 
 ```yaml
 - field: symbol_rate
-  type: float
-  scale: 1000        # Msym/s → ksym/s
+  type: integer
+  unit: "Ksym/sec"
+  scale: 1000        # ksym/s → Sym/s
 ```
 
 #### Uptime Normalization
@@ -891,6 +892,9 @@ identity, status derivation, health checks, and DOCSIS lock detection:
   from MHz/GHz)
 - `power` and `snr` are floats even when the source is integer
 - `channel_width` is always in Hz when present
+- `symbol_rate` is always in Sym/s when present; the catalog
+  spec-conformance gate rejects a value below 160000 (the lowest DOCSIS
+  upstream rate, 160 ksym/s) as an unscaled ksym/s value
 - Missing optional fields are omitted (not `null` or empty string)
 - `system_info` keys are snake_case, values are strings
 

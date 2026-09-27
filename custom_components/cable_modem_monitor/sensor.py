@@ -142,6 +142,9 @@ _FREQ = SensorDeviceClass.FREQUENCY
 _DSIZE = SensorDeviceClass.DATA_SIZE
 _DRATE = SensorDeviceClass.DATA_RATE
 
+# Unit of the symbol_rate channel attribute (FIELD_REGISTRY: stored in Sym/s).
+_SYMBOL_RATE_UNIT = "Sym/s"
+
 # Each tuple: (field, name_suffix, unit, device_class, state_class, icon, value_type)
 # fmt: off
 _DS_METRICS = [
@@ -812,7 +815,12 @@ class ChannelSensor(ModemSensorBase):
         ch = self._find_channel()
         if ch is None:
             return {}
-        return {key: value for key, value in ch.items() if key != self._field}
+        attrs = {key: value for key, value in ch.items() if key != self._field}
+        # Core stores symbol_rate in Sym/s; firmware labels vary (ksym/s,
+        # Msym/s), so the unit is stated beside the value.
+        if "symbol_rate" in attrs:
+            attrs["symbol_rate_unit"] = _SYMBOL_RATE_UNIT
+        return attrs
 
 
 # ------------------------------------------------------------------

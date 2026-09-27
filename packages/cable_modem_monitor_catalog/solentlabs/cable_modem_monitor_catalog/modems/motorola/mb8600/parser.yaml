@@ -59,6 +59,7 @@ upstream:
     - index: 4
       field: symbol_rate
       type: integer
+      scale: 1000 # ksym/s → Sym/s
     - index: 5
       field: frequency
       type: frequency

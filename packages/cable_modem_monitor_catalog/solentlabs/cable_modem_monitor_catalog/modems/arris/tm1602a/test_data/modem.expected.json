@@ -286,7 +286,7 @@
       "frequency": 15800000,
       "modulation": "QAM64",
       "power": 42.75,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 10,
@@ -295,7 +295,7 @@
       "frequency": 22200000,
       "modulation": "QAM64",
       "power": 41.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     }
   ]
 }

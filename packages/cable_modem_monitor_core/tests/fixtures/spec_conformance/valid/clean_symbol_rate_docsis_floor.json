@@ -1,0 +1,14 @@
+{
+  "_description": "symbol_rate at the lowest DOCSIS upstream rate (160 ksym/s) passes when stored in Sym/s",
+  "_data": {
+    "upstream": [
+      {
+        "channel_number": 1,
+        "channel_id": 1,
+        "channel_type": "atdma",
+        "lock_status": "locked",
+        "symbol_rate": 160000
+      }
+    ]
+  }
+}

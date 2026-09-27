@@ -109,6 +109,7 @@ upstream:
         - key: "symbolRate"
           field: symbol_rate
           type: integer
+          scale: 1000 # ksym/s → Sym/s
     # OFDMA channels — power in integer-tenths, scale to dBmV
     - array_path: "upstream.channels"
       filter:

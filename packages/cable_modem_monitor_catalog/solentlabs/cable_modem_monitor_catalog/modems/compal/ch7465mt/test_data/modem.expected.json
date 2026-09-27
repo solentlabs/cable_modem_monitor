@@ -290,6 +290,7 @@
     }
   ],
   "system_info": {
+    "boot_status": "Modem Mode",
     "docsis_status": "Operational",
     "downstream_channel_count": 24,
     "hardware_version": "5.01",
@@ -297,7 +298,6 @@
     "provisioned_burst_up": 84541,
     "provisioned_speed_down": 110100480,
     "provisioned_speed_up": 22544384,
-    "boot_status": "Modem Mode",
     "software_version": "CH7465MT-AT-NCIP-6.15.32p3TM-GA-NOSH",
     "system_uptime": "0 days 00h:16m:36s",
     "total_corrected": 674991443,
@@ -313,7 +313,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 38.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 8,
@@ -323,7 +323,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 41.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 7,
@@ -333,7 +333,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 40.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 6,
@@ -343,7 +343,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 39.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 5,
@@ -353,7 +353,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 39.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 4,
@@ -363,7 +363,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 39.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 3,
@@ -373,7 +373,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 38.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 1,
@@ -383,7 +383,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 38.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     }
   ]
 }

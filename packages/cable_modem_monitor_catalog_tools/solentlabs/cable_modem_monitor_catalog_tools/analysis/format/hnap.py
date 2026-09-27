@@ -15,6 +15,7 @@ from solentlabs.cable_modem_monitor_core.har import merge_hnap_har_responses
 
 from ...validation.har_utils import WARNING_PREFIX
 from ..mapping.field_shape import FieldShapeVocabulary, field_shape
+from ..mapping.symbol_rate import symbol_rate_unit_and_scale
 from ..types import FleetPatterns
 
 # HNAP response keys that indicate downstream/upstream channel data.
@@ -100,6 +101,7 @@ def detect_hnap_sections(
         channel_result = _detect_channel_data(
             response_key,
             response_data,
+            warnings,
             fleet=fleet,
         )
 
@@ -144,6 +146,7 @@ def _collect_hnap_responses(
 def _detect_channel_data(
     response_key: str,
     response_data: dict[str, Any],
+    warnings: list[str],
     fleet: FleetPatterns | None = None,
 ) -> dict[str, Any] | None:
     """Detect delimited channel data in an HNAP action response.
@@ -192,6 +195,9 @@ def _detect_channel_data(
         if not mappings:
             continue
 
+        # The fleet proves positions, not units: resolve symbol_rate from this capture.
+        _resolve_symbol_rate(mappings, sample_records, warnings)
+
         section: dict[str, Any] = {
             "format": "hnap",
             "response_key": response_key,
@@ -214,6 +220,22 @@ def _detect_channel_data(
         return section
 
     return None
+
+
+def _resolve_symbol_rate(
+    mappings: list[dict[str, Any]],
+    sample_records: list[list[str]],
+    warnings: list[str],
+) -> None:
+    """Set unit and scale on an HNAP symbol_rate mapping from every record's value."""
+    for m in mappings:
+        if m["field"] == "symbol_rate":
+            samples = [r[m["index"]] for r in sample_records if m["index"] < len(r)]
+            unit, scale = symbol_rate_unit_and_scale(samples, m.get("unit", ""), warnings)
+            if unit:
+                m["unit"] = unit
+            if scale is not None:
+                m["scale"] = scale
 
 
 def _detect_record_delimiter(value: str) -> str | None:

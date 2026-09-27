@@ -46,9 +46,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it "Width"), so the attribute is renamed and the number is
   unchanged. OFDMA upstream channels on these modems now also show
   their `channel_width`, which was dropped before.
+- **Upstream `symbol_rate` is now in symbols per second on every
+  modem, 1000 times the number shown before.** These modems reported
+  it in thousands (5120 for 5.12 Msym/s): ARRIS CM3500B, CM820B,
+  TG3442S and TM1602A; CommScope G54; Compal CH7465MT; Motorola MB8600
+  and MB8611; Netgear C3700, C7000v2, CM1200, CM2000, CM2050V, CM2500,
+  CM3000 and CM600; Sagemcom F3896LG-VMB and F3896LG-ZG; Technicolor
+  XB6, XB7, XB8 and XB10. Upstream channel sensors now carry
+  `symbol_rate_unit: Sym/s` beside `symbol_rate`. If a template or
+  automation reads `symbol_rate` on one of these modems, divide by 1000
+  to keep the old number.
+- **catalog_tools sets the symbol rate scale when it generates a
+  config.** A ksym label on the header or the values, or bare numbers
+  in the DOCSIS ksym range, add `scale: 1000`; a label that contradicts
+  the values leaves it unset with a warning.
 
 ### Fixed
 
+- **Arris SB6183 upstream channels show `symbol_rate`.** The modem
+  writes it as "5120 Ksym/sec" and the unit wasn't stripped, so the
+  value was dropped.
 - **Failure logs no longer print a session token carried in the URL.**
   On the Arris SB8200 URL-token and PHP firmware, a failed page load
   logged the full address, token included. The address's query is now

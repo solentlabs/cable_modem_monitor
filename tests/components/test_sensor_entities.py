@@ -50,7 +50,7 @@ from custom_components.cable_modem_monitor.sensor import (
     _humanize_field_name,
 )
 
-from .conftest import MOCK_ENTRY_DATA, MOCK_MODEM_DATA
+from .conftest import MOCK_DOWNSTREAM, MOCK_ENTRY_DATA, MOCK_MODEM_DATA, MOCK_UPSTREAM
 
 # -----------------------------------------------------------------------
 # Module-level test data
@@ -1451,6 +1451,38 @@ def test_channel_sensor_attributes_empty_when_no_modem_data(mock_runtime_data):
         modem_data=None,
     )
     assert sensor.extra_state_attributes == {}
+
+
+@pytest.mark.parametrize(
+    "extra_fields,expected_unit",
+    [
+        ({"symbol_rate": 5120000}, "Sym/s"),
+        ({}, None),
+    ],
+    ids=["symbol_rate_carries_unit", "no_symbol_rate_no_unit"],
+)
+def test_channel_sensor_symbol_rate_unit_attribute(mock_runtime_data, extra_fields, expected_unit):
+    """symbol_rate_unit rides beside symbol_rate, and only when symbol_rate is present."""
+    upstream = [{**MOCK_UPSTREAM[0], **extra_fields}]
+    modem_data = {**MOCK_MODEM_DATA, "upstream": upstream}
+    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
+    mock_runtime_data.channel_map = build_channel_map(MOCK_DOWNSTREAM, upstream, ChannelIdentity.ID)
+
+    sensor = ChannelSensor(
+        coord,
+        entry,
+        direction="upstream",
+        slot_key=("atdma", 1),
+        identity_mode=ChannelIdentity.ID,
+        field="power",
+        name_suffix="Power",
+        unit="dBmV",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:signal",
+        value_type=float,
+    )
+    assert sensor.extra_state_attributes.get("symbol_rate_unit") == expected_unit
 
 
 # -----------------------------------------------------------------------

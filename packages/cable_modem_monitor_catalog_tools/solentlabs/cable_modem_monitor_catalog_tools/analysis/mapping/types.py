@@ -37,6 +37,7 @@ class FieldMapping:
     key: str = ""
     label: str = ""
     map: dict[str, str] = dataclass_field(default_factory=dict)
+    scale: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to the sections output format."""
@@ -53,6 +54,8 @@ class FieldMapping:
             result["label"] = self.label
         if self.map:
             result["map"] = self.map
+        if self.scale is not None:
+            result["scale"] = self.scale
         return result
 
     @classmethod
