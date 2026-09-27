@@ -66,6 +66,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Arris SB6183 upstream channels show `symbol_rate`.** The modem
   writes it as "5120 Ksym/sec" and the unit wasn't stripped, so the
   value was dropped.
+- **catalog_tools reads table rows the firmware leaves unclosed.** When
+  data rows omit `</tr>`, the HTML parser nests each row inside the one
+  before it, and the analyzer saw the table's headers but no rows, so
+  unit, scale and channel type detection had no values to work from.
 - **Failure logs no longer print a session token carried in the URL.**
   On the Arris SB8200 URL-token and PHP firmware, a failed page load
   logged the full address, token included. The address's query is now

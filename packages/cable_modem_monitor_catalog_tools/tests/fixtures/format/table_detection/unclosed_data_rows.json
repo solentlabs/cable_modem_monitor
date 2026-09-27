@@ -1,0 +1,22 @@
+{
+  "_description": "Data rows missing </tr>: html.parser nests each row inside the previous one. Every row must still be read, while rows of a table nested in a cell stay excluded.",
+  "_entry": {
+    "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "headers": []},
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 400,
+        "mimeType": "text/html",
+        "text": "<html><table><tbody> <tr> <td></td> <td>UCID</td> <td>Symbol Rate</td> </tr> <tr> <tr><td>Upstream 1</td><td>6</td><td>5120 kSym/s</td><tr><td>Upstream 2</td><td>8</td><td>2560 kSym/s</td><tr><td>Upstream 3</td><td>7</td><td><table><tr><td>note</td></tr><tr><td>x</td></tr></table>5120 kSym/s</td> </tbody></table></html>"
+      }
+    }
+  },
+  "_expected_table_count": 2,
+  "_expected_headers": ["", "UCID", "Symbol Rate"],
+  "_expected_rows": [
+    ["Upstream 1", "6", "5120 kSym/s"],
+    ["Upstream 2", "8", "2560 kSym/s"],
+    ["Upstream 3", "7", "notex5120 kSym/s"]
+  ]
+}

@@ -96,9 +96,24 @@ def _get_direct_rows(table: Tag) -> list[Tag]:
     for child in table.children:
         if isinstance(child, Tag):
             if child.name == "tr":
-                rows.append(child)
+                rows.extend(_flatten_row(child))
             elif child.name in ("thead", "tbody", "tfoot"):
-                rows.extend(r for r in child.children if isinstance(r, Tag) and r.name == "tr")
+                for r in child.children:
+                    if isinstance(r, Tag) and r.name == "tr":
+                        rows.extend(_flatten_row(r))
+    return rows
+
+
+def _flatten_row(row: Tag) -> list[Tag]:
+    """Return the row plus any rows html.parser nested directly inside it."""
+    # Firmware that omits </tr> leaves each data row unclosed, and html.parser
+    # nests the next <tr> inside it. A <tr> directly inside a <tr> is never
+    # valid HTML, so this only unwinds that chain; rows of a table nested in
+    # a cell sit under <td>, not <tr>, and stay excluded.
+    rows = [row]
+    for child in row.children:
+        if isinstance(child, Tag) and child.name == "tr":
+            rows.extend(_flatten_row(child))
     return rows
 
 

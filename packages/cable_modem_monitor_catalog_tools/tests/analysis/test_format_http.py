@@ -158,6 +158,8 @@ def test_table_detection(fixture_path: Path) -> None:
         assert page.tables[0].headers == data["_expected_headers"]
     if data.get("_expected_table_id"):
         assert page.tables[0].table_id == data["_expected_table_id"]
+    if "_expected_rows" in data:
+        assert page.tables[0].rows == data["_expected_rows"]
 
 
 # =====================================================================
