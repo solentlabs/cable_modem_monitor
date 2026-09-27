@@ -174,15 +174,21 @@ class HTTPResourceLoader:
                     f"HTTP {response.status_code} on {target.path}",
                     status_code=response.status_code,
                     path=target.path,
-                    request_line=describe_request(response.request, headers=self._headers),
+                    request_line=describe_request(
+                        response.request, headers=self._headers, mask_query=bool(self._url_token)
+                    ),
                     response_body=response.text,
                     content_type=content_type,
                 )
 
             if response.status_code >= 400:
+                # The token _build_url appended is masked here, in the failure
+                # text only; the request above was sent with it intact.
+                request_line = describe_request(
+                    response.request, headers=self._headers, mask_query=bool(self._url_token)
+                )
                 raise ResourceLoadError(
-                    f"HTTP {response.status_code} fetching {target.path}"
-                    f"\n  request: {describe_request(response.request, headers=self._headers)}",
+                    f"HTTP {response.status_code} fetching {target.path}\n  request: {request_line}",
                     status_code=response.status_code,
                     path=target.path,
                 )

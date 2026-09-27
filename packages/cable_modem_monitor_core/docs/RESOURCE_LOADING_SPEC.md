@@ -408,9 +408,10 @@ outgoing request shape (method, full URL with query string, and
 headers actually sent). Header values whose names are declared by
 the active auth strategy via `BaseAuthManager.headers()` are replaced
 with `<set, len=N>` so logs confirm session-token presence without
-leaking the value. The JSON-RPC loader, whose session token rides in
-the URL query, declares it (`mask_query`), and the whole query is
-replaced the same way: masking is driven by that declaration, never by
+leaking the value. A loader that appended a session token to the URL
+declares it (`mask_query`): the HTTP loader for `url_token` and
+query-placed `bearer`, and the JSON-RPC loader. The whole query is then
+replaced the same way, and the request itself still carries the token: masking is driven by that declaration, never by
 locating the token in the string, which fails open on a redirect,
 percent-encoding or a prefix collision. Shared formatter:
 `loaders.diagnostics.describe_request`. See ARCHITECTURE_DECISIONS.md

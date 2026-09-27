@@ -38,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Failure logs no longer print a session token carried in the URL.**
+  On the Arris SB8200 URL-token and PHP firmware, a failed page load
+  logged the full address, token included. The address's query is now
+  shown only as its length, the way session headers already were. The
+  request itself is unchanged.
 - **Setup and Configure no longer hang when the modem can't be
   reached right away.** If the address refused the connection
   instantly, the dialog could spin forever instead of showing
