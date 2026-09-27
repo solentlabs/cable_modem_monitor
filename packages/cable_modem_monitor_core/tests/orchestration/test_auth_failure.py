@@ -25,6 +25,7 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     FormPbkdf2Auth,
     FormSjclAuth,
     HnapAuth,
+    JsonrpcAuth,
     JsonSjclAuth,
     NoneAuth,
     UrlTokenAuth,
@@ -61,6 +62,15 @@ AUTH_MODELS_BY_STRATEGY: dict[str, Any] = {
         aad="AAD",
         token_header="X-Token",
     ),
+    "jsonrpc": JsonrpcAuth(
+        strategy="jsonrpc",
+        endpoint="/rpc",
+        login_method="login",
+        username_field="u",
+        password_field="p",
+        token_path="token",
+        token_param="token",
+    ),
     "none": NoneAuth(strategy="none"),
     "url_token": UrlTokenAuth(strategy="url_token", login_page="/login"),
 }
@@ -85,6 +95,7 @@ def _config_with(auth: Any) -> Any:
 # │ "form_sjcl"   │ True     │ cookie session over HTTP            │
 # │ "hnap"        │ False    │ hnap transport, HNAPLoader path     │
 # │ "json_sjcl"   │ True     │ cookie + token-header session       │
+# │ "jsonrpc"     │ False    │ jsonrpc transport, JSONRPCLoader    │
 # │ "none"        │ False    │ stateless, no credential at all     │
 # │ "url_token"   │ True     │ token session over HTTP             │
 # └───────────────┴──────────┴─────────────────────────────────────┘
@@ -101,6 +112,7 @@ LOGIN_PAGE_DETECTION_CASES = [
     ("form_sjcl",    True),
     ("hnap",         False),
     ("json_sjcl",    True),
+    ("jsonrpc",      False),
     ("none",         False),
     ("url_token",    True),
 ]

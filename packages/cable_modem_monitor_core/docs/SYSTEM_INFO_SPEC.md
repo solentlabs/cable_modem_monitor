@@ -265,7 +265,7 @@ specific modem-reported state during outages or startup.
 | `javascript` | HTML page | JS function body → delimited string → offset |
 | `javascript_vars` | HTML page | `var x = 'value'` assignment → named variable |
 | `hnap` | HNAP response | Action response key → JSON key |
-| `json` | REST response | Per-field `path` or source-level `array_path` → JSON key |
+| `json` | REST response or JSON-RPC `result` | Per-field `path` or source-level `array_path` → JSON key |
 | `xml` | XML response | Root element → sub-element tag name |
 
 ### `javascript` system info field schema
@@ -342,14 +342,16 @@ after extraction.
 
 ### `json` system info
 
-JSON system_info sources extract fields from REST/JSON API responses.
+JSON system_info sources extract fields from REST/JSON API responses,
+and from JSON-RPC calls, where `resource` is the method name and the
+source reads the call's `result`.
 
 **Source schema:**
 
 | Property | Type | Required | Description |
 |----------|------|:--------:|-------------|
 | `format` | string | yes | `json` |
-| `resource` | string | yes | URL path key in the resource dict |
+| `resource` | string | yes | Key in the resource dict: URL path, or method name on `jsonrpc` |
 | `encoding` | string | no | Response encoding (e.g., `base64`) |
 | `array_path` | string | no | Dot-notation path to a JSON array. Navigates to the array and uses its first element as the source object for field lookups. Same concept as the channel parser's `array_path`. |
 | `child_aggregates` | list | no | Aggregate values across repeated array items (see below) |

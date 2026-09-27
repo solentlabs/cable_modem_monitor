@@ -295,6 +295,19 @@ class LoginPageDetectedError(ResourceLoadError):
         )
 
 
+class SessionExpiredError(ResourceLoadError):
+    """The modem answered a data call with the entry's declared session-expired code.
+
+    A JSON-RPC firmware reports a lapsed login inside an HTTP 200, so
+    only the reply's ``error.code`` can say so. Maps to
+    CollectorSignal.LOAD_AUTH, as a login page on a data URL does.
+    """
+
+    def __init__(self, path: str, code: str) -> None:
+        super().__init__(f"Session expired on {path}: {code}", status_code=200, path=path)
+        self.code = code
+
+
 def _decode_response(
     text: str,
     fmt: str,

@@ -62,6 +62,7 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         HnapLoadError,
         HnapSessionExpired,
         HttpStatusError,
+        JsonRpcSessionExpired,
         LogoutExecuted,
         LogoutFailed,
         ParseError,
@@ -197,6 +198,9 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
 
     if isinstance(event, HnapSessionExpired):
         return f"HNAP session expired [{event.model}] — HTTP {event.status_code}"
+
+    if isinstance(event, JsonRpcSessionExpired):
+        return f"JSON-RPC session expired [{event.model}] — {event.method}: {event.code}"
 
     if isinstance(event, StubPageDetected):
         return (

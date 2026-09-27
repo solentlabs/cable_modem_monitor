@@ -6,7 +6,8 @@ uses the authenticated session but owns no auth state, and it builds the
 dict the parser consumes but extracts no data.
 
 The fetch list is derived from parser.yaml — the orchestrator collects
-`resource` paths (HTML/REST) or `response_key` values (HNAP) at startup —
+`resource` paths (HTML/REST), `fun` codes (CBN), method names (JSON-RPC),
+or `response_key` values (HNAP) at startup —
 merged with the paths parser.py declares via its `resources` attribute.
 
 **Design principles:**
@@ -85,6 +86,26 @@ dict reflects this different transport.
 
 - `hnap_response` — the full `GetMultipleHNAPsResponse` dict containing
   all action responses
+
+### JSON-RPC Transport
+
+Keys are the method names on the fetch list. Values are each call's
+`result`, the envelope stripped.
+
+```python
+{
+    "CM.getDownstream": dict,
+    "CM.getUpstream": dict,
+    "CM.getMisc": dict,
+}
+```
+
+- The loader removes what JSON-RPC fixes (`jsonrpc`, `id`, the
+  `result` wrapper) and passes on what the vendor chose, as the HNAP
+  loader strips `GetMultipleHNAPsResponse`. parser.yaml then reads the
+  vendor's shape directly (`array_path: "dss"`).
+- A `result` that is not an object is wrapped `{"_raw": value}`, the
+  HTTP structured-format rule.
 
 **Action names vary by manufacturer** (e.g., `GetCustomer*`, `GetMoto*`). The
 loader returns whatever actions the modem responds with — parsers
@@ -215,6 +236,32 @@ non-200 status codes. Additionally, malformed XML responses are
 logged and the target is skipped (parser receives no entry for that
 fun value).
 
+### JSON-RPC Loading
+
+The `jsonrpc` transport POSTs every call to `auth.endpoint`; the
+`method` member names the resource. Envelope rules:
+[AUTH_JSONRPC_SPEC.md § Envelope](AUTH_JSONRPC_SPEC.md#envelope).
+
+**Fetch cycle:** for each method on the fetch list, POST
+`{"jsonrpc":"2.0","method":<method>,"params":[],"id":N}` to
+`<endpoint>?<token_param>=<token>` and store `result` under the method
+name. Calls are sequential. The loader sends no logout; the collector
+owns session lifecycle.
+
+**Error classification:**
+
+| Condition | Signal | Rationale |
+|-----------|--------|-----------|
+| Connection error / timeout | re-raised → `CONNECTIVITY` | Modem unreachable |
+| Non-2xx status | `ResourceLoadError` with status → 401/403 `LOAD_AUTH`, else `LOAD_ERROR` | Same reading as the other transports |
+| `error.code == session_expired_code` | `SessionExpiredError` → `LOAD_AUTH` | The firmware's own client treats it as a lapsed login; the collector logs in again once in the same poll |
+| Any other `error` | resource omitted, `ResourceDecodeError` logged with the code → `LOAD_INTEGRITY` | The call answered but served no data; no handler in the firmware reads other codes |
+| Body is not an envelope (no JSON, or neither `result` nor `error`) | resource omitted, `ResourceDecodeError` logged → `LOAD_INTEGRITY` | Same as a body that will not decode as its format |
+
+JSON-RPC errors arrive under HTTP 200, so the status alone cannot see
+them; `error.code` is the only signal, and only the configured
+`session_expired_code` changes the session.
+
 ### Path Deduplication
 
 Multiple sections in parser.yaml can reference the same URL path.
@@ -277,9 +324,11 @@ The orchestrator builds the fetch list at startup from two sources:
      `GetMultipleHNAPs` request
    - **CBN:** Collects all unique `resource` values (fun parameter
      strings) from parser.yaml sections and system_info sources
+   - **JSON-RPC:** Collects all unique `resource` values (method
+     names) the same way
 2. **parser.py `resources`** — the resources its hooks read,
-   declared as a dict of path → format on the `PostProcessor`
-   class. Applies to path-based transports (HTTP, CBN); not HNAP.
+   declared as a dict of resource key → format on the `PostProcessor`
+   class. Applies to keyed transports (HTTP, CBN, JSON-RPC); not HNAP.
    Paths parser.yaml already maps are deduplicated, with
    parser.yaml's format winning.
 
@@ -313,7 +362,9 @@ prefers `auth_context.url_token` (body-derived) over cookie extraction.
 The loader doesn't know how the token was obtained — it just appends
 whatever the collector provides. `bearer` with
 `token_placement: query` uses the same path: it stores its token as
-`auth_context.url_token` and declares `auth.token_prefix`.
+`auth_context.url_token` and declares `auth.token_prefix`. So does
+`jsonrpc`, whose prefix is `<token_param>=`, appended to its one
+endpoint rather than to a page path.
 
 ---
 
@@ -327,6 +378,7 @@ instantiated:
 | `http` | HTTPLoader | Format-dependent: `BeautifulSoup` (HTML formats) or `dict` (structured formats) |
 | `hnap` | HNAPLoader | `dict` (JSON) |
 | `cbn` | CBNLoader | `defusedxml.ElementTree.Element` |
+| `jsonrpc` | JSONRPCLoader | `dict` (the call's `result`) |
 
 Selection happens once at startup (or after config change) and persists
 for the integration's lifetime. The loader is instantiated by the
@@ -356,7 +408,11 @@ outgoing request shape (method, full URL with query string, and
 headers actually sent). Header values whose names are declared by
 the active auth strategy via `BaseAuthManager.headers()` are replaced
 with `<set, len=N>` so logs confirm session-token presence without
-leaking the value. Shared formatter:
+leaking the value. The JSON-RPC loader, whose session token rides in
+the URL query, declares it (`mask_query`), and the whole query is
+replaced the same way: masking is driven by that declaration, never by
+locating the token in the string, which fails open on a redirect,
+percent-encoding or a prefix collision. Shared formatter:
 `loaders.diagnostics.describe_request`. See ARCHITECTURE_DECISIONS.md
 "Resource-load failure detail via request-shape log."
 

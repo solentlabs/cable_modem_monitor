@@ -323,6 +323,9 @@ For each entry in HAR:
     ├── Request has HNAP_AUTH header?
     │   └── YES → transport: hnap
     │
+    ├── Request body is a JSON-RPC 2.0 call ("jsonrpc": "2.0", string "method")?
+    │   └── YES → transport: jsonrpc (checked after HNAP, over all entries)
+    │
     └── None of the above → transport: http
 ```
 
@@ -330,7 +333,16 @@ For each entry in HAR:
 header, or `HNAP_AUTH` header are protocol markers with no false
 positives.
 
-**Everything non-HNAP is `http`.** This includes modems with HTML pages,
+**A JSON-RPC capture stops at a core gap.** `generate_config` has no
+`jsonrpc` path, so analysis reports `transport: jsonrpc`, strategy
+`jsonrpc` with no fields, and one `jsonrpc_transport` gap naming the
+endpoint and every method called, then skips Phases 2-6. The entry is
+written by hand from that evidence
+([MODEM_YAML_SPEC.md § `jsonrpc`](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md#jsonrpc)).
+The HTTP tree run over JSON-RPC calls misreads the login as
+`form_pbkdf2`.
+
+**Everything else is `http`.** This includes modems with HTML pages,
 JSON APIs, or any combination. The data format (HTML tables, JSON
 responses) is a separate axis — detected in Phase 5.
 

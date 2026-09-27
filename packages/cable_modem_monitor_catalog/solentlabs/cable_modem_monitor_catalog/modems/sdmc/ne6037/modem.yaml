@@ -1,0 +1,64 @@
+manufacturer: SDMC
+model: NE6037
+brands:
+  - "Play"
+transport: jsonrpc
+default_host: "192.168.0.1"
+
+auth:
+  strategy: jsonrpc
+  endpoint: "/cgi-bin/router.php"
+  login_method: "MGMT.login"
+  username_field: "loginUserName"
+  password_field: "loginPwd"
+  token_path: "token"
+  token_param: "token"
+  lockout_code: "msgUserLockedText"
+  session_expired_code: "msgLoginExpiredText"
+
+session:
+  headers:
+    X-Requested-With: "XMLHttpRequest"
+
+actions:
+  restart:
+    type: jsonrpc
+    method: "MGMT.reboot"
+
+hardware:
+  docsis_version: "3.1"
+  release_date: "2025-06"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "[Issue #215 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/215) — MGMT.login answers result.token, sent back as ?token= on every call (entries 89, 161-251). Error codes from the captured firmware JS: login.htm sends msgUserLockedText to its lockout message and every other code to the login error; common.js (checkLoginExpired) treats msgLoginExpiredText as a lapsed login. A wrong password answers msgBadLoginText under HTTP 200 (second capture on the issue, entry 36)"
+  action_config: "[Issue #215 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/215) — MGMT.reboot with params [] answers result [] (entry 396). No logout action: the page's logout handler clears browser storage and navigates to /, sending nothing to the modem"
+  hardware: "[SDMC NE6037 product page](https://en.sdmctech.com/product/DOCSIS_234.html) — DOCSIS/EuroDOCSIS 3.1, 32 SC-QAM + 2 OFDM downstream, 8 SC-QAM + 2 OFDMA upstream; CM.getMisc in the Issue #215 HAR reports 'DOCSIS 3.1 Cable Modem Gateway Device'"
+  brands: "[Play support page](https://www.play.pl/pomoc/wsparcie-techniczne/routery-i-modemy/play-box-net-router-hfc) — Play issues an SDMC unit as 'PlayBox Router HFC WiFi' (a KAON unit ships under the same name); the filer of Issue #215 reports it as Play BOX NET HFC"
+  release_date: "[Play support page](https://www.play.pl/pomoc/wsparcie-techniczne/routery-i-modemy/play-box-net-router-hfc) — installation instructions dated from 2025-06-28. ISP manual date, a proxy, not a manufacturer launch date"
+  isps: "[Issue #215](https://github.com/solentlabs/cable_modem_monitor/issues/215) — filed as a Play unit; Play support page above"
+
+attribution:
+  contributors:
+    - github: https://github.com/piotrekoo
+      contribution: "HAR captures (session, wrong password, unauthenticated reboot page) and JSON-RPC wire notes (#215)"
+    - github: https://github.com/kwschulz
+      contribution: "Maintainer — jsonrpc transport, catalog entry"
+
+isps:
+  - Play
+
+notes: |
+  DOCSIS 3.1 gateway made by SDMC, issued by Play (Poland) as
+  "PlayBox Router HFC WiFi"; Play also ships a KAON unit under that
+  name, which this entry does not cover. Firmware 7.1.12.2.4445.
+  Every call is a JSON-RPC 2.0 POST to /cgi-bin/router.php; the
+  method names the operation. The login token rides as ?token= and
+  the firmware's client renews it before it lapses; Core logs in again
+  when a call answers msgLoginExpiredText. Lockout message states a
+  one-minute block.
+
+references:
+  issues:
+    - "[#215 — [Modem Request] SDMC NE6037](https://github.com/solentlabs/cable_modem_monitor/issues/215)"

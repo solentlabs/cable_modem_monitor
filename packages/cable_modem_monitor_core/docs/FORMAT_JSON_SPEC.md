@@ -2,7 +2,9 @@
 
 > Parent spec: [PARSING_SPEC.md](PARSING_SPEC.md) --- common concepts, output contract, channel type detection
 
-The JSON parsers extract channel data from JSON API responses. Two
+The JSON parsers extract channel data from JSON API responses. `json`
+also reads JSON-RPC calls, whose `result` the loader hands over keyed
+by method name (RESOURCE_LOADING_SPEC.md § JSON-RPC Transport). Two
 formats are available:
 
 - `json` --- direct array-of-objects shape: each item in an array is
@@ -90,7 +92,7 @@ upstream:
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `format` | string | yes | `json` --- selects `JSONParser` |
-| `resource` | string | yes | URL path key in the resource dict |
+| `resource` | string | yes | Key in the resource dict: URL path, or method name on `jsonrpc` |
 | `array_path` | string | yes* | Dot-notation path to the channel array |
 | `fields` | list | yes* | Key-to-field mappings within each JSON object |
 | `fields[].key` | string | yes | JSON key name in the source object |

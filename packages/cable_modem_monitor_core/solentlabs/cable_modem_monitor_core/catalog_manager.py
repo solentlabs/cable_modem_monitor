@@ -37,7 +37,7 @@ class ModemSummary:
         auth_strategy: Auth strategy of the default variant. For
             multi-variant modems, the config flow loads variant-specific
             auth strategy in Step 2.
-        transport: Network transport protocol (``"http"`` or ``"hnap"``).
+        transport: Network transport protocol (``"http"``, ``"hnap"``, ``"cbn"``, or ``"jsonrpc"``).
         path: Filesystem path to the modem directory in the catalog.
         sibling_dirs: Paths of other catalog directories that share this
             modem's ``(manufacturer, model)`` identity. Populated by

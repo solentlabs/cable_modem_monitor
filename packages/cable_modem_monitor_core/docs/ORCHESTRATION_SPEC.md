@@ -2369,7 +2369,7 @@ point for all action execution. Both the collector (logout) and
 orchestrator (restart) call it. The function extracts session, base
 URL, and HNAP credentials from the collector and dispatches to the
 appropriate transport-scoped executor based on the action's type
-discriminator (`http` or `hnap`).
+discriminator (`http`, `hnap`, `cbn`, or `jsonrpc`).
 
 ### HTTP Executor
 
@@ -2409,6 +2409,18 @@ Phases:
 Connection errors during the main request are treated as success.
 HMAC signing uses shared primitives from `protocol.hnap`.
 Returns `ActionResult`.
+
+### JSON-RPC Executor
+
+`jsonrpc_action.execute_jsonrpc_action()` sends one JSON-RPC call
+(`method`, `params`) to `auth.endpoint` with the session token in the
+query, the same request a data call makes. The envelope comes from
+`protocol.jsonrpc`.
+
+A `result` of any value is success. An `error` is a refused action
+whose message names the code, and so is a non-2xx status or a body
+that is not an envelope. Connection errors and timeouts are success
+(the modem is rebooting during restart). Returns `ActionResult`.
 
 ### ActionResult
 

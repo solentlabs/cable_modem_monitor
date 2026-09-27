@@ -226,7 +226,7 @@ class JSONSystemInfoSource(BaseModel):
 
     format_tag: ClassVar[str] = "json"
     decode_kind: ClassVar[DecodeKind] = "json"
-    transports: ClassVar[frozenset[str]] = frozenset({"http"})
+    transports: ClassVar[frozenset[str]] = frozenset({"http", "jsonrpc"})
 
     model_config = ConfigDict(extra="forbid")
     format: Literal["json"]

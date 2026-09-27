@@ -25,6 +25,7 @@ from ..loaders.http import (
     HTTPResourceLoader,
     LoginPageDetectedError,
     ResourceLoadError,
+    SessionExpiredError,
 )
 from ..models.modem_config.actions import HttpAction
 from ..parsers.coordinator import ModemParserCoordinator
@@ -46,6 +47,7 @@ from .events import (
     HnapConnectionFailed,
     HnapLoadError as HnapLoadErrorEvent,
     HnapSessionExpired,
+    JsonRpcSessionExpired,
     LogoutExecuted,
     LogoutFailed,
     ParseError,
@@ -193,6 +195,13 @@ class ModemDataCollector:
         try:
             resources, fetches = self._load_resources(auth_result)
         except LoginPageDetectedError as exc:
+            return ModemResult(
+                success=False,
+                signal=CollectorSignal.LOAD_AUTH,
+                error=str(exc),
+            )
+        except SessionExpiredError as exc:
+            log_event(_logger, JsonRpcSessionExpired(model=self._modem_config.model, method=exc.path, code=exc.code))
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.LOAD_AUTH,
@@ -444,6 +453,9 @@ class ModemDataCollector:
         if self._modem_config.transport == "cbn":
             return self._load_cbn_resources()
 
+        if self._modem_config.transport == "jsonrpc":
+            return self._load_jsonrpc_resources()
+
         return self._load_http_resources(auth_result)
 
     def _load_http_resources(
@@ -475,16 +487,7 @@ class ModemDataCollector:
         # login response to reuse.
         effective_auth = auth_result if self._auth_context else None
         resources = loader.fetch(targets, effective_auth)
-        for path, fmt, reason in loader.decode_errors:
-            log_event(
-                _logger,
-                ResourceDecodeError(
-                    model=self._modem_config.model,
-                    path=path,
-                    fmt=fmt,
-                    reason=reason,
-                ),
-            )
+        self._emit_decode_errors(loader.decode_errors)
         return resources, _to_resource_fetches(loader.resource_fetches)
 
     def _load_hnap_resources(self) -> tuple[dict[str, Any], list[ResourceFetch]]:
@@ -530,6 +533,43 @@ class ModemDataCollector:
         )
         resources = loader.fetch(targets)
         return resources, _to_resource_fetches(loader.resource_fetches)
+
+    def _load_jsonrpc_resources(self) -> tuple[dict[str, Any], list[ResourceFetch]]:
+        """Fetch JSON-RPC resources, one call per method on the fetch list."""
+        from ..loaders.jsonrpc import JSONRPCLoader
+        from ..protocol.jsonrpc import jsonrpc_params
+
+        targets = collect_fetch_targets(self._parser_config, self._post_processor)
+        auth = jsonrpc_params(self._modem_config.auth)
+        token_prefix, url_token = self._auth_manager.loader_url_token(self._session, self._auth_context)
+
+        loader = JSONRPCLoader(
+            session=self._session,
+            base_url=self._base_url,
+            endpoint=auth.endpoint,
+            token_prefix=token_prefix,
+            url_token=url_token,
+            session_expired_code=auth.session_expired_code,
+            timeout=self._modem_config.timeout,
+            model=self._modem_config.model,
+            headers=self._auth_manager.headers(),
+        )
+        resources = loader.fetch(targets)
+        self._emit_decode_errors(loader.decode_errors)
+        return resources, _to_resource_fetches(loader.resource_fetches)
+
+    def _emit_decode_errors(self, decode_errors: list[tuple[str, str, str]]) -> None:
+        """Log one ResourceDecodeError per resource the loader omitted."""
+        for path, fmt, reason in decode_errors:
+            log_event(
+                _logger,
+                ResourceDecodeError(
+                    model=self._modem_config.model,
+                    path=path,
+                    fmt=fmt,
+                    reason=reason,
+                ),
+            )
 
     def _classify_resource_load_error(self, exc: ResourceLoadError) -> ModemResult:
         """Route an HTTP resource-load failure to the correct signal."""

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
@@ -344,3 +345,42 @@ class TestNoDataSections:
         result = analyze_har(har_file)
         assert result.sections is None
         assert any("no parseable data sections" in w for w in result.warnings)
+
+
+# =====================================================================
+# JSON-RPC transport — detected, then stopped at a core gap
+# =====================================================================
+
+
+class TestJsonrpcTransport:
+    """A JSON-RPC capture is named as such and routed to hand-authoring.
+
+    generate_config has no jsonrpc path, so the analysis must stop at
+    Step 5 with a true statement rather than run the HTTP tree over it.
+    """
+
+    @staticmethod
+    def _analyze(tmp_path: Path) -> tuple[AnalysisResult, dict[str, Any]]:
+        data = load_fixture(FIXTURES_DIR / "jsonrpc" / "login_and_data.json")
+        return analyze_har(write_har(tmp_path, data["_har"])), data
+
+    def test_transport_is_jsonrpc(self, tmp_path: Path) -> None:
+        result, _ = self._analyze(tmp_path)
+        assert result.transport.transport == "jsonrpc"
+        assert result.transport.confidence == "high"
+
+    def test_stops_at_one_core_gap_with_evidence(self, tmp_path: Path) -> None:
+        result, data = self._analyze(tmp_path)
+        assert [gap.category for gap in result.core_gaps] == ["jsonrpc_transport"]
+        evidence = result.core_gaps[0].evidence
+        assert evidence["endpoint"] == data["_expected_endpoint"]
+        assert evidence["methods"] == data["_expected_methods"]
+
+    def test_http_phases_do_not_run(self, tmp_path: Path) -> None:
+        """No HTTP-tree verdict (the form_pbkdf2 misread) reaches the output."""
+        result, _ = self._analyze(tmp_path)
+        # The transport has exactly one strategy; its fields are hand-authored.
+        assert result.auth.strategy == "jsonrpc"
+        assert result.auth.fields == {}
+        assert result.actions.restart is None
+        assert result.sections is None

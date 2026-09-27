@@ -1,6 +1,6 @@
 """Auth strategy models for modem.yaml.
 
-Eleven strategies as a discriminated union on the 'strategy' field.
+Twelve strategies as a discriminated union on the 'strategy' field.
 Each model carries ``display_name``, ``transport``, and ``stateless``
 ClassVars so display labels, transport validation sets, factory
 dispatch, login-page detection, and the published constraint tables
@@ -323,6 +323,27 @@ class JsonSjclAuth(AuthStrategyBase):
     encodes_action_bodies: ClassVar[bool] = True
 
 
+class JsonrpcAuth(AuthStrategyBase):
+    """JSON-RPC 2.0 login call. See MODEM_YAML_SPEC.md § jsonrpc."""
+
+    model_config = ConfigDict(extra="forbid")
+    strategy: Literal["jsonrpc"]
+    endpoint: str
+    login_method: str
+    username_field: str
+    password_field: str
+    token_path: str
+    token_param: str
+    # Firmware vocabulary, compared with the reply's error.code as a string;
+    # empty means the entry declares none (AUTH_JSONRPC_SPEC.md § Error Codes).
+    lockout_code: str = ""
+    session_expired_code: str = ""
+
+    display_name: ClassVar[str] = "JSON-RPC"
+    transport: ClassVar[str] = "jsonrpc"
+    stateless: ClassVar[bool] = False
+
+
 AuthConfig = Annotated[
     Annotated[BasicAuth, Tag("basic")]
     | Annotated[BearerAuth, Tag("bearer")]
@@ -333,6 +354,7 @@ AuthConfig = Annotated[
     | Annotated[FormSjclAuth, Tag("form_sjcl")]
     | Annotated[HnapAuth, Tag("hnap")]
     | Annotated[JsonSjclAuth, Tag("json_sjcl")]
+    | Annotated[JsonrpcAuth, Tag("jsonrpc")]
     | Annotated[NoneAuth, Tag("none")]
     | Annotated[UrlTokenAuth, Tag("url_token")],
     Discriminator("strategy"),
@@ -354,6 +376,7 @@ _AUTH_MODELS: list[type[AuthStrategyBase]] = [
     FormSjclAuth,
     HnapAuth,
     JsonSjclAuth,
+    JsonrpcAuth,
     NoneAuth,
     UrlTokenAuth,
 ]
@@ -414,3 +437,4 @@ _transport_sets = get_transport_strategy_sets()
 HTTP_AUTH_STRATEGIES: frozenset[str] = _transport_sets["http"]
 HNAP_AUTH_STRATEGIES: frozenset[str] = _transport_sets["hnap"]
 CBN_AUTH_STRATEGIES: frozenset[str] = _transport_sets["cbn"]
+JSONRPC_AUTH_STRATEGIES: frozenset[str] = _transport_sets["jsonrpc"]

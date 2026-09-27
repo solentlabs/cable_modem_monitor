@@ -71,8 +71,8 @@ Each extraction format has its own specification:
 ## Two Layers: Transport and Format
 
 **Transport** (modem.yaml) controls *how data is fetched* — the resource
-loader. It identifies the transport protocol (`http`, `hnap`, or
-`cbn`).
+loader. It identifies the transport protocol (`http`, `hnap`, `cbn`,
+or `jsonrpc`).
 
 **Format** (parser.yaml, per-section) controls *how data is extracted* —
 the extraction strategy. Each section (`downstream`, `upstream`,
@@ -85,15 +85,16 @@ parser.yaml format   → decode step + extraction strategy (how to extract, per-
 
 For the `http` transport, format is independent — any format can appear
 with any auth strategy. A modem can mix formats across sections (e.g.,
-`table` for downstream, `javascript` for system_info). For `hnap` and
-`cbn`, the transport constrains the format (`hnap` and `xml`
-respectively).
+`table` for downstream, `javascript` for system_info). For `hnap`,
+`cbn`, and `jsonrpc`, the transport constrains the format (`hnap`,
+`xml`, and `json` respectively).
 
 | Transport | Valid Formats | Why |
 |-----------|--------------|-----|
 | `hnap` | `hnap` | Protocol-defined: SOAP JSON with delimiters |
 | `http` | `table`, `table_transposed`, `html_fields`, `javascript`, `javascript_json`, `json`, `json_transposed` | Format determines decode step; any format supports optional `encoding` property (e.g., `base64` — decoded before format-specific parsing). |
 | `cbn` | `xml` | XML POST API: parameterized POST with XML responses |
+| `jsonrpc` | `json` | JSON-RPC 2.0: `resource` is the method name; the parser reads the call's `result` |
 
 See [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#validation-rules) for the full transport constraint
 table including auth strategies.
@@ -220,6 +221,19 @@ parsed response with action responses as top-level keys.
 action responses. Individual action responses are accessed by key name
 from within this dict.
 
+### JSON-RPC
+
+Keys are method names; values are each call's `result` with the
+envelope stripped (RESOURCE_LOADING_SPEC.md § JSON-RPC Transport).
+Sections use `format: json` and name the method as `resource`:
+
+```yaml
+downstream:
+  format: json
+  resource: "CM.getDownstream"
+  array_path: "dss"
+```
+
 The resource dict contains only data. Auth infrastructure (sessions,
 builders, tokens) flows through the orchestrator, not through the
 resource dict.
@@ -298,6 +312,10 @@ to batch all referenced action names into a single
 by stripping the `Response` suffix. The parser.py `resources` attribute
 does not apply to HNAP — the batched request has no per-page fetch
 list, and no HNAP modem has needed a hook-only action.
+
+**JSON-RPC:** `resource` values are method names, collected and
+deduplicated like paths; parser.py `resources` keys are method names
+too. `requests:` does not apply: every call is the same POST.
 
 **Validation:** Nothing checks the fetch list at startup. A path that
 fails at poll time raises `ResourceLoadError` and ends the cycle

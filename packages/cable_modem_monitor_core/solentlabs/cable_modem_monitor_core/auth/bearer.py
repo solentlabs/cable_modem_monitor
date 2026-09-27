@@ -10,7 +10,7 @@ import requests
 
 from ..models.modem_config.auth import BearerAuth
 from .base import AuthContext, AuthResult, BaseAuthManager
-from .response import matches_criteria, place_token_header, safe_preview
+from .response import extract_token, matches_criteria, place_token_header, safe_preview, walk_path
 
 _logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class BearerAuthManager(BaseAuthManager):
             return header_token
         if body is _NOT_JSON:
             return AuthResult(success=False, error="Login response is not valid JSON", response=response)
-        token = _extract_token(body, config.token_path)
+        token = extract_token(body, config.token_path)
         if token is None:
             return AuthResult(
                 success=False,
@@ -177,32 +177,12 @@ def _parse_json(response: requests.Response) -> Any:
         return _NOT_JSON
 
 
-def _walk_path(body: Any, path: str) -> Any:
-    """Walk a dot-separated path through a JSON dict; return the value at the leaf or None."""
-    current: Any = body
-    for key in path.split("."):
-        if not isinstance(current, dict):
-            return None
-        current = current.get(key)
-        if current is None:
-            return None
-    return current
-
-
-def _extract_token(body: Any, token_path: str) -> str | None:
-    """Walk a dot-separated path through a JSON dict; return the string value or None."""
-    current = _walk_path(body, token_path)
-    if not isinstance(current, str):
-        return None
-    return current
-
-
 def _extract_user_id(body: Any, user_id_path: str) -> str:
     """Walk a dot-separated path to a user identifier; numbers are stored as their string form."""
     # Observed firmwares return the id as a JSON number (F3896LG: userId 3),
     # so unlike the token this accepts int as well as str. bool is an int
     # subclass and is never an identifier; reject it explicitly.
-    current = _walk_path(body, user_id_path)
+    current = walk_path(body, user_id_path)
     if isinstance(current, str):
         return current
     if isinstance(current, int) and not isinstance(current, bool):

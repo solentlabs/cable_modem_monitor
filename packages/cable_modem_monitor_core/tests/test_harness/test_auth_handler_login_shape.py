@@ -61,6 +61,15 @@ JSON_SJCL = {
     "aad": "AAD",
     "token_header": "X-Session-Token",
 }
+JSONRPC = {
+    "strategy": "jsonrpc",
+    "endpoint": "/cgi-bin/router.php",
+    "login_method": "MGMT.login",
+    "username_field": "u",
+    "password_field": "p",
+    "token_path": "token",
+    "token_param": "token",
+}
 NONE = {"strategy": "none"}
 URL_TOKEN = {"strategy": "url_token", "login_page": "/status.html", "token_prefix": "ct_"}
 
@@ -81,6 +90,7 @@ URL_TOKEN = {"strategy": "url_token", "login_page": "/status.html", "token_prefi
 # │ form_sjcl    │ /                       │ /sjcl_login           │ ""           │ default login_page, endpoint  │
 # │ hnap         │ ""                      │ ""                    │ ""           │ declares none of the three    │
 # │ json_sjcl    │ /login.php              │ /json_login           │ ""           │ login_page, login_endpoint    │
+# │ jsonrpc      │ ""                      │ ""                    │ ""           │ handler routes every call     │
 # │ none         │ ""                      │ ""                    │ ""           │ declares none of the three    │
 # │ url_token    │ /status.html            │ ""                    │ ct_          │ login_page, token_prefix      │
 # └──────────────┴─────────────────────────┴───────────────────────┴──────────────┴───────────────────────────────┘
@@ -98,6 +108,7 @@ LOGIN_SHAPE_CASES: list[tuple[dict[str, Any] | None, str, str, str, str]] = [
     (FORM_SJCL,    "/",                       "/sjcl_login",           "",           "form_sjcl"),
     (HNAP,         "",                        "",                      "",           "hnap"),
     (JSON_SJCL,    "/login.php",              "/json_login",           "",           "json_sjcl"),
+    (JSONRPC,      "",                        "",                      "",           "jsonrpc"),
     (NONE,         "",                        "",                      "",           "none"),
     (URL_TOKEN,    "/status.html",            "",                      "ct_",        "url_token"),
 ]

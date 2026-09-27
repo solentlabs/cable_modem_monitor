@@ -118,7 +118,13 @@ def load_catalog_modems() -> list[dict]:
             strategy = auth.get("strategy", "none") if auth else "none"
 
             transport = str(data.get("transport", "http")).lower()
-            transport_map = {"http": "HTML", "hnap": "HNAP", "cbn": "CBN", "rest_api": "REST_API"}
+            transport_map = {
+                "http": "HTML",
+                "hnap": "HNAP",
+                "cbn": "CBN",
+                "jsonrpc": "JSON-RPC",
+                "rest_api": "REST_API",
+            }
             protocol = transport_map.get(transport, "HTML")
 
             release_date = str(hardware.get("release_date", ""))

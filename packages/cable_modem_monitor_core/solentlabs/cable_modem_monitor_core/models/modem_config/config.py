@@ -40,7 +40,7 @@ class ModemConfig(BaseModel):
     model: str
     model_aliases: list[str] = Field(default_factory=list)
     brands: list[str] = Field(default_factory=list)
-    transport: Literal["http", "hnap", "cbn"]
+    transport: Literal["http", "hnap", "cbn", "jsonrpc"]
     default_host: str
 
     # Timeout
@@ -137,7 +137,7 @@ def _check_action_types(config: ModemConfig, errors: list[str]) -> None:
     """Validate action types match the declared transport."""
     if config.actions is None:
         return
-    expected_type = config.transport  # "http", "hnap", or "cbn"
+    expected_type = config.transport  # each transport has the action type of its own name
     for action_name in ("restart", "logout"):
         action = getattr(config.actions, action_name, None)
         if action is not None and action.type != expected_type:

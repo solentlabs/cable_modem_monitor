@@ -1,7 +1,7 @@
 """HAR Analysis Tool -- MCP tool.
 
 Orchestrates Phases 1-6 of the ONBOARDING_SPEC decision tree:
-1. Transport detection (HNAP vs HTTP)
+1. Transport detection (HNAP, JSON-RPC, or HTTP)
 2. Auth strategy detection and field extraction
 3. Session detection (cookies, headers, tokens)
 4. Action detection (logout, restart)
@@ -20,6 +20,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from solentlabs.cable_modem_monitor_core.har import load_har_json
 
@@ -32,6 +33,7 @@ from .analysis.session import SessionDetail
 from .analysis.transport import TransportResult
 from .analysis.types import CoreGap, FleetPatterns
 from .analysis.unread_resources import UnreadResource, detect_unread_resources
+from .validation.har_utils import jsonrpc_method
 
 
 @dataclass
@@ -102,6 +104,11 @@ def analyze_har(
     # Phase 1: Transport
     transport_result = TransportResult.detect(entries)
 
+    # generate_config has no jsonrpc path; the HTTP tree run over these
+    # calls misreads the login as form_pbkdf2 (#215). Stop at Step 5.
+    if transport_result.transport == "jsonrpc":
+        return _jsonrpc_stop(entries, transport_result)
+
     # Phase 2: Auth
     auth_result = detect_auth(entries, transport_result.transport, warnings, hard_stops, core_gaps)
 
@@ -150,6 +157,34 @@ def analyze_har(
         hard_stops=hard_stops,
         core_gaps=core_gaps,
         unread_resources=unread,
+    )
+
+
+def _jsonrpc_stop(entries: list[dict[str, Any]], transport_result: TransportResult) -> AnalysisResult:
+    """Report a JSON-RPC capture as a core gap: its config is authored by hand."""
+    endpoints: set[str] = set()
+    methods: set[str] = set()
+    for entry in entries:
+        method = jsonrpc_method(entry["request"])
+        if method is not None:
+            methods.add(method)
+            endpoints.add(urlparse(entry["request"].get("url", "")).path)
+    gap = CoreGap(
+        phase="transport",
+        category="jsonrpc_transport",
+        summary=(
+            "JSON-RPC 2.0 transport: generate_config has no path for it. Author modem.yaml and "
+            "parser.yaml by hand (MODEM_YAML_SPEC § jsonrpc, AUTH_JSONRPC_SPEC)."
+        ),
+        evidence={"endpoint": ", ".join(sorted(endpoints)), "methods": sorted(methods)},
+    )
+    return AnalysisResult(
+        transport=transport_result,
+        # The transport has exactly one strategy; its fields come from the capture by hand.
+        auth=AuthDetail(strategy="jsonrpc"),
+        session=SessionDetail(),
+        actions=ActionsDetail(),
+        core_gaps=[gap],
     )
 
 

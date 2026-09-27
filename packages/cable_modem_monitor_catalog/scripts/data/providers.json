@@ -28,13 +28,14 @@
     "kood":        {"abbrev": "KOOD", "name": "Koodo",                  "color": "77aa88"},
     "brighthouse": {"abbrev": "BRIG", "name": "BrightHouse",            "color": "6688aa"},
     "service electric": {"abbrev": "SERV", "name": "Service Electric Cablevision", "color": "778899"},
-    "teksavvy":    {"abbrev": "TEKS", "name": "Teksavvy",               "color": "669977"}
+    "teksavvy":    {"abbrev": "TEKS", "name": "Teksavvy",               "color": "669977"},
+    "play":        {"abbrev": "PLAY", "name": "Play",                   "color": "8866aa"}
   },
   "display_order": [
     "comcast", "xfinity", "cox", "spectrum", "twc", "rogers", "shaw",
     "videotron", "volia", "pyür", "vodafone", "magenta", "liwest", "unitymedia",
     "virgin", "ziggo", "telia", "mediacom", "suddenlink", "rcn", "cableone",
-    "kood", "brighthouse", "service electric", "teksavvy"
+    "kood", "brighthouse", "service electric", "teksavvy", "play"
   ],
   "info": {
     "comcast":     {"name": "Comcast Xfinity",        "region": "US (nationwide)",    "approval_url": "https://www.xfinity.com/support/articles/list-of-approved-cable-modems", "notes": "Online activation required"},
@@ -60,7 +61,8 @@
     "kood":        {"name": "Koodo",                   "region": "Canada",             "approval_url": "", "notes": "Telus subsidiary"},
     "brighthouse": {"name": "BrightHouse Networks",    "region": "US (Southeast)",     "approval_url": "", "notes": "Merged into Spectrum (2016). Source: https://en.wikipedia.org/wiki/Bright_House_Networks"},
     "service electric": {"name": "Service Electric Cablevision", "region": "US (Pennsylvania)", "approval_url": "https://www.sectv.com/", "notes": "Family-owned regional ISP since 1948. Source: https://en.wikipedia.org/wiki/Service_Electric"},
-    "teksavvy":    {"name": "Teksavvy",                "region": "Canada",             "approval_url": "https://teksavvy.com/services/internet/", "notes": "Independent Canadian ISP/reseller. Source: https://en.wikipedia.org/wiki/TekSavvy"}
+    "teksavvy":    {"name": "Teksavvy",                "region": "Canada",             "approval_url": "https://teksavvy.com/services/internet/", "notes": "Independent Canadian ISP/reseller. Source: https://en.wikipedia.org/wiki/TekSavvy"},
+    "play":        {"name": "Play",                    "region": "Poland",             "approval_url": "https://www.play.pl/pomoc/wsparcie-techniczne/routery-i-modemy/play-box-net-router-hfc", "notes": "Issues the SDMC NE6037 as PlayBox Router HFC WiFi. Source: https://www.play.pl/pomoc/wsparcie-techniczne/routery-i-modemy/play-box-net-router-hfc"}
   },
   "duplicates": ["xfinity", "time warner"]
 }

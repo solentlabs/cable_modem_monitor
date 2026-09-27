@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **SDMC NE6037** (Play "PlayBox Router HFC WiFi", 7.1.12.2.4445), with
+  restart. Awaiting confirmation on hardware. (#215)
+- **`jsonrpc` transport for firmware that speaks JSON-RPC 2.0.** Every
+  call posts to one endpoint and names its operation in `method`; the
+  login is one such call, and its token rides in the URL query. A
+  `parser.yaml` section names the method as its `resource` and reads
+  the call's `result` with the `json` format. The entry declares the
+  firmware's lockout and session-expired error codes. `analyze_har`
+  recognises a JSON-RPC capture and stops with a `jsonrpc_transport`
+  gap: the config generator has no JSON-RPC path, so the entry is
+  written by hand. (#215)
 - **`make commit-lint` checks commit messages before a push.** It runs
   commitlint over the branch's commits with the same config and range
   as CI, and `make validate-ci` now includes it. Requires Node.js.

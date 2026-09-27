@@ -1,7 +1,7 @@
 """Action execution — single dispatch for logout and restart commands.
 
 Dispatches modem-side actions to transport-scoped executors based on
-the action type (HTTP, HNAP, or CBN).  Both the collector (logout) and
+the action type (HTTP, HNAP, CBN, or JSON-RPC).  Both the collector (logout) and
 orchestrator (restart) use ``execute_action()`` as the single entry
 point.
 
@@ -17,14 +17,16 @@ from typing import TYPE_CHECKING, Any
 from ...connectivity import create_session
 from ...protocol.cbn import cbn_params
 from ...protocol.hnap import hmac_algorithm
+from ...protocol.jsonrpc import call_url, jsonrpc_params
 from .base import ActionResult
 from .cbn_action import execute_cbn_action
 from .hnap_action import execute_hnap_action
 from .http_action import execute_http_action
+from .jsonrpc_action import execute_jsonrpc_action
 
 if TYPE_CHECKING:
     from ...auth.base import AuthContext
-    from ...models.modem_config.actions import CbnAction, HnapAction, HttpAction
+    from ...models.modem_config.actions import CbnAction, HnapAction, HttpAction, JsonrpcAction
     from ...models.modem_config.config import ModemConfig
     from ..collector import ModemDataCollector
 
@@ -34,7 +36,7 @@ _logger = logging.getLogger(__name__)
 def execute_action(
     collector: ModemDataCollector,
     modem_config: ModemConfig,
-    action: HttpAction | HnapAction | CbnAction,
+    action: HttpAction | HnapAction | CbnAction | JsonrpcAction,
     *,
     log_level: int = logging.INFO,
 ) -> ActionResult:
@@ -54,7 +56,7 @@ def execute_action(
     Returns:
         ActionResult with success status and details.
     """
-    from ...models.modem_config.actions import CbnAction, HnapAction, HttpAction
+    from ...models.modem_config.actions import CbnAction, HnapAction, HttpAction, JsonrpcAction
 
     model = modem_config.model
 
@@ -133,6 +135,19 @@ def execute_action(
             model=model,
         )
 
+    if isinstance(action, JsonrpcAction):
+        # The token rides in the query exactly as on a data call; the same
+        # hook supplies it, so an action cannot disagree with the loader.
+        token_prefix, token = collector._auth_manager.loader_url_token(collector._session, collector._auth_context)
+        return execute_jsonrpc_action(
+            collector._session,
+            action,
+            url=call_url(collector._base_url, jsonrpc_params(modem_config.auth).endpoint, token_prefix, token),
+            timeout=modem_config.timeout,
+            log_level=log_level,
+            model=model,
+        )
+
     _logger.warning("Unknown action type [%s]: %s", model, type(action).__name__)
     return ActionResult(
         success=False,
@@ -146,4 +161,5 @@ __all__ = [
     "execute_cbn_action",
     "execute_hnap_action",
     "execute_http_action",
+    "execute_jsonrpc_action",
 ]

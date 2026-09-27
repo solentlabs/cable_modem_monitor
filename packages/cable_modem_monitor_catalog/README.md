@@ -21,9 +21,9 @@ Auto-generated index of the v3.14 modem catalog.
 
 - `modem.yaml` — Single source of truth (manufacturer, model, hardware, ISPs, status)
 
-**43 modems, 48 configurations** (28 ✅ confirmed, 20 ⏳ awaiting)
+**44 modems, 49 configurations** (28 ✅ confirmed, 21 ⏳ awaiting)
 
-**Auth strategies:** form (15), none (8), hnap (7), basic (5), url_token (3), bearer (3), form_cbn (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1), json_sjcl (1)
+**Auth strategies:** form (15), none (8), hnap (7), basic (5), url_token (3), bearer (3), form_cbn (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1), json_sjcl (1), jsonrpc (1)
 
 ## Directory Structure
 
@@ -84,6 +84,7 @@ packages/cable_modem_monitor_catalog/.../modems/
 | Netgear | [CM600](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/netgear/cm600/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3384](#bcm3384) | ![basic](https://img.shields.io/badge/-basic-C07820?style=flat-square "Basic Authentication") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable")](#twc) | CM600 | ⏳ Awaiting |
 | Sagemcom | [F3896LG-VMB](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/sagemcom/f3896lg-vmb/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![none](https://img.shields.io/badge/-none-808080?style=flat-square "No Authentication") | [![VM](https://img.shields.io/badge/-VM-aa4466?style=flat-square "Virgin Media")](#virgin) | F3896LG-VMB<br>Hub 5<br>SuperHub 5 | ✅ Confirmed |
 | Sagemcom | [F3896LG-ZG](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/sagemcom/f3896lg-zg/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![bearer](https://img.shields.io/badge/-bearer-1A7FAA?style=flat-square "JSON Login") | [![ZIG](https://img.shields.io/badge/-ZIG-cc7744?style=flat-square "Ziggo")](#ziggo) | F3896LG-ZG | ✅ Confirmed |
+| Sdmc | [NE6037](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/sdmc/ne6037/modem.yaml) | 3.1 | ![JSON-RPC](https://img.shields.io/badge/-JSON--RPC-C0507A?style=flat-square "JSON-RPC 2.0") |  | ![jsonrpc](https://img.shields.io/badge/-jsonrpc-C0507A?style=flat-square "JSON-RPC") | [![PLAY](https://img.shields.io/badge/-PLAY-8866aa?style=flat-square "Play")](#play) | NE6037 | ⏳ Awaiting |
 | Sercomm | [DM1000](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/sercomm/dm1000/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | Broadcom | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![KOOD](https://img.shields.io/badge/-KOOD-77aa88?style=flat-square "Koodo")](#kood) | DM1000 | ✅ Confirmed |
 | Technicolor | [CGA2121](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/cga2121/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3384](#bcm3384) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![TEL](https://img.shields.io/badge/-TEL-9966aa?style=flat-square "Telia")](#telia) | CGA2121 | ⏳ Awaiting |
 | Technicolor | [CGA4236](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/cga4236/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![pbkdf2](https://img.shields.io/badge/-pbkdf2-4A9A5B?style=flat-square "Form Login (PBKDF2)") | ![UNKN](https://img.shields.io/badge/-UNKN-gray?style=flat-square "Unknown") | CGA4236<br>CGA4236TCH1 | ⏳ Awaiting |
@@ -147,7 +148,8 @@ DOCSIS 3.1
 ├── 2023  ARRIS       SB8200     ░░░░░░░░░░░░░░░░████   3yr  Current
 ├── 2024  Netgear     CM2500     ░░░░░░░░░░░░░░░░░███   2yr  Current
 ├── 2024  Netgear     CM3000     ░░░░░░░░░░░░░░░░░███   2yr  Current
-└── 2024  Arris       S34        ░░░░░░░░░░░░░░░░░███   2yr  Current
+├── 2024  Arris       S34        ░░░░░░░░░░░░░░░░░███   2yr  Current
+└── 2025  SDMC        NE6037     ░░░░░░░░░░░░░░░░░░██   1yr  Current
 
 DOCSIS 4.0
 └── 2025  Technicolor XB10       ░░░░░░░░░░░░░░░░░░██   1yr  Current
@@ -166,7 +168,7 @@ _Scale: 2010-2026 (16 years)_
   - Simple: ![basic](https://img.shields.io/badge/-basic-C07820?style=flat-square) Basic Authentication
   - Form-based: ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square) Form Login | ![nonce](https://img.shields.io/badge/-nonce-3A6A9E?style=flat-square) Form Login (Nonce) | ![pbkdf2](https://img.shields.io/badge/-pbkdf2-4A9A5B?style=flat-square) Form Login (PBKDF2) | ![sjcl](https://img.shields.io/badge/-sjcl-7B4FB8?style=flat-square) Form Login (SJCL) | ![cbn](https://img.shields.io/badge/-cbn-8B6914?style=flat-square) Form Login CBN
   - Token-based: ![token](https://img.shields.io/badge/-token-0E9A8B?style=flat-square) URL Token | ![bearer](https://img.shields.io/badge/-bearer-1A7FAA?style=flat-square) JSON Login | ![json-sjcl](https://img.shields.io/badge/-json--sjcl-9B6FD8?style=flat-square) JSON Login (SJCL)
-  - Protocol: ![hnap](https://img.shields.io/badge/-hnap-5B8FBF?style=flat-square) HNAP
+  - Protocol: ![hnap](https://img.shields.io/badge/-hnap-5B8FBF?style=flat-square) HNAP | ![jsonrpc](https://img.shields.io/badge/-jsonrpc-C0507A?style=flat-square) JSON-RPC
 
 ## Chipset Reference
 
@@ -209,7 +211,8 @@ _Scale: 2010-2026 (16 years)_
 | <span id="brighthouse"></span>BRIG | BrightHouse Networks | US (Southeast) | — | Merged into Spectrum (2016). Source: <https://en.wikipedia.org/wiki/Bright_House_Networks> |
 | <span id="service-electric"></span>SERV | Service Electric Cablevision | US (Pennsylvania) | [Official list](https://www.sectv.com/) | Family-owned regional ISP since 1948. Source: <https://en.wikipedia.org/wiki/Service_Electric> |
 | <span id="teksavvy"></span>TEKS | Teksavvy | Canada | [Official list](https://teksavvy.com/services/internet/) | Independent Canadian ISP/reseller. Source: <https://en.wikipedia.org/wiki/TekSavvy> |
+| <span id="play"></span>PLAY | Play | Poland | [Official list](https://www.play.pl/pomoc/wsparcie-techniczne/routery-i-modemy/play-box-net-router-hfc) | Issues the SDMC NE6037 as PlayBox Router HFC WiFi. Source: <https://www.play.pl/pomoc/wsparcie-techniczne/routery-i-modemy/play-box-net-router-hfc> |
 
 ---
 
-Generated by `scripts/generate_catalog_index.py` from 49 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).
+Generated by `scripts/generate_catalog_index.py` from 50 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).

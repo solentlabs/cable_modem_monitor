@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**48 configurations supported** — 28 confirmed on real hardware, 20 awaiting verification.
+**49 configurations supported** — 28 confirmed on real hardware, 21 awaiting verification.
 
 ---
 
@@ -44,6 +44,7 @@ and share a diagnostics snapshot.
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | synthetic |
 | CM2500 | HTML | Comcast, Cox, Spectrum | reconstructed |
 | CM600 | HTML | Comcast, Cox, Spectrum, TWC | synthetic |
+| NE6037 | JSON-RPC | Play | — |
 | CGA2121 | HTML | Telia | generated |
 | CGA4236 | HTML | Unknown | — |
 | CGA6444VF | HTML | Vodafone | — |

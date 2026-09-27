@@ -15,6 +15,8 @@ encoding a central allowlist that drifts as new strategies arrive.
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit, urlunsplit
+
 import requests
 
 
@@ -22,6 +24,7 @@ def describe_request(
     req: requests.PreparedRequest | None,
     *,
     headers: frozenset[str],
+    mask_query: bool = False,
 ) -> str:
     """Format a one-line summary of an outgoing request for failure logs.
 
@@ -29,14 +32,23 @@ def describe_request(
     debug cache-buster / token query params) and headers actually
     sent. For each header whose lowercase name appears in
     ``headers``, the value is replaced with ``<set, len=N>``;
-    the name itself is shown verbatim.
+    the name itself is shown verbatim. ``mask_query`` is the caller's
+    declaration that the URL query carries a session token; the whole
+    query is then replaced the same way.
     """
     if req is None:
         return "(no PreparedRequest available)"
+    url = req.url or ""
+    if mask_query:
+        # The caller knows it put a secret in the query; masking all of it
+        # needs no guess about where the token sits, so it cannot fail open.
+        parts = urlsplit(url)
+        if parts.query:
+            url = urlunsplit(parts._replace(query=f"<set, len={len(parts.query)}>"))
     safe_headers: list[str] = []
     for name, value in req.headers.items():
         if name.lower() in headers:
             safe_headers.append(f"{name}=<set, len={len(value)}>")
         else:
             safe_headers.append(f"{name}={value}")
-    return f"{req.method} {req.url} [{', '.join(safe_headers)}]"
+    return f"{req.method} {url} [{', '.join(safe_headers)}]"
