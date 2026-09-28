@@ -70,6 +70,16 @@ def jsonrpc_body(request: dict[str, Any]) -> dict[str, Any] | None:
     return body if isinstance(body.get("method"), str) else None
 
 
+def jsonrpc_response(entry: dict[str, Any]) -> dict[str, Any]:
+    """The JSON-RPC response object of an entry, or an empty dict when the body is not one."""
+    text = (entry.get("response", {}).get("content") or {}).get("text") or ""
+    try:
+        body = json.loads(text)
+    except ValueError:
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
 def jsonrpc_method(request: dict[str, Any]) -> str | None:
     """The ``method`` of a JSON-RPC 2.0 request body, or None when the body is not one."""
     body = jsonrpc_body(request)

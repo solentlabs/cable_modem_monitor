@@ -1,6 +1,6 @@
 """Phase 5-6 dispatcher - format detection and section assembly.
 
-Routes to transport-specific modules (http / hnap) for format
+Routes to transport-specific modules (http / hnap / jsonrpc) for format
 classification, then delegates to mapping and mapping.system_info
 for Phase 6 extraction. Assembles the ``sections`` output dict.
 
@@ -22,6 +22,7 @@ from .http import (
     classify_page_format,
     identify_data_pages,
 )
+from .jsonrpc import jsonrpc_pages
 from .table_analysis import (
     detect_row_start,
     detect_table_direction,
@@ -52,7 +53,7 @@ def detect_sections(
 
     Args:
         entries: HAR ``log.entries`` list.
-        transport: Detected transport ("http" or "hnap").
+        transport: Detected transport ("http", "hnap" or "jsonrpc").
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
         fleet: Optional fleet patterns for augmented detection.
@@ -63,6 +64,9 @@ def detect_sections(
     """
     if transport == "hnap":
         return detect_hnap_sections(entries, warnings, hard_stops, fleet=fleet)
+
+    if transport == "jsonrpc":
+        return _sections_from_pages(jsonrpc_pages(entries), warnings, fleet=fleet)
 
     return _detect_http_sections(entries, warnings, hard_stops, fleet=fleet)
 
@@ -90,6 +94,16 @@ def _detect_http_sections(
         page = analyze_page(entry)
         page_analyses.append(page)
 
+    return _sections_from_pages(page_analyses, warnings, fleet=fleet)
+
+
+def _sections_from_pages(
+    page_analyses: list[PageAnalysis],
+    warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
+) -> dict[str, Any]:
+    """Assemble channel sections and system_info from analyzed pages."""
     # Phase 5-6: Assemble channel sections from table/JS/JSON pages
     sections: dict[str, Any] = {}
     _assemble_channel_sections(page_analyses, sections, warnings, fleet=fleet)

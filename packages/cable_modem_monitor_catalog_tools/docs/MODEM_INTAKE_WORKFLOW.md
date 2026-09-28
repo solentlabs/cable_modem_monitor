@@ -338,8 +338,8 @@ doesn't support yet. **Stop config generation.** Report:
      in `action_patterns.json`
    - `jsonrpc_transport`: not a missing Core pattern. Core supports the
      transport; the config generator does not emit it. Write modem.yaml
-     and parser.yaml by hand from the gap's evidence (endpoint, methods)
-     and the capture, then resume at Step 8
+     and parser.yaml by hand from the analysis's auth, session, sections
+     and ambiguities, and the capture, then resume at Step 8
 
 Format the report so it can be pasted into a GitHub issue for a
 development effort. Do NOT try to resolve gaps by patching the

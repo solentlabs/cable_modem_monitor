@@ -13,12 +13,11 @@ Per docs/ONBOARDING_SPEC.md Phase 1 and Phase 2 (JSON-RPC transport).
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 from urllib.parse import parse_qsl, urlparse
 
-from ...validation.har_utils import jsonrpc_body, path_from_url
+from ...validation.har_utils import jsonrpc_body, jsonrpc_response, path_from_url
 from ..ambiguity import Ambiguity, Candidate, Evidence
 from .http import classify_form_fields
 from .patterns import is_password_field_name
@@ -59,7 +58,7 @@ def detect_jsonrpc_auth(
         return AuthDetail(strategy="jsonrpc")
 
     # A retried login yields the attempt that answered result, as for form logins.
-    answered = [login for login in logins if isinstance(_response_envelope(entries[login[0]]).get("result"), dict)]
+    answered = [login for login in logins if isinstance(jsonrpc_response(entries[login[0]]).get("result"), dict)]
     login_index, credentials, login_method = (answered or logins)[-1]
     request = entries[login_index]["request"]
     username_field, password_field, _ = classify_form_fields({str(k): str(v) for k, v in credentials.items()})
@@ -83,19 +82,9 @@ def detect_jsonrpc_auth(
     return AuthDetail(strategy="jsonrpc", fields=fields, confidence="high")
 
 
-def _response_envelope(entry: dict[str, Any]) -> dict[str, Any]:
-    """The JSON-RPC response object, or an empty dict when the body is not one."""
-    text = (entry.get("response", {}).get("content") or {}).get("text") or ""
-    try:
-        body = json.loads(text)
-    except ValueError:
-        return {}
-    return body if isinstance(body, dict) else {}
-
-
 def _token_pairing(entries: list[dict[str, Any]], login_index: int) -> tuple[str, str] | None:
     """The (result key, query name) pair where the login's token reappears on a later call."""
-    result = _response_envelope(entries[login_index]).get("result") or {}
+    result = jsonrpc_response(entries[login_index]).get("result") or {}
     tokens = {value: key for key, value in result.items() if isinstance(value, str) and value}
     for entry in entries[login_index + 1 :]:
         for name, value in parse_qsl(urlparse(entry["request"].get("url", "")).query):

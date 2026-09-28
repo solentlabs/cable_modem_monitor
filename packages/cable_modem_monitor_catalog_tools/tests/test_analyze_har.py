@@ -354,10 +354,10 @@ class TestNoDataSections:
 
 
 class TestJsonrpcTransport:
-    """A JSON-RPC capture is analyzed through auth, and its error codes become ambiguities.
+    """A JSON-RPC capture is analyzed call by call; its judgments become ambiguities.
 
-    generate_config has no jsonrpc path yet, so the analysis still ends at
-    a core gap and runs no HTTP-tree phase over the calls.
+    generate_config has no jsonrpc path yet, so the analysis still reports
+    a core gap, and no HTTP-tree phase runs over the calls.
     """
 
     @staticmethod
@@ -382,16 +382,41 @@ class TestJsonrpcTransport:
         result, data = self._analyze(tmp_path)
         assert result.auth.strategy == "jsonrpc"
         assert result.auth.fields == data["_expected_auth_fields"]
-        assert result.actions.restart is None
-        assert result.sections is None
 
-    def test_error_codes_are_blocking_ambiguities(self, tmp_path: Path) -> None:
-        """Both codes are serialized as unresolved blocking ambiguities."""
+    def test_sections_keyed_by_method(self, tmp_path: Path) -> None:
+        """Each call's result is read as a JSON page whose resource is the method; the login is not data."""
+        result, data = self._analyze(tmp_path)
+        assert result.sections is not None
+        expected = data["_expected_sections"]
+        assert result.sections["downstream"]["resource"] == expected["downstream"]
+        assert result.sections["downstream"]["array_path"] == "dss"
+        assert [s["resource"] for s in result.sections["system_info"]["sources"]] == expected["system_info"]
+        assert "upstream" not in result.sections
+
+    def test_session_headers_from_calls(self, tmp_path: Path) -> None:
+        """Session headers come from the POSTed calls; the query token belongs to auth, not session."""
+        result, data = self._analyze(tmp_path)
+        assert result.session.headers == data["_expected_session_headers"]
+        assert result.session.token_prefix == ""
+        assert result.session.cookie_name == ""
+
+    def test_restart_is_a_candidate_list(self, tmp_path: Path) -> None:
+        """Calls that are neither the login nor a data source are restart candidates, citing the sending page."""
+        result, data = self._analyze(tmp_path)
+        assert result.actions.restart is None
+        restart = next(a for a in result.ambiguities if a.field == "actions.restart.method")
+        assert restart.blocking is False
+        assert restart.resolution is None
+        assert [[c.value, c.evidence[0].source] for c in restart.candidates] == data["_expected_restart_candidates"]
+
+    def test_ambiguities_serialized_unresolved(self, tmp_path: Path) -> None:
+        """The error codes block; restart does not."""
         result, _ = self._analyze(tmp_path)
         serialized = result.to_dict()["ambiguities"]
         assert [(a["field"], a["blocking"], a["resolution"]) for a in serialized] == [
             ("auth.lockout_code", True, None),
             ("auth.session_expired_code", True, None),
+            ("actions.restart.method", False, None),
         ]
 
     def test_confirmed_fleet_value_prefills_resolution(self, tmp_path: Path) -> None:

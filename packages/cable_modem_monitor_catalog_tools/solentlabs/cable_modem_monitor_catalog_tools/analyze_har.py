@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 from solentlabs.cable_modem_monitor_core.har import load_har_json
 
 from .analysis.actions import ActionsDetail, detect_actions
+from .analysis.actions.jsonrpc import restart_ambiguity
 from .analysis.ambiguity import Ambiguity, corroborate
 from .analysis.auth import AuthDetail, detect_auth
 from .analysis.format import detect_sections
@@ -108,8 +109,8 @@ def analyze_har(
     # Phase 1: Transport
     transport_result = TransportResult.detect(entries)
 
-    # generate_config has no jsonrpc path yet; the HTTP tree run over these
-    # calls misreads the login as form_pbkdf2 (#215). Stop after auth.
+    # The HTTP tree run over these calls misreads the login as form_pbkdf2
+    # (#215), so JSON-RPC has its own phase sequence.
     if transport_result.transport == "jsonrpc":
         return _analyze_jsonrpc(entries, transport_result, fleet)
 
@@ -169,10 +170,14 @@ def _analyze_jsonrpc(
     transport_result: TransportResult,
     fleet: FleetPatterns | None,
 ) -> AnalysisResult:
-    """Analyze a JSON-RPC capture through auth, then report the generate_config gap."""
+    """Analyze a JSON-RPC capture call by call, then report the generate_config gap."""
     warnings: list[str] = []
     ambiguities: list[Ambiguity] = []
     auth = detect_auth(entries, "jsonrpc", warnings, [], ambiguities=ambiguities)
+    session = SessionDetail.detect(entries, "jsonrpc", auth.strategy, warnings)
+    sections = detect_sections(entries, "jsonrpc", warnings, [], fleet=fleet)
+    # Restart candidates exclude data sources, so they follow sections.
+    ambiguities.append(restart_ambiguity(entries, sections))
     if fleet is not None:
         corroborate(ambiguities, fleet.confirmed_config_values)
     endpoints: set[str] = set()
@@ -187,7 +192,7 @@ def _analyze_jsonrpc(
         category="jsonrpc_transport",
         summary=(
             "JSON-RPC 2.0 transport: generate_config has no path for it. Author modem.yaml and "
-            "parser.yaml by hand from the auth fields and ambiguities (MODEM_YAML_SPEC § jsonrpc, "
+            "parser.yaml by hand from the auth fields, sections and ambiguities (MODEM_YAML_SPEC § jsonrpc, "
             "AUTH_JSONRPC_SPEC)."
         ),
         evidence={"endpoint": ", ".join(sorted(endpoints)), "methods": sorted(methods)},
@@ -195,8 +200,9 @@ def _analyze_jsonrpc(
     return AnalysisResult(
         transport=transport_result,
         auth=auth,
-        session=SessionDetail(),
+        session=session,
         actions=ActionsDetail(),
+        sections=sections if sections else None,
         warnings=warnings,
         core_gaps=[gap],
         ambiguities=ambiguities,

@@ -341,12 +341,13 @@ JSON-RPC call makes the transport `jsonrpc` only when it is the login,
 meaning its first param is an object with a password-shaped key (the
 Phase 2 credential test). Other JSON-RPC traffic does not count.
 
-**A JSON-RPC capture stops at a core gap after auth.** Analysis runs
-Phase 2 ([JSON-RPC transport](#json-rpc-transport)) and reports its
-fields and ambiguities. `generate_config` has no `jsonrpc` path yet, so
-analysis also reports one `jsonrpc_transport` gap naming the endpoint
-and every method called, and skips Phases 3-6. The HTTP tree run over
-JSON-RPC calls misreads the login as `form_pbkdf2`.
+**A JSON-RPC capture is analyzed call by call.** Phases 2-6 read the
+calls, not pages: the login gives auth, each other call's `result` is a
+JSON page named by its method, and restart is a candidate list. The
+HTTP tree is never run over the calls; it misreads the login as
+`form_pbkdf2`. `generate_config` has no `jsonrpc` path yet, so analysis
+also reports one `jsonrpc_transport` gap naming the endpoint and every
+method called.
 
 **Everything else is `http`.** This includes modems with HTML pages,
 JSON APIs, or any combination. The data format (HTML tables, JSON
@@ -560,6 +561,10 @@ endpoints.
 **HNAP transport:** Session is implicit (`uid` + `PrivateKey` cookies,
 `HNAP_AUTH` header). Do not emit a `session` block.
 
+**JSON-RPC transport:** The data requests are the POSTed calls other
+than the login, and only `session.headers` is detected from them. The
+query token is `auth.token_param`, and the session carries no cookie.
+
 ### Phase 4: Action Detection
 
 Scan HAR for logout and restart flows:
@@ -586,6 +591,7 @@ its `pre_fetch_url` via the form-evidence rule below.
 |----------|--------|
 | POST to reboot/restart endpoint with params | `actions.restart: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
 | HNAP SetConfiguration action with reboot param | `actions.restart: { type: hnap, action_name: "<name>", params: {...} }` |
+| JSON-RPC call that is neither the login nor a data source | A non-blocking `actions.restart.method` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per method, citing the page that sent it (its `Referer`, else the endpoint) and the request body. No method-name rule: call shapes come from confirmed modems only. |
 | No restart visible in HAR | Omit `actions.restart`. This is common — most HAR captures don't include a restart. |
 
 **Restart is rarely in the HAR.** Most contributors capture status pages,
@@ -682,6 +688,7 @@ Format is constrained by transport:
 | Transport | Format detection |
 |-----------|-----------------|
 | `hnap` | Always `hnap`. See HNAP format detection below. |
+| `jsonrpc` | Always `json`. Each answered call other than the login is a JSON page: resource is the method, JSON is its `result` (a non-object `result` wrapped as `_raw`, as Core's loader does). The first answer per method wins. HTTP JSON detection then runs unchanged, so one array is mapped per call. |
 | `http` | Inspect data page responses — see below. JSON responses use `json` (or `json_transposed` for `name`+`indexN` pivot shapes); HTML responses use `table`, `table_transposed`, `javascript`, `javascript_json`, or `html_fields`. |
 
 #### HNAP format detection

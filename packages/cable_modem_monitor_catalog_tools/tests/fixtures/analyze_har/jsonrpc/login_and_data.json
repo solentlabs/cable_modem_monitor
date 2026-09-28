@@ -1,9 +1,11 @@
 {
-  "_description": "JSON-RPC 2.0 firmware: login and data are calls to one endpoint, named by method",
+  "_description": "JSON-RPC 2.0 firmware: login, data and a reboot are calls to one endpoint, named by method",
   "_expected_endpoint": "/cgi-bin/router.php",
   "_expected_methods": [
     "CM.getDownstream",
-    "MGMT.login"
+    "CM.getMisc",
+    "MGMT.login",
+    "MGMT.reboot"
   ],
   "_expected_auth_fields": {
     "endpoint": "/cgi-bin/router.php",
@@ -13,6 +15,21 @@
     "token_path": "token",
     "token_param": "token"
   },
+  "_expected_sections": {
+    "downstream": "CM.getDownstream",
+    "system_info": [
+      "CM.getMisc"
+    ]
+  },
+  "_expected_session_headers": {
+    "X-Requested-With": "XMLHttpRequest"
+  },
+  "_expected_restart_candidates": [
+    [
+      "MGMT.reboot",
+      "/html/reboot.htm"
+    ]
+  ],
   "_har": {
     "log": {
       "entries": [
@@ -23,6 +40,14 @@
               {
                 "name": "Content-Type",
                 "value": "application/json; charset=UTF-8"
+              },
+              {
+                "name": "Referer",
+                "value": "https://192.168.0.1/login.htm"
+              },
+              {
+                "name": "X-Requested-With",
+                "value": "XMLHttpRequest"
               }
             ],
             "method": "POST",
@@ -55,6 +80,14 @@
               {
                 "name": "Content-Type",
                 "value": "application/json; charset=UTF-8"
+              },
+              {
+                "name": "Referer",
+                "value": "https://192.168.0.1/html/docssignal.htm"
+              },
+              {
+                "name": "X-Requested-With",
+                "value": "XMLHttpRequest"
               }
             ],
             "method": "POST",
@@ -68,7 +101,87 @@
             "content": {
               "mimeType": "application/json",
               "size": 100,
-              "text": "{\"jsonrpc\": \"2.0\", \"result\": {\"dss\": [{\"channel\": \"2\", \"frequency\": \"498000000\"}]}, \"id\": 2}"
+              "text": "{\"jsonrpc\": \"2.0\", \"result\": {\"dss\": [{\"channel\": \"2\", \"frequency\": \"498000000\"}]}, \"id\": 1}"
+            },
+            "cookies": [],
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=UTF-8"
+              }
+            ],
+            "status": 200
+          }
+        },
+        {
+          "request": {
+            "cookies": [],
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=UTF-8"
+              },
+              {
+                "name": "Referer",
+                "value": "https://192.168.0.1/html/docshelp.htm"
+              },
+              {
+                "name": "X-Requested-With",
+                "value": "XMLHttpRequest"
+              }
+            ],
+            "method": "POST",
+            "postData": {
+              "mimeType": "application/json",
+              "text": "{\"jsonrpc\": \"2.0\", \"method\": \"CM.getMisc\", \"params\": [], \"id\": 1}"
+            },
+            "url": "https://192.168.0.1/cgi-bin/router.php?token=FIELD_t"
+          },
+          "response": {
+            "content": {
+              "mimeType": "application/json",
+              "size": 100,
+              "text": "{\"jsonrpc\": \"2.0\", \"result\": {\"softwareVersion\": \"FIELD_v\"}, \"id\": 1}"
+            },
+            "cookies": [],
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=UTF-8"
+              }
+            ],
+            "status": 200
+          }
+        },
+        {
+          "request": {
+            "cookies": [],
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=UTF-8"
+              },
+              {
+                "name": "Referer",
+                "value": "https://192.168.0.1/html/reboot.htm"
+              },
+              {
+                "name": "X-Requested-With",
+                "value": "XMLHttpRequest"
+              }
+            ],
+            "method": "POST",
+            "postData": {
+              "mimeType": "application/json",
+              "text": "{\"jsonrpc\": \"2.0\", \"method\": \"MGMT.reboot\", \"params\": [], \"id\": 1}"
+            },
+            "url": "https://192.168.0.1/cgi-bin/router.php?token=FIELD_t"
+          },
+          "response": {
+            "content": {
+              "mimeType": "application/json",
+              "size": 100,
+              "text": "{\"jsonrpc\": \"2.0\", \"result\": [], \"id\": 1}"
             },
             "cookies": [],
             "headers": [

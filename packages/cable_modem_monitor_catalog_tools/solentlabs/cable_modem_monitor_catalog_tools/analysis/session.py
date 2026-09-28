@@ -3,6 +3,10 @@
 Examines post-login HAR entries for session artifacts: cookies, static
 headers (e.g., X-Requested-With), and URL token prefixes.
 
+JSON-RPC transport: the data requests are the POSTed calls, and only
+headers are detected. The query token is auth's ``token_param`` and the
+session carries no cookie (AUTH_JSONRPC_SPEC § Session).
+
 HNAP transport has implicit session (``uid`` + ``PrivateKey`` cookies,
 ``HNAP_AUTH`` header) -- this phase returns an empty session for HNAP.
 The auth manager sets both cookies from the challenge-response flow;
@@ -16,7 +20,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..validation.har_utils import is_static_resource, lower_headers
+from ..validation.har_utils import is_static_resource, jsonrpc_body, lower_headers
+from .auth.jsonrpc import jsonrpc_login_credentials
 from .auth.patterns import get_session_cookie_indicators
 
 # Cookie names that indicate a session (case-insensitive substring match).
@@ -59,7 +64,7 @@ class SessionDetail:
 
         Args:
             entries: HAR ``log.entries`` list.
-            transport: Detected transport (``http`` or ``hnap``).
+            transport: Detected transport (``http``, ``hnap`` or ``jsonrpc``).
             auth_strategy: Detected auth strategy name.
             warnings: Mutable list to append warnings to.
 
@@ -71,6 +76,16 @@ class SessionDetail:
         # No session block needed in modem.yaml.
         if transport == "hnap":
             return cls()
+
+        if transport == "jsonrpc":
+            calls = [
+                entry
+                for entry in entries
+                if jsonrpc_body(entry["request"]) is not None
+                and jsonrpc_login_credentials(entry["request"]) is None
+                and entry["response"].get("status") == 200
+            ]
+            return cls(headers=_consistent_headers(calls))
 
         # Stateless strategies typically don't need session config
         if auth_strategy == "none":
@@ -130,8 +145,6 @@ def _detect_session_headers(entries: list[dict[str, Any]]) -> dict[str, str]:
     Looks for headers like ``X-Requested-With: XMLHttpRequest`` that
     appear consistently on data page requests (non-static, non-login).
     """
-    headers: dict[str, str] = {}
-
     # Scan non-static GET requests for common session headers
     data_requests = [
         entry
@@ -140,7 +153,12 @@ def _detect_session_headers(entries: list[dict[str, Any]]) -> dict[str, str]:
         and not is_static_resource(entry["request"].get("url", ""))
         and entry["response"].get("status") == 200
     ]
+    return _consistent_headers(data_requests)
 
+
+def _consistent_headers(data_requests: list[dict[str, Any]]) -> dict[str, str]:
+    """Session headers carried by at least half of the data requests."""
+    headers: dict[str, str] = {}
     if not data_requests:
         return headers
 
