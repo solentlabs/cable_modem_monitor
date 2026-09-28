@@ -35,6 +35,8 @@ class DetectedTable:
     title_row_text: str
     table_index: int
     i18n_header_map: dict[str, str] = field(default_factory=dict)
+    # 1 when the label row was inserted to read malformed markup; Core never sees it.
+    repaired_rows: int = 0
 
 
 @dataclass

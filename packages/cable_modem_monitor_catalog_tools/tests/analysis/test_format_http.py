@@ -689,3 +689,34 @@ def _make_entry(url: str, status: int, content_type: str, body: str) -> dict[str
             },
         },
     }
+
+
+# =====================================================================
+# detect_row_start counts rows as Core's parser sees them
+# =====================================================================
+
+# Firmware that writes the label cells with no opening <tr>: the analyzer
+# repairs the row to read the labels, but Core's parser drops those cells,
+# so at runtime the first <tr> after the title is already data.
+_ORPHANED_LABELS = (
+    "<table><tr><th colspan=2>Downstream Bonded Channels</th></tr>"
+    "<td>Channel ID</td><td>Frequency</td></tr>"
+    "<tr><td>32</td><td>495000000</td></tr><tr><td>1</td><td>297000000</td></tr></table>"
+)
+_WELL_FORMED = (
+    "<table><tr><th colspan=2>Downstream Bonded Channels</th></tr>"
+    "<tr><td>Channel ID</td><td>Frequency</td></tr>"
+    "<tr><td>32</td><td>495000000</td></tr><tr><td>1</td><td>297000000</td></tr></table>"
+)
+
+
+@pytest.mark.parametrize(
+    "html,expected",
+    [(_ORPHANED_LABELS, 1), (_WELL_FORMED, 2)],
+    ids=["repaired-label-row-not-counted", "real-label-row-counted"],
+)
+def test_row_start_in_core_rows(html: str, expected: int) -> None:
+    """The label row the analyzer repaired in is not a row Core counts; a real one is."""
+    [table] = detect_tables(html)
+    assert table.headers == ["Channel ID", "Frequency"]
+    assert detect_row_start(table) == expected

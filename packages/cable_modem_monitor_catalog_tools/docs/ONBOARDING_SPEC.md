@@ -1032,6 +1032,12 @@ analysis output.
 Title rows (`<th colspan>`) and header rows (cells matching known field
 labels) are counted as non-data rows.
 
+`row_start` indexes the `<tr>` rows Core's parser sees
+([FORMAT_TABLE_SPEC.md](../../cable_modem_monitor_core/docs/FORMAT_TABLE_SPEC.md)).
+Where firmware writes the label cells with no opening `<tr>`, analysis
+repairs the row to read the labels, but Core's parser drops those cells,
+so the repaired label row is not counted.
+
 #### Table selector detection
 
 The analysis must choose a selector strategy for each detected table.
