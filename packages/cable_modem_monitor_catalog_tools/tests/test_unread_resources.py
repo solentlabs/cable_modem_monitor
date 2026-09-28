@@ -263,3 +263,66 @@ class TestShapeReduction:
     def test_bool_is_not_int(self) -> None:
         """bool is checked before int, which it subclasses in Python."""
         assert _shape_of_body({"enable": True}) == {"enable": "bool"}
+
+
+# =====================================================================
+# JSON-RPC — each method is a resource
+# =====================================================================
+
+_RPC_AUTH = AuthDetail(strategy="jsonrpc", fields={"endpoint": "/cgi-bin/router.php", "login_method": "MGMT.login"})
+
+
+def _rpc(method: str, reply: dict[str, Any]) -> dict[str, Any]:
+    """One JSON-RPC call to the shared endpoint and its reply."""
+    return {
+        "request": {
+            "method": "POST",
+            "url": "https://192.168.0.1/cgi-bin/router.php?token=t",
+            "postData": {"text": json.dumps({"jsonrpc": "2.0", "method": method, "params": [], "id": 1})},
+        },
+        "response": {
+            "status": 200,
+            "content": {"mimeType": "application/json", "text": json.dumps({"jsonrpc": "2.0", "id": 1, **reply})},
+        },
+    }
+
+
+_LOGIN = _rpc("MGMT.login", {"result": {"token": "t"}})
+_READ = {"downstream": {"resource": "CM.getDownstream"}}
+
+_LOGS = _rpc("CM.getLogs", {"result": [{"time": "x"}]})
+_DS = _rpc("CM.getDownstream", {"result": {"dss": []}})
+_LOGS_ERROR = _rpc("CM.getLogs", {"error": {"code": "x"}})
+_AB_1 = _rpc("A.b", {"result": {"n": 1}})
+_AB_2 = _rpc("A.b", {"result": {"n": 1, "m": "y"}})
+
+# fmt: off
+_JSONRPC_UNREAD_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], str]] = [
+    # (calls,                    sections, unread {method: shape},            id)
+    ([_LOGIN, _LOGS],            {},       {"CM.getLogs": [{"time": "str"}]}, "array-result"),
+    ([_LOGIN, _DS],              _READ,    {},                                "section-reads-it"),
+    ([_LOGIN],                   {},       {},                                "login-is-auth"),
+    ([_LOGIN, _LOGS_ERROR],      {},       {},                                "error-is-not-data"),
+    ([_LOGIN, _AB_1, _AB_2],     {},       {"A.b": {"n": "int", "m": "str"}}, "later-result-wins"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "calls,sections,expected",
+    [c[:3] for c in _JSONRPC_UNREAD_CASES],
+    ids=[c[3] for c in _JSONRPC_UNREAD_CASES],
+)
+def test_jsonrpc_unread_methods(
+    calls: list[dict[str, Any]], sections: dict[str, Any], expected: dict[str, Any]
+) -> None:
+    """A method that answered result and that neither a section nor the login reads is reported by name."""
+    unread = detect_unread_resources(calls, sections, _RPC_AUTH, ActionsDetail(), "jsonrpc")
+    assert {resource.path: resource.shape for resource in unread} == expected
+
+
+def test_jsonrpc_capture_still_reports_other_json_by_path() -> None:
+    """JSON a page GETs outside the RPC endpoint is still unread by path; the shared endpoint is not."""
+    entries = [_LOGIN, *_json_entry("https://192.168.0.1/lang/en.json", {"hello": "x"})]
+    unread = detect_unread_resources(entries, {}, _RPC_AUTH, ActionsDetail(), "jsonrpc")
+    assert [resource.path for resource in unread] == ["/lang/en.json"]

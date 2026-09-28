@@ -29,7 +29,7 @@ from .analysis.actions.jsonrpc import restart_ambiguity
 from .analysis.ambiguity import Ambiguity, corroborate
 from .analysis.auth import AuthDetail, detect_auth
 from .analysis.format import detect_sections
-from .analysis.js_endpoints import detect_uncaptured_endpoints
+from .analysis.js_endpoints import detect_uncalled_jsonrpc_methods, detect_uncaptured_endpoints
 from .analysis.request_requirements import detect_request_requirements
 from .analysis.session import SessionDetail
 from .analysis.transport import TransportResult
@@ -178,6 +178,8 @@ def _analyze_jsonrpc(
     sections = detect_sections(entries, "jsonrpc", warnings, [], fleet=fleet)
     # Restart candidates exclude data sources, so they follow sections.
     ambiguities.append(restart_ambiguity(entries, sections))
+    detect_uncalled_jsonrpc_methods(entries, warnings)
+    unread = detect_unread_resources(entries, sections, auth, ActionsDetail(), "jsonrpc")
     if fleet is not None:
         corroborate(ambiguities, fleet.confirmed_config_values)
     endpoints: set[str] = set()
@@ -205,6 +207,7 @@ def _analyze_jsonrpc(
         sections=sections if sections else None,
         warnings=warnings,
         core_gaps=[gap],
+        unread_resources=unread,
         ambiguities=ambiguities,
     )
 

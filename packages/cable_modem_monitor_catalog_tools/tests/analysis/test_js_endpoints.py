@@ -6,10 +6,13 @@ Fixture-driven tests for the end-to-end detection.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.js_endpoints import (
+    detect_uncalled_jsonrpc_methods,
     detect_uncaptured_endpoints,
     extract_endpoints_from_js,
 )
@@ -193,3 +196,61 @@ def test_warning_count_matches_expected(fixture_path: Path) -> None:
     warnings: list[str] = []
     detect_uncaptured_endpoints(data["_entries"], warnings)
     assert len(warnings) == len(data["_expected_warnings"])
+
+
+# =====================================================================
+# detect_uncalled_jsonrpc_methods — table-driven
+# =====================================================================
+
+
+def _login_call() -> dict[str, Any]:
+    """The captured MGMT.login call; its namespace anchors which names count."""
+    body = {"jsonrpc": "2.0", "method": "MGMT.login", "params": [{"u": "x", "pwd": "y"}], "id": 1}
+    return {
+        "request": {
+            "url": "https://192.168.0.1/cgi-bin/router.php",
+            "method": "POST",
+            "postData": {"text": json.dumps(body)},
+        },
+        "response": {"status": 200, "content": {"mimeType": "application/json", "text": '{"result": {}}'}},
+    }
+
+
+def _js(url: str, text: str, mime: str = "application/javascript") -> dict[str, Any]:
+    """A captured script or page response."""
+    return {
+        "request": {"url": f"https://192.168.0.1{url}", "method": "GET"},
+        "response": {"status": 200, "content": {"mimeType": mime, "text": text}},
+    }
+
+
+# fmt: off
+_UNCALLED_CASES: list[tuple[list[dict[str, Any]], list[str], str]] = [
+    # (captured JS entries, uncalled methods with sources, id)
+    ([_js("/js/params.js", '{method:"MGMT.reboot",timeout:1}')],
+     ["MGMT.reboot (referenced in params.js)"],                                            "method-key-value"),
+    ([_js("/js/common.js", 'x({jsonrpc:"2.0",method:"MGMT.login"})')],                   [], "already-called"),
+    ([_js("/js/ui.js", '{method:"auto"}')],                                                [], "no-namespace"),
+    ([_js("/js/ui.js", '$.ajax({method:"POST",url:"/x"})')],                               [], "http-verb"),
+    ([_js("/js/params.js", '{method:"LAN.setConfig"}')],                                   [], "namespace-uncalled"),
+    ([_js("/js/params.js", '// {method:"MGMT.reboot"}')],                                  [], "commented-out"),
+    ([_js("/reboot.htm", '<script>x({method:"MGMT.reboot"})</script>', "text/html")],
+     ["MGMT.reboot (referenced in inline JS in reboot.htm)"],                              "inline-script"),
+    ([_js("/a.js", '{method:"MGMT.reboot"}'), _js("/b.js", '{"method": "MGMT.reboot"}')],
+     ["MGMT.reboot (referenced in a.js, b.js)"],                                           "sources-merged"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "js_entries,expected",
+    [c[:2] for c in _UNCALLED_CASES],
+    ids=[c[2] for c in _UNCALLED_CASES],
+)
+def test_detect_uncalled_jsonrpc_methods(js_entries: list[dict[str, Any]], expected: list[str]) -> None:
+    """A method named in JS whose namespace a captured call uses, but which no call used, is a recapture prompt."""
+    warnings: list[str] = []
+    detect_uncalled_jsonrpc_methods([_login_call(), *js_entries], warnings)
+    prefix = "WARNING: JS names a JSON-RPC method not called in HAR: "
+    assert all(w.startswith(prefix) for w in warnings)
+    assert [w.removeprefix(prefix) for w in warnings] == expected

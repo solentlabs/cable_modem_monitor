@@ -409,6 +409,11 @@ class TestJsonrpcTransport:
         assert restart.resolution is None
         assert [[c.value, c.evidence[0].source] for c in restart.candidates] == data["_expected_restart_candidates"]
 
+    def test_unread_methods_reported(self, tmp_path: Path) -> None:
+        """Methods that answered but that neither a section nor the login reads are unread, by name."""
+        result, _ = self._analyze(tmp_path)
+        assert [(r.path, r.shape) for r in result.unread_resources] == [("MGMT.reboot", [])]
+
     def test_ambiguities_serialized_unresolved(self, tmp_path: Path) -> None:
         """The error codes block; restart does not."""
         result, _ = self._analyze(tmp_path)

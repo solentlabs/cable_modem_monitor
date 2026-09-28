@@ -1157,6 +1157,17 @@ Only static URL string literals are matched. Variable references
 investigates whether the uncaptured endpoint is relevant to the
 modem's auth, session, or data flow.
 
+**JSON-RPC transport.** Every call shares one endpoint, so the
+uncaptured unit is a method. A method is the string value of a `method`
+key in captured JS, counted only when its dotted namespace is one a
+captured call used, and only when no captured call used the method
+itself. The namespace anchor comes from the capture, so other script's
+`method: "auto"` and jQuery's `method: "POST"` drop out without a vendor
+pattern; undotted method names find nothing rather than a guess. Each
+warning names the method and the files that reference it. A restart the
+contributor never clicked shows up here, not as a restart candidate:
+recapture it.
+
 ### Post-Analysis: Request Requirements
 
 After JS endpoint discovery, the pipeline scans data-fetch entries
@@ -1231,6 +1242,13 @@ Action endpoints containing `{...}` placeholders are resolved at runtime
 and never equal the captured path, so they match segment-wise with each
 placeholder as a wildcard. On HNAP transport the `/HNAP1/` endpoint
 carries every call, data and action alike, and is never reported.
+
+On JSON-RPC transport each method is a resource: `path` carries the
+method name and `shape` its `result`. A method is read when a section or
+system_info source names it, or when it is the login. A method called
+more than once takes its later `result`, as golden generation does.
+Other JSON the capture fetches is still reported by path; only the
+shared endpoint is not.
 
 **Keys and types only, never values.** Keys are what make the judgment
 possible: an LLM recognizes `maxTrafficRate` as a provisioned rate where
