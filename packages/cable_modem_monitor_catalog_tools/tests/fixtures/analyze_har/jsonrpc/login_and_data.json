@@ -1,12 +1,5 @@
 {
   "_description": "JSON-RPC 2.0 firmware: login, data and a reboot are calls to one endpoint, named by method",
-  "_expected_endpoint": "/cgi-bin/router.php",
-  "_expected_methods": [
-    "CM.getDownstream",
-    "CM.getMisc",
-    "MGMT.login",
-    "MGMT.reboot"
-  ],
   "_expected_auth_fields": {
     "endpoint": "/cgi-bin/router.php",
     "login_method": "MGMT.login",

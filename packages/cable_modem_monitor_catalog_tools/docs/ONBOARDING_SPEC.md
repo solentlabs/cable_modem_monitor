@@ -345,9 +345,7 @@ Phase 2 credential test). Other JSON-RPC traffic does not count.
 calls, not pages: the login gives auth, each other call's `result` is a
 JSON page named by its method, and restart is a candidate list. The
 HTTP tree is never run over the calls; it misreads the login as
-`form_pbkdf2`. `generate_config` has no `jsonrpc` path yet, so analysis
-also reports one `jsonrpc_transport` gap naming the endpoint and every
-method called.
+`form_pbkdf2`.
 
 **Everything else is `http`.** This includes modems with HTML pages,
 JSON APIs, or any combination. The data format (HTML tables, JSON
@@ -1637,7 +1635,6 @@ effort. Categories:
 | `auth_unknown` | auth | Signal flags + description | New auth strategy implementation |
 | `unmatched_restart` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
 | `unmatched_logout` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
-| `jsonrpc_transport` | transport | Endpoint + every method called | A `generate_config` path for `jsonrpc` |
 
 Well-known modems with standard patterns produce zero core gaps.
 Novel modems produce gaps that require development before onboarding.
@@ -1710,6 +1707,11 @@ patterns to augment auto-generated aggregate fields.
 
 Does **not** write files — returns content for the LLM to review and
 place. If validation fails, returns errors so the LLM can fix and retry.
+
+Resolved [ambiguities](#ambiguities-resolve-then-proceed) are written at
+their paths before validation. On `jsonrpc` a resolution writes only
+`actions.restart.method`, so the action takes `type: jsonrpc`, the
+transport's one action type.
 
 ### `generate_golden_file`
 

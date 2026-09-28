@@ -246,6 +246,20 @@ class TestActionsBehavior:
         assert modem["actions"]["restart"]["type"] == "http"
         assert modem["actions"]["restart"]["params"]["action"] == "1"
 
+    def test_jsonrpc_restart_from_resolution(self) -> None:
+        """A resolved actions.restart.method becomes a jsonrpc action; the rest comes from the transport."""
+        fixture = load_fixture(VALID_DIR / "jsonrpc_resolved_restart.json")
+        modem = yaml.safe_load(generate_config(fixture["_analysis"], fixture["_metadata"]).modem_yaml)
+        assert modem["actions"] == {"restart": {"type": "jsonrpc", "method": "SYS.reboot"}}
+
+    def test_jsonrpc_unresolved_restart_omitted(self) -> None:
+        """A non-blocking restart left unresolved leaves no actions block, and generation stays valid."""
+        fixture = load_fixture(VALID_DIR / "jsonrpc_resolved_restart.json")
+        fixture["_analysis"]["ambiguities"][-1]["resolution"] = None
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert "actions" not in yaml.safe_load(result.modem_yaml)
+
     def test_no_actions_when_none(self) -> None:
         """No actions block when no actions detected."""
         fixture = load_fixture(VALID_DIR / "table_no_auth.json")

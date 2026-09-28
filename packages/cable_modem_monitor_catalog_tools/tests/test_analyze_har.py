@@ -356,8 +356,7 @@ class TestNoDataSections:
 class TestJsonrpcTransport:
     """A JSON-RPC capture is analyzed call by call; its judgments become ambiguities.
 
-    generate_config has no jsonrpc path yet, so the analysis still reports
-    a core gap, and no HTTP-tree phase runs over the calls.
+    No HTTP-tree phase runs over the calls, and nothing stops generation.
     """
 
     @staticmethod
@@ -370,12 +369,10 @@ class TestJsonrpcTransport:
         assert result.transport.transport == "jsonrpc"
         assert result.transport.confidence == "high"
 
-    def test_stops_at_one_core_gap_with_evidence(self, tmp_path: Path) -> None:
-        result, data = self._analyze(tmp_path)
-        assert [gap.category for gap in result.core_gaps] == ["jsonrpc_transport"]
-        evidence = result.core_gaps[0].evidence
-        assert evidence["endpoint"] == data["_expected_endpoint"]
-        assert evidence["methods"] == data["_expected_methods"]
+    def test_no_core_gap(self, tmp_path: Path) -> None:
+        """generate_config has a jsonrpc path, so a JSON-RPC capture is not a Core gap."""
+        result, _ = self._analyze(tmp_path)
+        assert result.core_gaps == []
 
     def test_auth_fields_from_login_call(self, tmp_path: Path) -> None:
         """The HTTP tree's form_pbkdf2 misread never reaches the output; the login call's fields do."""

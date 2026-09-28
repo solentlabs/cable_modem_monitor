@@ -21,6 +21,17 @@ def build_modem_dict(analysis: dict[str, Any], metadata: dict[str, Any]) -> dict
     return result
 
 
+def type_resolved_actions(modem_dict: dict[str, Any]) -> None:
+    """Give each jsonrpc action a resolution wrote its type; the transport has only the one."""
+    # A resolution writes actions.restart.method alone (ONBOARDING_SPEC § Ambiguities).
+    if modem_dict.get("transport") != "jsonrpc":
+        return
+    actions = modem_dict.get("actions") or {}
+    for name, action in actions.items():
+        if "type" not in action:
+            actions[name] = {"type": "jsonrpc", **action}
+
+
 def _add_identity(result: dict[str, Any], analysis: dict[str, Any], metadata: dict[str, Any]) -> None:
     """Add identity fields from metadata and analysis."""
     result["manufacturer"] = metadata.get("manufacturer", "")

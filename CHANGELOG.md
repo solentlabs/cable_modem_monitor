@@ -16,10 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   login is one such call, and its token rides in the URL query. A
   `parser.yaml` section names the method as its `resource` and reads
   the call's `result` with the `json` format. The entry declares the
-  firmware's lockout and session-expired error codes. `analyze_har`
-  recognises a JSON-RPC capture and stops with a `jsonrpc_transport`
-  gap: the config generator has no JSON-RPC path, so the entry is
-  written by hand. (#215)
+  firmware's lockout and session-expired error codes. The intake tools
+  generate a `jsonrpc` entry from a capture: the error codes and the
+  restart method are listed as candidates, each with the evidence in
+  the capture that supports it, for the contributor to choose. (#215)
 - **`make commit-lint` checks commit messages before a push.** It runs
   commitlint over the branch's commits with the same config and range
   as CI, and `make validate-ci` now includes it. Requires Node.js.

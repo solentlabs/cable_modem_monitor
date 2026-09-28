@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading import (
     grade_action,
@@ -9,18 +11,20 @@ from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading impor
 )
 from solentlabs.cable_modem_monitor_catalog_tools.grading import GRADE_SEVERITY
 
-_HTTP_RESTART = {
+_HTTP_RESTART: dict[str, Any] = {
     "type": "http",
     "method": "POST",
     "endpoint": "/actionHandler/ajaxSet_Reset_Restore.jst",
     "params": {"resetInfo": '["btn1","Device","admin"]', "csrfp_token": "{cookie:csrfp_token}"},
 }
 
-_HNAP_RESTART = {
+_HNAP_RESTART: dict[str, Any] = {
     "type": "hnap",
     "action_name": "SetArrisConfigurationInfo",
     "params": {"Action": "reboot"},
 }
+
+_JSONRPC_RESTART: dict[str, Any] = {"type": "jsonrpc", "method": "MGMT.reboot"}
 
 
 @pytest.mark.parametrize(
@@ -73,6 +77,9 @@ _HNAP_RESTART = {
         # (pre_fetch_action, response_key, ...) are out of grading scope
         (_HNAP_RESTART, {**_HNAP_RESTART, "pre_fetch_action": "GetArrisConfigurationInfo"}, "match"),
         ({**_HNAP_RESTART, "action_name": "SetOther"}, _HNAP_RESTART, "mismatch"),
+        # jsonrpc identity is the method; there is no endpoint on the action
+        (_JSONRPC_RESTART, _JSONRPC_RESTART, "match"),
+        ({**_JSONRPC_RESTART, "method": "MGMT.other"}, _JSONRPC_RESTART, "mismatch"),
         # Committed json_body the pipeline cannot produce (superhub5 shape)
         (
             {"type": "http", "method": "POST", "endpoint": "/rest/v1/system/reboot"},
@@ -150,3 +157,10 @@ def test_severity_covers_all_statuses() -> None:
     """The ratchet ordering knows every status grade_action can emit."""
     assert set(GRADE_SEVERITY) == {"match", "partial", "pipeline_only", "committed_only", "mismatch"}
     assert GRADE_SEVERITY["match"] < GRADE_SEVERITY["partial"] < GRADE_SEVERITY["mismatch"]
+
+
+def test_jsonrpc_mismatch_names_methods() -> None:
+    """A jsonrpc mismatch reads as the two methods, not an http method and a missing endpoint."""
+    grade = grade_action({**_JSONRPC_RESTART, "method": "MGMT.other"}, _JSONRPC_RESTART)
+    assert grade is not None
+    assert grade.detail == "detected jsonrpc MGMT.other vs committed jsonrpc MGMT.reboot"

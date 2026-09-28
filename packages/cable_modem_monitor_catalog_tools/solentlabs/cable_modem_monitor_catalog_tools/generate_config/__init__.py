@@ -19,7 +19,7 @@ from solentlabs.cable_modem_monitor_core.validation.layout import IDENTITY_KEYS,
 
 from ..analysis.types import FleetPatterns
 from .ambiguities import apply_resolutions
-from .modem import build_modem_dict
+from .modem import build_modem_dict, type_resolved_actions
 from .parser import build_parser_dict
 from .validation import (
     MODEM_KEY_ORDER,
@@ -78,6 +78,7 @@ def generate_config(
     # Build modem.yaml dict
     modem_dict = build_modem_dict(analysis, metadata)
     apply_resolutions(analysis, modem_dict, errors)
+    type_resolved_actions(modem_dict)
 
     # Build parser.yaml dict (None if no sections)
     sections = analysis.get("sections")

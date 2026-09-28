@@ -258,11 +258,22 @@ result = analyze_har(har_path, fleet=fleet)
 analysis = result.to_dict()
 ```
 
-Check three outputs:
+Check four outputs:
 
 1. **`hard_stops`** — if non-empty, report and stop
 2. **`warnings`** — note for later, don't stop
 3. **`core_gaps`** — if present, report and stop (Step 5)
+4. **`ambiguities`** — resolve each before Step 7
+
+Each ambiguity is a judgment the capture supports and the tool does not
+make: a dotted config path and candidates, each with the evidence that
+shows it (ONBOARDING_SPEC § Ambiguities). Read the evidence and set
+`resolution` to `{value}`, or to `{value: null, reason}` for an explicit
+none, then show the user each resolution with its evidence to confirm.
+A `blocking` one left unresolved makes `generate_config` refuse; a
+non-blocking one left unresolved omits its field. A pre-filled
+`{value, source: fleet}` came from confirmed catalog entries and is
+still reviewed.
 
 Report what was detected:
 
@@ -336,10 +347,6 @@ doesn't support yet. **Stop config generation.** Report:
    - `auth_unknown`: new auth strategy needed in Core
    - `unmatched_restart` / `unmatched_logout`: new action URL pattern needed
      in `action_patterns.json`
-   - `jsonrpc_transport`: not a missing Core pattern. Core supports the
-     transport; the config generator does not emit it. Write modem.yaml
-     and parser.yaml by hand from the analysis's auth, session, sections
-     and ambiguities, and the capture, then resume at Step 8
 
 Format the report so it can be pasted into a GitHub issue for a
 development effort. Do NOT try to resolve gaps by patching the
@@ -413,7 +420,7 @@ a user would. Each must name what sets that variant apart:
 
 ```python
 from solentlabs.cable_modem_monitor_catalog_tools.generate_golden_file import generate_golden_file
-golden = generate_golden_file(str(har_path), result.parser_yaml)
+golden = generate_golden_file(str(har_path), result.parser_yaml, transport=analysis["transport"])
 ```
 
 Report channel counts for sanity check:

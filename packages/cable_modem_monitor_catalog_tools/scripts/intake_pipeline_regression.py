@@ -5,6 +5,8 @@ Tests the catalog_tools intake pipeline by treating each catalog HAR
 as a fresh submission. For each modem:
 
 1. Run HAR through validate_har -> analyze_har -> generate_config
+   (ambiguities resolved from the committed config, among the tool's
+   candidates, before generate_config)
 2. Run generate_golden_file with the generated parser.yaml
 3. Compare generated golden file against committed golden file
 4. Compute field-level accuracy (matching / total committed fields)
@@ -38,6 +40,8 @@ import yaml
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading import grade_actions
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.grading import grade_auth
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
+from solentlabs.cable_modem_monitor_catalog_tools.generate_config.ambiguities import apply_resolutions
+from solentlabs.cable_modem_monitor_catalog_tools.generate_config.modem import type_resolved_actions
 from solentlabs.cable_modem_monitor_catalog_tools.grading import GRADE_SEVERITY
 from solentlabs.cable_modem_monitor_catalog_tools.regression import (
     ModemResult,
@@ -45,6 +49,7 @@ from solentlabs.cable_modem_monitor_catalog_tools.regression import (
     fleet_accuracy,
     result_status,
 )
+from solentlabs.cable_modem_monitor_catalog_tools.regression.ambiguities import resolve_from_committed
 from solentlabs.cable_modem_monitor_core.test_harness import resolve_modem_config
 
 CATALOG_ROOT = (
@@ -365,7 +370,11 @@ def _run_pipeline(
     if analysis_data is None:
         return
 
-    committed = _grade_actions_stage(result, analysis_data, committed_path)
+    committed = _load_committed(committed_path)
+    if not _resolve_ambiguities_stage(result, analysis_data, committed):
+        return
+
+    _grade_actions_stage(result, analysis_data, committed)
 
     modem_yaml, parser_yaml = _run_generate(analysis_data, modem_dir, result, fleet=fleet)
     if modem_yaml is None:
@@ -426,21 +435,54 @@ def run_modem(
     return result
 
 
-def _grade_actions_stage(
-    result: ModemResult,
-    analysis_data: dict[str, Any],
-    committed_path: Path | None,
-) -> dict[str, Any]:
-    """Grade detected actions against the committed config; returns it.
-
-    Runs right after analysis so actions are graded even when a later
-    stage fails.
-    """
+def _load_committed(committed_path: Path | None) -> dict[str, Any]:
+    """The committed modem config the HAR is graded against, or empty when there is none."""
     if committed_path is None or not committed_path.exists():
         return {}
     committed: dict[str, Any] = yaml.safe_load(committed_path.read_text()) or {}
-    result.grades["actions"] = grade_actions(analysis_data.get("actions"), committed.get("actions"))
     return committed
+
+
+def _resolve_ambiguities_stage(
+    result: ModemResult,
+    analysis_data: dict[str, Any],
+    committed: dict[str, Any],
+) -> bool:
+    """Play the LLM's part: resolve ambiguities from the committed config, among the tool's candidates.
+
+    False when a committed value was never offered, which fails the HAR:
+    intake would have handed the LLM evidence that cannot reach the answer.
+    """
+    if not committed or not analysis_data.get("ambiguities"):
+        return True
+    grades, failures = resolve_from_committed(analysis_data, committed)
+    result.grades["ambiguities"] = grades
+    if failures:
+        result.stage_failed = "resolve_ambiguities"
+        result.error = "; ".join(failures)
+        return False
+    return True
+
+
+def _grade_actions_stage(
+    result: ModemResult,
+    analysis_data: dict[str, Any],
+    committed: dict[str, Any],
+) -> None:
+    """Grade detected actions, plus any a resolution produced, against the committed config.
+
+    Runs before generation so actions are graded even when a later stage
+    fails. A resolved action (the jsonrpc restart) is built by
+    generate_config's own resolution step, so the grade sees exactly
+    what generation writes.
+    """
+    if not committed:
+        return
+    resolved: dict[str, Any] = {"transport": analysis_data.get("transport")}
+    apply_resolutions(analysis_data, resolved, [])
+    type_resolved_actions(resolved)
+    detected = {**(analysis_data.get("actions") or {}), **resolved.get("actions", {})}
+    result.grades["actions"] = grade_actions(detected, committed.get("actions"))
 
 
 def _grade_auth_stage(

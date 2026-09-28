@@ -20,7 +20,6 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 from solentlabs.cable_modem_monitor_core.har import load_har_json
 
@@ -35,7 +34,6 @@ from .analysis.session import SessionDetail
 from .analysis.transport import TransportResult
 from .analysis.types import CoreGap, FleetPatterns
 from .analysis.unread_resources import UnreadResource, detect_unread_resources
-from .validation.har_utils import jsonrpc_method
 
 
 @dataclass
@@ -170,7 +168,7 @@ def _analyze_jsonrpc(
     transport_result: TransportResult,
     fleet: FleetPatterns | None,
 ) -> AnalysisResult:
-    """Analyze a JSON-RPC capture call by call, then report the generate_config gap."""
+    """Analyze a JSON-RPC capture call by call."""
     warnings: list[str] = []
     ambiguities: list[Ambiguity] = []
     auth = detect_auth(entries, "jsonrpc", warnings, [], ambiguities=ambiguities)
@@ -182,23 +180,6 @@ def _analyze_jsonrpc(
     unread = detect_unread_resources(entries, sections, auth, ActionsDetail(), "jsonrpc")
     if fleet is not None:
         corroborate(ambiguities, fleet.confirmed_config_values)
-    endpoints: set[str] = set()
-    methods: set[str] = set()
-    for entry in entries:
-        method = jsonrpc_method(entry["request"])
-        if method is not None:
-            methods.add(method)
-            endpoints.add(urlparse(entry["request"].get("url", "")).path)
-    gap = CoreGap(
-        phase="transport",
-        category="jsonrpc_transport",
-        summary=(
-            "JSON-RPC 2.0 transport: generate_config has no path for it. Author modem.yaml and "
-            "parser.yaml by hand from the auth fields, sections and ambiguities (MODEM_YAML_SPEC § jsonrpc, "
-            "AUTH_JSONRPC_SPEC)."
-        ),
-        evidence={"endpoint": ", ".join(sorted(endpoints)), "methods": sorted(methods)},
-    )
     return AnalysisResult(
         transport=transport_result,
         auth=auth,
@@ -206,7 +187,6 @@ def _analyze_jsonrpc(
         actions=ActionsDetail(),
         sections=sections if sections else None,
         warnings=warnings,
-        core_gaps=[gap],
         unread_resources=unread,
         ambiguities=ambiguities,
     )

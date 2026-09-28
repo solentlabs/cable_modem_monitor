@@ -80,12 +80,6 @@ def jsonrpc_response(entry: dict[str, Any]) -> dict[str, Any]:
     return body if isinstance(body, dict) else {}
 
 
-def jsonrpc_method(request: dict[str, Any]) -> str | None:
-    """The ``method`` of a JSON-RPC 2.0 request body, or None when the body is not one."""
-    body = jsonrpc_body(request)
-    return body["method"] if body is not None else None
-
-
 def has_set_cookie(resp: dict[str, Any]) -> bool:
     """Check if a response sets a cookie (via cookies array or Set-Cookie header)."""
     if resp.get("cookies"):
