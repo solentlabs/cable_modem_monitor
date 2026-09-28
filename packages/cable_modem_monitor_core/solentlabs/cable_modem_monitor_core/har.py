@@ -1,6 +1,7 @@
 """HAR data extraction — shared resource dict construction.
 
 Builds transport-specific resource dicts from HAR entries. Used by:
+- ``cable_modem_monitor_catalog_tools.analysis.format.jsonrpc`` — JSON-RPC pages
 - ``cable_modem_monitor_catalog_tools.generate_golden_file`` — golden file generation
 - ``cable_modem_monitor_catalog_tools.analysis.format.hnap`` — HNAP format detection
 - ``testing.auth_hnap`` — mock server data response
@@ -107,15 +108,17 @@ def _lfs_error_message(path: Path) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_resource_dict(har_path: str) -> dict[str, Any]:
+def build_resource_dict(har_path: str, transport: str | None = None) -> dict[str, Any]:
     """Build a resource dict from HAR response bodies.
 
-    Auto-detects transport: HNAP entries produce
+    ``transport="jsonrpc"`` produces ``{method: result, ...}``. Otherwise
+    the transport is auto-detected: HNAP entries produce
     ``{"hnap_response": {...}}``, HTTP entries produce
     ``{path: BeautifulSoup, ...}``.
 
     Args:
         har_path: Path to the HAR file.
+        transport: The entry's transport, when the caller knows it.
 
     Returns:
         Resource dict for the ``ModemParserCoordinator``.
@@ -124,11 +127,40 @@ def build_resource_dict(har_path: str) -> dict[str, Any]:
     har_data = load_har_json(path)
     entries = har_data.get("log", {}).get("entries", [])
 
+    # Never sniffed: form-login firmware makes JSON-RPC plumbing calls too
+    # (OpenWrt LuCI ubus), so only the entry's transport can say so.
+    if transport == "jsonrpc":
+        return jsonrpc_har_results(entries)
+
     hnap_resources = _build_hnap_resources(entries)
     if hnap_resources:
         return hnap_resources
 
     return _build_http_resources(entries)
+
+
+def jsonrpc_har_results(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """``method → result`` for a capture's JSON-RPC 2.0 calls, as the loader hands them to a parser.
+
+    Same choice as the replay server when a method was called more than
+    once: a reply carrying ``result`` beats one carrying ``error``, and the
+    later result wins. See RESOURCE_LOADING_SPEC.md § JSON-RPC Transport.
+    """
+    results: dict[str, Any] = {}
+    for entry in entries:
+        request = entry.get("request", {})
+        try:
+            call = json.loads((request.get("postData") or {}).get("text") or "null")
+            reply = json.loads(_content_text(entry.get("response", {}).get("content", {}), request.get("url", "")))
+        except ValueError:
+            continue
+        if not isinstance(call, dict) or call.get("jsonrpc") != "2.0" or not isinstance(call.get("method"), str):
+            continue
+        if not isinstance(reply, dict) or "result" not in reply:
+            continue
+        result = reply["result"]
+        results[call["method"]] = result if isinstance(result, dict) else {"_raw": result}
+    return results
 
 
 def merge_hnap_har_responses(

@@ -42,8 +42,9 @@ _LOGIN = _call("MGMT.login", {"result": {"token": "t"}}, "/login.htm", params=_L
 # │ A → {x: 1}                               │ A: {x: 1}                       │ object result       │
 # │ A → [1]                                  │ A: {_raw: [1]}                  │ non-object wrapped  │
 # │ A → error                                │ none                            │ error is not data   │
-# │ A → error, A → {x: 1}                    │ A: {x: 1}                       │ first answer wins   │
-# │ A → {x: 1}, A → {x: 2}                   │ A: {x: 1}                       │ repeat ignored      │
+# │ A → error, A → {x: 1}                    │ A: {x: 1}                       │ error is skipped    │
+# │ A → {x: 1}, A → {x: 2}                   │ A: {x: 2}                       │ later result wins   │
+# │ A → {x: 1}, A → error                    │ A: {x: 1}                       │ result beats error  │
 # │ login → {token}                          │ none                            │ login is not data   │
 # └──────────────────────────────────────────┴─────────────────────────────────┴─────────────────────┘
 #
@@ -53,8 +54,9 @@ PAGES_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], str]] = [
     ([_call("A", _OBJ_1)],                                      {"A": {"x": 1}},       "object-result"),
     ([_call("A", {"result": [1]})],                             {"A": {"_raw": [1]}},  "non-object-wrapped"),
     ([_call("A", _ERROR)],                                      {},                    "error-is-not-data"),
-    ([_call("A", _ERROR), _call("A", _OBJ_1)],                  {"A": {"x": 1}},       "first-answer-wins"),
-    ([_call("A", _OBJ_1), _call("A", {"result": {"x": 2}})],    {"A": {"x": 1}},       "repeat-ignored"),
+    ([_call("A", _ERROR), _call("A", _OBJ_1)],                  {"A": {"x": 1}},       "error-is-skipped"),
+    ([_call("A", _OBJ_1), _call("A", {"result": {"x": 2}})],    {"A": {"x": 2}},       "later-result-wins"),
+    ([_call("A", _OBJ_1), _call("A", _ERROR)],                  {"A": {"x": 1}},       "result-beats-error"),
     ([_LOGIN],                                                  {},                    "login-is-not-data"),
 ]
 # fmt: on

@@ -1,7 +1,8 @@
 """Tests for HAR loading and resource building.
 
 Covers load_har_json() (LFS pointer detection, normal loading) and
-build_resource_dict() (JSON body sniffing, root-level array wrapping).
+build_resource_dict() (JSON body sniffing, root-level array wrapping, JSON-RPC
+results keyed by method).
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ import base64
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -33,7 +35,7 @@ LFS_POINTER = (
     "size 12345\n"
 )
 
-MINIMAL_HAR = {"log": {"entries": []}}
+MINIMAL_HAR: dict[str, Any] = {"log": {"entries": []}}
 
 
 class TestLoadHarJsonNormal:
@@ -463,3 +465,71 @@ class TestHtmlContentSniffing:
         resources = build_resource_dict(str(har))
 
         assert isinstance(resources["/page"], BeautifulSoup)
+
+
+# -----------------------------------------------------------------------
+# build_resource_dict — JSON-RPC transport
+# -----------------------------------------------------------------------
+
+_RPC_URL = "https://192.168.0.1/cgi-bin/router.php"
+
+
+def _rpc_entry(method: str, reply: dict[str, Any]) -> dict[str, Any]:
+    """A JSON-RPC 2.0 call and its reply, as a HAR entry."""
+    return {
+        "request": {
+            "url": _RPC_URL,
+            "method": "POST",
+            "postData": {"text": json.dumps({"jsonrpc": "2.0", "method": method, "params": [], "id": 1})},
+        },
+        "response": {
+            "status": 200,
+            "content": {"mimeType": "application/json", "text": json.dumps({"jsonrpc": "2.0", "id": 1, **reply})},
+        },
+    }
+
+
+_ONE: dict[str, Any] = {"result": {"x": 1}}
+_TWO: dict[str, Any] = {"result": {"x": 2}}
+_ERR: dict[str, Any] = {"error": {"code": "msgFail"}}
+
+# =============================================================================
+# JSON-RPC resource test data
+# =============================================================================
+#
+# ┌──────────────────────────────┬──────────────────────┬──────────────────────────┐
+# │ calls (method → reply)       │ resources            │ description              │
+# ├──────────────────────────────┼──────────────────────┼──────────────────────────┤
+# │ A → {x: 1}                   │ A: {x: 1}            │ keyed by method          │
+# │ A → [1]                      │ A: {_raw: [1]}       │ non-object wrapped       │
+# │ A → error                    │ none                 │ an error is not data     │
+# │ A → {x: 1}, A → {x: 2}       │ A: {x: 2}            │ later result wins        │
+# │ A → {x: 1}, A → error        │ A: {x: 1}            │ result beats error       │
+# └──────────────────────────────┴──────────────────────┴──────────────────────────┘
+#
+# fmt: off
+JSONRPC_RESOURCE_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], str]] = [
+    # (calls,                                            resources,              id)
+    ([_rpc_entry("A", _ONE)],                            {"A": {"x": 1}},        "keyed-by-method"),
+    ([_rpc_entry("A", {"result": [1]})],                 {"A": {"_raw": [1]}},   "non-object-wrapped"),
+    ([_rpc_entry("A", _ERR)],                            {},                     "error-is-not-data"),
+    ([_rpc_entry("A", _ONE), _rpc_entry("A", _TWO)],     {"A": {"x": 2}},        "later-result-wins"),
+    ([_rpc_entry("A", _ONE), _rpc_entry("A", _ERR)],     {"A": {"x": 1}},        "result-beats-error"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "calls,expected",
+    [c[:2] for c in JSONRPC_RESOURCE_CASES],
+    ids=[c[2] for c in JSONRPC_RESOURCE_CASES],
+)
+def test_jsonrpc_resources(tmp_path: Path, calls: list[dict[str, Any]], expected: dict[str, Any]) -> None:
+    """Each method's result, as the JSON-RPC loader hands it to the parser."""
+    assert build_resource_dict(str(_har_file(tmp_path, calls)), transport="jsonrpc") == expected
+
+
+def test_jsonrpc_only_when_told(tmp_path: Path) -> None:
+    """Without the transport, JSON-RPC calls read as HTTP: firmware plumbing never switches the shape."""
+    resources = build_resource_dict(str(_har_file(tmp_path, [_rpc_entry("A", _ONE)])))
+    assert set(resources) == {"/cgi-bin/router.php"}

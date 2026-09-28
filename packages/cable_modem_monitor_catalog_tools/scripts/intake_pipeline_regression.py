@@ -301,6 +301,7 @@ def _run_generate(
 def _run_golden_comparison(
     har_path: Path,
     parser_yaml: str,
+    transport: str,
     result: ModemResult,
 ) -> None:
     """Generate a golden file from the generated parser config and compare."""
@@ -308,7 +309,7 @@ def _run_golden_comparison(
         generate_golden_file,
     )
 
-    golden_result = generate_golden_file(str(har_path), parser_yaml)
+    golden_result = generate_golden_file(str(har_path), parser_yaml, transport=transport)
     if golden_result.errors:
         result.stage_failed = "generate_golden_file"
         result.error = "; ".join(golden_result.errors)
@@ -379,7 +380,7 @@ def _run_pipeline(
 
     # Golden file comparison
     if parser_yaml:
-        _run_golden_comparison(har_path, parser_yaml, result)
+        _run_golden_comparison(har_path, parser_yaml, analysis_data["transport"], result)
     else:
         result.stage_failed = "generate_golden_file"
         result.error = "no parser.yaml generated"

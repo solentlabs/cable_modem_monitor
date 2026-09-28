@@ -106,6 +106,11 @@ Keys are the method names on the fetch list. Values are each call's
   vendor's shape directly (`array_path: "dss"`).
 - A `result` that is not an object is wrapped `{"_raw": value}`, the
   HTTP structured-format rule.
+- A capture read offline (`build_resource_dict(har, transport="jsonrpc")`)
+  yields the same dict. A method called more than once takes its later
+  `result`, and an `error` reply is not data, as the HAR replay server
+  answers. The transport is passed, never sniffed: form-login firmware
+  makes JSON-RPC plumbing calls too.
 
 **Action names vary by manufacturer** (e.g., `GetCustomer*`, `GetMoto*`). The
 loader returns whatever actions the modem responds with — parsers

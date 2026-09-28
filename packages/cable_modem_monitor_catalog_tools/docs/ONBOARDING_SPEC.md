@@ -688,7 +688,7 @@ Format is constrained by transport:
 | Transport | Format detection |
 |-----------|-----------------|
 | `hnap` | Always `hnap`. See HNAP format detection below. |
-| `jsonrpc` | Always `json`. Each answered call other than the login is a JSON page: resource is the method, JSON is its `result` (a non-object `result` wrapped as `_raw`, as Core's loader does). The first answer per method wins. HTTP JSON detection then runs unchanged, so one array is mapped per call. |
+| `jsonrpc` | Always `json`. Each answered call other than the login is a JSON page: resource is the method, JSON is its `result` (a non-object `result` wrapped as `_raw`, as Core's loader does). A method called more than once takes its later `result`, as the replay server and golden generation do (Core's `jsonrpc_har_results`). HTTP JSON detection then runs unchanged, so one array is mapped per call. |
 | `http` | Inspect data page responses — see below. JSON responses use `json` (or `json_transposed` for `name`+`indexN` pivot shapes); HTML responses use `table`, `table_transposed`, `javascript`, `javascript_json`, or `html_fields`. |
 
 #### HNAP format detection
@@ -1699,7 +1699,9 @@ Reads the HAR response bodies directly and applies the parser.yaml
 config to extract `ModemData`. This is the same extraction logic the
 pipeline uses, but against HAR content rather than a live server.
 
-**Input:** HAR file path + parser.yaml content
+**Input:** HAR file path + parser.yaml content + `transport` from
+`analyze_har` (required for `jsonrpc`, whose resources are method names;
+others are auto-detected)
 **Output:** `{ golden_file: dict, golden_file_json: str, channel_counts: { downstream: int, upstream: int }, system_info_fields: [str], missing_system_info_fields: [str] }`
 
 `golden_file_json` is the canonical serialization of `golden_file` (`sort_keys=True`, `indent=2`, `ensure_ascii=False`). Always write this string directly to `modem.expected.json` — never re-serialize `golden_file` yourself, which loses the ordering guarantee.
@@ -1871,7 +1873,7 @@ Core defines:
 
 Catalog provides:
   fleet_scanner.scan_fleet(CATALOG_PATH) → FleetPatterns
-  trial_parser.trial_parse(har_path, parser_yaml) → TrialResult
+  trial_parser.trial_parse(har_path, parser_yaml, transport=None) → TrialResult
 ```
 
 **What fleet patterns augment:**

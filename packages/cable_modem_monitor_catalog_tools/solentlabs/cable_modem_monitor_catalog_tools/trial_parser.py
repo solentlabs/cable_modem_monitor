@@ -53,6 +53,7 @@ class TrialResult:
 def trial_parse(
     har_path: str,
     parser_yaml_content: str,
+    transport: str | None = None,
 ) -> TrialResult:
     """Run a trial extraction and validate results.
 
@@ -63,11 +64,12 @@ def trial_parse(
     Args:
         har_path: Path to the HAR file.
         parser_yaml_content: Candidate parser.yaml as a YAML string.
+        transport: analyze_har's transport, passed to ``generate_golden_file``.
 
     Returns:
         ``TrialResult`` with pass/fail, extracted data, and diagnostics.
     """
-    result = generate_golden_file(har_path, parser_yaml_content)
+    result = generate_golden_file(har_path, parser_yaml_content, transport=transport)
 
     errors = list(result.errors)
     warnings: list[str] = []
