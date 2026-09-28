@@ -68,6 +68,10 @@ class FleetPatterns:
             maps to the canonical ``"Operational"``. Error and
             in-progress states are deliberately excluded, per
             SYSTEM_INFO_SPEC Diagnostic Pass-Through.
+        confirmed_config_values: Dotted ``modem.yaml`` path (under
+            ``auth`` and ``actions``) mapped to each value a
+            ``status: confirmed`` entry declares there, and the entries
+            that declare it. Corroborates ambiguity candidates.
     """
 
     selector_directions: dict[str, str] = field(default_factory=dict)
@@ -81,6 +85,7 @@ class FleetPatterns:
     hnap_response_layouts: dict[str, dict[str, Any]] = field(default_factory=dict)
     uptime_formats: list[str] = field(default_factory=list)
     docsis_status_success_values: set[str] = field(default_factory=set)
+    confirmed_config_values: dict[str, dict[str, list[str]]] = field(default_factory=dict)
 
 
 # -----------------------------------------------------------------------

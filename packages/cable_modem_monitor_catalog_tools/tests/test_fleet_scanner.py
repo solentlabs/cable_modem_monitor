@@ -161,6 +161,39 @@ class TestScanFleetContent:
             assert label == label.lower()
 
 
+class TestConfirmedConfigValues:
+    """Only confirmed entries teach: their auth and action values corroborate ambiguity candidates."""
+
+    @staticmethod
+    def _write(root: Path, rel: str, text: str) -> None:
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def test_confirmed_values_indexed_by_path(self, tmp_path: Path) -> None:
+        """A confirmed entry's auth and action scalars are indexed; an unconfirmed entry's are not."""
+        self._write(
+            tmp_path,
+            "vendor/m1/modem.yaml",
+            "status: confirmed\nauth:\n  strategy: jsonrpc\n  lockout_code: codeLocked\n"
+            "actions:\n  restart:\n    type: jsonrpc\n    method: SYS.reboot\n",
+        )
+        self._write(
+            tmp_path,
+            "vendor/m1/modem-alt.yaml",
+            "status: confirmed\nauth:\n  lockout_code: codeLocked\n",
+        )
+        self._write(
+            tmp_path,
+            "vendor/m2/modem.yaml",
+            "status: awaiting_verification\nauth:\n  lockout_code: codeOther\n",
+        )
+        values = scan_fleet(tmp_path).confirmed_config_values
+        assert values["auth.lockout_code"] == {"codeLocked": ["vendor/m1", "vendor/m1/modem-alt"]}
+        assert values["actions.restart.method"] == {"SYS.reboot": ["vendor/m1"]}
+        assert "codeOther" not in values.get("auth.lockout_code", {})
+
+
 class TestAuditFleetAuth:
     """audit_fleet_auth catches login_page / HAR fixture mismatches."""
 

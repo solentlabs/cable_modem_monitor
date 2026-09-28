@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 from solentlabs.cable_modem_monitor_core.har import load_har_json
 
 from .analysis.actions import ActionsDetail, detect_actions
+from .analysis.ambiguity import Ambiguity, corroborate
 from .analysis.auth import AuthDetail, detect_auth
 from .analysis.format import detect_sections
 from .analysis.js_endpoints import detect_uncaptured_endpoints
@@ -49,6 +50,7 @@ class AnalysisResult:
     hard_stops: list[str] = field(default_factory=list)
     core_gaps: list[CoreGap] = field(default_factory=list)
     unread_resources: list[UnreadResource] = field(default_factory=list)
+    ambiguities: list[Ambiguity] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict matching the MCP tool output contract."""
@@ -66,6 +68,8 @@ class AnalysisResult:
         }
         if self.core_gaps:
             result["core_gaps"] = [gap.to_dict() for gap in self.core_gaps]
+        if self.ambiguities:
+            result["ambiguities"] = [ambiguity.to_dict() for ambiguity in self.ambiguities]
         return result
 
 
@@ -104,10 +108,10 @@ def analyze_har(
     # Phase 1: Transport
     transport_result = TransportResult.detect(entries)
 
-    # generate_config has no jsonrpc path; the HTTP tree run over these
-    # calls misreads the login as form_pbkdf2 (#215). Stop at Step 5.
+    # generate_config has no jsonrpc path yet; the HTTP tree run over these
+    # calls misreads the login as form_pbkdf2 (#215). Stop after auth.
     if transport_result.transport == "jsonrpc":
-        return _jsonrpc_stop(entries, transport_result)
+        return _analyze_jsonrpc(entries, transport_result, fleet)
 
     # Phase 2: Auth
     auth_result = detect_auth(entries, transport_result.transport, warnings, hard_stops, core_gaps)
@@ -160,8 +164,17 @@ def analyze_har(
     )
 
 
-def _jsonrpc_stop(entries: list[dict[str, Any]], transport_result: TransportResult) -> AnalysisResult:
-    """Report a JSON-RPC capture as a core gap: its config is authored by hand."""
+def _analyze_jsonrpc(
+    entries: list[dict[str, Any]],
+    transport_result: TransportResult,
+    fleet: FleetPatterns | None,
+) -> AnalysisResult:
+    """Analyze a JSON-RPC capture through auth, then report the generate_config gap."""
+    warnings: list[str] = []
+    ambiguities: list[Ambiguity] = []
+    auth = detect_auth(entries, "jsonrpc", warnings, [], ambiguities=ambiguities)
+    if fleet is not None:
+        corroborate(ambiguities, fleet.confirmed_config_values)
     endpoints: set[str] = set()
     methods: set[str] = set()
     for entry in entries:
@@ -174,17 +187,19 @@ def _jsonrpc_stop(entries: list[dict[str, Any]], transport_result: TransportResu
         category="jsonrpc_transport",
         summary=(
             "JSON-RPC 2.0 transport: generate_config has no path for it. Author modem.yaml and "
-            "parser.yaml by hand (MODEM_YAML_SPEC § jsonrpc, AUTH_JSONRPC_SPEC)."
+            "parser.yaml by hand from the auth fields and ambiguities (MODEM_YAML_SPEC § jsonrpc, "
+            "AUTH_JSONRPC_SPEC)."
         ),
         evidence={"endpoint": ", ".join(sorted(endpoints)), "methods": sorted(methods)},
     )
     return AnalysisResult(
         transport=transport_result,
-        # The transport has exactly one strategy; its fields come from the capture by hand.
-        auth=AuthDetail(strategy="jsonrpc"),
+        auth=auth,
         session=SessionDetail(),
         actions=ActionsDetail(),
+        warnings=warnings,
         core_gaps=[gap],
+        ambiguities=ambiguities,
     )
 
 

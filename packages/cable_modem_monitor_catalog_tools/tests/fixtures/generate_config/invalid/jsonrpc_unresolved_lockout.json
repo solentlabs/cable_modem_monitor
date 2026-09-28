@@ -1,0 +1,88 @@
+{
+  "_description": "A blocking ambiguity left unresolved refuses generation, naming the field and its candidates",
+  "_expected_error": "unresolved ambiguity auth\\.lockout_code .*codeLocked",
+  "_analysis": {
+    "transport": "jsonrpc",
+    "confidence": "high",
+    "auth": {
+      "strategy": "jsonrpc",
+      "confidence": "high",
+      "fields": {
+        "endpoint": "/cgi-bin/api.cgi",
+        "login_method": "SYS.login",
+        "username_field": "userName",
+        "password_field": "userPwd",
+        "token_path": "token",
+        "token_param": "tok"
+      }
+    },
+    "session": {
+      "headers": {}
+    },
+    "actions": {
+      "logout": null,
+      "restart": null
+    },
+    "sections": null,
+    "warnings": [],
+    "hard_stops": [],
+    "ambiguities": [
+      {
+        "field": "auth.lockout_code",
+        "blocking": true,
+        "candidates": [
+          {
+            "value": "codeLocked",
+            "evidence": [
+              {
+                "source": "/page.htm",
+                "snippet": "code===\"codeLocked\""
+              }
+            ],
+            "corroborated_by": []
+          }
+        ],
+        "resolution": null
+      },
+      {
+        "field": "auth.session_expired_code",
+        "blocking": true,
+        "candidates": [
+          {
+            "value": "codeExpired",
+            "evidence": [
+              {
+                "source": "/page.htm",
+                "snippet": "code===\"codeExpired\""
+              }
+            ],
+            "corroborated_by": []
+          }
+        ],
+        "resolution": {
+          "value": "codeExpired"
+        }
+      }
+    ]
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T400",
+    "default_host": "192.168.0.1",
+    "hardware": {
+      "docsis_version": "3.1"
+    },
+    "status": "awaiting_verification",
+    "attribution": {
+      "contributors": [
+        {
+          "github": "tester",
+          "contribution": "Test"
+        }
+      ]
+    },
+    "isps": [
+      "Various"
+    ]
+  }
+}

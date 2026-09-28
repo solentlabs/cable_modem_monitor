@@ -95,6 +95,21 @@ def test_valid_parser_yaml_presence(fixture_path: Path) -> None:
         assert result.parser_yaml is None
 
 
+@pytest.mark.parametrize(
+    "fixture_path",
+    [f for f in VALID_FIXTURES if "_expected_auth_fields" in load_fixture(f)],
+    ids=[f.stem for f in VALID_FIXTURES if "_expected_auth_fields" in load_fixture(f)],
+)
+def test_valid_auth_fields(fixture_path: Path) -> None:
+    """Auth fields, including resolved ambiguities, land in modem.yaml; explicit nones stay absent."""
+    fixture = load_fixture(fixture_path)
+    auth = yaml.safe_load(generate_config(fixture["_analysis"], fixture["_metadata"]).modem_yaml)["auth"]
+    for key, value in fixture["_expected_auth_fields"].items():
+        assert auth.get(key) == value, f"auth.{key}: expected {value!r}, got {auth.get(key)!r}"
+    for key in fixture.get("_expected_absent_auth_fields", []):
+        assert key not in auth, f"auth.{key} should be absent"
+
+
 # ---------------------------------------------------------------------------
 # Alias and brand validation — firmware-internal codes rejected from aliases/brands
 # ---------------------------------------------------------------------------

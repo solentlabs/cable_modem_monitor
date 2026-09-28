@@ -1,7 +1,7 @@
 """Phase 1 - Transport detection.
 
 Scans HAR entries for protocol markers. An HNAP marker makes the
-transport ``hnap``; a JSON-RPC 2.0 request body makes it ``jsonrpc``;
+transport ``hnap``; a JSON-RPC 2.0 login call makes it ``jsonrpc``;
 otherwise ``http``. Confidence is always ``high``: each marker is a
 protocol member, not a heuristic.
 
@@ -13,7 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..validation.har_utils import is_hnap_request, jsonrpc_method, lower_headers
+from ..validation.har_utils import is_hnap_request, lower_headers
+from .auth.jsonrpc import jsonrpc_login_credentials
 
 
 @dataclass
@@ -32,8 +33,8 @@ class TransportResult:
         """Detect transport protocol from HAR entries.
 
         Scans all entries for HNAP markers (``/HNAP1/`` URL, ``SOAPAction``
-        header, ``HNAP_AUTH`` header), then for a JSON-RPC 2.0 request
-        body. HNAP → ``hnap``, JSON-RPC → ``jsonrpc``, else ``http``.
+        header, ``HNAP_AUTH`` header), then for a JSON-RPC 2.0 login
+        call. HNAP → ``hnap``, JSON-RPC login → ``jsonrpc``, else ``http``.
 
         Args:
             entries: HAR ``log.entries`` list.
@@ -48,7 +49,9 @@ class TransportResult:
             if is_hnap_request(url, req_hdrs):
                 return cls(transport="hnap", confidence="high")
 
-        if any(jsonrpc_method(entry["request"]) is not None for entry in entries):
+        # The login decides: JSON-RPC calls outside auth and data (LuCI
+        # ubus plumbing) run on modems whose transport is http.
+        if any(jsonrpc_login_credentials(entry["request"]) is not None for entry in entries):
             return cls(transport="jsonrpc", confidence="high")
 
         return cls(transport="http", confidence="high")

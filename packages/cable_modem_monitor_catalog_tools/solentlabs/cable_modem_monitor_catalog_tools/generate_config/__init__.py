@@ -18,6 +18,7 @@ from solentlabs.cable_modem_monitor_core.validation.cross_file import validate_c
 from solentlabs.cable_modem_monitor_core.validation.layout import IDENTITY_KEYS, apply_section_spacing
 
 from ..analysis.types import FleetPatterns
+from .ambiguities import apply_resolutions
 from .modem import build_modem_dict
 from .parser import build_parser_dict
 from .validation import (
@@ -76,6 +77,7 @@ def generate_config(
 
     # Build modem.yaml dict
     modem_dict = build_modem_dict(analysis, metadata)
+    apply_resolutions(analysis, modem_dict, errors)
 
     # Build parser.yaml dict (None if no sections)
     sections = analysis.get("sections")

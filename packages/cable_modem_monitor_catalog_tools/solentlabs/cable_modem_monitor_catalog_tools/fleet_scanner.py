@@ -76,6 +76,13 @@ def scan_fleet(catalog_path: Path) -> FleetPatterns:
         _extract_uptime_formats(data, uptime_formats)
         _extract_docsis_status_values(data, docsis_status_values)
 
+    confirmed_config_values: dict[str, dict[str, list[str]]] = {}
+    for modem_yaml_path in sorted(catalog_path.rglob("modem*.yaml")):
+        _extract_confirmed_config_values(catalog_path, modem_yaml_path, confirmed_config_values)
+    for values in confirmed_config_values.values():
+        for entries in values.values():
+            entries.sort()
+
     return FleetPatterns(
         selector_directions=selector_directions,
         system_info_labels=system_info_labels,
@@ -90,7 +97,38 @@ def scan_fleet(catalog_path: Path) -> FleetPatterns:
         # shorter one that would also match a prefix of the same value.
         uptime_formats=sorted(uptime_formats, key=lambda f: (-len(f), f)),
         docsis_status_success_values=docsis_status_values,
+        confirmed_config_values=confirmed_config_values,
     )
+
+
+def _extract_confirmed_config_values(
+    catalog_path: Path,
+    modem_yaml_path: Path,
+    out: dict[str, dict[str, list[str]]],
+) -> None:
+    """Index a confirmed entry's auth and action scalars by dotted path."""
+    try:
+        data = yaml.safe_load(modem_yaml_path.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError):
+        return
+    # Only hardware-confirmed entries teach; an unconfirmed intake contributes
+    # nothing (MODEM_INTAKE_WORKFLOW § Step 4: patterns come from confirmed modems only).
+    if not isinstance(data, dict) or data.get("status") != "confirmed":
+        return
+    entry = modem_yaml_path.parent.relative_to(catalog_path).as_posix()
+    if modem_yaml_path.stem != "modem":
+        entry = f"{entry}/{modem_yaml_path.stem}"
+    for section in ("auth", "actions"):
+        _index_scalars(data.get(section), section, entry, out)
+
+
+def _index_scalars(node: Any, path: str, entry: str, out: dict[str, dict[str, list[str]]]) -> None:
+    """Record every string or number under ``node`` at its dotted path."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            _index_scalars(value, f"{path}.{key}", entry, out)
+    elif isinstance(node, str | int | float) and not isinstance(node, bool):
+        out.setdefault(path, {}).setdefault(str(node), []).append(entry)
 
 
 # ---------------------------------------------------------------------------

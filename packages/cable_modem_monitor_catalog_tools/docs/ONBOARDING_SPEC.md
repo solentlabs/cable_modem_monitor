@@ -323,7 +323,8 @@ For each entry in HAR:
     ├── Request has HNAP_AUTH header?
     │   └── YES → transport: hnap
     │
-    ├── Request body is a JSON-RPC 2.0 call ("jsonrpc": "2.0", string "method")?
+    ├── Request body is a JSON-RPC 2.0 login call (one "jsonrpc": "2.0"
+    │   object whose params[0] carries a password-shaped key)?
     │   └── YES → transport: jsonrpc (checked after HNAP, over all entries)
     │
     └── None of the above → transport: http
@@ -333,14 +334,19 @@ For each entry in HAR:
 header, or `HNAP_AUTH` header are protocol markers with no false
 positives.
 
-**A JSON-RPC capture stops at a core gap.** `generate_config` has no
-`jsonrpc` path, so analysis reports `transport: jsonrpc`, strategy
-`jsonrpc` with no fields, and one `jsonrpc_transport` gap naming the
-endpoint and every method called, then skips Phases 2-6. The entry is
-written by hand from that evidence
-([MODEM_YAML_SPEC.md § `jsonrpc`](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md#jsonrpc)).
-The HTTP tree run over JSON-RPC calls misreads the login as
-`form_pbkdf2`.
+**The login decides JSON-RPC, not any call.** Firmware can make
+JSON-RPC calls that play no part in auth or data: OpenWrt LuCI's `ubus`
+plumbing runs on a modem that logs in with a form and serves HTML. A
+JSON-RPC call makes the transport `jsonrpc` only when it is the login,
+meaning its first param is an object with a password-shaped key (the
+Phase 2 credential test). Other JSON-RPC traffic does not count.
+
+**A JSON-RPC capture stops at a core gap after auth.** Analysis runs
+Phase 2 ([JSON-RPC transport](#json-rpc-transport)) and reports its
+fields and ambiguities. `generate_config` has no `jsonrpc` path yet, so
+analysis also reports one `jsonrpc_transport` gap naming the endpoint
+and every method called, and skips Phases 3-6. The HTTP tree run over
+JSON-RPC calls misreads the login as `form_pbkdf2`.
 
 **Everything else is `http`.** This includes modems with HTML pages,
 JSON APIs, or any combination. The data format (HTML tables, JSON
@@ -391,6 +397,36 @@ HAR was captured post-auth (hash computed client-side). If the HAR
 includes the Login action response, the `Challenge` and `PublicKey`
 fields confirm the protocol but not the algorithm. Default to `md5`
 (most common) and flag for verification.
+
+#### JSON-RPC transport
+
+Auth is always `jsonrpc`. Its fields come from the last login call that
+answered `result`:
+
+| Field | Evidence |
+|-------|----------|
+| `endpoint` | The login request's URL path |
+| `login_method` | The login call's `method` |
+| `username_field`, `password_field` | Keys of the credential object in `params[0]`, classified as form fields are |
+| `token_path` | The `result` key whose string value reappears as a query value on a later call |
+| `token_param` | That query parameter's name |
+
+A token with no later call carrying it is a warning; `generate_config`
+validation then names the missing fields.
+
+**Error codes are a blocking [ambiguity](#ambiguities-resolve-then-proceed).**
+JSON-RPC defines no error codes, and a lockout read as a rejected
+credential sends the owner to re-enter the password, which extends the
+lockout. Analysis lists candidates and never picks one:
+
+- `auth.lockout_code`: string literals compared (`==`, `===`) in a
+  captured body that contains the login method's name, kept when the
+  literal is also a key in a captured i18n `.properties` file, the
+  firmware's message vocabulary.
+- `auth.session_expired_code`: the same test over every other body.
+
+Each candidate cites the comparison and its i18n text, English locale
+first.
 
 #### HTTP transport
 
@@ -1402,6 +1438,42 @@ coordinator skips missing hooks.
 | Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |
 | parser.py generated | "parser.py was generated for: [reasons]. Review the post-processing logic for correctness." |
 
+### Ambiguities (resolve, then proceed)
+
+A judgment the capture supports but the tool does not make. Analysis
+returns each one under `ambiguities`:
+
+```yaml
+ambiguities:
+  - field: auth.lockout_code        # dotted path into the generated config
+    blocking: true                  # generate_config refuses while unresolved
+    candidates:
+      - value: msgUserLockedText
+        evidence:
+          - {source: /login.htm, snippet: 'd.error.code==="msgUserLockedText"'}
+          - {source: /i18n/en/login.properties, snippet: "msgUserLockedText=Access ... blocked ..."}
+        corroborated_by: []         # confirmed entries declaring this value here
+    resolution: null
+```
+
+- **`candidates`** carry evidence, not a ranking.
+- **`resolution`** is set by the LLM from the evidence, as `{value}`, or
+  as `{value: null, reason}` for an explicit "none". The user confirms
+  it at review. A blank is never a resolution.
+- **`generate_config`** writes each resolved value at its path. An
+  explicit "none" leaves the field absent; a null without a reason is a
+  blank and is rejected. An unresolved **`blocking`** ambiguity makes
+  the result invalid, naming the field and its candidates. A
+  non-blocking one left unresolved omits its field.
+
+**Confirmed modems corroborate candidates.** A candidate carries
+`corroborated_by` when a `status: confirmed` entry declares the same
+value at the same path. When exactly one candidate is corroborated,
+analysis pre-fills `resolution` as `{value, source: fleet}`, still
+reviewed. Entries awaiting verification never corroborate, so an
+unconfirmed intake teaches nothing: patterns come from confirmed
+modems only ([MODEM_INTAKE_WORKFLOW.md § Step 4](MODEM_INTAKE_WORKFLOW.md#step-4-analyze-har)).
+
 ### Confidence annotations
 
 The generated modem.yaml should include comments marking fields with
@@ -1540,9 +1612,15 @@ effort. Categories:
 | `auth_unknown` | auth | Signal flags + description | New auth strategy implementation |
 | `unmatched_restart` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
 | `unmatched_logout` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
+| `jsonrpc_transport` | transport | Endpoint + every method called | A `generate_config` path for `jsonrpc` |
 
 Well-known modems with standard patterns produce zero core gaps.
 Novel modems produce gaps that require development before onboarding.
+
+**Ambiguities** are judgments the capture supports but the tool does
+not make: candidates with evidence, which the LLM resolves and the user
+confirms. Present only when a phase reports one. See
+[Ambiguities](#ambiguities-resolve-then-proceed).
 
 **Unread resources** are the opposite kind of signal: the JSON endpoints
 the HAR captured that no gap category covers, because nothing read them.
@@ -1796,6 +1874,7 @@ Catalog provides:
 | Table direction | Keyword matching ("downstream", "upstream") | Selector text from proven configs ("Signal Status (Codewords)" → downstream) |
 | System info labels | 17 hardcoded label→field mappings | Labels, CSS IDs, and JSON keys learned from fleet ("firmware name" → firmware_name) |
 | Aggregate fields | Hardcoded (source_field, agg_name) pairs | Additional aggregate patterns from fleet parser.yaml files |
+| Ambiguity candidates | Evidence only | `corroborated_by` from confirmed entries' `modem.yaml` values; one corroborated candidate pre-fills the resolution |
 
 **Merge rules:** Fleet patterns augment, not override. Core's baseline
 maps apply first. Fleet adds entries only for labels/selectors that

@@ -56,8 +56,8 @@ def is_hnap_request(url: str, req_headers: dict[str, str]) -> bool:
     return "/HNAP1/" in url or "hnap_auth" in req_headers or "soapaction" in req_headers
 
 
-def jsonrpc_method(request: dict[str, Any]) -> str | None:
-    """The ``method`` of a JSON-RPC 2.0 request body, or None when the body is not one."""
+def jsonrpc_body(request: dict[str, Any]) -> dict[str, Any] | None:
+    """A single JSON-RPC 2.0 request object with a string ``method``, or None."""
     text = (request.get("postData") or {}).get("text") or ""
     if '"jsonrpc"' not in text:
         return None
@@ -67,8 +67,13 @@ def jsonrpc_method(request: dict[str, Any]) -> str | None:
         return None
     if not isinstance(body, dict) or body.get("jsonrpc") != "2.0":
         return None
-    method = body.get("method")
-    return method if isinstance(method, str) else None
+    return body if isinstance(body.get("method"), str) else None
+
+
+def jsonrpc_method(request: dict[str, Any]) -> str | None:
+    """The ``method`` of a JSON-RPC 2.0 request body, or None when the body is not one."""
+    body = jsonrpc_body(request)
+    return body["method"] if body is not None else None
 
 
 def has_set_cookie(resp: dict[str, Any]) -> bool:

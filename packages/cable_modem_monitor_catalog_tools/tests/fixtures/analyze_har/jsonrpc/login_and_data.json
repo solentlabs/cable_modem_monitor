@@ -5,6 +5,14 @@
     "CM.getDownstream",
     "MGMT.login"
   ],
+  "_expected_auth_fields": {
+    "endpoint": "/cgi-bin/router.php",
+    "login_method": "MGMT.login",
+    "username_field": "loginUserName",
+    "password_field": "loginPwd",
+    "token_path": "token",
+    "token_param": "token"
+  },
   "_har": {
     "log": {
       "entries": [

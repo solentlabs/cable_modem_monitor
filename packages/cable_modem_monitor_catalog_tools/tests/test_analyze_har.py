@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
 from solentlabs.cable_modem_monitor_catalog_tools.analyze_har import (
     AnalysisResult,
     analyze_har,
@@ -353,16 +354,16 @@ class TestNoDataSections:
 
 
 class TestJsonrpcTransport:
-    """A JSON-RPC capture is named as such and routed to hand-authoring.
+    """A JSON-RPC capture is analyzed through auth, and its error codes become ambiguities.
 
-    generate_config has no jsonrpc path, so the analysis must stop at
-    Step 5 with a true statement rather than run the HTTP tree over it.
+    generate_config has no jsonrpc path yet, so the analysis still ends at
+    a core gap and runs no HTTP-tree phase over the calls.
     """
 
     @staticmethod
-    def _analyze(tmp_path: Path) -> tuple[AnalysisResult, dict[str, Any]]:
+    def _analyze(tmp_path: Path, fleet: FleetPatterns | None = None) -> tuple[AnalysisResult, dict[str, Any]]:
         data = load_fixture(FIXTURES_DIR / "jsonrpc" / "login_and_data.json")
-        return analyze_har(write_har(tmp_path, data["_har"])), data
+        return analyze_har(write_har(tmp_path, data["_har"]), fleet=fleet), data
 
     def test_transport_is_jsonrpc(self, tmp_path: Path) -> None:
         result, _ = self._analyze(tmp_path)
@@ -376,11 +377,28 @@ class TestJsonrpcTransport:
         assert evidence["endpoint"] == data["_expected_endpoint"]
         assert evidence["methods"] == data["_expected_methods"]
 
-    def test_http_phases_do_not_run(self, tmp_path: Path) -> None:
-        """No HTTP-tree verdict (the form_pbkdf2 misread) reaches the output."""
-        result, _ = self._analyze(tmp_path)
-        # The transport has exactly one strategy; its fields are hand-authored.
+    def test_auth_fields_from_login_call(self, tmp_path: Path) -> None:
+        """The HTTP tree's form_pbkdf2 misread never reaches the output; the login call's fields do."""
+        result, data = self._analyze(tmp_path)
         assert result.auth.strategy == "jsonrpc"
-        assert result.auth.fields == {}
+        assert result.auth.fields == data["_expected_auth_fields"]
         assert result.actions.restart is None
         assert result.sections is None
+
+    def test_error_codes_are_blocking_ambiguities(self, tmp_path: Path) -> None:
+        """Both codes are serialized as unresolved blocking ambiguities."""
+        result, _ = self._analyze(tmp_path)
+        serialized = result.to_dict()["ambiguities"]
+        assert [(a["field"], a["blocking"], a["resolution"]) for a in serialized] == [
+            ("auth.lockout_code", True, None),
+            ("auth.session_expired_code", True, None),
+        ]
+
+    def test_confirmed_fleet_value_prefills_resolution(self, tmp_path: Path) -> None:
+        """A candidate a confirmed entry declares is corroborated and pre-fills the resolution."""
+        data = load_fixture(Path(__file__).parent / "fixtures" / "auth" / "valid" / "jsonrpc_login_token.json")
+        fleet = FleetPatterns(confirmed_config_values={"auth.lockout_code": {"codeLocked": ["vendor/m1"]}})
+        result = analyze_har(write_har(tmp_path, {"log": {"entries": data["_entries"]}}), fleet=fleet)
+        lockout = next(a for a in result.ambiguities if a.field == "auth.lockout_code")
+        assert lockout.candidates[0].corroborated_by == ["vendor/m1"]
+        assert lockout.resolution == {"value": "codeLocked", "source": "fleet"}
