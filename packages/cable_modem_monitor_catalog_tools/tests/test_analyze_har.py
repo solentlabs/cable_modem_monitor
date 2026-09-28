@@ -421,6 +421,17 @@ class TestJsonrpcTransport:
             ("actions.restart.method", False, None),
         ]
 
+    def test_scanned_fleet_decides_password_names(self, tmp_path: Path) -> None:
+        """A login key only the scanned fleet declares is a credential with that fleet, and not without it."""
+        data = load_fixture(FIXTURES_DIR / "jsonrpc" / "login_and_data.json")
+        text = data["_har"]["log"]["entries"][0]["request"]["postData"]["text"]
+        data["_har"]["log"]["entries"][0]["request"]["postData"]["text"] = text.replace("loginPwd", "zzSecret")
+        har = write_har(tmp_path, data["_har"])
+        knows = analyze_har(har, fleet=FleetPatterns(password_field_names=frozenset({"zzsecret"})))
+        excludes = analyze_har(har, fleet=FleetPatterns(password_field_names=frozenset()))
+        assert (knows.transport.transport, knows.auth.fields["password_field"]) == ("jsonrpc", "zzSecret")
+        assert excludes.transport.transport == "http"
+
     def test_confirmed_fleet_value_prefills_resolution(self, tmp_path: Path) -> None:
         """A candidate a confirmed entry declares is corroborated and pre-fills the resolution."""
         data = load_fixture(Path(__file__).parent / "fixtures" / "auth" / "valid" / "jsonrpc_login_token.json")

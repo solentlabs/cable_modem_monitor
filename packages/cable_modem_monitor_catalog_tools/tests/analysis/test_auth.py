@@ -740,3 +740,22 @@ class TestDynamicFormAction:
         assert "action_source" not in result.fields
         assert result.confidence == "high"
         assert not any("action_source" in w for w in warnings)
+
+
+class TestFleetPasswordNames:
+    """A scanned fleet's password names replace the whole catalog's inside the scope, and only there."""
+
+    def test_scoped_names_replace_catalog(self) -> None:
+        from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.patterns import (
+            fleet_password_names,
+            has_credential_fields,
+            is_password_field_name,
+        )
+
+        assert not is_password_field_name("zzsecret")
+        with fleet_password_names(frozenset({"zzsecret"})):
+            assert is_password_field_name("zzSecret")
+            assert has_credential_fields({"text": "zzsecret=x"})
+        with fleet_password_names(frozenset()):
+            assert not is_password_field_name("zzsecret")
+        assert not is_password_field_name("zzsecret")

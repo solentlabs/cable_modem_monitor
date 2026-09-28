@@ -27,6 +27,7 @@ from .analysis.actions import ActionsDetail, detect_actions
 from .analysis.actions.jsonrpc import restart_ambiguity
 from .analysis.ambiguity import Ambiguity, corroborate
 from .analysis.auth import AuthDetail, detect_auth
+from .analysis.auth.patterns import fleet_password_names
 from .analysis.format import detect_sections
 from .analysis.js_endpoints import detect_uncalled_jsonrpc_methods, detect_uncaptured_endpoints
 from .analysis.request_requirements import detect_request_requirements
@@ -97,9 +98,15 @@ def analyze_har(
         FileNotFoundError: If har_path does not exist.
         ValueError: If HAR file cannot be parsed or has no entries.
     """
-    har_path = Path(har_path)
-    entries = _load_har_entries(har_path)
+    entries = _load_har_entries(Path(har_path))
+    # A scanned fleet decides which password_field names are known: the
+    # intake score scans without the modem under test (INTAKE_PIPELINE.md).
+    with fleet_password_names(fleet.password_field_names if fleet else None):
+        return _analyze_entries(entries, fleet)
 
+
+def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None) -> AnalysisResult:
+    """Run Phases 1-6 over loaded HAR entries."""
     warnings: list[str] = []
     hard_stops: list[str] = []
     core_gaps: list[CoreGap] = []

@@ -28,16 +28,19 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.patterns import collect_password_field_names
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
 from solentlabs.cable_modem_monitor_catalog_tools.validation.fixture_integrity import check_login_page_in_har
 
 
-def scan_fleet(catalog_path: Path) -> FleetPatterns:
+def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns:
     """Scan all parser.yaml files and build fleet patterns.
 
     Args:
         catalog_path: Root of the modem catalog directory
             (``modems/{manufacturer}/{model}/``).
+        exclude: A modem directory that teaches nothing. The intake score
+            grades each HAR as a new modem would be onboarded.
 
     Returns:
         ``FleetPatterns`` populated from the fleet's proven configs.
@@ -56,6 +59,8 @@ def scan_fleet(catalog_path: Path) -> FleetPatterns:
     docsis_status_values: set[str] = set()
 
     for parser_path in sorted(catalog_path.rglob("parser.yaml")):
+        if exclude is not None and parser_path.is_relative_to(exclude):
+            continue
         try:
             data = yaml.safe_load(parser_path.read_text(encoding="utf-8"))
         except (yaml.YAMLError, OSError):
@@ -78,6 +83,8 @@ def scan_fleet(catalog_path: Path) -> FleetPatterns:
 
     confirmed_config_values: dict[str, dict[str, list[str]]] = {}
     for modem_yaml_path in sorted(catalog_path.rglob("modem*.yaml")):
+        if exclude is not None and modem_yaml_path.is_relative_to(exclude):
+            continue
         _extract_confirmed_config_values(catalog_path, modem_yaml_path, confirmed_config_values)
     for values in confirmed_config_values.values():
         for entries in values.values():
@@ -98,6 +105,7 @@ def scan_fleet(catalog_path: Path) -> FleetPatterns:
         uptime_formats=sorted(uptime_formats, key=lambda f: (-len(f), f)),
         docsis_status_success_values=docsis_status_values,
         confirmed_config_values=confirmed_config_values,
+        password_field_names=collect_password_field_names(catalog_path, exclude),
     )
 
 

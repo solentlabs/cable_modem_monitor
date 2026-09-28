@@ -72,6 +72,9 @@ class FleetPatterns:
             ``auth`` and ``actions``) mapped to each value a
             ``status: confirmed`` entry declares there, and the entries
             that declare it. Corroborates ambiguity candidates.
+        password_field_names: ``password_field`` names the scanned
+            entries declare. None when not scanned, so detection reads
+            the whole catalog's.
     """
 
     selector_directions: dict[str, str] = field(default_factory=dict)
@@ -86,6 +89,7 @@ class FleetPatterns:
     uptime_formats: list[str] = field(default_factory=list)
     docsis_status_success_values: set[str] = field(default_factory=set)
     confirmed_config_values: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    password_field_names: frozenset[str] | None = None
 
 
 # -----------------------------------------------------------------------

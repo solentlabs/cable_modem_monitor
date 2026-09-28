@@ -292,3 +292,43 @@ class TestScanFleetEdgeCases:
         bad_yaml.write_text("{{invalid yaml", encoding="utf-8")
         fleet = scan_fleet(tmp_path)
         assert isinstance(fleet, FleetPatterns)
+
+
+class TestExcludeOneModem:
+    """The intake score grades each HAR against a fleet that excludes its own committed config."""
+
+    @staticmethod
+    def _write(root: Path, rel: str, text: str) -> None:
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def _catalog(self, root: Path) -> None:
+        for model, key, code, pwd in (("m1", "k1", "c1", "pw1"), ("m2", "k2", "c2", "pw2")):
+            self._write(
+                root,
+                f"vendor/{model}/parser.yaml",
+                f"system_info:\n  sources:\n    - format: json\n      resource: /a\n      fields:\n"
+                f"        - key: {key}\n          field: software_version\n          type: string\n",
+            )
+            self._write(
+                root,
+                f"vendor/{model}/modem.yaml",
+                f"status: confirmed\nauth:\n  strategy: jsonrpc\n  password_field: {pwd}\n  lockout_code: {code}\n",
+            )
+
+    def test_whole_fleet_learns_both(self, tmp_path: Path) -> None:
+        """Without exclusion every committed entry teaches."""
+        self._catalog(tmp_path)
+        fleet = scan_fleet(tmp_path)
+        assert set(fleet.system_info_json_keys) == {"k1", "k2"}
+        assert fleet.password_field_names == frozenset({"pw1", "pw2"})
+        assert set(fleet.confirmed_config_values["auth.lockout_code"]) == {"c1", "c2"}
+
+    def test_excluded_modem_teaches_nothing(self, tmp_path: Path) -> None:
+        """The excluded directory's parser patterns, password field and confirmed values are all absent."""
+        self._catalog(tmp_path)
+        fleet = scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m1")
+        assert set(fleet.system_info_json_keys) == {"k2"}
+        assert fleet.password_field_names == frozenset({"pw2"})
+        assert set(fleet.confirmed_config_values["auth.lockout_code"]) == {"c2"}

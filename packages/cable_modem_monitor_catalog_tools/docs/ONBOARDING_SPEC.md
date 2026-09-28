@@ -375,11 +375,11 @@ Password-shaped means either of:
   name with no separate pattern-maintenance step. Exact names never
   generalize; only curated substrings do.
 
-One caveat follows from the catalog-derived half: the intake
-regression treats each committed HAR as a fresh submission, but a
-modem whose field name matches no curated substring is recognized via
-its own committed config, so it grades better there than a genuinely
-novel submission would.
+The catalog-derived names come from the fleet an analysis runs with.
+`analyze_har(fleet=...)` and `validate_har(fleet=...)` use the scanned
+fleet's names; without a fleet, the whole catalog's. The intake
+regression scans without the modem under test, so a HAR is never
+recognized through its own committed config.
 
 #### HNAP transport
 
@@ -1525,7 +1525,8 @@ independently testable.
 Runs the HAR validation gate (see above). Returns structured result:
 pass/fail, detected issues, and diagnostic messages.
 
-**Input:** HAR file path
+**Input:** HAR file path + optional `fleet` (its `password_field` names
+decide which login fields are credentials)
 **Output:** `{ valid: bool, issues: [], auth_flow_detected: bool, transport_hints: [] }`
 
 ### `analyze_har`
@@ -1887,12 +1888,13 @@ Core defines:
     delimiters: set[str]                          # record delimiters (HNAP/JS)
     channel_type_values: set[str]                 # modulation type strings
     aggregate_fields: list[tuple[str,str]]        # (source_field, agg_name)
+    password_field_names: frozenset[str] | None   # committed password_field names
 
   analyze_har(har_path, fleet=None) → AnalysisResult
   generate_config(analysis, metadata, *, fleet=None) → GenerateConfigResult
 
 Catalog provides:
-  fleet_scanner.scan_fleet(CATALOG_PATH) → FleetPatterns
+  fleet_scanner.scan_fleet(CATALOG_PATH, exclude=None) → FleetPatterns
   trial_parser.trial_parse(har_path, parser_yaml, transport=None) → TrialResult
 ```
 

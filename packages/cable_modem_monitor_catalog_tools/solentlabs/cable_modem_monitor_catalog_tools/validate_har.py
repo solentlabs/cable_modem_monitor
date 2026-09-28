@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .analysis.auth.patterns import fleet_password_names
+from .analysis.types import FleetPatterns
 from .validation.auth_flow import validate_auth_flow, validate_auth_redirect_landing
 from .validation.har_utils import HARD_STOP_PREFIX
 from .validation.protocol_signals import identify_transport_and_auth
@@ -42,11 +44,13 @@ class ValidationResult:
         }
 
 
-def validate_har(har_path: str | Path) -> ValidationResult:
+def validate_har(har_path: str | Path, fleet: FleetPatterns | None = None) -> ValidationResult:
     """Run the HAR Validation Gate.
 
     Args:
         har_path: Path to a .har file.
+        fleet: Optional scanned fleet; its password_field names decide
+            which login fields are credentials.
 
     Returns:
         ValidationResult with pass/fail, issues, and transport hints.
@@ -62,12 +66,13 @@ def validate_har(har_path: str | Path) -> ValidationResult:
 
     entries = har_data["log"]["entries"]
 
-    # Step 2: Auth flow validation
-    auth_flow_detected = validate_auth_flow(entries, issues)
-    validate_auth_redirect_landing(entries, issues)
+    with fleet_password_names(fleet.password_field_names if fleet else None):
+        # Step 2: Auth flow validation
+        auth_flow_detected = validate_auth_flow(entries, issues)
+        validate_auth_redirect_landing(entries, issues)
 
-    # Step 3: Protocol signal scanning
-    identify_transport_and_auth(entries, issues, transport_hints)
+        # Step 3: Protocol signal scanning
+        identify_transport_and_auth(entries, issues, transport_hints)
 
     # Step 4: Response body integrity
     validate_response_integrity(entries, issues)

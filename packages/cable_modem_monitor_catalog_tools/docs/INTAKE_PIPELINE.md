@@ -210,6 +210,8 @@ The pipeline uses a three-layer detection model:
 
 Fleet patterns grow automatically as new modems are onboarded — each new parser.yaml enriches detection for future modems that share similar patterns.
 
+`scan_fleet(catalog, exclude=modem_dir)` builds the fleet without one modem's directory: its parser patterns, its `password_field` names and its confirmed `modem.yaml` values all teach nothing. The intake regression uses this for every HAR (below).
+
 ---
 
 ## Data-Driven Extension Points
@@ -278,6 +280,16 @@ python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regres
 Fleet-wide **field accuracy** is reported as a percentage of committed
 golden file fields correctly reproduced by the pipeline. This tracks
 improvement over time as the pipeline gains new pattern recognition.
+
+**Each HAR is graded as a new modem.** The fleet patterns its intake
+runs with are scanned without its own modem directory, so its committed
+config is the answer key and never a source of learning. A pattern only
+that modem declares cannot raise its own score; the score rises when
+something learned from other modems transfers.
+
+This is a report. The regression gate is the golden replay
+(`test_modem_har_replay`), which replays each saved HAR through its
+committed config and uses no fleet.
 
 A HAR the pipeline cannot process scores **zero against its full field
 count**, never dropping out of the denominator: a modem the pipeline

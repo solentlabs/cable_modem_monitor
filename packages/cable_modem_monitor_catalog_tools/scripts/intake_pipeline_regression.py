@@ -240,13 +240,13 @@ def _diff_config_files(
 # ---------------------------------------------------------------------------
 
 
-def _run_validate(har_path: Path, result: ModemResult) -> bool:
+def _run_validate(har_path: Path, result: ModemResult, fleet: FleetPatterns | None = None) -> bool:
     """Run validate_har. Returns True if passed."""
     from solentlabs.cable_modem_monitor_catalog_tools.validate_har import (
         validate_har,
     )
 
-    val = validate_har(str(har_path))
+    val = validate_har(str(har_path), fleet=fleet)
     if not val.valid:
         result.stage_failed = "validate_har"
         result.error = "; ".join(val.issues)
@@ -363,7 +363,7 @@ def _run_pipeline(
     fleet: FleetPatterns | None,
 ) -> None:
     """Run the pipeline stages, stopping at the first one that fails."""
-    if not _run_validate(har_path, result):
+    if not _run_validate(har_path, result, fleet=fleet):
         return
 
     analysis_data = _run_analyze(har_path, result, fleet=fleet)
@@ -733,7 +733,6 @@ def main() -> None:
         else:
             runnable.append((modem_id, har_path, modem_dir))
 
-    # Scan fleet patterns once — feeds into analyze_har and generate_config
     from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import scan_fleet
 
     fleet = scan_fleet(CATALOG_ROOT)
@@ -752,7 +751,10 @@ def main() -> None:
     results: list[ModemResult] = []
     for modem_id, har_path, modem_dir in runnable:
         print(f"  {modem_id} ({har_path.name})")
-        r = run_modem(modem_id, har_path, modem_dir, verbose=args.verbose, fleet=fleet)
+        # Graded as a new modem would be onboarded: its own committed config
+        # teaches its intake nothing (INTAKE_PIPELINE.md § Intake Pipeline Regression).
+        own_excluded = scan_fleet(CATALOG_ROOT, exclude=modem_dir)
+        r = run_modem(modem_id, har_path, modem_dir, verbose=args.verbose, fleet=own_excluded)
         results.append(r)
 
     _print_summary(results, incomplete=incomplete)

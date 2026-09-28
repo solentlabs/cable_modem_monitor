@@ -118,3 +118,16 @@ class TestSerialization:
         assert d["valid"] is True
         assert d["auth_flow_detected"] is True
         assert "http" in d["transport_hints"]
+
+
+def test_scanned_fleet_decides_login_credentials(tmp_path: Path) -> None:
+    """A login field only the scanned fleet declares marks the login with that fleet, and not without it."""
+    from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
+
+    data = load_fixture(VALID_DIR / "auth_form.json")
+    login = data["_har"]["log"]["entries"][1]["request"]["postData"]
+    login["text"] = login["text"].replace("pass=", "zzsecret=")
+    har = write_har(tmp_path, data["_har"])
+    knows = validate_har(har, fleet=FleetPatterns(password_field_names=frozenset({"zzsecret"})))
+    excludes = validate_har(har, fleet=FleetPatterns(password_field_names=frozenset()))
+    assert (knows.auth_flow_detected, excludes.auth_flow_detected) == (True, False)
