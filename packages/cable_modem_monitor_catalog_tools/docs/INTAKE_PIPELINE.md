@@ -281,6 +281,15 @@ Fleet-wide **field accuracy** is reported as a percentage of committed
 golden file fields correctly reproduced by the pipeline. This tracks
 improvement over time as the pipeline gains new pattern recognition.
 
+**Channels pair by identity, then by order**
+(`regression/golden_compare.py`). A committed channel is graded against
+the generated channel with the same `channel_type` and `channel_id`, so a
+dropped or extra row costs that one channel rather than misaligning every
+channel after it. Channels left unpaired, such as generated channels whose
+id is missing or wrong, are compared in order, so a wrong id costs that
+field and not the channel's correct values. A section whose committed
+channels have no unique identity is compared by position.
+
 **Each HAR is graded as a new modem.** The fleet patterns its intake
 runs with are scanned without its own modem directory, so its committed
 config is the answer key and never a source of learning. A pattern only

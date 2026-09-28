@@ -50,6 +50,11 @@ from solentlabs.cable_modem_monitor_catalog_tools.regression import (
     result_status,
 )
 from solentlabs.cable_modem_monitor_catalog_tools.regression.ambiguities import resolve_from_committed
+from solentlabs.cable_modem_monitor_catalog_tools.regression.golden_compare import (
+    count_fields,
+    count_matching_fields,
+    diff_golden_files,
+)
 from solentlabs.cable_modem_monitor_core.test_harness import resolve_modem_config
 
 CATALOG_ROOT = (
@@ -94,111 +99,8 @@ def _read_har_intake_info(har_path: Path) -> tuple[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# File backup / restore
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # Diffing
 # ---------------------------------------------------------------------------
-
-
-def _diff_channel_list(
-    section: str,
-    gen_list: list[Any],
-    com_list: list[Any],
-) -> list[str]:
-    """Diff two lists of channel dicts."""
-    diffs: list[str] = []
-    if len(gen_list) != len(com_list):
-        diffs.append(f"{section}: channel count {len(gen_list)} vs committed {len(com_list)}")
-        return diffs
-    for i, (g, c) in enumerate(zip(gen_list, com_list, strict=True)):
-        if not isinstance(g, dict) or not isinstance(c, dict):
-            continue
-        for key in sorted(set(g.keys()) | set(c.keys())):
-            if g.get(key) != c.get(key):
-                diffs.append(f"{section}[{i}].{key}: {g.get(key)!r} vs {c.get(key)!r}")
-    return diffs
-
-
-def _diff_section(
-    section: str,
-    gen_val: Any,
-    com_val: Any,
-) -> list[str]:
-    """Diff a single section (list, dict, or missing)."""
-    if isinstance(gen_val, list) and isinstance(com_val, list):
-        return _diff_channel_list(section, gen_val, com_val)
-
-    if isinstance(gen_val, dict) and isinstance(com_val, dict):
-        diffs: list[str] = []
-        for key in sorted(set(gen_val.keys()) | set(com_val.keys())):
-            if gen_val.get(key) != com_val.get(key):
-                diffs.append(f"{section}.{key}: {gen_val.get(key)!r} vs {com_val.get(key)!r}")
-        return diffs
-
-    if gen_val is None and com_val is not None:
-        return [f"{section}: missing in generated"]
-    if gen_val is not None and com_val is None:
-        return [f"{section}: extra in generated"]
-    if gen_val != com_val:
-        return [f"{section}: type mismatch"]
-    return []
-
-
-def _diff_golden_files(
-    generated: dict[str, Any],
-    committed: dict[str, Any],
-) -> list[str]:
-    """Compare generated golden file against committed golden file."""
-    diffs: list[str] = []
-    for section in ("downstream", "upstream", "system_info"):
-        diffs.extend(_diff_section(section, generated.get(section), committed.get(section)))
-    return diffs
-
-
-# ---------------------------------------------------------------------------
-# Field-level accuracy counting
-# ---------------------------------------------------------------------------
-
-
-def _count_fields(golden: dict[str, Any]) -> int:
-    """Count total leaf fields in a golden file."""
-    count = 0
-    for section in ("downstream", "upstream"):
-        for ch in golden.get(section, []):
-            if isinstance(ch, dict):
-                count += len(ch)
-    si = golden.get("system_info")
-    if isinstance(si, dict):
-        count += len(si)
-    return count
-
-
-def _count_matching_fields(
-    generated: dict[str, Any],
-    committed: dict[str, Any],
-) -> int:
-    """Count fields in committed that are correctly reproduced in generated."""
-    matching = 0
-    for section in ("downstream", "upstream"):
-        gen_list = generated.get(section, [])
-        com_list = committed.get(section, [])
-        for i, com_ch in enumerate(com_list):
-            if not isinstance(com_ch, dict):
-                continue
-            gen_ch = gen_list[i] if i < len(gen_list) and isinstance(gen_list[i], dict) else {}
-            for key, val in com_ch.items():
-                if gen_ch.get(key) == val:
-                    matching += 1
-    gen_si = generated.get("system_info") or {}
-    com_si = committed.get("system_info") or {}
-    if isinstance(com_si, dict) and isinstance(gen_si, dict):
-        for key, val in com_si.items():
-            if gen_si.get(key) == val:
-                matching += 1
-    return matching
 
 
 def _diff_config_files(
@@ -332,9 +234,9 @@ def _run_golden_comparison(
 
     committed = json.loads(expected_path.read_text())
     generated = golden_result.golden_file or {}
-    result.total_fields = _count_fields(committed)
-    result.matching_fields = _count_matching_fields(generated, committed)
-    result.golden_diffs = _diff_golden_files(generated, committed)
+    result.total_fields = count_fields(committed)
+    result.matching_fields = count_matching_fields(generated, committed)
+    result.golden_diffs = diff_golden_files(generated, committed)
 
 
 def _extract_metadata(modem_dir: Path) -> dict[str, Any]:
@@ -427,7 +329,7 @@ def run_modem(
         stem = har_path.stem
         expected_path = har_path.parent / f"{stem}.expected.json"
         if expected_path.exists():
-            result.total_fields = _count_fields(json.loads(expected_path.read_text()))
+            result.total_fields = count_fields(json.loads(expected_path.read_text()))
 
     if verbose:
         _print_result(result)
