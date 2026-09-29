@@ -8,7 +8,8 @@ analysis surfaced the answer and whether it was the only candidate.
 
 A channel key path reads the committed parser.yaml instead. Its
 candidates come from other modems, so an unoffered meaning is a new one:
-it is applied and graded ``committed_only``, never a failure.
+it is applied and graded ``committed_only``, never a failure. An action
+path is treated the same way: a capture without the action is normal.
 
 See INTAKE_PIPELINE.md § Intake Pipeline Regression.
 """
@@ -51,7 +52,9 @@ def resolve_from_committed(
         else:
             listed = ", ".join(offered) or "none"
             grades[path] = Grade("committed_only", f"committed {value} not surfaced (candidates: {listed})")
-            if parser_target:
+            # Key meanings come from other modems, and a capture without an action is
+            # normal: both grade the gap and continue. Auth codes must be in the capture.
+            if parser_target or path.startswith("actions."):
                 ambiguity["resolution"] = {"value": value}
             else:
                 ambiguity["resolution"] = None

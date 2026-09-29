@@ -1,4 +1,4 @@
-"""Tests for CBN intake: the login call decides the transport and carries the form_cbn fields.
+"""Tests for CBN intake: the login decides the transport and carries the form_cbn fields; setter calls are actions.
 
 Table-driven over the login request's shape. Per docs/ONBOARDING_SPEC.md
 Phase 1 and Phase 2 (CBN transport).
@@ -11,8 +11,10 @@ from typing import Any
 
 import pytest
 import yaml
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading import grade_action
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth import detect_auth
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.transport import TransportResult
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
 from solentlabs.cable_modem_monitor_catalog_tools.analyze_har import analyze_har
 from solentlabs.cable_modem_monitor_catalog_tools.generate_config import generate_config
 from tests._helpers import write_har
@@ -165,3 +167,66 @@ def test_reboot_page_is_not_an_http_action(tmp_path: Path) -> None:
     reboot = _post("/xml/setter.xml", "token=T3&fun=8", referer="/common_page/Reboot.html")
     result = analyze_har(write_har(tmp_path, {"log": {"entries": [_login(), _getter("10"), page, reboot]}}))
     assert (result.actions.logout, result.actions.restart) == (None, None)
+
+
+# =============================================================================
+# Actions: setter calls other than the login are logout and restart candidates
+# =============================================================================
+
+_REBOOT = _post("/xml/setter.xml", "token=T3&fun=8", referer="/common_page/Reboot.html")
+_LOGOUT = _post("/xml/setter.xml", "token=T4&fun=16", referer="/index.html")
+_ACTION_ENTRIES = [_login(), _getter("10"), _REBOOT, _LOGOUT]
+
+
+def _action_ambiguities(tmp_path: Path, fleet: FleetPatterns | None = None) -> dict[str, Any]:
+    result = analyze_har(write_har(tmp_path, {"log": {"entries": _ACTION_ENTRIES}}), fleet=fleet)
+    return {a.field: a for a in result.ambiguities if a.field.startswith("actions.")}
+
+
+def test_setter_calls_are_action_candidates(tmp_path: Path) -> None:
+    """Each non-login setter fun is a candidate for both actions, citing its page and body; neither blocks."""
+    ambiguities = _action_ambiguities(tmp_path)
+    assert sorted(ambiguities) == ["actions.logout.fun", "actions.restart.fun"]
+    for ambiguity in ambiguities.values():
+        assert ambiguity.blocking is False
+        assert [(c.value, [(e.source, e.snippet) for e in c.evidence]) for c in ambiguity.candidates] == [
+            ("8", [("/common_page/Reboot.html", "token=T3&fun=8")]),
+            ("16", [("/index.html", "token=T4&fun=16")]),
+        ]
+
+
+def test_confirmed_fleet_prefills_each_action(tmp_path: Path) -> None:
+    """A confirmed entry's fun corroborates its candidate and pre-fills that action only."""
+    fleet = FleetPatterns(confirmed_config_values={"actions.restart.fun": {"8": ["vendor/m1"]}})
+    ambiguities = _action_ambiguities(tmp_path, fleet)
+    assert ambiguities["actions.restart.fun"].resolution == {"value": "8", "source": "fleet"}
+    assert ambiguities["actions.logout.fun"].resolution is None
+
+
+def test_resolved_actions_generate_cbn_actions(tmp_path: Path) -> None:
+    """Resolved funs become type: cbn actions with integer codes."""
+    analysis = analyze_har(write_har(tmp_path, {"log": {"entries": _ACTION_ENTRIES}})).to_dict()
+    for ambiguity in analysis["ambiguities"]:
+        value = {"actions.restart.fun": "8", "actions.logout.fun": "16"}.get(ambiguity["field"])
+        if value:
+            ambiguity["resolution"] = {"value": value}
+    modem = yaml.safe_load(generate_config(analysis, {"manufacturer": "Solent Labs", "model": "T1"}).modem_yaml)
+    assert modem["actions"] == {"logout": {"type": "cbn", "fun": 16}, "restart": {"type": "cbn", "fun": 8}}
+
+
+# fmt: off
+CBN_GRADE_CASES: list[tuple[dict[str, Any], dict[str, Any], str, str]] = [
+    ({"type": "cbn", "fun": 8}, {"type": "cbn", "fun": 8},  "match",    "same-fun"),
+    ({"type": "cbn", "fun": 8}, {"type": "cbn", "fun": 16}, "mismatch", "different-fun"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "detected,committed,status", [c[:3] for c in CBN_GRADE_CASES], ids=[c[3] for c in CBN_GRADE_CASES]
+)
+def test_cbn_action_identity_is_the_fun(detected: dict[str, Any], committed: dict[str, Any], status: str) -> None:
+    """Two CBN actions are the same action when their fun codes are."""
+    grade = grade_action(detected, committed)
+    assert grade is not None
+    assert grade.status == status

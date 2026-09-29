@@ -24,6 +24,7 @@ from typing import Any
 from solentlabs.cable_modem_monitor_core.har import load_har_json
 
 from .analysis.actions import ActionsDetail, detect_actions
+from .analysis.actions.cbn import cbn_action_ambiguities
 from .analysis.actions.jsonrpc import restart_ambiguity
 from .analysis.ambiguity import Ambiguity, corroborate
 from .analysis.auth import AuthDetail, detect_auth
@@ -128,6 +129,8 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
 
     # Phase 4: Actions
     actions_result = detect_actions(entries, transport_result.transport, warnings, core_gaps)
+    if transport_result.transport == "cbn":
+        ambiguities.extend(cbn_action_ambiguities(entries))
 
     # Phase 5-6: Format detection and field mapping
     sections = detect_sections(
@@ -159,6 +162,9 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
         actions_result,
         transport_result.transport,
     )
+
+    if fleet is not None:
+        corroborate(ambiguities, fleet.confirmed_config_values)
 
     return AnalysisResult(
         transport=transport_result,

@@ -372,6 +372,9 @@ unoffered value is still applied: key candidates come from other modems,
 so a meaning none of them declares is a legitimate new one, not a
 failure to surface evidence
 ([ONBOARDING_SPEC.md § Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed)).
+An `actions.` path's unoffered value is applied too: a capture without
+the action is normal (ONBOARDING_SPEC Phase 4), as it is for HTTP
+actions, which grade the gap and continue.
 Each ambiguity is graded:
 
 | Grade | Meaning |
@@ -379,7 +382,7 @@ Each ambiguity is graded:
 | `match` | The committed value was the only candidate, or none was declared and none offered |
 | `partial` | The committed value was surfaced among several candidates |
 | `pipeline_only` | The committed config declares none; the tool offered candidates |
-| `committed_only` | The committed value was not among the candidates (the HAR fails, except on a `parser.` path) |
+| `committed_only` | The committed value was not among the candidates (the HAR fails, except on a `parser.` or `actions.` path) |
 
 A resolved action is graded with the detected ones, built by
 `generate_config`'s own resolution step, so a JSON-RPC restart the

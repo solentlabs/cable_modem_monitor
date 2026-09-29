@@ -24,14 +24,18 @@ def build_modem_dict(analysis: dict[str, Any], metadata: dict[str, Any]) -> dict
 
 
 def type_resolved_actions(modem_dict: dict[str, Any]) -> None:
-    """Give each jsonrpc action a resolution wrote its type; the transport has only the one."""
-    # A resolution writes actions.restart.method alone (ONBOARDING_SPEC § Ambiguities).
-    if modem_dict.get("transport") != "jsonrpc":
+    """Give each action a resolution wrote its type; jsonrpc and cbn each have only the one."""
+    # A resolution writes the identifying field alone: method or fun (ONBOARDING_SPEC § Ambiguities).
+    transport = modem_dict.get("transport")
+    if transport not in ("jsonrpc", "cbn"):
         return
     actions = modem_dict.get("actions") or {}
     for name, action in actions.items():
-        if "type" not in action:
-            actions[name] = {"type": "jsonrpc", **action}
+        typed = action if "type" in action else {"type": transport, **action}
+        if transport == "cbn" and "fun" in typed:
+            # Candidates carry the wire's text; the config holds the code as a number.
+            typed["fun"] = int(typed["fun"])
+        actions[name] = typed
 
 
 def _add_identity(result: dict[str, Any], analysis: dict[str, Any], metadata: dict[str, Any]) -> None:

@@ -66,6 +66,8 @@ def _identity(action: dict[str, Any]) -> tuple[Any, ...]:
         return (action.get("action_name"),)
     if action.get("type") == "jsonrpc":
         return (action.get("method"),)
+    if action.get("type") == "cbn":
+        return (str(action.get("fun")),)
     return (action.get("method"), action.get("endpoint"))
 
 
@@ -74,6 +76,8 @@ def _identity_str(action: dict[str, Any]) -> str:
         return f"hnap {action.get('action_name')}"
     if action.get("type") == "jsonrpc":
         return f"jsonrpc {action.get('method')}"
+    if action.get("type") == "cbn":
+        return f"cbn fun {action.get('fun')}"
     return f"{action.get('method')} {action.get('endpoint')}"
 
 

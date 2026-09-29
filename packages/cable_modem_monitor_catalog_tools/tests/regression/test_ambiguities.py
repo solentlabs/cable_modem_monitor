@@ -162,3 +162,21 @@ def test_resolve_channel_key_from_committed_parser(
     assert analysis["ambiguities"][0]["resolution"] == resolution
     assert grades[_KEY_PATH].status == grade
     assert failures == []
+
+
+def test_unoffered_action_is_graded_not_failed() -> None:
+    """An action the capture never sent is graded committed_only and applied; the HAR continues."""
+    analysis = {
+        "ambiguities": [
+            {
+                "field": "actions.restart.fun",
+                "blocking": False,
+                "candidates": [{"value": "16", "evidence": [], "corroborated_by": []}],
+                "resolution": None,
+            }
+        ]
+    }
+    grades, failures = resolve_from_committed(analysis, {"actions": {"restart": {"type": "cbn", "fun": 8}}})
+    assert grades["actions.restart.fun"].status == "committed_only"
+    assert analysis["ambiguities"][0]["resolution"] == {"value": 8}
+    assert failures == []

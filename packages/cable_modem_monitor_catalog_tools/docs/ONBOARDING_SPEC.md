@@ -603,6 +603,7 @@ Scan HAR for logout and restart flows:
 | POST to `/goform/logout*` or `/api/*/logout` | `actions.logout: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
 | POST with pre-fetch page (extract dynamic endpoint) | Add `pre_fetch_url` and `endpoint_pattern` |
 | HNAP action with logout/session-end semantics | `actions.logout: { type: hnap, action_name: "<name>" }` |
+| CBN setter call that is not the login | A non-blocking `actions.logout.fun` [ambiguity](#ambiguities-resolve-then-proceed), with the same candidates as the CBN restart row. Nothing in a CBN call names a logout. |
 | No logout visible in HAR | Omit `actions.logout`. Note in the generated YAML that logout behavior could not be confirmed from the HAR. |
 
 An observed POST outranks an earlier observed page GET. Auto-action
@@ -618,6 +619,7 @@ its `pre_fetch_url` via the form-evidence rule below.
 | POST to reboot/restart endpoint with params | `actions.restart: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
 | HNAP SetConfiguration action with reboot param | `actions.restart: { type: hnap, action_name: "<name>", params: {...} }` |
 | JSON-RPC call that is neither the login nor a data source | A non-blocking `actions.restart.method` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per method, citing the page that sent it (its `Referer`, else the endpoint) and the request body. No method-name rule: call shapes come from confirmed modems only. |
+| CBN setter call that is not the login | A non-blocking `actions.restart.fun` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per `fun` code, citing the page that sent it (its `Referer`, else the endpoint) and the request body. The resolved action takes `type: cbn`. |
 | No restart visible in HAR | Omit `actions.restart`. This is common — most HAR captures don't include a restart. |
 
 **Restart is rarely in the HAR.** Most contributors capture status pages,
@@ -1794,9 +1796,9 @@ place. If validation fails, returns errors so the LLM can fix and retry.
 
 Resolved [ambiguities](#ambiguities-resolve-then-proceed) are written at
 their paths before validation; a `parser.` path is applied to the
-analysis section before `parser.yaml` is built. On `jsonrpc` an action
-resolution writes only `actions.restart.method`, so the action takes `type: jsonrpc`, the
-transport's one action type.
+analysis section before `parser.yaml` is built. An action resolution
+writes only the identifying field (`method` on `jsonrpc`, `fun` on
+`cbn`), so the action takes the transport's one action type.
 
 ### `generate_golden_file`
 
