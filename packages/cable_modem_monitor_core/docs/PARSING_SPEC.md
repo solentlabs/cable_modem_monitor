@@ -71,8 +71,8 @@ Each extraction format has its own specification:
 ## Two Layers: Transport and Format
 
 **Transport** (modem.yaml) controls *how data is fetched* — the resource
-loader. It identifies the transport protocol (`http`, `hnap`, or
-`cbn`).
+loader. It identifies the transport protocol (`http`, `hnap`, `cbn`,
+or `jsonrpc`).
 
 **Format** (parser.yaml, per-section) controls *how data is extracted* —
 the extraction strategy. Each section (`downstream`, `upstream`,
@@ -85,15 +85,16 @@ parser.yaml format   → decode step + extraction strategy (how to extract, per-
 
 For the `http` transport, format is independent — any format can appear
 with any auth strategy. A modem can mix formats across sections (e.g.,
-`table` for downstream, `javascript` for system_info). For `hnap` and
-`cbn`, the transport constrains the format (`hnap` and `xml`
-respectively).
+`table` for downstream, `javascript` for system_info). For `hnap`,
+`cbn`, and `jsonrpc`, the transport constrains the format (`hnap`,
+`xml`, and `json` respectively).
 
 | Transport | Valid Formats | Why |
 |-----------|--------------|-----|
 | `hnap` | `hnap` | Protocol-defined: SOAP JSON with delimiters |
 | `http` | `table`, `table_transposed`, `html_fields`, `javascript`, `javascript_json`, `json`, `json_transposed` | Format determines decode step; any format supports optional `encoding` property (e.g., `base64` — decoded before format-specific parsing). |
 | `cbn` | `xml` | XML POST API: parameterized POST with XML responses |
+| `jsonrpc` | `json` | JSON-RPC 2.0: `resource` is the method name; the parser reads the call's `result` |
 
 See [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#validation-rules) for the full transport constraint
 table including auth strategies.
@@ -220,6 +221,19 @@ parsed response with action responses as top-level keys.
 action responses. Individual action responses are accessed by key name
 from within this dict.
 
+### JSON-RPC
+
+Keys are method names; values are each call's `result` with the
+envelope stripped (RESOURCE_LOADING_SPEC.md § JSON-RPC Transport).
+Sections use `format: json` and name the method as `resource`:
+
+```yaml
+downstream:
+  format: json
+  resource: "CM.getDownstream"
+  array_path: "dss"
+```
+
 The resource dict contains only data. Auth infrastructure (sessions,
 builders, tokens) flows through the orchestrator, not through the
 resource dict.
@@ -298,6 +312,10 @@ to batch all referenced action names into a single
 by stripping the `Response` suffix. The parser.py `resources` attribute
 does not apply to HNAP — the batched request has no per-page fetch
 list, and no HNAP modem has needed a hook-only action.
+
+**JSON-RPC:** `resource` values are method names, collected and
+deduplicated like paths; parser.py `resources` keys are method names
+too. `requests:` does not apply: every call is the same POST.
 
 **Validation:** Nothing checks the fetch list at startup. A path that
 fails at poll time raises `ResourceLoadError` and ends the cycle
@@ -379,8 +397,9 @@ json, xml, hnap, javascript).
 
 ```yaml
 - field: symbol_rate
-  type: float
-  scale: 1000        # Msym/s → ksym/s
+  type: integer
+  unit: "Ksym/sec"
+  scale: 1000        # ksym/s → Sym/s
 ```
 
 #### Uptime Normalization
@@ -418,6 +437,12 @@ Missing components default to 0. Whitespace in format strings is
 matched flexibly. ``[...]`` brackets mark an optional segment — the
 content inside is skipped if not present in the input. Brackets do not
 nest. Compiled patterns are cached.
+
+The value (surrounding whitespace stripped) must begin with the
+format. A match found later in the string is rejected, so a clock time
+inside a longer value (the S33/S33v2 page writes `Fri Feb 27 20:54:00
+2026` where uptime belongs) is never read as uptime. Text after the
+format is ignored: the SB8200 firmware writes `50 days 11h:15m:21s.00`.
 
 #### Filter Rules
 
@@ -867,6 +892,9 @@ identity, status derivation, health checks, and DOCSIS lock detection:
   from MHz/GHz)
 - `power` and `snr` are floats even when the source is integer
 - `channel_width` is always in Hz when present
+- `symbol_rate` is always in Sym/s when present; the catalog
+  spec-conformance gate rejects a value below 160000 (the lowest DOCSIS
+  upstream rate, 160 ksym/s) as an unscaled ksym/s value
 - Missing optional fields are omitted (not `null` or empty string)
 - `system_info` keys are snake_case, values are strings
 

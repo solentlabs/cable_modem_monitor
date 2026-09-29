@@ -35,6 +35,7 @@ from solentlabs.cable_modem_monitor_core.loaders.http import (
     HTTPResourceLoader,
     LoginPageDetectedError,
     ResourceLoadError,
+    SessionExpiredError,
 )
 from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
     CbnAction,
@@ -260,6 +261,7 @@ def _run_collector_with_failure(
 # │ load     │ ResourceLoadError(401)   │ LOAD_AUTH      │ stale session       │
 # │ load     │ ResourceLoadError(500)   │ LOAD_ERROR     │ server error        │
 # │ load     │ LoginPageDetectedError   │ LOAD_AUTH      │ login page detected │
+# │ load     │ SessionExpiredError      │ LOAD_AUTH      │ declared expiry code│
 # │ parse    │ ValueError               │ PARSE_ERROR    │ malformed response  │
 # └──────────┴──────────────────────────┴────────────────┴─────────────────────┘
 _AUTH_FAIL = {"auth_return": AuthResult(success=False, error="wrong password")}
@@ -272,6 +274,7 @@ _LOAD_500 = {
     "load_side_effect": ResourceLoadError("HTTP 500", status_code=500, path="/d.htm"),
 }
 _LOAD_LOGIN = {"load_side_effect": LoginPageDetectedError("/d.htm")}
+_LOAD_EXPIRED = {"load_side_effect": SessionExpiredError("CM.getDownstream", "msgLoginExpiredText")}
 _PARSE_ERR = {"parse_side_effect": ValueError("bad HTML")}
 
 # fmt: off
@@ -283,6 +286,7 @@ SIGNAL_CLASSIFICATION_CASES = [
     (_LOAD_401,      CollectorSignal.LOAD_AUTH,     "stale session (401)"),
     (_LOAD_500,      CollectorSignal.LOAD_ERROR,    "server error (500)"),
     (_LOAD_LOGIN,    CollectorSignal.LOAD_AUTH,     "login page detected"),
+    (_LOAD_EXPIRED,  CollectorSignal.LOAD_AUTH,     "declared session-expired code"),
     (_PARSE_ERR,     CollectorSignal.PARSE_ERROR,   "malformed response"),
 ]
 # fmt: on
@@ -1706,3 +1710,105 @@ class TestCbnLoadConnectivity:
         result = self._run(requests.Timeout("timed out"))
 
         assert result.signal == CollectorSignal.CONNECTIVITY
+
+
+# ------------------------------------------------------------------
+# Tests — JSON-RPC load path through the real loader
+# ------------------------------------------------------------------
+
+
+def _rpc_reply(body: dict[str, Any]) -> MagicMock:
+    resp = MagicMock(spec=requests.Response)
+    resp.status_code = 200
+    resp.ok = True
+    resp.content = b"{}"
+    resp.headers = {"Content-Type": "application/json"}
+    resp.json.return_value = body
+    return resp
+
+
+class TestJsonrpcLoadPath:
+    """The jsonrpc transport loads by method name and classifies reply errors.
+
+    RESOURCE_LOADING_SPEC.md § JSON-RPC Loading, with the real loader in
+    the path rather than a patched ``_load_resources``.
+    """
+
+    _METHODS = ("CM.getDownstream", "CM.getMisc")
+
+    @staticmethod
+    def _collector() -> ModemDataCollector:
+        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import JsonrpcAuth
+
+        config = _make_config(transport="jsonrpc")
+        config.auth = JsonrpcAuth(
+            strategy="jsonrpc",
+            endpoint="/cgi-bin/router.php",
+            login_method="MGMT.login",
+            username_field="u",
+            password_field="p",
+            token_path="token",
+            token_param="token",
+            session_expired_code="msgLoginExpiredText",
+        )
+        collector = ModemDataCollector(config, MagicMock(), None, "http://192.168.0.1", "", "pw")
+        collector._auth_context = AuthContext(token="T1", url_token="T1")
+        return collector
+
+    def _run(self, replies: list[MagicMock]) -> tuple[Any, MagicMock, dict[str, Any]]:
+        collector = self._collector()
+        targets = [ResourceTarget(path=m, format="json") for m in self._METHODS]
+        seen: dict[str, Any] = {}
+
+        def _parse(resources: dict[str, Any]) -> Any:
+            seen.update(resources)
+            return {"downstream": [], "upstream": [], "system_info": {}}, ParseDiagnostics()
+
+        with (
+            patch.object(collector, "authenticate", return_value=AuthResult(success=True)),
+            patch(
+                "solentlabs.cable_modem_monitor_core.orchestration.collector.collect_fetch_targets",
+                return_value=targets,
+            ),
+            patch.object(collector, "_parse", side_effect=_parse),
+            patch.object(collector._session, "post", side_effect=replies) as post,
+        ):
+            return collector.execute(), post, seen
+
+    def test_resources_keyed_by_method_with_token(self) -> None:
+        """Each method is one call carrying the login token; the parser gets each result."""
+        result, post, seen = self._run(
+            [
+                _rpc_reply({"jsonrpc": "2.0", "result": {"dss": []}, "id": 1}),
+                _rpc_reply({"jsonrpc": "2.0", "result": {"model": "T950"}, "id": 2}),
+            ]
+        )
+
+        assert result.signal == CollectorSignal.OK
+        assert seen == {"CM.getDownstream": {"dss": []}, "CM.getMisc": {"model": "T950"}}
+        assert {c.args[0] for c in post.call_args_list} == {"http://192.168.0.1/cgi-bin/router.php?token=T1"}
+
+    def test_expired_code_is_load_auth(self, caplog: pytest.LogCaptureFixture) -> None:
+        """The declared expiry code is a stale session, logged with its method and code."""
+        with caplog.at_level(logging.WARNING):
+            result, _, _ = self._run(
+                [_rpc_reply({"jsonrpc": "2.0", "error": {"code": "msgLoginExpiredText", "message": ""}, "id": 1})]
+            )
+
+        assert result.signal == CollectorSignal.LOAD_AUTH
+        assert "CM.getDownstream" in caplog.text
+        assert "msgLoginExpiredText" in caplog.text
+
+    def test_other_error_omits_resource_and_logs_code(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Any other code drops that resource and names the code in a decode-error event."""
+        with caplog.at_level(logging.WARNING):
+            result, _, seen = self._run(
+                [
+                    _rpc_reply({"jsonrpc": "2.0", "error": {"code": "msgGetFailedText", "message": ""}, "id": 1}),
+                    _rpc_reply({"jsonrpc": "2.0", "result": {"model": "T950"}, "id": 2}),
+                ]
+            )
+
+        assert result.signal == CollectorSignal.OK
+        assert seen == {"CM.getMisc": {"model": "T950"}}
+        assert "msgGetFailedText" in caplog.text

@@ -12,6 +12,7 @@ alone.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import get_args
 
 from ..models.modem_config import ModemConfig
 from ..models.parser_config import ParserConfig
@@ -24,11 +25,12 @@ from ..models.parser_config.system_info import (
     XMLSystemInfoSource,
 )
 
-# Formats valid per transport — derived from the central registry.
-# Adding a format with new transport coverage updates this without
-# editing this file. See MODEM_YAML_SPEC.md transport-format table.
+# Formats valid per transport — derived from the central registry and the
+# transport literal, so neither a format nor a transport edits this file.
+# See MODEM_YAML_SPEC.md transport-format table.
 _VALID_FORMATS: dict[str, frozenset[str]] = {
-    transport: format_tags_for_transport(transport, ALL_FORMAT_MODELS) for transport in ("cbn", "hnap", "http")
+    transport: format_tags_for_transport(transport, ALL_FORMAT_MODELS)
+    for transport in get_args(ModemConfig.model_fields["transport"].annotation)
 }
 
 

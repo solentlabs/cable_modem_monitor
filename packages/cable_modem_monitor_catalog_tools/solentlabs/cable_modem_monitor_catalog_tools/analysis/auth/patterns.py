@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import functools
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -40,11 +43,27 @@ def get_password_field_indicators() -> tuple[str, ...]:
     return tuple(data["password_field_indicators"])
 
 
-@functools.lru_cache(maxsize=1)
-def _fleet_password_field_names(catalog_root: Path) -> frozenset[str]:
-    """Collect declared password_field names from committed modem.yaml configs."""
+# The fleet an analysis runs with, when it was scanned: the intake score
+# excludes the modem under test, so its own password_field teaches nothing.
+_SCOPED_PASSWORD_NAMES: ContextVar[frozenset[str] | None] = ContextVar("scoped_password_names", default=None)
+
+
+@contextmanager
+def fleet_password_names(names: frozenset[str] | None) -> Iterator[None]:
+    """Use a scanned fleet's password_field names in place of the whole catalog's."""
+    token = _SCOPED_PASSWORD_NAMES.set(names)
+    try:
+        yield
+    finally:
+        _SCOPED_PASSWORD_NAMES.reset(token)
+
+
+def collect_password_field_names(catalog_root: Path, exclude: Path | None = None) -> frozenset[str]:
+    """Collect declared password_field names from committed modem.yaml configs outside ``exclude``."""
     names: set[str] = set()
     for modem_yaml_path in sorted(catalog_root.rglob("modem.yaml")):
+        if exclude is not None and modem_yaml_path.is_relative_to(exclude):
+            continue
         try:
             config: Any = yaml.safe_load(modem_yaml_path.read_text(encoding="utf-8"))
         except (yaml.YAMLError, OSError):
@@ -60,12 +79,24 @@ def _fleet_password_field_names(catalog_root: Path) -> frozenset[str]:
     return frozenset(names)
 
 
+@functools.lru_cache(maxsize=1)
+def _fleet_password_field_names(catalog_root: Path) -> frozenset[str]:
+    """The whole catalog's password_field names, read once."""
+    return collect_password_field_names(catalog_root)
+
+
 def get_fleet_password_field_names() -> frozenset[str]:
     """Return exact password field names declared by committed catalog modems."""
     # Attribute read at call time so tests can monkeypatch CATALOG_PATH.
     from solentlabs import cable_modem_monitor_catalog as catalog_pkg
 
     return _fleet_password_field_names(catalog_pkg.CATALOG_PATH)
+
+
+def _active_password_names() -> frozenset[str]:
+    """The scoped fleet's names inside ``fleet_password_names``, else the whole catalog's."""
+    scoped = _SCOPED_PASSWORD_NAMES.get()
+    return scoped if scoped is not None else get_fleet_password_field_names()
 
 
 def is_password_field_name(name: str) -> bool:
@@ -75,7 +106,7 @@ def is_password_field_name(name: str) -> bool:
     lower = name.lower()
     if any(ind in lower for ind in get_password_field_indicators()):
         return True
-    return lower in get_fleet_password_field_names()
+    return lower in _active_password_names()
 
 
 def has_credential_fields(post_data: dict[str, Any]) -> bool:
@@ -90,7 +121,7 @@ def has_credential_fields(post_data: dict[str, Any]) -> bool:
     if any(ind in text for ind in get_password_field_indicators()):
         return True
     # "name=" keeps exact names from matching as substrings of other tokens.
-    return any(f"{name}=" in text for name in get_fleet_password_field_names())
+    return any(f"{name}=" in text for name in _active_password_names())
 
 
 def get_nonce_success_prefix() -> str:

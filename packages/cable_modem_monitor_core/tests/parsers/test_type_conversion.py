@@ -337,6 +337,43 @@ UPTIME_CASES = [
     ("02h:30m",
      "{hours}h:{minutes}m[:{seconds}s]",
      "0 days 02h:30m:00s", "optional trailing seconds — absent"),
+    # One row per catalog uptime format, each a value captured in that
+    # entry's own HAR; expected is the entry's golden system_uptime.
+    ("6 d:  2 h: 33  m",
+     "{days} d: {hours} h: {minutes} m",
+     "6 days 02h:33m:00s", "arris/cm820b — no seconds, doubled spaces"),
+    ("98 days 14h:53m:26s",
+     "{days} days {hours}h:{minutes}m:{seconds}s",
+     "98 days 14h:53m:26s", "arris/sb6183 — days h:m:s"),
+    ("\n\t\t20 days 7h: 58m: 28s\n\t\t",
+     "{days} days {hours}h:{minutes}m:{seconds}s",
+     "20 days 07h:58m:28s", "technicolor/xb8 — same format, spaced colons and page whitespace"),
+    ("12 day(s) 19h:53m:41s",
+     "{days} day(s) {hours}h:{minutes}m:{seconds}s",
+     "12 days 19h:53m:41s", "arris/s33v3 — day(s)"),
+    ("0day(s)0h:16m:36s",
+     "{days}day(s){hours}h:{minutes}m:{seconds}s",
+     "0 days 00h:16m:36s", "compal/ch7465mt — day(s) unspaced"),
+    ("1 days 23 hours 43 mins 44 secs",
+     "{days} days {hours} hours {minutes} mins {seconds} secs",
+     "1 days 23h:43m:44s", "arris/sb8200-php — spelled-out units"),
+    ("0d 0h 6m 27s",
+     "{days}d {hours}h {minutes}m {seconds}s",
+     "0 days 00h:06m:27s", "arris/tg3442s — letter units, spaced"),
+    ("3d 15h:1m:27s",
+     "{days}d {hours}h:{minutes}m:{seconds}s",
+     "3 days 15h:01m:27s", "sdmc/ne6037 — letter units, colons"),
+    ("13 days 06:59:07",
+     "[{days} days ]{hours}:{minutes}:{seconds}",
+     "13 days 06h:59m:07s", "netgear/cm1200 — optional days, present"),
+    ("1308:19:22",
+     "{hours}:{minutes}:{seconds}",
+     "54 days 12h:19m:22s", "netgear/cm600 — hours past 24, no days"),
+    # Trailing text after the format is tolerated: the SB8200 HTML firmware
+    # appends ".00" in every capture (a golden-checked value, not a guess).
+    ("50 days 11h:15m:21s.00",
+     "{days} days {hours}h:{minutes}m:{seconds}s",
+     "50 days 11h:15m:21s", "arris/sb8200 — trailing .00 tolerated"),
 ]
 # fmt: on
 
@@ -358,6 +395,33 @@ def test_convert_uptime(
 
 
 # --- Uptime defensive paths ---
+
+
+# The S33/S33v2 firmware's own JS writes the clock time into the element
+# named SystemUpTime (captured value, S33v2 HAR). The value must begin
+# with the format, so a clock time is never read as uptime, whatever the
+# format; a match found mid-string would take 20:54:00.
+_CLOCK_TIME = "Fri Feb 27 20:54:00 2026"
+
+_CATALOG_UPTIME_FORMATS = [
+    "{days} d: {hours} h: {minutes} m",
+    "{days} days {hours}h:{minutes}m:{seconds}s",
+    "{days} day(s) {hours}h:{minutes}m:{seconds}s",
+    "{days}day(s){hours}h:{minutes}m:{seconds}s",
+    "{days} days {hours} hours {minutes} mins {seconds} secs",
+    "{days}d {hours}h {minutes}m {seconds}s",
+    "{days}d {hours}h:{minutes}m:{seconds}s",
+    "D: {days} H: {hours} M: {minutes} S: {seconds}",
+    "{hours}h:{minutes}m:{seconds}s",
+    "[{days} days ]{hours}:{minutes}:{seconds}",
+    "{hours}:{minutes}:{seconds}",
+]
+
+
+@pytest.mark.parametrize("input_format", _CATALOG_UPTIME_FORMATS)
+def test_uptime_rejects_a_clock_time(input_format: str) -> None:
+    """A value that does not begin with the format is not uptime."""
+    assert convert_value(_CLOCK_TIME, "uptime", input_format=input_format) is None
 
 
 def test_uptime_no_format_returns_value_unchanged(caplog) -> None:

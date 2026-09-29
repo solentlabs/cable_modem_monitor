@@ -115,13 +115,13 @@ class ResourceFetch:
 class HealthInfo:
     """Result of a health probe cycle.
 
-    Only contains actual probe measurements. The HealthMonitor considers
-    collection evidence internally when deriving health_status, but does
+    Only contains actual probe measurements. The HealthMonitor treats an
+    active collection as L4 proof when deriving health_status, but does
     not fabricate probe results -- None means "not measured."
 
     Attributes:
-        health_status: Derived status from probe combination and
-            collection evidence.
+        health_status: Derived status from probe combination, with an
+            active collection standing in for a skipped TCP probe.
         icmp_latency_ms: Round-trip time in milliseconds. None if
             ICMP failed, not supported, or not attempted.
         tcp_latency_ms: TCP handshake time in milliseconds to the
@@ -132,8 +132,8 @@ class HealthInfo:
             excluding TCP connection setup overhead. Populated only
             on modems where ``supports_head=True`` (HEAD bypasses the
             handler and gives a clean unimodal signal). None on
-            GET-only modems, HTTP failure, or when suppressed by
-            collection evidence.
+            GET-only modems, HTTP failure, or while a collection is
+            active.
     """
 
     health_status: HealthStatus

@@ -25,6 +25,12 @@ informational, never failing. Classifying what an endpoint contains and
 deciding whether it is worth mapping is the reading LLM's job, not this
 module's.
 
+**JSON-RPC:** every call shares one endpoint, so each method is a
+resource. ``path`` carries the method name and ``shape`` its result;
+the login method is auth's, and a method called twice takes its later
+result, as golden generation does. Other JSON a page fetches is still
+reported by path; only the shared endpoint is not.
+
 See ONBOARDING_SPEC.md "Post-Analysis: Unread Resources".
 """
 
@@ -35,7 +41,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from ..validation.har_utils import content_type_of, is_static_resource, path_from_url
+from ..validation.har_utils import content_type_of, is_static_resource, jsonrpc_body, jsonrpc_response, path_from_url
 from .actions.types import ActionsDetail
 from .auth.types import AuthDetail
 
@@ -76,12 +82,14 @@ def detect_unread_resources(
 ) -> list[UnreadResource]:
     """Report the HAR's 2xx JSON endpoints that no part of the config consumes."""
     mapped = _mapped_endpoints(sections, auth, actions)
+    # JSON-RPC puts every call behind auth's endpoint; its methods are reported below.
+    rpc_endpoint = _normalize_endpoint(auth.fields.get("endpoint") or "") if transport == "jsonrpc" else None
 
     unread: list[UnreadResource] = []
     for path, (response, body) in sorted(_json_candidates(entries).items()):
         # HNAP puts every call, data and action alike, behind one endpoint.
         # Reporting it as unread would be wrong on every HNAP modem.
-        if transport == "hnap" and "/HNAP1/" in path:
+        if (transport == "hnap" and "/HNAP1/" in path) or path == rpc_endpoint:
             continue
         if any(_endpoint_matches(path, endpoint) for endpoint in mapped):
             continue
@@ -93,7 +101,34 @@ def detect_unread_resources(
                 shape=_shape_of(body),
             )
         )
+    if transport == "jsonrpc":
+        unread.extend(_jsonrpc_unread(entries, sections, auth))
     return unread
+
+
+def _jsonrpc_unread(
+    entries: list[dict[str, Any]],
+    sections: dict[str, Any] | None,
+    auth: AuthDetail,
+) -> list[UnreadResource]:
+    """Report each JSON-RPC method that answered result and that neither a section nor the login reads."""
+    read = set(_collect_resources(sections)) | {auth.fields.get("login_method")}
+    answered: dict[str, tuple[dict[str, Any], Any]] = {}
+    for entry in entries:
+        body = jsonrpc_body(entry.get("request", {}))
+        reply = jsonrpc_response(entry)
+        if body is not None and "result" in reply:
+            answered[body["method"]] = (entry.get("response", {}), reply["result"])
+    return [
+        UnreadResource(
+            path=method,
+            status=response.get("status", 0),
+            content_type=content_type_of(response),
+            shape=_shape_of(result),
+        )
+        for method, (response, result) in sorted(answered.items())
+        if method not in read and isinstance(result, (dict, list))
+    ]
 
 
 # -----------------------------------------------------------------------

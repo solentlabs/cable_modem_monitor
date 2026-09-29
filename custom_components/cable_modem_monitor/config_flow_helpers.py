@@ -406,7 +406,10 @@ def _run_validation(
     probe_input = f"{protocol}://{host}" if protocol else host
     conn: ConnectivityResult = detect_protocol(probe_input)
     if not conn.success:
-        raise ConnectionError(conn.error or f"Cannot connect to {host}")
+        reason = conn.error or f"Cannot connect to {host}"
+        # The form reduces this to "Can't reach modem"; the log keeps the reason.
+        _LOGGER.warning("Protocol detection failed: %s", reason)
+        raise ConnectionError(reason)
     base_url = conn.working_url or f"http://{host}"
     protocol = conn.protocol or "http"
     legacy_ssl = conn.legacy_ssl

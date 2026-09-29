@@ -13,6 +13,8 @@ from dataclasses import (
 )
 from typing import Any
 
+from ..ambiguity import Candidate
+
 
 @dataclass
 class FieldMapping:
@@ -37,6 +39,7 @@ class FieldMapping:
     key: str = ""
     label: str = ""
     map: dict[str, str] = dataclass_field(default_factory=dict)
+    scale: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to the sections output format."""
@@ -53,6 +56,8 @@ class FieldMapping:
             result["label"] = self.label
         if self.map:
             result["map"] = self.map
+        if self.scale is not None:
+            result["scale"] = self.scale
         return result
 
     @classmethod
@@ -85,6 +90,9 @@ class SectionDetail:
     fields_per_record: int = 0
     array_path: str = ""
     variable: str = ""
+    # JSON keys the fleet maps to several fields, with a candidate per
+    # field. Not serialized: they leave analysis as ambiguities.
+    contested_keys: list[tuple[str, list[Candidate]]] = dataclass_field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to the sections output format."""

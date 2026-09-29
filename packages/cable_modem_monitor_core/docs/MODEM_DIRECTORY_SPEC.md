@@ -121,7 +121,17 @@ default variant — the one loaded when no variant is specified. When a
 single-variant modem is later split into multiple variants, the original
 behavior stays as `modem.yaml` and new variants get named suffixes. This
 ensures existing config entries (with `variant: null`) continue to work
-without migration. **When splitting, never delete or rename `modem.yaml`.**
+without migration. **When splitting, never delete or rename a
+`modem.yaml` that has shipped in a stable release.** A variant that has
+shipped only in a beta may be renamed in a later beta, with a CHANGELOG
+entry telling beta users to delete and re-add the integration.
+
+**The stem is the setup picker label**, so it must name what sets the
+variant apart
+([ARCHITECTURE_DECISIONS.md § The variant name is the user-facing discriminator](ARCHITECTURE_DECISIONS.md#the-variant-name-is-the-user-facing-discriminator)).
+A variant added to a model that already has one, in the same directory
+or a sibling directory, gets a named `modem-{name}.yaml`; a default
+`modem.yaml` has no stem to show.
 
 Files sharing the same `model` field group under one dropdown entry in the
 config flow. Variant selection happens on Step 2 (see

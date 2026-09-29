@@ -117,7 +117,7 @@
       "frequency": 17800000,
       "lock_status": "locked",
       "power": 54.3,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     }
   ]
 }

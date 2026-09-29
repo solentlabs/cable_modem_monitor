@@ -212,7 +212,8 @@
       "channel_type": "atdma",
       "frequency": 35600000,
       "lock_status": "locked",
-      "power": 46.3
+      "power": 46.3,
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 49,
@@ -220,7 +221,8 @@
       "channel_type": "atdma",
       "frequency": 16400000,
       "lock_status": "locked",
-      "power": 44.5
+      "power": 44.5,
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 50,
@@ -228,7 +230,8 @@
       "channel_type": "atdma",
       "frequency": 22800000,
       "lock_status": "locked",
-      "power": 44.8
+      "power": 44.8,
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 51,
@@ -236,7 +239,8 @@
       "channel_type": "atdma",
       "frequency": 29200000,
       "lock_status": "locked",
-      "power": 45.5
+      "power": 45.5,
+      "symbol_rate": 5120000
     }
   ]
 }

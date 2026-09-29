@@ -46,6 +46,7 @@ def test_valid_golden_file(fixture_path: Path, tmp_path: Path) -> None:
     result = generate_golden_file(
         har_path=str(har_file),
         parser_yaml_content=data["_parser_yaml"],
+        transport=data.get("_transport"),
     )
 
     assert not result.errors, f"Unexpected errors: {result.errors}"

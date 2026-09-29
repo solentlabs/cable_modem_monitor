@@ -11,6 +11,7 @@ Per ONBOARDING_SPEC.md ``generate_config`` tool contract.
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,7 +19,8 @@ from solentlabs.cable_modem_monitor_core.validation.cross_file import validate_c
 from solentlabs.cable_modem_monitor_core.validation.layout import IDENTITY_KEYS, apply_section_spacing
 
 from ..analysis.types import FleetPatterns
-from .modem import build_modem_dict
+from .ambiguities import apply_resolutions
+from .modem import build_modem_dict, type_resolved_actions
 from .parser import build_parser_dict
 from .validation import (
     MODEM_KEY_ORDER,
@@ -76,9 +78,12 @@ def generate_config(
 
     # Build modem.yaml dict
     modem_dict = build_modem_dict(analysis, metadata)
+    # Channel key resolutions rewrite a copy: the caller's analysis stays as analyzed.
+    sections = copy.deepcopy(analysis.get("sections"))
+    apply_resolutions(analysis, modem_dict, sections, errors)
+    type_resolved_actions(modem_dict)
 
     # Build parser.yaml dict (None if no sections)
-    sections = analysis.get("sections")
     parser_dict = build_parser_dict(sections, metadata, fleet=fleet) if sections else None
 
     # Validate via Pydantic

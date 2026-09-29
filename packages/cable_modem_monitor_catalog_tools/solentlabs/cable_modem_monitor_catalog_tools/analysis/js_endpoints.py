@@ -44,6 +44,14 @@ Revisit if real-world firmware HTML produces one of these shapes
 and breaks intake.  Until then the warnings are advisory and the
 impact of a miss is low.
 
+**JSON-RPC:** every call shares one endpoint, so the uncaptured unit is
+a method, not a path. A method is the string value of a ``method`` key,
+JSON-RPC's own envelope key, and counts only when its dotted namespace
+is one a captured call used. That anchor comes from the capture itself:
+it drops other script's ``method: "auto"`` and jQuery's ``method:
+"POST"`` without a vendor pattern, and finds nothing, rather than
+guessing, when a firmware's method names carry no namespace.
+
 See ONBOARDING_SPEC.md "Post-Analysis: JS Endpoint Discovery".
 """
 
@@ -56,6 +64,7 @@ from typing import Any
 from ..validation.har_utils import (
     WARNING_PREFIX,
     is_static_resource,
+    jsonrpc_body,
     path_from_url,
 )
 
@@ -114,6 +123,9 @@ _AJAX_PATTERNS: tuple[re.Pattern[str], ...] = (
 _URL_GROUP: dict[re.Pattern[str], int] = {
     _JQUERY_SHORTHAND: 2,
 }
+
+# The value of a JSON-RPC "method" key, quoted or bare: method:"X.y", "method": "X.y".
+_JSONRPC_METHOD_VALUE = re.compile(r"""["']?\bmethod["']?\s*:\s*["']([^"'\s]+)["']""")
 
 # Inline <script> block extraction.  HTML5 lets </script> carry trailing
 # whitespace, attribute-like text, or "/>" before the closing > — match
@@ -191,6 +203,29 @@ def detect_uncaptured_endpoints(
         warnings.append(
             f"{WARNING_PREFIX} JS references server endpoint not "
             f"captured in HAR: {endpoint} (referenced in {source_list})"
+        )
+
+
+def detect_uncalled_jsonrpc_methods(
+    entries: list[dict[str, Any]],
+    warnings: list[str],
+) -> None:
+    """Warn for each JSON-RPC method the firmware JS names that no captured call used."""
+    called = {body["method"] for entry in entries if (body := jsonrpc_body(entry.get("request", {}))) is not None}
+    namespaces = {method.split(".", 1)[0] for method in called if "." in method}
+
+    uncalled: dict[str, set[str]] = {}
+    for entry in entries:
+        for js_text, label in _extract_js_sources(entry):
+            for match in _JSONRPC_METHOD_VALUE.finditer(_strip_js_comments(js_text)):
+                method = match.group(1)
+                if method not in called and "." in method and method.split(".", 1)[0] in namespaces:
+                    uncalled.setdefault(method, set()).add(label)
+
+    for method in sorted(uncalled):
+        warnings.append(
+            f"{WARNING_PREFIX} JS names a JSON-RPC method not called in HAR: "
+            f"{method} (referenced in {', '.join(sorted(uncalled[method]))})"
         )
 
 

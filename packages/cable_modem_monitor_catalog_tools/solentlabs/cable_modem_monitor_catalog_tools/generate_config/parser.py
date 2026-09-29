@@ -12,7 +12,14 @@ from __future__ import annotations
 from typing import Any
 
 from ..analysis.types import FleetPatterns
-from .mappings import mapping_to_channel, mapping_to_column, mapping_to_json_channel, mapping_to_row
+from .mappings import (
+    mapping_to_channel,
+    mapping_to_column,
+    mapping_to_json_channel,
+    mapping_to_row,
+    mapping_to_xml_column,
+    section_mappings,
+)
 from .system_info import transform_system_info
 
 
@@ -76,6 +83,8 @@ def _transform_channel_section(section: dict[str, Any]) -> dict[str, Any] | None
         return _transform_javascript_json(section)
     if fmt == "hnap":
         return _transform_hnap(section)
+    if fmt == "xml":
+        return _transform_xml(section)
     if fmt == "json":
         return _transform_json(section)
 
@@ -237,9 +246,19 @@ def _transform_hnap(section: dict[str, Any]) -> dict[str, Any]:
 
 def _transform_json(section: dict[str, Any]) -> dict[str, Any]:
     """Transform JSON format from analysis to parser.yaml structure."""
-    fields = [mapping_to_json_channel(m) for m in section.get("mappings", [])]
+    result: dict[str, Any] = {"format": "json", "resource": section.get("resource", "")}
+    if section.get("arrays"):
+        result["arrays"] = [_json_array(entry) for entry in section["arrays"]]
+    else:
+        result.update(_json_array(section))
+    return result
 
-    ct = section.get("channel_type")
+
+def _json_array(entry: dict[str, Any]) -> dict[str, Any]:
+    """One array's parser.yaml keys: path, fields, channel type, fixed fields and filter."""
+    fields = [mapping_to_json_channel(m) for m in entry.get("mappings", [])]
+
+    ct = entry.get("channel_type")
     if ct and "key" in ct:
         # Inline the channel_type mapping on the fields list
         fields.append(
@@ -252,19 +271,42 @@ def _transform_json(section: dict[str, Any]) -> dict[str, Any]:
         )
         ct = None  # Don't also set section-level
 
+    result: dict[str, Any] = {"array_path": entry.get("array_path", ""), "fields": fields}
+    if ct:
+        result["channel_type"] = ct
+    if entry.get("fixed_fields"):
+        result["fixed_fields"] = entry["fixed_fields"]
+    if entry.get("filter"):
+        result["filter"] = entry["filter"]
+
+    return result
+
+
+def _transform_xml(section: dict[str, Any]) -> dict[str, Any]:
+    """Transform XML format from analysis to parser.yaml structure: one table per channel array."""
+    entries = section["arrays"] if section.get("arrays") else [section]
+    return {"format": "xml", "tables": [_xml_table(entry, section.get("resource", "")) for entry in entries]}
+
+
+def _xml_table(entry: dict[str, Any], resource: str) -> dict[str, Any]:
+    """One array's table: the fun code, the parent and repeated child tags, and its columns."""
+    # The array lives at root.child: the child repeats inside its parent element.
+    *parents, child = entry.get("array_path", "").split(".")
+    columns = [mapping_to_xml_column(m) for m in entry.get("mappings", [])]
+    ct = entry.get("channel_type")
+    if ct and "key" in ct:
+        # A channel-type tag is a mapped column, as a JSON key is a mapped field.
+        columns = [c for c in columns if c["field"] != "channel_type"]
+        columns.append({"source": ct["key"], "field": "channel_type", "type": "string", "map": ct["map"]})
+        ct = None
     result: dict[str, Any] = {
-        "format": "json",
-        "resource": section.get("resource", ""),
-        "array_path": section.get("array_path", ""),
-        "fields": fields,
+        "resource": entry.get("resource", resource),
+        "root_element": parents[-1] if parents else child,
+        "child_element": child,
+        "columns": columns,
     }
     if ct:
         result["channel_type"] = ct
-    if section.get("fixed_fields"):
-        result["fixed_fields"] = section["fixed_fields"]
-    if section.get("filter"):
-        result["filter"] = section["filter"]
-
     return result
 
 
@@ -312,7 +354,7 @@ def _build_aggregate(
     if not ds:
         return None
 
-    ds_fields = {m.get("field") for m in ds.get("mappings", [])}
+    ds_fields = {m.get("field") for m in section_mappings(ds)}
 
     # Merge fleet aggregate patterns with baseline
     patterns = list(_AGGREGATE_FIELDS)

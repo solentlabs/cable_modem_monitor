@@ -66,6 +66,7 @@ upstream:
           field: symbol_rate
           type: integer
           unit: "kSym/s"
+          scale: 1000 # ksym/s → Sym/s
         - index: 6
           field: modulation
           type: modulation

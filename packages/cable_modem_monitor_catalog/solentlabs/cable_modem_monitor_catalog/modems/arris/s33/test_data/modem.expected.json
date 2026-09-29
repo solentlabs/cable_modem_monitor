@@ -370,37 +370,37 @@
       "channel_id": 1,
       "channel_number": 1,
       "channel_type": "qam",
+      "channel_width": 3200000,
       "frequency": 18000000,
       "lock_status": "locked",
-      "power": 40.8,
-      "symbol_rate": 3200000
+      "power": 40.8
     },
     {
       "channel_id": 2,
       "channel_number": 2,
       "channel_type": "qam",
+      "channel_width": 6400000,
       "frequency": 24600000,
       "lock_status": "locked",
-      "power": 42.3,
-      "symbol_rate": 6400000
+      "power": 42.3
     },
     {
       "channel_id": 3,
       "channel_number": 3,
       "channel_type": "qam",
+      "channel_width": 6400000,
       "frequency": 31000000,
       "lock_status": "locked",
-      "power": 42.0,
-      "symbol_rate": 6400000
+      "power": 42.0
     },
     {
       "channel_id": 4,
       "channel_number": 4,
       "channel_type": "qam",
+      "channel_width": 6400000,
       "frequency": 37400000,
       "lock_status": "locked",
-      "power": 42.0,
-      "symbol_rate": 6400000
+      "power": 42.0
     }
   ]
 }

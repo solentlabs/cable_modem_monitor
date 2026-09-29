@@ -129,7 +129,7 @@ registered_fields:
     channel_width:
       type: integer
       unit: "Hz"
-      description: "OFDMA channel bandwidth"
+      description: "Upstream channel bandwidth (SC-QAM or OFDMA)"
     ranging_status:
       type: string
       description: "Upstream ranging status"
@@ -214,7 +214,8 @@ for the full mapping rules.
 - snake_case, lowercase, no abbreviations except industry-standard
   (`snr`, `fft`, `ofdm`)
 - Units are always the base SI unit in the value — `frequency` is Hz,
-  `power` is dBmV, `channel_width` is Hz — never scaled (no MHz, no kHz)
+  `power` is dBmV, `channel_width` is Hz, `symbol_rate` is Sym/s — never
+  scaled (no MHz, no kHz, no ksym/s)
 - The `unit` above is the stored unit. A consumer may display a scaled
   one (HA shows `provisioned_speed_*` in Mbit/s); that is a presentation
   choice and never changes what the field carries

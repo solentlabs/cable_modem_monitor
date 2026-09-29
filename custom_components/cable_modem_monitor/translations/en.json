@@ -73,9 +73,6 @@
       "unknown_model": "Selected modem not found in catalog.",
       "reauth_successful": "Reauthentication successful.",
       "reauth_failed": "Reauthentication failed. Please try again."
-    },
-    "progress": {
-      "validate": "Connecting to modem..."
     }
   },
   "options": {
@@ -107,9 +104,6 @@
       "session_rejected": "Logged in successfully, but the modem refused the data request. Not a credential problem; see the warning in the Home Assistant log.",
       "parse_failed": "Connected but couldn't read modem data.",
       "unknown": "Unexpected error. Check Home Assistant logs."
-    },
-    "progress": {
-      "validate": "Validating connection..."
     }
   },
   "services": {

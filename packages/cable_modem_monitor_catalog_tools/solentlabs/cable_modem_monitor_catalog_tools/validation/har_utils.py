@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import json
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -53,6 +54,30 @@ def lower_headers(req_or_resp: dict[str, Any]) -> dict[str, str]:
 def is_hnap_request(url: str, req_headers: dict[str, str]) -> bool:
     """Check if a request has HNAP protocol markers."""
     return "/HNAP1/" in url or "hnap_auth" in req_headers or "soapaction" in req_headers
+
+
+def jsonrpc_body(request: dict[str, Any]) -> dict[str, Any] | None:
+    """A single JSON-RPC 2.0 request object with a string ``method``, or None."""
+    text = (request.get("postData") or {}).get("text") or ""
+    if '"jsonrpc"' not in text:
+        return None
+    try:
+        body = json.loads(text)
+    except ValueError:
+        return None
+    if not isinstance(body, dict) or body.get("jsonrpc") != "2.0":
+        return None
+    return body if isinstance(body.get("method"), str) else None
+
+
+def jsonrpc_response(entry: dict[str, Any]) -> dict[str, Any]:
+    """The JSON-RPC response object of an entry, or an empty dict when the body is not one."""
+    text = (entry.get("response", {}).get("content") or {}).get("text") or ""
+    try:
+        body = json.loads(text)
+    except ValueError:
+        return {}
+    return body if isinstance(body, dict) else {}
 
 
 def has_set_cookie(resp: dict[str, Any]) -> bool:

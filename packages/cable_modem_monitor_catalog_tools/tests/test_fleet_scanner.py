@@ -161,6 +161,39 @@ class TestScanFleetContent:
             assert label == label.lower()
 
 
+class TestConfirmedConfigValues:
+    """Only confirmed entries teach: their auth and action values corroborate ambiguity candidates."""
+
+    @staticmethod
+    def _write(root: Path, rel: str, text: str) -> None:
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def test_confirmed_values_indexed_by_path(self, tmp_path: Path) -> None:
+        """A confirmed entry's auth and action scalars are indexed; an unconfirmed entry's are not."""
+        self._write(
+            tmp_path,
+            "vendor/m1/modem.yaml",
+            "status: confirmed\nauth:\n  strategy: jsonrpc\n  lockout_code: codeLocked\n"
+            "actions:\n  restart:\n    type: jsonrpc\n    method: SYS.reboot\n",
+        )
+        self._write(
+            tmp_path,
+            "vendor/m1/modem-alt.yaml",
+            "status: confirmed\nauth:\n  lockout_code: codeLocked\n",
+        )
+        self._write(
+            tmp_path,
+            "vendor/m2/modem.yaml",
+            "status: awaiting_verification\nauth:\n  lockout_code: codeOther\n",
+        )
+        values = scan_fleet(tmp_path).confirmed_config_values
+        assert values["auth.lockout_code"] == {"codeLocked": ["vendor/m1", "vendor/m1/modem-alt"]}
+        assert values["actions.restart.method"] == {"SYS.reboot": ["vendor/m1"]}
+        assert "codeOther" not in values.get("auth.lockout_code", {})
+
+
 class TestAuditFleetAuth:
     """audit_fleet_auth catches login_page / HAR fixture mismatches."""
 
@@ -259,3 +292,139 @@ class TestScanFleetEdgeCases:
         bad_yaml.write_text("{{invalid yaml", encoding="utf-8")
         fleet = scan_fleet(tmp_path)
         assert isinstance(fleet, FleetPatterns)
+
+
+class TestExcludeOneModem:
+    """The intake score grades each HAR against a fleet that excludes its own committed config."""
+
+    @staticmethod
+    def _write(root: Path, rel: str, text: str) -> None:
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def _catalog(self, root: Path) -> None:
+        for model, key, code, pwd in (("m1", "k1", "c1", "pw1"), ("m2", "k2", "c2", "pw2")):
+            self._write(
+                root,
+                f"vendor/{model}/parser.yaml",
+                f"system_info:\n  sources:\n    - format: json\n      resource: /a\n      fields:\n"
+                f"        - key: {key}\n          field: software_version\n          type: string\n",
+            )
+            self._write(
+                root,
+                f"vendor/{model}/modem.yaml",
+                f"status: confirmed\nauth:\n  strategy: jsonrpc\n  password_field: {pwd}\n  lockout_code: {code}\n",
+            )
+
+    def test_whole_fleet_learns_both(self, tmp_path: Path) -> None:
+        """Without exclusion every committed entry teaches."""
+        self._catalog(tmp_path)
+        fleet = scan_fleet(tmp_path)
+        assert set(fleet.system_info_json_keys) == {"k1", "k2"}
+        assert fleet.password_field_names == frozenset({"pw1", "pw2"})
+        assert set(fleet.confirmed_config_values["auth.lockout_code"]) == {"c1", "c2"}
+
+    def test_excluded_modem_teaches_nothing(self, tmp_path: Path) -> None:
+        """The excluded directory's parser patterns, password field and confirmed values are all absent."""
+        self._catalog(tmp_path)
+        fleet = scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m1")
+        assert set(fleet.system_info_json_keys) == {"k2"}
+        assert fleet.password_field_names == frozenset({"pw2"})
+        assert set(fleet.confirmed_config_values["auth.lockout_code"]) == {"c2"}
+
+
+class TestChannelJsonKeys:
+    """Channel JSON keys are learned from every committed parser.yaml, with the entries that declare each meaning."""
+
+    @staticmethod
+    def _write(root: Path, rel: str, text: str) -> None:
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def _catalog(self, root: Path) -> None:
+        # m1 nests two json arrays that both declare "status"; m2 is javascript_json, whose list is mappings.
+        self._write(
+            root,
+            "vendor/m1/parser.yaml",
+            "downstream:\n  format: json\n  resource: /a\n  arrays:\n"
+            "    - array_path: dss\n      fields:\n        - {key: Status, field: lock_status, type: lock_status}\n"
+            "    - array_path: ofdm\n      fields:\n        - {key: status, field: lock_status, type: lock_status}\n",
+        )
+        self._write(
+            root,
+            "vendor/m2/parser.yaml",
+            "upstream:\n  format: javascript_json\n  resource: /b\n  variable: json_usData\n"
+            "  mappings:\n    - {key: status, field: status, type: string}\n"
+            "    - {key: mer, field: snr, type: float}\n",
+        )
+
+    def test_meanings_indexed_with_declaring_entries(self, tmp_path: Path) -> None:
+        """Keys are lowercased; an entry is listed once per meaning however many arrays declare it."""
+        self._catalog(tmp_path)
+        assert scan_fleet(tmp_path).channel_keys == {
+            "status": {"lock_status": ["vendor/m1"], "status": ["vendor/m2"]},
+            "mer": {"snr": ["vendor/m2"]},
+        }
+
+    def test_excluded_modem_teaches_no_keys(self, tmp_path: Path) -> None:
+        """The modem under test does not teach its own key vocabulary."""
+        self._catalog(tmp_path)
+        assert scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m2").channel_keys == {
+            "status": {"lock_status": ["vendor/m1"]},
+        }
+
+
+class TestSystemInfoJsonKeyTypes:
+    """Each learned system_info JSON key records the types the fleet declares for it, and who declares them."""
+
+    @staticmethod
+    def _write(root: Path, rel: str, text: str) -> None:
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def _catalog(self, root: Path) -> None:
+        for model, key, declared in (
+            ("m1", "CMStatus", "string"),
+            ("m2", "cmstatus", "string"),
+            ("m3", "cmStatus", "integer"),
+        ):
+            self._write(
+                root,
+                f"vendor/{model}/parser.yaml",
+                f"system_info:\n  sources:\n    - format: json\n      resource: /a\n      fields:\n"
+                f"        - key: {key}\n          field: docsis_status\n          type: {declared}\n",
+            )
+
+    def test_types_indexed_with_declaring_entries(self, tmp_path: Path) -> None:
+        """Keys are lowercased; each declared type lists its entries."""
+        self._catalog(tmp_path)
+        assert scan_fleet(tmp_path).system_info_json_key_types == {
+            "cmstatus": {"string": ["vendor/m1", "vendor/m2"], "integer": ["vendor/m3"]},
+        }
+
+    def test_excluded_modem_declares_nothing(self, tmp_path: Path) -> None:
+        self._catalog(tmp_path)
+        types = scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m3").system_info_json_key_types
+        assert types == {"cmstatus": {"string": ["vendor/m1", "vendor/m2"]}}
+
+
+class TestXmlVocabulary:
+    """XML column and system_info sources teach the same key vocabulary as JSON keys."""
+
+    def test_xml_sources_learned(self, tmp_path: Path) -> None:
+        path = tmp_path / "vendor" / "m1" / "parser.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            "downstream:\n  format: xml\n  tables:\n    - resource: '10'\n      root_element: downstream_table\n"
+            "      child_element: downstream\n      columns:\n        - {source: pow, field: power, type: float}\n"
+            "system_info:\n  sources:\n    - format: xml\n      resource: '1'\n      root_element: GlobalSettings\n"
+            "      fields:\n        - {source: SwVersion, field: software_version, type: string}\n",
+            encoding="utf-8",
+        )
+        fleet = scan_fleet(tmp_path)
+        assert fleet.channel_keys == {"pow": {"power": ["vendor/m1"]}}
+        assert fleet.system_info_json_keys["swversion"] == ("software_version", 1)
+        assert fleet.system_info_json_key_types["swversion"] == {"string": ["vendor/m1"]}

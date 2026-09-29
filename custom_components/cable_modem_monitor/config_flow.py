@@ -7,7 +7,7 @@ my modem" to a working integration entry:
     Step 1b  — Select model + entity prefix
     Step 2   — Select variant  (skipped for single-variant modems)
     Step 3   — Enter connection details (host, credentials)
-    Step 4   — Validate  (progress spinner)
+    Step 4   — Validate  (inside the Step 3 submit)
 
 Plus:
     Options flow  — change host, credentials, prefix, intervals
@@ -90,7 +90,7 @@ _COOLOFF_TIMEOUT_SECONDS = 30.0
 
 
 # =============================================================================
-# Validation progress helper
+# Validation error mapping
 # =============================================================================
 
 
@@ -107,63 +107,12 @@ def _validation_error_key(exc: Exception) -> str:
     return "invalid_auth" if isinstance(exc, PermissionError) else "unknown"
 
 
-class _ValidationProgress:
-    """Manages async validation state for HA's progress-spinner pattern.
-
-    HA config flows show a spinner while a background task runs.  This
-    helper encapsulates the task lifecycle, result caching, and error
-    handling.
-    """
-
-    def __init__(self) -> None:
-        """Initialize with empty state."""
-        self.task: asyncio.Task[dict[str, Any]] | None = None
-        self.result: dict[str, Any] | None = None
-        self.error: Exception | None = None
-        self.error_key: str = "unknown"
-
-    def start(
-        self,
-        hass: HomeAssistant,
-        coro: Any,
-    ) -> None:
-        """Start the validation coroutine as a background task."""
-        self.task = hass.async_create_task(coro)
-
-    def is_running(self) -> bool:
-        """Return True if the task is still in progress."""
-        return self.task is not None and not self.task.done()
-
-    async def collect(self) -> bool:
-        """Await the task and store the outcome.
-
-        Returns:
-            True if validation succeeded.
-        """
-        if self.task is None:
-            return False
-
-        try:
-            self.result = await self.task
-            return True
-        except (ConnectionError, PermissionError, RuntimeError) as exc:
-            self.error = exc
-            self.error_key = _validation_error_key(exc)
-        except Exception as exc:
-            _LOGGER.exception("Unexpected validation error")
-            self.error = exc
-            self.error_key = "unknown"
-        finally:
-            self.task = None
-
-        return False
-
-    def reset(self) -> None:
-        """Clear all state for the next attempt."""
-        self.task = None
-        self.result = None
-        self.error = None
-        self.error_key = "unknown"
+def _validation_failure_key(exc: Exception) -> str:
+    """Map any validation failure to its strings.json error key, logging unexpected ones."""
+    if isinstance(exc, (ConnectionError, PermissionError, RuntimeError)):
+        return _validation_error_key(exc)
+    _LOGGER.error("Unexpected validation error", exc_info=exc)
+    return "unknown"
 
 
 # =============================================================================
@@ -200,7 +149,6 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         # Directory of the selected variant — may differ from summary.path
         # when a sibling transport directory was chosen in Step 2.
         self._selected_modem_dir: Path | None = None
-        self._progress = _ValidationProgress()
         # Carried from connection step for retry on error
         self._connection_input: dict[str, Any] | None = None
 
@@ -425,7 +373,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     ) -> config_entries.ConfigFlowResult:
         """Step 3 — Enter host and credentials."""
         if user_input is not None:
-            # The retry form (connection_with_errors) may carry an inline variant
+            # The retry form (after a failed validation) may carry an inline variant
             # switch (#176). Apply it before validating; it is recorded as the
             # selected variant, not stored in the connection input.
             rerender = False
@@ -453,7 +401,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             self._connection_input = user_input
             if rerender:
                 return self._show_connection_form(include_variant=True)
-            return await self.async_step_validate()
+            return await self._async_validate()
 
         return self._show_connection_form()
 
@@ -567,54 +515,45 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         return "none"
 
     # -----------------------------------------------------------------
-    # Step 4: Validate (progress spinner)
+    # Step 4: Validate (inside the Step 3 submit)
     # -----------------------------------------------------------------
 
-    async def async_step_validate(
-        self,
-        user_input: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
-        """Step 4 — Validate connectivity, auth, and parsing."""
-        if not self._progress.task:
-            if not self._connection_input or not self._selected_summary:
-                return self.async_abort(reason="missing_input")
-
-            self._progress.start(
-                self.hass,
-                validate_connection(
-                    self.hass,
-                    host=self._connection_input[CONF_HOST],
-                    username=self._connection_input.get(CONF_USERNAME, ""),
-                    password=self._connection_input.get(CONF_PASSWORD, ""),
-                    modem_dir=self._get_selected_modem_dir(),
-                    variant=self._selected_variant,
-                ),
-            )
-
-        if self._progress.is_running():
-            return self.async_show_progress(
-                step_id="validate",
-                progress_action="validate",
-                progress_task=self._progress.task,
-            )
-
-        success = await self._progress.collect()
-        if success:
-            return self.async_show_progress_done(next_step_id="validate_success")
-        return self.async_show_progress_done(next_step_id="connection_with_errors")
-
-    async def async_step_validate_success(
-        self,
-        user_input: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
-        """Create config entry after successful validation."""
-        if not self._connection_input or not self._selected_summary or not self._progress.result:
+    async def _async_validate(self) -> config_entries.ConfigFlowResult:
+        """Step 4 — Validate connectivity, auth, and parsing; create the entry or re-show Step 3."""
+        if not self._connection_input or not self._selected_summary:
             return self.async_abort(reason="missing_input")
 
-        summary = self._selected_summary
-        validation = self._progress.result
-        conn = self._connection_input
-        self._progress.reset()
+        # Awaited in-step, never behind a progress step: HA announces a
+        # finished progress task once, and the frontend misses it when a
+        # refused connection fails first (CONFIG_FLOW_SPEC § Step 4).
+        try:
+            validation = await validate_connection(
+                self.hass,
+                host=self._connection_input[CONF_HOST],
+                username=self._connection_input.get(CONF_USERNAME, ""),
+                password=self._connection_input.get(CONF_PASSWORD, ""),
+                modem_dir=self._get_selected_modem_dir(),
+                variant=self._selected_variant,
+            )
+        except Exception as exc:
+            # For multi-variant modems the form includes an inline variant
+            # switch so the user can correct a wrong pick without restarting
+            # (#176). The error banner carries the full, translated reason
+            # (strings.json config.error).
+            return self._show_connection_form(
+                errors={"base": _validation_failure_key(exc)},
+                include_variant=True,
+            )
+
+        return await self._async_create_validated_entry(self._selected_summary, self._connection_input, validation)
+
+    async def _async_create_validated_entry(
+        self,
+        summary: ModemSummary,
+        conn: dict[str, Any],
+        validation: dict[str, Any],
+    ) -> config_entries.ConfigFlowResult:
+        """Create the config entry from the selections and the validation result."""
 
         # Deduplicate by entity_prefix — the prefix is by design the
         # per-entry disambiguator (it controls every entity_id this
@@ -667,20 +606,6 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         }
 
         return self.async_create_entry(title=title, data=entry_data)
-
-    async def async_step_connection_with_errors(
-        self,
-        user_input: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
-        """Re-show the connection step with the validation error.
-
-        For multi-variant modems the form includes an inline variant switch so
-        the user can correct a wrong pick without restarting (#176). The error
-        banner carries the full, translated reason (strings.json config.error).
-        """
-        errors = {"base": self._progress.error_key}
-        self._progress.reset()
-        return self._show_connection_form(errors=errors, include_variant=True)
 
     # -----------------------------------------------------------------
     # Reauth flow
@@ -795,11 +720,6 @@ def _duration_to_seconds(duration: dict[str, int] | int) -> int:
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle reconfiguration of connection params and intervals."""
 
-    def __init__(self) -> None:
-        """Initialize options flow state."""
-        self._progress = _ValidationProgress()
-        self._user_input: dict[str, Any] | None = None
-
     async def async_step_init(
         self,
         user_input: dict[str, Any] | None = None,
@@ -809,8 +729,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             # Preserve password if user left it blank
             if not user_input.get(CONF_PASSWORD):
                 user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
-            self._user_input = user_input
-            return await self.async_step_options_validate()
+            return await self._async_validate(user_input)
 
         entry = self.config_entry
         data = entry.data
@@ -854,49 +773,33 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             ),
         )
 
-    async def async_step_options_validate(
-        self,
-        user_input: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
-        """Validate options changes with progress spinner."""
-        if not self._progress.task:
-            if not self._user_input:
-                return self.async_abort(reason="missing_input")
+    async def _async_validate(self, user_input: dict[str, Any]) -> config_entries.ConfigFlowResult:
+        """Validate the submitted options in-step; apply them or re-show the form with the error."""
+        entry = self.config_entry
+        summaries = await load_modem_catalog(self.hass)
+        mfr = entry.data[CONF_MANUFACTURER]
+        model = entry.data[CONF_MODEL]
+        summary = next(
+            (s for s in summaries if s.manufacturer == mfr and s.model == model),
+            None,
+        )
+        if summary is None:
+            return self.async_abort(reason="unknown_model")
 
-            entry = self.config_entry
-            summaries = await load_modem_catalog(self.hass)
-            mfr = entry.data[CONF_MANUFACTURER]
-            model = entry.data[CONF_MODEL]
-            summary = next(
-                (s for s in summaries if s.manufacturer == mfr and s.model == model),
-                None,
+        # Awaited in-step like the config flow (CONFIG_FLOW_SPEC § Step 4).
+        try:
+            validation = await self._validate_with_cooloff(
+                entry,
+                host=user_input[CONF_HOST],
+                username=user_input.get(CONF_USERNAME, ""),
+                password=user_input.get(CONF_PASSWORD, ""),
+                modem_dir=CATALOG_PATH / entry.data[CONF_MODEM_DIR],
+                variant=entry.data.get(CONF_VARIANT),
             )
-            if summary is None:
-                return self.async_abort(reason="unknown_model")
+        except Exception as exc:
+            return self._show_form_with_error(user_input, _validation_failure_key(exc))
 
-            self._progress.start(
-                self.hass,
-                self._validate_with_cooloff(
-                    entry,
-                    host=self._user_input[CONF_HOST],
-                    username=self._user_input.get(CONF_USERNAME, ""),
-                    password=self._user_input.get(CONF_PASSWORD, ""),
-                    modem_dir=CATALOG_PATH / entry.data[CONF_MODEM_DIR],
-                    variant=entry.data.get(CONF_VARIANT),
-                ),
-            )
-
-        if self._progress.is_running():
-            return self.async_show_progress(
-                step_id="options_validate",
-                progress_action="validate",
-                progress_task=self._progress.task,
-            )
-
-        success = await self._progress.collect()
-        if success:
-            return self.async_show_progress_done(next_step_id="options_success")
-        return self.async_show_progress_done(next_step_id="options_with_errors")
+        return self._apply_validated_options(user_input, validation)
 
     async def _validate_with_cooloff(
         self,
@@ -964,18 +867,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if waited:
             _LOGGER.debug("Options-flow validation: waited for modem to settle")
 
-    async def async_step_options_success(
+    def _apply_validated_options(
         self,
-        user_input: dict[str, Any] | None = None,
+        inp: dict[str, Any],
+        validation: dict[str, Any],
     ) -> config_entries.ConfigFlowResult:
         """Apply validated options changes."""
-        if not self._user_input or not self._progress.result:
-            return self.async_abort(reason="missing_input")
-
-        inp = self._user_input
-        validation = self._progress.result
-        self._progress.reset()
-
         hostname, _ = parse_host_input(inp[CONF_HOST])
         entry = self.config_entry
 
@@ -1010,16 +907,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             },
         )
 
-    async def async_step_options_with_errors(
+    def _show_form_with_error(
         self,
-        user_input: dict[str, Any] | None = None,
+        saved: dict[str, Any],
+        error_key: str,
     ) -> config_entries.ConfigFlowResult:
         """Re-show options form with error message."""
-        errors = {"base": self._progress.error_key}
-        saved = self._user_input or {}
-        self._progress.reset()
-        self._user_input = None
-
+        errors = {"base": error_key}
         entry = self.config_entry
         data = entry.data
 

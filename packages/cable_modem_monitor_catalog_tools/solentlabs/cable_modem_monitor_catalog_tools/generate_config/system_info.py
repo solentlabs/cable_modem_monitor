@@ -29,6 +29,8 @@ def transform_system_info(system_info: dict[str, Any]) -> dict[str, Any]:
             transformed_sources.append(_transform_hnap_system_info(source))
         elif fmt == "json":
             transformed_sources.append(_transform_json_system_info(source))
+        elif fmt == "xml":
+            transformed_sources.extend(_transform_xml_system_info(source))
         else:
             # html_fields, javascript — pass through
             transformed_sources.append(source)
@@ -56,6 +58,23 @@ def _transform_hnap_system_info(source: dict[str, Any]) -> dict[str, Any]:
         result["fields"] = fields
 
     return result
+
+
+def _transform_xml_system_info(source: dict[str, Any]) -> list[dict[str, Any]]:
+    """Transform an XML system_info source: one source per parent element, tags as sources."""
+    by_root: dict[str, list[dict[str, Any]]] = {}
+    for f in source.get("fields", []):
+        tf: dict[str, Any] = {"source": f.get("source", ""), "field": f["field"], "type": normalize_type(f["type"])}
+        if f.get("format"):
+            tf["format"] = f["format"]
+        if f.get("map"):
+            tf["map"] = f["map"]
+        # The analysis path is the element holding the tag; its last segment is the root to find.
+        by_root.setdefault(f.get("path", "").split(".")[-1], []).append(tf)
+    return [
+        {"format": "xml", "resource": source.get("resource", ""), "root_element": root, "fields": fields}
+        for root, fields in by_root.items()
+    ]
 
 
 def _transform_json_system_info(source: dict[str, Any]) -> dict[str, Any]:

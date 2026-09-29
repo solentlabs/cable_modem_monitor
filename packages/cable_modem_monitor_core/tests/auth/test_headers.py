@@ -24,6 +24,7 @@ from solentlabs.cable_modem_monitor_core.auth.form_pbkdf2 import FormPbkdf2AuthM
 from solentlabs.cable_modem_monitor_core.auth.form_sjcl import FormSjclAuthManager
 from solentlabs.cable_modem_monitor_core.auth.hnap import HnapAuthManager
 from solentlabs.cable_modem_monitor_core.auth.json_sjcl import JsonSjclAuthManager
+from solentlabs.cable_modem_monitor_core.auth.jsonrpc import JsonrpcAuthManager
 from solentlabs.cable_modem_monitor_core.auth.none import NoneAuthManager
 from solentlabs.cable_modem_monitor_core.auth.url_token import UrlTokenAuthManager
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
@@ -34,6 +35,7 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     FormPbkdf2Auth,
     FormSjclAuth,
     HnapAuth,
+    JsonrpcAuth,
     JsonSjclAuth,
     UrlTokenAuth,
 )
@@ -110,6 +112,21 @@ _CASES: list[tuple[BaseAuthManager, frozenset[str], str]] = [
         ),
         frozenset({"cookie", "x-session-token"}),
         "json_sjcl — adds configured token_header (lowercased)",
+    ),
+    (
+        JsonrpcAuthManager(
+            JsonrpcAuth(
+                strategy="jsonrpc",
+                endpoint="/rpc",
+                login_method="login",
+                username_field="u",
+                password_field="p",
+                token_path="token",
+                token_param="token",
+            )
+        ),
+        frozenset({"cookie"}),
+        "jsonrpc — token rides in the query, which describe_request masks; cookie by default",
     ),
 ]
 

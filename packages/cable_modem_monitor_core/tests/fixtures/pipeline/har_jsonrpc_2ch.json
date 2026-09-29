@@ -1,0 +1,64 @@
+{
+  "log": {
+    "entries": [
+      {
+        "request": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "postData": {
+            "mimeType": "application/json",
+            "text": "{\"jsonrpc\": \"2.0\", \"method\": \"MGMT.login\", \"params\": [{\"loginUserName\": \"FIELD_u\", \"loginPwd\": \"FIELD_p\"}], \"id\": 1}"
+          },
+          "url": "http://192.168.0.1/cgi-bin/router.php"
+        },
+        "response": {
+          "content": {
+            "mimeType": "application/json",
+            "text": "{\"jsonrpc\": \"2.0\", \"result\": {\"token\": \"FIELD_t\"}, \"id\": 1}"
+          },
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "status": 200
+        }
+      },
+      {
+        "request": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "postData": {
+            "mimeType": "application/json",
+            "text": "{\"jsonrpc\": \"2.0\", \"method\": \"CM.getDownstream\", \"params\": [], \"id\": 2}"
+          },
+          "url": "http://192.168.0.1/cgi-bin/router.php?token=FIELD_t"
+        },
+        "response": {
+          "content": {
+            "mimeType": "application/json",
+            "text": "{\"jsonrpc\": \"2.0\", \"result\": {\"dss\": [{\"channel\": \"1\", \"frequency\": \"507000000\", \"powerLevel\": \"2.5\"}, {\"channel\": \"2\", \"frequency\": \"513000000\", \"powerLevel\": \"2.6\"}]}, \"id\": 2}"
+          },
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "status": 200
+        }
+      }
+    ]
+  }
+}

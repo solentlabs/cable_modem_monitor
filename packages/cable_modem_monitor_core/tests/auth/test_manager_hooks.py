@@ -53,6 +53,15 @@ JSON_SJCL = {
     "aad": "AAD",
     "token_header": "X-Token",
 }
+JSONRPC = {
+    "strategy": "jsonrpc",
+    "endpoint": "/rpc",
+    "login_method": "login",
+    "username_field": "u",
+    "password_field": "p",
+    "token_path": "token",
+    "token_param": "tk",
+}
 NONE = {"strategy": "none"}
 URL_TOKEN = {"strategy": "url_token", "login_page": "/login.html"}
 URL_TOKEN_PREFIX = {**URL_TOKEN, "token_prefix": _PREFIX}
@@ -116,7 +125,8 @@ DEFAULT_VALIDITY_CASES: list[tuple[AuthContext | None, dict[str, str], bool, str
 # ├──────────────────────┼──────────────────────┤
 # │ cookie_name declared │ that name            │
 # │ cookie_name unset    │ ""                   │
-# │ form_cbn, hnap, none │ "" (no cookie_name)  │
+# │ form_cbn, hnap,      │ "" (no cookie_name)  │
+# │ jsonrpc, none        │                      │
 # └──────────────────────┴──────────────────────┘
 #
 # fmt: off
@@ -139,6 +149,7 @@ COOKIE_NAME_CASES: list[tuple[dict[str, Any], str, str]] = [
     (URL_TOKEN,                            "",   "url_token-unset"),
     (FORM_CBN,                             "",   "form_cbn"),
     (HNAP,                                 "",   "hnap"),
+    (JSONRPC,                              "",   "jsonrpc"),
     (NONE,                                 "",   "none"),
 ]
 # fmt: on
@@ -150,6 +161,7 @@ COOKIE_NAME_CASES: list[tuple[dict[str, Any], str, str]] = [
 # │ named cookie    │ ctx      │ present / absent │ both   │ inherited cookie check     │
 # │ form_cbn        │ ctx      │ -                │ True   │ no cookie_name field       │
 # │ hnap            │ ctx      │ uid x key        │ both   │ uid cookie AND private key │
+# │ jsonrpc         │ any      │ -                │ ctx    │ the token is the session   │
 # └─────────────────┴──────────┴──────────────────┴────────┴────────────────────────────┘
 #
 # fmt: off
@@ -165,6 +177,8 @@ STRATEGY_VALIDITY_CASES: list[tuple[dict[str, Any], AuthContext | None, dict[str
     (HNAP,                          CTX,     {"uid": "U1"},        False, "hnap-uid-no_key"),
     (HNAP,                          CTX_KEY, {},                   False, "hnap-no_uid-key"),
     (HNAP,                          CTX_KEY, {"PrivateKey": "K1"}, False, "hnap-privatekey_cookie_only"),
+    (JSONRPC,                       NEVER,   {},                   False, "jsonrpc-never"),
+    (JSONRPC,                       CTX_TOKEN, {},                 True,  "jsonrpc-token"),
 ]
 # fmt: on
 
@@ -193,6 +207,10 @@ URL_TOKEN_CASES: list[tuple[dict[str, Any], AuthContext | None, dict[str, str], 
     (HNAP,                                 CTX_TOKEN, COOKIE, ("", ""),         "hnap"),
     (NONE,                                 CTX_TOKEN, COOKIE, ("", ""),         "none"),
     ({**URL_TOKEN, "cookie_name": _SID},   CTX_TOKEN, COOKIE, ("", ""),         "url_token-no_prefix"),
+    # -- jsonrpc: <token_param>= once a login produced a token --------------------
+    (JSONRPC,                              CTX_TOKEN, COOKIE, ("tk=", "T1"),    "jsonrpc-token"),
+    (JSONRPC,                              CTX,       COOKIE, ("", ""),         "jsonrpc-no_token"),
+    (JSONRPC,                              NEVER,     COOKIE, ("", ""),         "jsonrpc-never"),
     # -- url_token with token_prefix ----------------------------------------------
     ({**URL_TOKEN_PREFIX, "cookie_name": _SID}, CTX_TOKEN, COOKIE, (_PREFIX, "T1"), "url_token-context_token"),
     ({**URL_TOKEN_PREFIX, "cookie_name": _SID}, CTX,       COOKIE, (_PREFIX, "C1"), "url_token-cookie_fallback"),
@@ -278,7 +296,7 @@ class TestSessionIsValid:
 
 
 class TestLoaderUrlToken:
-    """Only ``url_token`` and query-placed ``bearer`` send a URL token."""
+    """Only ``url_token``, query-placed ``bearer`` and ``jsonrpc`` send a URL token."""
 
     @pytest.mark.parametrize(
         "auth,context,cookies,expected,desc",
@@ -299,7 +317,20 @@ class TestLoaderUrlToken:
 
 _MINIMAL_BY_STRATEGY: dict[str, dict[str, Any]] = {
     auth["strategy"]: auth
-    for auth in (BASIC, BEARER, FORM, FORM_CBN, FORM_NONCE, FORM_PBKDF2, FORM_SJCL, HNAP, JSON_SJCL, NONE, URL_TOKEN)
+    for auth in (
+        BASIC,
+        BEARER,
+        FORM,
+        FORM_CBN,
+        FORM_NONCE,
+        FORM_PBKDF2,
+        FORM_SJCL,
+        HNAP,
+        JSON_SJCL,
+        JSONRPC,
+        NONE,
+        URL_TOKEN,
+    )
 }
 
 

@@ -1,6 +1,8 @@
 """HAR data extraction — shared resource dict construction.
 
 Builds transport-specific resource dicts from HAR entries. Used by:
+- ``cable_modem_monitor_catalog_tools.analysis.format.jsonrpc`` — JSON-RPC pages
+- ``cable_modem_monitor_catalog_tools.analysis.format.cbn`` — CBN pages
 - ``cable_modem_monitor_catalog_tools.generate_golden_file`` — golden file generation
 - ``cable_modem_monitor_catalog_tools.analysis.format.hnap`` — HNAP format detection
 - ``testing.auth_hnap`` — mock server data response
@@ -21,8 +23,10 @@ import logging
 import subprocess
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
+from xml.etree.ElementTree import Element, ParseError
 
+import defusedxml.ElementTree as DefusedET
 from bs4 import BeautifulSoup
 
 from .loaders.html_normalize import normalize_html
@@ -107,15 +111,23 @@ def _lfs_error_message(path: Path) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_resource_dict(har_path: str) -> dict[str, Any]:
+def build_resource_dict(
+    har_path: str,
+    transport: str | None = None,
+    getter_endpoint: str = "/xml/getter.xml",
+) -> dict[str, Any]:
     """Build a resource dict from HAR response bodies.
 
-    Auto-detects transport: HNAP entries produce
+    ``transport="jsonrpc"`` produces ``{method: result, ...}`` and
+    ``transport="cbn"`` produces ``{fun: Element, ...}``. Otherwise the
+    transport is auto-detected: HNAP entries produce
     ``{"hnap_response": {...}}``, HTTP entries produce
     ``{path: BeautifulSoup, ...}``.
 
     Args:
         har_path: Path to the HAR file.
+        transport: The entry's transport, when the caller knows it.
+        getter_endpoint: The CBN getter path (``form_cbn`` auth's field).
 
     Returns:
         Resource dict for the ``ModemParserCoordinator``.
@@ -124,11 +136,67 @@ def build_resource_dict(har_path: str) -> dict[str, Any]:
     har_data = load_har_json(path)
     entries = har_data.get("log", {}).get("entries", [])
 
+    # Never sniffed: form-login firmware makes JSON-RPC plumbing calls too
+    # (OpenWrt LuCI ubus), so only the entry's transport can say so.
+    if transport == "jsonrpc":
+        return jsonrpc_har_results(entries)
+    if transport == "cbn":
+        return cbn_har_results(entries, getter_endpoint)
+
     hnap_resources = _build_hnap_resources(entries)
     if hnap_resources:
         return hnap_resources
 
     return _build_http_resources(entries)
+
+
+def jsonrpc_har_results(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """``method → result`` for a capture's JSON-RPC 2.0 calls, as the loader hands them to a parser.
+
+    Same choice as the replay server when a method was called more than
+    once: a reply carrying ``result`` beats one carrying ``error``, and the
+    later result wins. See RESOURCE_LOADING_SPEC.md § JSON-RPC Transport.
+    """
+    results: dict[str, Any] = {}
+    for entry in entries:
+        request = entry.get("request", {})
+        try:
+            call = json.loads((request.get("postData") or {}).get("text") or "null")
+            reply = json.loads(_content_text(entry.get("response", {}).get("content", {}), request.get("url", "")))
+        except ValueError:
+            continue
+        if not isinstance(call, dict) or call.get("jsonrpc") != "2.0" or not isinstance(call.get("method"), str):
+            continue
+        if not isinstance(reply, dict) or "result" not in reply:
+            continue
+        result = reply["result"]
+        results[call["method"]] = result if isinstance(result, dict) else {"_raw": result}
+    return results
+
+
+def cbn_har_results(entries: list[dict[str, Any]], getter_endpoint: str = "/xml/getter.xml") -> dict[str, Element]:
+    """``fun → XML root`` for a capture's CBN getter calls, as the CBN loader hands them to a parser.
+
+    Only the getter carries data; setter calls (login, logout, restart)
+    share the fun namespace syntax but not its meaning. A body that does
+    not parse is skipped, and the later answer wins, as for JSON-RPC.
+    See RESOURCE_LOADING_SPEC.md § CBN XML POST Loading.
+    """
+    results: dict[str, Element] = {}
+    for entry in entries:
+        request = entry.get("request", {})
+        url = request.get("url", "")
+        if request.get("method", "").upper() != "POST" or urlparse(url).path != getter_endpoint:
+            continue
+        fun = dict(parse_qsl((request.get("postData") or {}).get("text") or "")).get("fun")
+        text = _content_text(entry.get("response", {}).get("content", {}), url)
+        if not fun or not text.strip():
+            continue
+        try:
+            results[fun] = DefusedET.fromstring(text)
+        except ParseError:
+            continue
+    return results
 
 
 def merge_hnap_har_responses(

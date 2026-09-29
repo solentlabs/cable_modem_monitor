@@ -10,7 +10,7 @@ files; this document explains the choices that shaped them.
 |---------|----------------|
 | [Package Boundaries](#package-boundaries) | Runtime package split, dependency direction, where each piece lives, pruning Core's exported surface, specs citing the catalog rather than restating its coverage |
 | [Core Schema Model](#core-schema-model) | What enters Core's schema vs what stays user-side; catalog stores source-faithful strings and maps only observed values, display normalizes; derived and dynamic fields, health as its own structure |
-| [Transport and Constraint Model](#transport-and-constraint-model) | Transport as protocol identifier, generated constraint tables, implicit capabilities, shared protocol primitives, config as parameters |
+| [Transport and Constraint Model](#transport-and-constraint-model) | Transport as protocol identifier, JSON-RPC as a transport, generated constraint tables, implicit capabilities, shared protocol primitives, config as parameters |
 | [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging, credential reconfiguration as reconstruction |
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
@@ -440,11 +440,11 @@ force the expensive path to run at the cheap path's frequency.
 ### Transport is a protocol identifier, not a constraint funnel
 
 **Decision:** The `transport` field in modem.yaml identifies the wire
-protocol: `http`, `hnap`, or `cbn`. For `http`, auth, session, and
-format are configured independently (qualified — some auth/session
-pairings are linked; see MODEM_YAML_SPEC.md auth-session-action
-consistency rules). For `hnap` and `cbn`, the protocol constrains
-everything.
+protocol: `http`, `hnap`, `cbn`, or `jsonrpc`. For `http`, auth,
+session, and format are configured independently (qualified — some
+auth/session pairings are linked; see MODEM_YAML_SPEC.md
+auth-session-action consistency rules). For the others, the protocol
+constrains everything.
 
 **Rationale:** The majority of modems use HTTP requests regardless of
 whether the response is HTML, JSON, or XML. The difference between an
@@ -454,8 +454,9 @@ transport selects the loader, format (in parser.yaml) selects the decode
 step and extraction strategy. Auth strategies are orthogonal to both —
 any auth can appear with any format over HTTP. HNAP and CBN are
 genuinely different protocols (HNAP: SOAP POST + HMAC signing; CBN:
-XML POST + AES-256-CBC), so each warrants its own transport value
-where the protocol constrains auth, session, and format.
+XML POST + AES-256-CBC; JSON-RPC: one endpoint, operation named in the
+body), so each warrants its own transport value where the protocol
+constrains auth, session, and format.
 
 Evidence: across the HTTP modem population, no auth strategy is
 structurally tied to a response format. Basic auth modems serve HTML
@@ -467,6 +468,38 @@ modem inventory and stress test results.
 **Constrains:** Format strategies must be compatible with the value type
 they receive. HTML formats expect `BeautifulSoup`, structured formats
 expect `dict`. Misconfigured modem.yaml is rejected at load time.
+
+### JSON-RPC is a transport; its vocabulary is entry data
+
+**Decision:** A firmware that POSTs every call as a
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification) envelope to one
+endpoint is the `jsonrpc` transport. Resources are keyed by method
+name. The loader strips the envelope and hands the parser `result`,
+which the `json` formats read. Login is the transport's one strategy,
+`jsonrpc`; restart is a `type: jsonrpc` action. The error codes that
+change Core's behaviour (`lockout_code`, `session_expired_code`) are
+entry values.
+
+**Rationale:** On `http`, resource keys are paths and a request is how
+a path is fetched, never a second identity for it (PARSING_SPEC.md
+§ Fetch List Derivation). A firmware whose one path serves every
+operation cannot be keyed by path; CBN is the same shape, operation in
+the body, and got a transport for it. JSON-RPC 2.0 fixes only the
+envelope (`jsonrpc`, `id`, `result` or `error`), so the transport owns
+the envelope and the entry owns everything the vendor chose: method
+names, credential keys, error codes, the shape inside `result`.
+Stripping the envelope is the HNAP loader's rule (it removes
+`GetMultipleHNAPsResponse`): the loader removes what the protocol
+fixes and passes on what the vendor chose. Error codes follow
+§ Session-busy is a declared criterion: a Core table of them would
+encode one vendor's vocabulary in a transport named for the protocol.
+
+**Constrains:** A resource key is the method name alone and data calls
+send `params: []`. A dialect that names its operation inside `params`
+(OpenWrt ubus, where `method` is always `call`) extends the resource
+key to carry params; it is not a second transport. Error codes are
+compared by equality on `error.code`; a new code that changes behaviour
+is a new optional field on the `jsonrpc` model, never a list in Core.
 
 ### The published constraint tables are generated, not written
 
@@ -531,7 +564,9 @@ entity.
 **Decision:** Cross-cutting protocol code sits in `protocol/`:
 `protocol/hnap.py` for HMAC signing and constants, `protocol/cbn.py`
 for the AES-256-CBC encryption `form_cbn` auth needs, `protocol/sjcl.py`
-for the SJCL PBKDF2 and AES-CCM that `form_sjcl` and `json_sjcl` share.
+for the SJCL PBKDF2 and AES-CCM that `form_sjcl` and `json_sjcl` share,
+`protocol/jsonrpc.py` for the envelope `jsonrpc` auth, loader, and
+actions share.
 
 **Rationale:** HNAP signing is used by auth, loaders, and action
 executors alike. A shared module removes the duplication while each
@@ -541,12 +576,12 @@ consumer still owns its transport-specific flow.
 
 ### Transport-scoped action executors with single dispatch
 
-**Decision:** `http_action.py`, `hnap_action.py`, and `cbn_action.py`
-implement their own protocols; one `execute_action()` dispatches to
-them.
+**Decision:** `http_action.py`, `hnap_action.py`, `cbn_action.py`, and
+`jsonrpc_action.py` implement their own protocols; one
+`execute_action()` dispatches to them.
 
-**Rationale:** The three protocols have nothing in common at the wire
-level — form POST, SOAP, parameterized XML POST. Separate modules stop
+**Rationale:** The protocols have nothing in common at the wire
+level — form POST, SOAP, parameterized XML POST, JSON-RPC envelope. Separate modules stop
 them coupling, while the single entry point gives the collector
 (logout) and orchestrator (restart) one interface to call.
 
@@ -1412,8 +1447,8 @@ expanding the action model. This is intentional.
 **Decision:** ICMP, HEAD, and TCP each measure a different layer. All
 run when the modem supports them; none is a fallback for another.
 Status comes from ICMP + TCP. HEAD measures latency only and never
-changes status. A recent successful collection skips HEAD and TCP,
-which would only re-prove what it already showed. For probe order and
+changes status. An active collection skips HEAD and TCP, which would
+contend with it for the modem's web server. For probe order and
 per-configuration outcomes, see ORCHESTRATION_SPEC § Probe
 Configurations.
 
@@ -1429,10 +1464,14 @@ server is listening.
 
 **Constrains:** Never hammer a modem's web server for something a
 cheaper probe answers. That rule lives in the skip gate and the
-`supports_head` guard, not in probe ordering. Two things look like bugs
-and are not: HEAD runs before TCP so a single-threaded modem gets an
-uncontested connection, and a failed ICMP forces TCP past the skip gate
-so stale evidence cannot outvote a live probe (UC-59a).
+`supports_head` guard, not in probe ordering. A completed collection
+never skips the next probe: health and poll intervals are independent
+settings, and at health interval >= poll interval a post-collection
+skip stops TCP and HEAD after the first reading (UC-59). Two things
+look like bugs and are not: HEAD runs before TCP so a single-threaded
+modem gets an uncontested connection, and a failed ICMP forces TCP past
+the skip gate so an in-flight collection cannot stand in for a live
+probe (UC-59a).
 
 ---
 
@@ -2069,12 +2108,13 @@ of its handshake off a page.
 
 ### How to add a transport
 
-Add a new loader (new value type), new `BaseParser` implementation(s)
-that consume that type, a new action model, the transport literal on
-`ModemConfig.transport`, and a `_TRANSPORT_PROSE` entry in
-`scripts/generate_constraint_tables.py` for the two columns no model
-carries (loader and session). Then regenerate. No existing code
-changes.
+Add a new loader, a new auth strategy, a new action model, the
+transport literal on `ModemConfig.transport`, and a `_TRANSPORT_PROSE`
+entry in `scripts/generate_constraint_tables.py` for the two columns no
+model carries (loader and session). A loader with a new value type
+needs new `BaseParser` implementation(s); one whose value type a
+format already parses adds the transport to that format's `transports`
+ClassVar, the one existing line that changes. Then regenerate.
 
 ---
 

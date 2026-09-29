@@ -5,7 +5,7 @@ error reporting across auth strategies.  Strategy-specific
 validation (``p_status``, error fields, ``LoginResult``, etc.)
 stays in each strategy module.
 
-Six entry points:
+Seven entry points:
 
 * :func:`safe_preview` — truncate arbitrary values for error
   messages and logs.
@@ -13,6 +13,8 @@ Six entry points:
   declared criterion (``login_success``, ``login_busy``).
 * :func:`place_token_header` — send a login's token back as a named
   request header (``bearer``, ``json_sjcl``).
+* :func:`extract_token` — read a string token at a dot-separated path
+  in a parsed body (``bearer``, ``jsonrpc``).
 * :func:`parse_json_dict` — parse an existing ``Response`` as a
   JSON dict (with double-decode, type check, DEBUG log).
 * :func:`post_json` — POST JSON payload **and** parse the
@@ -55,6 +57,27 @@ def place_token_header(session: requests.Session, header: str, token: str) -> No
     """Send the token back as request header ``header`` on every later request."""
     # Lives here, not in either strategy, so no strategy imports a sibling.
     session.headers[header] = token
+
+
+def walk_path(body: Any, path: str) -> Any:
+    """Walk a dot-separated path through a JSON dict; return the value at the leaf or None."""
+    current: Any = body
+    for key in path.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+        if current is None:
+            return None
+    return current
+
+
+def extract_token(body: Any, token_path: str) -> str | None:
+    """Return the string at ``token_path`` in a parsed body, or None."""
+    # Lives here, not in either strategy, so no strategy imports a sibling.
+    current = walk_path(body, token_path)
+    if not isinstance(current, str):
+        return None
+    return current
 
 
 def parse_json_dict(

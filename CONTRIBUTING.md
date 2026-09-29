@@ -396,8 +396,9 @@ Discussion, ideally opened by the person interested, with a link back.
 ### Commit Message Format
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
-CI validates every commit in a PR against `commitlint.config.js`, and the
-local `commit-msg` hook uses the same file.
+CI validates every commit in a PR against `commitlint.config.js`. The
+local `commit-msg` hook and `make commit-lint` (part of `make validate-ci`)
+use the same file.
 
 ```text
 feat(catalog): add support for Arris TG1682G

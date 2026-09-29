@@ -20,8 +20,8 @@ from solentlabs.cable_modem_monitor_catalog_tools.analysis.mapping.channel_detec
     detect_channel_type_fixed,
 )
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.mapping.dispatcher import (
-    _find_channel_array,
     _infer_field_from_value,
+    _list_arrays,
 )
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.mapping.field_resolution import (
     detect_field_type,
@@ -714,30 +714,25 @@ class TestExtractEdgeCases:
 
 
 # =====================================================================
-# _find_channel_array edge cases
+# _list_arrays edge cases
 # =====================================================================
 
 
-class TestFindChannelArray:
-    """Edge cases for JSON channel array discovery."""
+class TestListArrays:
+    """Edge cases for JSON list discovery: every list of objects, in document order."""
 
-    def test_nested_array(self) -> None:
-        """Finds array nested under a key."""
-        path, arr = _find_channel_array({"data": {"channels": [{"id": 1}]}})
-        assert path == "data.channels"
-        assert len(arr) == 1
+    def test_nested_arrays_in_order(self) -> None:
+        """Lists nested under keys are found with their dot paths, in document order."""
+        found = _list_arrays({"a": [{"x": 1}], "data": {"channels": [{"id": 1}, {"id": 2}]}})
+        assert [(path, len(items)) for path, items in found] == [("a", 1), ("data.channels", 2)]
 
     def test_no_array(self) -> None:
-        """Returns empty when no list-of-dicts found."""
-        path, arr = _find_channel_array({"status": "ok"})
-        assert path == ""
-        assert arr == []
+        """Nothing is found when no list of objects exists."""
+        assert _list_arrays({"status": "ok"}) == []
 
     def test_list_of_non_dicts(self) -> None:
-        """List of strings is not a channel array."""
-        path, arr = _find_channel_array({"items": ["a", "b"]})
-        assert path == ""
-        assert arr == []
+        """A list of strings or an empty list is not a candidate."""
+        assert _list_arrays({"items": ["a", "b"], "empty": []}) == []
 
 
 # =====================================================================

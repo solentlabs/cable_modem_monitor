@@ -215,6 +215,16 @@ class HnapSessionExpired:
 
 
 @dataclass
+class JsonRpcSessionExpired:
+    """A JSON-RPC data call answered the entry's declared session-expired code."""
+
+    model: str
+    method: str
+    code: str
+    level: EventLevel = field(default=EventLevel.WARNING, init=False)
+
+
+@dataclass
 class StubPageDetected:
     """0 of N expected parser anchors found — stub or login page served at data URL."""
 
@@ -488,7 +498,7 @@ class ActionStarted:
     """Action dispatched. Level is caller-determined."""
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn"
+    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
     action_name: str
     level: EventLevel  # caller-determined
 
@@ -498,7 +508,7 @@ class ActionCompleted:
     """Response received on success path. Level is caller-determined."""
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn"
+    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
     action_name: str
     status_code: int | None
     result: str
@@ -510,7 +520,7 @@ class ActionConnectionLost:
     """Connection dropped during action — expected during modem restart. Level is caller-determined."""
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn"
+    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
     action_name: str
     level: EventLevel  # caller-determined
 
@@ -520,7 +530,7 @@ class ActionFailed:
     """Bad response format, unexpected result, or request error."""
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn"
+    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
     action_name: str
     reason: str
     level: EventLevel = field(default=EventLevel.WARNING, init=False)
@@ -535,7 +545,7 @@ class ActionPreFetchCompleted:
     """
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn"
+    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
     action_name: str
     key_count: int | None
     fallback_endpoint: str | None
@@ -551,7 +561,7 @@ class ActionPreFetchFailed:
     """
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn"
+    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
     action_name: str
     reason: str
     fallback_endpoint: str | None
@@ -607,6 +617,7 @@ type OrchestratorEvent = (
     | LogoutFailed
     | PostLoginFetchFailed
     | HnapSessionExpired
+    | JsonRpcSessionExpired
     | StubPageDetected
     | SessionRetryStarted
     | SessionRetrySucceeded

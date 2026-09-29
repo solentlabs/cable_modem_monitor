@@ -129,7 +129,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 43.8,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 10,
@@ -139,7 +139,7 @@
       "lock_status": "locked",
       "modulation": "QAM64",
       "power": 43.5,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "active_subcarriers": 200,

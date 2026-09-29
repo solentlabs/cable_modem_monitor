@@ -883,6 +883,42 @@ class TestExecuteAction:
         assert call_kwargs["session_cookie_name"] == "sessionToken"
         assert call_kwargs["timeout"] == 10
 
+    def test_jsonrpc_action_dispatches(self) -> None:
+        """JSON-RPC action routes to execute_jsonrpc_action with the endpoint and the login token."""
+        from solentlabs.cable_modem_monitor_core.auth.base import AuthContext
+        from solentlabs.cable_modem_monitor_core.auth.jsonrpc import JsonrpcAuthManager
+        from solentlabs.cable_modem_monitor_core.models.modem_config.actions import JsonrpcAction
+        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import JsonrpcAuth
+
+        auth = JsonrpcAuth(
+            strategy="jsonrpc",
+            endpoint="/cgi-bin/router.php",
+            login_method="MGMT.login",
+            username_field="u",
+            password_field="p",
+            token_path="token",
+            token_param="token",
+        )
+        collector = MagicMock()
+        collector._session = MagicMock(spec=requests.Session)
+        collector._base_url = "http://192.168.0.1"
+        collector._auth_manager = JsonrpcAuthManager(auth)
+        collector._auth_context = AuthContext(token="T1", url_token="T1")
+
+        modem_config = MagicMock()
+        modem_config.auth = auth
+        modem_config.timeout = 10
+
+        action = JsonrpcAction(type="jsonrpc", method="MGMT.reboot")
+
+        with patch("solentlabs.cable_modem_monitor_core.orchestration.actions.execute_jsonrpc_action") as mock_rpc:
+            mock_rpc.return_value = MagicMock(success=True)
+            execute_action(collector, modem_config, action)
+
+        call_kwargs = mock_rpc.call_args[1]
+        assert call_kwargs["url"] == "http://192.168.0.1/cgi-bin/router.php?token=T1"
+        assert call_kwargs["timeout"] == 10
+
     def test_unknown_action_returns_failure(self, caplog) -> None:
         """An action object that's none of the known types returns ActionResult(success=False)."""
 

@@ -140,11 +140,12 @@
   },
 
   "safe_serial_prefixes": {
-    "_description": "Serial number prefixes produced by har-capture sanitization.",
+    "_description": "Prefixes of serial_number findings that are not serials: har-capture sanitization output, and firmware label text the pattern catches as its own value (SDMC NE6037 i18n properties: 'Serial Number' followed by the next key name).",
     "values": [
       "SNTLABS",
       "SERIAL_",
-      "SN_"
+      "SN_",
+      "Serial Number"
     ]
   },
 
@@ -182,14 +183,16 @@
       "10.0.0.1": "Xfinity XB-series default LAN gateway (router mode). Declared as default_host in technicolor/xb10 modem.yaml; identical across all XB10 units, RFC1918 private, not contributor PII.",
       "3.81.21.97": "Not an IP: substring of the Technicolor XB8 BOOT version 'S1TC-3.81.21.97' in the technicolor/xb8 fixture. Firmware version self-reported by the contributor in issue #101; the IPv4 regex matches the dotted tail of the version string.",
       "192.168.178.1": "Static example gateway in a Sagemcom F3896LG Dutch help string ('Open vervolgens een browser en ga naar 192.168.178.1'). Firmware UI copy in index.js, not the contributor's LAN. Appears in the sagemcom/f3896lg-zg fixture.",
-      "1.5.75.75": "Not an IP: substring of an inline SVG path in the Sagemcom F3896LG index.js ('...5.75v3.75a.75.75 0 01-1.5 0V9...'). The IPv4 regex matches the dotted coordinate run."
+      "1.5.75.75": "Not an IP: substring of an inline SVG path in the Sagemcom F3896LG index.js ('...5.75v3.75a.75.75 0 01-1.5 0V9...'). The IPv4 regex matches the dotted coordinate run.",
+      "7.1.12.2": "Not an IP: the dotted head of the SDMC NE6037 firmware version '7.1.12.2.4445' (CM.getMisc softwareVersion and SYS.getRunning in the sdmc/ne6037 fixture, and system_info.software_version in its golden). Firmware version self-reported by the filer in issue #215."
     },
     "values": [
       "3.81.21.97",
       "10.0.0.1",
       "11.22.11.22",
       "192.168.178.1",
-      "1.5.75.75"
+      "1.5.75.75",
+      "7.1.12.2"
     ]
   },
 

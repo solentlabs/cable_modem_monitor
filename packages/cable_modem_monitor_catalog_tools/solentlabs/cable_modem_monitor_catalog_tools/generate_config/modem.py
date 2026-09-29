@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import FormCbnAuth
+
 
 def build_modem_dict(analysis: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
     """Assemble a modem.yaml dict from analysis output and metadata."""
@@ -19,6 +21,21 @@ def build_modem_dict(analysis: dict[str, Any], metadata: dict[str, Any]) -> dict
     _add_analysis_blocks(result, analysis)
     _add_metadata_fields(result, metadata)
     return result
+
+
+def type_resolved_actions(modem_dict: dict[str, Any]) -> None:
+    """Give each action a resolution wrote its type; jsonrpc and cbn each have only the one."""
+    # A resolution writes the identifying field alone: method or fun (ONBOARDING_SPEC § Ambiguities).
+    transport = modem_dict.get("transport")
+    if transport not in ("jsonrpc", "cbn"):
+        return
+    actions = modem_dict.get("actions") or {}
+    for name, action in actions.items():
+        typed = action if "type" in action else {"type": transport, **action}
+        if transport == "cbn" and "fun" in typed:
+            # Candidates carry the wire's text; the config holds the code as a number.
+            typed["fun"] = int(typed["fun"])
+        actions[name] = typed
 
 
 def _add_identity(result: dict[str, Any], analysis: dict[str, Any], metadata: dict[str, Any]) -> None:
@@ -223,6 +240,13 @@ def _clean_auth_defaults(block: dict[str, Any]) -> None:
     Modifies the dict in place. Keeps the generated YAML clean by
     omitting values the model would supply anyway.
     """
+    if block.get("strategy") == "form_cbn":
+        # Core's model is the one home for these defaults.
+        for key, model_field in FormCbnAuth.model_fields.items():
+            if key != "strategy" and block.get(key) == model_field.default:
+                block.pop(key)
+        return
+
     for key, default_value in _AUTH_DEFAULTS:
         if block.get(key) == default_value:
             block.pop(key, None)

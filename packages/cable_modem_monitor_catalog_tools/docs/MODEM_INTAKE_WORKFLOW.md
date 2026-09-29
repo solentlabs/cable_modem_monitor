@@ -258,11 +258,24 @@ result = analyze_har(har_path, fleet=fleet)
 analysis = result.to_dict()
 ```
 
-Check three outputs:
+Check four outputs:
 
 1. **`hard_stops`** — if non-empty, report and stop
 2. **`warnings`** — note for later, don't stop
 3. **`core_gaps`** — if present, report and stop (Step 5)
+4. **`ambiguities`** — resolve each before Step 7
+
+Each ambiguity is a judgment the capture supports and the tool does not
+make: a dotted config path and candidates, each with the evidence that
+shows it (ONBOARDING_SPEC § Ambiguities). Read the evidence and set
+`resolution` to `{value}`, or to `{value: null, reason}` for an explicit
+none, then show the user each resolution with its evidence to confirm.
+A `blocking` one left unresolved makes `generate_config` refuse; a
+non-blocking one left unresolved omits its field. A pre-filled
+`{value, source: fleet}` came from confirmed catalog entries and is
+still reviewed. A `parser.<section>.<key>` path asks which field a
+channel key means, where catalog entries disagree; its value is a field
+name ([ONBOARDING_SPEC § Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed)).
 
 Report what was detected:
 
@@ -399,11 +412,17 @@ layout [MODEM_YAML_SPEC.md § Layout](../../cable_modem_monitor_core/docs/MODEM_
 defines; keep that layout through any hand edit, the catalog suite
 gates it.
 
+If the model already has variants (other `modem-*.yaml` files, or
+sibling directories for the same model), render its setup picker
+(`format_variant_labels` over `list_variants`) and read every label as
+a user would. Each must name what sets that variant apart:
+[ARCHITECTURE_DECISIONS.md § The variant name is the user-facing discriminator](../../cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md#the-variant-name-is-the-user-facing-discriminator).
+
 ## Step 8: Generate Golden File + Write Package
 
 ```python
 from solentlabs.cable_modem_monitor_catalog_tools.generate_golden_file import generate_golden_file
-golden = generate_golden_file(str(har_path), result.parser_yaml)
+golden = generate_golden_file(str(har_path), result.parser_yaml, transport=analysis["transport"])
 ```
 
 Report channel counts for sanity check:

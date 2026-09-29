@@ -595,3 +595,43 @@ class TestRestartAction:
 
         assert result.passed is False
         assert "Auth failed" in result.error
+
+
+# ---------------------------------------------------------------------------
+# Every transport replays through both runners
+# ---------------------------------------------------------------------------
+
+# run_modem_test wires its own loader per transport; a transport it does not
+# know used to fall through to the HTTP loader, which fetched CBN `fun` codes
+# as URL paths. Each non-HTTP transport replays the same capture through both
+# runners against one golden, so the two cannot drift apart again.
+# fmt: off
+TRANSPORT_CASES = [
+    # (modem.yaml,          parser.yaml,          HAR fixture,                golden,            id)
+    ("modem_cbn.yaml",      "parser_cbn.yaml",    "har_cbn_2ch.json",         "golden_qam_2ch",  "cbn"),
+    ("modem_jsonrpc.yaml",  "parser_jsonrpc.yaml", "har_jsonrpc_2ch.json",    "golden_qam_2ch",  "jsonrpc"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("runner", [run_modem_test, run_modem_test_orchestrated], ids=["direct", "orchestrated"])
+@pytest.mark.parametrize(
+    "modem_file,parser_file,har_file,golden_name",
+    [c[:4] for c in TRANSPORT_CASES],
+    ids=[c[4] for c in TRANSPORT_CASES],
+)
+def test_transport_replays_through_both_runners(
+    tmp_path: Path, runner: Any, modem_file: str, parser_file: str, har_file: str, golden_name: str
+) -> None:
+    """The direct and orchestrated runners load a non-HTTP transport the same way."""
+    case = _build_test_dir(
+        tmp_path,
+        modem_yaml=(_PIPELINE_FIXTURES / modem_file).read_text(),
+        parser_yaml=(_PIPELINE_FIXTURES / parser_file).read_text(),
+        har_data=load_fixture(_PIPELINE_FIXTURES / har_file),
+        golden=load_fixture(_PIPELINE_FIXTURES / f"{golden_name}.json"),
+    )
+
+    result = runner(case)
+
+    assert result.passed, result.error or result.comparison

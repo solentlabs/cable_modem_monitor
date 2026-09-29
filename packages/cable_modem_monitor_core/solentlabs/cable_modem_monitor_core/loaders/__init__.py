@@ -1,9 +1,9 @@
 """Resource loaders — fetch data from modems.
 
 HTTP loader for standard web interfaces, HNAP loader for SOAP,
-CBN loader for Compal XML POST.
+CBN loader for Compal XML POST, JSON-RPC loader for JSON-RPC 2.0.
 
-HNAP and CBN loaders are lazy-imported by the collector to avoid
+HNAP, CBN, and JSON-RPC loaders are lazy-imported by the collector to avoid
 pulling transport-specific dependencies (HMAC signing, defusedxml)
 into every consumer of this package.
 

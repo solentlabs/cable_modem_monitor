@@ -1,0 +1,15 @@
+manufacturer: Solent Labs
+model: T100
+transport: cbn
+default_host: 192.168.0.1
+auth:
+  strategy: form_cbn
+hardware:
+  docsis_version: "3.0"
+status: awaiting_verification
+attribution:
+  contributors:
+    - github: test-user
+      contribution: Initial capture
+isps:
+  - Various

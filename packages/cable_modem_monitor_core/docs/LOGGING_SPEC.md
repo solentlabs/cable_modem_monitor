@@ -121,12 +121,14 @@ and strips the query string from `url` and scrubs the password from
 | `LogoutFailed` | WARNING | Logout action failed |
 | `PostLoginFetchFailed` | WARNING | A `session.post_login_endpoints` path did not answer 2xx; collection continues |
 | `HnapSessionExpired` | WARNING | HNAP HTTP error on a reused session — session likely expired |
+| `JsonRpcSessionExpired` | WARNING | A JSON-RPC data call answered the entry's `session_expired_code` |
 | `StubPageDetected` | WARNING | 0 of N expected parser anchors found — stub/login page served at data URL |
 
 Fields — `LogoutFailed`: `model`, `reason: str`
 Fields — `PostLoginFetchFailed`: `model`, `path: str`,
 `status_code: int | None` (None on a transport error), `reason: str`
 Fields — `HnapSessionExpired`: `model`, `status_code: int`
+Fields — `JsonRpcSessionExpired`: `model`, `method: str`, `code: str`
 Fields — `StubPageDetected`: `model`, `path: str`, `anchors_found: int`,
 `anchors_expected: int`
 
@@ -236,7 +238,7 @@ Fields — `RecoveryObserverException`: `model`, `exc_type: str`
 
 | Event | Level | When |
 |---|---|---|
-| `ActionStarted` | caller-determined | Action dispatched (HNAP / HTTP / CBN) |
+| `ActionStarted` | caller-determined | Action dispatched (HNAP / HTTP / CBN / JSON-RPC) |
 | `ActionCompleted` | caller-determined | Response received, success path |
 | `ActionConnectionLost` | caller-determined | Connection dropped — expected during restart |
 | `ActionFailed` | WARNING | Bad response format, unexpected result, request error |
@@ -244,7 +246,7 @@ Fields — `RecoveryObserverException`: `model`, `exc_type: str`
 | `ActionPreFetchFailed` | WARNING | Pre-fetch connection error or bad response |
 
 Fields — `ActionStarted` / `ActionCompleted` / `ActionConnectionLost`:
-`model`, `transport: str` (`"hnap"` / `"http"` / `"cbn"`), `action_name: str`
+`model`, `transport: str` (`"hnap"` / `"http"` / `"cbn"` / `"jsonrpc"`), `action_name: str`
 Fields — `ActionCompleted`: adds `status_code: int | None`, `result: str`
 Fields — `ActionFailed`: `model`, `transport: str`, `action_name: str`, `reason: str`
 Fields — `ActionPreFetchFailed`: `model`, `transport: str`, `action_name: str`,
@@ -269,10 +271,12 @@ Fields — `ResourceDecodeError`: `model`, `path: str`, `fmt: str`, `reason: str
 
 `ResourceFetched` is emitted from `orchestration/collector.py` once per
 page after `_load_resources()` succeeds. `ResourceDecodeError` is emitted
-from `_load_http_resources()` after `HTTPResourceLoader.fetch()` returns —
-the loader accumulates `decode_errors: list[tuple[str, str, str]]`
-(path, fmt, reason) during the fetch; the collector emits one event per
-entry. Both sit in the collector rather than in `loaders/http.py` to
+from `_load_http_resources()` and `_load_jsonrpc_resources()` after the
+loader's `fetch()` returns — the loader accumulates
+`decode_errors: list[tuple[str, str, str]]` (path, fmt, reason) during
+the fetch; the collector emits one event per entry. On `jsonrpc` the
+path is the method name and a JSON-RPC `error` names its code in
+`reason`. Both sit in the collector rather than in `loaders/http.py` to
 avoid a circular import.
 
 The following loader calls remain as direct `_logger` calls: auth-response

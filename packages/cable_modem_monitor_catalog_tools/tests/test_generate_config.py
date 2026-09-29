@@ -11,8 +11,10 @@ verify key properties of the generated output.
 
 from __future__ import annotations
 
+import copy
 import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -93,6 +95,21 @@ def test_valid_parser_yaml_presence(fixture_path: Path) -> None:
             assert parser["downstream"]["format"] == expected_format
     else:
         assert result.parser_yaml is None
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    [f for f in VALID_FIXTURES if "_expected_auth_fields" in load_fixture(f)],
+    ids=[f.stem for f in VALID_FIXTURES if "_expected_auth_fields" in load_fixture(f)],
+)
+def test_valid_auth_fields(fixture_path: Path) -> None:
+    """Auth fields, including resolved ambiguities, land in modem.yaml; explicit nones stay absent."""
+    fixture = load_fixture(fixture_path)
+    auth = yaml.safe_load(generate_config(fixture["_analysis"], fixture["_metadata"]).modem_yaml)["auth"]
+    for key, value in fixture["_expected_auth_fields"].items():
+        assert auth.get(key) == value, f"auth.{key}: expected {value!r}, got {auth.get(key)!r}"
+    for key in fixture.get("_expected_absent_auth_fields", []):
+        assert key not in auth, f"auth.{key} should be absent"
 
 
 # ---------------------------------------------------------------------------
@@ -231,12 +248,191 @@ class TestActionsBehavior:
         assert modem["actions"]["restart"]["type"] == "http"
         assert modem["actions"]["restart"]["params"]["action"] == "1"
 
+    def test_jsonrpc_restart_from_resolution(self) -> None:
+        """A resolved actions.restart.method becomes a jsonrpc action; the rest comes from the transport."""
+        fixture = load_fixture(VALID_DIR / "jsonrpc_resolved_restart.json")
+        modem = yaml.safe_load(generate_config(fixture["_analysis"], fixture["_metadata"]).modem_yaml)
+        assert modem["actions"] == {"restart": {"type": "jsonrpc", "method": "SYS.reboot"}}
+
+    def test_jsonrpc_unresolved_restart_omitted(self) -> None:
+        """A non-blocking restart left unresolved leaves no actions block, and generation stays valid."""
+        fixture = load_fixture(VALID_DIR / "jsonrpc_resolved_restart.json")
+        fixture["_analysis"]["ambiguities"][-1]["resolution"] = None
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert "actions" not in yaml.safe_load(result.modem_yaml)
+
     def test_no_actions_when_none(self) -> None:
         """No actions block when no actions detected."""
         fixture = load_fixture(VALID_DIR / "table_no_auth.json")
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         modem = yaml.safe_load(result.modem_yaml)
         assert "actions" not in modem
+
+
+# ---------------------------------------------------------------------------
+# Spot-check: channel key resolutions (parser.<section>.<key>)
+# ---------------------------------------------------------------------------
+
+_KEY_PATH = "parser.downstream.power"
+_KEY_REASON = {"value": None, "reason": "the capture shows no such meaning"}
+
+# ┌──────────────────────────┬──────────────────────────┬─────────┬──────────────────────────┐
+# │ resolution               │ power key maps to        │ valid   │ description              │
+# ├──────────────────────────┼──────────────────────────┼─────────┼──────────────────────────┤
+# │ snr                      │ snr (float)              │ yes     │ fleet meaning applied    │
+# │ lock_status              │ lock_status (lock_status)│ yes     │ type follows the field   │
+# │ power_state              │ power_state (float)      │ yes     │ new meaning keeps type   │
+# │ none, with reason        │ (key dropped)            │ yes     │ explicit none            │
+# │ unresolved               │ (key dropped)            │ yes     │ non-blocking, omitted    │
+# │ none, no reason          │ (key dropped)            │ no      │ a blank is rejected      │
+# └──────────────────────────┴──────────────────────────┴─────────┴──────────────────────────┘
+#
+# fmt: off
+KEY_RESOLUTION_CASES: list[tuple[dict[str, Any] | None, tuple[str, str] | None, bool, str]] = [
+    # (resolution,               maps_to,                          valid, id)
+    ({"value": "snr"},           ("snr", "float"),                 True,  "fleet-meaning"),
+    ({"value": "lock_status"},   ("lock_status", "lock_status"),   True,  "type-follows-field"),
+    ({"value": "power_state"},   ("power_state", "float"),         True,  "new-meaning"),
+    (_KEY_REASON,                None,                             True,  "explicit-none"),
+    (None,                       None,                             True,  "unresolved"),
+    ({"value": None},            None,                             False, "blank"),
+]
+# fmt: on
+
+
+def _with_key_ambiguity(path: str, resolution: dict[str, Any] | None) -> dict[str, Any]:
+    """The json_format fixture carrying one channel key ambiguity."""
+    fixture = load_fixture(VALID_DIR / "json_format.json")
+    fixture["_analysis"]["ambiguities"] = [
+        {
+            "field": path,
+            "blocking": False,
+            "candidates": [{"value": "power", "evidence": [], "corroborated_by": []}],
+            "resolution": resolution,
+        }
+    ]
+    return fixture
+
+
+class TestChannelKeyResolution:
+    """A resolved channel key rewrites its field before parser.yaml is built; none or unresolved drops it."""
+
+    @pytest.mark.parametrize(
+        "resolution,maps_to,valid",
+        [c[:3] for c in KEY_RESOLUTION_CASES],
+        ids=[c[3] for c in KEY_RESOLUTION_CASES],
+    )
+    def test_key_resolution(
+        self, resolution: dict[str, Any] | None, maps_to: tuple[str, str] | None, valid: bool
+    ) -> None:
+        """The resolution picks the key's field and type, or drops the key."""
+        fixture = _with_key_ambiguity(_KEY_PATH, resolution)
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid is valid, result.validation.errors
+        assert result.parser_yaml is not None
+        fields = yaml.safe_load(result.parser_yaml)["downstream"]["fields"]
+        power = [(f["field"], f["type"]) for f in fields if f["key"] == "power"]
+        assert power == ([maps_to] if maps_to else [])
+
+    def test_modem_yaml_untouched(self) -> None:
+        """A parser path never lands in modem.yaml."""
+        fixture = _with_key_ambiguity(_KEY_PATH, {"value": "snr"})
+        assert "parser" not in yaml.safe_load(generate_config(fixture["_analysis"], fixture["_metadata"]).modem_yaml)
+
+    def test_analysis_not_mutated(self) -> None:
+        """Resolving rewrites a copy; the caller's analysis sections are unchanged."""
+        fixture = _with_key_ambiguity(_KEY_PATH, {"value": "snr"})
+        before = copy.deepcopy(fixture["_analysis"]["sections"])
+        generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert fixture["_analysis"]["sections"] == before
+
+    def test_unknown_key_is_an_error(self) -> None:
+        """A path naming a key the section does not map is reported, not ignored."""
+        fixture = _with_key_ambiguity("parser.downstream.nokey", {"value": "snr"})
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert "parser.downstream.nokey: the analysis maps no such channel key" in result.validation.errors
+
+
+# ---------------------------------------------------------------------------
+# Spot-check: json arrays form (several channel arrays in one section)
+# ---------------------------------------------------------------------------
+
+
+def _with_arrays(ambiguity: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The json_format fixture whose downstream holds a QAM and an OFDM array."""
+    fixture = load_fixture(VALID_DIR / "json_format.json")
+    fixture["_analysis"]["sections"]["downstream"] = {
+        "format": "json",
+        "resource": "/api/downstream",
+        "arrays": [
+            {
+                "array_path": "data.qam",
+                "mappings": [
+                    {"key": "channelId", "field": "channel_id", "type": "integer"},
+                    {"key": "status", "field": "status", "type": "string"},
+                    {"key": "corrected", "field": "corrected", "type": "integer"},
+                ],
+                "channel_type": {"fixed": "qam"},
+                "channel_count": 32,
+            },
+            {
+                "array_path": "data.ofdm",
+                "mappings": [
+                    {"key": "ofdmId", "field": "channel_id", "type": "integer"},
+                    {"key": "status", "field": "status", "type": "string"},
+                ],
+                "channel_type": {"fixed": "ofdm"},
+                "channel_count": 2,
+            },
+        ],
+    }
+    if ambiguity:
+        fixture["_analysis"]["ambiguities"] = [ambiguity]
+    return fixture
+
+
+class TestJsonArraysForm:
+    """Several analysis arrays become parser.yaml's arrays form, each with its own fields and type."""
+
+    def test_arrays_written(self) -> None:
+        fixture = _with_arrays()
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert result.parser_yaml is not None
+        downstream = yaml.safe_load(result.parser_yaml)["downstream"]
+        assert "array_path" not in downstream
+        assert [
+            (a["array_path"], a["channel_type"], [f["key"] for f in a["fields"]]) for a in downstream["arrays"]
+        ] == [
+            ("data.qam", {"fixed": "qam"}, ["channelId", "status", "corrected"]),
+            ("data.ofdm", {"fixed": "ofdm"}, ["ofdmId", "status"]),
+        ]
+
+    def test_aggregate_reads_every_array(self) -> None:
+        """A counter mapped only inside an array still earns its aggregate."""
+        fixture = _with_arrays()
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.parser_yaml is not None
+        assert "total_corrected" in yaml.safe_load(result.parser_yaml)["aggregate"]
+
+    def test_key_resolution_reaches_every_array(self) -> None:
+        """A parser.<section>.<key> resolution rewrites the key in each array that maps it."""
+        ambiguity = {
+            "field": "parser.downstream.status",
+            "blocking": False,
+            "candidates": [{"value": "lock_status", "evidence": [], "corroborated_by": []}],
+            "resolution": {"value": "lock_status"},
+        }
+        fixture = _with_arrays(ambiguity)
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert result.parser_yaml is not None
+        arrays = yaml.safe_load(result.parser_yaml)["downstream"]["arrays"]
+        assert [[f["field"] for f in a["fields"] if f["key"] == "status"] for a in arrays] == [
+            ["lock_status"],
+            ["lock_status"],
+        ]
 
 
 # ---------------------------------------------------------------------------

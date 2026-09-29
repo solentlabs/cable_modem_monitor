@@ -1,4 +1,4 @@
-.PHONY: help setup test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression catalog-field-sweep pii-check spell-check catalog-readme-check suppression-check import-check ha-compat-check changelog-check install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
+.PHONY: help setup test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression catalog-field-sweep pii-check spell-check catalog-readme-check suppression-check import-check ha-compat-check changelog-check commit-lint install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
 
 # Pin tool invocations to the project venv so that subprocesses
 # without venv on PATH (release.py shelling out, fresh clones, CI
@@ -33,6 +33,7 @@ help:
 	@echo "  make validate-ci   - Full CI-like validation (lint + tests + ha-compat)"
 	@echo "  make spell-check   - Spell check catalog modem YAML files (requires Node.js)"
 	@echo "  make changelog-check - Validate CHANGELOG.md structure"
+	@echo "  make commit-lint   - Validate this branch's commit messages (requires Node.js)"
 	@echo "  make install-hooks - Install optional pre-push hook (runs validate-ci)"
 	@echo ""
 	@echo "Catalog Reports (informational, never gates):"
@@ -129,7 +130,7 @@ validate:
 # hacs/action@main, which runs in a GitHub-hosted Docker context with
 # external network checks against home-assistant/brands and HACS APIs;
 # not reasonably reproducible locally — same exception class as hassfest).
-validate-ci: check test intake-regression pii-check spell-check catalog-readme-check suppression-check import-check ha-compat-check autoclose-check link-check changelog-check
+validate-ci: check test intake-regression pii-check spell-check catalog-readme-check suppression-check import-check ha-compat-check autoclose-check commit-lint link-check changelog-check
 	@echo "✅ Full CI validation passed!"
 	@echo "🔍 Checking declared dependencies for available updates..."
 	@$(VENV_BIN)/python scripts/check_owned_deps.py
@@ -217,6 +218,22 @@ catalog-readme-check:
 autoclose-check:
 	@echo "🔍 Scanning commit bodies for auto-close keywords..."
 	@$(VENV_BIN)/python scripts/check_auto_close_keywords.py --base origin/main
+
+# Commit message check — mirrors the CI commit-lint workflow. Checks every
+# commit on this branch (origin/main..HEAD) against commitlint.config.js,
+# the same range and config CI uses. The commit-msg hook is opt-in, so a
+# clone without it pushes messages nothing local has checked. Requires
+# Node.js (npx).
+commit-lint:
+	@echo "📝 Validating commit messages on this branch..."
+	@# commitlint rejects an empty range (exit 9), which is every fresh
+	@# branch cut from origin/main, so an empty branch passes here.
+	@if [ "$$(git rev-list --count origin/main..HEAD)" -eq 0 ]; then \
+		echo "No commits on this branch beyond origin/main."; \
+	else \
+		npx --yes -p @commitlint/cli -p @commitlint/config-conventional \
+			commitlint --from origin/main --to HEAD --verbose; \
+	fi
 
 # CHANGELOG.md structure check — mirrors the structure step of the CI
 # changelog-check job. Reports only on lines this branch touches (working

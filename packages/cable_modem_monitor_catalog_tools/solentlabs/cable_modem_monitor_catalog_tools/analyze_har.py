@@ -1,7 +1,7 @@
 """HAR Analysis Tool -- MCP tool.
 
 Orchestrates Phases 1-6 of the ONBOARDING_SPEC decision tree:
-1. Transport detection (HNAP vs HTTP)
+1. Transport detection (HNAP, JSON-RPC, or HTTP)
 2. Auth strategy detection and field extraction
 3. Session detection (cookies, headers, tokens)
 4. Action detection (logout, restart)
@@ -24,9 +24,13 @@ from typing import Any
 from solentlabs.cable_modem_monitor_core.har import load_har_json
 
 from .analysis.actions import ActionsDetail, detect_actions
+from .analysis.actions.cbn import cbn_action_ambiguities
+from .analysis.actions.jsonrpc import restart_ambiguity
+from .analysis.ambiguity import Ambiguity, corroborate
 from .analysis.auth import AuthDetail, detect_auth
+from .analysis.auth.patterns import fleet_password_names
 from .analysis.format import detect_sections
-from .analysis.js_endpoints import detect_uncaptured_endpoints
+from .analysis.js_endpoints import detect_uncalled_jsonrpc_methods, detect_uncaptured_endpoints
 from .analysis.request_requirements import detect_request_requirements
 from .analysis.session import SessionDetail
 from .analysis.transport import TransportResult
@@ -47,6 +51,7 @@ class AnalysisResult:
     hard_stops: list[str] = field(default_factory=list)
     core_gaps: list[CoreGap] = field(default_factory=list)
     unread_resources: list[UnreadResource] = field(default_factory=list)
+    ambiguities: list[Ambiguity] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict matching the MCP tool output contract."""
@@ -64,6 +69,8 @@ class AnalysisResult:
         }
         if self.core_gaps:
             result["core_gaps"] = [gap.to_dict() for gap in self.core_gaps]
+        if self.ambiguities:
+            result["ambiguities"] = [ambiguity.to_dict() for ambiguity in self.ambiguities]
         return result
 
 
@@ -92,15 +99,27 @@ def analyze_har(
         FileNotFoundError: If har_path does not exist.
         ValueError: If HAR file cannot be parsed or has no entries.
     """
-    har_path = Path(har_path)
-    entries = _load_har_entries(har_path)
+    entries = _load_har_entries(Path(har_path))
+    # A scanned fleet decides which password_field names are known: the
+    # intake score scans without the modem under test (INTAKE_PIPELINE.md).
+    with fleet_password_names(fleet.password_field_names if fleet else None):
+        return _analyze_entries(entries, fleet)
 
+
+def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None) -> AnalysisResult:
+    """Run Phases 1-6 over loaded HAR entries."""
     warnings: list[str] = []
     hard_stops: list[str] = []
     core_gaps: list[CoreGap] = []
+    ambiguities: list[Ambiguity] = []
 
     # Phase 1: Transport
     transport_result = TransportResult.detect(entries)
+
+    # The HTTP tree run over these calls misreads the login as form_pbkdf2
+    # (#215), so JSON-RPC has its own phase sequence.
+    if transport_result.transport == "jsonrpc":
+        return _analyze_jsonrpc(entries, transport_result, fleet)
 
     # Phase 2: Auth
     auth_result = detect_auth(entries, transport_result.transport, warnings, hard_stops, core_gaps)
@@ -110,9 +129,13 @@ def analyze_har(
 
     # Phase 4: Actions
     actions_result = detect_actions(entries, transport_result.transport, warnings, core_gaps)
+    if transport_result.transport == "cbn":
+        ambiguities.extend(cbn_action_ambiguities(entries))
 
     # Phase 5-6: Format detection and field mapping
-    sections = detect_sections(entries, transport_result.transport, warnings, hard_stops, fleet=fleet)
+    sections = detect_sections(
+        entries, transport_result.transport, warnings, hard_stops, fleet=fleet, ambiguities=ambiguities
+    )
 
     # An unprovisioned modem serves placeholder pages, so auth analyzes
     # cleanly while sections come back empty; without this warning the
@@ -140,6 +163,9 @@ def analyze_har(
         transport_result.transport,
     )
 
+    if fleet is not None:
+        corroborate(ambiguities, fleet.confirmed_config_values)
+
     return AnalysisResult(
         transport=transport_result,
         auth=auth_result,
@@ -150,6 +176,36 @@ def analyze_har(
         hard_stops=hard_stops,
         core_gaps=core_gaps,
         unread_resources=unread,
+        ambiguities=ambiguities,
+    )
+
+
+def _analyze_jsonrpc(
+    entries: list[dict[str, Any]],
+    transport_result: TransportResult,
+    fleet: FleetPatterns | None,
+) -> AnalysisResult:
+    """Analyze a JSON-RPC capture call by call."""
+    warnings: list[str] = []
+    ambiguities: list[Ambiguity] = []
+    auth = detect_auth(entries, "jsonrpc", warnings, [], ambiguities=ambiguities)
+    session = SessionDetail.detect(entries, "jsonrpc", auth.strategy, warnings)
+    sections = detect_sections(entries, "jsonrpc", warnings, [], fleet=fleet, ambiguities=ambiguities)
+    # Restart candidates exclude data sources, so they follow sections.
+    ambiguities.append(restart_ambiguity(entries, sections))
+    detect_uncalled_jsonrpc_methods(entries, warnings)
+    unread = detect_unread_resources(entries, sections, auth, ActionsDetail(), "jsonrpc")
+    if fleet is not None:
+        corroborate(ambiguities, fleet.confirmed_config_values)
+    return AnalysisResult(
+        transport=transport_result,
+        auth=auth,
+        session=session,
+        actions=ActionsDetail(),
+        sections=sections if sections else None,
+        warnings=warnings,
+        unread_resources=unread,
+        ambiguities=ambiguities,
     )
 
 

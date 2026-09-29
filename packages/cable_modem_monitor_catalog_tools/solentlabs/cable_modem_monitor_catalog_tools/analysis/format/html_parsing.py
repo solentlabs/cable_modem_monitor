@@ -38,7 +38,9 @@ from .types import DetectedLabelPair, DetectedTable
 # Fix: insert the missing <tr> before orphaned <td> cells so html.parser
 # receives valid HTML.  The pattern only fires when <td> appears
 # immediately after </tr> (never valid in well-formed HTML), so it
-# cannot silently corrupt correct tables.
+# cannot silently corrupt correct tables.  The inserted row is marked:
+# Core's parser does no such repair and drops the orphaned cells, so it
+# is not a row row_start may count.
 _ORPHANED_TD_RE = re.compile(
     r"(</tr>)((?:\s*<td\b[^>]*>.*?</td>)+\s*)(</tr>)",
     re.DOTALL | re.IGNORECASE,
@@ -56,6 +58,8 @@ _ORPHANED_TD_RE = re.compile(
 # appears as the only closing tag inside a <th> that has no nested tags.
 # The pattern only fires on <th>text</td> (never valid HTML), so it
 # cannot silently corrupt well-formed tables.
+_REPAIRED_ROW_ATTR = "data-cmm-repaired"
+
 _UNCLOSED_TH_RE = re.compile(
     r"(<th\b[^>]*>)([^<]*)(</td>)",
     re.IGNORECASE,
@@ -96,9 +100,24 @@ def _get_direct_rows(table: Tag) -> list[Tag]:
     for child in table.children:
         if isinstance(child, Tag):
             if child.name == "tr":
-                rows.append(child)
+                rows.extend(_flatten_row(child))
             elif child.name in ("thead", "tbody", "tfoot"):
-                rows.extend(r for r in child.children if isinstance(r, Tag) and r.name == "tr")
+                for r in child.children:
+                    if isinstance(r, Tag) and r.name == "tr":
+                        rows.extend(_flatten_row(r))
+    return rows
+
+
+def _flatten_row(row: Tag) -> list[Tag]:
+    """Return the row plus any rows html.parser nested directly inside it."""
+    # Firmware that omits </tr> leaves each data row unclosed, and html.parser
+    # nests the next <tr> inside it. A <tr> directly inside a <tr> is never
+    # valid HTML, so this only unwinds that chain; rows of a table nested in
+    # a cell sit under <td>, not <tr>, and stay excluded.
+    rows = [row]
+    for child in row.children:
+        if isinstance(child, Tag) and child.name == "tr":
+            rows.extend(_flatten_row(child))
     return rows
 
 
@@ -168,6 +187,14 @@ def _extract_rows(table: Tag) -> list[list[str]]:
             all_rows.append(leaf_texts)
 
     return all_rows
+
+
+def _repaired_label_rows(table: Tag, headers: list[str]) -> int:
+    """1 when the label row is one the analyzer repaired in; repairs among data rows never shift row_start."""
+    for row in table.find_all("tr", attrs={_REPAIRED_ROW_ATTR: True}):
+        if [cell.get_text(strip=True) for cell in row.find_all(["td", "th"], recursive=False)] == headers:
+            return 1
+    return 0
 
 
 def _extract_table_id(table: Tag) -> str:
@@ -314,7 +341,7 @@ def detect_tables(body: str) -> list[DetectedTable]:
     ``parsers.table_selector`` which applies the same wrapper-cell
     filtering.
     """
-    body = _ORPHANED_TD_RE.sub(r"\1<tr>\2\3", body)
+    body = _ORPHANED_TD_RE.sub(rf"\1<tr {_REPAIRED_ROW_ATTR}>\2\3", body)
     body = _UNCLOSED_TH_RE.sub(r"\1\2</th>", body)
     soup = BeautifulSoup(body, "html.parser")
     tables: list[DetectedTable] = []
@@ -349,6 +376,7 @@ def detect_tables(body: str) -> list[DetectedTable]:
                 preceding_text=_extract_preceding_text(table_el),
                 title_row_text=title_row_text,
                 table_index=idx,
+                repaired_rows=_repaired_label_rows(table_el, headers),
                 i18n_header_map=_extract_i18n_header_map(table_el),
             )
         )

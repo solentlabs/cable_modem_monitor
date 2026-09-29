@@ -323,6 +323,14 @@ For each entry in HAR:
     ├── Request has HNAP_AUTH header?
     │   └── YES → transport: hnap
     │
+    ├── Request body is a JSON-RPC 2.0 login call (one "jsonrpc": "2.0"
+    │   object whose params[0] carries a password-shaped key)?
+    │   └── YES → transport: jsonrpc (checked after HNAP, over all entries)
+    │
+    ├── Request body is a CBN login (form-encoded, `token` first, a
+    │   `fun` code, and a password-shaped field)?
+    │   └── YES → transport: cbn (checked after JSON-RPC, over all entries)
+    │
     └── None of the above → transport: http
 ```
 
@@ -330,7 +338,27 @@ For each entry in HAR:
 header, or `HNAP_AUTH` header are protocol markers with no false
 positives.
 
-**Everything non-HNAP is `http`.** This includes modems with HTML pages,
+**The login decides JSON-RPC, not any call.** Firmware can make
+JSON-RPC calls that play no part in auth or data: OpenWrt LuCI's `ubus`
+plumbing runs on a modem that logs in with a form and serves HTML. A
+JSON-RPC call makes the transport `jsonrpc` only when it is the login,
+meaning its first param is an object with a password-shaped key (the
+Phase 2 credential test). Other JSON-RPC traffic does not count.
+
+**A JSON-RPC capture is analyzed call by call.** Phases 2-6 read the
+calls, not pages: the login gives auth, each other call's `result` is a
+JSON page named by its method, and restart is a candidate list. The
+HTTP tree is never run over the calls; it misreads the login as
+`form_pbkdf2`.
+
+**The login decides CBN too.** Compal firmware sends every call as a
+form-encoded POST whose first parameter is the rotating `token` and
+whose `fun` code names the function
+([AUTH_CBN_SPEC.md](../../cable_modem_monitor_core/docs/AUTH_CBN_SPEC.md)).
+The call that also carries a password-shaped field is the login, and
+it makes the transport `cbn`.
+
+**Everything else is `http`.** This includes modems with HTML pages,
 JSON APIs, or any combination. The data format (HTML tables, JSON
 responses) is a separate axis — detected in Phase 5.
 
@@ -358,11 +386,11 @@ Password-shaped means either of:
   name with no separate pattern-maintenance step. Exact names never
   generalize; only curated substrings do.
 
-One caveat follows from the catalog-derived half: the intake
-regression treats each committed HAR as a fresh submission, but a
-modem whose field name matches no curated substring is recognized via
-its own committed config, so it grades better there than a genuinely
-novel submission would.
+The catalog-derived names come from the fleet an analysis runs with.
+`analyze_har(fleet=...)` and `validate_har(fleet=...)` use the scanned
+fleet's names; without a fleet, the whole catalog's. The intake
+regression scans without the modem under test, so a HAR is never
+recognized through its own committed config.
 
 #### HNAP transport
 
@@ -379,6 +407,53 @@ HAR was captured post-auth (hash computed client-side). If the HAR
 includes the Login action response, the `Challenge` and `PublicKey`
 fields confirm the protocol but not the algorithm. Default to `md5`
 (most common) and flag for verification.
+
+#### JSON-RPC transport
+
+Auth is always `jsonrpc`. Its fields come from the last login call that
+answered `result`:
+
+| Field | Evidence |
+|-------|----------|
+| `endpoint` | The login request's URL path |
+| `login_method` | The login call's `method` |
+| `username_field`, `password_field` | Keys of the credential object in `params[0]`, classified as form fields are |
+| `token_path` | The `result` key whose string value reappears as a query value on a later call |
+| `token_param` | That query parameter's name |
+
+A token with no later call carrying it is a warning; `generate_config`
+validation then names the missing fields.
+
+**Error codes are a blocking [ambiguity](#ambiguities-resolve-then-proceed).**
+JSON-RPC defines no error codes, and a lockout read as a rejected
+credential sends the owner to re-enter the password, which extends the
+lockout. Analysis lists candidates and never picks one:
+
+- `auth.lockout_code`: string literals compared (`==`, `===`) in a
+  captured body that contains the login method's name, kept when the
+  literal is also a key in a captured i18n `.properties` file, the
+  firmware's message vocabulary.
+- `auth.session_expired_code`: the same test over every other body.
+
+Each candidate cites the comparison and its i18n text, English locale
+first.
+
+#### CBN transport
+
+Auth is always `form_cbn`. Its fields come from the login call, the
+attempt whose body says `successful` when one does, else the first:
+
+| Field | Evidence |
+|-------|----------|
+| `login_fun` | The login's `fun` code |
+| `setter_endpoint` | The login request's URL path |
+| `getter_endpoint` | The path most other `token`-first `fun` calls go to |
+| `login_page` | The login request's `Referer` path |
+| `session_cookie_name` | The request cookie whose value is the login's `token` |
+| `username_value` | The login's `Username` value |
+
+A field absent from the capture keeps its model default, and
+`generate_config` omits every field equal to one.
 
 #### HTTP transport
 
@@ -512,6 +587,10 @@ endpoints.
 **HNAP transport:** Session is implicit (`uid` + `PrivateKey` cookies,
 `HNAP_AUTH` header). Do not emit a `session` block.
 
+**JSON-RPC transport:** The data requests are the POSTed calls other
+than the login, and only `session.headers` is detected from them. The
+query token is `auth.token_param`, and the session carries no cookie.
+
 ### Phase 4: Action Detection
 
 Scan HAR for logout and restart flows:
@@ -524,6 +603,7 @@ Scan HAR for logout and restart flows:
 | POST to `/goform/logout*` or `/api/*/logout` | `actions.logout: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
 | POST with pre-fetch page (extract dynamic endpoint) | Add `pre_fetch_url` and `endpoint_pattern` |
 | HNAP action with logout/session-end semantics | `actions.logout: { type: hnap, action_name: "<name>" }` |
+| CBN setter call that is not the login | A non-blocking `actions.logout.fun` [ambiguity](#ambiguities-resolve-then-proceed), with the same candidates as the CBN restart row. Nothing in a CBN call names a logout. |
 | No logout visible in HAR | Omit `actions.logout`. Note in the generated YAML that logout behavior could not be confirmed from the HAR. |
 
 An observed POST outranks an earlier observed page GET. Auto-action
@@ -538,6 +618,8 @@ its `pre_fetch_url` via the form-evidence rule below.
 |----------|--------|
 | POST to reboot/restart endpoint with params | `actions.restart: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
 | HNAP SetConfiguration action with reboot param | `actions.restart: { type: hnap, action_name: "<name>", params: {...} }` |
+| JSON-RPC call that is neither the login nor a data source | A non-blocking `actions.restart.method` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per method, citing the page that sent it (its `Referer`, else the endpoint) and the request body. No method-name rule: call shapes come from confirmed modems only. |
+| CBN setter call that is not the login | A non-blocking `actions.restart.fun` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per `fun` code, citing the page that sent it (its `Referer`, else the endpoint) and the request body. The resolved action takes `type: cbn`. |
 | No restart visible in HAR | Omit `actions.restart`. This is common — most HAR captures don't include a restart. |
 
 **Restart is rarely in the HAR.** Most contributors capture status pages,
@@ -634,6 +716,7 @@ Format is constrained by transport:
 | Transport | Format detection |
 |-----------|-----------------|
 | `hnap` | Always `hnap`. See HNAP format detection below. |
+| `jsonrpc` | Always `json`. Each answered call other than the login is a JSON page: resource is the method, JSON is its `result` (a non-object `result` wrapped as `_raw`, as Core's loader does). A method called more than once takes its later `result`, as the replay server and golden generation do (Core's `jsonrpc_har_results`). HTTP JSON detection then runs unchanged, so one array is mapped per call. |
 | `http` | Inspect data page responses — see below. JSON responses use `json` (or `json_transposed` for `name`+`indexN` pivot shapes); HTML responses use `table`, `table_transposed`, `javascript`, `javascript_json`, or `html_fields`. |
 
 #### HNAP format detection
@@ -649,9 +732,10 @@ structural details from HAR response bodies:
    delimiter (typically `^`) from the first record
 4. **Infer field mappings** — two-pass positional classification:
    - Pass 1: identify definitive fields (lock_status by text pattern,
-     channel_type by known values, frequency/symbol_rate by magnitude)
+     channel_type by known values, frequency/channel_width by magnitude)
    - Pass 1.5: resolve large-integer ambiguity (larger max values →
-     frequency, smaller → symbol_rate)
+     frequency, smaller → channel_width; the Arris firmware labels
+     it "Width")
    - Pass 2: assign remaining numeric fields by DOCSIS convention
      (channel_id first, then power, snr, corrected, uncorrected)
 5. **Detect channel type** — if a field has multiple distinct values
@@ -694,10 +778,11 @@ Response body analysis (sniff-then-Content-Type):
   ├── Body is valid JSON (regardless of Content-Type)?
   │   └── format: json
   │       Top-level arrays wrapped as {"_raw": [...]}
-  │       Detect: array_path and field key names from JSON structure
+  │       Detect: channel arrays and field key names from JSON structure
   │
   ├── application/xml or text/xml ?
-  │   └── format: xml — not yet supported, flag for human review
+  │   └── format: xml — read on the cbn transport (see `xml` format);
+  │       elsewhere flag for human review
   │
   ├── text/html (and not valid JSON)?
   │   ├── Contains <table> elements with channel data?
@@ -782,7 +867,7 @@ names/positions to canonical output fields.
 | `uncorrected` | integer | no | Uncorrectable codeword errors |
 | `modulation` | string | no | Modulation type |
 | `lock_status` | string | no | Channel lock status |
-| `symbol_rate` | integer | upstream only | Symbol rate |
+| `symbol_rate` | integer | upstream only | Symbol rate (normalized to Sym/s) |
 | `channel_type` | string | derived | `qam`/`ofdm` (downstream), `atdma`/`ofdma` (upstream) |
 
 **System info (Tier 1 canonical):**
@@ -881,6 +966,12 @@ the table header row. Column headers like "Frequency", "Power Level",
 **`table_transposed` format:** Map row labels to canonical fields. Same
 label-to-field mapping as above, but rows are labels instead of columns.
 
+A table of either kind is a channel section only when a column (or row
+label) maps to a measurement (`frequency`, `power`, `snr`), the rule
+channel arrays follow in the `json` format. Any other table is skipped
+with a warning naming its page and index, and its direction stays free
+for another table or a JavaScript function on the page.
+
 **`javascript` format:** Examine JS function bodies to determine:
 
 - Function name (regex target)
@@ -900,14 +991,42 @@ label-to-field mapping as above, but rows are labels instead of columns.
 **`javascript_json` format:** JS variable assignments containing JSON
 arrays of channel objects. Direction is inferred from the variable
 name (e.g., `json_dsData` → downstream). Mapping extraction reuses
-the JSON key→field pipeline. The `variable` name is captured in the
-section output for config generation.
+the JSON key→field pipeline, including its channel array rule below.
+The `variable` name is captured in the section output for config
+generation. Only a variable holding an array is detected.
 
 **`json` format:** Examine JSON response structure to determine:
 
-- `array_path` (dot-notation path to channel array)
-- JSON key names → canonical field names
+- The channel arrays, each with its `array_path` (dot-notation path).
+  A list of objects is a channel array when the registry or fleet maps
+  one of its keys to a measurement (`frequency`, `power`, `snr`). Every
+  other list of objects is skipped with a warning naming its path, so a
+  real channel array the rule missed shows at review.
+- Each array's direction: the resource first, then the array's path in
+  DOCSIS terms, leaf segment first (`ofdma` or `us…` is upstream; `ofdm`
+  or `ds…` is downstream), then the response's keys. Each array's
+  channel type: a channel-type key, else `ofdma` or `ofdm` in its path,
+  else the direction's default.
+- One channel array per direction is emitted flat; several are emitted
+  as `arrays`, one entry per array with its own mappings and channel
+  type.
+- JSON key names → canonical field names: the baseline registry first,
+  then the meaning committed `parser.yaml` files declare for the key.
+  When they disagree, the key is an [ambiguity](#ambiguities-resolve-then-proceed);
+  a key none declares falls to Tier 3.
 - `fallback_key` if the modem uses non-standard key names
+
+**`xml` format (`cbn` transport):** each getter call's XML answer is a
+page whose resource is its `fun` code, built by Core's
+`cbn_har_results`, the shape the CBN loader hands the parser. An
+element with child elements reads as a list of records, so a table's
+repeated children form a channel array at `root.child`, and the `json`
+rules above apply unchanged: channel-array selection, direction, and
+key vocabulary, which includes committed `xml` column sources. Each
+array becomes a `tables` entry (`resource` = the `fun` code,
+`root_element`, `child_element`, `columns`); scalar children feed
+`system_info` sources the same way JSON keys do. Lock flags, scales and
+filters are not inferred.
 
 For `system_info` fields, emit the container and the key **separately** —
 `path` for the dot-notation container, `key` for the leaf. Core navigates
@@ -978,6 +1097,12 @@ analysis output.
 Title rows (`<th colspan>`) and header rows (cells matching known field
 labels) are counted as non-data rows.
 
+`row_start` indexes the `<tr>` rows Core's parser sees
+([FORMAT_TABLE_SPEC.md](../../cable_modem_monitor_core/docs/FORMAT_TABLE_SPEC.md)).
+Where firmware writes the label cells with no opening `<tr>`, analysis
+repairs the row to read the labels, but Core's parser drops those cells,
+so the repaired label row is not counted.
+
 #### Table selector detection
 
 The analysis must choose a selector strategy for each detected table.
@@ -1020,6 +1145,26 @@ Examine data values for unit suffixes:
 | `"3.2 dBmV"` | `type: float, unit: "dBmV"` |
 | `"-15.3 dB"` | `type: float, unit: "dB"` |
 | Plain numbers without units | No `unit` field needed |
+
+`symbol_rate` is stored in Sym/s, and firmware reports ksym/s, so the
+generator sets `scale` from the captured samples in every format, in
+this order:
+
+1. **Label.** A ksym unit in the header (`Symb. Rate (Ksym/sec)`) or on
+   the values (`"5120 kSym/s"`) sets `unit` to that spelling and
+   `scale: 1000`.
+2. **Magnitude.** Bare numbers decide by the DOCSIS range: every
+   non-zero sample below 160000 (the lowest upstream rate, 160 ksym/s)
+   is ksym/s and gets `scale: 1000`; samples at or above it are already
+   Sym/s. Zero placeholders are ignored.
+3. **Conflict.** A ksym label on Sym/s-sized values, or samples on both
+   sides of 160000, leaves `scale` unset and adds a warning for the
+   author to settle.
+
+A fleet layout supplies positions, not units: the rule runs on the new
+capture's samples even when the field's position comes from a committed
+config. The spec-conformance gate rejects any unscaled value that gets
+through.
 
 #### Filter detection
 
@@ -1080,6 +1225,17 @@ Only static URL string literals are matched. Variable references
 **Output:** Advisory warnings (not hard stops). The maintainer
 investigates whether the uncaptured endpoint is relevant to the
 modem's auth, session, or data flow.
+
+**JSON-RPC transport.** Every call shares one endpoint, so the
+uncaptured unit is a method. A method is the string value of a `method`
+key in captured JS, counted only when its dotted namespace is one a
+captured call used, and only when no captured call used the method
+itself. The namespace anchor comes from the capture, so other script's
+`method: "auto"` and jQuery's `method: "POST"` drop out without a vendor
+pattern; undotted method names find nothing rather than a guess. Each
+warning names the method and the files that reference it. A restart the
+contributor never clicked shows up here, not as a restart candidate:
+recapture it.
 
 ### Post-Analysis: Request Requirements
 
@@ -1155,6 +1311,13 @@ Action endpoints containing `{...}` placeholders are resolved at runtime
 and never equal the captured path, so they match segment-wise with each
 placeholder as a wildcard. On HNAP transport the `/HNAP1/` endpoint
 carries every call, data and action alike, and is never reported.
+
+On JSON-RPC transport each method is a resource: `path` carries the
+method name and `shape` its `result`. A method is read when a section or
+system_info source names it, or when it is the login. A method called
+more than once takes its later `result`, as golden generation does.
+Other JSON the capture fetches is still reported by path; only the
+shared endpoint is not.
 
 **Keys and types only, never values.** Keys are what make the judgment
 possible: an LLM recognizes `maxTrafficRate` as a provisioned rate where
@@ -1369,6 +1532,56 @@ coordinator skips missing hooks.
 | Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |
 | parser.py generated | "parser.py was generated for: [reasons]. Review the post-processing logic for correctness." |
 
+### Ambiguities (resolve, then proceed)
+
+A judgment the capture supports but the tool does not make. Analysis
+returns each one under `ambiguities`:
+
+```yaml
+ambiguities:
+  - field: auth.lockout_code        # dotted path into the generated config
+    blocking: true                  # generate_config refuses while unresolved
+    candidates:
+      - value: msgUserLockedText
+        evidence:
+          - {source: /login.htm, snippet: 'd.error.code==="msgUserLockedText"'}
+          - {source: /i18n/en/login.properties, snippet: "msgUserLockedText=Access ... blocked ..."}
+        corroborated_by: []         # confirmed entries declaring this value here
+    resolution: null
+```
+
+- **`candidates`** carry evidence, not a ranking.
+- **`resolution`** is set by the LLM from the evidence, as `{value}`, or
+  as `{value: null, reason}` for an explicit "none". The user confirms
+  it at review. A blank is never a resolution.
+- **`generate_config`** writes each resolved value at its path. An
+  explicit "none" leaves the field absent; a null without a reason is a
+  blank and is rejected. An unresolved **`blocking`** ambiguity makes
+  the result invalid, naming the field and its candidates. A
+  non-blocking one left unresolved omits its field.
+
+**Confirmed modems corroborate candidates.** A candidate carries
+`corroborated_by` when a `status: confirmed` entry declares the same
+value at the same path. When exactly one candidate is corroborated,
+analysis pre-fills `resolution` as `{value, source: fleet}`, still
+reviewed. Entries awaiting verification never corroborate, so an
+unconfirmed intake teaches nothing: patterns come from confirmed
+modems only ([MODEM_INTAKE_WORKFLOW.md § Step 4](MODEM_INTAKE_WORKFLOW.md#step-4-analyze-har)).
+
+**Channel key meanings.** A JSON channel key the baseline registry does
+not map, and that committed `parser.yaml` files map to different
+fields, is a non-blocking ambiguity at `parser.<section>.<key>` (for
+example `parser.downstream.status`). Each fleet meaning is a candidate;
+its evidence is every entry that declares it, plus the capture's values
+for the key. Key vocabulary is wire evidence, so every committed entry
+teaches it, confirmed or not, and `corroborated_by` stays empty. The
+resolution is a field name: a fleet meaning, or a new one with a
+reason. It replaces the key's field in every array of the analysis
+section before `parser.yaml` is built; an explicit none or an unresolved ambiguity
+drops the key. A meaning that needs more than a field name, such as
+arithmetic across keys, goes to [parser.py](#parserpy-decision), or to
+a [core gap](#analyze_har) when Core should handle it for every modem.
+
 ### Confidence annotations
 
 The generated modem.yaml should include comments marking fields with
@@ -1397,7 +1610,8 @@ independently testable.
 Runs the HAR validation gate (see above). Returns structured result:
 pass/fail, detected issues, and diagnostic messages.
 
-**Input:** HAR file path
+**Input:** HAR file path + optional `fleet` (its `password_field` names
+decide which login fields are credentials)
 **Output:** `{ valid: bool, issues: [], auth_flow_detected: bool, transport_hints: [] }`
 
 ### `analyze_har`
@@ -1511,6 +1725,11 @@ effort. Categories:
 Well-known modems with standard patterns produce zero core gaps.
 Novel modems produce gaps that require development before onboarding.
 
+**Ambiguities** are judgments the capture supports but the tool does
+not make: candidates with evidence, which the LLM resolves and the user
+confirms. Present only when a phase reports one. See
+[Ambiguities](#ambiguities-resolve-then-proceed).
+
 **Unread resources** are the opposite kind of signal: the JSON endpoints
 the HAR captured that no gap category covers, because nothing read them.
 Always present, never a gate. See
@@ -1575,13 +1794,22 @@ patterns to augment auto-generated aggregate fields.
 Does **not** write files — returns content for the LLM to review and
 place. If validation fails, returns errors so the LLM can fix and retry.
 
+Resolved [ambiguities](#ambiguities-resolve-then-proceed) are written at
+their paths before validation; a `parser.` path is applied to the
+analysis section before `parser.yaml` is built. An action resolution
+writes only the identifying field (`method` on `jsonrpc`, `fun` on
+`cbn`), so the action takes the transport's one action type.
+
 ### `generate_golden_file`
 
 Reads the HAR response bodies directly and applies the parser.yaml
 config to extract `ModemData`. This is the same extraction logic the
 pipeline uses, but against HAR content rather than a live server.
 
-**Input:** HAR file path + parser.yaml content
+**Input:** HAR file path + parser.yaml content + `transport` from
+`analyze_har` (required for `jsonrpc`, whose resources are method names,
+and `cbn`, whose resources are `fun` codes; others are auto-detected),
+and for `cbn` the `getter_endpoint` (default `/xml/getter.xml`)
 **Output:** `{ golden_file: dict, golden_file_json: str, channel_counts: { downstream: int, upstream: int }, system_info_fields: [str], missing_system_info_fields: [str] }`
 
 `golden_file_json` is the canonical serialization of `golden_file` (`sort_keys=True`, `indent=2`, `ensure_ascii=False`). Always write this string directly to `modem.expected.json` — never re-serialize `golden_file` yourself, which loses the ordering guarantee.
@@ -1744,16 +1972,19 @@ Core defines:
     system_info_labels: dict[str, tuple[str,int]] # label text → (field, tier)
     system_info_ids: dict[str, tuple[str,int]]    # CSS ID → (field, tier)
     system_info_json_keys: dict[str, tuple[str,int]] # JSON key → (field, tier)
+    system_info_json_key_types: dict[str, dict[str, list[str]]] # JSON key → declared type → declaring entries
+    channel_keys: dict[str, dict[str, list[str]]]    # channel JSON key or XML source → field → declaring entries
     delimiters: set[str]                          # record delimiters (HNAP/JS)
     channel_type_values: set[str]                 # modulation type strings
     aggregate_fields: list[tuple[str,str]]        # (source_field, agg_name)
+    password_field_names: frozenset[str] | None   # committed password_field names
 
   analyze_har(har_path, fleet=None) → AnalysisResult
   generate_config(analysis, metadata, *, fleet=None) → GenerateConfigResult
 
 Catalog provides:
-  fleet_scanner.scan_fleet(CATALOG_PATH) → FleetPatterns
-  trial_parser.trial_parse(har_path, parser_yaml) → TrialResult
+  fleet_scanner.scan_fleet(CATALOG_PATH, exclude=None) → FleetPatterns
+  trial_parser.trial_parse(har_path, parser_yaml, transport=None) → TrialResult
 ```
 
 **What fleet patterns augment:**
@@ -1761,14 +1992,21 @@ Catalog provides:
 | Phase | Baseline (Core) | Fleet augmentation (Catalog) |
 |-------|-----------------|------------------------------|
 | Table direction | Keyword matching ("downstream", "upstream") | Selector text from proven configs ("Signal Status (Codewords)" → downstream) |
-| System info labels | 17 hardcoded label→field mappings | Labels, CSS IDs, and JSON keys learned from fleet ("firmware name" → firmware_name) |
+| System info labels | 17 hardcoded label→field mappings | Labels, CSS IDs, and JSON keys learned from fleet ("firmware name" → firmware_name); a learned JSON key maps only when the captured value fits a type the fleet declares for it, and a misfit is warned with the declaring entries |
+| Channel keys (JSON and XML) | Registry `json_keys`, then Tier 3 `snake_case` | Key or XML column source → field from every committed `parser.yaml`; a key mapped to two fields is an [ambiguity](#ambiguities-resolve-then-proceed) |
 | Aggregate fields | Hardcoded (source_field, agg_name) pairs | Additional aggregate patterns from fleet parser.yaml files |
+| Ambiguity candidates | Evidence only | `corroborated_by` from confirmed entries' `modem.yaml` values; one corroborated candidate pre-fills the resolution |
 
 **Merge rules:** Fleet patterns augment, not override. Core's baseline
 maps apply first. Fleet adds entries only for labels/selectors that
 Core's baseline does not cover. This means a new modem gets the
 benefit of every previous modem's config without any manual registry
 maintenance.
+
+A value fits a declared `string` when it is text, and a declared
+`integer` or `float` when it is a number or numeric text; any value
+fits other types. A learned key whose value fits no declared type is
+left unmapped, so the field stays free for another key.
 
 **Trial parser:** After analysis, the trial parser feeds HAR response
 bodies through Core's ``ModemParserCoordinator`` with a candidate
@@ -2131,7 +2369,7 @@ upstream:
     - { index: 1, field: lock_status, type: string }
     - { index: 2, field: channel_type, type: string }
     - { index: 3, field: channel_id, type: integer }
-    - { index: 4, field: symbol_rate, type: frequency }
+    - { index: 4, field: channel_width, type: frequency }
     - { index: 5, field: frequency, type: frequency }
     - { index: 6, field: power, type: float }
   channel_type:

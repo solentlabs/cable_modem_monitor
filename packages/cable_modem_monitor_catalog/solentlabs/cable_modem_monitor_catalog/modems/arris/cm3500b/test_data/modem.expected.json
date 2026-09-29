@@ -306,7 +306,7 @@
       "frequency": 37200000,
       "modulation": "QAM16",
       "power": 45.25,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 12,
@@ -315,7 +315,7 @@
       "frequency": 51000000,
       "modulation": "QAM64",
       "power": 43.75,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 11,
@@ -324,7 +324,7 @@
       "frequency": 44600000,
       "modulation": "QAM64",
       "power": 44.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 9,
@@ -333,7 +333,7 @@
       "frequency": 30800000,
       "modulation": "QAM64",
       "power": 46.0,
-      "symbol_rate": 5120
+      "symbol_rate": 5120000
     },
     {
       "active_subcarriers": 640,

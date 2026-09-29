@@ -334,7 +334,7 @@ def _find_unique_column_header(
 
 
 def detect_row_start(table: DetectedTable) -> int:
-    """Detect where data rows begin.
+    """Detect where data rows begin, as an index into the rows Core's parser sees.
 
     Returns the row index (0-based from full table including headers)
     where actual data starts. The header row counts as row 0.
@@ -356,7 +356,8 @@ def detect_row_start(table: DetectedTable) -> int:
             break
         skip += 1
 
-    return skip
+    # A label row the analyzer repaired in is not a <tr> at runtime.
+    return skip - table.repaired_rows
 
 
 _FOOTER_KEYWORDS: frozenset[str] = frozenset({"total", "sum", "summary", "subtotal", "average", "avg"})

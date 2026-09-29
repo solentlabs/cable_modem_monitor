@@ -62,7 +62,8 @@ def protocol_to_badge(protocol: str) -> str:
     badges = {
         "HTML": '![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping")',
         "HNAP": '![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth")',
-        "CBN": '![CBN](https://img.shields.io/badge/-CBN-8B6914?style=flat-square "CBN SOAP-based protocol")',
+        "CBN": '![CBN](https://img.shields.io/badge/-CBN-8B6914?style=flat-square "Compal XML POST protocol")',
+        "JSON-RPC": '![JSON-RPC](https://img.shields.io/badge/-JSON--RPC-C0507A?style=flat-square "JSON-RPC 2.0")',
         "REST_API": '![REST](https://img.shields.io/badge/-REST-5B9A5B?style=flat-square "JSON REST API")',
     }
     return badges.get(protocol, protocol)
@@ -83,6 +84,7 @@ _AUTH_COLORS: dict[str, str] = {
     "url_token": "0E9A8B",
     "bearer": "1A7FAA",
     "json_sjcl": "9B6FD8",
+    "jsonrpc": "C0507A",
 }
 
 _AUTH_COLOR_FALLBACK = "9E9E9E"
@@ -133,7 +135,7 @@ def generate_auth_legend() -> list[str]:
         ("Simple", ["basic"]),
         ("Form-based", ["form", "form_nonce", "form_pbkdf2", "form_sjcl", "form_cbn"]),
         ("Token-based", ["url_token", "bearer", "json_sjcl"]),
-        ("Protocol", ["hnap"]),
+        ("Protocol", ["hnap", "jsonrpc"]),
     ]
     # Append Core-registered strategies not yet in any group (gray fallback).
     known = {s for _, strategies in _groups for s in strategies}

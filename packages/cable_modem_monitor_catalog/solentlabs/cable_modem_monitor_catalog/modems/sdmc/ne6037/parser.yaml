@@ -1,0 +1,137 @@
+# Every resource is a JSON-RPC method; the loader hands over its result
+# (RESOURCE_LOADING_SPEC.md § JSON-RPC Transport). Keys and labels are
+# the firmware's docssignal.htm grid columns.
+
+downstream:
+  format: json
+  resource: "CM.getDownstream"
+  arrays:
+    - array_path: "dss"
+      channel_type:
+        fixed: "qam"
+      fields:
+        - key: "channel"
+          field: channel_id
+          type: integer
+        - key: "status"
+          field: lock_status
+          type: lock_status
+        - key: "frequency"
+          field: frequency
+          type: frequency
+        - key: "powerLevel"
+          field: power
+          type: float
+        - key: "mer"
+          field: snr
+          type: float
+        - key: "modulation"
+          field: modulation
+          type: modulation
+        - key: "correcteds"
+          field: corrected
+          type: integer
+        - key: "uncorrectables"
+          field: uncorrected
+          type: integer
+    - array_path: "ofdm"
+      channel_type:
+        fixed: "ofdm"
+      fields:
+        - key: "channel"
+          field: channel_id
+          type: integer
+        - key: "status"
+          field: lock_status
+          type: lock_status
+        - key: "powerLevel"
+          field: power
+          type: float
+        - key: "mer"
+          field: snr
+          type: float
+        - key: "carriers"
+          field: active_subcarriers
+          type: integer
+        # "Carrier Zero" (Hz), "First Carrier" (index) and "Spacing" (kHz)
+        # locate the lower edge of the active band; parser.py computes
+        # frequency from them (FIELD_REGISTRY.md § frequency semantics).
+        - key: "zero"
+          field: carrier_zero_frequency
+          type: integer
+        - key: "first"
+          field: first_active_subcarrier
+          type: integer
+        - key: "spacing"
+          field: subcarrier_spacing
+          type: integer
+
+upstream:
+  format: json
+  resource: "CM.getUpstream"
+  arrays:
+    # The capture's ofdma array is empty, so it is not mapped.
+    - array_path: "uss"
+      fields:
+        - key: "id"
+          field: channel_id
+          type: integer
+        - key: "status"
+          field: lock_status
+          type: lock_status
+        - key: "type"
+          field: channel_type
+          type: string
+          map:
+            "ATDMA": "atdma"
+        - key: "frequency"
+          field: frequency
+          type: frequency
+        - key: "powerLevel"
+          field: power
+          type: float
+        - key: "modulation"
+          field: modulation
+          type: modulation
+        - key: "symbolRate"
+          field: symbol_rate
+          type: integer
+          unit: "KSym/sec"
+          scale: 1000 # ksym/s → Sym/s
+
+system_info:
+  sources:
+    - format: json
+      resource: "CM.getStatus"
+      fields:
+        - key: "upTime"
+          field: system_uptime
+          type: uptime
+          format: "{days}d {hours}h:{minutes}m:{seconds}s"
+        - key: "code"
+          field: docsis_status
+          type: string
+          map:
+            "Online": "Operational"
+    - format: json
+      resource: "CM.getMisc"
+      fields:
+        - key: "model"
+          field: model_name
+          type: string
+        - key: "hardwareVersion"
+          field: hardware_version
+          type: string
+        - key: "softwareVersion"
+          field: software_version
+          type: string
+
+# DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
+# at a vastly different scale and are not aggregated.
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream.qam
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream.qam

@@ -16,10 +16,9 @@ Status derivation uses ICMP + TCP. HEAD is a latency-only signal that
 populates ``HealthInfo.http_latency_ms`` when available.
 
 The orchestrator notifies the HealthMonitor when data collections
-start and end — TCP and HEAD probes are skipped while a collection
-is active (avoids contention) or recently succeeded (redundant).
-A failing ICMP probe overrides the skip for TCP — stale collection
-evidence must not outvote a live probe (UC-59a).
+start and end. TCP and HEAD probes are skipped while a collection is
+active, to avoid contention; every other health reading is live. A
+failing ICMP probe overrides the skip for TCP (UC-59a).
 
 Probe capabilities (ICMP, HEAD) are declared in modem.yaml and
 confirmed by auto-detection during setup.
@@ -59,7 +58,7 @@ class HealthMonitor:
     reachability between data collection cycles. The orchestrator
     signals collection activity via ``record_collection_start()`` /
     ``record_collection_end()`` so the TCP and HEAD probes can be
-    skipped when redundant or contentious.
+    skipped while they would contend with a collection.
 
     Args:
         base_url: Modem URL for TCP/HTTP probes
@@ -106,8 +105,8 @@ class HealthMonitor:
         self._previous_status: HealthStatus = HealthStatus.UNKNOWN
 
         # Collection evidence — orchestrator signals active collections
-        # so the TCP/HEAD probes can be skipped when redundant or
-        # contentious. ICMP is unaffected (cheap, distinct layer).
+        # so the TCP/HEAD probes can be skipped while they would contend.
+        # ICMP is unaffected (cheap, distinct layer).
         self._collection_active: bool = False
         self._last_collection_success: float | None = None
         self._last_ping_time: float | None = None
@@ -125,9 +124,8 @@ class HealthMonitor:
         """Signal that a data collection cycle has ended.
 
         Called by the orchestrator after ``collector.execute()``
-        completes (success or failure). A successful collection is
-        recorded so the next ``ping()`` can skip the redundant TCP
-        and HEAD probes.
+        completes (success or failure). The success time is kept for
+        callers that wait for a quiet modem (``last_collection_success_at``).
         """
         self._collection_active = False
         if success:
@@ -138,14 +136,13 @@ class HealthMonitor:
 
         ICMP runs first (if supported), then HEAD (if supported and
         not skipped), then TCP (if HTTP probe enabled and not skipped).
-        TCP and HEAD share the skip gate — they're skipped when a data
-        collection is active or recently succeeded, since collection
-        already proves L4/HTTP reachability. See
+        TCP and HEAD share the skip gate: they're skipped while a data
+        collection is active, to avoid contention. See
         ``record_collection_start`` and ``record_collection_end``.
 
         Exception (UC-59a): a failing ICMP probe forces the TCP probe
-        past the skip gate — stale collection evidence must not
-        outvote a live probe. HEAD stays skipped.
+        past the skip gate, so an in-flight collection never stands in
+        for a live reading. HEAD stays skipped.
 
         Status derivation uses ICMP + TCP. ``http_latency_ms`` is a
         latency-only signal that populates only on HEAD-capable modems.
@@ -165,15 +162,14 @@ class HealthMonitor:
         if self._supports_icmp:
             icmp_ok, icmp_ms = self._probe_icmp()
 
-        # TCP and HEAD probes share a skip gate — when collection
-        # evidence supersedes them, neither runs.
+        # TCP and HEAD probes share a skip gate: while a collection is
+        # active, neither runs.
         skip_reason = self._should_skip_probes() if self._http_probe else None
 
-        # Contradiction override (UC-59a): collection evidence is a
-        # statement about the past; a failing ICMP probe is a current
-        # observation that contradicts it — the modem may have gone
-        # down since the poll succeeded. Force the TCP probe so status
-        # derivation uses a live reading instead of the stale evidence.
+        # Contradiction override (UC-59a): an in-flight collection proves
+        # nothing yet, and a failing ICMP probe is a current observation;
+        # the modem may have gone down mid-poll. Force the TCP probe so
+        # status derivation uses a live reading instead of assuming L4.
         # HEAD stays skipped (latency-only, cannot affect status).
         tcp_forced = skip_reason is not None and icmp_ok is False
 
@@ -286,25 +282,17 @@ class HealthMonitor:
     # ------------------------------------------------------------------
 
     def _should_skip_probes(self) -> str | None:
-        """Check if collection activity makes the TCP/HEAD probes redundant.
-
-        Returns a short reason string when the probes should be skipped,
-        or None when they should run:
-
-        - ``"collection active"`` — collection is running right now
-        - ``"recent collection"`` — collection succeeded since last ping
-
-        ICMP is unaffected and always runs when supported.
-
-        Never skips before the first ping() completes — consumers need
-        at least one real measurement to establish a baseline.
-        """
+        """Return ``"collection active"`` while a collection runs, else None."""
+        # Only an in-flight collection skips: it would contend with the
+        # probes on a single-threaded web server. A completed collection
+        # never skips, since at health interval >= poll interval a poll
+        # lands between every pair of pings and the latency sensors would
+        # never refresh. The first ping always runs, so consumers get a
+        # baseline measurement. ICMP is unaffected.
         if self._last_ping_time is None:
             return None
         if self._collection_active:
             return "collection active"
-        if self._last_collection_success is not None and self._last_collection_success > self._last_ping_time:
-            return "recent collection"
         return None
 
     # ------------------------------------------------------------------

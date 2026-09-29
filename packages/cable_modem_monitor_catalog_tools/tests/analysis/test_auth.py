@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 from solentlabs.cable_modem_monitor_catalog_tools.analysis import AuthDetail
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.ambiguity import Ambiguity
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth import detect_auth
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.hnap import (
     _detect_hmac_algorithm,
@@ -111,6 +112,45 @@ def test_auth_expected_warnings(fixture_path: Path) -> None:
     detect_auth(data["_entries"], data["_transport"], warnings, [])
     expected = data["_expected_warning"]
     assert any(expected in w for w in warnings), f"Expected warning containing {expected!r}, got {warnings}"
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    [f for f in VALID_FIXTURES if "_expected_absent_fields" in load_fixture(f)],
+    ids=[f.stem for f in VALID_FIXTURES if "_expected_absent_fields" in load_fixture(f)],
+)
+def test_auth_absent_fields(fixture_path: Path) -> None:
+    """Fields the capture cannot support are left unset, never guessed."""
+    data = load_fixture(fixture_path)
+    result = detect_auth(data["_entries"], data["_transport"], [], [])
+    for key in data["_expected_absent_fields"]:
+        assert key not in result.fields, f"Auth field {key} should be absent, got {result.fields[key]!r}"
+
+
+# =====================================================================
+# Ambiguities - fixture-driven
+# =====================================================================
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    [f for f in VALID_FIXTURES if "_expected_ambiguities" in load_fixture(f)],
+    ids=[f.stem for f in VALID_FIXTURES if "_expected_ambiguities" in load_fixture(f)],
+)
+def test_auth_ambiguities(fixture_path: Path) -> None:
+    """Each expected field is an unresolved ambiguity whose candidates cite their sources."""
+    data = load_fixture(fixture_path)
+    ambiguities: list[Ambiguity] = []
+    detect_auth(data["_entries"], data["_transport"], [], [], ambiguities=ambiguities)
+    actual = {
+        a.field: {
+            "blocking": a.blocking,
+            "candidates": {c.value: [e.source for e in c.evidence] for c in a.candidates},
+        }
+        for a in ambiguities
+    }
+    assert actual == data["_expected_ambiguities"]
+    assert all(a.resolution is None for a in ambiguities)
 
 
 # =====================================================================
@@ -700,3 +740,22 @@ class TestDynamicFormAction:
         assert "action_source" not in result.fields
         assert result.confidence == "high"
         assert not any("action_source" in w for w in warnings)
+
+
+class TestFleetPasswordNames:
+    """A scanned fleet's password names replace the whole catalog's inside the scope, and only there."""
+
+    def test_scoped_names_replace_catalog(self) -> None:
+        from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.patterns import (
+            fleet_password_names,
+            has_credential_fields,
+            is_password_field_name,
+        )
+
+        assert not is_password_field_name("zzsecret")
+        with fleet_password_names(frozenset({"zzsecret"})):
+            assert is_password_field_name("zzSecret")
+            assert has_credential_fields({"text": "zzsecret=x"})
+        with fleet_password_names(frozenset()):
+            assert not is_password_field_name("zzsecret")
+        assert not is_password_field_name("zzsecret")

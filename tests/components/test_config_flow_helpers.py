@@ -608,6 +608,34 @@ class TestVariantPath:
 
 
 # =====================================================================
+# Protocol detection failure — logged with Core's reason
+# =====================================================================
+
+
+class TestProtocolDetectionFailure:
+    """A failed detection raises ConnectionError and logs why at WARNING."""
+
+    @patch(f"{_MODULE}.detect_protocol")
+    def test_detection_failure_logs_reason(
+        self,
+        mock_detect: MagicMock,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """The form shows only "Can't reach modem", so the log must carry the reason."""
+        import logging
+
+        reason = "Cannot connect to modem at 127.0.0.1:8099. Tried: http, https"
+        mock_detect.return_value = ConnectivityResult(success=False, error=reason)
+
+        with caplog.at_level(logging.WARNING, logger=_MODULE), pytest.raises(ConnectionError):
+            _run_validation("127.0.0.1:8099", None, "", "", tmp_path, None)
+
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any(reason in msg for msg in warnings)
+
+
+# =====================================================================
 # Auth runs exactly once — no retry chain
 # =====================================================================
 #

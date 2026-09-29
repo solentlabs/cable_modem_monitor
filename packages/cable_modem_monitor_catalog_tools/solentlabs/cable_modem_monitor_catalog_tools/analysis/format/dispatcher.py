@@ -1,6 +1,6 @@
 """Phase 5-6 dispatcher - format detection and section assembly.
 
-Routes to transport-specific modules (http / hnap) for format
+Routes to transport-specific modules (http / hnap / jsonrpc) for format
 classification, then delegates to mapping and mapping.system_info
 for Phase 6 extraction. Assembles the ``sections`` output dict.
 
@@ -13,22 +13,27 @@ import posixpath
 from typing import Any
 
 from ...validation.har_utils import WARNING_PREFIX
+from ..ambiguity import Ambiguity
 from ..mapping.channel_detection import detect_channel_type_fixed
+from ..mapping.channel_keys import address_key_ambiguities
 from ..mapping.system_info import detect_system_info
+from ..mapping.types import SectionDetail
 from ..types import FleetPatterns
+from .cbn import cbn_pages
 from .hnap import detect_hnap_sections
 from .http import (
     analyze_page,
     classify_page_format,
     identify_data_pages,
 )
+from .jsonrpc import jsonrpc_pages
 from .table_analysis import (
     detect_row_start,
     detect_table_direction,
     detect_table_selector,
     is_channel_table,
 )
-from .types import PageAnalysis
+from .types import XML_CONTENT_TYPE, PageAnalysis
 
 # extract_section_mappings is imported inside the _assemble_* helpers
 # below, not here. format and mapping are mutually dependent packages:
@@ -47,15 +52,17 @@ def detect_sections(
     hard_stops: list[str],
     *,
     fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> dict[str, Any]:
     """Run Phases 5-6: format detection, field mapping, section assembly.
 
     Args:
         entries: HAR ``log.entries`` list.
-        transport: Detected transport ("http" or "hnap").
+        transport: Detected transport ("http", "hnap", "jsonrpc" or "cbn").
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
         fleet: Optional fleet patterns for augmented detection.
+        ambiguities: Mutable list to append channel key ambiguities to.
 
     Returns:
         Sections dict with downstream, upstream, and system_info keys.
@@ -64,7 +71,13 @@ def detect_sections(
     if transport == "hnap":
         return detect_hnap_sections(entries, warnings, hard_stops, fleet=fleet)
 
-    return _detect_http_sections(entries, warnings, hard_stops, fleet=fleet)
+    if transport == "jsonrpc":
+        return _sections_from_pages(jsonrpc_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
+
+    if transport == "cbn":
+        return _sections_from_pages(cbn_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
+
+    return _detect_http_sections(entries, warnings, hard_stops, fleet=fleet, ambiguities=ambiguities)
 
 
 def _detect_http_sections(
@@ -73,6 +86,7 @@ def _detect_http_sections(
     hard_stops: list[str],
     *,
     fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> dict[str, Any]:
     """Detect HTTP format sections from data pages.
 
@@ -90,9 +104,20 @@ def _detect_http_sections(
         page = analyze_page(entry)
         page_analyses.append(page)
 
+    return _sections_from_pages(page_analyses, warnings, fleet=fleet, ambiguities=ambiguities)
+
+
+def _sections_from_pages(
+    page_analyses: list[PageAnalysis],
+    warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
+) -> dict[str, Any]:
+    """Assemble channel sections and system_info from analyzed pages."""
     # Phase 5-6: Assemble channel sections from table/JS/JSON pages
     sections: dict[str, Any] = {}
-    _assemble_channel_sections(page_analyses, sections, warnings, fleet=fleet)
+    _assemble_channel_sections(page_analyses, sections, warnings, fleet=fleet, ambiguities=ambiguities)
 
     # Phase 6: Detect system_info sources
     system_info = detect_system_info(page_analyses, warnings, fleet=fleet)
@@ -108,15 +133,16 @@ def _assemble_channel_sections(
     warnings: list[str],
     *,
     fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> None:
     """Assemble downstream and upstream sections from page analyses."""
     for page in pages:
         fmt = classify_page_format(page)
 
         if fmt == "json":
-            _assemble_json_sections(page, sections, warnings)
+            _assemble_json_sections(page, sections, warnings, fleet=fleet, ambiguities=ambiguities)
         elif fmt == "javascript_json":
-            _assemble_js_json_sections(page, sections, warnings)
+            _assemble_js_json_sections(page, sections, warnings, fleet=fleet, ambiguities=ambiguities)
         elif fmt == "javascript":
             # For pages that have both JavaScript functions and HTML
             # channel tables, try the tables first. Tables provide more
@@ -236,6 +262,9 @@ def _assemble_js_json_sections(
     page: PageAnalysis,
     sections: dict[str, Any],
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> None:
     """Assemble channel sections from JS-embedded JSON arrays.
 
@@ -255,6 +284,7 @@ def _assemble_js_json_sections(
             json_data=json_data,
             resource=page.resource,
             warnings=warnings,
+            fleet=fleet,
         )
 
         if section is None:
@@ -263,6 +293,8 @@ def _assemble_js_json_sections(
         # Override format to javascript_json in the output
         section.format = "javascript_json"
         section.variable = js_var.name
+        # The variable holds the channel list itself; there is no path to read.
+        section.array_path = ""
 
         # Infer direction from variable name, then resource path
         direction = _direction_from_js_name(js_var.name)
@@ -282,46 +314,88 @@ def _assemble_js_json_sections(
             if section.channel_type is None:
                 section.channel_type = detect_channel_type_fixed(direction)
             sections[direction] = section.to_dict()
+            address_key_ambiguities(section, direction, ambiguities)
 
 
 def _assemble_json_sections(
     page: PageAnalysis,
     sections: dict[str, Any],
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> None:
-    """Assemble channel sections from JSON API responses."""
-    from ..mapping import extract_section_mappings
+    """Assemble channel sections from a JSON response, one entry per channel array."""
+    from ..mapping import extract_json_arrays
 
     if page.json_data is None:
         return
 
-    section = extract_section_mappings(
-        fmt="json",
-        json_data=page.json_data,
-        resource=page.resource,
-        warnings=warnings,
-    )
+    by_direction: dict[str, list[SectionDetail]] = {}
+    for array in extract_json_arrays(page.json_data, page.resource, warnings, fleet=fleet):
+        direction = _place_array(page, array, warnings)
+        if direction != "unknown":
+            by_direction.setdefault(direction, []).append(array)
 
-    if section is None:
-        return
+    for direction, arrays in by_direction.items():
+        if direction in sections:
+            continue
+        sections[direction] = arrays[0].to_dict() if len(arrays) == 1 else _arrays_section(arrays)
+        for array in arrays:
+            address_key_ambiguities(array, direction, ambiguities)
 
-    # Infer direction from resource path or JSON structure
+
+def _place_array(page: PageAnalysis, array: SectionDetail, warnings: list[str]) -> str:
+    """The array's direction, with its format and channel type set; "unknown" is warned."""
     direction = _direction_from_resource(page.resource)
     if direction == "unknown":
+        direction = _direction_from_array_path(array.array_path)
+    if direction == "unknown" and page.json_data is not None:
         direction = _direction_from_json(page.json_data)
-
     if direction == "unknown":
         warnings.append(
-            f"{WARNING_PREFIX} Cannot determine direction for JSON data on {page.resource}. Manual review required."
+            f"{WARNING_PREFIX} Cannot determine direction for JSON array '{array.array_path}' "
+            f"on {page.resource}. Manual review required."
         )
-        return
+        return direction
+    if page.content_type == XML_CONTENT_TYPE:
+        array.format = "xml"
+    # DOCSIS 3.0 JSON APIs rarely embed channel type; the path names
+    # OFDM/OFDMA arrays, and the direction's default covers the rest.
+    if array.channel_type is None:
+        array.channel_type = _channel_type_from_array_path(array.array_path) or detect_channel_type_fixed(direction)
+    return direction
 
-    if direction not in sections:
-        # DOCSIS 3.0 JSON APIs rarely embed channel type; apply fixed
-        # fallback when no channelType key was found in the JSON data.
-        if section.channel_type is None:
-            section.channel_type = detect_channel_type_fixed(direction)
-        sections[direction] = section.to_dict()
+
+def _arrays_section(arrays: list[SectionDetail]) -> dict[str, Any]:
+    """One section holding several channel arrays of a response, each with its own mappings and type."""
+    entries = []
+    for array in arrays:
+        entry = array.to_dict()
+        del entry["format"], entry["resource"]
+        entries.append(entry)
+    return {"format": arrays[0].format, "resource": arrays[0].resource, "arrays": entries}
+
+
+def _direction_from_array_path(array_path: str) -> str:
+    """Infer downstream/upstream from DOCSIS terms in an array's path, leaf segment first."""
+    for segment in reversed(array_path.lower().split(".")):
+        # ofdma names the upstream variant, so it is tested before ofdm.
+        if "ofdma" in segment or "upstream" in segment or _has_direction_prefix(segment, ("us",)):
+            return "upstream"
+        if "ofdm" in segment or "downstream" in segment or _has_direction_prefix(segment, ("ds",)):
+            return "downstream"
+    return "unknown"
+
+
+def _channel_type_from_array_path(array_path: str) -> dict[str, Any] | None:
+    """A fixed OFDM or OFDMA channel type when the array's path names one."""
+    for segment in reversed(array_path.lower().split(".")):
+        if "ofdma" in segment:
+            return {"fixed": "ofdma"}
+        if "ofdm" in segment:
+            return {"fixed": "ofdm"}
+    return None
 
 
 def _direction_from_js_name(name: str) -> str:

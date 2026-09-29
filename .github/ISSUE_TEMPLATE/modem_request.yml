@@ -83,11 +83,11 @@ body:
         har-capture launches its own controlled chromium window — your regular browser's cookies and login state don't carry over, so there's nothing to clear beforehand.
 
         **During capture**, follow the click sequence in the
-        [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md#step-1--capture)
+        [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md#1-capture)
         — it includes two steps that are easy to miss (a pre-login page visit and a
         deliberate wrong-password login) that make your capture much more useful.
 
-        **Before sharing:** Search the `.sanitized.har` file for your WiFi password and any other credentials — the sanitizer is best-effort. See the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md#step-2--review-for-pii) for what to check.
+        **Before sharing:** Search the `.sanitized.har` file for your WiFi password and any other credentials — the sanitizer is best-effort. See the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md#2-check-for-personal-data) for what to check.
 
         Attach the `.sanitized.har.gz` file to this issue.
 

@@ -35,6 +35,8 @@ class DetectedTable:
     title_row_text: str
     table_index: int
     i18n_header_map: dict[str, str] = field(default_factory=dict)
+    # 1 when the label row was inserted to read malformed markup; Core never sees it.
+    repaired_rows: int = 0
 
 
 @dataclass
@@ -68,6 +70,10 @@ class DetectedLabelPair:
     selector_type: str  # "label" or "id"
     selector_value: str  # the label text or element id
     element_id: str
+
+
+# A CBN getter answer read as records (ONBOARDING_SPEC § `xml` format).
+XML_CONTENT_TYPE = "application/xml"
 
 
 @dataclass

@@ -73,9 +73,6 @@
       "unknown_model": "Geselecteerde modem niet gevonden in de catalogus.",
       "reauth_successful": "Herauthenticatie geslaagd.",
       "reauth_failed": "Herauthenticatie mislukt. Probeer opnieuw."
-    },
-    "progress": {
-      "validate": "Verbinden met modem..."
     }
   },
   "options": {
@@ -107,9 +104,6 @@
       "session_rejected": "Aanmelding geslaagd, maar de modem weigerde het gegevensverzoek. Geen probleem met de inloggegevens; zie de waarschuwing in het Home Assistant-logboek.",
       "parse_failed": "Verbonden, maar kon de modemgegevens niet lezen.",
       "unknown": "Onverwachte fout. Controleer de Home Assistant-logs."
-    },
-    "progress": {
-      "validate": "Verbinding valideren..."
     }
   }
 }

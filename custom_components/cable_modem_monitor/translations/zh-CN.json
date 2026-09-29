@@ -73,9 +73,6 @@
       "unknown_model": "在目录中未找到所选调制解调器。",
       "reauth_successful": "重新认证成功。",
       "reauth_failed": "重新认证失败。请重试。"
-    },
-    "progress": {
-      "validate": "正在连接调制解调器..."
     }
   },
   "options": {
@@ -107,9 +104,6 @@
       "session_rejected": "登录成功，但调制解调器拒绝了数据请求。这不是凭据问题；请查看 Home Assistant 日志中的警告。",
       "parse_failed": "已连接但无法读取调制解调器数据。",
       "unknown": "意外错误。请查看 Home Assistant 日志。"
-    },
-    "progress": {
-      "validate": "正在验证连接..."
     }
   }
 }

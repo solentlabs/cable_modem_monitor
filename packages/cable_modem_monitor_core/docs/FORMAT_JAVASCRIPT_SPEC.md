@@ -112,6 +112,7 @@ upstream:
         - offset: 4
           field: symbol_rate
           type: integer
+          scale: 1000 # ksym/s → Sym/s
         - offset: 5
           field: frequency
           type: frequency

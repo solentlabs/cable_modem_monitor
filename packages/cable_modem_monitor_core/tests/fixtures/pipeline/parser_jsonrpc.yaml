@@ -1,0 +1,16 @@
+downstream:
+  format: json
+  resource: "CM.getDownstream"
+  array_path: "dss"
+  channel_type:
+    fixed: "qam"
+  fields:
+    - key: "channel"
+      field: channel_id
+      type: integer
+    - key: "frequency"
+      field: frequency
+      type: frequency
+    - key: "powerLevel"
+      field: power
+      type: float

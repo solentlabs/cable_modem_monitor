@@ -793,3 +793,76 @@ def test_response_handling_same_for_both_methods(
     assert (exc.status_code, exc.path) == (status, "/status.html"), f"Failed: {desc}"
     if status == 401:
         assert exc.request_line.startswith(method), f"Failed: {desc}"
+
+
+# =============================================================================
+# Failure logs never carry a URL token (RESOURCE_LOADING_SPEC § Error Signals)
+# =============================================================================
+#
+# ┌────────┬───────────────────┬──────────────┬──────────────────────────────┐
+# │ status │ url token         │ query_params │ query in the failure text    │
+# ├────────┼───────────────────┼──────────────┼──────────────────────────────┤
+# │ 401    │ ct_ + tok         │ -            │ masked (401 request_line)    │
+# │ 500    │ ct_ + tok         │ -            │ masked (exception message)   │
+# │ 401    │ -                 │ _n=12345     │ visible cache-buster         │
+# │ 500    │ -                 │ _n=12345     │ visible cache-buster         │
+# └────────┴───────────────────┴──────────────┴──────────────────────────────┘
+#
+_SECRET = "s3cr3ttok"
+
+# fmt: off
+MASK_CASES = [
+    # (status, url_token, token_prefix, query_params,      id)
+    (401,      _SECRET,   "ct_",        {},                "401-token-masked"),
+    (500,      _SECRET,   "ct_",        {},                "500-token-masked"),
+    (401,      "",        "",           {"_n": "12345"},   "401-cache-buster-visible"),
+    (500,      "",        "",           {"_n": "12345"},   "500-cache-buster-visible"),
+]
+# fmt: on
+
+
+def _failure_text(exc: ResourceLoadError) -> str:
+    """Everything a load failure puts in front of a user: message and request line."""
+    return f"{exc}\n{exc.request_line}"
+
+
+@pytest.mark.parametrize(
+    "status,url_token,token_prefix,query_params",
+    [c[:4] for c in MASK_CASES],
+    ids=[c[4] for c in MASK_CASES],
+)
+def test_failure_text_masks_only_a_url_token(
+    status: int, url_token: str, token_prefix: str, query_params: dict[str, str]
+) -> None:
+    """The token never reaches the failure text; a cache-buster still does."""
+    entries = _build_entries({"/status.html": ("application/json", "{}")}, status=status)
+    with HARMockServer(entries) as server:
+        loader = HTTPResourceLoader(
+            requests.Session(),
+            server.base_url,
+            timeout=10,
+            url_token=url_token,
+            token_prefix=token_prefix,
+            query_params=query_params,
+        )
+        with pytest.raises(ResourceLoadError) as exc_info:
+            loader.fetch([ResourceTarget(path="/status.html", format="table")])
+
+    text = _failure_text(exc_info.value)
+    assert _SECRET not in text
+    if url_token:
+        assert "?<set, len=" in text
+    else:
+        assert "?_n=12345" in text
+
+
+def test_token_still_sent_on_the_wire() -> None:
+    """Masking changes only the failure text; the request still carries the token."""
+    entries = _build_entries({"/status.html": ("text/html", "<html>ok</html>")})
+    with HARMockServer(entries) as server:
+        session = requests.Session()
+        loader = HTTPResourceLoader(session, server.base_url, timeout=10, url_token=_SECRET, token_prefix="ct_")
+        with patch.object(session, "get", wraps=session.get) as get:
+            loader.fetch([ResourceTarget(path="/status.html", format="table")])
+
+    assert get.call_args.args[0] == f"{server.base_url}/status.html?ct_{_SECRET}"

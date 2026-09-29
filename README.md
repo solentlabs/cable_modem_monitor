@@ -60,4 +60,4 @@ Cable Modem Monitor is maintained by one person, in the evenings, around a day j
 
 ## License
 
-MIT
+MIT. The project's names and logos are not covered by it; see [TRADEMARKS.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/TRADEMARKS.md).

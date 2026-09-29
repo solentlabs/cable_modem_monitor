@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...validation.har_utils import WARNING_PREFIX
+from ..ambiguity import Candidate
 from ..format.table_analysis import is_data_row
 from ..format.types import DetectedJsFunction, DetectedTable
 from ..types import FleetPatterns
@@ -20,13 +22,18 @@ from .channel_detection import (
     detect_channel_type_table,
     detect_channel_type_transposed,
 )
+from .channel_keys import key_candidates, learned_field
 from .field_resolution import (
     detect_field_type,
     match_header_to_field,
     match_json_key_to_field,
 )
 from .filter_detection import detect_filter_table
+from .symbol_rate import symbol_rate_unit_and_scale
 from .types import FieldMapping, SectionDetail
+
+# A table or a list of objects holds channels only when it maps one of these.
+_MEASUREMENT_FIELDS = frozenset({"frequency", "power", "snr"})
 
 # -----------------------------------------------------------------------
 # Public API
@@ -52,16 +59,17 @@ def extract_section_mappings(
         warnings = []
 
     if fmt == "table" and table is not None:
-        return _extract_table_mappings(table, resource, direction, warnings)
+        return _channel_table(_extract_table_mappings(table, resource, direction, warnings), table, resource, warnings)
 
     if fmt == "table_transposed" and table is not None:
-        return _extract_transposed_mappings(table, resource, direction, warnings)
+        section = _extract_transposed_mappings(table, resource, direction, warnings)
+        return _channel_table(section, table, resource, warnings)
 
     if fmt == "javascript" and js_function is not None:
         return _extract_js_mappings(js_function, resource, direction, warnings, fleet=fleet)
 
     if fmt == "json" and json_data is not None:
-        return _extract_json_mappings(json_data, resource, direction, warnings)
+        return _extract_json_mappings(json_data, resource, direction, warnings, fleet=fleet)
 
     return None
 
@@ -69,6 +77,22 @@ def extract_section_mappings(
 # -----------------------------------------------------------------------
 # Table format (standard)
 # -----------------------------------------------------------------------
+
+
+def _channel_table(
+    section: SectionDetail | None, table: DetectedTable, resource: str, warnings: list[str]
+) -> SectionDetail | None:
+    """The table's section when it maps a measurement; otherwise None, with the table named for review."""
+    if section is not None and any(m.field in _MEASUREMENT_FIELDS for m in section.mappings):
+        return section
+    # A layout or form table can pass channel-table detection; skipping it
+    # leaves the direction free for the page's real channel data.
+    warnings.append(
+        f"{WARNING_PREFIX} Table on {resource} (index {table.table_index}) maps no channel "
+        f"measurement column ({', '.join(sorted(_MEASUREMENT_FIELDS))}); skipped. "
+        "Review it if it holds channels."
+    )
+    return None
 
 
 def _extract_table_mappings(
@@ -88,6 +112,9 @@ def _extract_table_mappings(
         # Detect type and unit from data values; header unit takes priority
         sample_values = [row[idx] for row in table.rows if idx < len(row)]
         field_type, unit = detect_field_type(field_name, sample_values, header_unit)
+        scale = None
+        if field_name == "symbol_rate":
+            unit, scale = symbol_rate_unit_and_scale(sample_values, unit, warnings)
 
         mappings.append(
             FieldMapping(
@@ -96,6 +123,7 @@ def _extract_table_mappings(
                 tier=tier,
                 unit=unit,
                 index=idx,
+                scale=scale,
             )
         )
 
@@ -153,13 +181,20 @@ def _extract_transposed_mappings(
         # Sample values from the data columns
         sample_values = row[1:] if len(row) > 1 else []
         field_type, unit = detect_field_type(field_name, sample_values, header_unit)
+        # Transposed rows emit no unit, except symbol_rate, which needs one
+        # to strip a ksym suffix before scaling to Sym/s.
+        row_unit, scale = "", None
+        if field_name == "symbol_rate":
+            row_unit, scale = symbol_rate_unit_and_scale(sample_values, unit, warnings)
 
         mappings.append(
             FieldMapping(
                 field=field_name,
                 type=field_type,
                 tier=tier,
+                unit=row_unit,
                 label=label.strip(),
+                scale=scale,
             )
         )
 
@@ -219,7 +254,7 @@ def _extract_js_mappings(
     # Fleet-based layout: use proven field offsets from committed configs
     if fleet and js_func.name in fleet.js_function_layouts:
         return _extract_js_mappings_from_fleet(
-            js_func, resource, direction, fleet.js_function_layouts[js_func.name], record_count
+            js_func, resource, direction, fleet.js_function_layouts[js_func.name], record_count, warnings
         )
 
     # Inference-based layout (fallback)
@@ -254,6 +289,7 @@ def _extract_js_mappings(
 
     if not mappings:
         return None
+    _resolve_js_symbol_rate(mappings, data_values, fields_per_record, warnings)
 
     channel_type = detect_channel_type_fixed(direction)
 
@@ -275,6 +311,7 @@ def _extract_js_mappings_from_fleet(
     direction: str,
     layout: dict[str, Any],
     record_count: int,
+    warnings: list[str],
 ) -> SectionDetail | None:
     """Build JS section from a fleet-proven function layout.
 
@@ -299,6 +336,9 @@ def _extract_js_mappings_from_fleet(
     if not mappings:
         return None
 
+    # The fleet proves positions, not units: resolve symbol_rate from this capture.
+    _resolve_js_symbol_rate(mappings, js_func.values[1:], layout.get("fields_per_channel", 0), warnings)
+
     ct_value = layout.get("channel_type", "")
     channel_type: dict[str, Any] = {"fixed": ct_value} if ct_value else (detect_channel_type_fixed(direction) or {})
 
@@ -314,6 +354,19 @@ def _extract_js_mappings_from_fleet(
     )
 
 
+def _resolve_js_symbol_rate(
+    mappings: list[FieldMapping],
+    data_values: list[str],
+    fields_per_record: int,
+    warnings: list[str],
+) -> None:
+    """Set unit and scale on a JS symbol_rate mapping from every record's value."""
+    for m in mappings:
+        if m.field == "symbol_rate" and fields_per_record and m.offset is not None:
+            samples = data_values[m.offset :: fields_per_record]
+            m.unit, m.scale = symbol_rate_unit_and_scale(samples, m.unit, warnings)
+
+
 # -----------------------------------------------------------------------
 # JSON format
 # -----------------------------------------------------------------------
@@ -324,46 +377,91 @@ def _extract_json_mappings(
     resource: str,
     direction: str,
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> SectionDetail | None:
-    """Extract JSON key -> field mappings from a JSON response."""
-    # Find the channel array
-    array_path, channel_array = _find_channel_array(json_data)
-    if not channel_array:
-        return None
+    """The first channel array of a JSON response, for callers that read one."""
+    arrays = extract_json_arrays(json_data, resource, warnings, fleet=fleet)
+    return arrays[0] if arrays else None
 
+
+def extract_json_arrays(
+    json_data: dict[str, Any],
+    resource: str,
+    warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
+) -> list[SectionDetail]:
+    """Every channel array in a JSON response, in document order; every other list is warned."""
+    sections: list[SectionDetail] = []
+    for array_path, items in _list_arrays(json_data):
+        section = _json_array_section(array_path, items, resource, warnings, fleet)
+        if section is None:
+            # Named so a real channel array the rule missed shows at review.
+            warnings.append(
+                f"{WARNING_PREFIX} JSON array '{array_path}' on {resource} maps no channel "
+                f"measurement key ({', '.join(sorted(_MEASUREMENT_FIELDS))}); skipped. "
+                "Review it if it holds channels."
+            )
+            continue
+        sections.append(section)
+    return sections
+
+
+def _json_array_section(
+    array_path: str,
+    channel_array: list[dict[str, Any]],
+    resource: str,
+    warnings: list[str],
+    fleet: FleetPatterns | None,
+) -> SectionDetail | None:
+    """Map one array's keys; None unless one of them is a channel measurement."""
     # Use first item as sample
     sample = channel_array[0]
-    if not isinstance(sample, dict):
-        return None
 
     mappings: list[FieldMapping] = []
+    contested_keys: list[tuple[str, list[Candidate]]] = []
     for key, value in sample.items():
         field_name, tier = match_json_key_to_field(key)
         if not field_name:
             continue
+        if tier == 3:
+            # The registry left the key unmapped: one fleet meaning is learned;
+            # several keep Tier 3 until the LLM resolves the key.
+            learned = learned_field(key, fleet)
+            if learned:
+                field_name, tier = learned, 1
+            elif candidates := key_candidates(key, channel_array, resource, fleet):
+                contested_keys.append((key, candidates))
 
         field_type, unit = detect_field_type(field_name, [str(value)] if value is not None else [])
+        # JSON keys emit no unit, except symbol_rate (see transposed).
+        key_unit, scale = "", None
+        if field_name == "symbol_rate":
+            samples = [str(ch[key]) for ch in channel_array if isinstance(ch, dict) and ch.get(key) is not None]
+            key_unit, scale = symbol_rate_unit_and_scale(samples, unit, warnings)
         mappings.append(
             FieldMapping(
                 field=field_name,
                 type=field_type,
                 tier=tier,
+                unit=key_unit,
                 key=key,
+                scale=scale,
             )
         )
 
-    if not mappings:
+    if not any(m.field in _MEASUREMENT_FIELDS for m in mappings):
         return None
-
-    channel_type = detect_channel_type_json(channel_array)
 
     return SectionDetail(
         format="json",
         resource=resource,
         mappings=mappings,
         array_path=array_path,
-        channel_type=channel_type,
+        channel_type=detect_channel_type_json(channel_array),
         channel_count=len(channel_array),
+        contested_keys=contested_keys,
     )
 
 
@@ -372,21 +470,16 @@ def _extract_json_mappings(
 # -----------------------------------------------------------------------
 
 
-def _find_channel_array(data: dict[str, Any], prefix: str = "") -> tuple[str, list[dict[str, Any]]]:
-    """Find a channel array in JSON data using dot-notation path.
-
-    Walks the JSON structure looking for a list of dicts.
-    Returns (dot_path, array) or ("", []).
-    """
+def _list_arrays(data: dict[str, Any], prefix: str = "") -> list[tuple[str, list[dict[str, Any]]]]:
+    """Every non-empty list of objects under ``data``, by dot-notation path, in document order."""
+    found: list[tuple[str, list[dict[str, Any]]]] = []
     for key, value in data.items():
         path = f"{prefix}.{key}" if prefix else key
         if isinstance(value, list) and value and isinstance(value[0], dict):
-            return path, value
-        if isinstance(value, dict):
-            result = _find_channel_array(value, path)
-            if result[1]:
-                return result
-    return "", []
+            found.append((path, value))
+        elif isinstance(value, dict):
+            found.extend(_list_arrays(value, path))
+    return found
 
 
 def _count_data_rows(table: DetectedTable) -> int:

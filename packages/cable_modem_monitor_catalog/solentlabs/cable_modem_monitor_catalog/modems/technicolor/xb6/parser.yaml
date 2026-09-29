@@ -96,6 +96,7 @@ upstream:
     - field: symbol_rate
       label: "Symbol Rate"
       type: integer
+      scale: 1000 # ksym/s → Sym/s
   selector:
     match: "Upstream"
     type: header_text

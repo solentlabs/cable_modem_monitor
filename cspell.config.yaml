@@ -113,6 +113,7 @@ words:
   - subcarrier
   - subcarriers
   - Symb
+  - docssignal
   - TDMA
   - tdma
   - Uncorrectables
@@ -129,6 +130,7 @@ words:
   - desynchronize
   - DUKSID
   - httponly
+  - MGMT
   - decryptable
   - decryptor
   - dklen
@@ -185,6 +187,7 @@ words:
   - Nighthawk
   - QNAP
   - Sagemcom
+  - SDMC
   - Sercomm
   - sercomm
   - superhub

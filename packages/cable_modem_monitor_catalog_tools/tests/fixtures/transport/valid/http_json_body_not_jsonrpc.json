@@ -1,0 +1,15 @@
+{
+  "_description": "HTTP transport - JSON POST body that mentions jsonrpc but is not a 2.0 call",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/rest/v1/user/login",
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "postData": {"mimeType": "application/json", "text": "{\"jsonrpc\":\"1.0\",\"password\":\"***\"}"}
+      },
+      "response": {"status": 201}
+    }
+  ],
+  "_expected_transport": "http"
+}

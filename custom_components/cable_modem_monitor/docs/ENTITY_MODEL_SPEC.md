@@ -234,7 +234,9 @@ regardless of mode. Additional Tier 2/3 fields from parser output
 **Attributes on every US channel sensor:** `channel_number`,
 `channel_id`, `channel_type`. Both identifiers are always present
 regardless of mode. Additional fields (symbol_rate, lock_status,
-modulation, ranging_status, etc.) flow as attributes.
+modulation, ranging_status, etc.) flow as attributes. A sensor with a
+`symbol_rate` attribute also carries `symbol_rate_unit: "Sym/s"`,
+because firmware labels the rate in ksym/s and Core stores Sym/s.
 
 ### LAN Statistics Sensors
 

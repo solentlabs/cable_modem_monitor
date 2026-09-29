@@ -506,3 +506,91 @@ class TestFleetAugmentedDetection:
         assert result is not None
         fields = {f.field for src in result.sources for f in src.fields}
         assert "system_uptime" in fields
+
+
+# =====================================================================
+# Fleet-learned JSON keys: the captured value must fit a declared type
+# =====================================================================
+
+_DECLARES = {"vendor/a", "vendor/b"}
+
+# ┌───────────┬──────────────────┬──────────┬─────────┬─────────────────────────────────┐
+# │ key       │ declared type(s) │ captured │ mapped  │ description                     │
+# ├───────────┼──────────────────┼──────────┼─────────┼─────────────────────────────────┤
+# │ cmStatus  │ string           │ "OPER"   │ yes     │ text fits string                │
+# │ cmStatus  │ string           │ 7        │ no      │ a number does not fit string    │
+# │ cmCount   │ integer          │ "12"     │ yes     │ numeric text fits integer       │
+# │ cmCount   │ integer          │ "twelve" │ no      │ other text does not             │
+# │ cmUp      │ uptime           │ 360      │ yes     │ any value fits other types      │
+# │ cmStatus  │ string, integer  │ 7        │ yes     │ fitting any declared type does  │
+# └───────────┴──────────────────┴──────────┴─────────┴─────────────────────────────────┘
+#
+# fmt: off
+SHAPE_CASES: list[tuple[str, str, list[str], object, bool, str]] = [
+    # (key,       field,            types,                 captured,  mapped, id)
+    ("cmStatus", "docsis_status",   ["string"],            "OPER",    True,   "text-fits-string"),
+    ("cmStatus", "docsis_status",   ["string"],            7,         False,  "number-misfits-string"),
+    ("cmCount",  "channel_count",   ["integer"],           "12",      True,   "numeric-text-fits-integer"),
+    ("cmCount",  "channel_count",   ["integer"],           "twelve",  False,  "text-misfits-integer"),
+    ("cmUp",     "system_uptime",   ["uptime"],            360,       True,   "any-fits-other-types"),
+    ("cmStatus", "docsis_status",   ["string", "integer"], 7,         True,   "fits-one-of-several"),
+]
+# fmt: on
+
+
+def _fleet_for(key: str, field: str, types: list[str]) -> FleetPatterns:
+    """A fleet that learned ``key`` as ``field``, declared with each of ``types``."""
+    normalized = key.lower()
+    return FleetPatterns(
+        system_info_json_keys={normalized: (field, 1)},
+        system_info_json_key_types={normalized: {t: sorted(_DECLARES) for t in types}},
+    )
+
+
+@pytest.mark.parametrize(
+    "key,field,types,captured,mapped",
+    [c[:5] for c in SHAPE_CASES],
+    ids=[c[5] for c in SHAPE_CASES],
+)
+def test_fleet_key_maps_only_a_fitting_value(
+    key: str, field: str, types: list[str], captured: object, mapped: bool
+) -> None:
+    """A learned key maps when its value fits a declared type; a misfit is left unmapped and warned."""
+    page = PageAnalysis(resource="/api/info", content_type="application/json", json_data={"cm": {key: captured}})
+    warnings: list[str] = []
+    result = detect_system_info([page], warnings, fleet=_fleet_for(key, field, types))
+    fields = [f.field for s in (result.sources if result else []) for f in s.fields]
+    assert (field in fields) is mapped
+    assert any(key in w and "not mapped" in w for w in warnings) is not mapped
+
+
+def test_misfit_warning_names_the_evidence() -> None:
+    """The warning cites the key, where it sits, the declaring entries, the declared type and the value."""
+    page = PageAnalysis(resource="/api/info", content_type="application/json", json_data={"cm": {"cmStatus": 7}})
+    warnings: list[str] = []
+    detect_system_info([page], warnings, fleet=_fleet_for("cmStatus", "docsis_status", ["string"]))
+    assert [w for w in warnings if "not mapped" in w] == [
+        "WARNING: JSON key 'cm.cmStatus' on /api/info is docsis_status in vendor/a, vendor/b as string, "
+        "but the capture holds 7; not mapped. Review which key carries docsis_status."
+    ]
+
+
+def test_misfit_leaves_the_field_for_another_key() -> None:
+    """A later key that fits still claims the field."""
+    page = PageAnalysis(
+        resource="/api/info",
+        content_type="application/json",
+        json_data={"cmStatus": 7, "networkAccess": "Permitted"},
+    )
+    result = detect_system_info([page], [], fleet=_fleet_for("cmStatus", "docsis_status", ["string"]))
+    assert result is not None
+    assert [(f.field, f.source) for f in result.sources[0].fields] == [("docsis_status", "networkAccess")]
+
+
+def test_baseline_key_is_not_shape_checked() -> None:
+    """Only fleet-learned keys are checked; the baseline map applies as before."""
+    page = PageAnalysis(resource="/api/info", content_type="application/json", json_data={"uptime": "3 days"})
+    fleet = FleetPatterns(system_info_json_key_types={"uptime": {"integer": ["vendor/a"]}})
+    result = detect_system_info([page], [], fleet=fleet)
+    assert result is not None
+    assert [f.field for f in result.sources[0].fields] == ["system_uptime"]

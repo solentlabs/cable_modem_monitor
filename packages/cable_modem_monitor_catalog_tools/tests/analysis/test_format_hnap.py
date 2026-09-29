@@ -324,7 +324,7 @@ class TestInferFieldMappings:
 
 
 class TestResolveLargeIntegers:
-    """Large integer resolution: frequency vs symbol_rate."""
+    """Large integer resolution: frequency vs channel_width."""
 
     def test_single_large_int_becomes_frequency(self) -> None:
         """One large integer position resolves to frequency."""
@@ -336,27 +336,27 @@ class TestResolveLargeIntegers:
         assert "_max_val" not in definitive[3]
 
     def test_two_large_ints_sorted_by_max(self) -> None:
-        """Two large integers: larger max → frequency, smaller → symbol_rate."""
+        """Two large integers: larger max → frequency, smaller → channel_width."""
         definitive: dict[int, dict[str, Any]] = {
-            3: {"field": "_large_int", "type": "frequency", "index": 3, "_max_val": 5120000},
+            3: {"field": "_large_int", "type": "frequency", "index": 3, "_max_val": 6400000},
             4: {"field": "_large_int", "type": "frequency", "index": 4, "_max_val": 567000000},
         }
         _resolve_large_integers(definitive)
-        assert definitive[3]["field"] == "symbol_rate"
+        assert definitive[3]["field"] == "channel_width"
         assert definitive[4]["field"] == "frequency"
         assert "_max_val" not in definitive[3]
         assert "_max_val" not in definitive[4]
 
     def test_three_large_ints(self) -> None:
-        """Three large integers: largest → frequency, others → symbol_rate."""
+        """Three large integers: largest → frequency, others → channel_width."""
         definitive: dict[int, dict[str, Any]] = {
             2: {"field": "_large_int", "type": "frequency", "index": 2, "_max_val": 100000},
             3: {"field": "_large_int", "type": "frequency", "index": 3, "_max_val": 5120000},
             4: {"field": "_large_int", "type": "frequency", "index": 4, "_max_val": 567000000},
         }
         _resolve_large_integers(definitive)
-        assert definitive[2]["field"] == "symbol_rate"
-        assert definitive[3]["field"] == "symbol_rate"
+        assert definitive[2]["field"] == "channel_width"
+        assert definitive[3]["field"] == "channel_width"
         assert definitive[4]["field"] == "frequency"
 
 
@@ -427,18 +427,18 @@ class TestClassifyRemainingNumeric:
         assert result is not None
         assert result["field"] == "power"
 
-    def test_large_value_becomes_symbol_rate(self) -> None:
-        """Large values when frequency not assigned become symbol_rate."""
+    def test_large_value_becomes_channel_width(self) -> None:
+        """Large values when frequency not assigned become channel_width."""
         state = _Pass2State(channel_id_assigned=True, frequency_assigned=False)
         result = _classify_remaining_numeric(
             0,
-            ["5120000", "5120000"],
+            ["6400000", "3200000"],
             channel_id_assigned=True,
             frequency_assigned=False,
             state=state,
         )
         assert result is not None
-        assert result["field"] == "symbol_rate"
+        assert result["field"] == "channel_width"
 
     def test_remaining_standard_order(self) -> None:
         """Remaining fields assigned in standard DOCSIS order."""
@@ -583,7 +583,7 @@ def test_detect_channel_data_edge(
     expected: dict[str, Any] | None,
 ) -> None:
     """_detect_channel_data returns None for edge-case inputs."""
-    result = _detect_channel_data("GetTestResponse", response_data)
+    result = _detect_channel_data("GetTestResponse", response_data, [])
     assert result is expected
 
 

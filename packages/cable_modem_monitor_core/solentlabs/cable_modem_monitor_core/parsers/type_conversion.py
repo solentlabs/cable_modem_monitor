@@ -335,7 +335,11 @@ def _compile_uptime_segment(segment: str) -> str:
 def _uptime_from_pattern(value: str, format_str: str) -> str | None:
     """Parse uptime from a custom placeholder format string."""
     pattern = _compile_uptime_pattern(format_str)
-    m = pattern.search(value)
+    # The value must begin with the format; a match found mid-string would
+    # read a clock time inside a longer value as uptime. Trailing text is
+    # tolerated because firmware writes it (SB8200 appends ".00").
+    # PARSING_SPEC § Uptime Normalization.
+    m = pattern.match(value.strip())
     if not m:
         _logger.debug("Uptime pattern '%s' did not match '%s'", format_str, value)
         return None

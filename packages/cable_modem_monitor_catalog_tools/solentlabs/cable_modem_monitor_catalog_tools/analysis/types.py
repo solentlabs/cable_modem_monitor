@@ -49,6 +49,15 @@ class FleetPatterns:
         system_info_json_keys: Normalized JSON keys mapped to
             ``(canonical_field, tier)``. Built from ``key`` fields in
             JSON-format system_info sources across the fleet.
+        system_info_json_key_types: Normalized system_info JSON key
+            mapped to each ``type`` the fleet declares for it, and the
+            entries that declare it. A learned key maps only when the
+            captured value fits one.
+        channel_keys: Normalized channel key (a JSON key or XML column
+            source) mapped to each field committed ``json``,
+            ``javascript_json`` and ``xml`` sections declare for it, and
+            the entries that declare it. A key with two fields is an
+            ambiguity (ONBOARDING_SPEC § Ambiguities).
         delimiters: Record/value delimiters observed in the fleet's
             HNAP and JavaScript parser configs.
         channel_type_values: Modulation/channel type strings observed
@@ -68,12 +77,21 @@ class FleetPatterns:
             maps to the canonical ``"Operational"``. Error and
             in-progress states are deliberately excluded, per
             SYSTEM_INFO_SPEC Diagnostic Pass-Through.
+        confirmed_config_values: Dotted ``modem.yaml`` path (under
+            ``auth`` and ``actions``) mapped to each value a
+            ``status: confirmed`` entry declares there, and the entries
+            that declare it. Corroborates ambiguity candidates.
+        password_field_names: ``password_field`` names the scanned
+            entries declare. None when not scanned, so detection reads
+            the whole catalog's.
     """
 
     selector_directions: dict[str, str] = field(default_factory=dict)
     system_info_labels: dict[str, tuple[str, int]] = field(default_factory=dict)
     system_info_ids: dict[str, tuple[str, int]] = field(default_factory=dict)
     system_info_json_keys: dict[str, tuple[str, int]] = field(default_factory=dict)
+    system_info_json_key_types: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    channel_keys: dict[str, dict[str, list[str]]] = field(default_factory=dict)
     delimiters: set[str] = field(default_factory=set)
     channel_type_values: set[str] = field(default_factory=set)
     aggregate_fields: list[tuple[str, str]] = field(default_factory=list)
@@ -81,6 +99,8 @@ class FleetPatterns:
     hnap_response_layouts: dict[str, dict[str, Any]] = field(default_factory=dict)
     uptime_formats: list[str] = field(default_factory=list)
     docsis_status_success_values: set[str] = field(default_factory=set)
+    confirmed_config_values: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    password_field_names: frozenset[str] | None = None
 
 
 # -----------------------------------------------------------------------

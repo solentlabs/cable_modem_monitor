@@ -7,6 +7,123 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.2] - 2026-09-29
+
+### Added
+
+- **SDMC NE6037** (Play "PlayBox Router HFC WiFi", 7.1.12.2.4445), with
+  restart. Awaiting confirmation on hardware. (#215)
+- **`jsonrpc` transport for firmware that speaks JSON-RPC 2.0.** Every
+  call posts to one endpoint and names its operation in `method`; the
+  login is one such call, and its token rides in the URL query. A
+  `parser.yaml` section names the method as its `resource` and reads
+  the call's `result` with the `json` format. The entry declares the
+  firmware's lockout and session-expired error codes. The intake tools
+  generate a `jsonrpc` entry from a capture: the error codes and the
+  restart method are listed as candidates, each with the evidence in
+  the capture that supports it, for the contributor to choose. (#215)
+- **The intake tools generate CBN entries.** A Compal (CBN) capture is
+  recognized by its encrypted login, read call by call, and produces a
+  `form_cbn` auth block and `format: xml` sections keyed by `fun` code.
+  Its restart and logout codes are listed as candidates, each with the
+  page that sent it, for the contributor to choose. Core's
+  `build_resource_dict` builds a CBN resource dict from a HAR, so a
+  generated CBN parser can be checked against the capture.
+- **`make commit-lint` checks commit messages before a push.** It runs
+  commitlint over the branch's commits with the same config and range
+  as CI, and `make validate-ci` now includes it. Requires Node.js.
+- **`TRADEMARKS.md` says how forks may use the project's names.** The
+  MIT License covers the code, not the "Solent Labs" and "Cable Modem
+  Monitor" names or logos. Forks are welcome under their own name, with
+  a link back as attribution.
+
+### Changed
+
+- **An uptime `format:` must now match from the start of the value.**
+  A match found partway through was accepted, so a clock time inside a
+  longer value could be read as uptime. Text after the format is still
+  ignored (the SB8200 writes `…21s.00`). Every catalog entry reads the
+  same uptime as before.
+- **The SB8200 PHP firmware variant is now "JSON Login (php)" in the
+  setup picker,** so it names what sets it apart from the other SB8200
+  variants. If you set it up on 3.14.15-beta.1, it will not load after
+  this update: delete the integration entry and add it again, picking
+  "JSON Login (php)". (#213)
+- **Arris S33, S34 and SB8200 (HNAP) upstream channels report
+  `channel_width` instead of `symbol_rate`.** The value these modems
+  gave as symbol rate is the channel width in Hz (the firmware labels
+  it "Width"), so the attribute is renamed and the number is
+  unchanged. OFDMA upstream channels on these modems now also show
+  their `channel_width`, which was dropped before.
+- **Upstream `symbol_rate` is now in symbols per second on every
+  modem, 1000 times the number shown before.** These modems reported
+  it in thousands (5120 for 5.12 Msym/s): ARRIS CM3500B, CM820B,
+  TG3442S and TM1602A; CommScope G54; Compal CH7465MT; Motorola MB8600
+  and MB8611; Netgear C3700, C7000v2, CM1200, CM2000, CM2050V, CM2500,
+  CM3000 and CM600; Sagemcom F3896LG-VMB and F3896LG-ZG; Technicolor
+  XB6, XB7, XB8 and XB10. Upstream channel sensors now carry
+  `symbol_rate_unit: Sym/s` beside `symbol_rate`. If a template or
+  automation reads `symbol_rate` on one of these modems, divide by 1000
+  to keep the old number.
+- **The intake tools learn more from the catalog.** JSON and XML
+  channel keys are learned from every committed `parser.yaml`; a key
+  the catalog maps two ways is listed as candidates instead of guessed.
+  Every channel array in a JSON response is read, not just the first.
+  A table or JSON list with no frequency, power or SNR column is
+  skipped with a warning naming it, so a settings form or address list
+  no longer becomes a channel section. A learned system_info key is
+  used only when the captured value has the type the catalog declares
+  for it; otherwise it is flagged.
+- **The intake score grades each capture as a new modem.** Each HAR is
+  analyzed without its own committed config, so the score measures what
+  a first-time intake would get, and channels are compared by channel
+  ID before position. It now stands at 83.5% of fields.
+- **The Modem Request Guide is shorter.** Capture steps are grouped
+  into four phases, each with a one-line reason; every instruction is
+  kept.
+- **catalog_tools sets the symbol rate scale when it generates a
+  config.** A ksym label on the header or the values, or bare numbers
+  in the DOCSIS ksym range, add `scale: 1000`; a label that contradicts
+  the values leaves it unset with a warning.
+
+### Fixed
+
+- **Arris SB6183 upstream channels show `symbol_rate`.** The modem
+  writes it as "5120 Ksym/sec" and the unit wasn't stripped, so the
+  value was dropped.
+- **catalog_tools no longer drops the first channel of an SB8200
+  table.** The firmware writes the label row without an opening
+  `<tr>`; the generated `row_start` counted that row although Core's
+  parser never sees it.
+- **catalog_tools reads table rows the firmware leaves unclosed.** When
+  data rows omit `</tr>`, the HTML parser nests each row inside the one
+  before it, and the analyzer saw the table's headers but no rows, so
+  unit, scale and channel type detection had no values to work from.
+- **Failure logs no longer print a session token carried in the URL.**
+  On the Arris SB8200 URL-token and PHP firmware, a failed page load
+  logged the full address, token included. The address's query is now
+  shown only as its length, the way session headers already were. The
+  request itself is unchanged.
+- **catalog_tools `run_tests` replays CBN entries.** Its pipeline
+  fetched a CBN modem's `fun` codes as web page paths, so every CBN
+  replay failed there while passing the catalog suite. A transport the
+  pipeline does not know now stops with an error instead of falling
+  back to web pages.
+- **Setup and Configure no longer hang when the modem can't be
+  reached right away.** If the address refused the connection
+  instantly, the dialog could spin forever instead of showing
+  "Can't reach modem". Both now check the connection while you wait on
+  the form, the way Home Assistant integrations usually do, so the
+  "Connecting to modem..." step is gone. The log now records why the
+  modem couldn't be reached.
+- **TCP and HTTP latency sensors keep updating when the health check
+  interval is as long as the poll interval or longer.** At those
+  settings the sensors showed their first reading indefinitely,
+  because a health check right after a poll skipped the probes. Health
+  checks now skip them only while a poll is running. A TCP failure
+  seen right after a successful poll now shows as Degraded instead of
+  being hidden by that poll.
+
 ## [3.14.15-beta.1] - 2026-09-25
 
 ### Added

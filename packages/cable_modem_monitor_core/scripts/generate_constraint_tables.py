@@ -57,6 +57,10 @@ _TRANSPORT_PROSE: dict[str, dict[str, str]] = {
         "loader": "`HTTPResourceLoader` → `BeautifulSoup` or `dict`",
         "session": "stateless, cookie, CSRF, or url_token",
     },
+    "jsonrpc": {
+        "loader": "`JSONRPCLoader` → `dict`",
+        "session": "login token in the URL query",
+    },
 }
 
 

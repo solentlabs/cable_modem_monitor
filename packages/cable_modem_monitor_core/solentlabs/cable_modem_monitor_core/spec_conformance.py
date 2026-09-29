@@ -28,6 +28,12 @@ ALLOWED_CHANNEL_TYPES: Final = frozenset({"qam", "ofdm", "atdma", "ofdma"})
 ALLOWED_LOCK_STATUSES: Final = frozenset({"locked", "not_locked"})
 OFDM_STRIPPED_FIELDS: Final = frozenset({"is_ofdm", "symbol_rate"})
 
+# PARSING_SPEC.md § ATDMA Upstream: symbol_rate is Sym/s. DOCSIS upstream
+# rates are 160 to 5120 ksym/s, so a value below 160000 is ksym/s that
+# the parser failed to scale.
+# Source: CableLabs CM-SP-PHYv3.0 (https://www.cablelabs.com/specifications).
+MIN_SYMBOL_RATE_SYM_PER_S: Final = 160_000
+
 # PARSING_SPEC.md § Canonical modulation values.
 # The enumeration is the DOCSIS-defined modulation orders, not a fleet
 # observation: QPSK plus 8/16/32/64/128/256-QAM (DOCSIS 3.0 SC-QAM) and
@@ -222,6 +228,22 @@ def _validate_channel(channel: dict[str, Any], modem: str, path_prefix: str) -> 
                     message=(f"modulation must be one of {sorted(CANONICAL_MODULATIONS)}; got {modulation!r}"),
                 )
             )
+
+    # OFDM/OFDMA channels must not carry symbol_rate at all (rule below).
+    symbol_rate = channel.get("symbol_rate")
+    if channel_type not in ("ofdm", "ofdma") and symbol_rate is not None and symbol_rate < MIN_SYMBOL_RATE_SYM_PER_S:
+        out.append(
+            Violation(
+                modem=modem,
+                path=f"{path_prefix}.symbol_rate",
+                rule="symbol_rate_sym_per_s",
+                value=symbol_rate,
+                message=(
+                    f"symbol_rate must be Sym/s (>= {MIN_SYMBOL_RATE_SYM_PER_S}); "
+                    f"got {symbol_rate!r}, which looks like ksym/s: add scale: 1000"
+                ),
+            )
+        )
 
     # OFDM/OFDMA stripping rule (PARSING_SPEC § Fields stripped from
     # OFDM/OFDMA output).

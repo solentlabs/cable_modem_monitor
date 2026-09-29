@@ -242,15 +242,15 @@ def test_missing_data(resources: dict, expected: list, desc: str) -> None:
 class TestUpstreamSection:
     """Test upstream-style config with different field mappings."""
 
-    def test_upstream_with_symbol_rate(self) -> None:
-        """Upstream channels with symbol_rate field."""
+    def test_upstream_with_channel_width(self) -> None:
+        """Upstream channels with channel_width field."""
         config = _make_config(
             response_key="GetStatusUpstreamResponse",
             data_key="UpstreamChannel",
             fields=[
                 {"index": 2, "field": "channel_type", "type": "string", "map": {"SC-QAM": "atdma", "OFDMA": "ofdma"}},
                 {"index": 3, "field": "channel_id", "type": "integer"},
-                {"index": 4, "field": "symbol_rate", "type": "integer"},
+                {"index": 4, "field": "channel_width", "type": "frequency"},
                 {"index": 5, "field": "frequency", "type": "frequency"},
                 {"index": 6, "field": "power", "type": "float"},
             ],
@@ -267,7 +267,7 @@ class TestUpstreamSection:
         assert len(channels) == 2
         assert channels[0]["channel_id"] == 1
         assert channels[0]["channel_type"] == "atdma"
-        assert channels[0]["symbol_rate"] == 6400000
+        assert channels[0]["channel_width"] == 6400000
         assert channels[0]["frequency"] == 38400000
         assert channels[0]["power"] == 47.0
         assert channels[1]["channel_type"] == "ofdma"

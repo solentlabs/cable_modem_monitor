@@ -1,0 +1,35 @@
+{
+  "log": {
+    "entries": [
+      {
+        "request": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ],
+          "method": "POST",
+          "postData": {
+            "mimeType": "application/x-www-form-urlencoded",
+            "text": "token=tok&fun=10"
+          },
+          "url": "http://192.168.0.1/xml/getter.xml"
+        },
+        "response": {
+          "content": {
+            "mimeType": "text/xml",
+            "text": "<downstream_table><downstream><chid>1</chid><freq>507000000</freq><pow>2.5</pow></downstream><downstream><chid>2</chid><freq>513000000</freq><pow>2.6</pow></downstream></downstream_table>"
+          },
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "text/xml"
+            }
+          ],
+          "status": 200
+        }
+      }
+    ]
+  }
+}

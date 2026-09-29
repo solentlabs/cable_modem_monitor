@@ -140,8 +140,11 @@ mattering. Note that
 **What this measures.** Exact-match grading answers a question the mission
 never asked. The fitting measure is whether the correct answer was among the
 candidates offered, and whether un-inferable cases were flagged as gaps.
-Until detection emits candidates there is nothing to score that way, so the
-grades below stand as the interim proxy.
+[Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed) are the
+first detection that emits candidates, and the regression scores them that
+way ([Ambiguity resolution](#intake-pipeline-regression)). Auth and action
+detection still return one answer, so their exact-match grades stand as the
+interim proxy.
 
 ---
 
@@ -207,6 +210,8 @@ The pipeline uses a three-layer detection model:
 
 Fleet patterns grow automatically as new modems are onboarded — each new parser.yaml enriches detection for future modems that share similar patterns.
 
+`scan_fleet(catalog, exclude=modem_dir)` builds the fleet without one modem's directory: its parser patterns, its `password_field` names and its confirmed `modem.yaml` values all teach nothing. The intake regression uses this for every HAR (below).
+
 ---
 
 ## Data-Driven Extension Points
@@ -270,11 +275,30 @@ python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regres
 |--------|---------|
 | `CLEAN` | Generated golden file matches committed golden file exactly |
 | `DRIFT` | Pipeline ran but generated output differs from committed golden file |
-| `FAILURE` | Pipeline stage failed (validate_har, analyze_har, generate_config) |
+| `FAILURE` | Pipeline stage failed (validate_har, analyze_har, resolve_ambiguities, generate_config) |
 
 Fleet-wide **field accuracy** is reported as a percentage of committed
 golden file fields correctly reproduced by the pipeline. This tracks
 improvement over time as the pipeline gains new pattern recognition.
+
+**Channels pair by identity, then by order**
+(`regression/golden_compare.py`). A committed channel is graded against
+the generated channel with the same `channel_type` and `channel_id`, so a
+dropped or extra row costs that one channel rather than misaligning every
+channel after it. Channels left unpaired, such as generated channels whose
+id is missing or wrong, are compared in order, so a wrong id costs that
+field and not the channel's correct values. A section whose committed
+channels have no unique identity is compared by position.
+
+**Each HAR is graded as a new modem.** The fleet patterns its intake
+runs with are scanned without its own modem directory, so its committed
+config is the answer key and never a source of learning. A pattern only
+that modem declares cannot raise its own score; the score rises when
+something learned from other modems transfers.
+
+This is a report. The regression gate is the golden replay
+(`test_modem_har_replay`), which replays each saved HAR through its
+committed config and uses no fleet.
 
 A HAR the pipeline cannot process scores **zero against its full field
 count**, never dropping out of the denominator: a modem the pipeline
@@ -300,7 +324,7 @@ against the committed config per HAR
 
 | Grade | Meaning |
 |-------|---------|
-| `match` | Type, identity (method + endpoint, or hnap action_name), and params all reproduced |
+| `match` | Type, identity (method + endpoint, hnap action_name, or jsonrpc method), and params all reproduced |
 | `partial` | Identity matches; params differ, are missing, or json_body not produced |
 | `pipeline_only` | Pipeline detected an action the catalog never adopted — candidate enrichment, or a false positive |
 | `committed_only` | Committed action the pipeline cannot produce from the HAR (human-authored config, or action never fired during capture) |
@@ -335,6 +359,34 @@ Points](#data-driven-extension-points)). A third, narrower case is a
 committed endpoint no capture can yield: `sagemcom/f3896lg-zg` declares
 its logout as `/rest/v1/user/{auth:user_id}/token/{auth:token}`, and the
 generator has no template vocabulary to produce placeholders with.
+
+**Ambiguity resolution.** The regression has no LLM, so it plays that
+part from the committed config (`regression/ambiguities.py`): before
+`generate_config`, each ambiguity resolves to the committed value at its
+path, taken only from among the tool's candidates. A committed value the
+tool never offered fails the HAR at `resolve_ambiguities`, because intake
+would have handed the LLM evidence that cannot reach the answer. A path
+the committed config leaves unset resolves to an explicit none. A
+`parser.<section>.<key>` path reads the committed `parser.yaml`, and its
+unoffered value is still applied: key candidates come from other modems,
+so a meaning none of them declares is a legitimate new one, not a
+failure to surface evidence
+([ONBOARDING_SPEC.md § Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed)).
+An `actions.` path's unoffered value is applied too: a capture without
+the action is normal (ONBOARDING_SPEC Phase 4), as it is for HTTP
+actions, which grade the gap and continue.
+Each ambiguity is graded:
+
+| Grade | Meaning |
+|-------|---------|
+| `match` | The committed value was the only candidate, or none was declared and none offered |
+| `partial` | The committed value was surfaced among several candidates |
+| `pipeline_only` | The committed config declares none; the tool offered candidates |
+| `committed_only` | The committed value was not among the candidates (the HAR fails, except on a `parser.` or `actions.` path) |
+
+A resolved action is graded with the detected ones, built by
+`generate_config`'s own resolution step, so a JSON-RPC restart the
+resolution picked is graded like an observed one.
 
 **Auth grading** compares the pipeline-generated auth block against the
 committed config (`analysis/auth/grading.py`), using the same grade

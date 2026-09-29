@@ -1,146 +1,90 @@
 # Requesting Support for Your Modem
 
-Don't see your modem listed? Adding support starts with a HAR capture
-from your modem's web interface. This guide walks you through capturing
-and submitting it. From there, a maintainer or contributor builds a
-parser, and you verify it works on your hardware before it ships.
+Modem not listed? Send a capture of its web interface. A maintainer or
+contributor builds support from it, and you test it on your hardware.
 
-This guide is for **Home Assistant users** who want to request support.
-If you're comfortable with AI tools and want to help move things faster
-(analyze the capture yourself, propose a catalog entry, help triage
-issues), see the
-[AI-assisted catalog contribution guide](../CONTRIBUTING.md#ai-assisted-catalog-contribution)
-in CONTRIBUTING.md instead.
+Comfortable with AI tools and want to do more of the work yourself? See
+the [AI-assisted catalog contribution guide](../CONTRIBUTING.md#ai-assisted-catalog-contribution).
 
-## What's collected
+The integration reads channel data, error counts, connection status,
+firmware and uptime; never WiFi settings, device lists or account
+details.
 
-- Downstream/upstream channel data (frequency, power, SNR)
-- Error counts (corrected/uncorrectable codewords)
-- Connection status and DOCSIS lock state
-- System information (firmware, uptime)
-
-## What's not collected
-
-WiFi settings, router configuration, device lists, account information.
-
----
-
-## Step 1 — Capture
-
-Install har-capture and run it against your modem's IP:
+## 1. Capture
 
 ```bash
 pip install "har-capture[full]"
 har-capture 192.168.100.1 --patterns network-device
 ```
 
-`--patterns network-device` selects the PII rule set for routers and
-modems. Replace `192.168.100.1` with your modem's IP if it differs.
-If your modem requires HTTP Basic Auth, add `--username` and
-`--password` flags — see
-[har-capture's CLI reference](https://github.com/solentlabs/har-capture#quick-start)
-for details.
+Use your modem's IP if it differs. For HTTP Basic Auth, add
+`--username` and `--password`
+([CLI reference](https://github.com/solentlabs/har-capture#quick-start)).
 
-A few cable-modem-specific tips, in the order they happen during the
-capture:
+A browser opens. Work through these steps in it, in order.
 
-- **Before logging in, visit one status page directly** by typing its
-  address into the address bar (for example
-  `192.168.100.1/DocsisStatus.htm` — any status page you know works).
-  You'll likely just see the login page again: that's the point. It
-  records how your modem answers a data request without a valid
-  session, which is exactly what the integration sees when its session
-  expires mid-poll.
-- **Log in once with a wrong password on purpose**, then log in with
-  the real one. The rejected attempt teaches the integration how your
-  modem refuses bad credentials — on some modems a failed login looks
-  identical to a success unless you know what to compare, and this
-  evidence can't be reconstructed later. (Your wrong guess is redacted
-  like any other password.)
-- **After the real login, let the page your modem sends you to finish
-  loading** before clicking anything else. Many modems answer the login
-  with a redirect, and that landing page is how the integration confirms
-  the login worked. A capture that moves on before it loads cannot be
-  used to test the login.
-- **Visit all status pages**, and wait 3–5 seconds per page for async
-  data to load. har-capture launches its own controlled chromium
-  instance, so there's no need to use your regular browser's incognito
-  mode — each capture starts from a clean session.
-- **If a status page has a Refresh button, click it once** and wait for
-  the data to reload. On some modems that button fetches the data a
-  different way than the page load did, and the integration can only
-  use what the capture shows.
-- **Click your modem's Logout link last**, before closing the browser.
-  Some modems allow only one login at a time. Without the logout
-  request in the capture, the integration cannot learn how to release
-  the session, and may hold it while you are trying to reach the
-  modem's own web page.
-- **Optional, after logout: capture a reboot.** If you want the
-  integration's Restart button to work on your modem, log back in, find
-  its Reboot or Restart control (usually on an admin or settings page),
-  and click it. Your internet drops for a few minutes while the modem
-  restarts; close the browser once the click is sent. Without this, the
-  catalog entry ships without a restart action.
+### Before logging in
 
-har-capture produces a sanitized, gzipped `.sanitized.har.gz` file —
-that's the artifact to attach in Step 3.
+**Step 1. Open a status page directly.** Type its address into the
+address bar, for example `192.168.100.1/DocsisStatus.htm`.
+*Seeing the login page is expected: it shows how the modem answers
+when a session has expired.*
 
-## Step 2 — Review for PII
+### Logging in
 
-`har-capture` automatically redacts MAC addresses, serial numbers,
-public IPs, and known credential patterns — but it's best-effort. Some
-modems embed WiFi credentials in unlabeled JavaScript or proprietary
-blobs the sanitizer hasn't seen. Pick one of these to verify before
-sharing:
+**Step 2. Log in with a wrong password.**
+*On some modems a rejected login looks just like a success, and this
+can't be recorded later. The wrong guess is redacted.*
 
-- **AI-assisted self-screen (faster)** — paste a prepared prompt into
-  ChatGPT, Claude, or any AI assistant that takes file attachments.
-  Full prompt and instructions:
-  [docs/examples/har-pii-screen-prompt.md](examples/har-pii-screen-prompt.md).
-- **Manual checklist (5 minutes)** — open the file in a text editor and
-  search for a short list of patterns:
-  [docs/examples/har-pii-manual-checklist.md](examples/har-pii-manual-checklist.md).
+**Step 3. Log in with the real password, and wait for the next page
+to finish loading.**
+*That page is how the integration confirms a login worked.*
 
-If anything sensitive remains, replace it with `***REDACTED***` in the
-`.sanitized.har`, save, re-gzip (`gzip -kf -9 yourfile.sanitized.har`),
-and note what you redacted in your issue so the sanitizer can be
-improved for future contributors. Running
-`har-capture validate yourfile.sanitized.har --patterns network-device`
-afterwards confirms nothing leaked and that the `.har` and `.har.gz`
-still match.
+### Collecting data
 
-## Step 3 — Submit
+**Step 4. Visit every status page, waiting 3–5 seconds on each.**
+*Some data loads after the page appears.*
 
-Open the [Modem Request issue template](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml)
-and:
+**Step 5. If a page has a Refresh button, click it once.**
+*On some modems it fetches data differently from the page load.*
 
-- Fill in modem details (model, manufacturer)
-- Attach your `.sanitized.har.gz`
-- If you ran the AI screen, include the output block in your issue
-- Note any manual redactions you made
+### Finishing
 
----
+**Step 6. Log out.**
+*Modems that allow one login at a time need this to release the
+session.*
 
-## Privacy summary
+**Step 7 (optional). Capture a restart.** Log back in, click Reboot or
+Restart, and close the browser once the click is sent.
+*Needed for the integration's Restart button. Your internet drops for
+a few minutes.*
 
-| Data type | What happens |
-|-----------|--------------|
-| WiFi credentials | Auto-redacted; **verify before sharing** |
-| MAC addresses | Auto-redacted (hashed, format `02:xx:xx:xx:xx:xx`) |
-| Serial numbers | Auto-redacted (hashed, `SERIAL_*` prefix) |
-| Public IPs | Auto-redacted (`192.0.2.x` TEST-NET reserved range) |
-| Channel data (power, SNR) | Preserved — needed for parser |
-| Firmware version | Preserved — useful for compatibility |
-| Uptime | Preserved — useful for testing |
+The result is a `.sanitized.har.gz` file.
 
-Modem IPs like `192.168.100.1` are preserved — they're standard
-defaults, not personal information.
+## 2. Check for personal data
 
----
+har-capture redacts MAC addresses, serial numbers, public IPs and known
+password fields, but can miss WiFi credentials in unusual places. Local
+addresses like `192.168.100.1` are kept on purpose. Check the file
+with either:
 
-## Resources
+- an [AI prompt](examples/har-pii-screen-prompt.md) (faster), or
+- a [manual checklist](examples/har-pii-manual-checklist.md) (5 minutes).
 
-- Browse [existing modem request issues](https://github.com/solentlabs/cable_modem_monitor/issues?q=label%3A%22new+modem%22)
-  for examples
-- See the [modem catalog](../packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/)
-  for currently supported modems
+If you find anything:
+
+1. Replace it with `***REDACTED***` and save.
+2. Re-gzip: `gzip -kf -9 yourfile.sanitized.har`
+3. Confirm the files are clean and match:
+   `har-capture validate yourfile.sanitized.har --patterns network-device`
+4. Say what you redacted in your issue, so the redaction rules can be
+   improved.
+
+## 3. Submit
+
+Open a [Modem Request issue](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml),
+fill in the model and manufacturer, and attach the `.sanitized.har.gz`.
+Include the AI screen output if you ran it.
+
+For examples, see [past modem requests](https://github.com/solentlabs/cable_modem_monitor/issues?q=label%3A%22new+modem%22)
+and the [modem catalog](../packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/).
