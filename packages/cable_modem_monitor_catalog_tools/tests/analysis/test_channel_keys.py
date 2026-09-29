@@ -23,9 +23,9 @@ from tests._helpers import load_fixture, write_har
 _JSONRPC_FIXTURE = Path(__file__).parent.parent / "fixtures" / "analyze_har" / "jsonrpc" / "login_and_data.json"
 
 _TWO_MEANINGS = {"lock_status": ["vendor/a"], "status": ["vendor/b", "vendor/c"]}
-_DISAGREES = FleetPatterns(channel_json_keys={"status": _TWO_MEANINGS})
-_MER_IS_SNR = FleetPatterns(channel_json_keys={"mer": {"snr": ["vendor/a"]}})
-_POWERLEVEL_IS_SNR = FleetPatterns(channel_json_keys={"powerlevel": {"snr": ["vendor/a"]}})
+_DISAGREES = FleetPatterns(channel_keys={"status": _TWO_MEANINGS})
+_MER_IS_SNR = FleetPatterns(channel_keys={"mer": {"snr": ["vendor/a"]}})
+_POWERLEVEL_IS_SNR = FleetPatterns(channel_keys={"powerlevel": {"snr": ["vendor/a"]}})
 
 
 def _json_entry(url: str, body: str, content_type: str = "application/json") -> dict[str, Any]:
@@ -132,6 +132,6 @@ def test_http_analysis_reports_key_ambiguities(tmp_path: Path) -> None:
 def test_jsonrpc_analysis_reports_key_ambiguities(tmp_path: Path) -> None:
     """A JSON-RPC capture's key ambiguity sits beside its auth and restart ambiguities."""
     data = load_fixture(_JSONRPC_FIXTURE)
-    fleet = FleetPatterns(channel_json_keys={"channel": {"channel_id": ["vendor/a"], "channel_number": ["vendor/b"]}})
+    fleet = FleetPatterns(channel_keys={"channel": {"channel_id": ["vendor/a"], "channel_number": ["vendor/b"]}})
     result = analyze_har(write_har(tmp_path, data["_har"]), fleet=fleet)
     assert "parser.downstream.channel" in [a.field for a in result.ambiguities]

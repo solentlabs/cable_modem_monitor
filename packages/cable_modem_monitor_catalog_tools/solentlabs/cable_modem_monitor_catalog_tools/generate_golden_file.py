@@ -45,6 +45,7 @@ def generate_golden_file(
     har_path: str,
     parser_yaml_content: str | None,
     transport: str | None = None,
+    getter_endpoint: str = "/xml/getter.xml",
 ) -> GenerateGoldenFileResult:
     """Generate a golden file from HAR response bodies.
 
@@ -55,7 +56,9 @@ def generate_golden_file(
         har_path: Path to the HAR file.
         parser_yaml_content: parser.yaml content as a YAML string.
         transport: analyze_har's transport. Required for ``jsonrpc``,
-            whose resources are method names; others are auto-detected.
+            whose resources are method names, and ``cbn``, whose resources
+            are fun codes; others are auto-detected.
+        getter_endpoint: For ``cbn``, the getter path (``form_cbn`` auth's field).
 
     Returns:
         Result with golden_file dict, channel counts, and any errors.
@@ -86,7 +89,7 @@ def generate_golden_file(
 
     # Load HAR and build resource dict
     try:
-        resources = build_resource_dict(har_path, transport=transport)
+        resources = build_resource_dict(har_path, transport=transport, getter_endpoint=getter_endpoint)
     except Exception as e:
         return GenerateGoldenFileResult(
             golden_file={},

@@ -64,7 +64,7 @@ def _meanings(key: str, fleet: FleetPatterns | None) -> dict[str, list[str]]:
     """Each field the fleet declares for ``key``, with its declaring entries."""
     if fleet is None:
         return {}
-    return fleet.channel_json_keys.get(key.strip().lower(), {})
+    return fleet.channel_keys.get(key.strip().lower(), {})
 
 
 def _sample_values(key: str, channels: list[dict[str, Any]]) -> str:

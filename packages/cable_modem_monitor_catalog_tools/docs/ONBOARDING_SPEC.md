@@ -779,7 +779,8 @@ Response body analysis (sniff-then-Content-Type):
   │       Detect: channel arrays and field key names from JSON structure
   │
   ├── application/xml or text/xml ?
-  │   └── format: xml — not yet supported, flag for human review
+  │   └── format: xml — read on the cbn transport (see `xml` format);
+  │       elsewhere flag for human review
   │
   ├── text/html (and not valid JSON)?
   │   ├── Contains <table> elements with channel data?
@@ -1012,6 +1013,18 @@ generation. Only a variable holding an array is detected.
   When they disagree, the key is an [ambiguity](#ambiguities-resolve-then-proceed);
   a key none declares falls to Tier 3.
 - `fallback_key` if the modem uses non-standard key names
+
+**`xml` format (`cbn` transport):** each getter call's XML answer is a
+page whose resource is its `fun` code, built by Core's
+`cbn_har_results`, the shape the CBN loader hands the parser. An
+element with child elements reads as a list of records, so a table's
+repeated children form a channel array at `root.child`, and the `json`
+rules above apply unchanged: channel-array selection, direction, and
+key vocabulary, which includes committed `xml` column sources. Each
+array becomes a `tables` entry (`resource` = the `fun` code,
+`root_element`, `child_element`, `columns`); scalar children feed
+`system_info` sources the same way JSON keys do. Lock flags, scales and
+filters are not inferred.
 
 For `system_info` fields, emit the container and the key **separately** —
 `path` for the dot-notation container, `key` for the leaf. Core navigates
@@ -1792,8 +1805,9 @@ config to extract `ModemData`. This is the same extraction logic the
 pipeline uses, but against HAR content rather than a live server.
 
 **Input:** HAR file path + parser.yaml content + `transport` from
-`analyze_har` (required for `jsonrpc`, whose resources are method names;
-others are auto-detected)
+`analyze_har` (required for `jsonrpc`, whose resources are method names,
+and `cbn`, whose resources are `fun` codes; others are auto-detected),
+and for `cbn` the `getter_endpoint` (default `/xml/getter.xml`)
 **Output:** `{ golden_file: dict, golden_file_json: str, channel_counts: { downstream: int, upstream: int }, system_info_fields: [str], missing_system_info_fields: [str] }`
 
 `golden_file_json` is the canonical serialization of `golden_file` (`sort_keys=True`, `indent=2`, `ensure_ascii=False`). Always write this string directly to `modem.expected.json` — never re-serialize `golden_file` yourself, which loses the ordering guarantee.
@@ -1957,7 +1971,7 @@ Core defines:
     system_info_ids: dict[str, tuple[str,int]]    # CSS ID → (field, tier)
     system_info_json_keys: dict[str, tuple[str,int]] # JSON key → (field, tier)
     system_info_json_key_types: dict[str, dict[str, list[str]]] # JSON key → declared type → declaring entries
-    channel_json_keys: dict[str, dict[str, list[str]]] # channel JSON key → field → declaring entries
+    channel_keys: dict[str, dict[str, list[str]]]    # channel JSON key or XML source → field → declaring entries
     delimiters: set[str]                          # record delimiters (HNAP/JS)
     channel_type_values: set[str]                 # modulation type strings
     aggregate_fields: list[tuple[str,str]]        # (source_field, agg_name)
@@ -1977,7 +1991,7 @@ Catalog provides:
 |-------|-----------------|------------------------------|
 | Table direction | Keyword matching ("downstream", "upstream") | Selector text from proven configs ("Signal Status (Codewords)" → downstream) |
 | System info labels | 17 hardcoded label→field mappings | Labels, CSS IDs, and JSON keys learned from fleet ("firmware name" → firmware_name); a learned JSON key maps only when the captured value fits a type the fleet declares for it, and a misfit is warned with the declaring entries |
-| Channel JSON keys | Registry `json_keys`, then Tier 3 `snake_case` | Key → field from every committed `parser.yaml`; a key mapped to two fields is an [ambiguity](#ambiguities-resolve-then-proceed) |
+| Channel keys (JSON and XML) | Registry `json_keys`, then Tier 3 `snake_case` | Key or XML column source → field from every committed `parser.yaml`; a key mapped to two fields is an [ambiguity](#ambiguities-resolve-then-proceed) |
 | Aggregate fields | Hardcoded (source_field, agg_name) pairs | Additional aggregate patterns from fleet parser.yaml files |
 | Ambiguity candidates | Evidence only | `corroborated_by` from confirmed entries' `modem.yaml` values; one corroborated candidate pre-fills the resolution |
 

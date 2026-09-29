@@ -363,7 +363,7 @@ class TestChannelJsonKeys:
     def test_meanings_indexed_with_declaring_entries(self, tmp_path: Path) -> None:
         """Keys are lowercased; an entry is listed once per meaning however many arrays declare it."""
         self._catalog(tmp_path)
-        assert scan_fleet(tmp_path).channel_json_keys == {
+        assert scan_fleet(tmp_path).channel_keys == {
             "status": {"lock_status": ["vendor/m1"], "status": ["vendor/m2"]},
             "mer": {"snr": ["vendor/m2"]},
         }
@@ -371,7 +371,7 @@ class TestChannelJsonKeys:
     def test_excluded_modem_teaches_no_keys(self, tmp_path: Path) -> None:
         """The modem under test does not teach its own key vocabulary."""
         self._catalog(tmp_path)
-        assert scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m2").channel_json_keys == {
+        assert scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m2").channel_keys == {
             "status": {"lock_status": ["vendor/m1"]},
         }
 
@@ -409,3 +409,22 @@ class TestSystemInfoJsonKeyTypes:
         self._catalog(tmp_path)
         types = scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m3").system_info_json_key_types
         assert types == {"cmstatus": {"string": ["vendor/m1", "vendor/m2"]}}
+
+
+class TestXmlVocabulary:
+    """XML column and system_info sources teach the same key vocabulary as JSON keys."""
+
+    def test_xml_sources_learned(self, tmp_path: Path) -> None:
+        path = tmp_path / "vendor" / "m1" / "parser.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            "downstream:\n  format: xml\n  tables:\n    - resource: '10'\n      root_element: downstream_table\n"
+            "      child_element: downstream\n      columns:\n        - {source: pow, field: power, type: float}\n"
+            "system_info:\n  sources:\n    - format: xml\n      resource: '1'\n      root_element: GlobalSettings\n"
+            "      fields:\n        - {source: SwVersion, field: software_version, type: string}\n",
+            encoding="utf-8",
+        )
+        fleet = scan_fleet(tmp_path)
+        assert fleet.channel_keys == {"pow": {"power": ["vendor/m1"]}}
+        assert fleet.system_info_json_keys["swversion"] == ("software_version", 1)
+        assert fleet.system_info_json_key_types["swversion"] == {"string": ["vendor/m1"]}

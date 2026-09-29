@@ -87,6 +87,20 @@ def mapping_to_json_channel(mapping: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def mapping_to_xml_column(mapping: dict[str, Any]) -> dict[str, Any]:
+    """Convert analysis FieldMapping to an XML table column; the tag is the source."""
+    result: dict[str, Any] = {
+        "source": mapping.get("key", ""),
+        "field": mapping["field"],
+        "type": normalize_type(mapping["type"]),
+    }
+    if mapping.get("map"):
+        result["map"] = mapping["map"]
+    if mapping.get("scale") is not None:
+        result["scale"] = mapping["scale"]
+    return result
+
+
 def section_mappings(section: dict[str, Any]) -> list[dict[str, Any]]:
     """Every mapping of an analysis section: its own, then each array's."""
     mappings: list[dict[str, Any]] = list(section.get("mappings", []))

@@ -104,7 +104,7 @@ class TestEveryChannelArray:
     def test_fleet_measurement_key_selects_array(self) -> None:
         """A measurement key only the fleet maps still makes a channel array."""
         body = json.dumps({"rows": [{"num": 1, "FreqD": 507000000}]})
-        fleet = FleetPatterns(channel_json_keys={"freqd": {"frequency": ["vendor/a"]}})
+        fleet = FleetPatterns(channel_keys={"freqd": {"frequency": ["vendor/a"]}})
         without, _ = _sections([_entry("/api/downstream", body)])
         learned, _ = _sections([_entry("/api/downstream", body)], fleet)
         assert "downstream" not in without
@@ -116,7 +116,7 @@ class TestEveryChannelArray:
             "dschannel": [{"channelID": 1, "frequency": 1, "status": "Locked"}],
             "ofdmchannel": [{"ofdmID": 33, "powerLevel": 1.5, "status": "1"}],
         }
-        fleet = FleetPatterns(channel_json_keys={"status": {"lock_status": ["vendor/a"], "status": ["vendor/b"]}})
+        fleet = FleetPatterns(channel_keys={"status": {"lock_status": ["vendor/a"], "status": ["vendor/b"]}})
         ambiguities: list[Ambiguity] = []
         detect_sections(
             [_entry("/cgi-bin/status", json.dumps(status))], "http", [], [], fleet=fleet, ambiguities=ambiguities

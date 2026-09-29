@@ -72,6 +72,10 @@ class DetectedLabelPair:
     element_id: str
 
 
+# A CBN getter answer read as records (ONBOARDING_SPEC § `xml` format).
+XML_CONTENT_TYPE = "application/xml"
+
+
 @dataclass
 class PageAnalysis:
     """All extractable content found on a single data page."""

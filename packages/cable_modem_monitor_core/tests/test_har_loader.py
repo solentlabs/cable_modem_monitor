@@ -533,3 +533,54 @@ def test_jsonrpc_only_when_told(tmp_path: Path) -> None:
     """Without the transport, JSON-RPC calls read as HTTP: firmware plumbing never switches the shape."""
     resources = build_resource_dict(str(_har_file(tmp_path, [_rpc_entry("A", _ONE)])))
     assert set(resources) == {"/cgi-bin/router.php"}
+
+
+def _cbn_entry(fun: str, body: str, path: str = "/xml/getter.xml") -> dict[str, Any]:
+    """A CBN call (token first, a fun code) and its XML answer, as a HAR entry."""
+    return {
+        "request": {"url": f"http://192.168.100.1{path}", "method": "POST", "postData": {"text": f"token=T&fun={fun}"}},
+        "response": {"status": 200, "content": {"mimeType": "text/xml", "text": body}},
+    }
+
+
+_DS = "<downstream_table><downstream><freq>1</freq></downstream></downstream_table>"
+_DS2 = "<downstream_table><downstream><freq>2</freq></downstream></downstream_table>"
+
+# =============================================================================
+# CBN resource test data
+# =============================================================================
+#
+# ┌────────────────────────────────────────┬──────────────────────┬──────────────────────────┐
+# │ calls (fun → body)                     │ resources (root tag) │ description              │
+# ├────────────────────────────────────────┼──────────────────────┼──────────────────────────┤
+# │ getter 10 → table                      │ 10: table, freq 1    │ keyed by fun             │
+# │ getter 10 → table, getter 10 → table 2 │ 10: freq 2           │ later answer wins        │
+# │ getter 10 → table, getter 10 → empty   │ 10: freq 1           │ unparseable is skipped   │
+# │ setter 8 → <setter/>                   │ none                 │ only the getter is data  │
+# └────────────────────────────────────────┴──────────────────────┴──────────────────────────┘
+#
+# fmt: off
+CBN_RESOURCE_CASES: list[tuple[list[dict[str, Any]], dict[str, str], str]] = [
+    # (calls,                                                        fun → first freq, id)
+    ([_cbn_entry("10", _DS)],                                        {"10": "1"},      "keyed-by-fun"),
+    ([_cbn_entry("10", _DS), _cbn_entry("10", _DS2)],                {"10": "2"},      "later-answer-wins"),
+    ([_cbn_entry("10", _DS), _cbn_entry("10", "")],                  {"10": "1"},      "unparseable-skipped"),
+    ([_cbn_entry("8", "<setter></setter>", path="/xml/setter.xml")], {},               "getter-only"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("calls,expected", [c[:2] for c in CBN_RESOURCE_CASES], ids=[c[2] for c in CBN_RESOURCE_CASES])
+def test_cbn_resources(tmp_path: Path, calls: list[dict[str, Any]], expected: dict[str, str]) -> None:
+    """Each getter fun code's parsed XML root, as the CBN loader hands it to the parser."""
+    resources = build_resource_dict(str(_har_file(tmp_path, calls)), transport="cbn")
+    assert {fun: root.findtext("downstream/freq") for fun, root in resources.items()} == expected
+
+
+def test_cbn_getter_endpoint_is_configurable(tmp_path: Path) -> None:
+    """A firmware with its own getter path is read from that path."""
+    calls = [_cbn_entry("10", _DS, path="/cgi/get.xml")]
+    assert set(build_resource_dict(str(_har_file(tmp_path, calls)), transport="cbn")) == set()
+    assert set(
+        build_resource_dict(str(_har_file(tmp_path, calls)), transport="cbn", getter_endpoint="/cgi/get.xml")
+    ) == {"10"}

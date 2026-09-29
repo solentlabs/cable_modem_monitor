@@ -17,6 +17,7 @@ from .mappings import (
     mapping_to_column,
     mapping_to_json_channel,
     mapping_to_row,
+    mapping_to_xml_column,
     section_mappings,
 )
 from .system_info import transform_system_info
@@ -82,6 +83,8 @@ def _transform_channel_section(section: dict[str, Any]) -> dict[str, Any] | None
         return _transform_javascript_json(section)
     if fmt == "hnap":
         return _transform_hnap(section)
+    if fmt == "xml":
+        return _transform_xml(section)
     if fmt == "json":
         return _transform_json(section)
 
@@ -276,6 +279,34 @@ def _json_array(entry: dict[str, Any]) -> dict[str, Any]:
     if entry.get("filter"):
         result["filter"] = entry["filter"]
 
+    return result
+
+
+def _transform_xml(section: dict[str, Any]) -> dict[str, Any]:
+    """Transform XML format from analysis to parser.yaml structure: one table per channel array."""
+    entries = section["arrays"] if section.get("arrays") else [section]
+    return {"format": "xml", "tables": [_xml_table(entry, section.get("resource", "")) for entry in entries]}
+
+
+def _xml_table(entry: dict[str, Any], resource: str) -> dict[str, Any]:
+    """One array's table: the fun code, the parent and repeated child tags, and its columns."""
+    # The array lives at root.child: the child repeats inside its parent element.
+    *parents, child = entry.get("array_path", "").split(".")
+    columns = [mapping_to_xml_column(m) for m in entry.get("mappings", [])]
+    ct = entry.get("channel_type")
+    if ct and "key" in ct:
+        # A channel-type tag is a mapped column, as a JSON key is a mapped field.
+        columns = [c for c in columns if c["field"] != "channel_type"]
+        columns.append({"source": ct["key"], "field": "channel_type", "type": "string", "map": ct["map"]})
+        ct = None
+    result: dict[str, Any] = {
+        "resource": entry.get("resource", resource),
+        "root_element": parents[-1] if parents else child,
+        "child_element": child,
+        "columns": columns,
+    }
+    if ct:
+        result["channel_type"] = ct
     return result
 
 

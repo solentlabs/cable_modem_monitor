@@ -14,6 +14,8 @@ from collections import Counter
 from typing import Any
 from urllib.parse import parse_qsl
 
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import FormCbnAuth
+
 from ...validation.har_utils import lower_headers, path_from_url
 from .patterns import is_password_field_name
 from .types import AuthDetail
@@ -64,6 +66,13 @@ def detect_cbn_auth(entries: list[dict[str, Any]], warnings: list[str]) -> AuthD
     if "Username" in params:
         fields["username_value"] = params["Username"]
     return AuthDetail(strategy="form_cbn", fields=fields, confidence="high")
+
+
+def cbn_getter_endpoint(entries: list[dict[str, Any]]) -> str:
+    """The getter path of a CBN capture, else the ``form_cbn`` default."""
+    login = next((entry for entry in entries if cbn_login_params(entry["request"]) is not None), None)
+    setter = path_from_url(login["request"].get("url", "")) if login else ""
+    return _getter_endpoint(entries, setter) or FormCbnAuth.model_fields["getter_endpoint"].default
 
 
 def _getter_endpoint(entries: list[dict[str, Any]], setter: str) -> str:

@@ -50,7 +50,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
     system_info_ids: dict[str, tuple[str, int]] = {}
     system_info_json_keys: dict[str, tuple[str, int]] = {}
     system_info_json_key_types: dict[str, dict[str, list[str]]] = {}
-    channel_json_keys: dict[str, dict[str, list[str]]] = {}
+    channel_keys: dict[str, dict[str, list[str]]] = {}
     delimiters: set[str] = set()
     channel_type_values: set[str] = set()
     aggregate_fields: list[tuple[str, str]] = []
@@ -76,7 +76,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
         _extract_system_info_ids(data, system_info_ids)
         entry = parser_path.parent.relative_to(catalog_path).as_posix()
         _extract_system_info_json_keys(data, entry, system_info_json_keys, system_info_json_key_types)
-        _extract_channel_json_keys(data, entry, channel_json_keys)
+        _extract_channel_keys(data, entry, channel_keys)
         _extract_delimiters(data, delimiters)
         _extract_channel_type_values(data, channel_type_values)
         _extract_aggregates(data, aggregate_fields, seen_aggregates)
@@ -92,7 +92,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
         _extract_confirmed_config_values(catalog_path, modem_yaml_path, confirmed_config_values)
     for values in (
         *confirmed_config_values.values(),
-        *channel_json_keys.values(),
+        *channel_keys.values(),
         *system_info_json_key_types.values(),
     ):
         for entries in values.values():
@@ -104,7 +104,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
         system_info_ids=system_info_ids,
         system_info_json_keys=system_info_json_keys,
         system_info_json_key_types=system_info_json_key_types,
-        channel_json_keys=channel_json_keys,
+        channel_keys=channel_keys,
         delimiters=delimiters,
         channel_type_values=channel_type_values,
         aggregate_fields=aggregate_fields,
@@ -361,8 +361,8 @@ def _extract_system_info_json_keys(
     types: dict[str, dict[str, list[str]]],
 ) -> None:
     """Extract JSON key → (field, tier), and each declared type with its entries, from system_info ``key`` fields."""
-    for field_def in _iter_system_info_fields(data):
-        key = field_def.get("key")
+    for field_def in _iter_system_info_fields(data) + _iter_xml_system_info_fields(data):
+        key = field_def.get("key") or field_def.get("xml_source")
         field_name = field_def.get("field")
         if isinstance(key, str) and isinstance(field_name, str) and key.strip() and field_name.strip():
             normalized = key.strip().lower()
@@ -375,21 +375,23 @@ def _extract_system_info_json_keys(
                     entries.append(entry)
 
 
-def _extract_channel_json_keys(
+def _extract_channel_keys(
     data: dict[str, object],
     entry: str,
     result: dict[str, dict[str, list[str]]],
 ) -> None:
-    """Record each channel JSON key's field, and the entry declaring it, once per meaning."""
+    """Record each channel key's field (a JSON key or XML column source), and the entry declaring it."""
     for direction in ("downstream", "upstream"):
         section = data.get(direction)
-        if not isinstance(section, dict) or section.get("format") not in ("json", "javascript_json"):
+        if not isinstance(section, dict) or section.get("format") not in ("json", "javascript_json", "xml"):
             continue
-        # Flat form holds its list on the section, arrays form on each array;
-        # json names the list fields, javascript_json names it mappings.
-        for holder in [section, *_dict_items(section.get("arrays"))]:
-            for mapping in _dict_items(holder.get("fields")) + _dict_items(holder.get("mappings")):
-                key = mapping.get("key")
+        # Flat form holds its list on the section, arrays form on each array,
+        # xml on each table; json names the list fields, javascript_json
+        # mappings, xml columns (keyed by source).
+        holders = [section, *_dict_items(section.get("arrays")), *_dict_items(section.get("tables"))]
+        for holder in holders:
+            for mapping in [m for name in ("fields", "mappings", "columns") for m in _dict_items(holder.get(name))]:
+                key = mapping.get("key") or mapping.get("source")
                 field_name = mapping.get("field")
                 if isinstance(key, str) and isinstance(field_name, str) and key.strip() and field_name.strip():
                     entries = result.setdefault(key.strip().lower(), {}).setdefault(field_name.strip(), [])
@@ -419,6 +421,18 @@ def _iter_system_info_fields(
         for function in _dict_items(source.get("functions")):
             fields.extend(_dict_items(function.get("fields")))
     return fields
+
+
+def _iter_xml_system_info_fields(data: dict[str, object]) -> list[dict[str, object]]:
+    """XML system_info fields, their tag renamed ``xml_source`` so HNAP ``source`` names never teach JSON keys."""
+    system_info = data.get("system_info")
+    sources = system_info.get("sources") if isinstance(system_info, dict) else None
+    return [
+        {**field_def, "xml_source": field_def.get("source")}
+        for source in _dict_items(sources)
+        if source.get("format") == "xml"
+        for field_def in _dict_items(source.get("fields"))
+    ]
 
 
 def _dict_items(value: object) -> list[dict[str, object]]:

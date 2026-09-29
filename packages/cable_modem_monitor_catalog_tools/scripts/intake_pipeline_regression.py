@@ -208,7 +208,7 @@ def _run_generate(
 def _run_golden_comparison(
     har_path: Path,
     parser_yaml: str,
-    transport: str,
+    analysis_data: dict[str, Any],
     result: ModemResult,
 ) -> None:
     """Generate a golden file from the generated parser config and compare."""
@@ -216,7 +216,11 @@ def _run_golden_comparison(
         generate_golden_file,
     )
 
-    golden_result = generate_golden_file(str(har_path), parser_yaml, transport=transport)
+    # A CBN capture's data comes from the getter the auth analysis found.
+    getter = (analysis_data.get("auth") or {}).get("fields", {}).get("getter_endpoint", "/xml/getter.xml")
+    golden_result = generate_golden_file(
+        str(har_path), parser_yaml, transport=analysis_data["transport"], getter_endpoint=getter
+    )
     if golden_result.errors:
         result.stage_failed = "generate_golden_file"
         result.error = "; ".join(golden_result.errors)
@@ -291,7 +295,7 @@ def _run_pipeline(
 
     # Golden file comparison
     if parser_yaml:
-        _run_golden_comparison(har_path, parser_yaml, analysis_data["transport"], result)
+        _run_golden_comparison(har_path, parser_yaml, analysis_data, result)
     else:
         result.stage_failed = "generate_golden_file"
         result.error = "no parser.yaml generated"

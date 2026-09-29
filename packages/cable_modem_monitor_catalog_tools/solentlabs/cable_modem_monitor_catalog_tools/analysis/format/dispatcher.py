@@ -19,6 +19,7 @@ from ..mapping.channel_keys import address_key_ambiguities
 from ..mapping.system_info import detect_system_info
 from ..mapping.types import SectionDetail
 from ..types import FleetPatterns
+from .cbn import cbn_pages
 from .hnap import detect_hnap_sections
 from .http import (
     analyze_page,
@@ -32,7 +33,7 @@ from .table_analysis import (
     detect_table_selector,
     is_channel_table,
 )
-from .types import PageAnalysis
+from .types import XML_CONTENT_TYPE, PageAnalysis
 
 # extract_section_mappings is imported inside the _assemble_* helpers
 # below, not here. format and mapping are mutually dependent packages:
@@ -57,7 +58,7 @@ def detect_sections(
 
     Args:
         entries: HAR ``log.entries`` list.
-        transport: Detected transport ("http", "hnap" or "jsonrpc").
+        transport: Detected transport ("http", "hnap", "jsonrpc" or "cbn").
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
         fleet: Optional fleet patterns for augmented detection.
@@ -72,6 +73,9 @@ def detect_sections(
 
     if transport == "jsonrpc":
         return _sections_from_pages(jsonrpc_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
+
+    if transport == "cbn":
+        return _sections_from_pages(cbn_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
 
     return _detect_http_sections(entries, warnings, hard_stops, fleet=fleet, ambiguities=ambiguities)
 
@@ -329,22 +333,9 @@ def _assemble_json_sections(
 
     by_direction: dict[str, list[SectionDetail]] = {}
     for array in extract_json_arrays(page.json_data, page.resource, warnings, fleet=fleet):
-        direction = _direction_from_resource(page.resource)
-        if direction == "unknown":
-            direction = _direction_from_array_path(array.array_path)
-        if direction == "unknown":
-            direction = _direction_from_json(page.json_data)
-        if direction == "unknown":
-            warnings.append(
-                f"{WARNING_PREFIX} Cannot determine direction for JSON array '{array.array_path}' "
-                f"on {page.resource}. Manual review required."
-            )
-            continue
-        # DOCSIS 3.0 JSON APIs rarely embed channel type; the path names
-        # OFDM/OFDMA arrays, and the direction's default covers the rest.
-        if array.channel_type is None:
-            array.channel_type = _channel_type_from_array_path(array.array_path) or detect_channel_type_fixed(direction)
-        by_direction.setdefault(direction, []).append(array)
+        direction = _place_array(page, array, warnings)
+        if direction != "unknown":
+            by_direction.setdefault(direction, []).append(array)
 
     for direction, arrays in by_direction.items():
         if direction in sections:
@@ -352,6 +343,28 @@ def _assemble_json_sections(
         sections[direction] = arrays[0].to_dict() if len(arrays) == 1 else _arrays_section(arrays)
         for array in arrays:
             address_key_ambiguities(array, direction, ambiguities)
+
+
+def _place_array(page: PageAnalysis, array: SectionDetail, warnings: list[str]) -> str:
+    """The array's direction, with its format and channel type set; "unknown" is warned."""
+    direction = _direction_from_resource(page.resource)
+    if direction == "unknown":
+        direction = _direction_from_array_path(array.array_path)
+    if direction == "unknown" and page.json_data is not None:
+        direction = _direction_from_json(page.json_data)
+    if direction == "unknown":
+        warnings.append(
+            f"{WARNING_PREFIX} Cannot determine direction for JSON array '{array.array_path}' "
+            f"on {page.resource}. Manual review required."
+        )
+        return direction
+    if page.content_type == XML_CONTENT_TYPE:
+        array.format = "xml"
+    # DOCSIS 3.0 JSON APIs rarely embed channel type; the path names
+    # OFDM/OFDMA arrays, and the direction's default covers the rest.
+    if array.channel_type is None:
+        array.channel_type = _channel_type_from_array_path(array.array_path) or detect_channel_type_fixed(direction)
+    return direction
 
 
 def _arrays_section(arrays: list[SectionDetail]) -> dict[str, Any]:

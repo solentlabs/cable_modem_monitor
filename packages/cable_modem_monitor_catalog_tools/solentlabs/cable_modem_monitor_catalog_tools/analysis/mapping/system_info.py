@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ...validation.har_utils import WARNING_PREFIX
-from ..format.types import DetectedLabelPair, PageAnalysis
+from ..format.types import XML_CONTENT_TYPE, DetectedLabelPair, PageAnalysis
 from ..types import FleetPatterns
 from .field_shape import FieldShapeVocabulary, field_shape
 from .service_flows import detect_service_flow_aggregates
@@ -193,11 +193,13 @@ def _detect_page_system_info(
     # aggregates alone are enough to make the source worth emitting.
     if page.json_data is not None:
         fields = _match_json_system_info(page.json_data, json_map, vocabulary, learned=learned, resource=page.resource)
-        aggregates = detect_service_flow_aggregates(page.json_data)
+        is_xml = page.content_type == XML_CONTENT_TYPE
+        # XML declares aggregates by child element, not array path; none are read from it yet.
+        aggregates = [] if is_xml else detect_service_flow_aggregates(page.json_data)
         if fields or aggregates:
             sources.append(
                 SystemInfoSourceDetail(
-                    format="json",
+                    format="xml" if is_xml else "json",
                     resource=page.resource,
                     fields=fields,
                     child_aggregates=aggregates,
