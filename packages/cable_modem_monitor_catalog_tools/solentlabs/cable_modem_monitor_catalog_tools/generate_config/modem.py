@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import FormCbnAuth
+
 
 def build_modem_dict(analysis: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
     """Assemble a modem.yaml dict from analysis output and metadata."""
@@ -234,6 +236,13 @@ def _clean_auth_defaults(block: dict[str, Any]) -> None:
     Modifies the dict in place. Keeps the generated YAML clean by
     omitting values the model would supply anyway.
     """
+    if block.get("strategy") == "form_cbn":
+        # Core's model is the one home for these defaults.
+        for key, model_field in FormCbnAuth.model_fields.items():
+            if key != "strategy" and block.get(key) == model_field.default:
+                block.pop(key)
+        return
+
     for key, default_value in _AUTH_DEFAULTS:
         if block.get(key) == default_value:
             block.pop(key, None)

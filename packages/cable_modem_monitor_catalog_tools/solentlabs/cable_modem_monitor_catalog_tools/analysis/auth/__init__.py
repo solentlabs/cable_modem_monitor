@@ -1,7 +1,7 @@
 """Phase 2 - Auth strategy detection.
 
 Public API: ``detect_auth()`` dispatches to transport-specific modules
-(``hnap``, ``jsonrpc``, ``http``).
+(``hnap``, ``jsonrpc``, ``cbn``, ``http``).
 
 Per docs/ONBOARDING_SPEC.md Phase 2.
 """
@@ -12,6 +12,7 @@ from typing import Any
 
 from ..ambiguity import Ambiguity
 from ..types import CoreGap
+from .cbn import detect_cbn_auth
 from .hnap import detect_hnap_auth
 from .http import detect_http_auth
 from .jsonrpc import detect_jsonrpc_auth
@@ -35,11 +36,12 @@ def detect_auth(
     - HNAP: always ``hnap`` strategy, detect hmac_algorithm
     - JSON-RPC: always ``jsonrpc``; fields from the login call, error
       codes as ambiguities
+    - CBN: always ``form_cbn``; fields from the login call
     - HTTP: walks the Phase 2 decision tree
 
     Args:
         entries: HAR ``log.entries`` list.
-        transport: Detected transport (``http``, ``hnap`` or ``jsonrpc``).
+        transport: Detected transport (``http``, ``hnap``, ``jsonrpc`` or ``cbn``).
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
         core_gaps: Mutable list to append core gap items to.
@@ -56,4 +58,6 @@ def detect_auth(
         return detect_hnap_auth(entries, warnings)
     if transport == "jsonrpc":
         return detect_jsonrpc_auth(entries, warnings, ambiguities)
+    if transport == "cbn":
+        return detect_cbn_auth(entries, warnings)
     return detect_http_auth(entries, warnings, hard_stops, core_gaps)

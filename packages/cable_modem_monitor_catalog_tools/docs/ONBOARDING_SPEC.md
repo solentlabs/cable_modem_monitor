@@ -327,6 +327,10 @@ For each entry in HAR:
     │   object whose params[0] carries a password-shaped key)?
     │   └── YES → transport: jsonrpc (checked after HNAP, over all entries)
     │
+    ├── Request body is a CBN login (form-encoded, `token` first, a
+    │   `fun` code, and a password-shaped field)?
+    │   └── YES → transport: cbn (checked after JSON-RPC, over all entries)
+    │
     └── None of the above → transport: http
 ```
 
@@ -346,6 +350,13 @@ calls, not pages: the login gives auth, each other call's `result` is a
 JSON page named by its method, and restart is a candidate list. The
 HTTP tree is never run over the calls; it misreads the login as
 `form_pbkdf2`.
+
+**The login decides CBN too.** Compal firmware sends every call as a
+form-encoded POST whose first parameter is the rotating `token` and
+whose `fun` code names the function
+([AUTH_CBN_SPEC.md](../../cable_modem_monitor_core/docs/AUTH_CBN_SPEC.md)).
+The call that also carries a password-shaped field is the login, and
+it makes the transport `cbn`.
 
 **Everything else is `http`.** This includes modems with HTML pages,
 JSON APIs, or any combination. The data format (HTML tables, JSON
@@ -426,6 +437,23 @@ lockout. Analysis lists candidates and never picks one:
 
 Each candidate cites the comparison and its i18n text, English locale
 first.
+
+#### CBN transport
+
+Auth is always `form_cbn`. Its fields come from the login call, the
+attempt whose body says `successful` when one does, else the first:
+
+| Field | Evidence |
+|-------|----------|
+| `login_fun` | The login's `fun` code |
+| `setter_endpoint` | The login request's URL path |
+| `getter_endpoint` | The path most other `token`-first `fun` calls go to |
+| `login_page` | The login request's `Referer` path |
+| `session_cookie_name` | The request cookie whose value is the login's `token` |
+| `username_value` | The login's `Username` value |
+
+A field absent from the capture keeps its model default, and
+`generate_config` omits every field equal to one.
 
 #### HTTP transport
 

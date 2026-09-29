@@ -1,9 +1,9 @@
 """Phase 1 - Transport detection.
 
 Scans HAR entries for protocol markers. An HNAP marker makes the
-transport ``hnap``; a JSON-RPC 2.0 login call makes it ``jsonrpc``;
-otherwise ``http``. Confidence is always ``high``: each marker is a
-protocol member, not a heuristic.
+transport ``hnap``; a JSON-RPC 2.0 login call makes it ``jsonrpc``; a
+CBN login call makes it ``cbn``; otherwise ``http``. Confidence is
+always ``high``: each marker is a protocol member, not a heuristic.
 
 Per docs/ONBOARDING_SPEC.md Phase 1.
 """
@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..validation.har_utils import is_hnap_request, lower_headers
+from .auth.cbn import cbn_login_params
 from .auth.jsonrpc import jsonrpc_login_credentials
 
 
@@ -33,8 +34,9 @@ class TransportResult:
         """Detect transport protocol from HAR entries.
 
         Scans all entries for HNAP markers (``/HNAP1/`` URL, ``SOAPAction``
-        header, ``HNAP_AUTH`` header), then for a JSON-RPC 2.0 login
-        call. HNAP → ``hnap``, JSON-RPC login → ``jsonrpc``, else ``http``.
+        header, ``HNAP_AUTH`` header), then for a JSON-RPC 2.0 login call,
+        then for a CBN login call. HNAP → ``hnap``, JSON-RPC login →
+        ``jsonrpc``, CBN login → ``cbn``, else ``http``.
 
         Args:
             entries: HAR ``log.entries`` list.
@@ -53,5 +55,8 @@ class TransportResult:
         # ubus plumbing) run on modems whose transport is http.
         if any(jsonrpc_login_credentials(entry["request"]) is not None for entry in entries):
             return cls(transport="jsonrpc", confidence="high")
+
+        if any(cbn_login_params(entry["request"]) is not None for entry in entries):
+            return cls(transport="cbn", confidence="high")
 
         return cls(transport="http", confidence="high")
