@@ -49,6 +49,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
     system_info_labels: dict[str, tuple[str, int]] = {}
     system_info_ids: dict[str, tuple[str, int]] = {}
     system_info_json_keys: dict[str, tuple[str, int]] = {}
+    system_info_json_key_types: dict[str, dict[str, list[str]]] = {}
     channel_json_keys: dict[str, dict[str, list[str]]] = {}
     delimiters: set[str] = set()
     channel_type_values: set[str] = set()
@@ -73,8 +74,9 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
         _extract_selectors(data, selector_directions)
         _extract_system_info_labels(data, system_info_labels)
         _extract_system_info_ids(data, system_info_ids)
-        _extract_system_info_json_keys(data, system_info_json_keys)
-        _extract_channel_json_keys(data, parser_path.parent.relative_to(catalog_path).as_posix(), channel_json_keys)
+        entry = parser_path.parent.relative_to(catalog_path).as_posix()
+        _extract_system_info_json_keys(data, entry, system_info_json_keys, system_info_json_key_types)
+        _extract_channel_json_keys(data, entry, channel_json_keys)
         _extract_delimiters(data, delimiters)
         _extract_channel_type_values(data, channel_type_values)
         _extract_aggregates(data, aggregate_fields, seen_aggregates)
@@ -88,7 +90,11 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
         if exclude is not None and modem_yaml_path.is_relative_to(exclude):
             continue
         _extract_confirmed_config_values(catalog_path, modem_yaml_path, confirmed_config_values)
-    for values in (*confirmed_config_values.values(), *channel_json_keys.values()):
+    for values in (
+        *confirmed_config_values.values(),
+        *channel_json_keys.values(),
+        *system_info_json_key_types.values(),
+    ):
         for entries in values.values():
             entries.sort()
 
@@ -97,6 +103,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
         system_info_labels=system_info_labels,
         system_info_ids=system_info_ids,
         system_info_json_keys=system_info_json_keys,
+        system_info_json_key_types=system_info_json_key_types,
         channel_json_keys=channel_json_keys,
         delimiters=delimiters,
         channel_type_values=channel_type_values,
@@ -349,9 +356,11 @@ def _extract_system_info_ids(
 
 def _extract_system_info_json_keys(
     data: dict[str, object],
+    entry: str,
     result: dict[str, tuple[str, int]],
+    types: dict[str, dict[str, list[str]]],
 ) -> None:
-    """Extract JSON key → (field, tier) from system_info ``key`` fields."""
+    """Extract JSON key → (field, tier), and each declared type with its entries, from system_info ``key`` fields."""
     for field_def in _iter_system_info_fields(data):
         key = field_def.get("key")
         field_name = field_def.get("field")
@@ -359,6 +368,11 @@ def _extract_system_info_json_keys(
             normalized = key.strip().lower()
             if normalized not in result:
                 result[normalized] = (field_name.strip(), 1)
+            declared = field_def.get("type")
+            if isinstance(declared, str):
+                entries = types.setdefault(normalized, {}).setdefault(declared, [])
+                if entry not in entries:
+                    entries.append(entry)
 
 
 def _extract_channel_json_keys(

@@ -374,3 +374,38 @@ class TestChannelJsonKeys:
         assert scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m2").channel_json_keys == {
             "status": {"lock_status": ["vendor/m1"]},
         }
+
+
+class TestSystemInfoJsonKeyTypes:
+    """Each learned system_info JSON key records the types the fleet declares for it, and who declares them."""
+
+    @staticmethod
+    def _write(root: Path, rel: str, text: str) -> None:
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def _catalog(self, root: Path) -> None:
+        for model, key, declared in (
+            ("m1", "CMStatus", "string"),
+            ("m2", "cmstatus", "string"),
+            ("m3", "cmStatus", "integer"),
+        ):
+            self._write(
+                root,
+                f"vendor/{model}/parser.yaml",
+                f"system_info:\n  sources:\n    - format: json\n      resource: /a\n      fields:\n"
+                f"        - key: {key}\n          field: docsis_status\n          type: {declared}\n",
+            )
+
+    def test_types_indexed_with_declaring_entries(self, tmp_path: Path) -> None:
+        """Keys are lowercased; each declared type lists its entries."""
+        self._catalog(tmp_path)
+        assert scan_fleet(tmp_path).system_info_json_key_types == {
+            "cmstatus": {"string": ["vendor/m1", "vendor/m2"], "integer": ["vendor/m3"]},
+        }
+
+    def test_excluded_modem_declares_nothing(self, tmp_path: Path) -> None:
+        self._catalog(tmp_path)
+        types = scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m3").system_info_json_key_types
+        assert types == {"cmstatus": {"string": ["vendor/m1", "vendor/m2"]}}

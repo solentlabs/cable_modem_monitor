@@ -1922,6 +1922,7 @@ Core defines:
     system_info_labels: dict[str, tuple[str,int]] # label text → (field, tier)
     system_info_ids: dict[str, tuple[str,int]]    # CSS ID → (field, tier)
     system_info_json_keys: dict[str, tuple[str,int]] # JSON key → (field, tier)
+    system_info_json_key_types: dict[str, dict[str, list[str]]] # JSON key → declared type → declaring entries
     channel_json_keys: dict[str, dict[str, list[str]]] # channel JSON key → field → declaring entries
     delimiters: set[str]                          # record delimiters (HNAP/JS)
     channel_type_values: set[str]                 # modulation type strings
@@ -1941,7 +1942,7 @@ Catalog provides:
 | Phase | Baseline (Core) | Fleet augmentation (Catalog) |
 |-------|-----------------|------------------------------|
 | Table direction | Keyword matching ("downstream", "upstream") | Selector text from proven configs ("Signal Status (Codewords)" → downstream) |
-| System info labels | 17 hardcoded label→field mappings | Labels, CSS IDs, and JSON keys learned from fleet ("firmware name" → firmware_name) |
+| System info labels | 17 hardcoded label→field mappings | Labels, CSS IDs, and JSON keys learned from fleet ("firmware name" → firmware_name); a learned JSON key maps only when the captured value fits a type the fleet declares for it, and a misfit is warned with the declaring entries |
 | Channel JSON keys | Registry `json_keys`, then Tier 3 `snake_case` | Key → field from every committed `parser.yaml`; a key mapped to two fields is an [ambiguity](#ambiguities-resolve-then-proceed) |
 | Aggregate fields | Hardcoded (source_field, agg_name) pairs | Additional aggregate patterns from fleet parser.yaml files |
 | Ambiguity candidates | Evidence only | `corroborated_by` from confirmed entries' `modem.yaml` values; one corroborated candidate pre-fills the resolution |
@@ -1951,6 +1952,11 @@ maps apply first. Fleet adds entries only for labels/selectors that
 Core's baseline does not cover. This means a new modem gets the
 benefit of every previous modem's config without any manual registry
 maintenance.
+
+A value fits a declared `string` when it is text, and a declared
+`integer` or `float` when it is a number or numeric text; any value
+fits other types. A learned key whose value fits no declared type is
+left unmapped, so the field stays free for another key.
 
 **Trial parser:** After analysis, the trial parser feeds HAR response
 bodies through Core's ``ModemParserCoordinator`` with a candidate

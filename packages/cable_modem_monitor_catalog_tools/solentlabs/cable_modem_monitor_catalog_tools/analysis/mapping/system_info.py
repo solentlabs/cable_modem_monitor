@@ -9,8 +9,10 @@ Per docs/ONBOARDING_SPEC.md Phase 6 and docs/PARSING_SPEC.md system_info section
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
+from ...validation.har_utils import WARNING_PREFIX
 from ..format.types import DetectedLabelPair, PageAnalysis
 from ..types import FleetPatterns
 from .field_shape import FieldShapeVocabulary, field_shape
@@ -103,9 +105,18 @@ def detect_system_info(
     label_map, id_map, json_map = _build_merged_maps(fleet)
     vocabulary = FieldShapeVocabulary.from_fleet(fleet)
     sources: list[SystemInfoSourceDetail] = []
+    # Baseline keys apply as before; only keys the fleet taught are shape-checked.
+    learned = _LearnedKeyTypes(
+        types={
+            key: types
+            for key, types in (fleet.system_info_json_key_types if fleet else {}).items()
+            if key not in _JSON_SYSINFO_MAP
+        },
+        warnings=warnings,
+    )
 
     for page in pages:
-        _detect_page_system_info(page, label_map, id_map, json_map, sources, vocabulary)
+        _detect_page_system_info(page, label_map, id_map, json_map, sources, vocabulary, learned)
 
     if not sources:
         return None
@@ -145,6 +156,7 @@ def _detect_page_system_info(
     json_map: dict[str, tuple[str, int]],
     sources: list[SystemInfoSourceDetail],
     vocabulary: FieldShapeVocabulary | None = None,
+    learned: _LearnedKeyTypes | None = None,
 ) -> None:
     """Detect system_info sources from a single page."""
     vocabulary = vocabulary or FieldShapeVocabulary()
@@ -180,7 +192,7 @@ def _detect_page_system_info(
     # carries no scalar system_info fields, only the per-flow array, so
     # aggregates alone are enough to make the source worth emitting.
     if page.json_data is not None:
-        fields = _match_json_system_info(page.json_data, json_map, vocabulary)
+        fields = _match_json_system_info(page.json_data, json_map, vocabulary, learned=learned, resource=page.resource)
         aggregates = detect_service_flow_aggregates(page.json_data)
         if fields or aggregates:
             sources.append(
@@ -327,10 +339,53 @@ def _match_js_system_info(
 # -----------------------------------------------------------------------
 
 
+@dataclass
+class _LearnedKeyTypes:
+    """Types the fleet declares for the JSON keys it taught, and where a misfit is reported."""
+
+    types: dict[str, dict[str, list[str]]]
+    warnings: list[str]
+
+    def fits(self, key: str, value: object) -> bool:
+        """True unless the fleet taught ``key`` and ``value`` fits none of its declared types."""
+        declared = self.types.get(key)
+        return not declared or any(_fits_type(t, value) for t in declared)
+
+    def warn(self, dotted: str, key: str, field_name: str, value: object, resource: str) -> None:
+        """Report a learned key left unmapped, with the fleet evidence and the captured value."""
+        declared = self.types[key]
+        entries = ", ".join(sorted({e for es in declared.values() for e in es}))
+        self.warnings.append(
+            f"{WARNING_PREFIX} JSON key '{dotted}' on {resource} is {field_name} in {entries} "
+            f"as {' or '.join(sorted(declared))}, but the capture holds {value!r}; not mapped. "
+            f"Review which key carries {field_name}."
+        )
+
+
+def _fits_type(declared: str, value: object) -> bool:
+    """Text fits string; a number or numeric text fits integer and float; anything fits other types."""
+    if declared == "string":
+        return isinstance(value, str)
+    if declared in ("integer", "float"):
+        if isinstance(value, bool):
+            return False
+        if isinstance(value, int | float):
+            return True
+        try:
+            float(str(value))
+        except ValueError:
+            return False
+        return True
+    return True
+
+
 def _match_json_system_info(
     data: dict[str, Any],
     json_map: dict[str, tuple[str, int]] | None = None,
     vocabulary: FieldShapeVocabulary | None = None,
+    *,
+    learned: _LearnedKeyTypes | None = None,
+    resource: str = "",
 ) -> list[SystemInfoFieldDetail]:
     """Match JSON keys to system info fields."""
     vocabulary = vocabulary or FieldShapeVocabulary()
@@ -340,7 +395,7 @@ def _match_json_system_info(
     fields: list[SystemInfoFieldDetail] = []
     seen: set[str] = set()
 
-    _walk_json_for_sysinfo(data, json_map, fields, seen, "", vocabulary)
+    _walk_json_for_sysinfo(data, json_map, fields, seen, "", vocabulary, learned, resource)
 
     return fields
 
@@ -352,6 +407,8 @@ def _walk_json_for_sysinfo(
     seen: set[str],
     prefix: str,
     vocabulary: FieldShapeVocabulary,
+    learned: _LearnedKeyTypes | None = None,
+    resource: str = "",
 ) -> None:
     """Recursively walk JSON looking for system info fields."""
     for key, value in data.items():
@@ -360,6 +417,10 @@ def _walk_json_for_sysinfo(
         if normalized in json_map:
             field_name, _tier = json_map[normalized]
             if field_name not in seen and isinstance(value, str | int | float):
+                if learned is not None and not learned.fits(normalized, value):
+                    # Unmapped, not guessed: the field stays free for a key that fits.
+                    learned.warn(f"{prefix}.{key}" if prefix else key, normalized, field_name, value, resource)
+                    continue
                 seen.add(field_name)
                 field_type, field_format, field_map = field_shape(field_name, value, vocabulary)
                 fields.append(
@@ -380,4 +441,4 @@ def _walk_json_for_sysinfo(
         # Recurse into nested dicts (but not lists)
         if isinstance(value, dict):
             child_prefix = f"{prefix}.{key}" if prefix else key
-            _walk_json_for_sysinfo(value, json_map, fields, seen, child_prefix, vocabulary)
+            _walk_json_for_sysinfo(value, json_map, fields, seen, child_prefix, vocabulary, learned, resource)
