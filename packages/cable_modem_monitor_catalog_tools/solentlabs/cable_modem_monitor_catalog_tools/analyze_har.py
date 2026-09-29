@@ -110,6 +110,7 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
     warnings: list[str] = []
     hard_stops: list[str] = []
     core_gaps: list[CoreGap] = []
+    ambiguities: list[Ambiguity] = []
 
     # Phase 1: Transport
     transport_result = TransportResult.detect(entries)
@@ -129,7 +130,9 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
     actions_result = detect_actions(entries, transport_result.transport, warnings, core_gaps)
 
     # Phase 5-6: Format detection and field mapping
-    sections = detect_sections(entries, transport_result.transport, warnings, hard_stops, fleet=fleet)
+    sections = detect_sections(
+        entries, transport_result.transport, warnings, hard_stops, fleet=fleet, ambiguities=ambiguities
+    )
 
     # An unprovisioned modem serves placeholder pages, so auth analyzes
     # cleanly while sections come back empty; without this warning the
@@ -167,6 +170,7 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
         hard_stops=hard_stops,
         core_gaps=core_gaps,
         unread_resources=unread,
+        ambiguities=ambiguities,
     )
 
 
@@ -180,7 +184,7 @@ def _analyze_jsonrpc(
     ambiguities: list[Ambiguity] = []
     auth = detect_auth(entries, "jsonrpc", warnings, [], ambiguities=ambiguities)
     session = SessionDetail.detect(entries, "jsonrpc", auth.strategy, warnings)
-    sections = detect_sections(entries, "jsonrpc", warnings, [], fleet=fleet)
+    sections = detect_sections(entries, "jsonrpc", warnings, [], fleet=fleet, ambiguities=ambiguities)
     # Restart candidates exclude data sources, so they follow sections.
     ambiguities.append(restart_ambiguity(entries, sections))
     detect_uncalled_jsonrpc_methods(entries, warnings)

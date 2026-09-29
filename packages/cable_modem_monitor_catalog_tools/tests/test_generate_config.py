@@ -11,8 +11,10 @@ verify key properties of the generated output.
 
 from __future__ import annotations
 
+import copy
 import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -266,6 +268,90 @@ class TestActionsBehavior:
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         modem = yaml.safe_load(result.modem_yaml)
         assert "actions" not in modem
+
+
+# ---------------------------------------------------------------------------
+# Spot-check: channel key resolutions (parser.<section>.<key>)
+# ---------------------------------------------------------------------------
+
+_KEY_PATH = "parser.downstream.power"
+_KEY_REASON = {"value": None, "reason": "the capture shows no such meaning"}
+
+# ┌──────────────────────────┬──────────────────────────┬─────────┬──────────────────────────┐
+# │ resolution               │ power key maps to        │ valid   │ description              │
+# ├──────────────────────────┼──────────────────────────┼─────────┼──────────────────────────┤
+# │ snr                      │ snr (float)              │ yes     │ fleet meaning applied    │
+# │ lock_status              │ lock_status (lock_status)│ yes     │ type follows the field   │
+# │ power_state              │ power_state (float)      │ yes     │ new meaning keeps type   │
+# │ none, with reason        │ (key dropped)            │ yes     │ explicit none            │
+# │ unresolved               │ (key dropped)            │ yes     │ non-blocking, omitted    │
+# │ none, no reason          │ (key dropped)            │ no      │ a blank is rejected      │
+# └──────────────────────────┴──────────────────────────┴─────────┴──────────────────────────┘
+#
+# fmt: off
+KEY_RESOLUTION_CASES: list[tuple[dict[str, Any] | None, tuple[str, str] | None, bool, str]] = [
+    # (resolution,               maps_to,                          valid, id)
+    ({"value": "snr"},           ("snr", "float"),                 True,  "fleet-meaning"),
+    ({"value": "lock_status"},   ("lock_status", "lock_status"),   True,  "type-follows-field"),
+    ({"value": "power_state"},   ("power_state", "float"),         True,  "new-meaning"),
+    (_KEY_REASON,                None,                             True,  "explicit-none"),
+    (None,                       None,                             True,  "unresolved"),
+    ({"value": None},            None,                             False, "blank"),
+]
+# fmt: on
+
+
+def _with_key_ambiguity(path: str, resolution: dict[str, Any] | None) -> dict[str, Any]:
+    """The json_format fixture carrying one channel key ambiguity."""
+    fixture = load_fixture(VALID_DIR / "json_format.json")
+    fixture["_analysis"]["ambiguities"] = [
+        {
+            "field": path,
+            "blocking": False,
+            "candidates": [{"value": "power", "evidence": [], "corroborated_by": []}],
+            "resolution": resolution,
+        }
+    ]
+    return fixture
+
+
+class TestChannelKeyResolution:
+    """A resolved channel key rewrites its field before parser.yaml is built; none or unresolved drops it."""
+
+    @pytest.mark.parametrize(
+        "resolution,maps_to,valid",
+        [c[:3] for c in KEY_RESOLUTION_CASES],
+        ids=[c[3] for c in KEY_RESOLUTION_CASES],
+    )
+    def test_key_resolution(
+        self, resolution: dict[str, Any] | None, maps_to: tuple[str, str] | None, valid: bool
+    ) -> None:
+        """The resolution picks the key's field and type, or drops the key."""
+        fixture = _with_key_ambiguity(_KEY_PATH, resolution)
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid is valid, result.validation.errors
+        assert result.parser_yaml is not None
+        fields = yaml.safe_load(result.parser_yaml)["downstream"]["fields"]
+        power = [(f["field"], f["type"]) for f in fields if f["key"] == "power"]
+        assert power == ([maps_to] if maps_to else [])
+
+    def test_modem_yaml_untouched(self) -> None:
+        """A parser path never lands in modem.yaml."""
+        fixture = _with_key_ambiguity(_KEY_PATH, {"value": "snr"})
+        assert "parser" not in yaml.safe_load(generate_config(fixture["_analysis"], fixture["_metadata"]).modem_yaml)
+
+    def test_analysis_not_mutated(self) -> None:
+        """Resolving rewrites a copy; the caller's analysis sections are unchanged."""
+        fixture = _with_key_ambiguity(_KEY_PATH, {"value": "snr"})
+        before = copy.deepcopy(fixture["_analysis"]["sections"])
+        generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert fixture["_analysis"]["sections"] == before
+
+    def test_unknown_key_is_an_error(self) -> None:
+        """A path naming a key the section does not map is reported, not ignored."""
+        fixture = _with_key_ambiguity("parser.downstream.nokey", {"value": "snr"})
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert "parser.downstream.nokey: the analysis maps no such channel key" in result.validation.errors
 
 
 # ---------------------------------------------------------------------------

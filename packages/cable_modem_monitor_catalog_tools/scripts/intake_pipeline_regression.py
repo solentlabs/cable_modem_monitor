@@ -273,7 +273,7 @@ def _run_pipeline(
         return
 
     committed = _load_committed(committed_path)
-    if not _resolve_ambiguities_stage(result, analysis_data, committed):
+    if not _resolve_ambiguities_stage(result, analysis_data, committed, _load_committed(modem_dir / "parser.yaml")):
         return
 
     _grade_actions_stage(result, analysis_data, committed)
@@ -338,7 +338,7 @@ def run_modem(
 
 
 def _load_committed(committed_path: Path | None) -> dict[str, Any]:
-    """The committed modem config the HAR is graded against, or empty when there is none."""
+    """A committed config file (modem or parser) the HAR is graded against, or empty when there is none."""
     if committed_path is None or not committed_path.exists():
         return {}
     committed: dict[str, Any] = yaml.safe_load(committed_path.read_text()) or {}
@@ -349,6 +349,7 @@ def _resolve_ambiguities_stage(
     result: ModemResult,
     analysis_data: dict[str, Any],
     committed: dict[str, Any],
+    committed_parser: dict[str, Any],
 ) -> bool:
     """Play the LLM's part: resolve ambiguities from the committed config, among the tool's candidates.
 
@@ -357,7 +358,7 @@ def _resolve_ambiguities_stage(
     """
     if not committed or not analysis_data.get("ambiguities"):
         return True
-    grades, failures = resolve_from_committed(analysis_data, committed)
+    grades, failures = resolve_from_committed(analysis_data, committed, committed_parser)
     result.grades["ambiguities"] = grades
     if failures:
         result.stage_failed = "resolve_ambiguities"
@@ -381,7 +382,8 @@ def _grade_actions_stage(
     if not committed:
         return
     resolved: dict[str, Any] = {"transport": analysis_data.get("transport")}
-    apply_resolutions(analysis_data, resolved, [])
+    # Actions only: no sections, so channel key resolutions have nothing to rewrite.
+    apply_resolutions(analysis_data, resolved, None, [])
     type_resolved_actions(resolved)
     detected = {**(analysis_data.get("actions") or {}), **resolved.get("actions", {})}
     result.grades["actions"] = grade_actions(detected, committed.get("actions"))

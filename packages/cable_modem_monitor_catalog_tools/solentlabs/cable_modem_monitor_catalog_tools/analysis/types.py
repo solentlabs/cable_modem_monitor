@@ -49,6 +49,10 @@ class FleetPatterns:
         system_info_json_keys: Normalized JSON keys mapped to
             ``(canonical_field, tier)``. Built from ``key`` fields in
             JSON-format system_info sources across the fleet.
+        channel_json_keys: Normalized channel JSON key mapped to each
+            field committed ``json`` and ``javascript_json`` sections
+            declare for it, and the entries that declare it. A key with
+            two fields is an ambiguity (ONBOARDING_SPEC § Ambiguities).
         delimiters: Record/value delimiters observed in the fleet's
             HNAP and JavaScript parser configs.
         channel_type_values: Modulation/channel type strings observed
@@ -81,6 +85,7 @@ class FleetPatterns:
     system_info_labels: dict[str, tuple[str, int]] = field(default_factory=dict)
     system_info_ids: dict[str, tuple[str, int]] = field(default_factory=dict)
     system_info_json_keys: dict[str, tuple[str, int]] = field(default_factory=dict)
+    channel_json_keys: dict[str, dict[str, list[str]]] = field(default_factory=dict)
     delimiters: set[str] = field(default_factory=set)
     channel_type_values: set[str] = field(default_factory=set)
     aggregate_fields: list[tuple[str, str]] = field(default_factory=list)

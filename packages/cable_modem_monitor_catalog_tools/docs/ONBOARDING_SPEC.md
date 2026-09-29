@@ -960,7 +960,10 @@ section output for config generation.
 **`json` format:** Examine JSON response structure to determine:
 
 - `array_path` (dot-notation path to channel array)
-- JSON key names → canonical field names
+- JSON key names → canonical field names: the baseline registry first,
+  then the meaning committed `parser.yaml` files declare for the key.
+  When they disagree, the key is an [ambiguity](#ambiguities-resolve-then-proceed);
+  a key none declares falls to Tier 3.
 - `fallback_key` if the modem uses non-standard key names
 
 For `system_info` fields, emit the container and the key **separately** —
@@ -1503,6 +1506,20 @@ reviewed. Entries awaiting verification never corroborate, so an
 unconfirmed intake teaches nothing: patterns come from confirmed
 modems only ([MODEM_INTAKE_WORKFLOW.md § Step 4](MODEM_INTAKE_WORKFLOW.md#step-4-analyze-har)).
 
+**Channel key meanings.** A JSON channel key the baseline registry does
+not map, and that committed `parser.yaml` files map to different
+fields, is a non-blocking ambiguity at `parser.<section>.<key>` (for
+example `parser.downstream.status`). Each fleet meaning is a candidate;
+its evidence is every entry that declares it, plus the capture's values
+for the key. Key vocabulary is wire evidence, so every committed entry
+teaches it, confirmed or not, and `corroborated_by` stays empty. The
+resolution is a field name: a fleet meaning, or a new one with a
+reason. It replaces the key's field in the analysis section before
+`parser.yaml` is built; an explicit none or an unresolved ambiguity
+drops the key. A meaning that needs more than a field name, such as
+arithmetic across keys, goes to [parser.py](#parserpy-decision), or to
+a [core gap](#analyze_har) when Core should handle it for every modem.
+
 ### Confidence annotations
 
 The generated modem.yaml should include comments marking fields with
@@ -1716,8 +1733,9 @@ Does **not** write files — returns content for the LLM to review and
 place. If validation fails, returns errors so the LLM can fix and retry.
 
 Resolved [ambiguities](#ambiguities-resolve-then-proceed) are written at
-their paths before validation. On `jsonrpc` a resolution writes only
-`actions.restart.method`, so the action takes `type: jsonrpc`, the
+their paths before validation; a `parser.` path is applied to the
+analysis section before `parser.yaml` is built. On `jsonrpc` an action
+resolution writes only `actions.restart.method`, so the action takes `type: jsonrpc`, the
 transport's one action type.
 
 ### `generate_golden_file`
@@ -1891,6 +1909,7 @@ Core defines:
     system_info_labels: dict[str, tuple[str,int]] # label text → (field, tier)
     system_info_ids: dict[str, tuple[str,int]]    # CSS ID → (field, tier)
     system_info_json_keys: dict[str, tuple[str,int]] # JSON key → (field, tier)
+    channel_json_keys: dict[str, dict[str, list[str]]] # channel JSON key → field → declaring entries
     delimiters: set[str]                          # record delimiters (HNAP/JS)
     channel_type_values: set[str]                 # modulation type strings
     aggregate_fields: list[tuple[str,str]]        # (source_field, agg_name)
@@ -1910,6 +1929,7 @@ Catalog provides:
 |-------|-----------------|------------------------------|
 | Table direction | Keyword matching ("downstream", "upstream") | Selector text from proven configs ("Signal Status (Codewords)" → downstream) |
 | System info labels | 17 hardcoded label→field mappings | Labels, CSS IDs, and JSON keys learned from fleet ("firmware name" → firmware_name) |
+| Channel JSON keys | Registry `json_keys`, then Tier 3 `snake_case` | Key → field from every committed `parser.yaml`; a key mapped to two fields is an [ambiguity](#ambiguities-resolve-then-proceed) |
 | Aggregate fields | Hardcoded (source_field, agg_name) pairs | Additional aggregate patterns from fleet parser.yaml files |
 | Ambiguity candidates | Evidence only | `corroborated_by` from confirmed entries' `modem.yaml` values; one corroborated candidate pre-fills the resolution |
 

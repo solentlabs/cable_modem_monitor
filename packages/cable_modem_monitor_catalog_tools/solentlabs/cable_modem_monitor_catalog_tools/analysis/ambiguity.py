@@ -75,3 +75,22 @@ def corroborate(ambiguities: list[Ambiguity], confirmed_config_values: dict[str,
         # Still reviewed: fleet evidence narrows the judgment, the user confirms it.
         if ambiguity.resolution is None and len(corroborated) == 1:
             ambiguity.resolution = {"value": corroborated[0].value, "source": "fleet"}
+
+
+# A channel key's meaning lives in parser.yaml, not modem.yaml; this prefix
+# addresses it (ONBOARDING_SPEC § Ambiguities, Channel key meanings).
+PARSER_PATH_PREFIX = "parser."
+
+
+def parser_path(section: str, key: str) -> str:
+    """The ambiguity path for a channel JSON key in a parser.yaml section."""
+    return f"{PARSER_PATH_PREFIX}{section}.{key}"
+
+
+def split_parser_path(path: str) -> tuple[str, str] | None:
+    """The (section, key) a parser path names, or None for a modem.yaml path."""
+    if not path.startswith(PARSER_PATH_PREFIX):
+        return None
+    # The key is the rest of the path, so a dotted wire key survives.
+    section, _, key = path[len(PARSER_PATH_PREFIX) :].partition(".")
+    return section, key

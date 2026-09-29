@@ -49,6 +49,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
     system_info_labels: dict[str, tuple[str, int]] = {}
     system_info_ids: dict[str, tuple[str, int]] = {}
     system_info_json_keys: dict[str, tuple[str, int]] = {}
+    channel_json_keys: dict[str, dict[str, list[str]]] = {}
     delimiters: set[str] = set()
     channel_type_values: set[str] = set()
     aggregate_fields: list[tuple[str, str]] = []
@@ -73,6 +74,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
         _extract_system_info_labels(data, system_info_labels)
         _extract_system_info_ids(data, system_info_ids)
         _extract_system_info_json_keys(data, system_info_json_keys)
+        _extract_channel_json_keys(data, parser_path.parent.relative_to(catalog_path).as_posix(), channel_json_keys)
         _extract_delimiters(data, delimiters)
         _extract_channel_type_values(data, channel_type_values)
         _extract_aggregates(data, aggregate_fields, seen_aggregates)
@@ -86,7 +88,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
         if exclude is not None and modem_yaml_path.is_relative_to(exclude):
             continue
         _extract_confirmed_config_values(catalog_path, modem_yaml_path, confirmed_config_values)
-    for values in confirmed_config_values.values():
+    for values in (*confirmed_config_values.values(), *channel_json_keys.values()):
         for entries in values.values():
             entries.sort()
 
@@ -95,6 +97,7 @@ def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns
         system_info_labels=system_info_labels,
         system_info_ids=system_info_ids,
         system_info_json_keys=system_info_json_keys,
+        channel_json_keys=channel_json_keys,
         delimiters=delimiters,
         channel_type_values=channel_type_values,
         aggregate_fields=aggregate_fields,
@@ -356,6 +359,28 @@ def _extract_system_info_json_keys(
             normalized = key.strip().lower()
             if normalized not in result:
                 result[normalized] = (field_name.strip(), 1)
+
+
+def _extract_channel_json_keys(
+    data: dict[str, object],
+    entry: str,
+    result: dict[str, dict[str, list[str]]],
+) -> None:
+    """Record each channel JSON key's field, and the entry declaring it, once per meaning."""
+    for direction in ("downstream", "upstream"):
+        section = data.get(direction)
+        if not isinstance(section, dict) or section.get("format") not in ("json", "javascript_json"):
+            continue
+        # Flat form holds its list on the section, arrays form on each array;
+        # json names the list fields, javascript_json names it mappings.
+        for holder in [section, *_dict_items(section.get("arrays"))]:
+            for mapping in _dict_items(holder.get("fields")) + _dict_items(holder.get("mappings")):
+                key = mapping.get("key")
+                field_name = mapping.get("field")
+                if isinstance(key, str) and isinstance(field_name, str) and key.strip() and field_name.strip():
+                    entries = result.setdefault(key.strip().lower(), {}).setdefault(field_name.strip(), [])
+                    if entry not in entries:
+                        entries.append(entry)
 
 
 def _iter_system_info_fields(

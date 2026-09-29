@@ -13,6 +13,8 @@ from dataclasses import (
 )
 from typing import Any
 
+from ..ambiguity import Candidate
+
 
 @dataclass
 class FieldMapping:
@@ -88,6 +90,9 @@ class SectionDetail:
     fields_per_record: int = 0
     array_path: str = ""
     variable: str = ""
+    # JSON keys the fleet maps to several fields, with a candidate per
+    # field. Not serialized: they leave analysis as ambiguities.
+    contested_keys: list[tuple[str, list[Candidate]]] = dataclass_field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to the sections output format."""

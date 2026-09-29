@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..ambiguity import Candidate
 from ..format.table_analysis import is_data_row
 from ..format.types import DetectedJsFunction, DetectedTable
 from ..types import FleetPatterns
@@ -20,6 +21,7 @@ from .channel_detection import (
     detect_channel_type_table,
     detect_channel_type_transposed,
 )
+from .channel_keys import key_candidates, learned_field
 from .field_resolution import (
     detect_field_type,
     match_header_to_field,
@@ -62,7 +64,7 @@ def extract_section_mappings(
         return _extract_js_mappings(js_function, resource, direction, warnings, fleet=fleet)
 
     if fmt == "json" and json_data is not None:
-        return _extract_json_mappings(json_data, resource, direction, warnings)
+        return _extract_json_mappings(json_data, resource, direction, warnings, fleet=fleet)
 
     return None
 
@@ -354,6 +356,8 @@ def _extract_json_mappings(
     resource: str,
     direction: str,
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
 ) -> SectionDetail | None:
     """Extract JSON key -> field mappings from a JSON response."""
     # Find the channel array
@@ -367,10 +371,19 @@ def _extract_json_mappings(
         return None
 
     mappings: list[FieldMapping] = []
+    contested_keys: list[tuple[str, list[Candidate]]] = []
     for key, value in sample.items():
         field_name, tier = match_json_key_to_field(key)
         if not field_name:
             continue
+        if tier == 3:
+            # The registry left the key unmapped: one fleet meaning is learned;
+            # several keep Tier 3 until the LLM resolves the key.
+            learned = learned_field(key, fleet)
+            if learned:
+                field_name, tier = learned, 1
+            elif candidates := key_candidates(key, channel_array, resource, fleet):
+                contested_keys.append((key, candidates))
 
         field_type, unit = detect_field_type(field_name, [str(value)] if value is not None else [])
         # JSON keys emit no unit, except symbol_rate (see transposed).
@@ -401,6 +414,7 @@ def _extract_json_mappings(
         array_path=array_path,
         channel_type=channel_type,
         channel_count=len(channel_array),
+        contested_keys=contested_keys,
     )
 
 

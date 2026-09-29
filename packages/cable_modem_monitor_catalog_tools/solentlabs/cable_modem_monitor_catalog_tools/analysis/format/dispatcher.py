@@ -13,7 +13,9 @@ import posixpath
 from typing import Any
 
 from ...validation.har_utils import WARNING_PREFIX
+from ..ambiguity import Ambiguity
 from ..mapping.channel_detection import detect_channel_type_fixed
+from ..mapping.channel_keys import address_key_ambiguities
 from ..mapping.system_info import detect_system_info
 from ..types import FleetPatterns
 from .hnap import detect_hnap_sections
@@ -48,6 +50,7 @@ def detect_sections(
     hard_stops: list[str],
     *,
     fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> dict[str, Any]:
     """Run Phases 5-6: format detection, field mapping, section assembly.
 
@@ -57,6 +60,7 @@ def detect_sections(
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
         fleet: Optional fleet patterns for augmented detection.
+        ambiguities: Mutable list to append channel key ambiguities to.
 
     Returns:
         Sections dict with downstream, upstream, and system_info keys.
@@ -66,9 +70,9 @@ def detect_sections(
         return detect_hnap_sections(entries, warnings, hard_stops, fleet=fleet)
 
     if transport == "jsonrpc":
-        return _sections_from_pages(jsonrpc_pages(entries), warnings, fleet=fleet)
+        return _sections_from_pages(jsonrpc_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
 
-    return _detect_http_sections(entries, warnings, hard_stops, fleet=fleet)
+    return _detect_http_sections(entries, warnings, hard_stops, fleet=fleet, ambiguities=ambiguities)
 
 
 def _detect_http_sections(
@@ -77,6 +81,7 @@ def _detect_http_sections(
     hard_stops: list[str],
     *,
     fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> dict[str, Any]:
     """Detect HTTP format sections from data pages.
 
@@ -94,7 +99,7 @@ def _detect_http_sections(
         page = analyze_page(entry)
         page_analyses.append(page)
 
-    return _sections_from_pages(page_analyses, warnings, fleet=fleet)
+    return _sections_from_pages(page_analyses, warnings, fleet=fleet, ambiguities=ambiguities)
 
 
 def _sections_from_pages(
@@ -102,11 +107,12 @@ def _sections_from_pages(
     warnings: list[str],
     *,
     fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> dict[str, Any]:
     """Assemble channel sections and system_info from analyzed pages."""
     # Phase 5-6: Assemble channel sections from table/JS/JSON pages
     sections: dict[str, Any] = {}
-    _assemble_channel_sections(page_analyses, sections, warnings, fleet=fleet)
+    _assemble_channel_sections(page_analyses, sections, warnings, fleet=fleet, ambiguities=ambiguities)
 
     # Phase 6: Detect system_info sources
     system_info = detect_system_info(page_analyses, warnings, fleet=fleet)
@@ -122,15 +128,16 @@ def _assemble_channel_sections(
     warnings: list[str],
     *,
     fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> None:
     """Assemble downstream and upstream sections from page analyses."""
     for page in pages:
         fmt = classify_page_format(page)
 
         if fmt == "json":
-            _assemble_json_sections(page, sections, warnings)
+            _assemble_json_sections(page, sections, warnings, fleet=fleet, ambiguities=ambiguities)
         elif fmt == "javascript_json":
-            _assemble_js_json_sections(page, sections, warnings)
+            _assemble_js_json_sections(page, sections, warnings, fleet=fleet, ambiguities=ambiguities)
         elif fmt == "javascript":
             # For pages that have both JavaScript functions and HTML
             # channel tables, try the tables first. Tables provide more
@@ -250,6 +257,9 @@ def _assemble_js_json_sections(
     page: PageAnalysis,
     sections: dict[str, Any],
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> None:
     """Assemble channel sections from JS-embedded JSON arrays.
 
@@ -269,6 +279,7 @@ def _assemble_js_json_sections(
             json_data=json_data,
             resource=page.resource,
             warnings=warnings,
+            fleet=fleet,
         )
 
         if section is None:
@@ -296,12 +307,16 @@ def _assemble_js_json_sections(
             if section.channel_type is None:
                 section.channel_type = detect_channel_type_fixed(direction)
             sections[direction] = section.to_dict()
+            address_key_ambiguities(section, direction, ambiguities)
 
 
 def _assemble_json_sections(
     page: PageAnalysis,
     sections: dict[str, Any],
     warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> None:
     """Assemble channel sections from JSON API responses."""
     from ..mapping import extract_section_mappings
@@ -314,6 +329,7 @@ def _assemble_json_sections(
         json_data=page.json_data,
         resource=page.resource,
         warnings=warnings,
+        fleet=fleet,
     )
 
     if section is None:
@@ -336,6 +352,7 @@ def _assemble_json_sections(
         if section.channel_type is None:
             section.channel_type = detect_channel_type_fixed(direction)
         sections[direction] = section.to_dict()
+        address_key_ambiguities(section, direction, ambiguities)
 
 
 def _direction_from_js_name(name: str) -> str:

@@ -332,3 +332,45 @@ class TestExcludeOneModem:
         assert set(fleet.system_info_json_keys) == {"k2"}
         assert fleet.password_field_names == frozenset({"pw2"})
         assert set(fleet.confirmed_config_values["auth.lockout_code"]) == {"c2"}
+
+
+class TestChannelJsonKeys:
+    """Channel JSON keys are learned from every committed parser.yaml, with the entries that declare each meaning."""
+
+    @staticmethod
+    def _write(root: Path, rel: str, text: str) -> None:
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def _catalog(self, root: Path) -> None:
+        # m1 nests two json arrays that both declare "status"; m2 is javascript_json, whose list is mappings.
+        self._write(
+            root,
+            "vendor/m1/parser.yaml",
+            "downstream:\n  format: json\n  resource: /a\n  arrays:\n"
+            "    - array_path: dss\n      fields:\n        - {key: Status, field: lock_status, type: lock_status}\n"
+            "    - array_path: ofdm\n      fields:\n        - {key: status, field: lock_status, type: lock_status}\n",
+        )
+        self._write(
+            root,
+            "vendor/m2/parser.yaml",
+            "upstream:\n  format: javascript_json\n  resource: /b\n  variable: json_usData\n"
+            "  mappings:\n    - {key: status, field: status, type: string}\n"
+            "    - {key: mer, field: snr, type: float}\n",
+        )
+
+    def test_meanings_indexed_with_declaring_entries(self, tmp_path: Path) -> None:
+        """Keys are lowercased; an entry is listed once per meaning however many arrays declare it."""
+        self._catalog(tmp_path)
+        assert scan_fleet(tmp_path).channel_json_keys == {
+            "status": {"lock_status": ["vendor/m1"], "status": ["vendor/m2"]},
+            "mer": {"snr": ["vendor/m2"]},
+        }
+
+    def test_excluded_modem_teaches_no_keys(self, tmp_path: Path) -> None:
+        """The modem under test does not teach its own key vocabulary."""
+        self._catalog(tmp_path)
+        assert scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m2").channel_json_keys == {
+            "status": {"lock_status": ["vendor/m1"]},
+        }

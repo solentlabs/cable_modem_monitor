@@ -273,7 +273,9 @@ none, then show the user each resolution with its evidence to confirm.
 A `blocking` one left unresolved makes `generate_config` refuse; a
 non-blocking one left unresolved omits its field. A pre-filled
 `{value, source: fleet}` came from confirmed catalog entries and is
-still reviewed.
+still reviewed. A `parser.<section>.<key>` path asks which field a
+channel key means, where catalog entries disagree; its value is a field
+name ([ONBOARDING_SPEC § Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed)).
 
 Report what was detected:
 

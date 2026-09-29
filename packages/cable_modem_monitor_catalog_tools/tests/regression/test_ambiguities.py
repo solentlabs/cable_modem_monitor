@@ -87,3 +87,78 @@ def test_failure_names_the_value_and_candidates() -> None:
     """A committed value the tool missed is reported with what it did offer."""
     _, failures = resolve_from_committed(_analysis(["a", "b"]), _ELSEWHERE)
     assert failures == ["committed value not surfaced: auth.lockout_code = z (candidates: a, b)"]
+
+
+# =============================================================================
+# Channel key paths (parser.<section>.<key>) read the committed parser.yaml
+# =============================================================================
+
+_KEY_PATH = "parser.downstream.status"
+_AS_LOCK_STATUS = {"value": "lock_status"}
+
+
+def _key_analysis(candidates: list[str]) -> dict[str, Any]:
+    """An analysis dict carrying one channel key ambiguity at _KEY_PATH."""
+    return {
+        "ambiguities": [
+            {
+                "field": _KEY_PATH,
+                "blocking": False,
+                "candidates": [{"value": v, "evidence": [], "corroborated_by": []} for v in candidates],
+                "resolution": None,
+            }
+        ]
+    }
+
+
+def _parser(field: str | None) -> dict[str, Any]:
+    """A committed parser.yaml whose second downstream array maps status to ``field``."""
+    second = [{"key": "status", "field": field, "type": "string"}] if field else []
+    return {
+        "downstream": {
+            "format": "json",
+            "arrays": [
+                {"array_path": "dss", "fields": [{"key": "channel", "field": "channel_id", "type": "integer"}]},
+                {"array_path": "ofdm", "fields": second},
+            ],
+        }
+    }
+
+
+_MAPS_LOCK = _parser("lock_status")
+
+# ┌─────────────────────┬─────────────┬─────────────┬────────────────┬─────────────────────────┐
+# │ candidates          │ committed   │ resolution  │ grade          │ description             │
+# ├─────────────────────┼─────────────┼─────────────┼────────────────┼─────────────────────────┤
+# │ lock_status, status │ lock_status │ lock_status │ partial        │ surfaced among several  │
+# │ status, snr         │ lock_status │ lock_status │ committed_only │ new meaning, still read │
+# │ lock_status, status │ key absent  │ none        │ pipeline_only  │ committed maps no key   │
+# └─────────────────────┴─────────────┴─────────────┴────────────────┴─────────────────────────┘
+# No case fails the HAR.
+#
+# fmt: off
+KEY_CASES: list[tuple[dict[str, Any], dict[str, Any], Any, str, str]] = [
+    # (analysis,                               committed parser, resolution,      grade,            id)
+    (_key_analysis(["lock_status", "status"]), _MAPS_LOCK,       _AS_LOCK_STATUS, "partial",        "surfaced"),
+    (_key_analysis(["status", "snr"]),         _MAPS_LOCK,       _AS_LOCK_STATUS, "committed_only", "new-meaning"),
+    (_key_analysis(["lock_status", "status"]), _parser(None),    _NONE,           "pipeline_only",  "key-absent"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "analysis,committed_parser,resolution,grade",
+    [c[:4] for c in KEY_CASES],
+    ids=[c[4] for c in KEY_CASES],
+)
+def test_resolve_channel_key_from_committed_parser(
+    analysis: dict[str, Any],
+    committed_parser: dict[str, Any],
+    resolution: Any,
+    grade: str,
+) -> None:
+    """A key path resolves from the committed parser.yaml; an unoffered meaning is graded, never a failure."""
+    grades, failures = resolve_from_committed(analysis, _LOCKED, committed_parser)
+    assert analysis["ambiguities"][0]["resolution"] == resolution
+    assert grades[_KEY_PATH].status == grade
+    assert failures == []

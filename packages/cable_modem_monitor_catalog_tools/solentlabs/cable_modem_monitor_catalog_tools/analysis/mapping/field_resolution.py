@@ -136,6 +136,12 @@ def detect_field_type(
     return _infer_type_from_values(sample_values)
 
 
+def known_field_type(field_name: str) -> str | None:
+    """The type a known field always takes, or None when only its values could tell."""
+    known = _detect_known_field_type(field_name, [], "")
+    return known[0] if known else None
+
+
 def _detect_known_field_type(
     field_name: str,
     sample_values: list[str],
