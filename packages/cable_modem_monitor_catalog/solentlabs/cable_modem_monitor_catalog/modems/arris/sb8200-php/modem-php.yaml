@@ -42,16 +42,16 @@ status: awaiting_verification
 sources:
   auth_config:
     "[#213 SB8200 PHP firmware HAR](https://github.com/solentlabs/cable_modem_monitor/issues/213)
-    — test_data/modem.har: login script [5]; [31] rejected
+    — test_data/modem-php.har: login script [5]; [31] rejected
     login 409; [32] accepted login, PHPSESSID cookie and X-CSRF-Token
     header; [33] [46] [60] data pages requested with ?ct_<token>"
   logout_action:
-    'test_data/modem.har — main_arris.js [3] logout(); [74] [76] PUT
+    'test_data/modem-php.har — main_arris.js [3] logout(); [74] [76] PUT
     {"DoLogOut":1} with the PHPSESSID cookie, 200'
   session_headers:
-    "test_data/modem.har — X-Requested-With: XMLHttpRequest on the
+    "test_data/modem-php.har — X-Requested-With: XMLHttpRequest on the
     login [31] [32] and logout [74] [76] requests (jQuery $.ajax)"
-  hardware: "test_data/modem.har [60] cmswinfo.php — Docsis 3.1, Hardware
+  hardware: "test_data/modem-php.har [60] cmswinfo.php — Docsis 3.1, Hardware
     Version 6, Software Version AB01.06.013_051923_223.0A.NSH; release
     year per [ARRIS SB8200 page](https://www.arris.com/surfboard/products/cable-modems/sb8200/)"
   brands: "[SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/) — SURFboard styling"
@@ -70,7 +70,7 @@ notes: |
   PHP build of the ARRIS SB8200 AB01 firmware (AB01.06.013_051923_223.0A.NSH,
   HW 6, RCN/Astound provisioning). HTTPS only; pages are .php
   (X-Powered-By: PHP/7.4.9) where the arris/sb8200 AB01 builds serve .html.
-  Entry indices below are into test_data/modem.har.
+  Entry indices below are into test_data/modem-php.har.
 
   Login: validate() in the login script [5] PUTs JSON {username, password,
   ipAddress: document.location.hostname} to /actionHandler/ajaxSet_login.php,
