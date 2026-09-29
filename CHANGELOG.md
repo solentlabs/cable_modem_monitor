@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generate a `jsonrpc` entry from a capture: the error codes and the
   restart method are listed as candidates, each with the evidence in
   the capture that supports it, for the contributor to choose. (#215)
+- **The intake tools generate CBN entries.** A Compal (CBN) capture is
+  recognized by its encrypted login, read call by call, and produces a
+  `form_cbn` auth block and `format: xml` sections keyed by `fun` code.
+  Its restart and logout codes are listed as candidates, each with the
+  page that sent it, for the contributor to choose. Core's
+  `build_resource_dict` builds a CBN resource dict from a HAR, so a
+  generated CBN parser can be checked against the capture.
 - **`make commit-lint` checks commit messages before a push.** It runs
   commitlint over the branch's commits with the same config and range
   as CI, and `make validate-ci` now includes it. Requires Node.js.
@@ -56,6 +63,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `symbol_rate_unit: Sym/s` beside `symbol_rate`. If a template or
   automation reads `symbol_rate` on one of these modems, divide by 1000
   to keep the old number.
+- **The intake tools learn more from the catalog.** JSON and XML
+  channel keys are learned from every committed `parser.yaml`; a key
+  the catalog maps two ways is listed as candidates instead of guessed.
+  Every channel array in a JSON response is read, not just the first.
+  A table or JSON list with no frequency, power or SNR column is
+  skipped with a warning naming it, so a settings form or address list
+  no longer becomes a channel section. A learned system_info key is
+  used only when the captured value has the type the catalog declares
+  for it; otherwise it is flagged.
+- **The intake score grades each capture as a new modem.** Each HAR is
+  analyzed without its own committed config, so the score measures what
+  a first-time intake would get, and channels are compared by channel
+  ID before position. It now stands at 83.5% of fields.
+- **The Modem Request Guide is shorter.** Capture steps are grouped
+  into four phases, each with a one-line reason; every instruction is
+  kept.
 - **catalog_tools sets the symbol rate scale when it generates a
   config.** A ksym label on the header or the values, or bare numbers
   in the DOCSIS ksym range, add `scale: 1000`; a label that contradicts
@@ -66,6 +89,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Arris SB6183 upstream channels show `symbol_rate`.** The modem
   writes it as "5120 Ksym/sec" and the unit wasn't stripped, so the
   value was dropped.
+- **catalog_tools no longer drops the first channel of an SB8200
+  table.** The firmware writes the label row without an opening
+  `<tr>`; the generated `row_start` counted that row although Core's
+  parser never sees it.
 - **catalog_tools reads table rows the firmware leaves unclosed.** When
   data rows omit `</tr>`, the HTML parser nests each row inside the one
   before it, and the analyzer saw the table's headers but no rows, so
