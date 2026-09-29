@@ -355,6 +355,87 @@ class TestChannelKeyResolution:
 
 
 # ---------------------------------------------------------------------------
+# Spot-check: json arrays form (several channel arrays in one section)
+# ---------------------------------------------------------------------------
+
+
+def _with_arrays(ambiguity: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The json_format fixture whose downstream holds a QAM and an OFDM array."""
+    fixture = load_fixture(VALID_DIR / "json_format.json")
+    fixture["_analysis"]["sections"]["downstream"] = {
+        "format": "json",
+        "resource": "/api/downstream",
+        "arrays": [
+            {
+                "array_path": "data.qam",
+                "mappings": [
+                    {"key": "channelId", "field": "channel_id", "type": "integer"},
+                    {"key": "status", "field": "status", "type": "string"},
+                    {"key": "corrected", "field": "corrected", "type": "integer"},
+                ],
+                "channel_type": {"fixed": "qam"},
+                "channel_count": 32,
+            },
+            {
+                "array_path": "data.ofdm",
+                "mappings": [
+                    {"key": "ofdmId", "field": "channel_id", "type": "integer"},
+                    {"key": "status", "field": "status", "type": "string"},
+                ],
+                "channel_type": {"fixed": "ofdm"},
+                "channel_count": 2,
+            },
+        ],
+    }
+    if ambiguity:
+        fixture["_analysis"]["ambiguities"] = [ambiguity]
+    return fixture
+
+
+class TestJsonArraysForm:
+    """Several analysis arrays become parser.yaml's arrays form, each with its own fields and type."""
+
+    def test_arrays_written(self) -> None:
+        fixture = _with_arrays()
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert result.parser_yaml is not None
+        downstream = yaml.safe_load(result.parser_yaml)["downstream"]
+        assert "array_path" not in downstream
+        assert [
+            (a["array_path"], a["channel_type"], [f["key"] for f in a["fields"]]) for a in downstream["arrays"]
+        ] == [
+            ("data.qam", {"fixed": "qam"}, ["channelId", "status", "corrected"]),
+            ("data.ofdm", {"fixed": "ofdm"}, ["ofdmId", "status"]),
+        ]
+
+    def test_aggregate_reads_every_array(self) -> None:
+        """A counter mapped only inside an array still earns its aggregate."""
+        fixture = _with_arrays()
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.parser_yaml is not None
+        assert "total_corrected" in yaml.safe_load(result.parser_yaml)["aggregate"]
+
+    def test_key_resolution_reaches_every_array(self) -> None:
+        """A parser.<section>.<key> resolution rewrites the key in each array that maps it."""
+        ambiguity = {
+            "field": "parser.downstream.status",
+            "blocking": False,
+            "candidates": [{"value": "lock_status", "evidence": [], "corroborated_by": []}],
+            "resolution": {"value": "lock_status"},
+        }
+        fixture = _with_arrays(ambiguity)
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert result.parser_yaml is not None
+        arrays = yaml.safe_load(result.parser_yaml)["downstream"]["arrays"]
+        assert [[f["field"] for f in a["fields"] if f["key"] == "status"] for a in arrays] == [
+            ["lock_status"],
+            ["lock_status"],
+        ]
+
+
+# ---------------------------------------------------------------------------
 # Spot-check: parser.yaml system_info
 # ---------------------------------------------------------------------------
 

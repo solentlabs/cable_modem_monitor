@@ -85,3 +85,11 @@ def mapping_to_json_channel(mapping: dict[str, Any]) -> dict[str, Any]:
     if mapping.get("scale") is not None:
         result["scale"] = mapping["scale"]
     return result
+
+
+def section_mappings(section: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every mapping of an analysis section: its own, then each array's."""
+    mappings: list[dict[str, Any]] = list(section.get("mappings", []))
+    for entry in section.get("arrays", []):
+        mappings.extend(entry.get("mappings", []))
+    return mappings

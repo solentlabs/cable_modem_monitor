@@ -50,7 +50,14 @@ def address_key_ambiguities(section: SectionDetail, direction: str, ambiguities:
     if ambiguities is None:
         return
     for key, candidates in section.contested_keys:
-        ambiguities.append(Ambiguity(field=parser_path(direction, key), blocking=False, candidates=candidates))
+        path = parser_path(direction, key)
+        existing = next((a for a in ambiguities if a.field == path), None)
+        if existing is None:
+            ambiguities.append(Ambiguity(field=path, blocking=False, candidates=candidates))
+            continue
+        # The key recurs in another array of the section: one judgment, both captures cited.
+        for held, found in zip(existing.candidates, candidates, strict=True):
+            held.evidence.extend(e for e in found.evidence if e not in held.evidence)
 
 
 def _meanings(key: str, fleet: FleetPatterns | None) -> dict[str, list[str]]:

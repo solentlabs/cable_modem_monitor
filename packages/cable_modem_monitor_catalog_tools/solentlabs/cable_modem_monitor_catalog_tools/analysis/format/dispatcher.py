@@ -17,6 +17,7 @@ from ..ambiguity import Ambiguity
 from ..mapping.channel_detection import detect_channel_type_fixed
 from ..mapping.channel_keys import address_key_ambiguities
 from ..mapping.system_info import detect_system_info
+from ..mapping.types import SectionDetail
 from ..types import FleetPatterns
 from .hnap import detect_hnap_sections
 from .http import (
@@ -288,6 +289,8 @@ def _assemble_js_json_sections(
         # Override format to javascript_json in the output
         section.format = "javascript_json"
         section.variable = js_var.name
+        # The variable holds the channel list itself; there is no path to read.
+        section.array_path = ""
 
         # Infer direction from variable name, then resource path
         direction = _direction_from_js_name(js_var.name)
@@ -318,41 +321,68 @@ def _assemble_json_sections(
     fleet: FleetPatterns | None = None,
     ambiguities: list[Ambiguity] | None = None,
 ) -> None:
-    """Assemble channel sections from JSON API responses."""
-    from ..mapping import extract_section_mappings
+    """Assemble channel sections from a JSON response, one entry per channel array."""
+    from ..mapping import extract_json_arrays
 
     if page.json_data is None:
         return
 
-    section = extract_section_mappings(
-        fmt="json",
-        json_data=page.json_data,
-        resource=page.resource,
-        warnings=warnings,
-        fleet=fleet,
-    )
+    by_direction: dict[str, list[SectionDetail]] = {}
+    for array in extract_json_arrays(page.json_data, page.resource, warnings, fleet=fleet):
+        direction = _direction_from_resource(page.resource)
+        if direction == "unknown":
+            direction = _direction_from_array_path(array.array_path)
+        if direction == "unknown":
+            direction = _direction_from_json(page.json_data)
+        if direction == "unknown":
+            warnings.append(
+                f"{WARNING_PREFIX} Cannot determine direction for JSON array '{array.array_path}' "
+                f"on {page.resource}. Manual review required."
+            )
+            continue
+        # DOCSIS 3.0 JSON APIs rarely embed channel type; the path names
+        # OFDM/OFDMA arrays, and the direction's default covers the rest.
+        if array.channel_type is None:
+            array.channel_type = _channel_type_from_array_path(array.array_path) or detect_channel_type_fixed(direction)
+        by_direction.setdefault(direction, []).append(array)
 
-    if section is None:
-        return
+    for direction, arrays in by_direction.items():
+        if direction in sections:
+            continue
+        sections[direction] = arrays[0].to_dict() if len(arrays) == 1 else _arrays_section(arrays)
+        for array in arrays:
+            address_key_ambiguities(array, direction, ambiguities)
 
-    # Infer direction from resource path or JSON structure
-    direction = _direction_from_resource(page.resource)
-    if direction == "unknown":
-        direction = _direction_from_json(page.json_data)
 
-    if direction == "unknown":
-        warnings.append(
-            f"{WARNING_PREFIX} Cannot determine direction for JSON data on {page.resource}. Manual review required."
-        )
-        return
+def _arrays_section(arrays: list[SectionDetail]) -> dict[str, Any]:
+    """One section holding several channel arrays of a response, each with its own mappings and type."""
+    entries = []
+    for array in arrays:
+        entry = array.to_dict()
+        del entry["format"], entry["resource"]
+        entries.append(entry)
+    return {"format": arrays[0].format, "resource": arrays[0].resource, "arrays": entries}
 
-    if direction not in sections:
-        # DOCSIS 3.0 JSON APIs rarely embed channel type; apply fixed
-        # fallback when no channelType key was found in the JSON data.
-        if section.channel_type is None:
-            section.channel_type = detect_channel_type_fixed(direction)
-        sections[direction] = section.to_dict()
-        address_key_ambiguities(section, direction, ambiguities)
+
+def _direction_from_array_path(array_path: str) -> str:
+    """Infer downstream/upstream from DOCSIS terms in an array's path, leaf segment first."""
+    for segment in reversed(array_path.lower().split(".")):
+        # ofdma names the upstream variant, so it is tested before ofdm.
+        if "ofdma" in segment or "upstream" in segment or _has_direction_prefix(segment, ("us",)):
+            return "upstream"
+        if "ofdm" in segment or "downstream" in segment or _has_direction_prefix(segment, ("ds",)):
+            return "downstream"
+    return "unknown"
+
+
+def _channel_type_from_array_path(array_path: str) -> dict[str, Any] | None:
+    """A fixed OFDM or OFDMA channel type when the array's path names one."""
+    for segment in reversed(array_path.lower().split(".")):
+        if "ofdma" in segment:
+            return {"fixed": "ofdma"}
+        if "ofdm" in segment:
+            return {"fixed": "ofdm"}
+    return None
 
 
 def _direction_from_js_name(name: str) -> str:

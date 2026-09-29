@@ -12,7 +12,13 @@ from __future__ import annotations
 from typing import Any
 
 from ..analysis.types import FleetPatterns
-from .mappings import mapping_to_channel, mapping_to_column, mapping_to_json_channel, mapping_to_row
+from .mappings import (
+    mapping_to_channel,
+    mapping_to_column,
+    mapping_to_json_channel,
+    mapping_to_row,
+    section_mappings,
+)
 from .system_info import transform_system_info
 
 
@@ -237,9 +243,19 @@ def _transform_hnap(section: dict[str, Any]) -> dict[str, Any]:
 
 def _transform_json(section: dict[str, Any]) -> dict[str, Any]:
     """Transform JSON format from analysis to parser.yaml structure."""
-    fields = [mapping_to_json_channel(m) for m in section.get("mappings", [])]
+    result: dict[str, Any] = {"format": "json", "resource": section.get("resource", "")}
+    if section.get("arrays"):
+        result["arrays"] = [_json_array(entry) for entry in section["arrays"]]
+    else:
+        result.update(_json_array(section))
+    return result
 
-    ct = section.get("channel_type")
+
+def _json_array(entry: dict[str, Any]) -> dict[str, Any]:
+    """One array's parser.yaml keys: path, fields, channel type, fixed fields and filter."""
+    fields = [mapping_to_json_channel(m) for m in entry.get("mappings", [])]
+
+    ct = entry.get("channel_type")
     if ct and "key" in ct:
         # Inline the channel_type mapping on the fields list
         fields.append(
@@ -252,18 +268,13 @@ def _transform_json(section: dict[str, Any]) -> dict[str, Any]:
         )
         ct = None  # Don't also set section-level
 
-    result: dict[str, Any] = {
-        "format": "json",
-        "resource": section.get("resource", ""),
-        "array_path": section.get("array_path", ""),
-        "fields": fields,
-    }
+    result: dict[str, Any] = {"array_path": entry.get("array_path", ""), "fields": fields}
     if ct:
         result["channel_type"] = ct
-    if section.get("fixed_fields"):
-        result["fixed_fields"] = section["fixed_fields"]
-    if section.get("filter"):
-        result["filter"] = section["filter"]
+    if entry.get("fixed_fields"):
+        result["fixed_fields"] = entry["fixed_fields"]
+    if entry.get("filter"):
+        result["filter"] = entry["filter"]
 
     return result
 
@@ -312,7 +323,7 @@ def _build_aggregate(
     if not ds:
         return None
 
-    ds_fields = {m.get("field") for m in ds.get("mappings", [])}
+    ds_fields = {m.get("field") for m in section_mappings(ds)}
 
     # Merge fleet aggregate patterns with baseline
     patterns = list(_AGGREGATE_FIELDS)

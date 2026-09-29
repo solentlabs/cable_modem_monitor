@@ -41,8 +41,8 @@ def _json_entry(url: str, body: str, content_type: str = "application/json") -> 
 
 
 def _downstream(key: str, values: list[Any]) -> list[dict[str, Any]]:
-    """One JSON downstream page whose channels carry ``key``."""
-    channels = [{"channelId": i + 1, key: value} for i, value in enumerate(values)]
+    """One JSON downstream page whose channels carry ``key``, beside the measurement that makes them channels."""
+    channels = [{"channelId": i + 1, "frequency": 507000000, key: value} for i, value in enumerate(values)]
     return [_json_entry("/api/downstream", json.dumps({"channels": channels}))]
 
 
@@ -117,7 +117,7 @@ def test_candidate_evidence_cites_declaring_entries_and_capture() -> None:
 
 def test_javascript_json_section_is_addressed_by_direction() -> None:
     """A JS-embedded JSON array is addressed by the direction its variable names."""
-    body = '<script>json_dsData = [{"ChannelID":"1","status":"Locked"}];</script>'
+    body = '<script>json_dsData = [{"ChannelID":"1","Frequency":"507 MHz","status":"Locked"}];</script>'
     _, ambiguities = _sections([_json_entry("/php/data.php", body, "text/html")], _DISAGREES)
     assert [a.field for a in ambiguities] == ["parser.downstream.status"]
 

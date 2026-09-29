@@ -6,8 +6,8 @@ confirmed by the user. ``{value}`` lands at the ambiguity's dotted path;
 absent. A blocking ambiguity with no resolution stops generation.
 
 A ``parser.<section>.<key>`` path names a channel JSON key: its value is
-the key's field, written into the analysis sections before parser.yaml
-is built. None, or no resolution, drops the key.
+the key's field, written into every array of the analysis section before
+parser.yaml is built. None, or no resolution, drops the key.
 
 Per docs/ONBOARDING_SPEC.md § Ambiguities.
 """
@@ -18,6 +18,7 @@ from typing import Any
 
 from ..analysis.ambiguity import split_parser_path
 from ..analysis.mapping.field_resolution import known_field_type
+from .mappings import section_mappings
 
 
 def apply_resolutions(
@@ -62,13 +63,15 @@ def _set_key_field(sections: dict[str, Any], target: tuple[str, str], value: Any
     section = sections.get(section_name)
     if not isinstance(section, dict):
         section = {}
-    mappings = section.get("mappings", [])
-    matches = [m for m in mappings if m.get("key") == key]
+    matches = [m for m in section_mappings(section) if m.get("key") == key]
     if not matches:
         errors.append(f"{path}: the analysis maps no such channel key")
         return
     if value is None:
-        section["mappings"] = [m for m in mappings if m.get("key") != key]
+        # The key goes from the section and from every array that maps it.
+        for holder in [section, *section.get("arrays", [])]:
+            if "mappings" in holder:
+                holder["mappings"] = [m for m in holder["mappings"] if m.get("key") != key]
         return
     for mapping in matches:
         mapping["field"] = value

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...validation.har_utils import WARNING_PREFIX
 from ..ambiguity import Candidate
 from ..format.table_analysis import is_data_row
 from ..format.types import DetectedJsFunction, DetectedTable
@@ -350,6 +351,9 @@ def _resolve_js_symbol_rate(
 # JSON format
 # -----------------------------------------------------------------------
 
+# A list of objects is a channel array only when it carries one of these.
+_MEASUREMENT_FIELDS = frozenset({"frequency", "power", "snr"})
+
 
 def _extract_json_mappings(
     json_data: dict[str, Any],
@@ -359,16 +363,44 @@ def _extract_json_mappings(
     *,
     fleet: FleetPatterns | None = None,
 ) -> SectionDetail | None:
-    """Extract JSON key -> field mappings from a JSON response."""
-    # Find the channel array
-    array_path, channel_array = _find_channel_array(json_data)
-    if not channel_array:
-        return None
+    """The first channel array of a JSON response, for callers that read one."""
+    arrays = extract_json_arrays(json_data, resource, warnings, fleet=fleet)
+    return arrays[0] if arrays else None
 
+
+def extract_json_arrays(
+    json_data: dict[str, Any],
+    resource: str,
+    warnings: list[str],
+    *,
+    fleet: FleetPatterns | None = None,
+) -> list[SectionDetail]:
+    """Every channel array in a JSON response, in document order; every other list is warned."""
+    sections: list[SectionDetail] = []
+    for array_path, items in _list_arrays(json_data):
+        section = _json_array_section(array_path, items, resource, warnings, fleet)
+        if section is None:
+            # Named so a real channel array the rule missed shows at review.
+            warnings.append(
+                f"{WARNING_PREFIX} JSON array '{array_path}' on {resource} maps no channel "
+                f"measurement key ({', '.join(sorted(_MEASUREMENT_FIELDS))}); skipped. "
+                "Review it if it holds channels."
+            )
+            continue
+        sections.append(section)
+    return sections
+
+
+def _json_array_section(
+    array_path: str,
+    channel_array: list[dict[str, Any]],
+    resource: str,
+    warnings: list[str],
+    fleet: FleetPatterns | None,
+) -> SectionDetail | None:
+    """Map one array's keys; None unless one of them is a channel measurement."""
     # Use first item as sample
     sample = channel_array[0]
-    if not isinstance(sample, dict):
-        return None
 
     mappings: list[FieldMapping] = []
     contested_keys: list[tuple[str, list[Candidate]]] = []
@@ -402,17 +434,15 @@ def _extract_json_mappings(
             )
         )
 
-    if not mappings:
+    if not any(m.field in _MEASUREMENT_FIELDS for m in mappings):
         return None
-
-    channel_type = detect_channel_type_json(channel_array)
 
     return SectionDetail(
         format="json",
         resource=resource,
         mappings=mappings,
         array_path=array_path,
-        channel_type=channel_type,
+        channel_type=detect_channel_type_json(channel_array),
         channel_count=len(channel_array),
         contested_keys=contested_keys,
     )
@@ -423,21 +453,16 @@ def _extract_json_mappings(
 # -----------------------------------------------------------------------
 
 
-def _find_channel_array(data: dict[str, Any], prefix: str = "") -> tuple[str, list[dict[str, Any]]]:
-    """Find a channel array in JSON data using dot-notation path.
-
-    Walks the JSON structure looking for a list of dicts.
-    Returns (dot_path, array) or ("", []).
-    """
+def _list_arrays(data: dict[str, Any], prefix: str = "") -> list[tuple[str, list[dict[str, Any]]]]:
+    """Every non-empty list of objects under ``data``, by dot-notation path, in document order."""
+    found: list[tuple[str, list[dict[str, Any]]]] = []
     for key, value in data.items():
         path = f"{prefix}.{key}" if prefix else key
         if isinstance(value, list) and value and isinstance(value[0], dict):
-            return path, value
-        if isinstance(value, dict):
-            result = _find_channel_array(value, path)
-            if result[1]:
-                return result
-    return "", []
+            found.append((path, value))
+        elif isinstance(value, dict):
+            found.extend(_list_arrays(value, path))
+    return found
 
 
 def _count_data_rows(table: DetectedTable) -> int:

@@ -748,7 +748,7 @@ Response body analysis (sniff-then-Content-Type):
   ├── Body is valid JSON (regardless of Content-Type)?
   │   └── format: json
   │       Top-level arrays wrapped as {"_raw": [...]}
-  │       Detect: array_path and field key names from JSON structure
+  │       Detect: channel arrays and field key names from JSON structure
   │
   ├── application/xml or text/xml ?
   │   └── format: xml — not yet supported, flag for human review
@@ -954,12 +954,25 @@ label-to-field mapping as above, but rows are labels instead of columns.
 **`javascript_json` format:** JS variable assignments containing JSON
 arrays of channel objects. Direction is inferred from the variable
 name (e.g., `json_dsData` → downstream). Mapping extraction reuses
-the JSON key→field pipeline. The `variable` name is captured in the
-section output for config generation.
+the JSON key→field pipeline, including its channel array rule below.
+The `variable` name is captured in the section output for config
+generation. Only a variable holding an array is detected.
 
 **`json` format:** Examine JSON response structure to determine:
 
-- `array_path` (dot-notation path to channel array)
+- The channel arrays, each with its `array_path` (dot-notation path).
+  A list of objects is a channel array when the registry or fleet maps
+  one of its keys to a measurement (`frequency`, `power`, `snr`). Every
+  other list of objects is skipped with a warning naming its path, so a
+  real channel array the rule missed shows at review.
+- Each array's direction: the resource first, then the array's path in
+  DOCSIS terms, leaf segment first (`ofdma` or `us…` is upstream; `ofdm`
+  or `ds…` is downstream), then the response's keys. Each array's
+  channel type: a channel-type key, else `ofdma` or `ofdm` in its path,
+  else the direction's default.
+- One channel array per direction is emitted flat; several are emitted
+  as `arrays`, one entry per array with its own mappings and channel
+  type.
 - JSON key names → canonical field names: the baseline registry first,
   then the meaning committed `parser.yaml` files declare for the key.
   When they disagree, the key is an [ambiguity](#ambiguities-resolve-then-proceed);
@@ -1514,8 +1527,8 @@ its evidence is every entry that declares it, plus the capture's values
 for the key. Key vocabulary is wire evidence, so every committed entry
 teaches it, confirmed or not, and `corroborated_by` stays empty. The
 resolution is a field name: a fleet meaning, or a new one with a
-reason. It replaces the key's field in the analysis section before
-`parser.yaml` is built; an explicit none or an unresolved ambiguity
+reason. It replaces the key's field in every array of the analysis
+section before `parser.yaml` is built; an explicit none or an unresolved ambiguity
 drops the key. A meaning that needs more than a field name, such as
 arithmetic across keys, goes to [parser.py](#parserpy-decision), or to
 a [core gap](#analyze_har) when Core should handle it for every modem.
