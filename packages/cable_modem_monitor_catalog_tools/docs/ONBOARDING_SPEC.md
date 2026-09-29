@@ -935,6 +935,12 @@ the table header row. Column headers like "Frequency", "Power Level",
 **`table_transposed` format:** Map row labels to canonical fields. Same
 label-to-field mapping as above, but rows are labels instead of columns.
 
+A table of either kind is a channel section only when a column (or row
+label) maps to a measurement (`frequency`, `power`, `snr`), the rule
+channel arrays follow in the `json` format. Any other table is skipped
+with a warning naming its page and index, and its direction stays free
+for another table or a JavaScript function on the page.
+
 **`javascript` format:** Examine JS function bodies to determine:
 
 - Function name (regex target)

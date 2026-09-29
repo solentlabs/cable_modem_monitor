@@ -32,6 +32,9 @@ from .filter_detection import detect_filter_table
 from .symbol_rate import symbol_rate_unit_and_scale
 from .types import FieldMapping, SectionDetail
 
+# A table or a list of objects holds channels only when it maps one of these.
+_MEASUREMENT_FIELDS = frozenset({"frequency", "power", "snr"})
+
 # -----------------------------------------------------------------------
 # Public API
 # -----------------------------------------------------------------------
@@ -56,10 +59,11 @@ def extract_section_mappings(
         warnings = []
 
     if fmt == "table" and table is not None:
-        return _extract_table_mappings(table, resource, direction, warnings)
+        return _channel_table(_extract_table_mappings(table, resource, direction, warnings), table, resource, warnings)
 
     if fmt == "table_transposed" and table is not None:
-        return _extract_transposed_mappings(table, resource, direction, warnings)
+        section = _extract_transposed_mappings(table, resource, direction, warnings)
+        return _channel_table(section, table, resource, warnings)
 
     if fmt == "javascript" and js_function is not None:
         return _extract_js_mappings(js_function, resource, direction, warnings, fleet=fleet)
@@ -73,6 +77,22 @@ def extract_section_mappings(
 # -----------------------------------------------------------------------
 # Table format (standard)
 # -----------------------------------------------------------------------
+
+
+def _channel_table(
+    section: SectionDetail | None, table: DetectedTable, resource: str, warnings: list[str]
+) -> SectionDetail | None:
+    """The table's section when it maps a measurement; otherwise None, with the table named for review."""
+    if section is not None and any(m.field in _MEASUREMENT_FIELDS for m in section.mappings):
+        return section
+    # A layout or form table can pass channel-table detection; skipping it
+    # leaves the direction free for the page's real channel data.
+    warnings.append(
+        f"{WARNING_PREFIX} Table on {resource} (index {table.table_index}) maps no channel "
+        f"measurement column ({', '.join(sorted(_MEASUREMENT_FIELDS))}); skipped. "
+        "Review it if it holds channels."
+    )
+    return None
 
 
 def _extract_table_mappings(
@@ -350,9 +370,6 @@ def _resolve_js_symbol_rate(
 # -----------------------------------------------------------------------
 # JSON format
 # -----------------------------------------------------------------------
-
-# A list of objects is a channel array only when it carries one of these.
-_MEASUREMENT_FIELDS = frozenset({"frequency", "power", "snr"})
 
 
 def _extract_json_mappings(

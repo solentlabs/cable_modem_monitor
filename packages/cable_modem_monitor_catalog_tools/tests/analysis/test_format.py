@@ -273,3 +273,45 @@ class TestSectionAssemblyEdgeCases:
         result = detect_sections(entries, "http", warnings, [])
         # Table has digit-only headers → no field mappings → section skipped
         assert "downstream" not in result
+
+
+# A page's layout table: one button column whose rows flatten the page's
+# section headings. A heading naming OFDM passes the modulation fallback and
+# one naming codewords reads as downstream, so the layout reaches mapping
+# ahead of the real channel table.
+_FORM_TABLE = (
+    "<table>"
+    "<tr><th>ApplyCancel</th></tr>"
+    "<tr><td>Starting Frequency</td></tr>"
+    "<tr><td>ChannelLock StatusFrequencyPowerSNRUnerrored Codewords</td></tr>"
+    "<tr><td>Downstream OFDM Channels</td></tr>"
+    "</table>"
+)
+_CHANNEL_TABLE = (
+    "<h2>Downstream Bonded Channels</h2><table>"
+    "<tr><th>Channel ID</th><th>Frequency</th><th>Power</th></tr>"
+    "<tr><td>1</td><td>507000000</td><td>3.2</td></tr>"
+    "</table>"
+)
+
+
+class TestTableNeedsAMeasurement:
+    """A table is a channel section only when a column maps to frequency, power or snr."""
+
+    def test_form_table_skipped_for_the_channel_table(self) -> None:
+        """The form does not take the direction; the channel table after it does."""
+        entries = [_make_entry("/status.htm", 200, "text/html", f"<html>{_FORM_TABLE}{_CHANNEL_TABLE}</html>")]
+        warnings: list[str] = []
+        result = detect_sections(entries, "http", warnings, [])
+        assert [m["field"] for m in result["downstream"]["mappings"]] == ["channel_id", "frequency", "power"]
+        assert any("/status.htm" in w and "no channel measurement" in w for w in warnings)
+
+    def test_form_table_alone_yields_no_section(self) -> None:
+        entries = [_make_entry("/status.htm", 200, "text/html", f"<html>{_FORM_TABLE}</html>")]
+        warnings: list[str] = []
+        result = detect_sections(entries, "http", warnings, [])
+        assert "downstream" not in result
+        assert [w for w in warnings if "no channel measurement" in w] == [
+            "WARNING: Table on /status.htm (index 0) maps no channel measurement column "
+            "(frequency, power, snr); skipped. Review it if it holds channels."
+        ]
