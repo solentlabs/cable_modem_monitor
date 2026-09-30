@@ -276,6 +276,57 @@ class TestListModems:
 
         assert results[0].status == "confirmed"
 
+    def test_discovers_directory_with_only_named_variants(self, tmp_path: Path) -> None:
+        """A directory holding only modem-{name}.yaml files is a modem (#213)."""
+        modem_dir = tmp_path / "solent" / "t100"
+        _write_variant_yaml(
+            modem_dir / "modem-form.yaml",
+            {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": "form"}},
+        )
+        _write_variant_yaml(
+            modem_dir / "modem-basic.yaml",
+            {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": "basic"}},
+        )
+
+        results = list_modems(tmp_path)
+
+        assert len(results) == 1
+        assert results[0].path == modem_dir
+        # No default variant, so the first named variant supplies the summary.
+        assert results[0].auth_strategy == "basic"
+
+    def test_groups_sibling_with_only_named_variant(self, tmp_path: Path) -> None:
+        """A sibling directory with no default modem.yaml still joins its model (#213)."""
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100",
+            {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": "none"}},
+        )
+        _write_variant_yaml(
+            tmp_path / "solent" / "t100-php" / "modem-php.yaml",
+            {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": "bearer"}},
+        )
+
+        results = list_modems(tmp_path)
+
+        assert len(results) == 1
+        assert results[0].sibling_dirs == [tmp_path / "solent" / "t100-php"]
+        variants = list_variants(results[0].path, results[0].sibling_dirs)
+        assert [(v.name, v.auth_strategy) for v in variants] == [(None, "none"), ("php", "bearer")]
+
+    def test_default_variant_supplies_summary(self, tmp_path: Path) -> None:
+        """modem.yaml wins over named variants that sort before it."""
+        modem_dir = tmp_path / "solent" / "t100"
+        _write_modem_yaml(modem_dir, {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": "none"}})
+        _write_variant_yaml(
+            modem_dir / "modem-basic.yaml",
+            {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": "basic"}},
+        )
+
+        results = list_modems(tmp_path)
+
+        assert len(results) == 1
+        assert results[0].auth_strategy == "none"
+
 
 class TestModemSummary:
     """ModemSummary dataclass construction."""

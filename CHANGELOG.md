@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `OK`) instead of just a key count. A refusal on a session held for
   hours now reads differently from one on a fresh login. (#218)
 
+### Fixed
+
+- **The Arris SB8200 PHP firmware can be picked in setup.** On
+  3.14.15-beta.2 "JSON Login (php)" was missing from the SB8200
+  picker: its directory holds only a named variant file, and catalog
+  discovery found directories by their default `modem.yaml`. Discovery
+  now finds a directory by any variant file. (#213)
+
 ## [3.14.15-beta.2] - 2026-09-29
 
 ### Added
