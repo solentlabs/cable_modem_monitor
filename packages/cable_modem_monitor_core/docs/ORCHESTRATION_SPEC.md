@@ -2093,7 +2093,10 @@ one-shot.
 - INFO: `"Restart command sent [MODEL] — session cleared (0.4s)"`
 - ERROR: `"Restart command failed [MODEL] — <reason>"` — an exception,
   or the `ActionResult.message` when the executor reported failure
-  (e.g. `Per-action auth failed: Login returned HTTP 401`).
+  (e.g. `Per-action auth failed: Login returned HTTP 401`). A refused
+  action on the monitoring session appends `(session age <N>s)`: the
+  refused session is kept, so every retry reuses it, and its age
+  separates a stale session from a fresh login that was refused (#218).
 
 ---
 
@@ -2399,7 +2402,8 @@ executor. Returns `ActionResult`.
 Phases:
 
 1. **Pre-fetch** (optional): call `pre_fetch_action` HNAP action to
-   retrieve current config values.
+   retrieve current config values. The firmware's `<Action>Result`
+   is logged, not judged: the action proceeds whatever it says.
 2. **Interpolation**: replace `${var:default}` placeholders in `params`
    with values from the pre-fetch response.
 3. **Main request**: HMAC-sign and send a SOAP POST to `/HNAP1/`.

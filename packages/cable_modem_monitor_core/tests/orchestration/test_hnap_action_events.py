@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
 import requests
 from solentlabs.cable_modem_monitor_core.orchestration.events import (
     ActionCompleted,
@@ -186,6 +187,32 @@ def test_pre_fetch_completed_on_success():
     event = next(e for e in events if isinstance(e, ActionPreFetchCompleted))
     assert event.key_count == 2
     assert event.fallback_endpoint is None
+
+
+@pytest.mark.parametrize(
+    ("pre_fetch_body", "expected_result"),
+    [
+        ({"GetScheduleResponse": {"Schedule": "val", "GetScheduleResult": "OK"}}, "OK"),
+        ({"GetScheduleResponse": {"GetScheduleResult": "UN-AUTH"}}, "UN-AUTH"),
+        ({"GetScheduleResponse": {"Schedule": "val"}}, None),
+    ],
+    ids=["ok", "rejected", "no_result_key"],
+)
+def test_pre_fetch_completed_reports_firmware_result(pre_fetch_body: dict, expected_result: str | None):
+    # A key count alone cannot tell a rejected pre-fetch from a good one (#218)
+    pre_fetch_resp = MagicMock()
+    pre_fetch_resp.json.return_value = pre_fetch_body
+    main_resp = MagicMock()
+    main_resp.status_code = 200
+    main_resp.json.return_value = {"RebootResponse": {"RebootResult": "OK"}}
+    session = MagicMock()
+    session.post.side_effect = [pre_fetch_resp, main_resp]
+
+    action = _make_action(pre_fetch_action="GetSchedule")
+    with capture_events() as events:
+        _call_execute(session, action)
+    event = next(e for e in events if isinstance(e, ActionPreFetchCompleted))
+    assert event.result == expected_result
 
 
 # ---------------------------------------------------------------------------

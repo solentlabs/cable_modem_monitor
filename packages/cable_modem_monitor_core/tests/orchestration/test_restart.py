@@ -56,6 +56,8 @@ def _collector(auth_success: bool = True) -> MagicMock:
     collector._base_url = "http://192.168.100.1"
     collector.authenticate.return_value.success = auth_success
     collector.authenticate.return_value.error = "" if auth_success else "wrong"
+    # A real collector reports the age of the login authenticate() just made.
+    collector.session_age_seconds = 0.0
     return collector
 
 

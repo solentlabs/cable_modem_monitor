@@ -229,7 +229,13 @@ Fields — `CounterReset`: `model`, `prev_corrected: int`, `cur_corrected: int`,
 | `RecoveryObserverException` | ERROR | Unhandled exception in recovery observer |
 
 Fields — `RestartCommandSent`: `model`, `elapsed_seconds: float`
-Fields — `RestartCommandFailed`: `model`, `reason: str`
+Fields — `RestartCommandFailed`: `model`, `reason: str`, `session_age_seconds: float | None`
+
+`RestartCommandFailed.session_age_seconds` — age of the monitoring session the
+command went out on, measured from the login that created it (reuse does not
+reset it). A refusal on a session held for hours reads differently from one on
+a fresh login (#218). `None` when no monitoring session was used: the login
+failed, or the action authenticates separately (`action_auth`).
 Fields — `RecoveryWindowOpened`: `model`, `reason: str`, `window_seconds: float`
 Fields — `RecoveryWindowClosed`: `model`, `elapsed_seconds: float`, `last_docsis_status: str`
 Fields — `RecoveryObserverException`: `model`, `exc_type: str`
@@ -252,7 +258,13 @@ Fields — `ActionFailed`: `model`, `transport: str`, `action_name: str`, `reaso
 Fields — `ActionPreFetchFailed`: `model`, `transport: str`, `action_name: str`,
 `reason: str`, `fallback_endpoint: str | None`
 Fields — `ActionPreFetchCompleted`: `model`, `transport: str`,
-`action_name: str`, `key_count: int | None`, `fallback_endpoint: str | None`
+`action_name: str`, `key_count: int | None`, `fallback_endpoint: str | None`,
+`result: str | None`
+
+`ActionPreFetchCompleted.result` — the HNAP firmware's `<Action>Result` value
+(`OK`, `UN-AUTH`, ...) from the pre-fetch response. A key count cannot tell a
+rejected pre-fetch from a good one. `None` when the response carries no such
+key, and always for non-HNAP transports.
 
 `ActionPreFetchFailed.fallback_endpoint` — non-`None` means extraction
 failed but action continues with the static fallback endpoint.

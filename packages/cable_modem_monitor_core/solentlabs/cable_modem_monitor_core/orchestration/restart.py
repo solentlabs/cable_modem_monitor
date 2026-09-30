@@ -113,7 +113,13 @@ def run_restart(
         action_result = execute_action(collector, modem_config, actions.restart)
         if not action_result.success:
             elapsed = time.monotonic() - start
-            log_event(_logger, RestartCommandFailed(model=model, reason=action_result.message))
+            # Session age tells a refusal on a long-held session from one
+            # on a fresh login (#218). action_auth never used this session.
+            session_age = None if _has_action_auth(actions.restart) else collector.session_age_seconds
+            log_event(
+                _logger,
+                RestartCommandFailed(model=model, reason=action_result.message, session_age_seconds=session_age),
+            )
             # No command reached the modem, so the monitoring session is
             # still good and there is no reboot for recovery to watch.
             return RestartResult(

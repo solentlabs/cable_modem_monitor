@@ -293,7 +293,8 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         return f"Restart command sent [{event.model}] — session cleared ({event.elapsed_seconds:.1f}s)"
 
     if isinstance(event, RestartCommandFailed):
-        return f"Restart command failed [{event.model}] — {event.reason}"
+        age = f" (session age {event.session_age_seconds:.0f}s)" if event.session_age_seconds is not None else ""
+        return f"Restart command failed [{event.model}] — {event.reason}{age}"
 
     if isinstance(event, RecoveryWindowOpened):
         return f"Recovery window open [{event.model}] — reason: {event.reason}"
@@ -325,7 +326,11 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
     if isinstance(event, ActionPreFetchCompleted):
         keys = f"{event.key_count} keys" if event.key_count is not None else "no keys"
         fallback = f", fallback: {event.fallback_endpoint}" if event.fallback_endpoint is not None else ""
-        return f"Action pre-fetch completed [{event.model}] — {event.transport}/{event.action_name}: {keys}{fallback}"
+        result = f", result: {event.result}" if event.result is not None else ""
+        return (
+            f"Action pre-fetch completed [{event.model}] — "
+            f"{event.transport}/{event.action_name}: {keys}{result}{fallback}"
+        )
 
     if isinstance(event, ActionPreFetchFailed):
         suffix = (

@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   action type, matching the underscore in `form_cbn` and `url_token`.
   An entry that still says `jsonrpc` fails validation. The shipped SDMC
   NE6037 entry is updated. (#215)
+- **A refused restart logs the session it was sent on.** The
+  `Restart command failed` line now ends with the age of that session,
+  and an HNAP pre-fetch line shows the firmware's result (`UN-AUTH`,
+  `OK`) instead of just a key count. A refusal on a session held for
+  hours now reads differently from one on a fresh login. (#218)
 
 ## [3.14.15-beta.2] - 2026-09-29
 

@@ -456,6 +456,9 @@ class RestartCommandFailed:
 
     model: str
     reason: str
+    # Age of the monitoring session the command was sent on; None when
+    # none was used (action_auth, or the login itself failed).
+    session_age_seconds: float | None = None
     level: EventLevel = field(default=EventLevel.ERROR, init=False)
 
 
@@ -550,6 +553,9 @@ class ActionPreFetchCompleted:
     key_count: int | None
     fallback_endpoint: str | None
     level: EventLevel  # caller-determined
+    # HNAP firmware's own verdict (<Action>Result), e.g. "OK" or "UN-AUTH";
+    # None when the transport or response carries none.
+    result: str | None = None
 
 
 @dataclass

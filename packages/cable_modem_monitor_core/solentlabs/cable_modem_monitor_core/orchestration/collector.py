@@ -94,6 +94,9 @@ class ModemDataCollector:
         self._auth_context: AuthContext | None = None
         self._last_auth_result: AuthResult | None = None
         self._session_reused: bool = False
+        # Monotonic time of the login that created the current session;
+        # reuse does not reset it.
+        self._authenticated_at: float | None = None
         # First successful login of this collector's lifetime is the
         # setup-confirmation line; re-logins after it are steady state.
         # ORCHESTRATION_SPEC § Logging Contract, auth/resource tier.
@@ -269,6 +272,13 @@ class ModemDataCollector:
         return self._auth_manager.session_is_valid(self._session, self._auth_context)
 
     @property
+    def session_age_seconds(self) -> float | None:
+        """Seconds since the login that created the current session; None when none is held."""
+        if self._authenticated_at is None:
+            return None
+        return time.monotonic() - self._authenticated_at
+
+    @property
     def last_resource_fetches(self) -> list[ResourceFetch]:
         """Per-resource timing from the last successful collection."""
         return self._last_resource_fetches
@@ -314,6 +324,7 @@ class ModemDataCollector:
                 self._session.headers[name] = value
         self._auth_context = None
         self._last_auth_result = None
+        self._authenticated_at = None
         log_event(_logger, SessionCleared(model=self._modem_config.model))
 
     def close(self) -> None:
@@ -370,6 +381,7 @@ class ModemDataCollector:
         if result.success:
             self._auth_context = result.auth_context
             self._last_auth_result = result
+            self._authenticated_at = time.monotonic()
             log_event(
                 _logger,
                 AuthSucceeded(

@@ -206,6 +206,10 @@ def _execute_pre_fetch(
     response_key = f"{pre_fetch_action}Response"
     inner = data.get(response_key, data)
     key_count = len(inner) if isinstance(inner, dict) else 0
+    # A key count alone cannot tell a rejected pre-fetch ("UN-AUTH") from
+    # a good one (#218), so surface the firmware's verdict. Logged only;
+    # the action proceeds either way.
+    firmware_result = inner.get(f"{pre_fetch_action}Result") if isinstance(inner, dict) else None
 
     log_event(
         _logger,
@@ -216,6 +220,7 @@ def _execute_pre_fetch(
             key_count=key_count,
             fallback_endpoint=None,
             level=level,
+            result=str(firmware_result) if firmware_result is not None else None,
         ),
     )
 
