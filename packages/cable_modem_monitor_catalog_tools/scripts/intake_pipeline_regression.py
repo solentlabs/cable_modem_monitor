@@ -176,7 +176,7 @@ def _run_analyze(
 
 def _run_generate(
     analysis_data: dict[str, Any],
-    modem_dir: Path,
+    committed: dict[str, Any],
     result: ModemResult,
     fleet: FleetPatterns | None = None,
 ) -> tuple[str | None, str | None]:
@@ -188,7 +188,7 @@ def _run_generate(
         generate_config,
     )
 
-    user_meta = _extract_metadata(modem_dir)
+    user_meta = _extract_metadata(committed)
     enriched = enrich_metadata(analysis_data, user_input=user_meta)
     config = generate_config(analysis_data, enriched.metadata, fleet=fleet)
     if config.validation and not config.validation.valid:
@@ -243,16 +243,13 @@ def _run_golden_comparison(
     result.golden_diffs = diff_golden_files(generated, committed)
 
 
-def _extract_metadata(modem_dir: Path) -> dict[str, Any]:
-    """Extract identity metadata from committed modem.yaml."""
-    modem_yaml = modem_dir / "modem.yaml"
-    if not modem_yaml.exists():
+def _extract_metadata(committed: dict[str, Any]) -> dict[str, Any]:
+    """Extract identity metadata from the committed config the HAR is graded against."""
+    if not committed:
         return {}
-    with open(modem_yaml) as f:
-        cfg = yaml.safe_load(f) or {}
     return {
-        "manufacturer": cfg.get("manufacturer", ""),
-        "model": cfg.get("model", ""),
+        "manufacturer": committed.get("manufacturer", ""),
+        "model": committed.get("model", ""),
     }
 
 
@@ -282,7 +279,7 @@ def _run_pipeline(
 
     _grade_actions_stage(result, analysis_data, committed)
 
-    modem_yaml, parser_yaml = _run_generate(analysis_data, modem_dir, result, fleet=fleet)
+    modem_yaml, parser_yaml = _run_generate(analysis_data, committed, result, fleet=fleet)
     if modem_yaml is None:
         return
 

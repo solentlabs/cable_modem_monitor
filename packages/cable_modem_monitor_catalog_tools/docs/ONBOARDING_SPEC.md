@@ -234,7 +234,8 @@ against the request URL before looking it up, and follow redirect chains
 to a bounded depth.
 
 The same check runs over committed fixtures via `audit_fleet_auth`, which
-reports under AUTH FIXTURE ISSUES in the intake pipeline regression.
+audits each fixture under the variant config it replays with and reports
+under AUTH FIXTURE ISSUES in the intake pipeline regression.
 
 ### Step 3: Auth mechanism identification
 
@@ -382,7 +383,8 @@ Password-shaped means either of:
   `auth_patterns.json` — these generalize to firmware never seen
   before;
 - an exact `password_field` name declared by any committed
-  `modem.yaml` — committing a modem teaches the detector its field
+  `modem.yaml` or `modem-{variant}.yaml` — committing a modem teaches
+  the detector its field
   name with no separate pattern-maintenance step. Exact names never
   generalize; only curated substrings do.
 

@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   picker: its directory holds only a named variant file, and catalog
   discovery found directories by their default `modem.yaml`. Discovery
   now finds a directory by any variant file. (#213)
+- **The intake tools read named variant files.** The committed-fixture
+  auth audit checks each capture against the variant config it replays
+  with, a `password_field` name declared only in a
+  `modem-{variant}.yaml` is learned, and the intake score reads a
+  modem's identity from that same config. All three read `modem.yaml`
+  only. No shipped entry's result changes.
 
 ## [3.14.15-beta.2] - 2026-09-29
 

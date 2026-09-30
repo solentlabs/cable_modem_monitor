@@ -31,6 +31,7 @@ import yaml
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.patterns import collect_password_field_names
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
 from solentlabs.cable_modem_monitor_catalog_tools.validation.fixture_integrity import check_login_page_in_har
+from solentlabs.cable_modem_monitor_core.test_harness import resolve_modem_config
 
 
 def scan_fleet(catalog_path: Path, exclude: Path | None = None) -> FleetPatterns:
@@ -192,44 +193,48 @@ def audit_fleet_auth(catalog_path: Path) -> list[AuthAuditIssue]:
     """
     issues: list[AuthAuditIssue] = []
 
-    for modem_yaml_path in sorted(catalog_path.rglob("modem.yaml")):
-        try:
-            config: Any = yaml.safe_load(modem_yaml_path.read_text(encoding="utf-8"))
-        except (yaml.YAMLError, OSError):
-            continue
-
-        if not isinstance(config, dict):
-            continue
-
-        auth = config.get("auth", {})
-        if not isinstance(auth, dict):
-            continue
-        if auth.get("strategy") != "form":
+    # One pass per fixture, not per config: each HAR is audited under the
+    # config it replays with (Core's pairing rule), so a named variant's
+    # fixture is checked and no fixture is judged by another variant's auth.
+    for har_path in sorted(catalog_path.rglob("test_data/*.har")):
+        modem_dir = har_path.parent.parent
+        auth = _form_auth(resolve_modem_config(har_path.stem, modem_dir))
+        if auth is None:
             continue
 
         login_page: str = auth.get("login_page", "") or ""
         action: str = auth.get("action", "") or ""
-
-        modem_dir = modem_yaml_path.parent
-        test_data = modem_dir / "test_data"
         modem_rel = str(modem_dir.relative_to(catalog_path))
 
-        for har_path in sorted(test_data.glob("*.har")):
-            try:
-                with open(har_path, encoding="utf-8") as f:
-                    har_data: Any = json.load(f)
-                entries: list[Any] = har_data.get("log", {}).get("entries", [])
-            except (OSError, json.JSONDecodeError):
-                continue
+        try:
+            with open(har_path, encoding="utf-8") as f:
+                har_data: Any = json.load(f)
+            entries: list[Any] = har_data.get("log", {}).get("entries", [])
+        except (OSError, json.JSONDecodeError):
+            continue
 
-            if login_page and action:
-                issue = check_login_page_in_har(entries, login_page, action)
-                if issue:
-                    issues.append(AuthAuditIssue(modem=modem_rel, har=har_path.name, issue=issue))
+        if login_page and action:
+            issue = check_login_page_in_har(entries, login_page, action)
+            if issue:
+                issues.append(AuthAuditIssue(modem=modem_rel, har=har_path.name, issue=issue))
 
-            issues.extend(_redirect_landing_issues(entries, modem_rel, har_path.name))
+        issues.extend(_redirect_landing_issues(entries, modem_rel, har_path.name))
 
     return issues
+
+
+def _form_auth(config_path: Path | None) -> dict[str, Any] | None:
+    """The auth block of a form-strategy config, or None for any other config."""
+    if config_path is None:
+        return None
+    try:
+        config: Any = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError):
+        return None
+    auth = config.get("auth") if isinstance(config, dict) else None
+    if not isinstance(auth, dict) or auth.get("strategy") != "form":
+        return None
+    return auth
 
 
 def _redirect_landing_issues(

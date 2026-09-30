@@ -273,6 +273,50 @@ class TestAuditFleetAuth:
         assert issue.har == "modem.har"
         assert issue.issue
 
+    # Each fixture is audited under the config it replays with
+    # (resolve_modem_config), so a named variant's fixture is checked and a
+    # fixture is never judged by another variant's auth block.
+    #
+    # ┌──────────────────────────┬─────────────────────────┬────────────────┬──────────────────┐
+    # │ case                     │ config files (strategy) │ fixture        │ audited fixtures │
+    # ├──────────────────────────┼─────────────────────────┼────────────────┼──────────────────┤
+    # │ named variant, default   │ modem (none),           │ modem-form.har │ modem-form.har   │
+    # │ alongside                │ modem-form (form)       │                │                  │
+    # │ named variant only       │ modem-form (form)       │ modem-form.har │ modem-form.har   │
+    # │ fixture of a non-form    │ modem (form),           │ modem-basic.har│ none             │
+    # │ variant                  │ modem-basic (basic)     │                │                  │
+    # └──────────────────────────┴─────────────────────────┴────────────────┴──────────────────┘
+    #
+    # fmt: off
+    VARIANT_PAIRING_CASES = [
+        ("variant beside default", {"modem": "none", "modem-form": "form"},   "modem-form.har",  ["modem-form.har"]),
+        ("variant only",           {"modem-form": "form"},                    "modem-form.har",  ["modem-form.har"]),
+        ("non-form variant",       {"modem": "form", "modem-basic": "basic"}, "modem-basic.har", []),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "configs,fixture,audited",
+        [c[1:] for c in VARIANT_PAIRING_CASES],
+        ids=[c[0] for c in VARIANT_PAIRING_CASES],
+    )
+    def test_fixture_audited_under_its_own_variant(
+        self, tmp_path: Path, configs: dict[str, str], fixture: str, audited: list[str]
+    ) -> None:
+        """A fixture is audited against the variant config it replays under."""
+        modem_dir = tmp_path / "vendor" / "m1"
+        test_data = modem_dir / "test_data"
+        test_data.mkdir(parents=True)
+        for stem, strategy in configs.items():
+            (modem_dir / f"{stem}.yaml").write_text(
+                f"auth:\n  strategy: {strategy}\n  action: /goform/Login\n  login_page: /Login.asp\n",
+                encoding="utf-8",
+            )
+        # An empty capture holds no login page, so an audited form fixture is flagged.
+        (test_data / fixture).write_text('{"log": {"entries": []}}', encoding="utf-8")
+
+        assert [i.har for i in audit_fleet_auth(tmp_path)] == audited
+
 
 class TestScanFleetEdgeCases:
     """Edge cases and robustness."""
@@ -332,6 +376,14 @@ class TestExcludeOneModem:
         assert set(fleet.system_info_json_keys) == {"k2"}
         assert fleet.password_field_names == frozenset({"pw2"})
         assert set(fleet.confirmed_config_values["auth.lockout_code"]) == {"c2"}
+
+    def test_named_variant_teaches_its_password_field(self, tmp_path: Path) -> None:
+        """A modem-{variant}.yaml password_field is learned, and excluded with its directory."""
+        self._catalog(tmp_path)
+        self._write(tmp_path, "vendor/m1/modem-alt.yaml", "auth:\n  strategy: form\n  password_field: pw3\n")
+        assert scan_fleet(tmp_path).password_field_names == frozenset({"pw1", "pw2", "pw3"})
+        excluded = scan_fleet(tmp_path, exclude=tmp_path / "vendor" / "m1")
+        assert excluded.password_field_names == frozenset({"pw2"})
 
 
 class TestChannelJsonKeys:

@@ -59,9 +59,9 @@ def fleet_password_names(names: frozenset[str] | None) -> Iterator[None]:
 
 
 def collect_password_field_names(catalog_root: Path, exclude: Path | None = None) -> frozenset[str]:
-    """Collect declared password_field names from committed modem.yaml configs outside ``exclude``."""
+    """Collect declared password_field names from committed modem*.yaml configs outside ``exclude``."""
     names: set[str] = set()
-    for modem_yaml_path in sorted(catalog_root.rglob("modem.yaml")):
+    for modem_yaml_path in sorted(catalog_root.rglob("modem*.yaml")):
         if exclude is not None and modem_yaml_path.is_relative_to(exclude):
             continue
         try:
