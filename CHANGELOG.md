@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`jsonrpc` is now `json_rpc`** as a transport, auth strategy and
+  action type, matching the underscore in `form_cbn` and `url_token`.
+  An entry that still says `jsonrpc` fails validation. The shipped SDMC
+  NE6037 entry is updated. (#215)
+
 ## [3.14.15-beta.2] - 2026-09-29
 
 ### Added

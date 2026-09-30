@@ -24,7 +24,7 @@ _HNAP_RESTART: dict[str, Any] = {
     "params": {"Action": "reboot"},
 }
 
-_JSONRPC_RESTART: dict[str, Any] = {"type": "jsonrpc", "method": "MGMT.reboot"}
+_JSON_RPC_RESTART: dict[str, Any] = {"type": "json_rpc", "method": "MGMT.reboot"}
 
 
 @pytest.mark.parametrize(
@@ -77,9 +77,9 @@ _JSONRPC_RESTART: dict[str, Any] = {"type": "jsonrpc", "method": "MGMT.reboot"}
         # (pre_fetch_action, response_key, ...) are out of grading scope
         (_HNAP_RESTART, {**_HNAP_RESTART, "pre_fetch_action": "GetArrisConfigurationInfo"}, "match"),
         ({**_HNAP_RESTART, "action_name": "SetOther"}, _HNAP_RESTART, "mismatch"),
-        # jsonrpc identity is the method; there is no endpoint on the action
-        (_JSONRPC_RESTART, _JSONRPC_RESTART, "match"),
-        ({**_JSONRPC_RESTART, "method": "MGMT.other"}, _JSONRPC_RESTART, "mismatch"),
+        # json_rpc identity is the method; there is no endpoint on the action
+        (_JSON_RPC_RESTART, _JSON_RPC_RESTART, "match"),
+        ({**_JSON_RPC_RESTART, "method": "MGMT.other"}, _JSON_RPC_RESTART, "mismatch"),
         # Committed json_body the pipeline cannot produce (superhub5 shape)
         (
             {"type": "http", "method": "POST", "endpoint": "/rest/v1/system/reboot"},
@@ -159,8 +159,8 @@ def test_severity_covers_all_statuses() -> None:
     assert GRADE_SEVERITY["match"] < GRADE_SEVERITY["partial"] < GRADE_SEVERITY["mismatch"]
 
 
-def test_jsonrpc_mismatch_names_methods() -> None:
-    """A jsonrpc mismatch reads as the two methods, not an http method and a missing endpoint."""
-    grade = grade_action({**_JSONRPC_RESTART, "method": "MGMT.other"}, _JSONRPC_RESTART)
+def test_json_rpc_mismatch_names_methods() -> None:
+    """A json_rpc mismatch reads as the two methods, not an http method and a missing endpoint."""
+    grade = grade_action({**_JSON_RPC_RESTART, "method": "MGMT.other"}, _JSON_RPC_RESTART)
     assert grade is not None
-    assert grade.detail == "detected jsonrpc MGMT.other vs committed jsonrpc MGMT.reboot"
+    assert grade.detail == "detected json_rpc MGMT.other vs committed json_rpc MGMT.reboot"

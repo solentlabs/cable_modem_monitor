@@ -175,8 +175,8 @@ class TestConfirmedConfigValues:
         self._write(
             tmp_path,
             "vendor/m1/modem.yaml",
-            "status: confirmed\nauth:\n  strategy: jsonrpc\n  lockout_code: codeLocked\n"
-            "actions:\n  restart:\n    type: jsonrpc\n    method: SYS.reboot\n",
+            "status: confirmed\nauth:\n  strategy: json_rpc\n  lockout_code: codeLocked\n"
+            "actions:\n  restart:\n    type: json_rpc\n    method: SYS.reboot\n",
         )
         self._write(
             tmp_path,
@@ -314,7 +314,7 @@ class TestExcludeOneModem:
             self._write(
                 root,
                 f"vendor/{model}/modem.yaml",
-                f"status: confirmed\nauth:\n  strategy: jsonrpc\n  password_field: {pwd}\n  lockout_code: {code}\n",
+                f"status: confirmed\nauth:\n  strategy: json_rpc\n  password_field: {pwd}\n  lockout_code: {code}\n",
             )
 
     def test_whole_fleet_learns_both(self, tmp_path: Path) -> None:

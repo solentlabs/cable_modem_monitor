@@ -379,7 +379,7 @@ def _grade_actions_stage(
     """Grade detected actions, plus any a resolution produced, against the committed config.
 
     Runs before generation so actions are graded even when a later stage
-    fails. A resolved action (the jsonrpc restart) is built by
+    fails. A resolved action (the json_rpc restart) is built by
     generate_config's own resolution step, so the grade sees exactly
     what generation writes.
     """

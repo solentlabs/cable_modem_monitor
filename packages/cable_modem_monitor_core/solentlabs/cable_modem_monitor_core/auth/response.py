@@ -14,7 +14,7 @@ Seven entry points:
 * :func:`place_token_header` — send a login's token back as a named
   request header (``bearer``, ``json_sjcl``).
 * :func:`extract_token` — read a string token at a dot-separated path
-  in a parsed body (``bearer``, ``jsonrpc``).
+  in a parsed body (``bearer``, ``json_rpc``).
 * :func:`parse_json_dict` — parse an existing ``Response`` as a
   JSON dict (with double-decode, type check, DEBUG log).
 * :func:`post_json` — POST JSON payload **and** parse the

@@ -883,15 +883,15 @@ class TestExecuteAction:
         assert call_kwargs["session_cookie_name"] == "sessionToken"
         assert call_kwargs["timeout"] == 10
 
-    def test_jsonrpc_action_dispatches(self) -> None:
-        """JSON-RPC action routes to execute_jsonrpc_action with the endpoint and the login token."""
+    def test_json_rpc_action_dispatches(self) -> None:
+        """JSON-RPC action routes to execute_json_rpc_action with the endpoint and the login token."""
         from solentlabs.cable_modem_monitor_core.auth.base import AuthContext
-        from solentlabs.cable_modem_monitor_core.auth.jsonrpc import JsonrpcAuthManager
-        from solentlabs.cable_modem_monitor_core.models.modem_config.actions import JsonrpcAction
-        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import JsonrpcAuth
+        from solentlabs.cable_modem_monitor_core.auth.json_rpc import JsonRpcAuthManager
+        from solentlabs.cable_modem_monitor_core.models.modem_config.actions import JsonRpcAction
+        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import JsonRpcAuth
 
-        auth = JsonrpcAuth(
-            strategy="jsonrpc",
+        auth = JsonRpcAuth(
+            strategy="json_rpc",
             endpoint="/cgi-bin/router.php",
             login_method="MGMT.login",
             username_field="u",
@@ -902,16 +902,16 @@ class TestExecuteAction:
         collector = MagicMock()
         collector._session = MagicMock(spec=requests.Session)
         collector._base_url = "http://192.168.0.1"
-        collector._auth_manager = JsonrpcAuthManager(auth)
+        collector._auth_manager = JsonRpcAuthManager(auth)
         collector._auth_context = AuthContext(token="T1", url_token="T1")
 
         modem_config = MagicMock()
         modem_config.auth = auth
         modem_config.timeout = 10
 
-        action = JsonrpcAction(type="jsonrpc", method="MGMT.reboot")
+        action = JsonRpcAction(type="json_rpc", method="MGMT.reboot")
 
-        with patch("solentlabs.cable_modem_monitor_core.orchestration.actions.execute_jsonrpc_action") as mock_rpc:
+        with patch("solentlabs.cable_modem_monitor_core.orchestration.actions.execute_json_rpc_action") as mock_rpc:
             mock_rpc.return_value = MagicMock(success=True)
             execute_action(collector, modem_config, action)
 

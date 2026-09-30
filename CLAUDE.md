@@ -424,7 +424,7 @@ reply, where a skipped one is visible without re-running the work.
   omits post-processor fields (`rate_corrected`, `rate_uncorrected`)
   and cannot resolve CBN resources at all (`build_resource_dict`
   auto-detects HNAP or HTTP, and reads JSON-RPC only when passed
-  `transport="jsonrpc"`). Using it to write a golden silently
+  `transport="json_rpc"`). Using it to write a golden silently
   drops fields, and on a CBN modem writes an empty one.
 - **Docstring placeholders.** In docstring examples, use template
   placeholders (`{manufacturer}/{model}/`), not specific fake names

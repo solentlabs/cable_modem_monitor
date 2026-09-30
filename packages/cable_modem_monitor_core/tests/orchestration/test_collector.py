@@ -1727,8 +1727,8 @@ def _rpc_reply(body: dict[str, Any]) -> MagicMock:
     return resp
 
 
-class TestJsonrpcLoadPath:
-    """The jsonrpc transport loads by method name and classifies reply errors.
+class TestJsonRpcLoadPath:
+    """The json_rpc transport loads by method name and classifies reply errors.
 
     RESOURCE_LOADING_SPEC.md § JSON-RPC Loading, with the real loader in
     the path rather than a patched ``_load_resources``.
@@ -1738,11 +1738,11 @@ class TestJsonrpcLoadPath:
 
     @staticmethod
     def _collector() -> ModemDataCollector:
-        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import JsonrpcAuth
+        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import JsonRpcAuth
 
-        config = _make_config(transport="jsonrpc")
-        config.auth = JsonrpcAuth(
-            strategy="jsonrpc",
+        config = _make_config(transport="json_rpc")
+        config.auth = JsonRpcAuth(
+            strategy="json_rpc",
             endpoint="/cgi-bin/router.php",
             login_method="MGMT.login",
             username_field="u",

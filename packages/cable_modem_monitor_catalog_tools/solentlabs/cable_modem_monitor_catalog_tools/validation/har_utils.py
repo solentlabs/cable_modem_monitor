@@ -56,7 +56,7 @@ def is_hnap_request(url: str, req_headers: dict[str, str]) -> bool:
     return "/HNAP1/" in url or "hnap_auth" in req_headers or "soapaction" in req_headers
 
 
-def jsonrpc_body(request: dict[str, Any]) -> dict[str, Any] | None:
+def json_rpc_body(request: dict[str, Any]) -> dict[str, Any] | None:
     """A single JSON-RPC 2.0 request object with a string ``method``, or None."""
     text = (request.get("postData") or {}).get("text") or ""
     if '"jsonrpc"' not in text:
@@ -70,7 +70,7 @@ def jsonrpc_body(request: dict[str, Any]) -> dict[str, Any] | None:
     return body if isinstance(body.get("method"), str) else None
 
 
-def jsonrpc_response(entry: dict[str, Any]) -> dict[str, Any]:
+def json_rpc_response(entry: dict[str, Any]) -> dict[str, Any]:
     """The JSON-RPC response object of an entry, or an empty dict when the body is not one."""
     text = (entry.get("response", {}).get("content") or {}).get("text") or ""
     try:

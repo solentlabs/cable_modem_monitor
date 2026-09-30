@@ -100,9 +100,9 @@ but modem-specific behavior comes from config, not from Core code.
 | Data models | `ModemData`, `ChannelData`, `SystemInfo`, `HealthInfo`, `ModemIdentity` |
 | Config schemas | `ModemConfig`, `AuthConfig`, `PageConfig`, `ParserConfig` |
 | ABCs / base classes | `BaseParser`, `BaseAuthManager`, `AuthStrategyBase` (model ClassVars) |
-| Action executors | `orchestration/actions/` — transport-scoped executors (`http_action`, `hnap_action`, `cbn_action`, `jsonrpc_action`) with single `execute_action()` dispatch. `ActionResult` return type. |
-| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing; `hmac_algorithm()` gives typed access to the auth block's algorithm. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth; `cbn_params()` gives typed access to the getter/setter endpoints and session cookie. `protocol/sjcl` — SJCL PBKDF2 and AES-CCM used by `form_sjcl` and `json_sjcl`. `protocol/jsonrpc` — the JSON-RPC 2.0 envelope (build a call, read `result` or `error`) shared by `jsonrpc` auth, loader, and actions; `jsonrpc_params()` gives typed access to the auth block. |
-| Auth shared helpers | `auth/response` — JSON response parsing (double-decode, type check, diagnostics) shared by `form_sjcl`, `form_pbkdf2`, `hnap`; dot-path token reads shared by `bearer` and `jsonrpc`. |
+| Action executors | `orchestration/actions/` — transport-scoped executors (`http_action`, `hnap_action`, `cbn_action`, `json_rpc_action`) with single `execute_action()` dispatch. `ActionResult` return type. |
+| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing; `hmac_algorithm()` gives typed access to the auth block's algorithm. `protocol/cbn` — shared CBN_Encrypt (AES-256-CBC) used by `form_cbn` auth; `cbn_params()` gives typed access to the getter/setter endpoints and session cookie. `protocol/sjcl` — SJCL PBKDF2 and AES-CCM used by `form_sjcl` and `json_sjcl`. `protocol/json_rpc` — the JSON-RPC 2.0 envelope (build a call, read `result` or `error`) shared by `json_rpc` auth, loader, and actions; `json_rpc_params()` gives typed access to the auth block. |
+| Auth shared helpers | `auth/response` — JSON response parsing (double-decode, type check, diagnostics) shared by `form_sjcl`, `form_pbkdf2`, `hnap`; dot-path token reads shared by `bearer` and `json_rpc`. |
 | Parser coordinator | `ModemParserCoordinator` — factory + orchestration: parser.yaml → `BaseParser` instances → parser.py chaining → `ModemData` |
 | Auth strategies | One audited implementation per strategy in `auth/`. See the [Auth Manager](#auth-manager) table for the full set. |
 | Resource loaders | HTTP → `BeautifulSoup` or `dict` (format-dependent), HNAP → JSON, CBN → `Element`, JSON-RPC → `dict` (`result`) |
@@ -210,7 +210,7 @@ snapshot = orchestrator.get_modem_data()
 ## Transport and Format
 
 The `transport` field in modem.yaml is the first config decision — it
-identifies the wire protocol (`http`, `hnap`, `cbn`, or `jsonrpc`) and
+identifies the wire protocol (`http`, `hnap`, `cbn`, or `json_rpc`) and
 determines whether the remaining axes are free or locked. For `http`,
 auth, session, and format are configured independently (qualified —
 some auth/session pairings are linked, marked with 🔗 below). For the
@@ -221,7 +221,7 @@ graph TD
     T[transport] --> HNAP["<b>hnap</b><hr/>HNAPLoader → dict"]
     T --> HTTP["<b>http</b><hr/>HTTPLoader → BeautifulSoup | dict"]
     T --> CBN["<b>cbn</b><hr/>CBNLoader → Element"]
-    T --> JRPC["<b>jsonrpc</b><hr/>JSONRPCLoader → dict"]
+    T --> JRPC["<b>json_rpc</b><hr/>JsonRpcLoader → dict"]
 
     HNAP --> HA["<b>AUTH</b><hr/>• HMAC challenge-response"]
     HA --> HS["<b>SESSION</b><hr/>• uid + PrivateKey cookies<br/>• HNAP_AUTH header"]
@@ -235,7 +235,7 @@ graph TD
     CA --> CS["<b>SESSION</b><hr/>• rotating sessionToken cookie<br/>• stable SID cookie"]
     CS --> CF["<b>FORMAT</b><hr/>• xml"]
 
-    JRPC --> JA["<b>AUTH</b><hr/>• jsonrpc (login call)"]
+    JRPC --> JA["<b>AUTH</b><hr/>• json_rpc (login call)"]
     JA --> JS["<b>SESSION</b><hr/>• token in URL query"]
     JS --> JF["<b>FORMAT</b><hr/>• json"]
 ```
@@ -274,7 +274,7 @@ choosing `json` format doesn't require `form_pbkdf2` auth.
 - The protocol fixes only the envelope: method names, error codes, and
   the shape of `result` are entry values
 - One strategy handles all JSON-RPC modems
-  ([AUTH_JSONRPC_SPEC.md](AUTH_JSONRPC_SPEC.md))
+  ([AUTH_JSON_RPC_SPEC.md](AUTH_JSON_RPC_SPEC.md))
 
 ### HTTP — Independent Axes
 
@@ -292,7 +292,7 @@ choosing `json` format doesn't require `form_pbkdf2` auth.
 | `cbn` | `CBNLoader` → `Element` | `form_cbn` | `xml` | `cbn` |
 | `hnap` | `HNAPLoader` → `dict` | `hnap` | `hnap` | `hnap` |
 | `http` | `HTTPResourceLoader` → `BeautifulSoup` or `dict` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `json_sjcl`, `none`, `url_token` | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
-| `jsonrpc` | `JSONRPCLoader` → `dict` | `jsonrpc` | `json` | `jsonrpc` |
+| `json_rpc` | `JsonRpcLoader` → `dict` | `json_rpc` | `json` | `json_rpc` |
 <!-- END GENERATED: constraint-summary -->
 
 At runtime, the format declared in parser.yaml determines how the response
@@ -331,7 +331,7 @@ existing entries change.
   `_TRANSPORT_PROSE` entry in the table generator. A transport whose
   value type a format already parses adds itself to that format's
   `transports` instead of a new `BaseParser`. `cbn` demonstrates the
-  first: new loader, new `xml` parser, new `form_cbn` auth. `jsonrpc`
+  first: new loader, new `xml` parser, new `form_cbn` auth. `json_rpc`
   the second: its loader yields `dict`, so the `json` formats serve
   it.
 
@@ -364,8 +364,8 @@ from modem.yaml:
 | `form_pbkdf2` | `http` | No |
 | `form_sjcl` | `http` | No |
 | `hnap` | `hnap` | No |
+| `json_rpc` | `json_rpc` | No |
 | `json_sjcl` | `http` | No |
-| `jsonrpc` | `jsonrpc` | No |
 | `none` | `http` | Yes |
 | `url_token` | `http` | No |
 <!-- END GENERATED: auth-strategies -->
@@ -395,7 +395,7 @@ config fields.
   are config values on it. `json_sjcl` is separate because SJCL
   encryption adds a round trip and crypto, the same line that separates
   `form_sjcl` from `form`
-- `jsonrpc` is a JSON login too, but on its own transport: the login is
+- `json_rpc` is a JSON login too, but on its own transport: the login is
   one JSON-RPC call on the endpoint every data call shares, and a
   strategy serves exactly one transport
 - All other form differences (encoding, CSRF, field names, session cookies)
@@ -454,7 +454,7 @@ knowledge moved:
 | `auth_failure_mode()` | `CREDENTIALS_SUSPECT` | strategies that prove a login-time rejection |
 | `session_cookie_name()` | `""` | strategies whose config declares `cookie_name`. `form_cbn` does not: its session reads valid after login until the CBN session work detects expiry. |
 | `session_is_valid(session, context)` | no context: `False`; else the `session_cookie_name()` cookie is in the jar when one is named; else `True` | `none` (always `True`), `hnap` (uid cookie and `context.private_key`) |
-| `loader_url_token(session, context)` | no token | `url_token`, and `bearer` with `token_placement: query`: the configured `token_prefix` with `context.url_token`, falling back to the session cookie's value when the login gave none. `jsonrpc`: `<token_param>=` with `context.url_token`, and nothing before a login |
+| `loader_url_token(session, context)` | no token | `url_token`, and `bearer` with `token_placement: query`: the configured `token_prefix` with `context.url_token`, falling back to the session cookie's value when the login gave none. `json_rpc`: `<token_param>=` with `context.url_token`, and nothing before a login |
 | `encode_action_body(body)` | `None`: this session cannot encode, so a `body_encoding: session` action fails and sends nothing | `json_sjcl`: the SJCL envelope under the last successful login's key. Its model sets `encodes_action_bodies`, which config validation reads. |
 
 A new hook is added with its first implementer, never ahead of one.

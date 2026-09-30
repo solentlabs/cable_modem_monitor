@@ -106,7 +106,7 @@ Keys are the method names on the fetch list. Values are each call's
   vendor's shape directly (`array_path: "dss"`).
 - A `result` that is not an object is wrapped `{"_raw": value}`, the
   HTTP structured-format rule.
-- A capture read offline (`build_resource_dict(har, transport="jsonrpc")`)
+- A capture read offline (`build_resource_dict(har, transport="json_rpc")`)
   yields the same dict. A method called more than once takes its later
   `result`, and an `error` reply is not data, as the HAR replay server
   answers. The transport is passed, never sniffed: form-login firmware
@@ -243,9 +243,9 @@ fun value).
 
 ### JSON-RPC Loading
 
-The `jsonrpc` transport POSTs every call to `auth.endpoint`; the
+The `json_rpc` transport POSTs every call to `auth.endpoint`; the
 `method` member names the resource. Envelope rules:
-[AUTH_JSONRPC_SPEC.md § Envelope](AUTH_JSONRPC_SPEC.md#envelope).
+[AUTH_JSON_RPC_SPEC.md § Envelope](AUTH_JSON_RPC_SPEC.md#envelope).
 
 **Fetch cycle:** for each method on the fetch list, POST
 `{"jsonrpc":"2.0","method":<method>,"params":[],"id":N}` to
@@ -368,7 +368,7 @@ The loader doesn't know how the token was obtained — it just appends
 whatever the collector provides. `bearer` with
 `token_placement: query` uses the same path: it stores its token as
 `auth_context.url_token` and declares `auth.token_prefix`. So does
-`jsonrpc`, whose prefix is `<token_param>=`, appended to its one
+`json_rpc`, whose prefix is `<token_param>=`, appended to its one
 endpoint rather than to a page path.
 
 ---
@@ -383,7 +383,7 @@ instantiated:
 | `http` | HTTPLoader | Format-dependent: `BeautifulSoup` (HTML formats) or `dict` (structured formats) |
 | `hnap` | HNAPLoader | `dict` (JSON) |
 | `cbn` | CBNLoader | `defusedxml.ElementTree.Element` |
-| `jsonrpc` | JSONRPCLoader | `dict` (the call's `result`) |
+| `json_rpc` | JsonRpcLoader | `dict` (the call's `result`) |
 
 Selection happens once at startup (or after config change) and persists
 for the integration's lifetime. The loader is instantiated by the

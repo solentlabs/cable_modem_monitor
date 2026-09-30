@@ -3,7 +3,7 @@
 Used by the intake regression to track onboarding capability per action:
 how much of each committed action config the deterministic pipeline
 reproduces from the HAR alone. Grading covers type, identity (method +
-endpoint for http, action_name for hnap, method for jsonrpc), params,
+endpoint for http, action_name for hnap, method for json_rpc), params,
 and json_body presence.
 Other committed fields (pre_fetch_action, action_auth, requires_session,
 response keys) are human-authored config outside what a HAR can show —
@@ -64,7 +64,7 @@ def _identity(action: dict[str, Any]) -> tuple[Any, ...]:
     """What makes two actions the same action."""
     if action.get("type") == "hnap":
         return (action.get("action_name"),)
-    if action.get("type") == "jsonrpc":
+    if action.get("type") == "json_rpc":
         return (action.get("method"),)
     if action.get("type") == "cbn":
         return (str(action.get("fun")),)
@@ -74,8 +74,8 @@ def _identity(action: dict[str, Any]) -> tuple[Any, ...]:
 def _identity_str(action: dict[str, Any]) -> str:
     if action.get("type") == "hnap":
         return f"hnap {action.get('action_name')}"
-    if action.get("type") == "jsonrpc":
-        return f"jsonrpc {action.get('method')}"
+    if action.get("type") == "json_rpc":
+        return f"json_rpc {action.get('method')}"
     if action.get("type") == "cbn":
         return f"cbn fun {action.get('fun')}"
     return f"{action.get('method')} {action.get('endpoint')}"

@@ -2369,7 +2369,7 @@ point for all action execution. Both the collector (logout) and
 orchestrator (restart) call it. The function extracts session, base
 URL, and HNAP credentials from the collector and dispatches to the
 appropriate transport-scoped executor based on the action's type
-discriminator (`http`, `hnap`, `cbn`, or `jsonrpc`).
+discriminator (`http`, `hnap`, `cbn`, or `json_rpc`).
 
 ### HTTP Executor
 
@@ -2412,10 +2412,10 @@ Returns `ActionResult`.
 
 ### JSON-RPC Executor
 
-`jsonrpc_action.execute_jsonrpc_action()` sends one JSON-RPC call
+`json_rpc_action.execute_json_rpc_action()` sends one JSON-RPC call
 (`method`, `params`) to `auth.endpoint` with the session token in the
 query, the same request a data call makes. The envelope comes from
-`protocol.jsonrpc`.
+`protocol.json_rpc`.
 
 A `result` of any value is success. An `error` is a refused action
 whose message names the code, and so is a non-2xx status or a body

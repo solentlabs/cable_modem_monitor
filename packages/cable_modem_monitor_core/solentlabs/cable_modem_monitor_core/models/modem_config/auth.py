@@ -323,11 +323,11 @@ class JsonSjclAuth(AuthStrategyBase):
     encodes_action_bodies: ClassVar[bool] = True
 
 
-class JsonrpcAuth(AuthStrategyBase):
-    """JSON-RPC 2.0 login call. See MODEM_YAML_SPEC.md § jsonrpc."""
+class JsonRpcAuth(AuthStrategyBase):
+    """JSON-RPC 2.0 login call. See MODEM_YAML_SPEC.md § json_rpc."""
 
     model_config = ConfigDict(extra="forbid")
-    strategy: Literal["jsonrpc"]
+    strategy: Literal["json_rpc"]
     endpoint: str
     login_method: str
     username_field: str
@@ -335,12 +335,12 @@ class JsonrpcAuth(AuthStrategyBase):
     token_path: str
     token_param: str
     # Firmware vocabulary, compared with the reply's error.code as a string;
-    # empty means the entry declares none (AUTH_JSONRPC_SPEC.md § Error Codes).
+    # empty means the entry declares none (AUTH_JSON_RPC_SPEC.md § Error Codes).
     lockout_code: str = ""
     session_expired_code: str = ""
 
     display_name: ClassVar[str] = "JSON-RPC"
-    transport: ClassVar[str] = "jsonrpc"
+    transport: ClassVar[str] = "json_rpc"
     stateless: ClassVar[bool] = False
 
 
@@ -354,7 +354,7 @@ AuthConfig = Annotated[
     | Annotated[FormSjclAuth, Tag("form_sjcl")]
     | Annotated[HnapAuth, Tag("hnap")]
     | Annotated[JsonSjclAuth, Tag("json_sjcl")]
-    | Annotated[JsonrpcAuth, Tag("jsonrpc")]
+    | Annotated[JsonRpcAuth, Tag("json_rpc")]
     | Annotated[NoneAuth, Tag("none")]
     | Annotated[UrlTokenAuth, Tag("url_token")],
     Discriminator("strategy"),
@@ -376,7 +376,7 @@ _AUTH_MODELS: list[type[AuthStrategyBase]] = [
     FormSjclAuth,
     HnapAuth,
     JsonSjclAuth,
-    JsonrpcAuth,
+    JsonRpcAuth,
     NoneAuth,
     UrlTokenAuth,
 ]
@@ -437,4 +437,4 @@ _transport_sets = get_transport_strategy_sets()
 HTTP_AUTH_STRATEGIES: frozenset[str] = _transport_sets["http"]
 HNAP_AUTH_STRATEGIES: frozenset[str] = _transport_sets["hnap"]
 CBN_AUTH_STRATEGIES: frozenset[str] = _transport_sets["cbn"]
-JSONRPC_AUTH_STRATEGIES: frozenset[str] = _transport_sets["jsonrpc"]
+JSON_RPC_AUTH_STRATEGIES: frozenset[str] = _transport_sets["json_rpc"]

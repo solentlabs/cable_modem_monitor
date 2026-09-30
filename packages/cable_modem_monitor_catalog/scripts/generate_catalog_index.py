@@ -122,7 +122,7 @@ def load_catalog_modems() -> list[dict]:
                 "http": "HTML",
                 "hnap": "HNAP",
                 "cbn": "CBN",
-                "jsonrpc": "JSON-RPC",
+                "json_rpc": "JSON-RPC",
                 "rest_api": "REST_API",
             }
             protocol = transport_map.get(transport, "HTML")

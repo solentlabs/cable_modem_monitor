@@ -25,12 +25,12 @@ from solentlabs.cable_modem_monitor_core.har import load_har_json
 
 from .analysis.actions import ActionsDetail, detect_actions
 from .analysis.actions.cbn import cbn_action_ambiguities
-from .analysis.actions.jsonrpc import restart_ambiguity
+from .analysis.actions.json_rpc import restart_ambiguity
 from .analysis.ambiguity import Ambiguity, corroborate
 from .analysis.auth import AuthDetail, detect_auth
 from .analysis.auth.patterns import fleet_password_names
 from .analysis.format import detect_sections
-from .analysis.js_endpoints import detect_uncalled_jsonrpc_methods, detect_uncaptured_endpoints
+from .analysis.js_endpoints import detect_uncalled_json_rpc_methods, detect_uncaptured_endpoints
 from .analysis.request_requirements import detect_request_requirements
 from .analysis.session import SessionDetail
 from .analysis.transport import TransportResult
@@ -118,8 +118,8 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
 
     # The HTTP tree run over these calls misreads the login as form_pbkdf2
     # (#215), so JSON-RPC has its own phase sequence.
-    if transport_result.transport == "jsonrpc":
-        return _analyze_jsonrpc(entries, transport_result, fleet)
+    if transport_result.transport == "json_rpc":
+        return _analyze_json_rpc(entries, transport_result, fleet)
 
     # Phase 2: Auth
     auth_result = detect_auth(entries, transport_result.transport, warnings, hard_stops, core_gaps)
@@ -180,7 +180,7 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
     )
 
 
-def _analyze_jsonrpc(
+def _analyze_json_rpc(
     entries: list[dict[str, Any]],
     transport_result: TransportResult,
     fleet: FleetPatterns | None,
@@ -188,13 +188,13 @@ def _analyze_jsonrpc(
     """Analyze a JSON-RPC capture call by call."""
     warnings: list[str] = []
     ambiguities: list[Ambiguity] = []
-    auth = detect_auth(entries, "jsonrpc", warnings, [], ambiguities=ambiguities)
-    session = SessionDetail.detect(entries, "jsonrpc", auth.strategy, warnings)
-    sections = detect_sections(entries, "jsonrpc", warnings, [], fleet=fleet, ambiguities=ambiguities)
+    auth = detect_auth(entries, "json_rpc", warnings, [], ambiguities=ambiguities)
+    session = SessionDetail.detect(entries, "json_rpc", auth.strategy, warnings)
+    sections = detect_sections(entries, "json_rpc", warnings, [], fleet=fleet, ambiguities=ambiguities)
     # Restart candidates exclude data sources, so they follow sections.
     ambiguities.append(restart_ambiguity(entries, sections))
-    detect_uncalled_jsonrpc_methods(entries, warnings)
-    unread = detect_unread_resources(entries, sections, auth, ActionsDetail(), "jsonrpc")
+    detect_uncalled_json_rpc_methods(entries, warnings)
+    unread = detect_unread_resources(entries, sections, auth, ActionsDetail(), "json_rpc")
     if fleet is not None:
         corroborate(ambiguities, fleet.confirmed_config_values)
     return AnalysisResult(

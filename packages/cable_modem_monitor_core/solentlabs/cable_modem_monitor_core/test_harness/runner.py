@@ -38,14 +38,14 @@ from ..har import load_har_json
 from ..loaders.cbn import CBNLoader
 from ..loaders.hnap import HNAPLoader
 from ..loaders.http import HTTPResourceLoader
-from ..loaders.jsonrpc import JSONRPCLoader
+from ..loaders.json_rpc import JsonRpcLoader
 from ..orchestration.factory import create_orchestrator
 from ..orchestration.signals import ConnectionStatus
 from ..parsers.coordinator import ModemParserCoordinator
 from ..post_processor import load_post_processor
 from ..protocol.cbn import cbn_params
 from ..protocol.hnap import hmac_algorithm
-from ..protocol.jsonrpc import jsonrpc_params
+from ..protocol.json_rpc import json_rpc_params
 from .discovery import ModemTestCase, RestartTestCase
 from .golden_file import ComparisonResult, compare_golden_file
 from .server import HARMockServer
@@ -422,11 +422,11 @@ def _run_pipeline(
                 timeout=modem_config.timeout,
             )
             resources = hnap_loader.fetch(parser_config)
-        elif modem_config.transport == "jsonrpc":
+        elif modem_config.transport == "json_rpc":
             # JSON-RPC: one call per method on the transport's endpoint
             token_prefix, url_token = auth_manager.loader_url_token(session, auth_result.auth_context)
-            rpc = jsonrpc_params(modem_config.auth)
-            resources = JSONRPCLoader(
+            rpc = json_rpc_params(modem_config.auth)
+            resources = JsonRpcLoader(
                 session=session,
                 base_url=base_url,
                 endpoint=rpc.endpoint,

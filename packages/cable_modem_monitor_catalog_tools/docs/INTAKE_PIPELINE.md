@@ -324,7 +324,7 @@ against the committed config per HAR
 
 | Grade | Meaning |
 |-------|---------|
-| `match` | Type, identity (method + endpoint, hnap action_name, or jsonrpc method), and params all reproduced |
+| `match` | Type, identity (method + endpoint, hnap action_name, or json_rpc method), and params all reproduced |
 | `partial` | Identity matches; params differ, are missing, or json_body not produced |
 | `pipeline_only` | Pipeline detected an action the catalog never adopted — candidate enrichment, or a false positive |
 | `committed_only` | Committed action the pipeline cannot produce from the HAR (human-authored config, or action never fired during capture) |

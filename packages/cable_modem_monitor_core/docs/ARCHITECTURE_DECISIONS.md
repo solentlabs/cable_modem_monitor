@@ -440,7 +440,7 @@ force the expensive path to run at the cheap path's frequency.
 ### Transport is a protocol identifier, not a constraint funnel
 
 **Decision:** The `transport` field in modem.yaml identifies the wire
-protocol: `http`, `hnap`, `cbn`, or `jsonrpc`. For `http`, auth,
+protocol: `http`, `hnap`, `cbn`, or `json_rpc`. For `http`, auth,
 session, and format are configured independently (qualified — some
 auth/session pairings are linked; see MODEM_YAML_SPEC.md
 auth-session-action consistency rules). For the others, the protocol
@@ -473,10 +473,10 @@ expect `dict`. Misconfigured modem.yaml is rejected at load time.
 
 **Decision:** A firmware that POSTs every call as a
 [JSON-RPC 2.0](https://www.jsonrpc.org/specification) envelope to one
-endpoint is the `jsonrpc` transport. Resources are keyed by method
+endpoint is the `json_rpc` transport. Resources are keyed by method
 name. The loader strips the envelope and hands the parser `result`,
 which the `json` formats read. Login is the transport's one strategy,
-`jsonrpc`; restart is a `type: jsonrpc` action. The error codes that
+`json_rpc`; restart is a `type: json_rpc` action. The error codes that
 change Core's behaviour (`lockout_code`, `session_expired_code`) are
 entry values.
 
@@ -499,7 +499,7 @@ send `params: []`. A dialect that names its operation inside `params`
 (OpenWrt ubus, where `method` is always `call`) extends the resource
 key to carry params; it is not a second transport. Error codes are
 compared by equality on `error.code`; a new code that changes behaviour
-is a new optional field on the `jsonrpc` model, never a list in Core.
+is a new optional field on the `json_rpc` model, never a list in Core.
 
 ### The published constraint tables are generated, not written
 
@@ -565,7 +565,7 @@ entity.
 `protocol/hnap.py` for HMAC signing and constants, `protocol/cbn.py`
 for the AES-256-CBC encryption `form_cbn` auth needs, `protocol/sjcl.py`
 for the SJCL PBKDF2 and AES-CCM that `form_sjcl` and `json_sjcl` share,
-`protocol/jsonrpc.py` for the envelope `jsonrpc` auth, loader, and
+`protocol/json_rpc.py` for the envelope `json_rpc` auth, loader, and
 actions share.
 
 **Rationale:** HNAP signing is used by auth, loaders, and action
@@ -577,7 +577,7 @@ consumer still owns its transport-specific flow.
 ### Transport-scoped action executors with single dispatch
 
 **Decision:** `http_action.py`, `hnap_action.py`, `cbn_action.py`, and
-`jsonrpc_action.py` implement their own protocols; one
+`json_rpc_action.py` implement their own protocols; one
 `execute_action()` dispatches to them.
 
 **Rationale:** The protocols have nothing in common at the wire

@@ -1,0 +1,58 @@
+{
+  "_description": "JSON-RPC login whose token no later call carries: token fields stay unset, with a warning",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://192.168.0.1/cgi-bin/api.cgi",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"jsonrpc\": \"2.0\", \"method\": \"SYS.login\", \"params\": [{\"userName\": \"FIELD_u\", \"userPwd\": \"FIELD_p\"}], \"id\": 1}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 50,
+          "text": "{\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"token\": \"FIELD_t\"}}"
+        }
+      }
+    }
+  ],
+  "_transport": "json_rpc",
+  "_expected_strategy": "json_rpc",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "endpoint": "/cgi-bin/api.cgi",
+    "login_method": "SYS.login"
+  },
+  "_expected_absent_fields": [
+    "token_path",
+    "token_param"
+  ],
+  "_expected_warning": "no later call carries",
+  "_expected_ambiguities": {
+    "auth.lockout_code": {
+      "blocking": true,
+      "candidates": {}
+    },
+    "auth.session_expired_code": {
+      "blocking": true,
+      "candidates": {}
+    }
+  }
+}

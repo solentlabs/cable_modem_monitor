@@ -20,7 +20,7 @@ from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPat
 from solentlabs.cable_modem_monitor_catalog_tools.analyze_har import analyze_har
 from tests._helpers import load_fixture, write_har
 
-_JSONRPC_FIXTURE = Path(__file__).parent.parent / "fixtures" / "analyze_har" / "jsonrpc" / "login_and_data.json"
+_JSON_RPC_FIXTURE = Path(__file__).parent.parent / "fixtures" / "analyze_har" / "json_rpc" / "login_and_data.json"
 
 _TWO_MEANINGS = {"lock_status": ["vendor/a"], "status": ["vendor/b", "vendor/c"]}
 _DISAGREES = FleetPatterns(channel_keys={"status": _TWO_MEANINGS})
@@ -129,9 +129,9 @@ def test_http_analysis_reports_key_ambiguities(tmp_path: Path) -> None:
     assert [a["field"] for a in result.to_dict()["ambiguities"]] == ["parser.downstream.status"]
 
 
-def test_jsonrpc_analysis_reports_key_ambiguities(tmp_path: Path) -> None:
+def test_json_rpc_analysis_reports_key_ambiguities(tmp_path: Path) -> None:
     """A JSON-RPC capture's key ambiguity sits beside its auth and restart ambiguities."""
-    data = load_fixture(_JSONRPC_FIXTURE)
+    data = load_fixture(_JSON_RPC_FIXTURE)
     fleet = FleetPatterns(channel_keys={"channel": {"channel_id": ["vendor/a"], "channel_number": ["vendor/b"]}})
     result = analyze_har(write_har(tmp_path, data["_har"]), fleet=fleet)
     assert "parser.downstream.channel" in [a.field for a in result.ambiguities]

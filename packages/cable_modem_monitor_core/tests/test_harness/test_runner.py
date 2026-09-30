@@ -607,9 +607,9 @@ class TestRestartAction:
 # runners against one golden, so the two cannot drift apart again.
 # fmt: off
 TRANSPORT_CASES = [
-    # (modem.yaml,          parser.yaml,          HAR fixture,                golden,            id)
-    ("modem_cbn.yaml",      "parser_cbn.yaml",    "har_cbn_2ch.json",         "golden_qam_2ch",  "cbn"),
-    ("modem_jsonrpc.yaml",  "parser_jsonrpc.yaml", "har_jsonrpc_2ch.json",    "golden_qam_2ch",  "jsonrpc"),
+    # (modem.yaml,          parser.yaml,            HAR fixture,             golden,           id)
+    ("modem_cbn.yaml",      "parser_cbn.yaml",      "har_cbn_2ch.json",      "golden_qam_2ch", "cbn"),
+    ("modem_json_rpc.yaml", "parser_json_rpc.yaml", "har_json_rpc_2ch.json", "golden_qam_2ch", "json_rpc"),
 ]
 # fmt: on
 

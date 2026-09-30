@@ -24,10 +24,10 @@ def build_modem_dict(analysis: dict[str, Any], metadata: dict[str, Any]) -> dict
 
 
 def type_resolved_actions(modem_dict: dict[str, Any]) -> None:
-    """Give each action a resolution wrote its type; jsonrpc and cbn each have only the one."""
+    """Give each action a resolution wrote its type; json_rpc and cbn each have only the one."""
     # A resolution writes the identifying field alone: method or fun (ONBOARDING_SPEC § Ambiguities).
     transport = modem_dict.get("transport")
-    if transport not in ("jsonrpc", "cbn"):
+    if transport not in ("json_rpc", "cbn"):
         return
     actions = modem_dict.get("actions") or {}
     for name, action in actions.items():

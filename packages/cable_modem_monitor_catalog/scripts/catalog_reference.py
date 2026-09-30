@@ -84,7 +84,7 @@ _AUTH_COLORS: dict[str, str] = {
     "url_token": "0E9A8B",
     "bearer": "1A7FAA",
     "json_sjcl": "9B6FD8",
-    "jsonrpc": "C0507A",
+    "json_rpc": "C0507A",
 }
 
 _AUTH_COLOR_FALLBACK = "9E9E9E"
@@ -135,7 +135,7 @@ def generate_auth_legend() -> list[str]:
         ("Simple", ["basic"]),
         ("Form-based", ["form", "form_nonce", "form_pbkdf2", "form_sjcl", "form_cbn"]),
         ("Token-based", ["url_token", "bearer", "json_sjcl"]),
-        ("Protocol", ["hnap", "jsonrpc"]),
+        ("Protocol", ["hnap", "json_rpc"]),
     ]
     # Append Core-registered strategies not yet in any group (gray fallback).
     known = {s for _, strategies in _groups for s in strategies}

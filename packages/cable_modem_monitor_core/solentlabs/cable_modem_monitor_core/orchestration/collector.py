@@ -453,8 +453,8 @@ class ModemDataCollector:
         if self._modem_config.transport == "cbn":
             return self._load_cbn_resources()
 
-        if self._modem_config.transport == "jsonrpc":
-            return self._load_jsonrpc_resources()
+        if self._modem_config.transport == "json_rpc":
+            return self._load_json_rpc_resources()
 
         return self._load_http_resources(auth_result)
 
@@ -534,16 +534,16 @@ class ModemDataCollector:
         resources = loader.fetch(targets)
         return resources, _to_resource_fetches(loader.resource_fetches)
 
-    def _load_jsonrpc_resources(self) -> tuple[dict[str, Any], list[ResourceFetch]]:
+    def _load_json_rpc_resources(self) -> tuple[dict[str, Any], list[ResourceFetch]]:
         """Fetch JSON-RPC resources, one call per method on the fetch list."""
-        from ..loaders.jsonrpc import JSONRPCLoader
-        from ..protocol.jsonrpc import jsonrpc_params
+        from ..loaders.json_rpc import JsonRpcLoader
+        from ..protocol.json_rpc import json_rpc_params
 
         targets = collect_fetch_targets(self._parser_config, self._post_processor)
-        auth = jsonrpc_params(self._modem_config.auth)
+        auth = json_rpc_params(self._modem_config.auth)
         token_prefix, url_token = self._auth_manager.loader_url_token(self._session, self._auth_context)
 
-        loader = JSONRPCLoader(
+        loader = JsonRpcLoader(
             session=self._session,
             base_url=self._base_url,
             endpoint=auth.endpoint,

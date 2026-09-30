@@ -325,7 +325,7 @@ For each entry in HAR:
     │
     ├── Request body is a JSON-RPC 2.0 login call (one "jsonrpc": "2.0"
     │   object whose params[0] carries a password-shaped key)?
-    │   └── YES → transport: jsonrpc (checked after HNAP, over all entries)
+    │   └── YES → transport: json_rpc (checked after HNAP, over all entries)
     │
     ├── Request body is a CBN login (form-encoded, `token` first, a
     │   `fun` code, and a password-shaped field)?
@@ -341,7 +341,7 @@ positives.
 **The login decides JSON-RPC, not any call.** Firmware can make
 JSON-RPC calls that play no part in auth or data: OpenWrt LuCI's `ubus`
 plumbing runs on a modem that logs in with a form and serves HTML. A
-JSON-RPC call makes the transport `jsonrpc` only when it is the login,
+JSON-RPC call makes the transport `json_rpc` only when it is the login,
 meaning its first param is an object with a password-shaped key (the
 Phase 2 credential test). Other JSON-RPC traffic does not count.
 
@@ -410,7 +410,7 @@ fields confirm the protocol but not the algorithm. Default to `md5`
 
 #### JSON-RPC transport
 
-Auth is always `jsonrpc`. Its fields come from the last login call that
+Auth is always `json_rpc`. Its fields come from the last login call that
 answered `result`:
 
 | Field | Evidence |
@@ -716,7 +716,7 @@ Format is constrained by transport:
 | Transport | Format detection |
 |-----------|-----------------|
 | `hnap` | Always `hnap`. See HNAP format detection below. |
-| `jsonrpc` | Always `json`. Each answered call other than the login is a JSON page: resource is the method, JSON is its `result` (a non-object `result` wrapped as `_raw`, as Core's loader does). A method called more than once takes its later `result`, as the replay server and golden generation do (Core's `jsonrpc_har_results`). HTTP JSON detection then runs unchanged, so one array is mapped per call. |
+| `json_rpc` | Always `json`. Each answered call other than the login is a JSON page: resource is the method, JSON is its `result` (a non-object `result` wrapped as `_raw`, as Core's loader does). A method called more than once takes its later `result`, as the replay server and golden generation do (Core's `json_rpc_har_results`). HTTP JSON detection then runs unchanged, so one array is mapped per call. |
 | `http` | Inspect data page responses — see below. JSON responses use `json` (or `json_transposed` for `name`+`indexN` pivot shapes); HTML responses use `table`, `table_transposed`, `javascript`, `javascript_json`, or `html_fields`. |
 
 #### HNAP format detection
@@ -1797,7 +1797,7 @@ place. If validation fails, returns errors so the LLM can fix and retry.
 Resolved [ambiguities](#ambiguities-resolve-then-proceed) are written at
 their paths before validation; a `parser.` path is applied to the
 analysis section before `parser.yaml` is built. An action resolution
-writes only the identifying field (`method` on `jsonrpc`, `fun` on
+writes only the identifying field (`method` on `json_rpc`, `fun` on
 `cbn`), so the action takes the transport's one action type.
 
 ### `generate_golden_file`
@@ -1807,7 +1807,7 @@ config to extract `ModemData`. This is the same extraction logic the
 pipeline uses, but against HAR content rather than a live server.
 
 **Input:** HAR file path + parser.yaml content + `transport` from
-`analyze_har` (required for `jsonrpc`, whose resources are method names,
+`analyze_har` (required for `json_rpc`, whose resources are method names,
 and `cbn`, whose resources are `fun` codes; others are auto-detected),
 and for `cbn` the `getter_endpoint` (default `/xml/getter.xml`)
 **Output:** `{ golden_file: dict, golden_file_json: str, channel_counts: { downstream: int, upstream: int }, system_info_fields: [str], missing_system_info_fields: [str] }`

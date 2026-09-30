@@ -351,7 +351,7 @@ source reads the call's `result`.
 | Property | Type | Required | Description |
 |----------|------|:--------:|-------------|
 | `format` | string | yes | `json` |
-| `resource` | string | yes | Key in the resource dict: URL path, or method name on `jsonrpc` |
+| `resource` | string | yes | Key in the resource dict: URL path, or method name on `json_rpc` |
 | `encoding` | string | no | Response encoding (e.g., `base64`) |
 | `array_path` | string | no | Dot-notation path to a JSON array. Navigates to the array and uses its first element as the source object for field lookups. Same concept as the channel parser's `array_path`. |
 | `child_aggregates` | list | no | Aggregate values across repeated array items (see below) |

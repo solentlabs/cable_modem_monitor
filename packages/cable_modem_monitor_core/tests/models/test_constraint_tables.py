@@ -28,7 +28,7 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     CBN_AUTH_STRATEGIES,
     HNAP_AUTH_STRATEGIES,
     HTTP_AUTH_STRATEGIES,
-    JSONRPC_AUTH_STRATEGIES,
+    JSON_RPC_AUTH_STRATEGIES,
     AuthConfig,
     get_auth_strategy_rows,
     get_strategy_display_labels,
@@ -99,7 +99,7 @@ def test_transport_sets_partition_the_strategies() -> None:
         "cbn": CBN_AUTH_STRATEGIES,
         "hnap": HNAP_AUTH_STRATEGIES,
         "http": HTTP_AUTH_STRATEGIES,
-        "jsonrpc": JSONRPC_AUTH_STRATEGIES,
+        "json_rpc": JSON_RPC_AUTH_STRATEGIES,
     }
     counted = sum(len(strategies) for strategies in sets.values())
     assert counted == len(AUTH_ROWS)

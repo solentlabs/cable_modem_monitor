@@ -1,0 +1,54 @@
+{
+  "_expected_error": "transport 'json_rpc' does not support format 'table'",
+  "_modem": {
+    "attribution": {
+      "contributors": [
+        {
+          "contribution": "Test",
+          "github": "tester"
+        }
+      ]
+    },
+    "auth": {
+      "endpoint": "/rpc",
+      "login_method": "login",
+      "password_field": "p",
+      "strategy": "json_rpc",
+      "token_param": "token",
+      "token_path": "token",
+      "username_field": "u"
+    },
+    "default_host": "192.168.0.1",
+    "hardware": {
+      "docsis_version": "3.1"
+    },
+    "isps": [
+      "Various"
+    ],
+    "manufacturer": "Solent Labs",
+    "model": "T950",
+    "status": "awaiting_verification",
+    "transport": "json_rpc"
+  },
+  "_parser": {
+    "downstream": {
+      "format": "table",
+      "resource": "CM.getDownstream",
+      "tables": [
+        {
+          "columns": [
+            {
+              "field": "channel_id",
+              "index": 0,
+              "type": "integer"
+            }
+          ],
+          "selector": {
+            "match": "x",
+            "type": "id"
+          }
+        }
+      ]
+    }
+  }
+}

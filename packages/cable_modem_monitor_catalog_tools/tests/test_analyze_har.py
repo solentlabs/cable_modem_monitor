@@ -353,7 +353,7 @@ class TestNoDataSections:
 # =====================================================================
 
 
-class TestJsonrpcTransport:
+class TestJsonRpcTransport:
     """A JSON-RPC capture is analyzed call by call; its judgments become ambiguities.
 
     No HTTP-tree phase runs over the calls, and nothing stops generation.
@@ -361,23 +361,23 @@ class TestJsonrpcTransport:
 
     @staticmethod
     def _analyze(tmp_path: Path, fleet: FleetPatterns | None = None) -> tuple[AnalysisResult, dict[str, Any]]:
-        data = load_fixture(FIXTURES_DIR / "jsonrpc" / "login_and_data.json")
+        data = load_fixture(FIXTURES_DIR / "json_rpc" / "login_and_data.json")
         return analyze_har(write_har(tmp_path, data["_har"]), fleet=fleet), data
 
-    def test_transport_is_jsonrpc(self, tmp_path: Path) -> None:
+    def test_transport_is_json_rpc(self, tmp_path: Path) -> None:
         result, _ = self._analyze(tmp_path)
-        assert result.transport.transport == "jsonrpc"
+        assert result.transport.transport == "json_rpc"
         assert result.transport.confidence == "high"
 
     def test_no_core_gap(self, tmp_path: Path) -> None:
-        """generate_config has a jsonrpc path, so a JSON-RPC capture is not a Core gap."""
+        """generate_config has a json_rpc path, so a JSON-RPC capture is not a Core gap."""
         result, _ = self._analyze(tmp_path)
         assert result.core_gaps == []
 
     def test_auth_fields_from_login_call(self, tmp_path: Path) -> None:
         """The HTTP tree's form_pbkdf2 misread never reaches the output; the login call's fields do."""
         result, data = self._analyze(tmp_path)
-        assert result.auth.strategy == "jsonrpc"
+        assert result.auth.strategy == "json_rpc"
         assert result.auth.fields == data["_expected_auth_fields"]
 
     def test_sections_keyed_by_method(self, tmp_path: Path) -> None:
@@ -423,18 +423,18 @@ class TestJsonrpcTransport:
 
     def test_scanned_fleet_decides_password_names(self, tmp_path: Path) -> None:
         """A login key only the scanned fleet declares is a credential with that fleet, and not without it."""
-        data = load_fixture(FIXTURES_DIR / "jsonrpc" / "login_and_data.json")
+        data = load_fixture(FIXTURES_DIR / "json_rpc" / "login_and_data.json")
         text = data["_har"]["log"]["entries"][0]["request"]["postData"]["text"]
         data["_har"]["log"]["entries"][0]["request"]["postData"]["text"] = text.replace("loginPwd", "zzSecret")
         har = write_har(tmp_path, data["_har"])
         knows = analyze_har(har, fleet=FleetPatterns(password_field_names=frozenset({"zzsecret"})))
         excludes = analyze_har(har, fleet=FleetPatterns(password_field_names=frozenset()))
-        assert (knows.transport.transport, knows.auth.fields["password_field"]) == ("jsonrpc", "zzSecret")
+        assert (knows.transport.transport, knows.auth.fields["password_field"]) == ("json_rpc", "zzSecret")
         assert excludes.transport.transport == "http"
 
     def test_confirmed_fleet_value_prefills_resolution(self, tmp_path: Path) -> None:
         """A candidate a confirmed entry declares is corroborated and pre-fills the resolution."""
-        data = load_fixture(Path(__file__).parent / "fixtures" / "auth" / "valid" / "jsonrpc_login_token.json")
+        data = load_fixture(Path(__file__).parent / "fixtures" / "auth" / "valid" / "json_rpc_login_token.json")
         fleet = FleetPatterns(confirmed_config_values={"auth.lockout_code": {"codeLocked": ["vendor/m1"]}})
         result = analyze_har(write_har(tmp_path, {"log": {"entries": data["_entries"]}}), fleet=fleet)
         lockout = next(a for a in result.ambiguities if a.field == "auth.lockout_code")

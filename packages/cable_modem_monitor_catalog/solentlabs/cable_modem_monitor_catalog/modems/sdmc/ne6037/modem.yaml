@@ -2,11 +2,11 @@ manufacturer: SDMC
 model: NE6037
 brands:
   - "Play"
-transport: jsonrpc
+transport: json_rpc
 default_host: "192.168.0.1"
 
 auth:
-  strategy: jsonrpc
+  strategy: json_rpc
   endpoint: "/cgi-bin/router.php"
   login_method: "MGMT.login"
   username_field: "loginUserName"
@@ -22,7 +22,7 @@ session:
 
 actions:
   restart:
-    type: jsonrpc
+    type: json_rpc
     method: "MGMT.reboot"
 
 hardware:
@@ -44,7 +44,7 @@ attribution:
     - github: https://github.com/piotrekoo
       contribution: "HAR captures (session, wrong password, unauthenticated reboot page) and JSON-RPC wire notes (#215)"
     - github: https://github.com/kwschulz
-      contribution: "Maintainer — jsonrpc transport, catalog entry"
+      contribution: "Maintainer — json_rpc transport, catalog entry"
 
 isps:
   - Play

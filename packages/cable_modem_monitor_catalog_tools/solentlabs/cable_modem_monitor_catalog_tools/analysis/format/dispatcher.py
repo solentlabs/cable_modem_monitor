@@ -1,6 +1,6 @@
 """Phase 5-6 dispatcher - format detection and section assembly.
 
-Routes to transport-specific modules (http / hnap / jsonrpc) for format
+Routes to transport-specific modules (http / hnap / json_rpc) for format
 classification, then delegates to mapping and mapping.system_info
 for Phase 6 extraction. Assembles the ``sections`` output dict.
 
@@ -26,7 +26,7 @@ from .http import (
     classify_page_format,
     identify_data_pages,
 )
-from .jsonrpc import jsonrpc_pages
+from .json_rpc import json_rpc_pages
 from .table_analysis import (
     detect_row_start,
     detect_table_direction,
@@ -58,7 +58,7 @@ def detect_sections(
 
     Args:
         entries: HAR ``log.entries`` list.
-        transport: Detected transport ("http", "hnap", "jsonrpc" or "cbn").
+        transport: Detected transport ("http", "hnap", "json_rpc" or "cbn").
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
         fleet: Optional fleet patterns for augmented detection.
@@ -71,8 +71,8 @@ def detect_sections(
     if transport == "hnap":
         return detect_hnap_sections(entries, warnings, hard_stops, fleet=fleet)
 
-    if transport == "jsonrpc":
-        return _sections_from_pages(jsonrpc_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
+    if transport == "json_rpc":
+        return _sections_from_pages(json_rpc_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
 
     if transport == "cbn":
         return _sections_from_pages(cbn_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)

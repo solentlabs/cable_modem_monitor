@@ -508,7 +508,7 @@ _ERR: dict[str, Any] = {"error": {"code": "msgFail"}}
 # └──────────────────────────────┴──────────────────────┴──────────────────────────┘
 #
 # fmt: off
-JSONRPC_RESOURCE_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], str]] = [
+JSON_RPC_RESOURCE_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], str]] = [
     # (calls,                                            resources,              id)
     ([_rpc_entry("A", _ONE)],                            {"A": {"x": 1}},        "keyed-by-method"),
     ([_rpc_entry("A", {"result": [1]})],                 {"A": {"_raw": [1]}},   "non-object-wrapped"),
@@ -521,15 +521,15 @@ JSONRPC_RESOURCE_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], str]] =
 
 @pytest.mark.parametrize(
     "calls,expected",
-    [c[:2] for c in JSONRPC_RESOURCE_CASES],
-    ids=[c[2] for c in JSONRPC_RESOURCE_CASES],
+    [c[:2] for c in JSON_RPC_RESOURCE_CASES],
+    ids=[c[2] for c in JSON_RPC_RESOURCE_CASES],
 )
-def test_jsonrpc_resources(tmp_path: Path, calls: list[dict[str, Any]], expected: dict[str, Any]) -> None:
+def test_json_rpc_resources(tmp_path: Path, calls: list[dict[str, Any]], expected: dict[str, Any]) -> None:
     """Each method's result, as the JSON-RPC loader hands it to the parser."""
-    assert build_resource_dict(str(_har_file(tmp_path, calls)), transport="jsonrpc") == expected
+    assert build_resource_dict(str(_har_file(tmp_path, calls)), transport="json_rpc") == expected
 
 
-def test_jsonrpc_only_when_told(tmp_path: Path) -> None:
+def test_json_rpc_only_when_told(tmp_path: Path) -> None:
     """Without the transport, JSON-RPC calls read as HTTP: firmware plumbing never switches the shape."""
     resources = build_resource_dict(str(_har_file(tmp_path, [_rpc_entry("A", _ONE)])))
     assert set(resources) == {"/cgi-bin/router.php"}

@@ -1,7 +1,7 @@
 """HAR data extraction — shared resource dict construction.
 
 Builds transport-specific resource dicts from HAR entries. Used by:
-- ``cable_modem_monitor_catalog_tools.analysis.format.jsonrpc`` — JSON-RPC pages
+- ``cable_modem_monitor_catalog_tools.analysis.format.json_rpc`` — JSON-RPC pages
 - ``cable_modem_monitor_catalog_tools.analysis.format.cbn`` — CBN pages
 - ``cable_modem_monitor_catalog_tools.generate_golden_file`` — golden file generation
 - ``cable_modem_monitor_catalog_tools.analysis.format.hnap`` — HNAP format detection
@@ -118,7 +118,7 @@ def build_resource_dict(
 ) -> dict[str, Any]:
     """Build a resource dict from HAR response bodies.
 
-    ``transport="jsonrpc"`` produces ``{method: result, ...}`` and
+    ``transport="json_rpc"`` produces ``{method: result, ...}`` and
     ``transport="cbn"`` produces ``{fun: Element, ...}``. Otherwise the
     transport is auto-detected: HNAP entries produce
     ``{"hnap_response": {...}}``, HTTP entries produce
@@ -138,8 +138,8 @@ def build_resource_dict(
 
     # Never sniffed: form-login firmware makes JSON-RPC plumbing calls too
     # (OpenWrt LuCI ubus), so only the entry's transport can say so.
-    if transport == "jsonrpc":
-        return jsonrpc_har_results(entries)
+    if transport == "json_rpc":
+        return json_rpc_har_results(entries)
     if transport == "cbn":
         return cbn_har_results(entries, getter_endpoint)
 
@@ -150,7 +150,7 @@ def build_resource_dict(
     return _build_http_resources(entries)
 
 
-def jsonrpc_har_results(entries: list[dict[str, Any]]) -> dict[str, Any]:
+def json_rpc_har_results(entries: list[dict[str, Any]]) -> dict[str, Any]:
     """``method → result`` for a capture's JSON-RPC 2.0 calls, as the loader hands them to a parser.
 
     Same choice as the replay server when a method was called more than
