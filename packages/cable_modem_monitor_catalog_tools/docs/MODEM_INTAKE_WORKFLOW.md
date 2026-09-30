@@ -413,9 +413,13 @@ defines; keep that layout through any hand edit, the catalog suite
 gates it.
 
 If the model already has variants (other `modem-*.yaml` files, or
-sibling directories for the same model), render its setup picker
-(`format_variant_labels` over `list_variants`) and read every label as
-a user would. Each must name what sets that variant apart:
+sibling directories for the same model), render its setup picker the
+way the config flow does: find the model with `list_modems`, pass its
+`path` and `sibling_dirs` to `list_variants`, then
+`format_variant_labels`. Calling `list_variants` on the directory
+directly skips discovery and lists a variant the picker cannot reach.
+The new variant must be in the list; read every label as a user would.
+Each must name what sets that variant apart:
 [ARCHITECTURE_DECISIONS.md § The variant name is the user-facing discriminator](../../cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md#the-variant-name-is-the-user-facing-discriminator).
 
 ## Step 8: Generate Golden File + Write Package
