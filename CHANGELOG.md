@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The intake score can be compared between runs.**
+  `intake_pipeline_regression.py --compare <scorecard>` prints which
+  captures' accuracy, status or grades moved since that card, worst
+  first, and which captures entered or left. The fleet percentage hides
+  a large change on one modem. Report only; the exit code is unchanged.
+
 ### Changed
 
 - **`jsonrpc` is now `json_rpc`** as a transport, auth strategy and

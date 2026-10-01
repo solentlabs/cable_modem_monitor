@@ -435,8 +435,27 @@ from the scorecard history rather than a committed baseline. Adding a
 modem needs no index or baseline update — discovery walks the catalog
 tree and the new HAR is included automatically on the next run.
 
-The reusable machinery (scorecard building, result classification)
-lives in the unit-tested
+**Comparing two runs.** `--compare <card>` prints which captures moved
+since an earlier scorecard (`regression/compare.py`): accuracy, status,
+and every grade dimension the card holds, worst regression first, then
+captures that entered or left. Captures are keyed by `modem:har_file`, so
+a renamed capture shows as one `LEFT` plus one `ENTERED`. It is console
+output only and never changes the exit code. Save a card, change the
+pipeline, and compare (CI's card is the `intake-pipeline-scorecard`
+artifact, written as `intake-pipeline-scorecard.json`):
+
+```bash
+python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --scorecard intake-pipeline-scorecard.json
+python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --compare intake-pipeline-scorecard.json
+```
+
+The card records its commit and timestamp but not the scoring
+definition. A comparison across a change to how the score is computed
+reports that change as per-capture movement; check `git log` between
+the two commits before reading it as intake progress.
+
+The reusable machinery (scorecard building and comparison, result
+classification) lives in the unit-tested
 `solentlabs/cable_modem_monitor_catalog_tools/regression/` package and
 is generic over grade dimensions; the script supplies discovery,
 pipeline stages, and printing. The shared grade taxonomy is

@@ -24,6 +24,7 @@ Usage:
     python .../intake_pipeline_regression.py --modem arris/sb8200
     python .../intake_pipeline_regression.py -v
     python .../intake_pipeline_regression.py --scorecard scorecard.json
+    python .../intake_pipeline_regression.py --compare scorecard.json
 """
 
 from __future__ import annotations
@@ -50,6 +51,7 @@ from solentlabs.cable_modem_monitor_catalog_tools.regression import (
     result_status,
 )
 from solentlabs.cable_modem_monitor_catalog_tools.regression.ambiguities import resolve_from_committed
+from solentlabs.cable_modem_monitor_catalog_tools.regression.compare import compare_scorecards, render_comparison
 from solentlabs.cable_modem_monitor_catalog_tools.regression.golden_compare import (
     count_fields,
     count_matching_fields,
@@ -566,6 +568,17 @@ def _write_scorecard(path: Path, results: list[ModemResult]) -> None:
     print(f"Scorecard written to {path}")
 
 
+def _print_comparison(baseline_path: Path, results: list[ModemResult]) -> None:
+    """Print per-capture movement since an earlier scorecard; a bad file is reported, never raised."""
+    try:
+        baseline = json.loads(baseline_path.read_text())
+        text = render_comparison(compare_scorecards(baseline, build_scorecard(results)))
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        print(f"Could not compare against {baseline_path}: {e}\n")
+        return
+    print(text + "\n")
+
+
 def _write_step_summary(results: list[ModemResult]) -> None:
     """Write GitHub Actions step summary if running in CI."""
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -621,6 +634,12 @@ def main() -> None:
         metavar="PATH",
         help="Write JSON scorecard for trend tracking",
     )
+    parser.add_argument(
+        "--compare",
+        type=Path,
+        metavar="PATH",
+        help="Print which captures moved since an earlier scorecard (report only)",
+    )
     args = parser.parse_args()
 
     modems = discover_modems(args.modem)
@@ -665,6 +684,9 @@ def main() -> None:
     _print_summary(results, incomplete=incomplete)
     _print_auth_audit(CATALOG_ROOT)
     _write_step_summary(results)
+
+    if args.compare:
+        _print_comparison(args.compare, results)
 
     if args.scorecard:
         _write_scorecard(args.scorecard, results)
