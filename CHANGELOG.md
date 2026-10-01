@@ -43,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `modem-{variant}.yaml` is learned, and the intake score reads a
   modem's identity from that same config. All three read `modem.yaml`
   only. No shipped entry's result changes.
+- **The intake tools no longer propose a modem's model name as its
+  hardware version.** A `Model` label or `model` JSON key now maps to
+  `model_name`. On a page listing Model before Hardware Version, the
+  model name took the `hardware_version` slot. (#221)
 
 ## [3.14.15-beta.2] - 2026-09-29
 

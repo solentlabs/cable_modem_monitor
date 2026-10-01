@@ -916,6 +916,7 @@ type and map filled in by hand.
 |-----------------|------|:------:|
 | `boot_status` | string | sometimes |
 | `docsis_version` | string | sometimes |
+| `model_name` | string | sometimes |
 | `provisioned_speed_down` | integer | service flow modems |
 | `provisioned_speed_up` | integer | service flow modems |
 | `provisioned_burst_down` | integer | service flow modems |
