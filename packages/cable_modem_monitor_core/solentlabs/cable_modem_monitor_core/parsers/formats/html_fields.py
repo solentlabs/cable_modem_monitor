@@ -3,7 +3,7 @@
 Produces a flat ``dict[str, Any]`` from named fields in HTML pages.
 Used for system_info sources with ``format: html_fields``.
 
-See PARSING_SPEC.md System Info / html_fields selector types.
+See SYSTEM_INFO_SPEC.md § html_fields selector types.
 """
 
 from __future__ import annotations
@@ -87,7 +87,7 @@ def _extract_field(soup: BeautifulSoup | Tag, field_cfg: HTMLFieldMapping) -> st
     elif field_cfg.css:
         raw = _extract_by_css(soup, field_cfg.css, field_cfg.attribute)
     elif field_cfg.label:
-        raw = _extract_by_label(soup, field_cfg.label)
+        raw = extract_by_label(soup, field_cfg.label)
 
     if raw is None:
         return None
@@ -146,32 +146,29 @@ def _element_value(element: Tag, attribute: str) -> str | None:
     return str(val)
 
 
-def _extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:
-    """Extract value adjacent to a label, using structural cascade.
+def extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:
+    """Return the value adjacent to a label via the structural cascade (SYSTEM_INFO_SPEC)."""
+    leaves = _label_leaves(soup, label_text.lower().strip())
 
-    Tries multiple HTML patterns to find the value element next to a
-    label. This is anti-fragile — firmware updates that change HTML
-    structure don't break configs because multiple patterns are tried.
+    # Pass 1: each leaf's own handler, in document order.
+    for element in leaves:
+        value = _try_label_cascade(element)
+        if value is not None:
+            return value
 
-    Two kinds of elements are skipped as wrappers:
+    # Pass 2 only fills a hole: borrowing a parent cell's handler must never
+    # take the match from a later element whose own handler finds a value.
+    for element in leaves:
+        value = _try_parent_cascade(element)
+        if value is not None:
+            return value
 
-    1. Elements with block-level children (``table``, ``div``, etc.) —
-       their ``get_text()`` includes all nested content.
-    2. Elements whose direct child (also a cascade-supported tag)
-       contains the label text — the child is a more specific match
-       and will be found later in the loop.
+    return None
 
-    Cascade order:
-    1. ``<td>label</td><td>value</td>`` (sibling cells)
-    2. ``<th>label</th>`` paired with ``<td>`` in same row
-    3. ``<span>label</span>`` followed by sibling ``<span>``
-    4. ``<dt>label</dt><dd>value</dd>`` (definition list)
-    5. ``<div>label</div>`` followed by sibling ``<div>``
-    """
-    # Normalize label for matching
-    label_lower = label_text.lower().strip()
 
-    # Search all text-containing elements
+def _label_leaves(soup: BeautifulSoup | Tag, label_lower: str) -> list[Tag]:
+    """Return the leaf elements holding the label text, in document order."""
+    leaves: list[Tag] = []
     for element in soup.find_all(["td", "th", "span", "dt", "div", "label"]):
         if not isinstance(element, Tag):
             continue
@@ -191,16 +188,16 @@ def _extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:
         if _has_child_with_label(element, label_lower):
             continue
 
-        # Try structural patterns based on element type
-        value = _try_label_cascade(element)
-        if value is not None:
-            return value
-
-    return None
+        leaves.append(element)
+    return leaves
 
 
 # Block-level tags that indicate a wrapper element when found as children.
 _BLOCK_LEVEL_TAGS = ["table", "div", "section", "article", "ul", "ol", "dl"]
+
+# Cells whose handler a leaf may borrow from its direct parent, e.g. a
+# <label> or <span> wrapping the label text inside a <td>.
+_CLIMB_TAGS = frozenset({"td", "th", "dt"})
 
 # Tags that participate in the label cascade — used to detect when a
 # parent element should defer to a more specific child match.
@@ -220,6 +217,16 @@ def _has_child_with_label(element: Tag, label_lower: str) -> bool:
 
 
 _CascadeHandler = Callable[[Tag], str | None]
+
+
+def _try_parent_cascade(element: Tag) -> str | None:
+    """Apply the direct parent cell's handler when the leaf's own handler found nothing."""
+    # One level only: a nested span must never climb to an unrelated layout cell.
+    # The parent holds the label by construction, since it contains the leaf.
+    parent = element.parent
+    if not isinstance(parent, Tag) or parent.name not in _CLIMB_TAGS:
+        return None
+    return _try_label_cascade(parent)
 
 
 def _try_label_cascade(label_element: Tag) -> str | None:

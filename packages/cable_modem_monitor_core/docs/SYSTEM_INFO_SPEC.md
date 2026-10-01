@@ -469,7 +469,7 @@ because a swap produces plausible-looking but inverted speeds.
 
 | Selector | When to use | Algorithm |
 |----------|------------|-----------|
-| `label: "text"` | Value appears next to a text label | Find element containing label text, cascade through structural patterns (td→sibling td, th→paired td, span→sibling span, dt→dd) to locate the adjacent value element. Prefers leaf elements over ancestors — if a parent element contains the label text only because a child does, the child matches instead. |
+| `label: "text"` | Value appears next to a text label | Scan `td`, `th`, `span`, `dt`, `div` and `label` elements in document order for the label text. Skip wrappers: an element with a block-level child, or whose direct cascade-tag child holds the label (the leaf matches instead). The leaf's tag picks the handler: `td`→next `td`; `th`→first `td` in its row; `span`→sibling `span`; `dt`→`dd`; `div`→sibling `div`; `label`→its `for=` target (`value` or text) in the same parent, else its next sibling. First value found wins. Only when no element's own handler finds a value does a leaf whose direct parent is a `td`, `th` or `dt` borrow that parent's handler (one level only). |
 | `id: "element_id"` | Value is in an element with a known HTML id | Direct element lookup via `id` attribute, extract text content |
 | `css: "selector"` | Value is in an element targeted by CSS selector | CSS selector query via `select_one()`, extract text content |
 

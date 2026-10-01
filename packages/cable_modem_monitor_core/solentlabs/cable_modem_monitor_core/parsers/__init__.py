@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from .base import BaseParser
 from .coordinator import ModemParserCoordinator
-from .formats.html_fields import HTMLFieldsParser
+from .formats.html_fields import HTMLFieldsParser, extract_by_label
 from .formats.html_table import HTMLTableParser
 from .type_conversion import convert_value, normalize_frequency
 
@@ -19,5 +19,6 @@ __all__ = [
     "HTMLTableParser",
     "ModemParserCoordinator",
     "convert_value",
+    "extract_by_label",
     "normalize_frequency",
 ]

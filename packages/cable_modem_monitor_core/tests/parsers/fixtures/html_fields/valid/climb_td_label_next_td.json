@@ -1,0 +1,18 @@
+{
+  "_description": "Label tag inside a td, value in the next td; the td handler applies one level up",
+  "_html": "<html><body><table><tr><td><label id=\"hw\">Hardware Version</label></td><td>2.1.0</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {
+        "label": "Hardware Version",
+        "field": "hardware_version",
+        "type": "string"
+      }
+    ]
+  },
+  "_expected": {
+    "hardware_version": "2.1.0"
+  }
+}

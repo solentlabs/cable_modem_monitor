@@ -1,0 +1,18 @@
+{
+  "_description": "Label with its own sibling returns that sibling, not the next td",
+  "_html": "<html><body><table><tr><td><label>Hardware Version</label><span>2.1.0</span></td><td>other</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {
+        "label": "Hardware Version",
+        "field": "hardware_version",
+        "type": "string"
+      }
+    ]
+  },
+  "_expected": {
+    "hardware_version": "2.1.0"
+  }
+}

@@ -52,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hardware version.** A `Model` label or `model` JSON key now maps to
   `model_name`. On a page listing Model before Hardware Version, the
   model name took the `hardware_version` slot. (#221)
+- **System info labels wrapped in a tag inside a table cell are read.**
+  A label such as `<td><label>Hardware Version</label></td>` followed by
+  a value cell returned nothing; the value cell is now found. (#221)
 
 ## [3.14.15-beta.2] - 2026-09-29
 
