@@ -61,7 +61,7 @@
     "corrected": {
       "tier": 1,
       "type": "integer",
-      "headers": ["corrected", "correctable", "corrected codewords", "correctable codewords", "total correctable codewords", "correcteds"],
+      "headers": ["corrected", "correctable", "corrected codewords", "correctable codewords", "total correctable codewords", "correcteds", "correctables"],
       "json_keys": ["corrected", "correctederrors", "corrected_errors", "correcteds"]
     },
     "uncorrected": {

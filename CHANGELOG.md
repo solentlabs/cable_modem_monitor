@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and an HNAP pre-fetch line shows the firmware's result (`UN-AUTH`,
   `OK`) instead of just a key count. A refusal on a session held for
   hours now reads differently from one on a fresh login. (#218)
+- **The intake tools map a `Correctables` column to `corrected`.**
+  `Uncorrectables` already mapped to `uncorrected`; the plural
+  `Correctables` became a stray `correctables` field. (#221)
 
 ### Fixed
 
