@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**49 configurations supported** — 28 confirmed on real hardware, 21 awaiting verification.
+**50 configurations supported** — 28 confirmed on real hardware, 22 awaiting verification.
 
 ---
 
@@ -49,6 +49,7 @@ and share a diagnostics snapshot.
 | CGA4236 | HTML | Unknown | — |
 | CGA6444VF | HTML | Vodafone | — |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy | — |
+| EVW32C-0N | HTML | Telemach | — |
 
 ## Pending Review
 

@@ -21,9 +21,9 @@ Auto-generated index of the v3.14 modem catalog.
 
 - `modem.yaml` — Single source of truth (manufacturer, model, hardware, ISPs, status)
 
-**44 modems, 49 configurations** (28 ✅ confirmed, 21 ⏳ awaiting)
+**45 modems, 50 configurations** (28 ✅ confirmed, 22 ⏳ awaiting)
 
-**Auth strategies:** form (15), none (8), hnap (7), basic (5), url_token (3), bearer (3), form_cbn (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1), json_sjcl (1), json_rpc (1)
+**Auth strategies:** form (16), none (8), hnap (7), basic (5), url_token (3), bearer (3), form_cbn (2), form_pbkdf2 (2), form_nonce (1), form_sjcl (1), json_sjcl (1), json_rpc (1)
 
 ## Directory Structure
 
@@ -94,6 +94,7 @@ packages/cable_modem_monitor_catalog/.../modems/
 | Technicolor | [XB6](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb6/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications")](#rogers) | XB6<br>CGM4140COM | ✅ Confirmed |
 | Technicolor | [XB7](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb7/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications")](#rogers) [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) | XB7<br>CGM4331COM | ✅ Confirmed |
 | Technicolor | [XB8](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb8/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications")](#rogers) [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) | XB8<br>CGM4981COM | ✅ Confirmed |
+| Ubee | [EVW32C-0N](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/ubee/evw32c-0n/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![TMC](https://img.shields.io/badge/-TMC-88aa55?style=flat-square "Telemach")](#telemach) | EVW32C-0N<br>EVW32C | ⏳ Awaiting |
 
 ## Unsupported Modems
 
@@ -116,6 +117,7 @@ DOCSIS 3.0
 ├── 2015  Compal      CH7465MT   ░░░░░░██████████████  11yr  Current
 ├── 2016  Netgear     C7000v2    ░░░░░░░█████████████  10yr  Current
 ├── 2016  Netgear     CM600      ░░░░░░░█████████░░░░   7yr  EOL 2023
+├── 2016  Ubee        EVW32C-0N  ░░░░░░░█████████████  10yr  Current
 ├── 2016  ARRIS       SB6190     ░░░░░░░█████████░░░░   7yr  EOL 2023
 └── 2017  Motorola    MB7621     ░░░░░░░░████████████   9yr  Current
 
@@ -203,6 +205,7 @@ _Scale: 2010-2026 (16 years)_
 | <span id="virgin"></span>VM | Virgin Media | UK | [Official list](https://www.virginmedia.com/) | No BYOM; modem mode available |
 | <span id="ziggo"></span>ZIG | Ziggo | Netherlands | [Official list](https://www.ziggo.nl/) | VodafoneZiggo joint venture. Source: <https://en.wikipedia.org/wiki/Ziggo> |
 | <span id="telia"></span>TEL | Telia | Nordic/Baltic | [Official list](https://www.teliacompany.com/) | Sweden, Finland, Norway, Baltics |
+| <span id="telemach"></span>TMC | Telemach | Slovenia | [Official list](https://telemach.si/connect) | Its Connect app supports the Ubee EVW32C. Source: <https://telemach.si/connect> |
 | <span id="mediacom"></span>MED | Mediacom | US (Midwest/South) | [Official list](https://mediacomcable.com/compatible-retail-modems/) |  |
 | <span id="suddenlink"></span>SUD | Suddenlink (Optimum) | US (13 states) | — | Rebranded to Optimum (Aug 2022); Altice USA subsidiary. Source: <https://en.wikipedia.org/wiki/Suddenlink_Communications> |
 | <span id="rcn"></span>RCN | Astound (formerly RCN) | US (Northeast) | [Official list](https://www.astound.com/support/internet/bring-your-own-modem/) | No official list; DOCSIS 3.1 recommended |
@@ -215,4 +218,4 @@ _Scale: 2010-2026 (16 years)_
 
 ---
 
-Generated by `scripts/generate_catalog_index.py` from 50 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).
+Generated by `scripts/generate_catalog_index.py` from 51 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).
