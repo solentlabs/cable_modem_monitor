@@ -168,6 +168,7 @@ def _assemble_table_sections(
 ) -> None:
     """Assemble channel sections from HTML table pages."""
     from ..mapping import extract_section_mappings
+    from ..mapping.dispatcher import warn_unregistered_fields
 
     for table in page.tables:
         # Only consider tables that contain channel data — skip
@@ -206,6 +207,8 @@ def _assemble_table_sections(
         section.selector = selector
         section.row_start = row_start
         sections[direction] = section.to_dict()
+        where = f"the table on {page.resource} (index {table.table_index})"
+        warn_unregistered_fields(section, where, warnings, headers=table.headers)
 
 
 def _assemble_js_sections(
@@ -274,6 +277,7 @@ def _assemble_js_json_sections(
     """
     from ...validation.har_utils import WARNING_PREFIX
     from ..mapping import extract_section_mappings
+    from ..mapping.dispatcher import warn_unregistered_fields
 
     for js_var in page.js_json_variables:
         # Wrap as dict so extract_section_mappings can find the array
@@ -315,6 +319,7 @@ def _assemble_js_json_sections(
                 section.channel_type = detect_channel_type_fixed(direction)
             sections[direction] = section.to_dict()
             address_key_ambiguities(section, direction, ambiguities)
+            warn_unregistered_fields(section, f"JS variable '{js_var.name}' on {page.resource}", warnings)
 
 
 def _assemble_json_sections(
@@ -327,6 +332,7 @@ def _assemble_json_sections(
 ) -> None:
     """Assemble channel sections from a JSON response, one entry per channel array."""
     from ..mapping import extract_json_arrays
+    from ..mapping.dispatcher import warn_unregistered_fields
 
     if page.json_data is None:
         return
@@ -343,6 +349,7 @@ def _assemble_json_sections(
         sections[direction] = arrays[0].to_dict() if len(arrays) == 1 else _arrays_section(arrays)
         for array in arrays:
             address_key_ambiguities(array, direction, ambiguities)
+            warn_unregistered_fields(array, f"JSON array '{array.array_path}' on {page.resource}", warnings)
 
 
 def _place_array(page: PageAnalysis, array: SectionDetail, warnings: list[str]) -> str:

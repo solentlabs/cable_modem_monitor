@@ -265,6 +265,10 @@ Check four outputs:
 3. **`core_gaps`** — if present, report and stop (Step 5)
 4. **`ambiguities`** — resolve each before Step 7
 
+Resolve every unregistered-field warning before Step 7: keep the field
+as modem-specific (the Tier 3 graduation path in FIELD_REGISTRY), or
+map its source to a known field.
+
 Each ambiguity is a judgment the capture supports and the tool does not
 make: a dotted config path and candidates, each with the evidence that
 shows it (ONBOARDING_SPEC § Ambiguities). Read the evidence and set

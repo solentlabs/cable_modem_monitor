@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The intake tools map a `Correctables` column to `corrected`.**
   `Uncorrectables` already mapped to `uncorrected`; the plural
   `Correctables` became a stray `correctables` field. (#221)
+- **The intake tools warn on every unregistered channel field.** A
+  header or JSON key outside the field registry still becomes a
+  `snake_case` field, now with a warning naming the source text, the
+  field and the page, and the analysis records each mapping's `tier`.
+  A near-miss of a known field no longer passes silently. (#221)
 
 ### Fixed
 

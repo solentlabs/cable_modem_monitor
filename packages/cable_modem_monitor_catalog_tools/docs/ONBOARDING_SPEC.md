@@ -947,6 +947,11 @@ The analysis tool must map ALL detected fields, not just canonical ones:
 **Do not skip unrecognized fields.** The graduation path (Tier 3 to
 Tier 2) only works if fields are captured in the first place.
 
+Table, JavaScript and JSON channel mappings in the analysis output carry
+their `tier` (HNAP mappings are positional and carry none), and each
+Tier 3 field raises one warning naming its source text, its generated
+name and where it was found.
+
 #### Format-specific mapping
 
 **`table` format:** Map column indices to canonical fields by examining
@@ -1646,9 +1651,9 @@ detection, format detection, and field mapping extraction.
       "format": "table",
       "resource": "/status.html",
       "mappings": [
-        { "index": 0, "field": "channel_id", "type": "integer" },
-        { "index": 1, "field": "frequency", "type": "frequency", "unit": "Hz" },
-        { "index": 2, "field": "power", "type": "float", "unit": "dBmV" }
+        { "index": 0, "field": "channel_id", "type": "integer", "tier": 1 },
+        { "index": 1, "field": "frequency", "type": "frequency", "unit": "Hz", "tier": 1 },
+        { "index": 2, "field": "power", "type": "float", "unit": "dBmV", "tier": 1 }
       ],
       "selector": { "type": "header_text", "match": "Downstream Bonded Channels" },
       "row_start": 2,
@@ -1660,8 +1665,8 @@ detection, format detection, and field mapping extraction.
       "format": "table",
       "resource": "/status.html",
       "mappings": [
-        { "index": 0, "field": "channel_id", "type": "integer" },
-        { "index": 1, "field": "frequency", "type": "frequency" }
+        { "index": 0, "field": "channel_id", "type": "integer", "tier": 1 },
+        { "index": 1, "field": "frequency", "type": "frequency", "tier": 1 }
       ],
       "selector": { "type": "header_text", "match": "Upstream Bonded Channels" },
       "row_start": 2,

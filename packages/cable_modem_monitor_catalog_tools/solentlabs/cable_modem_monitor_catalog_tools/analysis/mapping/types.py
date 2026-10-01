@@ -43,7 +43,7 @@ class FieldMapping:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to the sections output format."""
-        result: dict[str, Any] = {"field": self.field, "type": self.type}
+        result: dict[str, Any] = {"field": self.field, "type": self.type, "tier": self.tier}
         if self.unit:
             result["unit"] = self.unit
         if self.index is not None:
