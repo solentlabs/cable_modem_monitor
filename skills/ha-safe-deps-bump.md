@@ -77,7 +77,7 @@ stale venv:
   `pip install -U <pkg>` if desired — no tracked change.
 - Spec **excludes** the latest — a cap (`~=`, `<`) or pin (`==`) → this
   is the only case that needs a file edit, and caps are usually
-  deliberate (`har-capture~=0.9.0`, `types-requests<2.33.0`). Confirm the
+  deliberate (`har-capture~=0.13.1`, `types-requests<2.33.0`). Confirm the
   reason in the nearby comment before touching it.
 
 The build is the gate: notify when old, update only if it stays green.

@@ -57,6 +57,10 @@ notes: |
   Modem UI swaps CustomerConnSystemUpTime display with clock time (JS bug); HNAP API returns real uptime.
   Known anti-brute-force: LOCKUP (temp lock) and REBOOT (forces restart).
 
+  The device serial in modem.har entry 40 (SerialNumber) was redacted
+  here afterwards to [REDACTED]. The older automated pass left it;
+  har-capture 0.13.1 flags it.
+
 references:
   issues:
     - "[#117 — [Bug]: Arris S33v2 crashing when monitor enabled](https://github.com/solentlabs/cable_modem_monitor/issues/117)"

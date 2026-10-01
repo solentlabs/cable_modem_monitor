@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `snake_case` field, now with a warning naming the source text, the
   field and the page, and the analysis records each mapping's `tier`.
   A near-miss of a known field no longer passes silently. (#221)
+- **har-capture floor raised to 0.13.1.** 0.13.0 redacts serials under
+  any JSON key naming them, labeled serials in JSON and script bodies,
+  and IPv6 and `10.x` addresses, all of which earlier releases left.
+  0.13.1 stops password-label redaction from overwriting JavaScript.
 
 ### Fixed
 
@@ -55,6 +59,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **System info labels wrapped in a tag inside a table cell are read.**
   A label such as `<td><label>Hardware Version</label></td>` followed by
   a value cell returned nothing; the value cell is now found. (#221)
+- **Three catalog fixtures no longer carry device serial numbers.**
+  The fixture gate on har-capture 0.13.1 found the modem serial in the
+  HNAP responses of the Arris S33, S33v2 and SB8200 (HNAP) captures,
+  which the older sanitizer left. Each is replaced with `[REDACTED]`
+  and declared in that modem's notes. The synthetic serial, password
+  and token in the Sagemcom F3896LG-VMB fixture are allowlisted.
 
 ## [3.14.15-beta.2] - 2026-09-29
 

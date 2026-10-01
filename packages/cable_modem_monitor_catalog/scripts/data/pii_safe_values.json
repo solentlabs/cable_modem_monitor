@@ -130,22 +130,30 @@
     "values": [
       "nologin",
       "sanitized",
-      "redacted"
+      "redacted",
+      "pw",
+      "test-bearer-token"
     ],
     "_provenance": {
       "nologin": "Hitron CODA56 guest mode (user=nologin/pws=nologin) — modem.yaml sources.auth_config cites issue #89",
       "sanitized": "Sanitization placeholder, not a credential — the password half of the format-preserving base64 substitution sanctioned by MODEM_INTAKE_WORKFLOW.md § Hand-applied sanitization (e.g. YWRtaW46c2FuaXRpemVk = admin:sanitized)",
-      "redacted": "Sanitization placeholder, not a credential — the lowercase form of the [REDACTED] substitution prescribed by MODEM_INTAKE_WORKFLOW.md § Hand-applied sanitization"
+      "redacted": "Sanitization placeholder, not a credential — the lowercase form of the [REDACTED] substitution prescribed by MODEM_INTAKE_WORKFLOW.md § Hand-applied sanitization",
+      "pw": "Synthetic login password in the sagemcom/f3896lg-vmb fixture, which declares itself synthesized (log.creator.name 'synthesized', log.comment). Issue #82's documented login used a different placeholder; this value was never sent to a modem.",
+      "test-bearer-token": "Synthetic bearer token in the sagemcom/f3896lg-vmb fixture (login response and reboot Authorization header). The fixture declares itself synthesized (log.creator.name 'synthesized', log.comment); issue #82 shows a different token value."
     }
   },
 
   "safe_serial_prefixes": {
-    "_description": "Prefixes of serial_number findings that are not serials: har-capture sanitization output, and firmware label text the pattern catches as its own value (SDMC NE6037 i18n properties: 'Serial Number' followed by the next key name).",
+    "_description": "Prefixes of serial_number findings that are not serials: har-capture sanitization output, firmware label text the pattern catches as its own value (SDMC NE6037 i18n properties: 'Serial Number' followed by the next key name), and synthetic fixture serials.",
+    "_provenance": {
+      "ABC123456789": "Synthetic serial in the sagemcom/f3896lg-vmb fixture, which declares itself synthesized (log.creator.name 'synthesized', log.comment); issue #82 shows a different serial value."
+    },
     "values": [
       "SNTLABS",
       "SERIAL_",
       "SN_",
-      "Serial Number"
+      "Serial Number",
+      "ABC123456789"
     ]
   },
 
