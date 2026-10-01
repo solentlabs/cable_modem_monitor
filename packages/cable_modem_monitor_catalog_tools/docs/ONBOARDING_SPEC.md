@@ -929,6 +929,11 @@ they never enter the pipeline. See
 [Three-tier field mapping](#three-tier-field-mapping) below and
 SYSTEM_INFO_SPEC § Tiered Sensor Model.
 
+An HTML label candidate is a table row of two or more cells: the first
+cell's text is the label, the second's the value. It is kept only when
+Core's own label lookup on the same page returns that value, so an
+emitted `label` selector reads at runtime what intake saw.
+
 #### Three-tier field mapping
 
 Field mapping follows the three-tier system defined in FIELD_REGISTRY.
@@ -1451,7 +1456,7 @@ Some modems render status indicators as CSS classes or data attributes
 rather than visible text. For example, a provisioning status table may
 use Bootstrap classes (`class="success"`) with glyphicon icons instead
 of displaying the word "Online". The automated Phase 6 label detection
-(which matches visible text via regex) will miss these fields because
+(which reads visible cell text) will miss these fields because
 there is no text content to match against.
 
 These values are configured in parser.yaml using `html_fields` with a

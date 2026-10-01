@@ -248,6 +248,39 @@ class TestLabelPairDetection:
         assert "System Up Time" in labels
 
 
+# Row candidates are kept only when Core's label lookup on the same page
+# returns the same value. Each case is the rows of one table.
+# fmt: off
+TABLE_LABEL_PAIR_CASES = [
+    # (rows,                                                            expected,               desc)
+    ("<tr><td>Uptime</td><td>5 days</td></tr>",                        [("Uptime", "5 days")], "plain cells"),
+    ("<tr><td>Uptime:</td><td>5 days</td></tr>",                       [("Uptime", "5 days")], "colon dropped"),
+    ("<tr><td><b>Uptime</b></td><td>5 days</td></tr>",                 [("Uptime", "5 days")], "label in b"),
+    ("<tr><td><label>Uptime</label></td><td>5 days</td></tr>",         [("Uptime", "5 days")], "label in label"),
+    ("<tr><td><span>Uptime</span></td><td>5 days</td></tr>",           [("Uptime", "5 days")], "label in span"),
+    ("<tr><td>Boot State</td><td>OK</td><td>Operational</td></tr>",    [("Boot State", "OK")], "three cells"),
+    ("<tr><td>1</td><td>12</td><td>3.2</td></tr>"
+     "<tr><td>2</td><td>21</td><td>3.1</td></tr>",                     [("1", "12")],          "channel row rejected"),
+    ("<tr><td>Status</td><td>OK</td></tr>"
+     "<tr><td>Status</td><td>Bad</td></tr>",                           [("Status", "OK")],     "duplicate first wins"),
+    ("<tr><td>Uptime</td></tr>",                                       [],                     "single cell skipped"),
+    ("<tr><td>Info</td><td>"
+     "<table><tr><td>A</td><td>B</td></tr></table></td></tr>",          [("A", "B")],           "nested table skipped"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "rows,expected,desc",
+    TABLE_LABEL_PAIR_CASES,
+    ids=[c[2] for c in TABLE_LABEL_PAIR_CASES],
+)
+def test_table_label_pairs(rows: str, expected: list[tuple[str, str]], desc: str) -> None:
+    """Table rows yield label pairs that Core's label lookup confirms."""
+    pairs = detect_label_pairs(f"<table>{rows}</table>")
+    assert [(p.label, p.value) for p in pairs if p.selector_type == "label"] == expected
+
+
 # =====================================================================
 # Table direction detection — table-driven
 # =====================================================================

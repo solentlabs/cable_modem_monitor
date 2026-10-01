@@ -303,6 +303,9 @@ def _extract_system_info_labels(
 ) -> None:
     """Extract label → (field, tier) from system_info ``label`` fields."""
     for field_def in _iter_system_info_fields(data):
+        # A label that needs a pattern reads the whole cell when proposed bare.
+        if field_def.get("pattern"):
+            continue
         label = field_def.get("label")
         field_name = field_def.get("field")
         if isinstance(label, str) and isinstance(field_name, str) and label.strip() and field_name.strip():

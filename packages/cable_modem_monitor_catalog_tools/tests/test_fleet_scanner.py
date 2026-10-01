@@ -386,6 +386,36 @@ class TestExcludeOneModem:
         assert excluded.password_field_names == frozenset({"pw2"})
 
 
+# A label whose committed mapping needs a pattern reads the whole cell bare,
+# so it must not be proposed as a plain label.
+# fmt: off
+SYSTEM_INFO_LABEL_LEARNING_CASES = [
+    # (field yaml,                                           learned,                           desc)
+    ("{label: Up Time, field: system_uptime}",               {"up time": ("system_uptime", 1)}, "plain learned"),
+    ("{label: System, field: hardware_version, pattern: x}", {},                                "pattern skipped"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "field_yaml,learned,desc",
+    SYSTEM_INFO_LABEL_LEARNING_CASES,
+    ids=[c[2] for c in SYSTEM_INFO_LABEL_LEARNING_CASES],
+)
+def test_system_info_label_learning(
+    tmp_path: Path, field_yaml: str, learned: dict[str, tuple[str, int]], desc: str
+) -> None:
+    """Only labels the fleet reads without a pattern are learned."""
+    path = tmp_path / "vendor" / "m1" / "parser.yaml"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "system_info:\n  sources:\n    - format: html_fields\n      resource: /a\n"
+        f"      fields:\n        - {field_yaml}\n",
+        encoding="utf-8",
+    )
+    assert scan_fleet(tmp_path).system_info_labels == learned
+
+
 class TestChannelJsonKeys:
     """Channel JSON keys are learned from every committed parser.yaml, with the entries that declare each meaning."""
 

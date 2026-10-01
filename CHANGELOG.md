@@ -59,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **System info labels wrapped in a tag inside a table cell are read.**
   A label such as `<td><label>Hardware Version</label></td>` followed by
   a value cell returned nothing; the value cell is now found. (#221)
+- **The intake tools find system info labels wrapped in a tag.** A
+  label cell such as `<td><b>Software Version</b></td>` hid the row, so
+  the software info pages of the Arris SB6183, SB6190 and SB8200 and
+  the Technicolor TC4400 proposed no fields. Each row label is now kept
+  when Core's label lookup reads the same value from the page. (#221)
 - **Three catalog fixtures no longer carry device serial numbers.**
   The fixture gate on har-capture 0.13.1 found the modem serial in the
   HNAP responses of the Arris S33, S33v2 and SB8200 (HNAP) captures,

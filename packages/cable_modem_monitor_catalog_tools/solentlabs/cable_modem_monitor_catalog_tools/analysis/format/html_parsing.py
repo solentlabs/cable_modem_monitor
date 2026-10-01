@@ -8,7 +8,8 @@ Cells that contain nested ``<table>`` elements are treated as layout
 wrappers, not data cells — consistent with the parser-side table
 selector in ``parsers.table_selector``.
 
-Label-value pair detection uses regex (no nesting issues).
+Table-row label pairs are kept only when Core's label lookup reads the
+same value; id and inline "Label: Value<BR>" pairs use regex.
 """
 
 from __future__ import annotations
@@ -16,6 +17,8 @@ from __future__ import annotations
 import re
 
 from bs4 import BeautifulSoup, Tag
+from solentlabs.cable_modem_monitor_core.loaders.html_normalize import normalize_html
+from solentlabs.cable_modem_monitor_core.parsers import extract_by_label
 
 from .types import DetectedLabelPair, DetectedTable
 
@@ -66,11 +69,6 @@ _UNCLOSED_TH_RE = re.compile(
 )
 
 _TAG_STRIP = re.compile(r"<[^>]+>")
-
-_LABEL_VALUE_PATTERN = re.compile(
-    r"<t[dh][^>]*>\s*([^<]+?)\s*:?\s*</t[dh]>\s*<t[dh][^>]*>\s*([^<]+?)\s*</t[dh]>",
-    re.IGNORECASE,
-)
 
 # Inline "Label: Value<BR>" pattern — some modems embed system info
 # as BR-delimited text inside a single <TD> cell (e.g., SB6141 cmHelpData.htm).
@@ -385,7 +383,7 @@ def detect_tables(body: str) -> list[DetectedTable]:
 
 
 # -----------------------------------------------------------------------
-# Label-value pair detection (regex — no nesting issues)
+# Label-value pair detection
 # -----------------------------------------------------------------------
 
 
@@ -394,11 +392,9 @@ def detect_label_pairs(body: str) -> list[DetectedLabelPair]:
     pairs: list[DetectedLabelPair] = []
     seen_labels: set[str] = set()
 
-    # Strategy 1: Table cells with label: value pattern
-    for match in _LABEL_VALUE_PATTERN.finditer(body):
-        label = match.group(1).strip().rstrip(":")
-        value = match.group(2).strip()
-        if label and value and label.lower() not in seen_labels:
+    # Strategy 1: table rows, first cell the label, second the value
+    for label, value in _confirmed_row_pairs(body):
+        if label.lower() not in seen_labels:
             seen_labels.add(label.lower())
             pairs.append(
                 DetectedLabelPair(
@@ -442,4 +438,31 @@ def detect_label_pairs(body: str) -> list[DetectedLabelPair]:
                 )
             )
 
+    return pairs
+
+
+# Mirrors Core's private _BLOCK_LEVEL_TAGS in parsers.formats.html_fields:
+# a cell holding one of these is a layout wrapper, not a label or value.
+_BLOCK_LEVEL_TAGS = ["table", "div", "section", "article", "ul", "ol", "dl"]
+
+
+def _confirmed_row_pairs(body: str) -> list[tuple[str, str]]:
+    """Return (label, value) from table rows that Core's label lookup reads back."""
+    # Same parse as Core's loader, so the confirmation sees the runtime DOM.
+    soup = BeautifulSoup(normalize_html(body), "html.parser")
+    pairs: list[tuple[str, str]] = []
+    for row in soup.find_all("tr"):
+        cells = row.find_all(["td", "th"], recursive=False)
+        if len(cells) < 2 or cells[0].find(_BLOCK_LEVEL_TAGS) or cells[1].find(_BLOCK_LEVEL_TAGS):
+            continue
+        label = cells[0].get_text().strip().rstrip(":").strip()
+        value = cells[1].get_text().strip()
+        if not label or not value:
+            continue
+        # Core matches labels by substring, so a row whose label also sits
+        # inside an earlier cell (channel tables of numbers) reads that
+        # cell's neighbour instead; such a row is not a label pair.
+        core_value = extract_by_label(soup, label)
+        if core_value is not None and core_value.strip() == value:
+            pairs.append((label, value))
     return pairs
