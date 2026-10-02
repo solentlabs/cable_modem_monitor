@@ -51,14 +51,15 @@ class DetectedJsFunction:
 
 @dataclass
 class DetectedJsJsonVariable:
-    """A JavaScript variable holding a JSON array of channel objects.
+    """A JavaScript variable holding a JSON array of channel objects, or an object holding channel arrays.
 
-    Found in ``<script>`` tags as ``variableName = [{...}, ...]``.
-    Used by the ``javascript_json`` format (e.g., TG3442DE).
+    Found in ``<script>`` tags as ``variableName = [{...}, ...]`` (TG3442DE)
+    or ``variableName = {"ds_channels": [...], ...}`` (TG3442S).
+    Used by the ``javascript_json`` format.
     """
 
     name: str
-    data: list[dict[str, Any]]
+    data: list[dict[str, Any]] | dict[str, Any]
 
 
 @dataclass

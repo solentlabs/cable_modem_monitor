@@ -269,17 +269,23 @@ def _assemble_js_json_sections(
     fleet: FleetPatterns | None = None,
     ambiguities: list[Ambiguity] | None = None,
 ) -> None:
-    """Assemble channel sections from JS-embedded JSON arrays.
+    """Assemble channel sections from JS-embedded JSON.
 
-    Each detected variable (e.g., ``json_dsData``, ``json_usData``)
-    becomes a section.  Direction is inferred from the variable name
-    or from the JSON key structure.
+    A variable holding a list (e.g., ``json_dsData``, ``json_usData``)
+    becomes a section, its direction inferred from the variable name or
+    the JSON key structure. A variable holding an object is read by the
+    ``json`` array rules.
     """
     from ...validation.har_utils import WARNING_PREFIX
     from ..mapping import extract_section_mappings
     from ..mapping.dispatcher import warn_unregistered_fields
 
     for js_var in page.js_json_variables:
+        if isinstance(js_var.data, dict):
+            _assemble_json_arrays(
+                page, js_var.data, sections, warnings, variable=js_var.name, fleet=fleet, ambiguities=ambiguities
+            )
+            continue
         # Wrap as dict so extract_section_mappings can find the array
         json_data = {"_raw": js_var.data}
 
@@ -331,34 +337,54 @@ def _assemble_json_sections(
     ambiguities: list[Ambiguity] | None = None,
 ) -> None:
     """Assemble channel sections from a JSON response, one entry per channel array."""
+    if page.json_data is None:
+        return
+    _assemble_json_arrays(page, page.json_data, sections, warnings, fleet=fleet, ambiguities=ambiguities)
+
+
+def _assemble_json_arrays(
+    page: PageAnalysis,
+    data: dict[str, Any],
+    sections: dict[str, Any],
+    warnings: list[str],
+    *,
+    variable: str = "",
+    fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
+) -> None:
+    """Assemble sections from every channel array in ``data``, a response body or a JS variable's object."""
     from ..mapping import extract_json_arrays
     from ..mapping.dispatcher import warn_unregistered_fields
 
-    if page.json_data is None:
-        return
-
     by_direction: dict[str, list[SectionDetail]] = {}
-    for array in extract_json_arrays(page.json_data, page.resource, warnings, fleet=fleet):
-        direction = _place_array(page, array, warnings)
+    for array in extract_json_arrays(data, page.resource, warnings, fleet=fleet):
+        direction = _place_array(page, data, array, warnings)
         if direction != "unknown":
             by_direction.setdefault(direction, []).append(array)
 
     for direction, arrays in by_direction.items():
         if direction in sections:
             continue
-        sections[direction] = arrays[0].to_dict() if len(arrays) == 1 else _arrays_section(arrays)
+        if variable:
+            # javascript_json reads an object only in arrays form; its flat
+            # form needs the variable to hold the array itself.
+            for array in arrays:
+                array.format = "javascript_json"
+            sections[direction] = {**_arrays_section(arrays), "variable": variable}
+        else:
+            sections[direction] = arrays[0].to_dict() if len(arrays) == 1 else _arrays_section(arrays)
         for array in arrays:
             address_key_ambiguities(array, direction, ambiguities)
             warn_unregistered_fields(array, f"JSON array '{array.array_path}' on {page.resource}", warnings)
 
 
-def _place_array(page: PageAnalysis, array: SectionDetail, warnings: list[str]) -> str:
+def _place_array(page: PageAnalysis, data: dict[str, Any], array: SectionDetail, warnings: list[str]) -> str:
     """The array's direction, with its format and channel type set; "unknown" is warned."""
     direction = _direction_from_resource(page.resource)
     if direction == "unknown":
         direction = _direction_from_array_path(array.array_path)
-    if direction == "unknown" and page.json_data is not None:
-        direction = _direction_from_json(page.json_data)
+    if direction == "unknown":
+        direction = _direction_from_json(data)
     if direction == "unknown":
         warnings.append(
             f"{WARNING_PREFIX} Cannot determine direction for JSON array '{array.array_path}' "

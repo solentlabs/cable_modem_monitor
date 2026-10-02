@@ -450,6 +450,65 @@ class TestJsonArraysForm:
         ]
 
 
+class TestJavascriptJsonArraysForm:
+    """An object variable's arrays become javascript_json arrays, each with its own mappings and type."""
+
+    def test_arrays_written(self) -> None:
+        fixture = load_fixture(VALID_DIR / "json_format.json")
+        fixture["_analysis"]["sections"]["downstream"] = {
+            "format": "javascript_json",
+            "resource": "/wan.php",
+            "variable": "channelData",
+            "arrays": [
+                {
+                    "array_path": "ds_channels",
+                    "mappings": [
+                        {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                        {"key": "Frequency", "field": "frequency", "type": "frequency"},
+                    ],
+                    "channel_type": {"fixed": "qam"},
+                    "channel_count": 31,
+                },
+                {
+                    "array_path": "ofdm_channels",
+                    "mappings": [
+                        {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                        {"key": "Type", "field": "channel_type", "type": "string"},
+                    ],
+                    "channel_type": {"key": "Type", "map": {"OFDM": "ofdm"}},
+                    "channel_count": 1,
+                },
+            ],
+        }
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert result.parser_yaml is not None
+        downstream = yaml.safe_load(result.parser_yaml)["downstream"]
+        assert (downstream["format"], downstream["variable"], "mappings" in downstream) == (
+            "javascript_json",
+            "channelData",
+            False,
+        )
+        assert [(a["array_path"], a.get("channel_type"), a["mappings"]) for a in downstream["arrays"]] == [
+            (
+                "ds_channels",
+                {"fixed": "qam"},
+                [
+                    {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                    {"key": "Frequency", "field": "frequency", "type": "frequency"},
+                ],
+            ),
+            (
+                "ofdm_channels",
+                None,
+                [
+                    {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                    {"key": "Type", "field": "channel_type", "type": "string", "map": {"OFDM": "ofdm"}},
+                ],
+            ),
+        ]
+
+
 # ---------------------------------------------------------------------------
 # Spot-check: parser.yaml system_info
 # ---------------------------------------------------------------------------

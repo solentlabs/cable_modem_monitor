@@ -136,6 +136,53 @@ class TestJavascriptJsonList:
         assert "array_path" not in sections["downstream"]
 
 
+# An Arris actionHandler wan.php shape: one object holding every channel
+# array, an empty OFDMA array, and a codeword companion with no measurement.
+_CHANNEL_DATA = {
+    "ds_channels": [{"ChannelID": "1", "Frequency": "507000000", "PowerLevel": "3.2", "SNRLevel": "38.5"}],
+    "us_channels": [{"ChannelID": "2", "Frequency": "36000000", "PowerLevel": "44.0"}],
+    "ofdm_channels": [{"ChannelID": "33", "PowerLevel": "1.5"}],
+    "ofdma_channels": [],
+    "error_codewords": [{"ChannelID": "1", "CorrectableCodewords": "5"}],
+}
+
+
+def _object_page(data: dict[str, Any]) -> dict[str, Any]:
+    """A wan.php page assigning ``data`` to channelData."""
+    return _entry("/wan.php", f"<script>let channelData = {json.dumps(data)};</script>", "text/html")
+
+
+class TestJavascriptJsonObject:
+    """A JS variable holding an object is read by the json array rules, always in arrays form."""
+
+    def test_sections_name_the_variable(self) -> None:
+        sections, _ = _sections([_object_page(_CHANNEL_DATA)])
+        for direction in ("downstream", "upstream"):
+            assert (sections[direction]["format"], sections[direction]["variable"]) == (
+                "javascript_json",
+                "channelData",
+            )
+
+    def test_arrays_by_path(self) -> None:
+        """Direction and channel type come from each array's path."""
+        sections, _ = _sections([_object_page(_CHANNEL_DATA)])
+        assert _arrays(sections["downstream"]) == [
+            ("ds_channels", {"fixed": "qam"}),
+            ("ofdm_channels", {"fixed": "ofdm"}),
+        ]
+        assert _arrays(sections["upstream"]) == [("us_channels", {"fixed": "atdma"})]
+
+    def test_companion_array_is_warned(self) -> None:
+        _, warnings = _sections([_object_page(_CHANNEL_DATA)])
+        assert [w for w in warnings if "no channel measurement" in w and "'error_codewords'" in w]
+
+    def test_one_array_keeps_arrays_form(self) -> None:
+        """Core's flat form needs an array value, so an object always gets arrays."""
+        sections, _ = _sections([_object_page({"ds_channels": _CHANNEL_DATA["ds_channels"]})])
+        assert _arrays(sections["downstream"]) == [("ds_channels", {"fixed": "qam"})]
+        assert "upstream" not in sections
+
+
 # =============================================================================
 # Direction from an array's path
 # =============================================================================

@@ -219,6 +219,53 @@ class TestJsJsonDetection:
         assert page.js_json_variables == []
 
 
+# =====================================================================
+# Which script assignments are JS JSON variables
+# =====================================================================
+#
+# ┌──────────────────────────────────┬─────────────┬───────────────────────────┐
+# │ assignment                       │ detected as │ description               │
+# ├──────────────────────────────────┼─────────────┼───────────────────────────┤
+# │ ds = [{channel}]                 │ list        │ channel list              │
+# │ ds = [{.. "a];b" ..}]            │ list        │ "];" inside a string      │
+# │ channelData = {"ds": [{channel}]}│ dict        │ object holding a channel  │
+# │                                  │             │ array                     │
+# │ channelData = null; = {...}      │ dict        │ null initialiser first    │
+# │ systemState = {"eth": [{..}]}    │ none        │ no measurement key        │
+# │ obj = {}                         │ none        │ empty object              │
+# │ ui = {show: function() {}}       │ none        │ JS literal, not JSON      │
+# │ codes = {"err": [{"ChannelID"}]} │ none        │ only a companion array    │
+# └──────────────────────────────────┴─────────────┴───────────────────────────┘
+#
+_CHANNEL = '{"ChannelID": "1", "Frequency": "507000000", "PowerLevel": "3.2"}'
+
+# fmt: off
+JS_JSON_VARIABLE_CASES: list[tuple[str, str, str, str]] = [
+    (f"var ds = [{_CHANNEL}];",                                   "ds",          "list", "channel-list"),
+    ('var ds = [{"ChannelID": "1", "Note": "a];b"}];',            "ds",          "list", "bracket-in-string"),
+    (f'let channelData = {{"ds_channels": [{_CHANNEL}]}};',       "channelData", "dict", "object-with-channel-array"),
+    (f'var channelData = null; channelData = {{"ds": [{_CHANNEL}]}};',
+                                                                  "channelData", "dict", "null-initialiser"),
+    ('var systemState = {"ethernet": [{"port": 1, "link": "up"}]};', "",         "none", "no-measurement-key"),
+    ("var obj = {};",                                             "",            "none", "empty-object"),
+    ("var ui = {show: function() { return 1; }};",                "",            "none", "js-literal"),
+    ('var codes = {"err": [{"ChannelID": "1", "Correctable": "0"}]};', "",       "none", "companion-only"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "script,name,kind",
+    [c[:3] for c in JS_JSON_VARIABLE_CASES],
+    ids=[c[3] for c in JS_JSON_VARIABLE_CASES],
+)
+def test_js_json_variable_detection(script: str, name: str, kind: str) -> None:
+    """Array and object values are read whole; an object counts when it holds a channel array."""
+    page = analyze_page(_make_entry("/wan.php", 200, "text/html", f"<html><script>{script}</script></html>"))
+    found = [(v.name, type(v.data).__name__) for v in page.js_json_variables]
+    assert found == ([] if kind == "none" else [(name, kind)])
+
+
 @pytest.mark.parametrize(
     "fixture_path",
     JS_EDGE_CASE_FIXTURES,

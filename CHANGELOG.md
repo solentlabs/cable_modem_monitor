@@ -55,6 +55,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   synthetic fixtures, so CBN intake is graded on the Compal CH7465MT
   capture alone. INTAKE_PIPELINE.md documents the `intake_status`
   marker.
+- **The intake tools read channel arrays inside a JavaScript object.**
+  A page assigning one object that holds every channel array, as the
+  Arris TG3442S and SBG8300 `wan.php` do, now yields `javascript_json`
+  sections in `arrays` form, and an array with no measurement, such as
+  `error_codewords`, is named in a warning. Only a variable holding
+  the channel list itself was detected before. (#210)
 - **har-capture floor raised to 0.13.1.** 0.13.0 redacts serials under
   any JSON key naming them, labeled serials in JSON and script bodies,
   and IPv6 and `10.x` addresses, all of which earlier releases left.

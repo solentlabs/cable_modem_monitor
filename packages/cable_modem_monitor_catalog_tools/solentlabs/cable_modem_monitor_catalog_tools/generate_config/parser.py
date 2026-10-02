@@ -172,9 +172,25 @@ def _transform_javascript(section: dict[str, Any]) -> dict[str, Any]:
 
 def _transform_javascript_json(section: dict[str, Any]) -> dict[str, Any]:
     """Transform javascript_json format from analysis to parser.yaml structure."""
-    mappings = [mapping_to_json_channel(m) for m in section.get("mappings", [])]
+    result: dict[str, Any] = {
+        "format": "javascript_json",
+        "resource": section.get("resource", ""),
+        "variable": section.get("variable", ""),
+    }
+    if section.get("arrays"):
+        result["arrays"] = [
+            {"array_path": entry.get("array_path", ""), **_js_json_array(entry)} for entry in section["arrays"]
+        ]
+    else:
+        result.update(_js_json_array(section))
+    return result
 
-    ct = section.get("channel_type")
+
+def _js_json_array(entry: dict[str, Any]) -> dict[str, Any]:
+    """One javascript_json array's parser.yaml keys: mappings, filter and channel type."""
+    mappings = [mapping_to_json_channel(m) for m in entry.get("mappings", [])]
+
+    ct = entry.get("channel_type")
     if ct and "key" in ct:
         # Inline the channel_type normalization map on the field entry,
         # replacing the raw (map-less) entry that came from _extract_json_mappings.
@@ -189,14 +205,9 @@ def _transform_javascript_json(section: dict[str, Any]) -> dict[str, Any]:
         )
         ct = None
 
-    result: dict[str, Any] = {
-        "format": "javascript_json",
-        "resource": section.get("resource", ""),
-        "variable": section.get("variable", ""),
-        "mappings": mappings,
-    }
-    if section.get("filter"):
-        result["filter"] = section["filter"]
+    result: dict[str, Any] = {"mappings": mappings}
+    if entry.get("filter"):
+        result["filter"] = entry["filter"]
     if ct:
         result["channel_type"] = ct
 

@@ -285,8 +285,8 @@ def _walk_xml(body: str, channel_keys: set[str], system_keys: set[str]) -> None:
 def _walk_page(page: PageAnalysis, channel_keys: set[str], system_keys: set[str]) -> None:
     """Collect channel-table headers and labels, and page-level label-value pairs."""
     for variable in page.js_json_variables:
-        for item in variable.data:
-            _walk_json(item, True, channel_keys, system_keys)
+        # A list's items are channel context; an object is walked as a JSON body.
+        _walk_json(variable.data, False, channel_keys, system_keys)
 
     for table in page.tables:
         if not is_channel_table(table):

@@ -813,10 +813,11 @@ Response body analysis (sniff-then-Content-Type):
   │   │   │
   │   │   └── Cannot determine orientation → examine header row and data rows
   │   │
-  │   ├── Contains <script> with JS variable assignments holding JSON arrays?
+  │   ├── Contains <script> with JS variable assignments holding JSON?
   │   │   └── format: javascript_json
-  │   │       Indicators: variableName = [{...}, ...]; in <script> block,
-  │   │       array of dicts with 2+ keys (channel objects)
+  │   │       Indicators: variableName = [{...}, ...] (array of dicts
+  │   │       with 2+ keys), or variableName = {...} holding a channel
+  │   │       array (json rule below)
   │   │
   │   ├── Contains <script> with function bodies containing delimited data?
   │   │   └── format: javascript
@@ -1016,12 +1017,19 @@ for another table or a JavaScript function on the page.
 - Field indices within each record (same approach as JS — examine
   actual data to identify positions)
 
-**`javascript_json` format:** JS variable assignments containing JSON
-arrays of channel objects. Direction is inferred from the variable
-name (e.g., `json_dsData` → downstream). Mapping extraction reuses
-the JSON key→field pipeline, including its channel array rule below.
-The `variable` name is captured in the section output for config
-generation. Only a variable holding an array is detected.
+**`javascript_json` format:** JS variable assignments whose value is
+JSON, read whole from the assignment as Core does (`raw_decode`). The
+`variable` name is captured in the section output for config
+generation.
+
+- A variable holding an array of channel objects is one section.
+  Direction is inferred from the variable name (e.g., `json_dsData` →
+  downstream). Mapping extraction reuses the JSON key→field pipeline.
+- A variable holding an object is detected when it holds a channel
+  array, and is read by the `json` rules below: channel-array
+  selection, skipped-array warnings, direction and channel type per
+  array. It is always emitted in `arrays` form, even with one array,
+  because Core's flat form needs the variable to hold the array.
 
 **`json` format:** Examine JSON response structure to determine:
 

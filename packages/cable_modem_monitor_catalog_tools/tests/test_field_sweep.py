@@ -217,6 +217,12 @@ class TestCapturedFields:
         channel, _ = captured_fields([_entry(body, "text/html")])
         assert channel["channel_id"] == {"channelId"}
 
+    def test_js_embedded_json_object_arrays_are_channel_context(self) -> None:
+        """Arrays inside an object assigned to a script variable carry channel keys."""
+        body = '<script>let channelData = {"ds": [{"channelId": "1", "rxMer": "40"}]};</script>'
+        channel, _ = captured_fields([_entry(body, "text/html")])
+        assert channel["snr"] == {"rxMer"}
+
     def test_malformed_xml_is_skipped(self) -> None:
         """An unparseable XML body yields no keys rather than raising."""
         channel, system = captured_fields([_entry("<?xml version='1.0'?><open>", "text/xml")])
