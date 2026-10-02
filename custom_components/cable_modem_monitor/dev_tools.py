@@ -528,6 +528,28 @@ def _build_error_graphs_yaml(
     return lines
 
 
+# Holds for every catalog entry without an aggregate; says nothing about
+# why a given modem lacks one, since that cause is not established (#194).
+NO_ERROR_TOTAL_MESSAGE = (
+    "This modem's catalog entry declares no error total, so per-channel error "
+    "sensors are present but no total is computed."
+)
+
+
+def _has_channel_error_counters(modem_data: dict[str, Any]) -> bool:
+    """Whether any downstream channel carries a corrected or uncorrected counter."""
+    return any("corrected" in ch or "uncorrected" in ch for ch in modem_data.get("downstream", []))
+
+
+def _build_no_error_total_card_yaml() -> list[str]:
+    """Markdown card standing in for the error graphs when the modem has no total."""
+    return [
+        "  - type: markdown",
+        "    title: Error Totals",
+        f'    content: "{NO_ERROR_TOTAL_MESSAGE}"',
+    ]
+
+
 def _build_latency_graph_yaml(
     resolver: _EntityResolver,
     *,
@@ -696,6 +718,8 @@ def create_generate_dashboard_handler(
 
         # Kept apart from the header so an empty result is detectable.
         yaml_parts: list[str] = []
+        # The no-total note is not an entity; it must not mask an empty result.
+        note_lines: list[str] = []
 
         if opts["status"]:
             yaml_parts.extend(
@@ -739,6 +763,12 @@ def create_generate_dashboard_handler(
                     include_rates=opts["error_rates"],
                 )
             )
+        elif opts["errors"] and _has_channel_error_counters(modem_data):
+            # Errors were requested but no graph can be drawn; say why in
+            # the dashboard, where the user looks, and in the log.
+            note_lines = _build_no_error_total_card_yaml()
+            yaml_parts.extend(note_lines)
+            _LOGGER.info("Dashboard error graphs omitted: %s", NO_ERROR_TOTAL_MESSAGE)
 
         if opts["latency"]:
             yaml_parts.extend(
@@ -749,7 +779,7 @@ def create_generate_dashboard_handler(
                 )
             )
 
-        if not yaml_parts:
+        if len(yaml_parts) == len(note_lines):
             # An empty cards: list is invalid Lovelace and explains nothing.
             raise ServiceValidationError(
                 "No entities found for this modem — it may still be starting up, " "or its entities may be disabled"

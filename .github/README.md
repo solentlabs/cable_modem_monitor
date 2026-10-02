@@ -119,7 +119,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
   - Signal-to-Noise Ratio (SNR in dB)
   - Frequency (Hz)
   - Corrected/Uncorrected errors
-- **Summary Sensors**: Total corrected and uncorrected errors across all channels
+- **Summary Sensors**: Total corrected and uncorrected downstream errors, where the modem's catalog entry declares them
 - **Unified Status**: Single sensor showing operational state (Operational/Degraded/Not Locked/Unresponsive)
 - **System Information**: Software version, uptime, channel counts, and last boot time
 - **Health Monitoring**: Real-time modem health checks with:
@@ -282,10 +282,16 @@ Firmware and hardware versions also appear on the device info card. Other system
 
 ### Summary Sensors
 
-- `sensor.cable_modem_total_corrected_errors`: Total corrected errors across all downstream channels
-- `sensor.cable_modem_total_uncorrected_errors`: Total uncorrected errors across all downstream channels
+- `sensor.cable_modem_total_corrected_errors`: Total corrected errors summed over downstream channels
+- `sensor.cable_modem_total_uncorrected_errors`: Total uncorrected errors summed over downstream channels
 - `sensor.cable_modem_rate_corrected_errors`: Corrected errors per minute
 - `sensor.cable_modem_rate_uncorrected_errors`: Uncorrected errors per minute
+
+The integration sums the totals from per-channel counters; no modem in the catalog reports one itself. What they cover depends on the modem:
+
+- **DOCSIS 3.1 and 4.0 modems**: SC-QAM channels only. OFDM counters are not added in.
+- **DOCSIS 3.0 modems**: every downstream channel, since all are SC-QAM.
+- **No totals**: some catalog entries declare none, and these four sensors are not created. Where the modem reports per-channel error counts, those sensors still are, and a generated dashboard shows a note in place of the error graphs.
 
 ### Per-Channel Downstream Sensors (for each channel)
 

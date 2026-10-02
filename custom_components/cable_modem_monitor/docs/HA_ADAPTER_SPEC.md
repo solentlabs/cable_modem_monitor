@@ -1260,6 +1260,15 @@ error rows. What it is *called* is answered only by the registry, because
 renaming the device renames them. An ID assembled from `entity_prefix`
 holds only for a default-named, never-renamed install (#205).
 
+**No error total.** When `include_errors` is set and `system_info` has no
+`total_corrected`, but downstream channels carry `corrected` or
+`uncorrected` counters, the error graphs are replaced by a markdown card
+and an INFO log line, both saying the modem's catalog entry declares no
+error total, so per-channel error sensors are present but no total is
+computed. The text holds for every such entry and states no per-modem
+cause (#194). A modem with no per-channel counters gets neither. The
+card is not an entity, so it does not count toward a non-empty result.
+
 Every entity carries a unique ID the integration owns, making the lookup
 exact: `er.async_get_entity_id(domain, DOMAIN, unique_id)`. Unique IDs are
 not derivable from entity IDs — `sensor.{prefix}_ds_channel_count` is

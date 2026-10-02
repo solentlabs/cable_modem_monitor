@@ -13,6 +13,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import yaml as yaml_lib
 from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.cable_modem_monitor.const import CONF_ENTITY_PREFIX, DOMAIN, EntityPrefix
@@ -20,6 +21,7 @@ from custom_components.cable_modem_monitor.coordinator import (
     CableModemRuntimeData,
 )
 from custom_components.cable_modem_monitor.dev_tools import (
+    NO_ERROR_TOTAL_MESSAGE,
     _add_channel_graphs,
     _build_channel_graph_yaml,
     _build_channel_lookup,
@@ -1255,6 +1257,97 @@ def test_generate_dashboard_handler_with_error_rates_opt_in(
     status_card = "\n".join(status_card_lines)
     assert "rate_corrected_errors" not in status_card
     assert "rate_uncorrected_errors" not in status_card
+
+
+# ┌──────────────────┬──────────────────────┬────────────────┬───────────────┬──────────────────────────────┐
+# │ total_corrected  │ per-channel counters │ include_errors │ no-total card │ description                  │
+# ├──────────────────┼──────────────────────┼────────────────┼───────────────┼──────────────────────────────┤
+# │ present          │ yes                  │ True           │ no            │ totals render as graphs      │
+# │ absent           │ yes                  │ True           │ yes           │ card explains the missing    │
+# │ absent           │ yes                  │ False          │ no            │ errors not requested         │
+# │ absent           │ no                   │ True           │ no            │ no counters, nothing to say  │
+# └──────────────────┴──────────────────────┴────────────────┴───────────────┴──────────────────────────────┘
+#
+# fmt: off
+NO_TOTALS_CARD_CASES: list[tuple[bool, bool, bool, bool, str]] = [
+    (True,  True,  True,  False, "totals_present"),
+    (False, True,  True,  True,  "no_total_with_channel_counters"),
+    (False, True,  False, False, "errors_not_requested"),
+    (False, False, True,  False, "no_counters_at_all"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "has_total,has_channel_counters,include_errors,expect_card,desc",
+    NO_TOTALS_CARD_CASES,
+    ids=[c[4] for c in NO_TOTALS_CARD_CASES],
+)
+def test_generate_dashboard_no_totals_card(
+    mock_runtime_data: CableModemRuntimeData,
+    caplog: pytest.LogCaptureFixture,
+    has_total: bool,
+    has_channel_counters: bool,
+    include_errors: bool,
+    expect_card: bool,
+    desc: str,
+) -> None:
+    """Requested errors with no total yield a card and a log line saying why (#194)."""
+    snapshot = mock_runtime_data.data_coordinator.data
+    modem_data = snapshot.modem_data
+    assert modem_data is not None
+    error_keys = {"total_corrected", "total_uncorrected", "rate_corrected", "rate_uncorrected"}
+    counter_keys = {"corrected", "uncorrected"}
+    system_info = dict(modem_data["system_info"])
+    if not has_total:
+        system_info = {k: v for k, v in system_info.items() if k not in error_keys}
+    downstream = modem_data["downstream"]
+    if not has_channel_counters:
+        downstream = [{k: v for k, v in ch.items() if k not in counter_keys} for ch in downstream]
+    mock_runtime_data.data_coordinator.data = replace(
+        snapshot, modem_data={**modem_data, "system_info": system_info, "downstream": downstream}
+    )
+
+    entry = _make_mock_entry(mock_runtime_data)
+    entry.data = {"entity_prefix": "none", "host": "192.168.100.1"}
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    handler = create_generate_dashboard_handler(hass)
+    with caplog.at_level("INFO", logger="custom_components.cable_modem_monitor.dev_tools"):
+        yaml = handler(_make_mock_call({"include_errors": include_errors}))["yaml"]
+
+    cards = yaml_lib.safe_load(yaml)["cards"]
+    markdown = [card for card in cards if card["type"] == "markdown"]
+    expected_card = {"type": "markdown", "title": "Error Totals", "content": NO_ERROR_TOTAL_MESSAGE}
+    assert markdown == ([expected_card] if expect_card else [])
+    assert (NO_ERROR_TOTAL_MESSAGE in caplog.text) is expect_card
+
+
+def test_generate_dashboard_no_totals_card_alone_still_raises(
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """The note card is not an entity, so it cannot stand in for an empty dashboard."""
+    snapshot = mock_runtime_data.data_coordinator.data
+    modem_data = snapshot.modem_data
+    assert modem_data is not None
+    system_info = {k: v for k, v in modem_data["system_info"].items() if not k.startswith(("total_", "rate_"))}
+    mock_runtime_data.data_coordinator.data = replace(snapshot, modem_data={**modem_data, "system_info": system_info})
+
+    entry = _make_mock_entry(mock_runtime_data)
+    entry.data = {"entity_prefix": "none", "host": "192.168.100.1"}
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.dev_tools.er.async_get",
+            return_value=_FakeEntityRegistry(entry.entry_id, empty=True),
+        ),
+        pytest.raises(ServiceValidationError, match="No entities found for this modem"),
+    ):
+        handler = create_generate_dashboard_handler(hass)
+        handler(_make_mock_call({"include_errors": True}))
 
 
 def test_generate_dashboard_handler_no_restart_support(

@@ -1266,9 +1266,10 @@ modem.yaml stays focused on auth, session, and actions.
 **Precedence rule:** If parser.yaml maps a `system_info` field with
 the same name as an `aggregate` entry (e.g., both produce
 `total_corrected`), the native mapping wins. The coordinator skips
-the aggregate computation for that field. This handles the common
-case: a modem natively reports totals → map them directly. A modem
-that doesn't → declare the aggregate to compute them.
+the aggregate computation for that field. A modem that reports totals
+natively maps them directly; one that doesn't declares the aggregate.
+No catalog modem reports totals natively today, so every total in the
+fleet is computed.
 
 **Empty scope:** If the scoped channel set is empty (e.g.,
 `downstream.qam` but the modem has only OFDM channels), the aggregate

@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   any JSON key naming them, labeled serials in JSON and script bodies,
   and IPv6 and `10.x` addresses, all of which earlier releases left.
   0.13.1 stops password-label redaction from overwriting JavaScript.
+- **A generated dashboard says why it has no error graphs.** On a modem
+  whose catalog entry declares no error total, `generate_dashboard`
+  dropped the error section without a word. It now emits a note card
+  in its place, and the README describes the three cases: SC-QAM
+  totals on DOCSIS 3.1 and later, all-channel totals on DOCSIS 3.0,
+  and no totals. (#194)
 
 ### Fixed
 
