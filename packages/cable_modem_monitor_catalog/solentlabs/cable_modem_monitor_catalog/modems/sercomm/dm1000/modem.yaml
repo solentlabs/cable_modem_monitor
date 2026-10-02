@@ -67,6 +67,12 @@ notes: |
   STATE=OPERATE; Core derives docsis_status from those. system_uptime
   is read from status.html, which renders it server-side.
 
+  Reboot and System Uptime are unconfirmed through the integration: both
+  were added (92ee562e, 3541f4ba) after the entry was confirmed
+  (05aa1098). The capture shows a reboot sent from the modem's own page
+  (todo=reboot, 200), not the integration's button. Asked on #92
+  (2026-07-23, 07-24, 07-31); no reply.
+
   OFDM/OFDMA carry no usable frequency — the firmware exposes only a
   sercomm-specific placement value, not the active-band lower edge.
   Rationale in parser.yaml.

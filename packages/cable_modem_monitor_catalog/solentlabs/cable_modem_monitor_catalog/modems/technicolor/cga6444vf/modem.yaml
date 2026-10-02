@@ -109,7 +109,8 @@ notes: |
   is not a failure code. Failures return error != "ok" — MSG_LOGIN_150
   (session busy) or failedAttempts (bad credentials). login_success and
   login_busy mirror this. The browser's salt POST also sends
-  logout: <bool> to evict a rival session; unimplemented in form_pbkdf2.
+  logout: <bool> to evict a rival session; Core deliberately never sends
+  it (MODEM_YAML_SPEC.md § Single-session modems).
 
 references:
   issues:

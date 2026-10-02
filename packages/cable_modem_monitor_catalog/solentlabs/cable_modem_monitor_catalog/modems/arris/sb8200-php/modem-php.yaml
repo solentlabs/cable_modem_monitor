@@ -98,5 +98,5 @@ notes: |
 
 references:
   issues:
-    - "[#213 — Unusual Arris SB8200 [Modem Request]](https://github.com/solentlabs/cable_modem_monitor/issues/213)"
+    - "[#213 — [Modem Request] Arris SB8200 (PHP firmware)](https://github.com/solentlabs/cable_modem_monitor/issues/213)"
     - "[#81 — SB8200 AB01 .html firmware (separate entry, arris/sb8200)](https://github.com/solentlabs/cable_modem_monitor/issues/81)"
