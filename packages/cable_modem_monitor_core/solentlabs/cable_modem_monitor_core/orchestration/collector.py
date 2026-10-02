@@ -18,7 +18,7 @@ import requests
 
 from ..auth.base import AuthContext, AuthResult, BaseAuthManager, LoginLockoutError
 from ..auth.factory import create_auth_manager
-from ..connectivity import create_session
+from ..connectivity import CONNECTIVITY_ERRORS, create_session, is_connectivity_error
 from ..fetch_list import collect_fetch_targets
 from ..loaders.hnap import HNAPLoadError
 from ..loaders.http import (
@@ -149,7 +149,7 @@ class ModemDataCollector:
                 signal=CollectorSignal.AUTH_LOCKOUT,
                 error=str(exc),
             )
-        except (requests.ConnectionError, requests.Timeout) as exc:
+        except CONNECTIVITY_ERRORS as exc:
             error_with_type = f"{type(exc).__name__}: {exc}"
             log_event(
                 _logger,
@@ -214,7 +214,7 @@ class ModemDataCollector:
             return self._classify_hnap_error(exc)
         except ResourceLoadError as exc:
             return self._classify_resource_load_error(exc)
-        except (requests.ConnectionError, requests.Timeout) as exc:
+        except CONNECTIVITY_ERRORS as exc:
             log_event(
                 _logger,
                 ConnectionFailedDuringLoad(
@@ -592,7 +592,7 @@ class ModemDataCollector:
         # exception with `from e`, so __cause__ carries the original and
         # status_code is None for these.
         cause = exc.__cause__
-        if exc.status_code is None and isinstance(cause, requests.ConnectionError | requests.Timeout):
+        if exc.status_code is None and is_connectivity_error(cause):
             log_event(
                 _logger,
                 ConnectionFailedDuringLoad(
@@ -649,7 +649,7 @@ class ModemDataCollector:
         cause = exc.__cause__
 
         # Connection/timeout — modem unreachable (UC-30/UC-31)
-        if exc.status_code is None and isinstance(cause, requests.ConnectionError | requests.Timeout):
+        if exc.status_code is None and is_connectivity_error(cause):
             log_event(_logger, HnapConnectionFailed(model=self._modem_config.model, reason=str(exc)))
             return ModemResult(
                 success=False,

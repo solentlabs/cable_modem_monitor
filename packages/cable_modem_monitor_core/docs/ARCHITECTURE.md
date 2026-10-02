@@ -114,7 +114,7 @@ but modem-specific behavior comes from config, not from Core code.
 | Auth Manager | Strategy dispatch, session reuse, backoff |
 | Modem loader | `load_modem_config(path, mfr, model, variant)` — knows the directory convention |
 | Catalog Manager | `list_modems(catalog_path)` → `list[ModemSummary]` — walks catalog, returns identity fields for config flow display and filtering |
-| Connectivity | Protocol detection, legacy SSL, health probes |
+| Connectivity | Protocol detection, legacy SSL, health probes; `is_connectivity_error`, the one rule for "the modem never answered" that auth, loaders, the collector and the HTTP, HNAP and JSON-RPC actions share (the CBN action catches only `ConnectionError`) |
 | Exceptions | `LoginLockoutError`, `AuthFailedError`, `ParseError` |
 | Test harness | Schema validators, HAR replay framework, parser output assertions |
 

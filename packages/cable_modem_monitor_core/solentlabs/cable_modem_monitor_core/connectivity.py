@@ -1,4 +1,4 @@
-"""Connectivity probing for modem setup.
+"""Connectivity probing for modem setup, and the connectivity-failure predicate.
 
 Detects which protocol a modem speaks (HTTP vs HTTPS), whether it
 requires legacy SSL ciphers, and which health-monitoring probes it
@@ -8,6 +8,11 @@ in ``hass.async_add_executor_job()``.
 These probes run **once** during config-flow validation.  The results
 are persisted in the HA config entry and reused at every poll — the
 runtime path never re-discovers protocol or probe support.
+
+``is_connectivity_error`` is the one rule auth strategies, loaders,
+the collector and the HTTP, HNAP and JSON-RPC actions share to tell an
+unreachable modem from one that answered. The CBN action catches only
+``ConnectionError``.
 
 See CONFIG_FLOW_SPEC.md § Step 4 for the validation pipeline.
 """
@@ -19,7 +24,7 @@ import socket
 import ssl
 import subprocess
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Final
 
 import requests
 import urllib3
@@ -77,6 +82,21 @@ def create_session(*, legacy_ssl: bool = False) -> requests.Session:
     if legacy_ssl:
         session.mount("https://", LegacySSLAdapter())
     return session
+
+
+# ---------------------------------------------------------------------------
+# Connectivity failure classification
+# ---------------------------------------------------------------------------
+
+# The modem never answered: CONNECTIVITY, not a verdict on the credential
+# or the page (RESOURCE_LOADING_SPEC § Error Signals). ConnectTimeout,
+# ProxyError and SSLError are subclasses, so they count too.
+CONNECTIVITY_ERRORS: Final = (requests.ConnectionError, requests.Timeout)
+
+
+def is_connectivity_error(exc: BaseException | None) -> bool:
+    """Return True when ``exc`` means the modem never answered."""
+    return isinstance(exc, CONNECTIVITY_ERRORS)
 
 
 # ---------------------------------------------------------------------------

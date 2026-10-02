@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 import requests
 import requests.cookies
 
+from ...connectivity import CONNECTIVITY_ERRORS
 from ..events import (
     ActionCompleted,
     ActionConnectionLost,
@@ -140,7 +141,7 @@ def execute_http_action(
             message=f"Action {'completed' if resp.ok else 'refused'} with status {resp.status_code}",
             details={"status_code": resp.status_code},
         )
-    except (requests.ConnectionError, requests.Timeout):
+    except CONNECTIVITY_ERRORS:
         log_event(_logger, ActionConnectionLost(model=model, transport="http", action_name=action_name, level=level))
         return ActionResult(
             success=True,
@@ -169,7 +170,7 @@ def _resolve_endpoint(
     try:
         pre_resp = session.get(pre_url, timeout=timeout)
         # Response bytes log dropped — absorbed into downstream pre-fetch events
-    except (requests.ConnectionError, requests.Timeout):
+    except CONNECTIVITY_ERRORS:
         # Pre-fetch may only be for session state; try static endpoint
         fallback = action.endpoint or None
         log_event(

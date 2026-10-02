@@ -22,6 +22,7 @@ from typing import Any
 
 import requests
 
+from ..connectivity import is_connectivity_error
 from ..fetch_list import ResourceTarget
 from ..protocol.json_rpc import call_url, parse_reply, post_call
 from .diagnostics import describe_request
@@ -80,7 +81,7 @@ class JsonRpcLoader:
         except requests.RequestException as exc:
             # RESOURCE_LOADING_SPEC § Error Signals: an unreachable modem is
             # CONNECTIVITY, so these propagate rather than shorten the dict.
-            if isinstance(exc, requests.ConnectionError | requests.Timeout):
+            if is_connectivity_error(exc):
                 raise
             raise ResourceLoadError(f"Failed to call {method}: {type(exc).__name__}: {exc}", path=method) from exc
 

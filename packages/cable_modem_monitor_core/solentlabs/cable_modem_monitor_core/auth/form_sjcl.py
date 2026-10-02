@@ -37,6 +37,7 @@ from typing import Any
 
 import requests
 
+from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormSjclAuth
 from ..protocol import sjcl
 from .base import AuthResult, BaseAuthManager
@@ -253,7 +254,7 @@ def _fetch_page_vars(
     try:
         resp = session.get(url, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         return AuthResult(success=False, error=f"Login page fetch failed: {type(e).__name__}: {e}")
 
@@ -331,7 +332,7 @@ def _validate_session(
     try:
         resp = session.post(url, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         return AuthResult(
             success=False,

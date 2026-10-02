@@ -32,6 +32,7 @@ from urllib.parse import urlparse
 
 import requests
 
+from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormCbnAuth
 from ..protocol.cbn import compal_encrypt
 from .base import AuthContext, AuthResult, BaseAuthManager, LoginLockoutError
@@ -119,7 +120,7 @@ def _send(send: Callable[[], requests.Response], context: str) -> requests.Respo
         # belong to the collector as CONNECTIVITY (UC-30/UC-31). Everything
         # else is a real answer this strategy can report on. Mirrors the
         # contract auth/response.py states for the JSON strategies.
-        if isinstance(exc, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(exc):
             raise
         return AuthResult(success=False, error=f"{context}: {type(exc).__name__}: {exc}")
 

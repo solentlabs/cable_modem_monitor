@@ -12,6 +12,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup, Tag
 
+from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormAuth
 from .base import AuthFailureMode, AuthResult, BaseAuthManager
 
@@ -90,7 +91,7 @@ class FormAuthManager(BaseAuthManager):
                     timeout=timeout,
                 )
             except requests.RequestException as e:
-                if isinstance(e, requests.ConnectionError | requests.Timeout):
+                if is_connectivity_error(e):
                     raise
                 return AuthResult(
                     success=False,
@@ -150,7 +151,7 @@ class FormAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
-            if isinstance(e, requests.ConnectionError | requests.Timeout):
+            if is_connectivity_error(e):
                 raise
             return AuthResult(
                 success=False,

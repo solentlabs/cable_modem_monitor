@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 import requests
 
+from ...connectivity import CONNECTIVITY_ERRORS
 from ...protocol.hnap import (
     HNAP_ENDPOINT,
     HNAP_NAMESPACE,
@@ -94,7 +95,7 @@ def execute_hnap_action(
             headers=headers,
             timeout=timeout,
         )
-    except (requests.ConnectionError, requests.Timeout):
+    except CONNECTIVITY_ERRORS:
         log_event(
             _logger,
             ActionConnectionLost(model=model, transport="hnap", action_name=action.action_name, level=level),

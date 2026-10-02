@@ -33,6 +33,7 @@ from typing import Any
 
 import requests
 
+from ..connectivity import is_connectivity_error
 from .base import AuthResult
 
 _logger = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ def post_json(
     try:
         resp = session.post(url, json=payload, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         return AuthResult(success=False, error=f"POST failed: {type(e).__name__}: {e}")
 
@@ -207,7 +208,7 @@ def post_form(
     try:
         resp = session.post(url, data=payload, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         return AuthResult(success=False, error=f"POST failed: {type(e).__name__}: {e}")
 

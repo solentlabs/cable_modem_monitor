@@ -14,6 +14,7 @@ import logging
 
 import requests
 
+from ...connectivity import CONNECTIVITY_ERRORS
 from ...models.modem_config.actions import JsonRpcAction
 from ...protocol.json_rpc import parse_reply, post_call
 from ..events import (
@@ -45,7 +46,7 @@ def execute_json_rpc_action(
 
     try:
         response = post_call(session, url, method, list(action.params), timeout=timeout)
-    except (requests.ConnectionError, requests.Timeout):
+    except CONNECTIVITY_ERRORS:
         # Expected for restart: the modem drops the connection as it reboots.
         log_event(_logger, ActionConnectionLost(model=model, transport="json_rpc", action_name=method, level=level))
         return ActionResult(

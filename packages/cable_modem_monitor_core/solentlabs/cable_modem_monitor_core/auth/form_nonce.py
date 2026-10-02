@@ -17,6 +17,7 @@ from typing import Any, Literal
 import requests
 from bs4 import BeautifulSoup, Tag
 
+from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormNonceAuth
 from .base import AuthResult, BaseAuthManager
 
@@ -132,7 +133,7 @@ class FormNonceAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
-            if isinstance(e, requests.ConnectionError | requests.Timeout):
+            if is_connectivity_error(e):
                 raise
             return AuthResult(
                 success=False,

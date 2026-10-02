@@ -11,6 +11,7 @@ from typing import Any
 
 import requests
 
+from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormPbkdf2Auth
 from .base import AuthFailureMode, AuthResult, BaseAuthManager
 from .response import matches_criteria, parse_json_dict, post_form
@@ -145,7 +146,7 @@ def _fetch_csrf_token(
     try:
         resp = session.get(url, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         _logger.debug("CSRF init endpoint unreachable: %s", url)
         return ""
@@ -216,7 +217,7 @@ def _submit_login(
     try:
         response = session.post(login_url, data=login_data, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         return AuthResult(success=False, error=f"Login POST failed: {type(e).__name__}: {e}")
 
