@@ -54,6 +54,13 @@ ignoreWords:
   - dlindnegm
   - Tatsh
   - thon
+  # Contributor handles (CHANGELOG credits) and encoded fragments in test data
+  - Boby
+  - squatto
+  - dvcm
+  - Dsensors
+  # German example heading in the link-checker slug tests
+  - überblick
   # Non-English example strings and glossary terms in TRANSLATION_GUIDE.md
   - Anmeldung
   - Authentifizierung
@@ -538,6 +545,9 @@ words:
   - glyphicons
 
   # British / alternate spellings (used in comments and docs)
+  - recognise
+  - initialiser
+  - analyser
   - Analysed
   - artefacts
   - behaviour
@@ -557,6 +567,7 @@ words:
   - unanalysed
 
   # Abbreviations used in production code
+  - JRPC
   - applation
   - authing
   - coro
@@ -580,6 +591,16 @@ words:
   - withoutloginkey
 
   # Test data constants (intentional placeholder values in fixtures)
+  - zzsecret
+  - geheimcode
+  - correcthorse
+  - nokey
+  - loginform
+  - linklocal
+  - freqd
+  - errcodeword
+  - ofdmach
+  - devctl
   - anykey
   - appletv
   - familyroom
@@ -662,10 +683,23 @@ words:
   - uncorrectederrors
 
   # Auth pattern / firmware form identifiers
+  - purecaptcha
+  - lockedout
+  - ubus
   - ajaxset
   - genielogin
 
   # Spec/doc vocabulary (incl. British spellings)
+  - Correctables
+  - unspaced
+  - unredacted
+  - unreachability
+  - unexcluded
+  - undotted
+  - slugifies
+  - repr
+  - reposted
+  - misaligning
   - absoluting
   - baselined
   - browsable
