@@ -74,9 +74,9 @@ with either:
 If you find anything:
 
 1. Replace it with `***REDACTED***` and save.
-2. Re-gzip: `gzip -kf -9 yourfile.sanitized.har`
+2. Re-gzip: `gzip -kf -9 your-file.sanitized.har`
 3. Confirm the files are clean and match:
-   `har-capture validate yourfile.sanitized.har --patterns network-device`
+   `har-capture validate your-file.sanitized.har --patterns network-device`
 4. Say what you redacted in your issue, so the redaction rules can be
    improved.
 

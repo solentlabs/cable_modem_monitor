@@ -51,6 +51,9 @@ ignoreWords:
   - Vonk
   - Fzcw
   - didnt
+  - dlindnegm
+  - Tatsh
+  - thon
   # Non-English example strings and glossary terms in TRANSLATION_GUIDE.md
   - Anmeldung
   - Authentifizierung
@@ -60,6 +63,8 @@ ignoreWords:
   # Source citations in catalog modem.yaml: publication name, Dutch product name
   - Telecompaper
   - zwart
+  # Source citation in docs/ATTRIBUTION.md: company name
+  - Obkio
 
 words:
   # Home Assistant tooling
@@ -371,6 +376,7 @@ words:
   - rebrands
   - relogin
   - slugification
+  - slugifying
   - solentlabs
   - triaging
   - unbonded
@@ -520,6 +526,7 @@ words:
   - libreadline
   - libsqlite
   - mdev
+  - pids
   - setsid
   - tasklist
   - textconv
@@ -547,6 +554,7 @@ words:
   - serialises
   - standardises
   - summarises
+  - unanalysed
 
   # Abbreviations used in production code
   - applation
@@ -666,11 +674,13 @@ words:
   - defences
   - formedness
   - gatekeeping
+  - intraword
   - Liskov
   - NCIP
   - optimise
   - pingable
   - redactions
+  - setext
   - timespan
   - typetracking
   - unconfigured

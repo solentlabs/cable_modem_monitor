@@ -50,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in its place, and the README describes the three cases: SC-QAM
   totals on DOCSIS 3.1 and later, all-channel totals on DOCSIS 3.0,
   and no totals. (#194)
+- **`make spell-check` covers `docs/` and `scripts/`.** It and the CI
+  Spell Check job scanned only catalog modem YAML; both now also check
+  `docs/**/*.md` and the Python and shell scripts under `scripts/`.
 
 ### Fixed
 

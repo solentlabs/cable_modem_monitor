@@ -31,7 +31,7 @@ help:
 	@echo "  make quick-check  - Quick checks (lint + format, skip type-check)"
 	@echo "  make validate-host - Cross-platform validation (auto-installs tools)"
 	@echo "  make validate-ci   - Full CI-like validation (lint + tests + ha-compat)"
-	@echo "  make spell-check   - Spell check catalog modem YAML files (requires Node.js)"
+	@echo "  make spell-check   - Spell check catalog YAML, docs and scripts (requires Node.js)"
 	@echo "  make changelog-check - Validate CHANGELOG.md structure"
 	@echo "  make commit-lint   - Validate this branch's commit messages (requires Node.js)"
 	@echo "  make install-hooks - Install optional pre-push hook (runs validate-ci)"
@@ -158,12 +158,13 @@ pii-check:
 	@echo "🔍 Scanning fixtures for PII..."
 	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py
 
-# Spell check for catalog modem files — mirrors CI spell-check job. Requires Node.js (npx).
-# Scoped to catalog modem YAML; broader codebase (Python, docs) not yet audited.
+# Spell check for catalog modem YAML, docs/ and scripts/ — mirrors CI spell-check job.
+# Requires Node.js (npx). Keep the globs identical to the CI job's.
 spell-check:
-	@echo "🔤 Running spell check on catalog modem files..."
+	@echo "🔤 Running spell check on catalog YAML, docs and scripts..."
 	@npx --yes cspell@10 --config cspell.config.yaml \
 		"packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/**/*.yaml" \
+		"docs/**/*.md" "scripts/**/*.py" "scripts/**/*.sh" \
 		--no-progress
 
 # Suppression-discipline scan — mirrors CI suppression-check job.
