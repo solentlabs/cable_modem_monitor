@@ -37,7 +37,8 @@ def detect_auth(
     - JSON-RPC: always ``json_rpc``; fields from the login call, error
       codes as ambiguities
     - CBN: always ``form_cbn``; fields from the login call
-    - HTTP: walks the Phase 2 decision tree
+    - HTTP: walks the Phase 2 decision tree; a JSON login's strategy is
+      an ambiguity
 
     Args:
         entries: HAR ``log.entries`` list.
@@ -60,4 +61,4 @@ def detect_auth(
         return detect_json_rpc_auth(entries, warnings, ambiguities)
     if transport == "cbn":
         return detect_cbn_auth(entries, warnings)
-    return detect_http_auth(entries, warnings, hard_stops, core_gaps)
+    return detect_http_auth(entries, warnings, hard_stops, core_gaps, ambiguities)

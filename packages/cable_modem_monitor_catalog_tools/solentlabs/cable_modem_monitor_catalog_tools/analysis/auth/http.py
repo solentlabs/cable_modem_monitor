@@ -2,7 +2,7 @@
 
 Implements the HTTP branch of the ONBOARDING_SPEC Phase 2 decision tree.
 Walks: none -> basic -> url_token -> form_sjcl -> form_pbkdf2 ->
-form_nonce -> form -> hard stop.
+JSON login (an auth.strategy ambiguity) -> form_nonce -> form -> hard stop.
 
 Per docs/ONBOARDING_SPEC.md Phase 2 (HTTP transport).
 """
@@ -18,12 +18,15 @@ from urllib.parse import urljoin, urlsplit
 from ...validation.har_utils import (
     HARD_STOP_PREFIX,
     WARNING_PREFIX,
+    WRITE_METHODS,
     has_set_cookie,
     lower_headers,
     parse_form_params,
     path_from_url,
 )
+from ..ambiguity import Ambiguity
 from ..types import CoreGap
+from .json_login import is_json_login, json_login_ambiguity
 from .patterns import (
     get_login_url_patterns,
     get_nonce_error_prefix,
@@ -33,6 +36,7 @@ from .patterns import (
     get_sjcl_post_fields,
     has_credential_fields,
     is_password_field_name,
+    is_username_field_name,
 )
 from .types import AuthDetail
 
@@ -70,17 +74,19 @@ def detect_http_auth(
     warnings: list[str],
     hard_stops: list[str],
     core_gaps: list[CoreGap] | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> AuthDetail:
     """Walk the HTTP auth decision tree.
 
     Order: none -> basic -> url_token -> form_sjcl -> form_pbkdf2 ->
-    form_nonce -> form -> hard stop.
+    JSON login -> form_nonce -> form -> hard stop.
 
     Args:
         entries: HAR ``log.entries`` list.
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
         core_gaps: Mutable list to append core gap items to.
+        ambiguities: Mutable list to append the JSON login's strategy ambiguity to.
 
     Returns:
         AuthDetail with strategy, extracted fields, and confidence.
@@ -121,13 +127,15 @@ def detect_http_auth(
     if signals.pbkdf2_entries:
         return _extract_form_pbkdf2(signals)
 
+    # JSON login to a login path -> its strategy is an ambiguity
+    detail = json_login_ambiguity(entries, signals.json_login_entries, warnings, ambiguities)
+    if detail is not None:
+        return detail
+
     # Form POST to login endpoint
-    if signals.form_post_entry is not None:
-        # Check for nonce-style response
-        if signals.form_nonce_entry is not None:
-            return _extract_form_nonce(signals)
-        # Standard form auth
-        return _extract_form(entries, signals, warnings)
+    detail = _extract_form_login(entries, signals, warnings)
+    if detail is not None:
+        return detail
 
     # Auth signals detected but no strategy matched -> HARD STOP + evidence
     hard_stops.append(
@@ -174,6 +182,7 @@ class _HttpAuthSignals:
     sjcl_login_entry: dict[str, Any] | None = None
     sjcl_login_page_html: str = ""
     pbkdf2_entries: list[dict[str, Any]] = field(default_factory=list)
+    json_login_entries: list[dict[str, Any]] = field(default_factory=list)
     has_401: bool = False
     has_302_after_post: bool = False
     has_authorization_header: bool = False
@@ -266,9 +275,12 @@ def _check_entry_auth_signals(
     # URL token pattern: login_<base64> or bare base64 credential in URL
     _check_url_token_signals(url, req, entry, signals)
 
-    # POST requests
-    if method == "POST":
+    # Requests with a body: logins arrive by any write method
+    if method.upper() in WRITE_METHODS:
         _check_post_signals(entry, req, resp, url, status, signals)
+        if is_json_login(entry):
+            signals.json_login_entries.append(entry)
+            signals.has_any_auth_signal = True
 
     # Set-Cookie on non-first entry after a login-like POST
     if has_set_cookie(resp) and signals.form_post_entry is not None:
@@ -355,6 +367,21 @@ def _check_post_signals(
 # ---------------------------------------------------------------------------
 # Strategy extraction helpers
 # ---------------------------------------------------------------------------
+
+
+def _extract_form_login(
+    entries: list[dict[str, Any]],
+    signals: _HttpAuthSignals,
+    warnings: list[str],
+) -> AuthDetail | None:
+    """form_nonce or form for a form login, or None without one."""
+    if signals.form_post_entry is None:
+        return None
+    # Check for nonce-style response
+    if signals.form_nonce_entry is not None:
+        return _extract_form_nonce(signals)
+    # Standard form auth
+    return _extract_form(entries, signals, warnings)
 
 
 def _extract_basic(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> AuthDetail:
@@ -766,7 +793,7 @@ def _extract_form(
 
     fields: dict[str, Any] = {
         "action": post_path,
-        "method": "POST",
+        "method": req.get("method", "POST").upper(),
         "username_field": username_field,
         "password_field": password_field,
         "encoding": encoding,
@@ -850,10 +877,7 @@ def classify_form_fields(
     password_field = ""
     hidden_fields: dict[str, str] = {}
 
-    username_indicators = ("username", "user", "login")
-
     for name, value in params.items():
-        lower_name = name.lower()
         # Password checked first: "loginPassword" matches both lists, and
         # password is the more specific signal. First match wins on each
         # axis, since credential inputs precede auxiliary fields like
@@ -862,7 +886,7 @@ def classify_form_fields(
         # constants.
         if is_password_field_name(name):
             password_field = password_field or name
-        elif any(ind in lower_name for ind in username_indicators):
+        elif is_username_field_name(name):
             username_field = username_field or name
         else:
             hidden_fields[name] = value

@@ -118,6 +118,13 @@ class TestPlaceholderEndpoints:
         assert [resource.path for resource in unread] == ["/rest/v1/user/3"]
 
 
+def test_strategy_candidate_login_endpoint_is_read() -> None:
+    """An unresolved JSON login's endpoint is the config's, whichever candidate is chosen."""
+    entries = _json_entry("http://192.168.1.1/actionHandler/ajaxSet_login.php", {"EncryptedData": "00"})
+    auth = AuthDetail(strategy="", candidates={"json_sjcl": {"login_endpoint": "/actionHandler/ajaxSet_login.php"}})
+    assert detect_unread_resources(entries, None, auth, ActionsDetail(), "http") == []
+
+
 # =====================================================================
 # Redaction — no response body value reaches the output
 # =====================================================================

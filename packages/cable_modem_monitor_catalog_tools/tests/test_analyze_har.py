@@ -440,3 +440,33 @@ class TestJsonRpcTransport:
         lockout = next(a for a in result.ambiguities if a.field == "auth.lockout_code")
         assert lockout.candidates[0].corroborated_by == ["vendor/m1"]
         assert lockout.resolution == {"value": "codeLocked", "source": "fleet"}
+
+
+# =====================================================================
+# JSON login: the strategy is an ambiguity the fleet can corroborate
+# =====================================================================
+
+_JSON_LOGIN = Path(__file__).parent / "fixtures" / "auth" / "valid" / "json_login_put_header_token.json"
+
+
+@pytest.mark.parametrize(
+    ("confirmed", "expected_resolution"),
+    [
+        ({}, None),
+        ({"auth.strategy": {"bearer": ["{manufacturer}/{model}"]}}, {"value": "bearer", "source": "fleet"}),
+    ],
+    ids=["unconfirmed_fleet", "confirmed_bearer_corroborates"],
+)
+def test_json_login_strategy_ambiguity(
+    tmp_path: Path, confirmed: dict[str, dict[str, list[str]]], expected_resolution: dict[str, str] | None
+) -> None:
+    """A JSON login reports strategy candidates and their fields; a confirmed entry pre-fills the one it declares."""
+    entries = load_fixture(_JSON_LOGIN)["_entries"]
+    har = write_har(tmp_path, {"log": {"version": "1.2", "entries": entries}})
+    result = analyze_har(har, fleet=FleetPatterns(confirmed_config_values=confirmed)).to_dict()
+    (ambiguity,) = [a for a in result["ambiguities"] if a["field"] == "auth.strategy"]
+    assert [c["value"] for c in ambiguity["candidates"]] == ["bearer"]
+    assert ambiguity["resolution"] == expected_resolution
+    assert result["auth"]["strategy"] == ""
+    assert result["auth"]["candidates"]["bearer"]["login_endpoint"] == "/actionHandler/ajaxSet_login.php"
+    assert result["hard_stops"] == []

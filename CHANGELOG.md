@@ -67,6 +67,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sections in `arrays` form, and an array with no measurement, such as
   `error_codewords`, is named in a warning. Only a variable holding
   the channel list itself was detected before. (#210)
+- **The intake tools see JSON and PUT logins.** A JSON login, sent by
+  POST, PUT or PATCH to a login path, now reports its strategy as
+  candidates with the wire evidence for each: `bearer` with its token
+  source and placement when the password key's value is not ciphertext,
+  `json_sjcl` when the body is. A method Core cannot send gets a
+  warning, not a candidate. Generation uses the chosen candidate's fields. The
+  Arris SB8200 PHP capture now reproduces its committed `bearer` login,
+  and the SBG8300 all of it but `login_busy`; the TG3442S capture offers
+  `json_sjcl` and still needs its crypto parameters from page script.
+  They had stopped at "Cannot determine auth mechanism" or read as no
+  login. (#210, #213)
 - **har-capture floor raised to 0.13.1.** 0.13.0 redacts serials under
   any JSON key naming them, labeled serials in JSON and script bodies,
   and IPv6 and `10.x` addresses, all of which earlier releases left.

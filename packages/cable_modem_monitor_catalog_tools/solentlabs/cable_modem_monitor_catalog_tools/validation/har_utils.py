@@ -19,6 +19,10 @@ from typing import Any
 HARD_STOP_PREFIX = "HARD STOP:"
 WARNING_PREFIX = "WARNING:"
 
+# Methods that submit a body. Logins arrive by any of them: Arris PHP
+# firmware sends its credentials with PUT.
+WRITE_METHODS: frozenset[str] = frozenset({"POST", "PUT", "PATCH"})
+
 # ---------------------------------------------------------------------------
 # Static resource extensions — excluded from data page detection
 # ---------------------------------------------------------------------------

@@ -286,6 +286,58 @@ class TestActionsBehavior:
 
 
 # ---------------------------------------------------------------------------
+# Spot-check: auth.strategy resolution picks a candidate's fields
+# ---------------------------------------------------------------------------
+
+_BEARER_FIELDS = {
+    "login_endpoint": "/actionHandler/ajaxSet_login.php",
+    "method": "PUT",
+    "token_source": "header",
+    "token_header": "X-CSRF-Token",
+    "token_placement": "header",
+}
+
+
+def _with_strategy_ambiguity(resolution: dict[str, Any] | None) -> dict[str, Any]:
+    """table_form_auth with its auth replaced by an unsettled JSON login."""
+    fixture = load_fixture(VALID_DIR / "table_form_auth.json")
+    fixture["_analysis"]["auth"] = {
+        "strategy": "",
+        "fields": {},
+        "confidence": "low",
+        "candidates": {"bearer": dict(_BEARER_FIELDS)},
+    }
+    fixture["_analysis"]["ambiguities"] = [
+        {
+            "field": "auth.strategy",
+            "blocking": True,
+            "candidates": [{"value": "bearer", "evidence": [], "corroborated_by": []}],
+            "resolution": resolution,
+        }
+    ]
+    return fixture
+
+
+class TestAuthStrategyResolution:
+    """The resolved strategy brings its candidate's fields; an unresolved one stops generation."""
+
+    def test_resolved_candidate_fields_written(self) -> None:
+        """A resolved bearer writes the bearer candidate's fields, plus the session cookie."""
+        fixture = _with_strategy_ambiguity({"value": "bearer"})
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        auth = yaml.safe_load(result.modem_yaml)["auth"]
+        assert auth == {"strategy": "bearer", **_BEARER_FIELDS, "cookie_name": "session"}
+
+    def test_unresolved_strategy_blocks(self) -> None:
+        """No resolution: generation names the ambiguity and its candidates."""
+        fixture = _with_strategy_ambiguity(None)
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert not result.validation.valid
+        assert any("unresolved ambiguity auth.strategy (candidates: bearer)" in e for e in result.validation.errors)
+
+
+# ---------------------------------------------------------------------------
 # Spot-check: channel key resolutions (parser.<section>.<key>)
 # ---------------------------------------------------------------------------
 

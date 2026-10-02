@@ -108,7 +108,7 @@ candidate list and the LLM picks by reading response bodies. Unread
 resources emit key skeletons and the LLM decides what is worth mapping.
 Neither gates, and both hand over evidence rather than a conclusion.
 
-Auth and action detection do not. Both return a single answer,
+HTTP auth and action detection mostly do not. They return a single answer,
 `AuthDetail.confidence` is serialized and read by nothing, and a failure is
 a hard stop rather than a shortlist. The cost is not missed capability, it
 is **silent wrong confidence**: `sagemcom/f3896lg-zg` is reported
@@ -142,9 +142,10 @@ never asked. The fitting measure is whether the correct answer was among the
 candidates offered, and whether un-inferable cases were flagged as gaps.
 [Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed) are the
 first detection that emits candidates, and the regression scores them that
-way ([Ambiguity resolution](#intake-pipeline-regression)). Auth and action
-detection still return one answer, so their exact-match grades stand as the
-interim proxy.
+way ([Ambiguity resolution](#intake-pipeline-regression)). A JSON login's
+strategy is one ([ONBOARDING_SPEC.md § JSON login](ONBOARDING_SPEC.md#json-login));
+other auth and action detection still returns one answer, so its
+exact-match grades stand as the interim proxy.
 
 ---
 
@@ -418,7 +419,7 @@ make it read as capability. Four causes:
 
 | Cause | Modems |
 |-------|--------|
-| **No branch for the strategy.** The HTTP tree walks none → basic → url_token → form_sjcl → form_pbkdf2 → form_nonce → form. `bearer` is not in it, so it cannot emit it | `sagemcom/f3896lg-zg` |
+| **Claimed by form_pbkdf2 first.** The HTTP tree tries form_pbkdf2 before the JSON login branch, and takes any JSON body sent to a login-pattern URL, so `bearer` is never offered there | `sagemcom/f3896lg-zg` |
 | **Capture carries no evidence.** The committed strategy is right about the hardware; the HAR cannot show it | `netgear/c7000v2`, `technicolor/tc4400` — committed `basic`, but zero 401 challenges and zero `Authorization` headers. `arris/tg3442de` — committed `form_sjcl`, but both login POST bodies are `{}`, so the SJCL fields the branch keys on are gone and the login URL falls through to the PBKDF2 bucket |
 | **Action-scoped auth read as primary.** `auth: none` plus `actions.restart.action_auth: bearer` — the only login in the capture fired for the restart action, and the data path really is unauthenticated | `sagemcom/f3896lg-vmb` |
 | **Credential shape the detector cannot name.** The login posts `arguments=<base64 of user:pass>`; the credential test is field-name based, so a generic `arguments` parameter reads as carrying no credentials | `arris/sb6190` (b64 variant) |

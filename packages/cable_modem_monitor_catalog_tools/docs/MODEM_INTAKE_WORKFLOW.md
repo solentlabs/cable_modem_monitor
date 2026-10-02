@@ -284,7 +284,9 @@ name ([ONBOARDING_SPEC § Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-th
 Report what was detected:
 
 - Transport: `{analysis["transport"]}`
-- Auth: `{analysis["auth"]["strategy"]}` (confidence: `{analysis["auth"]["confidence"]}`)
+- Auth: `{analysis["auth"]["strategy"]}` (confidence: `{analysis["auth"]["confidence"]}`);
+  empty when `auth.strategy` is an ambiguity, with each candidate's fields
+  in `analysis["auth"]["candidates"]`
 - Actions: logout={observed/source_inferred/none}, restart={observed/source_inferred/none}
   - `observed` — request appeared in HAR traffic (highest confidence)
   - `source_inferred` — endpoint referenced in captured page source or matches a
@@ -332,6 +334,8 @@ entry, verify the detected strategy against the HAR before proceeding. Pull
 | `form_nonce` | Auth response body starts with `Url:` (success) or `Error:` (failure) — no HTTP redirect. The POST body contains a short random numeric value alongside credentials; `nonce_field` should match its field name. |
 | `form_pbkdf2` | A preliminary request fires before credentials are submitted and the response contains a salt value. `pbkdf2_iterations` and `pbkdf2_key_length` should match values visible in that exchange. |
 | `form_sjcl` | The credential POST body is an encrypted SJCL JSON blob, not plain form fields. `encrypt_aad` and `decrypt_aad` should match the AAD strings in the login JS. |
+| `bearer` | The JSON login body has a password key whose value is not ciphertext, and a value its response issued (a header such as `X-CSRF-Token`, or a JSON field) comes back on later requests. |
+| `json_sjcl` | The JSON login body is ciphertext plus the username, with no password key, built by the login page's SJCL script. Set `pbkdf2_iterations`, `pbkdf2_key_length` and `aad` from that script. |
 
 If the detected strategy or any extracted field looks wrong, correct
 `analysis["auth"]` before calling `generate_config` — don't patch the

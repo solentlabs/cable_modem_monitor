@@ -19,6 +19,7 @@ from ..analysis.auth.patterns import (
 from .har_utils import (
     HARD_STOP_PREFIX,
     WARNING_PREFIX,
+    WRITE_METHODS,
     has_set_cookie,
     is_hnap_request,
     lower_headers,
@@ -96,7 +97,7 @@ def validate_auth_redirect_landing(entries: list[dict[str, Any]], issues: list[s
 
     for entry in entries:
         request = entry["request"]
-        if request.get("method") != "POST" or not _is_login_url(request.get("url", "")):
+        if request.get("method") not in WRITE_METHODS or not _is_login_url(request.get("url", "")):
             continue
         if not has_credential_fields(request.get("postData", {})):
             continue
@@ -181,10 +182,10 @@ def _scan_auth_artifacts(entries: list[dict[str, Any]]) -> AuthArtifacts:
         if is_hnap_request(url, req_hdrs):
             artifacts.hnap = artifacts.any = True
 
-        # A POST without credential-shaped fields is an action posted to the
+        # A write without credential-shaped fields is an action sent to the
         # auth endpoint, not a login; a HAR with no login must not report
         # an auth flow.
-        if method == "POST" and _is_login_url(url) and has_credential_fields(req.get("postData", {})):
+        if method in WRITE_METHODS and _is_login_url(url) and has_credential_fields(req.get("postData", {})):
             artifacts.login_post = artifacts.any = True
 
         if "authorization" in req_hdrs:

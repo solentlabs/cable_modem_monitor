@@ -8,6 +8,7 @@ inputs.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -151,6 +152,69 @@ def test_auth_ambiguities(fixture_path: Path) -> None:
     }
     assert actual == data["_expected_ambiguities"]
     assert all(a.resolution is None for a in ambiguities)
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    [f for f in VALID_FIXTURES if "_expected_candidate_fields" in load_fixture(f)],
+    ids=[f.stem for f in VALID_FIXTURES if "_expected_candidate_fields" in load_fixture(f)],
+)
+def test_auth_candidate_fields(fixture_path: Path) -> None:
+    """Each strategy candidate carries exactly the fields its evidence supports."""
+    data = load_fixture(fixture_path)
+    result = detect_auth(data["_entries"], data["_transport"], [], [], ambiguities=[])
+    assert result.candidates == data["_expected_candidate_fields"]
+    assert result.fields == {}
+
+
+# ┌──────────────────────────────┬────────────┬─────────────────────────────────────────────┐
+# │ login variant                │ candidates │ why                                         │
+# ├──────────────────────────────┼────────────┼─────────────────────────────────────────────┤
+# │ PUT, password value as sent  │ bearer     │ the fixture as captured                     │
+# │ POST                         │ bearer     │ Core's bearer accepts POST                  │
+# │ PATCH                        │ none       │ no Core JSON strategy sends PATCH           │
+# │ password value is ciphertext │ json_sjcl  │ an encrypted value is not a plain password  │
+# └──────────────────────────────┴────────────┴─────────────────────────────────────────────┘
+_CIPHER_VALUE = "0123456789abcdef0123456789abcdef"
+_JSON_LOGIN_VARIANTS: list[tuple[str, str | None, str | None, list[str]]] = [
+    ("put_as_captured", None, None, ["bearer"]),
+    ("post", "POST", None, ["bearer"]),
+    ("patch", "PATCH", None, []),
+    ("password_value_is_ciphertext", None, _CIPHER_VALUE, ["json_sjcl"]),
+]
+
+
+@pytest.mark.parametrize(
+    ("method", "password", "expected"),
+    [(v[1], v[2], v[3]) for v in _JSON_LOGIN_VARIANTS],
+    ids=[v[0] for v in _JSON_LOGIN_VARIANTS],
+)
+def test_json_login_candidates_follow_the_wire(method: str | None, password: str | None, expected: list[str]) -> None:
+    """Candidates are only strategies Core can run with the observed method and body shape."""
+    data = load_fixture(VALID_DIR / "json_login_put_header_token.json")
+    login = data["_entries"][2]["request"]
+    if method:
+        login["method"] = method
+    if password:
+        body = json.loads(login["postData"]["text"])
+        body["password"] = password
+        login["postData"]["text"] = json.dumps(body)
+    warnings: list[str] = []
+    ambiguities: list[Ambiguity] = []
+    detect_auth(data["_entries"], "http", warnings, [], ambiguities=ambiguities)
+    offered = [c.value for a in ambiguities if a.field == "auth.strategy" for c in a.candidates]
+    assert offered == expected
+    if not expected:
+        assert any(str(method) in w and "bearer" in w for w in warnings), warnings
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH"])
+def test_form_login_keeps_its_method(method: str) -> None:
+    """A form login sent by any write method is detected, and the config sends it the same way."""
+    data = load_fixture(VALID_DIR / "form_post_302.json")
+    data["_entries"][0]["request"]["method"] = method
+    result = detect_auth(data["_entries"], "http", [], [])
+    assert (result.strategy, result.fields["method"]) == ("form", method)
 
 
 # =====================================================================

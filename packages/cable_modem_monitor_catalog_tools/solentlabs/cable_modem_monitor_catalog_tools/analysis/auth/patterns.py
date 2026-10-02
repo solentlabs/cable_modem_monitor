@@ -109,6 +109,16 @@ def is_password_field_name(name: str) -> bool:
     return lower in _active_password_names()
 
 
+# Checked after is_password_field_name: "loginPassword" matches both.
+_USERNAME_FIELD_INDICATORS = ("username", "user", "login")
+
+
+def is_username_field_name(name: str) -> bool:
+    """Check if a field name reads as a username field."""
+    lower = name.lower()
+    return any(ind in lower for ind in _USERNAME_FIELD_INDICATORS)
+
+
 def has_credential_fields(post_data: dict[str, Any]) -> bool:
     """Check if form POST data carries a password-shaped field name."""
     # Names, not values; HAR sanitizers redact values.

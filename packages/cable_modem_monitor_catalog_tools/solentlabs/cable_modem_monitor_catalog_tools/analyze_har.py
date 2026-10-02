@@ -122,7 +122,7 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
         return _analyze_json_rpc(entries, transport_result, fleet)
 
     # Phase 2: Auth
-    auth_result = detect_auth(entries, transport_result.transport, warnings, hard_stops, core_gaps)
+    auth_result = detect_auth(entries, transport_result.transport, warnings, hard_stops, core_gaps, ambiguities)
 
     # Phase 3: Session
     session_result = SessionDetail.detect(entries, transport_result.transport, auth_result.strategy, warnings)

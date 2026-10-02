@@ -185,10 +185,12 @@ def _mapped_endpoints(
     """Collect every endpoint the generated config will fetch."""
     mapped = {_normalize_endpoint(resource) for resource in _collect_resources(sections)}
 
-    for name in _AUTH_ENDPOINT_FIELDS:
-        value = auth.fields.get(name)
-        if isinstance(value, str) and value:
-            mapped.add(_normalize_endpoint(value))
+    # An unresolved strategy's candidates all name the login the capture made.
+    for fields in (auth.fields, *auth.candidates.values()):
+        for name in _AUTH_ENDPOINT_FIELDS:
+            value = fields.get(name)
+            if isinstance(value, str) and value:
+                mapped.add(_normalize_endpoint(value))
 
     for action in (actions.logout, actions.restart):
         if action is None:

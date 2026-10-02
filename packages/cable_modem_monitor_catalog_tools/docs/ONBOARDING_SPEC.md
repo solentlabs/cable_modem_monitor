@@ -21,7 +21,9 @@ review, commit authorization).
 - HAR is the single source of truth — every config decision traces to wire evidence
 - Config constraints (transport, auth, format) form the decision framework
 - Deterministic logic lives in MCP tools, not in prompts — repeatable and testable
-- Ambiguity is a hard stop, not a guess — flag for human review
+- Ambiguity is never a guess: analysis reports the candidates and their
+  wire evidence for the LLM to resolve; with nothing to cite, it is a
+  hard stop
 - Metadata not in the HAR is filled via web search, not left as TODOs
 - Generated config must pass Pydantic build-time validation, plus an
   alias-and-brand check: firmware-internal codes (underscore-shaped,
@@ -245,7 +247,7 @@ under AUTH FIXTURE ISSUES in the intake pipeline regression.
 |--------------|----------------|
 | `WWW-Authenticate: Basic` response header | `basic` auth |
 | `WWW-Authenticate: Digest` response header | Digest auth — **unsupported, flag** |
-| POST to login endpoint with credential-shaped form body | `form` (or variant — continue analysis) |
+| POST, PUT or PATCH to login endpoint with credential-shaped form body | `form` (or variant — continue analysis) |
 | `HNAP_AUTH` header on any request | `hnap` auth |
 | URL contains base64-encoded credentials | `url_token` auth |
 | JSON POST with SJCL AES-CCM encrypted payload (`EncryptData`) | `form_sjcl` auth |
@@ -370,6 +372,8 @@ responses) is a separate axis — detected in Phase 5.
 Auth detection depends on transport — the constraint table limits valid
 strategies.
 
+Logins arrive by POST, PUT or PATCH; "POST" below means any of them.
+
 **The login POST is selected by credential-shaped field names, not
 recency alone.** A form POST to an auth-pattern URL counts as a login
 only when its body carries a password-shaped field name — names, not
@@ -481,7 +485,7 @@ Check HAR entries for login flow:
   │   │
   │   └── Ambiguous response format → flag for human review
   │
-  ├── POST with JSON body containing credentials
+  ├── POST, PUT or PATCH with JSON body containing credentials
   │   ├── Login page has SJCL JS variables (myIv, mySalt, encryptflag)?
   │   │   POST body contains EncryptData field?
   │   │   └── strategy: form_sjcl
@@ -498,9 +502,9 @@ Check HAR entries for login flow:
   │   │                double_hash, csrf_init_endpoint, csrf_header,
   │   │                login_success (see below)
   │   │
-  │   └── Single POST login?
-  │       └── strategy: form
-  │           Extract: action, username_field, password_field
+  │   └── Sent to a path naming a login (JSON login, below)?
+  │       └── auth.strategy ambiguity: candidates with evidence,
+  │           each candidate's fields under auth.candidates
   │
   ├── URL contains base64-encoded credentials (login_<base64>)
   │   └── strategy: url_token
@@ -513,6 +517,40 @@ Check HAR entries for login flow:
   │
   └── Cannot determine → HARD STOP
 ```
+
+#### JSON login
+
+A JSON body sent to a path whose last segment contains `login`, with a
+password- or username-shaped key, can be more than one strategy. The
+branch sees only what the branches above leave: any JSON body sent to a
+login-pattern URL (`/login`, `/cgi-bin/`, ...) goes to `form_pbkdf2`
+first, so a bearer login there is never offered (`sagemcom/f3896lg-zg`,
+[INTAKE_PIPELINE.md § Intake Pipeline Regression](INTAKE_PIPELINE.md#intake-pipeline-regression)). Analysis
+does not pick: it reports a blocking `auth.strategy`
+[ambiguity](#ambiguities-resolve-then-proceed) whose candidates are the
+strategies the body fits, each citing the login request, the page that
+builds the body, and the request that sends the token back. Each
+candidate's fields are under `auth.candidates`; `auth.strategy` stays
+empty until resolved, and `generate_config` builds the auth block from
+the resolved candidate. The path is the signal because the same
+encrypted envelope also carries keepalives and restarts. Among attempts,
+the latest 2xx one is the login. A strategy is offered only when Core's
+model for it accepts the login's method; otherwise a warning names the
+strategy the body fits, and nothing is offered.
+
+| Candidate | Offered when | Fields |
+|-----------|--------------|--------|
+| `bearer` | A password-shaped key holds a value that is not ciphertext-shaped (values are often redacted, so only the shape is checked) | `login_endpoint`; `method` unless POST; `username_field` unless `username` (`""` with no username key); `extra_fields`, where a value equal to the modem's host becomes `{host}`; token source and placement |
+| `json_sjcl` | A key holds ciphertext (32 or more hex characters) and no password-shaped key holds anything else | `login_page`, the latest page before the login with a password input that names the ciphertext key; `login_endpoint`; `method` unless PUT; `token_header` |
+
+The token is the first value the login response issued, from a header or
+a JSON string of 8 or more characters that no earlier request sent, that a
+later request sends back: as a request header (`token_placement: header`),
+as `Authorization: Bearer` (the default placement), or inside a URL query
+parameter (`query`, with the text before it as `token_prefix`). A login
+with no such value gets a warning. `json_sjcl`'s PBKDF2 parameters and
+AAD live in page script the tool does not read; `generate_config`
+validation names them.
 
 **Dynamic form action.** A query string on the login POST URL is a
 per-session token published in the login form's `action` (Netgear
@@ -1594,7 +1632,9 @@ ambiguities:
 - **`resolution`** is set by the LLM from the evidence, as `{value}`, or
   as `{value: null, reason}` for an explicit "none". The user confirms
   it at review. A blank is never a resolution.
-- **`generate_config`** writes each resolved value at its path. An
+- **`generate_config`** writes each resolved value at its path; a
+  resolved `auth.strategy` also brings that candidate's fields from
+  `auth.candidates` ([JSON login](#json-login)). An
   explicit "none" leaves the field absent; a null without a reason is a
   blank and is rejected. An unresolved **`blocking`** ambiguity makes
   the result invalid, naming the field and its candidates. A
@@ -1739,8 +1779,10 @@ detection, format detection, and field mapping extraction.
 }
 ```
 
-Returns `hard_stops` if transport or auth is ambiguous — the LLM presents
-these to the user for resolution before proceeding.
+Returns `hard_stops` when transport or auth cannot be determined. An auth
+strategy the capture supports in more than one way is an `auth.strategy`
+ambiguity instead, with each candidate's fields under `auth.candidates`
+([JSON login](#json-login)).
 
 **Core gaps** indicate patterns the pipeline detected but Core cannot yet
 handle. When `core_gaps` is non-empty, config generation should not

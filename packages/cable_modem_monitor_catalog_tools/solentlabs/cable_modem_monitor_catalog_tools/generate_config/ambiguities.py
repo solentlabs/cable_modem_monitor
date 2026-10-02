@@ -9,6 +9,9 @@ A ``parser.<section>.<key>`` path names a channel JSON key: its value is
 the key's field, written into every array of the analysis section before
 parser.yaml is built. None, or no resolution, drops the key.
 
+``auth.strategy`` picks one of analysis's strategy candidates, and the
+auth block is built from that candidate's fields.
+
 Per docs/ONBOARDING_SPEC.md § Ambiguities.
 """
 
@@ -19,6 +22,19 @@ from typing import Any
 from ..analysis.ambiguity import split_parser_path
 from ..analysis.mapping.field_resolution import known_field_type
 from .mappings import section_mappings
+
+STRATEGY_PATH = "auth.strategy"
+
+
+def resolved_auth(analysis: dict[str, Any]) -> dict[str, Any]:
+    """The analysis auth, or the resolved strategy candidate's fields when the strategy was an ambiguity."""
+    auth: dict[str, Any] = analysis.get("auth") or {}
+    candidates = auth.get("candidates") or {}
+    for ambiguity in analysis.get("ambiguities") or []:
+        value = (ambiguity.get("resolution") or {}).get("value")
+        if ambiguity["field"] == STRATEGY_PATH and value in candidates:
+            return {"strategy": value, "fields": candidates[value]}
+    return auth
 
 
 def apply_resolutions(
