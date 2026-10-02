@@ -1232,9 +1232,9 @@ current channel data.
   first configured modem when omitted.
 - Which graphs to include (DS power, DS SNR, DS frequency, US power,
   US frequency, errors, error rates, latency, status card)
-- Graph timespan (hours)
+- `graph_hours` — graph timespan, 1-168; the schema enforces the same
+  range as the form's selector, so a scripted call cannot exceed it
 - `short_titles` — a single global readability toggle for card titles
-- `status_card_exclude` — pass-through fields to drop from the status card
 
 **YAML-only options (accepted by the schema, off the UI form by
 design):** `channel_label` (`auto` / `full` / `id_only` / `type_id`) and
@@ -1242,7 +1242,9 @@ design):** `channel_label` (`auto` / `full` / `id_only` / `type_id`) and
 lines *within* channel graphs. The form is for content selection (which
 cards and graphs you get); these fine cosmetics are left to hand-editing
 the emitted YAML. `short_titles` is the one formatting toggle kept on the
-form, as a single global readability preference.
+form, as a single global readability preference. `status_card_exclude`
+(pass-through fields to drop from the status card) is also YAML-only:
+its valid values depend on the modem, so a static form cannot list them.
 
 **How it works:**
 

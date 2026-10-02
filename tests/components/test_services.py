@@ -13,6 +13,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import voluptuous as vol
 import yaml as yaml_lib
 from homeassistant.exceptions import ServiceValidationError
 
@@ -47,6 +48,7 @@ from custom_components.cable_modem_monitor.dev_tools import (
     create_orphaned_statistics_handler,
 )
 from custom_components.cable_modem_monitor.services import (
+    SERVICE_GENERATE_DASHBOARD_SCHEMA,
     _find_loaded_entries,
     _resolve_target_entries,
     async_register_services,
@@ -1476,6 +1478,43 @@ def test_register_services() -> None:
         "convert_channel_identity",
         "orphaned_statistics",
     }
+
+
+# -----------------------------------------------------------------------
+# generate_dashboard schema: graph_hours range matches the UI selector
+# -----------------------------------------------------------------------
+
+# ┌─────────────┬────────┬──────────────────────────────┐
+# │ graph_hours │ valid  │ description                  │
+# ├─────────────┼────────┼──────────────────────────────┤
+# │ 1           │ yes    │ lower bound                  │
+# │ 168         │ yes    │ upper bound, one week        │
+# │ 0           │ no     │ below the range              │
+# │ 169         │ no     │ above the UI's maximum       │
+# │ 500         │ no     │ scripted call past the cap   │
+# └─────────────┴────────┴──────────────────────────────┘
+#
+# fmt: off
+GRAPH_HOURS_CASES: list[tuple[int, bool, str]] = [
+    (1,   True,  "lower_bound"),
+    (168, True,  "upper_bound"),
+    (0,   False, "below_range"),
+    (169, False, "above_range"),
+    (500, False, "scripted_past_cap"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("hours,valid,desc", GRAPH_HOURS_CASES, ids=[c[2] for c in GRAPH_HOURS_CASES])
+def test_generate_dashboard_schema_graph_hours_range(hours: int, valid: bool, desc: str) -> None:
+    """The schema enforces the same 1-168 range as the services.yaml selector."""
+    if valid:
+        validated = SERVICE_GENERATE_DASHBOARD_SCHEMA({"graph_hours": hours})
+        assert isinstance(validated, dict)
+        assert validated["graph_hours"] == hours
+    else:
+        with pytest.raises(vol.Invalid):
+            SERVICE_GENERATE_DASHBOARD_SCHEMA({"graph_hours": hours})
 
 
 # -----------------------------------------------------------------------

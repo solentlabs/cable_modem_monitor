@@ -82,6 +82,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which the older sanitizer left. Each is replaced with `[REDACTED]`
   and declared in that modem's notes. The synthetic serial, password
   and token in the Sagemcom F3896LG-VMB fixture are allowlisted.
+- **The dashboard generator docs match its defaults.** EXAMPLES.md
+  listed Upstream Frequency and Short Titles as off; both are on.
+  Error Rates, off by default, is now listed, and `channel_label`,
+  `channel_grouping` and `status_card_exclude` are documented as
+  YAML-only options. `graph_hours` outside 1-168 is now rejected from
+  scripts too, matching the form.
 
 ## [3.14.15-beta.2] - 2026-09-29
 

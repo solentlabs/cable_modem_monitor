@@ -21,7 +21,7 @@ Lovelace YAML — no manual entity counting required.
 
 1. Open **Developer Tools > Actions** in Home Assistant
 2. Select **Cable Modem Monitor: Generate Dashboard**
-3. Toggle the sections you want (all enabled by default)
+3. Toggle the sections you want (all on by default except Error Rates)
 4. Click **Perform action**
 5. Copy the YAML from the response
 6. Go to your dashboard, click **Add Card > Manual**, paste the YAML
@@ -35,11 +35,12 @@ Lovelace YAML — no manual entity counting required.
 | Downstream SNR | on | Signal-to-noise ratio for all downstream channels |
 | Downstream Frequency | on | Frequency for all downstream channels |
 | Upstream Power | on | Power levels for all upstream channels |
-| Upstream Frequency | off | Frequency for all upstream channels |
+| Upstream Frequency | on | Frequency for all upstream channels |
 | Error Graphs | on | Corrected and uncorrected error totals (7-day view); a note instead when the modem has no totals |
+| Error Rates | off | Per-minute corrected and uncorrected error rates (7-day view) |
 | Latency | on | Ping and HTTP latency (6-hour view) |
 | Graph Hours | 24 | Hours of history shown in channel graphs (1-168) |
-| Short Titles | off | Compact card titles (e.g., "DS Power" vs "Downstream Power Levels") |
+| Short Titles | on | Compact card titles, "DS Power" rather than "Downstream Power Levels" |
 
 The generated YAML is tailored to your modem — correct channel count,
 channel types (QAM, OFDM, ATDMA, OFDMA), and entity prefix.
@@ -61,6 +62,20 @@ response_variable: result
 ```
 
 The YAML is in `result.yaml`.
+
+### YAML-only options
+
+These are not on the Actions form. Pass them from an automation or
+script, or in the form's YAML mode.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `channel_label` | `auto` | Line names in channel graphs: `full` ("QAM Ch 5"), `id_only` ("Ch 5") or `type_id` ("QAM 5"). `auto` uses `id_only` when a graph holds one channel type and `full` when it mixes types |
+| `channel_grouping` | `by_direction` | `by_direction` puts all channel types in one graph per metric; `by_type` gives each channel type its own graph |
+| `status_card_exclude` | empty | Fields to leave off the status card, such as `docsis_status` |
+
+`channel_label` and `channel_grouping` apply in Channel ID mode only.
+In Channel Number mode, lines are named "Ch 1", "Ch 2" and so on.
 
 ---
 
