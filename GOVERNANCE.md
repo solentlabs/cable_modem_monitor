@@ -85,7 +85,8 @@ Contributors don't write CHANGELOG entries — see
 Pull requests must meet these requirements before merging:
 
 - [ ] All CI checks pass (tests, linting, type checking)
-- [ ] Code coverage meets minimum threshold (60%)
+- [ ] Code coverage meets the per-package gate in
+  [tests.yml](.github/workflows/tests.yml)
 - [ ] Documentation is updated if needed
 - [ ] Commit messages follow conventional commits format
 - [ ] Maintainer approval

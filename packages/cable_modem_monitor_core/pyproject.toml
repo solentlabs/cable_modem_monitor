@@ -65,5 +65,4 @@ addopts = [
     "--tb=short",
     "--cov=solentlabs/cable_modem_monitor_core",
     "--cov-report=term-missing",
-    "--cov-fail-under=80",
 ]
