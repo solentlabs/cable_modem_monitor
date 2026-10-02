@@ -382,7 +382,17 @@ selector, or no `action` attribute logs an ERROR and falls back to
 `action`. It never fails the login, because a modem that accepts the
 static URL must keep working, and it is never silent, because a
 declared source that stopped resolving is a config defect that has to
-surface. Entries leaving `action_source` at `config` are unaffected.
+surface. Entries leaving `action_source` at `config` always post to
+`action`.
+
+**Login-page drift (log only):** with `login_page` set, the strategy
+also reports where the page disagrees with the config: a form `action`
+that differs from `action` (under `action_source: config`), more than
+one `<form>` with no `form_selector` choosing among them, and a declared
+`form_selector` that matches nothing. Each logs a WARNING the first time
+it is seen and lands in the diagnostics download; none changes where the
+login posts or which form is read. Event and levels: LOGGING_SPEC.md
+`LoginPageDriftDetected`.
 
 **Success detection:** If `success` is provided, checks `redirect`
 (path substring match) and/or `indicator` (body substring match).

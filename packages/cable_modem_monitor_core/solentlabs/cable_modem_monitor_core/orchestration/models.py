@@ -8,7 +8,7 @@ See ORCHESTRATION_SPEC.md Data Models section.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -19,6 +19,7 @@ from .signals import (
 )
 
 if TYPE_CHECKING:
+    from ..auth.base import LoginPageDrift
     from .event_payload import SnapshotEventPayload
 
 
@@ -270,6 +271,9 @@ class OrchestratorDiagnostics:
             once recorded so intermittent failures survive into
             diagnostics downloads. Diagnostics-only; never feeds
             signals or policy.
+        login_page_drift: Where the login page disagreed with the form
+            config on the most recent fresh login (LOGGING_SPEC
+            ``LoginPageDriftDetected``). Diagnostics-only.
     """
 
     poll_duration: float | None
@@ -287,6 +291,7 @@ class OrchestratorDiagnostics:
     last_stub_body: dict[str, str] = field(default_factory=dict)
     system_info_fields_missing: list[str] = field(default_factory=list)
     system_info_fields_failed: dict[str, str] = field(default_factory=dict)
+    login_page_drift: list[LoginPageDrift] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict for diagnostics output."""
@@ -306,6 +311,7 @@ class OrchestratorDiagnostics:
             "last_stub_body": self.last_stub_body,
             "system_info_fields_missing": self.system_info_fields_missing,
             "system_info_fields_failed": self.system_info_fields_failed,
+            "login_page_drift": [asdict(d) for d in self.login_page_drift],
         }
 
 

@@ -9,8 +9,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 from .signals import CollectorSignal
+
+if TYPE_CHECKING:
+    from ..auth.base import LoginPageDriftCondition
 
 
 class EventLevel(IntEnum):
@@ -150,6 +154,17 @@ class StaleSessionRecoveryDisabled:
     model: str
     streak: int
     level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
+class LoginPageDriftDetected:
+    """The pre-fetched login page disagrees with the form config. Level is caller-determined."""
+
+    model: str
+    condition: LoginPageDriftCondition
+    configured: str
+    observed: str
+    level: EventLevel  # caller-determined: WARNING the first time this drift is seen, DEBUG after
 
 
 # ---------------------------------------------------------------------------
@@ -617,6 +632,7 @@ type OrchestratorEvent = (
     | AuthCircuitBreakerOpen
     | CircuitBreakerPollingBlocked
     | StaleSessionRecoveryDisabled
+    | LoginPageDriftDetected
     | SessionReused
     | SessionCleared
     | LogoutExecuted

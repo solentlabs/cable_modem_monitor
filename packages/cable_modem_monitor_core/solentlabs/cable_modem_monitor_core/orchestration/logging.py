@@ -63,6 +63,7 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         HnapSessionExpired,
         HttpStatusError,
         JsonRpcSessionExpired,
+        LoginPageDriftDetected,
         LogoutExecuted,
         LogoutFailed,
         ParseError,
@@ -170,6 +171,14 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
                 f" (HTTP 404). Polling stopped. {remedy}"
             )
         return f"Circuit breaker OPEN [{event.model}] — polling stopped. {remedy}"
+
+    if isinstance(event, LoginPageDriftDetected):
+        prefix = f"Login page drift [{event.model}] — "
+        if event.condition == "action_mismatch":
+            return f"{prefix}login form posts to {event.observed}, config posts to {event.configured}"
+        if event.condition == "multiple_forms":
+            return f"{prefix}{event.observed} on the login page and no form_selector chose one; the first is read"
+        return f"{prefix}form_selector {event.configured!r} matches nothing on the login page ({event.observed})"
 
     if isinstance(event, StaleSessionRecoveryDisabled):
         return (

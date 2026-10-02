@@ -12,7 +12,7 @@ import abc
 import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 import requests
 
@@ -66,6 +66,18 @@ class AuthContext:
     user_id: str = ""
 
 
+type LoginPageDriftCondition = Literal["action_mismatch", "multiple_forms", "selector_miss"]
+
+
+@dataclass(frozen=True)
+class LoginPageDrift:
+    """One way the pre-fetched login page disagrees with the form config (LOGGING_SPEC ``LoginPageDriftDetected``)."""
+
+    condition: LoginPageDriftCondition
+    configured: str
+    observed: str
+
+
 @dataclass
 class AuthResult:
     """Result of an authentication attempt.
@@ -87,6 +99,10 @@ class AuthResult:
             each strategy's spec names the responses that mean it. The
             collector classifies it ``AUTH_UNAVAILABLE``, as it does a
             5xx (UC-87a). Only meaningful with ``success=False``.
+        login_page_drift: Where the pre-fetched login page disagrees
+            with the config. Findings only, on success and failure
+            alike; no other field depends on them. The collector logs
+            them (auth cannot import orchestration).
 
     **Reuse contract — load-bearing.** ``response`` and ``response_url``
     advertise an auth-response-reuse opportunity to the loader, which
@@ -115,6 +131,7 @@ class AuthResult:
     response: requests.Response | None = None
     response_url: str = ""
     busy: bool = False
+    login_page_drift: tuple[LoginPageDrift, ...] = ()
 
 
 class BaseAuthManager(abc.ABC):

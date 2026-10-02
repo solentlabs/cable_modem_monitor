@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a large change on one modem. Report only; the exit code is unchanged.
 - **Setup links to the supported modem list.** The model step of the
   config flow links to the catalog's modem list on GitHub.
+- **Form logins report login-page drift.** A WARNING names a login form
+  that posts somewhere other than the configured URL, a page with more
+  than one form and nothing choosing between them, or a `form_selector`
+  that matches nothing. Each warns once, later repeats log at DEBUG, and
+  the diagnostics download lists the current findings under
+  `login_page_drift`. The login itself is unchanged. (#189)
 
 ### Changed
 

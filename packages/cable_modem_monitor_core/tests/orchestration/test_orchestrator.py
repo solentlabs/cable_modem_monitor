@@ -44,6 +44,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from solentlabs.cable_modem_monitor_core.auth.base import LoginPageDrift
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemResult,
     ModemSnapshot,
@@ -1505,6 +1506,15 @@ class TestDiagnostics:
 
         assert snapshot.system_info_fields_missing == ["system_uptime"]
         assert snapshot.system_info_fields_failed == {"docsis_status": "garbage"}
+
+    def test_diagnostics_include_login_page_drift(self) -> None:
+        """The collector's current login-page drift lands on the diagnostics snapshot."""
+        drift = LoginPageDrift("multiple_forms", "", "2 forms")
+        collector = _mock_collector()
+        collector.login_page_drift = (drift,)
+        orch = _make_orchestrator(collector=collector)
+
+        assert orch.diagnostics().login_page_drift == [drift]
 
     def test_diagnostics_available_with_circuit_open(self) -> None:
         """Diagnostics work even when circuit breaker is open."""

@@ -16,7 +16,7 @@ from typing import Any, Final
 
 import requests
 
-from ..auth.base import AuthContext, AuthResult, BaseAuthManager, LoginLockoutError
+from ..auth.base import AuthContext, AuthResult, BaseAuthManager, LoginLockoutError, LoginPageDrift
 from ..auth.factory import create_auth_manager
 from ..connectivity import CONNECTIVITY_ERRORS, create_session, is_connectivity_error
 from ..fetch_list import collect_fetch_targets
@@ -48,6 +48,7 @@ from .events import (
     HnapLoadError as HnapLoadErrorEvent,
     HnapSessionExpired,
     JsonRpcSessionExpired,
+    LoginPageDriftDetected,
     LogoutExecuted,
     LogoutFailed,
     ParseError,
@@ -105,6 +106,12 @@ class ModemDataCollector:
         # completed collection of this collector's lifetime confirms the
         # poll returned data, and every one after it is steady state.
         self._collection_complete_logged: bool = False
+        # Login-page drift: the latest fresh login's findings, for the
+        # diagnostics download, and every drift already warned about.
+        # A drift warns once per collector lifetime (LOGGING_SPEC § Level
+        # policy, repeated findings); a real one recurs on every login.
+        self._login_page_drift: tuple[LoginPageDrift, ...] = ()
+        self._login_page_drift_warned: set[LoginPageDrift] = set()
 
         # Persistent session — reused across execute() calls.
         # Created via create_session() so HTTPS modems with self-signed
@@ -284,6 +291,11 @@ class ModemDataCollector:
         return self._last_resource_fetches
 
     @property
+    def login_page_drift(self) -> tuple[LoginPageDrift, ...]:
+        """Login-page drift the most recent fresh login found."""
+        return self._login_page_drift
+
+    @property
     def last_stub_bodies(self) -> dict[str, str]:
         """Response body snippets from the last LOAD_INTEGRITY event, keyed by resource path."""
         return self._last_stub_bodies
@@ -377,6 +389,7 @@ class ModemDataCollector:
             timeout=self._modem_config.timeout,
             log_level=log_level,
         )
+        self._report_login_page_drift(tuple(result.login_page_drift))
 
         if result.success:
             self._auth_context = result.auth_context
@@ -399,6 +412,23 @@ class ModemDataCollector:
             self._fetch_post_login_endpoints()
 
         return result
+
+    def _report_login_page_drift(self, findings: tuple[LoginPageDrift, ...]) -> None:
+        """Record the login's drift findings and log each, WARNING the first time it is seen."""
+        self._login_page_drift = findings
+        for drift in findings:
+            first = drift not in self._login_page_drift_warned
+            self._login_page_drift_warned.add(drift)
+            log_event(
+                _logger,
+                LoginPageDriftDetected(
+                    model=self._modem_config.model,
+                    condition=drift.condition,
+                    configured=drift.configured,
+                    observed=drift.observed,
+                    level=EventLevel.WARNING if first else EventLevel.DEBUG,
+                ),
+            )
 
     def _fetch_post_login_endpoints(self) -> None:
         """GET each declared post-login path in order; responses are discarded.

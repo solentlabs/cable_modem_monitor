@@ -26,6 +26,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.events import (
     EventLevel,
     HealthRecoveryDetected,
     HealthStatusReport,
+    LoginPageDriftDetected,
     RecoveryWindowOpened,
     ResourceFetched,
     ZeroChannelsNoSystemInfo,
@@ -235,6 +236,52 @@ def test_auth_succeeded_message_reports_landing_path(response_url, expected_tail
     )
     _, msg = logger.log.call_args.args
     assert msg == f"Auth succeeded [SB8200] — strategy: form, status=200{expected_tail}"
+
+
+# Each condition names both sides, so the line alone says what to change.
+LOGIN_PAGE_DRIFT_MESSAGE_CASES = [
+    pytest.param(
+        "action_mismatch",
+        "http://h/goform/login",
+        "http://h/goform/login?id=",
+        "Login page drift [SB8200] — login form posts to http://h/goform/login?id=,"
+        " config posts to http://h/goform/login",
+        id="action_mismatch",
+    ),
+    pytest.param(
+        "multiple_forms",
+        "",
+        "2 forms",
+        "Login page drift [SB8200] — 2 forms on the login page and no form_selector chose one; the first is read",
+        id="multiple_forms",
+    ),
+    pytest.param(
+        "selector_miss",
+        "#login",
+        "1 form",
+        "Login page drift [SB8200] — form_selector '#login' matches nothing on the login page (1 form)",
+        id="selector_miss",
+    ),
+]
+
+
+@pytest.mark.parametrize("condition,configured,observed,expected", LOGIN_PAGE_DRIFT_MESSAGE_CASES)
+def test_login_page_drift_message(condition, configured, observed, expected):
+    """The drift line names the condition and both values."""
+    logger = MagicMock(spec=logging.Logger)
+    log_event(
+        logger,
+        LoginPageDriftDetected(
+            model="SB8200",
+            condition=condition,
+            configured=configured,
+            observed=observed,
+            level=EventLevel.WARNING,
+        ),
+    )
+    level, msg = logger.log.call_args.args
+    assert level == EventLevel.WARNING
+    assert msg == expected
 
 
 def test_log_event_message_contains_model():

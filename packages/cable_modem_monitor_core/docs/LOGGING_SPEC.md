@@ -42,6 +42,14 @@ operations and `EventLevel.INFO` for first-poll confirmation. This
 preserves the first-poll-INFO / steady-state-DEBUG behaviour without
 per-call-site level selection.
 
+**Repeated findings warn once.** A finding that is not a failure, and
+that recurs on every login while its cause stands, logs at WARNING the
+first time the collector sees it and at DEBUG every time after, for the
+collector's lifetime. "The same" means the same condition with the same
+values; a changed value warns again. The diagnostics download carries
+the current findings, so demoting the repeats loses nothing.
+`LoginPageDriftDetected` follows this rule.
+
 ## Event inventory
 
 ### Phase: connectivity
@@ -68,6 +76,7 @@ Fields — `ConnectivityBackoffReset`: `model`
 | `AuthCircuitBreakerOpen` | ERROR | Circuit breaker opened |
 | `CircuitBreakerPollingBlocked` | ERROR | Per-poll guard — breaker is open; the remedy depends on what tripped it |
 | `StaleSessionRecoveryDisabled` | INFO | Stale-session recovery streak hit threshold; session reuse disabled for this runtime |
+| `LoginPageDriftDetected` | caller-determined | The pre-fetched `form` login page disagrees with the config (log only) |
 
 Fields — `AuthSucceeded`: `model`, `strategy: str`, `status_code: int` (0 when
 no response), `response_url: str` — the path the login response landed on,
@@ -100,6 +109,27 @@ stopped modem picks it up at once. Composing the remedy per event is
 how the 404 wording came to exist on one of these two events and not
 the other.
 Fields — `StaleSessionRecoveryDisabled`: `model`, `streak: int`
+Fields — `LoginPageDriftDetected`: `model`, `condition`, `configured: str`,
+`observed: str`. `condition` is one of:
+
+- `action_mismatch`: with `action_source: config`, the login form's
+  `action`, resolved against the page URL, differs from
+  `{base_url}{action}`. `configured` and `observed` are the two URLs
+  with query values emptied and parameter names kept
+  (`/goform/Login?id=`): a per-load token is one drift, not one per
+  login, and no token reaches the log or diagnostics.
+- `multiple_forms`: the page has more than one `<form>` and no
+  `form_selector` matched one, so the first is read. `observed` is the
+  form count.
+- `selector_miss`: a declared `form_selector` matches nothing.
+  `configured` is the selector, `observed` the form count.
+
+The `form` strategy reports these on `AuthResult.login_page_drift`, on a
+failed login as well as a successful one; the collector emits the event,
+since `auth/` cannot import `orchestration/`. Nothing else reads the
+findings: where the login posts and which form is read do not change.
+Level: WARNING the first time, DEBUG after (§ Level policy). The latest
+login's findings are `login_page_drift` in the diagnostics download.
 
 Response-related fields on `AuthFailed` are `None` when auth failed with a
 connection error (no HTTP response). That case renders as

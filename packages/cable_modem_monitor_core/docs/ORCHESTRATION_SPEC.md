@@ -267,6 +267,7 @@ Example — successful collection with no channels:
 | Pulse | INFO first poll, DEBUG after | Successful poll summaries | `"Collection complete [MODEL] — DS: 24, US: 4 (120ms)"` — visible at INFO for first-poll confirmation, then DEBUG in steady-state to keep success-path logs quiet |
 | Auth/resource | INFO first poll, DEBUG after | Steady-state noise reduction | Auth strategy, session state, resource loading. Visible at INFO for first-poll diagnostics, drops to DEBUG after to avoid flooding multi-modem logs |
 | Failures | WARNING/ERROR always | Never demoted | Auth failures, connectivity errors, parse errors. Always visible regardless of poll count |
+| Repeated findings | WARNING first sighting, DEBUG after | Not failures; recur every login | Login-page drift. Rule in [LOGGING_SPEC.md](LOGGING_SPEC.md) § Level policy |
 | Wire data | DEBUG always | Troubleshooting only | Request/response details, parsing internals |
 
 Status transitions and adaptive-reuse state changes stay at INFO even

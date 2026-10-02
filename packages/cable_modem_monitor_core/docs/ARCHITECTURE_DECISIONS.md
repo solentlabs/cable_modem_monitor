@@ -945,6 +945,16 @@ left intact in the snippet — they are protocol-shaped, not the
 user's secret, and they're often the diagnostic signal a
 maintainer needs to confirm the strategy ran.
 
+**Login-page drift is logged, not corrected.** A criterion mismatch and
+a wrong password both end ``AUTH_FAILED``, and the one input the
+``form`` strategy read but never recorded was the login page saying to
+post elsewhere (#189). It now reports a form action that differs from
+the config, more than one form with nothing choosing among them, and a
+``form_selector`` that matches nothing (LOGGING_SPEC.md
+``LoginPageDriftDetected``). No fallback or correction follows: no
+catalog capture shows drift, and a logged finding in a user's
+diagnostics is the evidence a corrective design would need.
+
 ### LOAD_INTEGRITY failure detail via diagnostics download
 
 **Decision:** When the collector's parse phase returns a

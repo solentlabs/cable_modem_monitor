@@ -222,6 +222,7 @@ class Orchestrator:
             last_stub_body=self._collector.last_stub_bodies,
             system_info_fields_missing=self._collector.last_system_info_fields_missing,
             system_info_fields_failed=self._collector.system_info_fields_failed,
+            login_page_drift=list(self._collector.login_page_drift),
         )
 
     @property

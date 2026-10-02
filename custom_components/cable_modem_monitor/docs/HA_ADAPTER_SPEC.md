@@ -958,6 +958,10 @@ included automatically when new diagnostics are added to the model.
 - `system_info_fields_failed` — mapped fields whose value type
   conversion rejected, with the raw value (truncated); retained for
   the runtime so intermittent failures stay visible
+- `login_page_drift` — where the `form` login page disagreed with the
+  config on the most recent fresh login (`condition`, `configured`,
+  `observed`; LOGGING_SPEC § `LoginPageDriftDetected`). The log warns
+  once per drift, so this is where a recurring one stays visible
 
 **Auth-failure detail surfaces in `recent_logs`.** When auth fails,
 the collector emits a single sanitized ``WARNING`` log carrying

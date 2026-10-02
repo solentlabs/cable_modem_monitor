@@ -12,6 +12,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from solentlabs.cable_modem_monitor_core.auth.base import LoginPageDrift
 
 from custom_components.cable_modem_monitor.diagnostics import (
     _create_log_entry,
@@ -474,6 +475,38 @@ async def test_diagnostics_no_snapshot(mock_runtime_data):
     assert result["modem_data"]["note"] == "No snapshot available"
     assert result["downstream_channels"] == []
     assert result["upstream_channels"] == []
+
+
+async def test_diagnostics_reports_login_page_drift(mock_runtime_data, mock_orchestrator_diagnostics):
+    """The current login-page drift findings are in the download, so nobody has to dig through logs."""
+    mock_orchestrator_diagnostics.login_page_drift = [
+        LoginPageDrift("action_mismatch", "http://h/goform/login", "http://h/goform/login?id="),
+    ]
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.runtime_data = mock_runtime_data
+    entry.data = MOCK_ENTRY_DATA
+    entry.title = "Solent Labs TPS-2000"
+    entry.entry_id = "test_123"
+
+    async def fake_executor(fn, *args):
+        return fn(*args)
+
+    hass.async_add_executor_job = fake_executor
+
+    with patch(
+        "custom_components.cable_modem_monitor.diagnostics.get_log_entries",
+        return_value=SAMPLE_LOG_BUFFER_ENTRY,
+    ):
+        result = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert result["core_diagnostics"]["login_page_drift"] == [
+        {
+            "condition": "action_mismatch",
+            "configured": "http://h/goform/login",
+            "observed": "http://h/goform/login?id=",
+        }
+    ]
 
 
 async def test_diagnostics_last_exception_truncated(mock_runtime_data):

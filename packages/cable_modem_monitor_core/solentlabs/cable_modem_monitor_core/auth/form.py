@@ -7,14 +7,14 @@ from __future__ import annotations
 
 import base64
 import logging
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qsl, urljoin, urlparse, urlsplit, urlunsplit
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
 from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormAuth
-from .base import AuthFailureMode, AuthResult, BaseAuthManager
+from .base import AuthFailureMode, AuthResult, BaseAuthManager, LoginPageDrift
 
 _logger = logging.getLogger(__name__)
 
@@ -83,6 +83,7 @@ class FormAuthManager(BaseAuthManager):
 
         # Step 1: Pre-fetch login page if configured (for cookies/nonces)
         discovered_fields: dict[str, str] = {}
+        drift: tuple[LoginPageDrift, ...] = ()
         login_url = f"{base_url}{config.action}"
         if config.login_page:
             try:
@@ -103,6 +104,10 @@ class FormAuthManager(BaseAuthManager):
                 prefetch_response.text,
                 config.form_selector,
             )
+
+            # Log only: compared against the configured URL before any
+            # override below, and read by nothing in this flow.
+            drift = _login_page_drift(prefetch_response.text, config, prefetch_response.url, login_url)
 
             # Read the POST URL off the form every login: firmware that
             # publishes a per-page-load token in the action (#189) rejects
@@ -156,12 +161,13 @@ class FormAuthManager(BaseAuthManager):
             return AuthResult(
                 success=False,
                 error=f"Login POST failed: {type(e).__name__}: {e}",
+                login_page_drift=drift,
             )
 
         # Step 4: Evaluate success
         error = _check_success(config, response)
         if error:
-            return AuthResult(success=False, error=error, response=response)
+            return AuthResult(success=False, error=error, response=response, login_page_drift=drift)
 
         response_path = urlparse(response.url).path if response.url else ""
 
@@ -169,6 +175,7 @@ class FormAuthManager(BaseAuthManager):
             success=True,
             response=response,
             response_url=response_path,
+            login_page_drift=drift,
         )
 
 
@@ -250,6 +257,49 @@ def _login_action_from_page(html: str, form_selector: str, page_url: str) -> str
     if not isinstance(action, str) or not action.strip():
         return None
     return urljoin(page_url, action.strip())
+
+
+def _login_page_drift(html: str, config: FormAuth, page_url: str, configured_url: str) -> tuple[LoginPageDrift, ...]:
+    """Where the login page disagrees with the config; empty when it agrees or cannot be read."""
+    # A finding must never fail or redirect a login, so anything this
+    # read trips over is swallowed here rather than reaching authenticate().
+    try:
+        soup = _parse_login_page(html)
+        if soup is None:
+            return ()
+        selector = config.form_selector
+        forms = soup.find_all("form")
+        count = f"{len(forms)} form{'' if len(forms) == 1 else 's'}"
+        selected = bool(selector) and soup.select_one(selector) is not None
+        findings: list[LoginPageDrift] = []
+        if selector and not selected:
+            findings.append(LoginPageDrift("selector_miss", selector, count))
+        if len(forms) > 1 and not selected:
+            findings.append(LoginPageDrift("multiple_forms", selector, count))
+        # action_source: login_page posts to the page's action, so there is
+        # nothing to disagree with.
+        if config.action_source == "config":
+            published = _login_action_from_page(html, selector, page_url)
+            if published is not None:
+                # Query values are dropped from both sides: a per-load token
+                # (#189) would otherwise be a new drift on every login, and a
+                # session token must not reach logs or diagnostics.
+                observed, configured = _without_query_values(published), _without_query_values(configured_url)
+                if observed != configured:
+                    findings.append(LoginPageDrift("action_mismatch", configured, observed))
+        return tuple(findings)
+    except Exception:
+        _logger.debug("Login page drift check failed", exc_info=True)
+        return ()
+
+
+def _without_query_values(url: str) -> str:
+    """The URL with each query value emptied and the parameter names kept."""
+    parts = urlsplit(url)
+    if not parts.query:
+        return url
+    names = [name for name, _ in parse_qsl(parts.query, keep_blank_values=True)]
+    return urlunsplit(parts._replace(query="&".join(f"{name}=" for name in names)))
 
 
 def _discover_hidden_fields(html: str, form_selector: str) -> dict[str, str]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from solentlabs.cable_modem_monitor_core.auth.base import LoginPageDrift
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     HealthInfo,
     ModemIdentity,
@@ -303,7 +304,21 @@ class TestOrchestratorDiagnostics:
             "last_stub_body": {},
             "system_info_fields_missing": [],
             "system_info_fields_failed": {},
+            "login_page_drift": [],
         }
+
+    def test_to_dict_login_page_drift(self) -> None:
+        """Each drift finding serializes as a plain dict of its condition and values."""
+        metrics = OrchestratorDiagnostics(
+            poll_duration=None,
+            auth_failure_streak=0,
+            circuit_breaker_open=False,
+            session_is_valid=True,
+            login_page_drift=[LoginPageDrift("selector_miss", "#login", "1 form")],
+        )
+        assert metrics.to_dict()["login_page_drift"] == [
+            {"condition": "selector_miss", "configured": "#login", "observed": "1 form"}
+        ]
 
     def test_to_dict_with_fetches(self) -> None:
         """to_dict serializes nested ResourceFetch objects."""
