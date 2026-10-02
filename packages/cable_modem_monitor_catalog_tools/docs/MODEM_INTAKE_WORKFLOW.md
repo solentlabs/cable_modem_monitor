@@ -552,8 +552,8 @@ Open the diagnostics JSON and sanity-check:
   expected counts and locked entries with full fields (frequency,
   power, snr, corrected/uncorrected where applicable)
 - `data.system_info` populated (docsis_status, system_uptime,
-  hardware_version, software_version, total_corrected,
-  total_uncorrected)
+  hardware_version, software_version), plus total_corrected and
+  total_uncorrected when `parser.yaml` declares them under `aggregate:`
 - `data.config_entry.variant` matches the variant the contributor
   used (relevant for multi-variant modems — see Gotchas)
 
@@ -718,7 +718,9 @@ A diagnostics JSON can show "most things working" — channels
 populated, latency healthy — while one or two `system_info` fields
 are still null. That's not a confirmation; that's an alpha cycle.
 Confirm only when the full system_info block is populated and there
-are no errors in `modem_data`.
+are no errors in `modem_data`. Error totals belong to that block only
+when `parser.yaml` declares an `aggregate:`; a modem that omits it on
+purpose is complete without them.
 
 ## Key Rules
 

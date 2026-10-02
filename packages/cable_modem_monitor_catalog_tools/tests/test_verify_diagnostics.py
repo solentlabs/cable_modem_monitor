@@ -231,6 +231,44 @@ def test_no_warnings_on_healthy_diagnostics(tmp_path: Path) -> None:
     assert result.warnings == []
 
 
+# T100's parser.yaml declares an aggregate; T200's does not.
+_NO_TOTALS_SYSTEM_INFO = {
+    k: v for k, v in _HEALTHY_DATA["system_info"].items() if k not in ("total_corrected", "total_uncorrected")
+}
+
+_AGGREGATE_CASES = [
+    # (model, system_info, expect totals warning)
+    pytest.param("T100", _NO_TOTALS_SYSTEM_INFO, True, id="aggregate_declared_totals_missing"),
+    pytest.param("T100", _HEALTHY_DATA["system_info"], False, id="aggregate_declared_totals_present"),
+    pytest.param("T200", _NO_TOTALS_SYSTEM_INFO, False, id="no_aggregate_totals_absent"),
+]
+
+
+@pytest.mark.parametrize("model,system_info,expect_warning", _AGGREGATE_CASES)
+def test_error_totals_expected_only_when_parser_declares_aggregate(
+    tmp_path: Path,
+    model: str,
+    system_info: dict[str, Any],
+    expect_warning: bool,
+) -> None:
+    """Missing error totals warn only when the modem's parser.yaml declares them."""
+    data = _patched(
+        config_entry={**_HEALTHY_DATA["config_entry"], "model": model},
+        system_info=system_info,
+    )
+    diag_path = _write_diag(tmp_path, data)
+
+    result = verify_diagnostics(
+        diag_path,
+        version=_TEST_VERSION,
+        catalog_root=_CATALOG,
+        verified_at=_TEST_DATE,
+    )
+
+    warned = [w for w in result.warnings if "total_corrected" in w and "total_uncorrected" in w]
+    assert bool(warned) is expect_warning, result.warnings
+
+
 # ---------------------------------------------------------------------------
 # Error tests: table-driven
 # ---------------------------------------------------------------------------

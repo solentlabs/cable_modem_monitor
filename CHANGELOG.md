@@ -102,6 +102,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the parser without the orchestrator, so 17 committed modems whose
   goldens carry error rates failed there while passing CI. It now
   replays the full orchestrator cycle, as the catalog suite does.
+- **`verify_diagnostics` expects error totals only when the parser sums
+  them.** It warned "partial confirmation" on complete diagnostics from
+  modems whose `parser.yaml` declares no `aggregate:`, such as the Arris
+  SB6190 and Netgear CM1100. (#194)
 - **Two setup and options aborts show a message.** When a selected
   variant, or the configured modem in Configure, is no longer in the
   catalog, the flow showed the raw key `unknown_variant` or
