@@ -59,7 +59,7 @@ generate_golden_file ─ parse HAR through generated config
 write_modem_package ── place all files in catalog directory
     │
     ▼
-run_tests ─────── HAR replay → auth → load → parse → golden file diff
+run_tests ─────── HAR replay → orchestrator cycle → golden file diff
     │
     ├── failures? → LLM diagnoses, fixes config, re-runs
     │

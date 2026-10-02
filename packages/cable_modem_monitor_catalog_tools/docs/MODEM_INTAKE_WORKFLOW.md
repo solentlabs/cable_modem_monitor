@@ -476,10 +476,8 @@ On a golden mismatch the replay writes `modem.actual.json` next to the
 HAR. Once the diff is what you intend, promote it to
 `modem.expected.json` and re-run.
 
-`catalog_tools.run_tests(modem_dir)` exists as an MCP tool and returns
-the same structured diff, but it calls the non-orchestrated pipeline,
-so a modem whose golden carries orchestrator-derived fields fails there
-while passing CI. Diagnose with it if you like; decide with pytest.
+`catalog_tools.run_tests(modem_dir)` runs the same orchestrated replay
+and returns the result as a structured diff.
 
 If tests fail, diagnose from the structured diff:
 

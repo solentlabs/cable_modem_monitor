@@ -1,0 +1,21 @@
+{
+  "downstream": [
+    {
+      "channel_id": 1,
+      "channel_number": 1,
+      "corrected": 0,
+      "frequency": 507000000,
+      "power": 2.5,
+      "uncorrected": 0
+    }
+  ],
+  "system_info": {
+    "downstream_channel_count": 1,
+    "rate_corrected": 0.0,
+    "rate_uncorrected": 0.0,
+    "total_corrected": 0,
+    "total_uncorrected": 0,
+    "upstream_channel_count": 0
+  },
+  "upstream": []
+}

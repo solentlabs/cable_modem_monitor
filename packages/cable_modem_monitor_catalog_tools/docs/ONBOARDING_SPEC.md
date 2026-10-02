@@ -1842,12 +1842,12 @@ genuinely don't expose all four fields.
 
 ### `run_tests`
 
-Invokes Core's test harness for a specific modem directory. This is
-the same harness that Catalog's pytest suite uses — the MCP tool just
-provides a structured interface to it.
+Invokes Core's test harness for a specific modem directory. It calls
+`run_modem_test_orchestrated`, the same orchestrator cycle Catalog's
+pytest suite runs, and returns structured results.
 
 **Input:** Modem directory path (e.g., `modems/motorola/mb7621`)
-**Output:** `{ passed: bool, failures: [{ test: str, expected: any, actual: any, diff: str }] }`
+**Output:** `{ passed: bool, results: [{ test: str, passed: bool, error?: str, diff?: str, failures?: [{ path, expected, actual, hint }] }], errors: [str] }`
 
 ### `write_modem_package`
 
@@ -2176,11 +2176,11 @@ def pytest_generate_tests(metafunc):
 
 ```python
 # packages/cable_modem_monitor_catalog/tests/test_modems.py
-from solentlabs.cable_modem_monitor_core.test_harness import run_modem_test
+from solentlabs.cable_modem_monitor_core.test_harness import run_modem_test_orchestrated
 
 def test_modem_har_replay(modem_test_case):
-    """Each modem's HAR replay produces expected output."""
-    result = run_modem_test(modem_test_case)
+    """Each modem's HAR replay produces expected output via orchestrator."""
+    result = run_modem_test_orchestrated(modem_test_case)
     assert result.passed, result.diff
 ```
 
@@ -2213,7 +2213,7 @@ After all artifacts are placed in the modem directory, the LLM calls
 `run_tests` which invokes Core's test harness:
 
 1. `HARMockServer` built from `test_data/modem.har` (auth-aware)
-2. Full pipeline runs: auth → load → parse
+2. Full orchestrator cycle runs: auth → load → parse → derived fields → logout
 3. Output compared against `test_data/modem.expected.json`
 4. Structured diff returned on failure
 

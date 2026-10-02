@@ -98,6 +98,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the wrong token or not at all. It now decrypts the password with the
   token it served and fails the login unless it is the test password.
   Test harness only, no change to how Core talks to a modem.
+- **The intake `run_tests` tool agrees with the catalog suite.** It ran
+  the parser without the orchestrator, so 17 committed modems whose
+  goldens carry error rates failed there while passing CI. It now
+  replays the full orchestrator cycle, as the catalog suite does.
 - **Two setup and options aborts show a message.** When a selected
   variant, or the configured modem in Configure, is no longer in the
   catalog, the flow showed the raw key `unknown_variant` or

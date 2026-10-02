@@ -28,6 +28,13 @@ _PARSER_YAML = (_PIPELINE_FIXTURES / "parser.yaml").read_text()
 _HAR_DATA: dict[str, Any] = json.loads((_PIPELINE_FIXTURES / "har_1ch.json").read_text())
 _GOLDEN_FILE: dict[str, Any] = json.loads((_PIPELINE_FIXTURES / "golden_1ch.json").read_text())
 
+# Zero error counters: the orchestrator adds rate_corrected / rate_uncorrected (zero floor),
+# the parser-only pipeline does not, so this golden passes only on the orchestrated path.
+_RUN_TESTS_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "run_tests"
+_ERROR_TOTALS_PARSER_YAML = (_RUN_TESTS_FIXTURES / "parser.yaml").read_text()
+_ERROR_TOTALS_HAR: dict[str, Any] = json.loads((_RUN_TESTS_FIXTURES / "har_error_totals.json").read_text())
+_ERROR_TOTALS_GOLDEN: dict[str, Any] = json.loads((_RUN_TESTS_FIXTURES / "golden_error_totals.json").read_text())
+
 
 @pytest.fixture(autouse=True)
 def _allow_sockets(socket_enabled: None) -> None:  # noqa: ARG001
@@ -43,6 +50,8 @@ def _build_modem_dir(
     tmp_path: Path,
     *,
     golden: dict[str, Any] | None = _GOLDEN_FILE,
+    parser_yaml: str = _PARSER_YAML,
+    har: dict[str, Any] = _HAR_DATA,
 ) -> Path:
     """Build a single modem directory and return its path."""
     modem_dir = tmp_path / "modems" / "solentlabs" / "t100"
@@ -50,8 +59,8 @@ def _build_modem_dir(
     tests_dir.mkdir(parents=True)
 
     (modem_dir / "modem.yaml").write_text(_MODEM_YAML)
-    (modem_dir / "parser.yaml").write_text(_PARSER_YAML)
-    (tests_dir / "modem.har").write_text(json.dumps(_HAR_DATA))
+    (modem_dir / "parser.yaml").write_text(parser_yaml)
+    (tests_dir / "modem.har").write_text(json.dumps(har))
     if golden is not None:
         (tests_dir / "modem.expected.json").write_text(json.dumps(golden))
 
@@ -76,6 +85,19 @@ class TestRunTests:
         assert len(result.results) == 1
         assert result.results[0]["passed"] is True
         assert result.errors == []
+
+    def test_orchestrator_derived_fields(self, tmp_path: Path) -> None:
+        """Golden with orchestrator-derived rates passes, as it does in the catalog suite."""
+        modem_dir = _build_modem_dir(
+            tmp_path,
+            golden=_ERROR_TOTALS_GOLDEN,
+            parser_yaml=_ERROR_TOTALS_PARSER_YAML,
+            har=_ERROR_TOTALS_HAR,
+        )
+
+        result = run_tests(str(modem_dir))
+
+        assert result.passed is True, result.results
 
     def test_failure(self, tmp_path: Path) -> None:
         """Golden file mismatch returns passed=False with diff."""
