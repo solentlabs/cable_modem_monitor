@@ -52,8 +52,9 @@ _SJCL_POST_FIELDS: tuple[str, ...] = get_sjcl_post_fields()
 # anywhere in the URL: /cgi-bin/login_cgi is a script name and
 # /Admin_Login_Lock.txt is a status file, and both used to register as
 # url_token auth, outranking the correct strategy and emitting a bogus
-# login_page.
-_URL_TOKEN_QUERY = re.compile(r"(login(?:_|%5f))([A-Za-z0-9+/=%]{4,})", re.IGNORECASE)
+# login_page. The marker must also start a parameter name: inside a value
+# it is page text (SBG8300's CAPTCHA image is ?t=login_form).
+_URL_TOKEN_QUERY = re.compile(r"(?:^|&)(login(?:_|%5f))([A-Za-z0-9+/=%]{4,})", re.IGNORECASE)
 _BASE64_CHARS = re.compile(r"^[A-Za-z0-9+/=]{4,}$")
 # Bare base64 credential: base64(user:pass) as a query param name with empty value
 _BARE_BASE64_CREDENTIAL = re.compile(r"^[A-Za-z0-9+/]{8,}={0,2}$")

@@ -411,14 +411,14 @@ analysis output), auth is graded from the generated config, so it
 requires generation to succeed.
 
 **Auth strategy mismatches that are correct by design.** A `strategy:
-mismatch` normally means one side is wrong, but eight standing lines are
+mismatch` normally means one side is wrong, but six standing lines are
 none of them a catalog error. They are reported, never suppressed — the
 report states what the pipeline can do, and hiding a known limit would
 make it read as capability. Four causes:
 
 | Cause | Modems |
 |-------|--------|
-| **No branch for the strategy.** The HTTP tree walks none → basic → url_token → form_sjcl → form_pbkdf2 → form_nonce → form. `form_cbn` and `bearer` are not in it, so it cannot emit them | `arris/sb8200-cbn`, `compal/ch7465mt` (`form_cbn`); `sagemcom/f3896lg-zg` (`bearer`) |
+| **No branch for the strategy.** The HTTP tree walks none → basic → url_token → form_sjcl → form_pbkdf2 → form_nonce → form. `bearer` is not in it, so it cannot emit it | `sagemcom/f3896lg-zg` |
 | **Capture carries no evidence.** The committed strategy is right about the hardware; the HAR cannot show it | `netgear/c7000v2`, `technicolor/tc4400` — committed `basic`, but zero 401 challenges and zero `Authorization` headers. `arris/tg3442de` — committed `form_sjcl`, but both login POST bodies are `{}`, so the SJCL fields the branch keys on are gone and the login URL falls through to the PBKDF2 bucket |
 | **Action-scoped auth read as primary.** `auth: none` plus `actions.restart.action_auth: bearer` — the only login in the capture fired for the restart action, and the data path really is unauthenticated | `sagemcom/f3896lg-vmb` |
 | **Credential shape the detector cannot name.** The login posts `arguments=<base64 of user:pass>`; the credential test is field-name based, so a generic `arguments` parameter reads as carrying no credentials | `arris/sb6190` (b64 variant) |
@@ -426,9 +426,9 @@ make it read as capability. Four causes:
 None of these is a catalog defect, and no entry above should be changed to
 make a line turn green. Nor does closing them require teaching the detector
 every shape: each one has wire evidence that would let a reader settle it —
-`created.token` in a login response, `fun=` codes on a setter endpoint, a
-login POST that precedes only a reboot. Reporting that evidence and the
-matching catalog precedent is the fix, per [Detection Owes the LLM
+`created.token` in a login response, a login POST that precedes only a
+reboot. Reporting that evidence and the matching catalog precedent is the
+fix, per [Detection Owes the LLM
 Evidence](#detection-owes-the-llm-evidence-not-a-verdict). The two `basic`
 lines have no evidence in the capture at all, and their correct outcome is a
 gap report asking for a clean recapture.

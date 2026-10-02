@@ -177,6 +177,11 @@ class TestAuthUtilityEdgeCases:
         ("https://h/Admin_Login_Lock.txt?_=1779637456025", None),
         ("https://h/login_page.html?x=1", None),
         ("http://h/status.html?login_", None),
+        # The marker starts a parameter name; inside a value it is page text
+        # (SBG8300 CAPTCHA image: ?t=login_form&s=...).
+        ("http://h/status.html?_=1&login_YWRtaW46cGFzcw==", ("login_", "/status.html")),
+        ("http://h/purecaptcha_img.php?t=login_form&s=1", None),
+        ("http://h/status.html?relogin_YWRtaW46cGFzcw==", None),
     ],
     ids=[
         "query_token",
@@ -185,10 +190,13 @@ class TestAuthUtilityEdgeCases:
         "path_segment_admin_login_lock",
         "path_segment_with_query",
         "marker_without_token",
+        "token_in_later_parameter",
+        "marker_inside_parameter_value",
+        "marker_inside_longer_name",
     ],
 )
 def test_url_token_parts_requires_token_in_query(url: str, expected: tuple[str, str] | None) -> None:
-    """Only a query-string marker followed by a token is url_token auth."""
+    """Only a query parameter named by the marker and a token is url_token auth."""
     assert _extract_url_token_parts(url) == expected
 
 

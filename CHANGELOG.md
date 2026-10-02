@@ -140,6 +140,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   existing session, but Basic sends credentials on every request, so
   the Netgear CM600 and C3700 captures could not pass. Other schemes
   and session cookies still stop.
+- **The intake tools no longer read a CAPTCHA URL as a token login.**
+  The Arris SBG8300 login page fetches `purecaptcha_img.php?t=login_form`,
+  and the detector matched `login_` inside that value, reporting
+  `url_token` for a modem that logs in with a JSON body. The marker must
+  now start a query parameter name.
 
 ## [3.14.15-beta.2] - 2026-09-29
 
