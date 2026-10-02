@@ -246,9 +246,9 @@ changelog-check:
 	@$(VENV_BIN)/python scripts/check_changelog.py
 
 # Markdown link check — mirrors CI link-check job. Validates that intra-repo
-# relative and repo-absolute links resolve, and that the HACS-rendered root
-# README uses absolute URLs. Offline and deterministic. See CLAUDE.md
-# § Two READMEs — GitHub vs HACS.
+# relative and repo-absolute links and their #anchors resolve, and that the
+# HACS-rendered root README uses absolute URLs. Offline and deterministic.
+# See CLAUDE.md § Two READMEs — GitHub vs HACS.
 link-check:
 	@echo "🔗 Checking intra-repo Markdown links..."
 	@$(VENV_BIN)/python scripts/check_markdown_links.py

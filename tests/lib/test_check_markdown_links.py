@@ -8,15 +8,16 @@ Coverage breakdown per docs/CODE_REVIEW.md § Test File Standards:
 - ``_resolve`` link classification — table-driven inline.
 - ``_check_link``, ``_named_spans`` and the § pointer rules —
   behavioural, over small Markdown trees built in ``tmp_path``.
+- ``_slugify`` — table-driven inline; anchor fragments — behavioural.
 - Guard cases (external URLs, fenced content, one-word bold inlines,
-  HACS blob URLs) are each paired with a live counterpart asserting the
-  same rule still fires outside the guard, per § Gate Scripts Require
-  Tests.
+  HACS blob URLs, explicit anchors, non-Markdown targets) are each
+  paired with a live counterpart asserting the same rule still fires
+  outside the guard, per § Gate Scripts Require Tests.
 
-Deliberately not tested: anchor-fragment targets and whether a pointer
-names a heading at all. The module docstring excludes both by design —
-a partial name is indistinguishable from a stale one — so a test
-asserting either would pin behavior the script never claims.
+Deliberately not tested: whether a pointer names a heading at all. The
+module docstring excludes it by design (a partial name is
+indistinguishable from a stale one), so a test asserting it would pin
+behavior the script never claims.
 """
 
 from __future__ import annotations
@@ -212,7 +213,7 @@ def _scan(repo_root: Path, md_file: Path) -> list[str]:
     basenames: dict[str, list[Path]] = {}
     for path in repo_root.rglob("*.md"):
         basenames.setdefault(path.name, []).append(path)
-    problems: list[str] = _mod._scan_file(md_file, repo_root, set(), basenames, {})
+    problems: list[str] = _mod._scan_file(md_file, repo_root, set(), basenames, {}, {})
     return problems
 
 
@@ -282,6 +283,171 @@ def test_fence_guard_does_not_swallow_unfenced_links(tmp_path: Path) -> None:
     doc = tmp_path / "d.md"
     doc.write_text("# Doc\n\n[example](./nowhere.md)\n", encoding="utf-8")
     assert any("missing:" in p for p in _scan(tmp_path, doc))
+
+
+# ---------------------------------------------------------------------------
+# _slugify — GitHub heading anchors
+# ---------------------------------------------------------------------------
+
+# fmt: off
+SLUGS = [
+    pytest.param("Available Sensors",                "available-sensors",              id="plain"),
+    pytest.param("Step 2 — Review for PII",          "step-2--review-for-pii",         id="em-dash-double-hyphen"),
+    pytest.param("`get_modem_data` path",            "get_modem_data-path",            id="code-span-underscore-kept"),
+    pytest.param("**Bold** and *em*",                "bold-and-em",                    id="emphasis-stripped"),
+    pytest.param("See [the spec](./SPEC.md) here",   "see-the-spec-here",              id="link-text-kept"),
+    pytest.param("What's new? (v3.14)",              "whats-new-v314",                 id="punctuation-dropped"),
+    pytest.param("Boot-time checks",                 "boot-time-checks",               id="hyphen-kept"),
+    pytest.param("Café Überblick",                   "café-überblick",                 id="unicode-letters-kept"),
+    pytest.param("Absent in `<script>` tag",         "absent-in-script-tag",           id="html-in-code-span-kept"),
+    pytest.param("Html <b>bold</b> tag",             "html-bold-tag",                  id="html-outside-code-dropped"),
+    pytest.param("\u26a0\ufe0f Breaking change",      "\ufe0f-breaking-change",          id="combining-mark-kept"),
+    pytest.param("Image ![alt](i.png) here",         "image--here",                    id="image-alt-dropped"),
+    pytest.param("Under_score __bold__",             "under_score-bold",               id="underscore-bold-stripped"),
+    pytest.param("_em_ text",                        "em-text",                        id="underscore-em-stripped"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(("heading", "expected"), SLUGS)
+def test_slugify(heading: str, expected: str) -> None:
+    """Heading text slugifies the way GitHub renders its anchor."""
+    assert _mod._slugify(heading) == expected
+
+
+# ---------------------------------------------------------------------------
+# Anchor fragments
+# ---------------------------------------------------------------------------
+
+_TARGET_DOC = (
+    "# Target\n\n"
+    "## Available Sensors\n\n"
+    "## Setup\n\n"
+    "## Setup\n\n"
+    '<span id="bcm3390"></span>\n\n'
+    '<a name="legacy-name"></a>\n\n'
+    '`<span id="in-code-span">`\n\n'
+    '    <span id="in-indented-block"></span>\n\n'
+    "Setext Title\n============\n\n"
+    "Setext Two\n----------\n\n"
+    "Plain paragraph\n\n---\n\n"
+    "```markdown\n## Fenced Heading\n```\n"
+)
+
+
+@pytest.fixture
+def anchor_repo(tmp_path: Path) -> Path:
+    """docs/target.md with headings, a duplicate, explicit ids and a fenced heading."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "target.md").write_text(_TARGET_DOC, encoding="utf-8")
+    (tmp_path / "docs" / "tool.py").write_text("x = 1\n", encoding="utf-8")
+    return tmp_path
+
+
+def _scan_link(repo_root: Path, target: str) -> list[str]:
+    """Scan a docs/a.md that holds one link to target."""
+    doc = repo_root / "docs" / "a.md"
+    doc.write_text(f"# A\n\n## Local Heading\n\n[x]({target})\n", encoding="utf-8")
+    return _scan(repo_root, doc)
+
+
+# fmt: off
+LIVE_ANCHORS = [
+    pytest.param("./target.md#available-sensors",          id="heading"),
+    pytest.param("./target.md#setup",                      id="first-duplicate"),
+    pytest.param("./target.md#setup-1",                    id="second-duplicate"),
+    pytest.param("./target.md#bcm3390",                    id="span-id"),
+    pytest.param("./target.md#legacy-name",                id="a-name"),
+    pytest.param("./target.md#setext-title",               id="setext-h1"),
+    pytest.param("./target.md#setext-two",                 id="setext-h2"),
+    pytest.param("#local-heading",                         id="in-page"),
+    pytest.param(f"{_BLOB}/docs/target.md#setup",          id="blob-url"),
+    pytest.param("./target.md#available%2Dsensors",        id="percent-encoded"),
+    pytest.param("./tool.py#L1",                           id="non-markdown-target"),
+    pytest.param("./target.md",                            id="no-fragment"),
+]
+
+DEAD_ANCHORS = [
+    pytest.param("./target.md#available-sensor",           id="heading-renamed"),
+    pytest.param("./target.md#setup-2",                    id="duplicate-past-last"),
+    pytest.param("./target.md#fenced-heading",             id="fenced-heading"),
+    pytest.param("#no-such-heading",                       id="in-page"),
+    pytest.param(f"{_BLOB}/docs/target.md#gone",           id="blob-url"),
+    pytest.param("./target.md#Available-Sensors",          id="case-differs"),
+    pytest.param("./target.md#in-code-span",               id="id-in-code-span"),
+    pytest.param("./target.md#in-indented-block",          id="id-in-indented-block"),
+    pytest.param("./target.md#plain-paragraph",            id="paragraph-before-rule"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("target", LIVE_ANCHORS)
+def test_live_anchor_is_not_reported(target: str, anchor_repo: Path) -> None:
+    """Headings, duplicate suffixes and explicit ids all count as anchors."""
+    assert _scan_link(anchor_repo, target) == []
+
+
+@pytest.mark.parametrize("target", DEAD_ANCHORS)
+def test_dead_anchor_is_reported(target: str, anchor_repo: Path) -> None:
+    """Live counterpart to every guard above: a fragment naming nothing fires."""
+    problems = _scan_link(anchor_repo, target)
+    assert len(problems) == 1
+    assert "no anchor" in problems[0]
+    assert "docs/a.md:5" in problems[0]
+
+
+# fmt: off
+CODE_GUARDS = [
+    pytest.param("`[x](#gone)`\n",                     id="inline-code-span"),
+    pytest.param("Para.\n\n    [x](#gone)\n",          id="indented-code-block"),
+]
+
+CODE_GUARD_COUNTERPARTS = [
+    pytest.param("[x](#gone)\n",                       id="outside-code-span"),
+    pytest.param("[`code`](#gone)\n",                  id="code-span-as-link-text"),
+    pytest.param("- item\n\n    [x](#gone)\n",         id="list-continuation"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("body", CODE_GUARDS)
+def test_link_inside_code_is_not_checked(body: str, tmp_path: Path) -> None:
+    """A link written as code is example text, not a link."""
+    doc = tmp_path / "a.md"
+    doc.write_text(f"# A\n\n{body}", encoding="utf-8")
+    assert _scan(tmp_path, doc) == []
+
+
+@pytest.mark.parametrize("body", CODE_GUARD_COUNTERPARTS)
+def test_code_guard_does_not_swallow_real_links(body: str, tmp_path: Path) -> None:
+    """Live counterpart: the same link outside code, or indented under a list item, fires."""
+    doc = tmp_path / "a.md"
+    doc.write_text(f"# A\n\n{body}", encoding="utf-8")
+    assert any("no anchor" in p for p in _scan(tmp_path, doc))
+
+
+def test_explicit_id_guard_is_specific(anchor_repo: Path) -> None:
+    """Live counterpart to the explicit-id guard: only the declared id is accepted."""
+    assert _scan_link(anchor_repo, "./target.md#bcm3391") != []
+
+
+def test_non_markdown_guard_still_checks_markdown(anchor_repo: Path) -> None:
+    """Live counterpart to the non-Markdown guard: the same fragment on a .md fires."""
+    assert any("no anchor" in p for p in _scan_link(anchor_repo, "./target.md#L1"))
+
+
+def test_missing_file_is_not_also_an_anchor_report(anchor_repo: Path) -> None:
+    """A link to a missing file reports the file once, not a second anchor line."""
+    problems = _scan_link(anchor_repo, "./gone.md#setup")
+    assert len(problems) == 1
+    assert "missing:" in problems[0]
+
+
+def test_fenced_link_anchor_is_not_checked(anchor_repo: Path) -> None:
+    """A dead anchor inside a fence is example text, not a link."""
+    doc = anchor_repo / "docs" / "a.md"
+    doc.write_text("# A\n\n```markdown\n[x](./target.md#gone)\n```\n", encoding="utf-8")
+    assert _scan(anchor_repo, doc) == []
 
 
 # ---------------------------------------------------------------------------
