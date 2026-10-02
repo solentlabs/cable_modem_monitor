@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Ubee EVW32C-0N** (Telemach, 2.4.1014-SIP). Awaiting confirmation on hardware. (#221)
+- **Clearing leftover state history.** TROUBLESHOOTING § Leftover State
+  History shows how to purge the System Uptime and Current Time rows,
+  and Last Boot Time rows from before 3.14.0, with Home Assistant's
+  `recorder.purge_entities`. Only installs that raised the recorder's
+  `purge_keep_days` still hold them. (#178)
 - **The intake score can be compared between runs.**
   `intake_pipeline_regression.py --compare <scorecard>` prints which
   captures' accuracy, status or grades moved since that card, worst

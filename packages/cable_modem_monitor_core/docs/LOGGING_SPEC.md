@@ -214,9 +214,15 @@ public issues, so the scrubbed text must be whole before anything trims it.
 |---|---|---|
 | `StatusTransition` | INFO | Connection status changed between polls |
 | `CounterReset` | INFO | Error counters dropped — modem rebooted or stats cleared |
+| `SystemInfoFieldsChanged` | WARNING | `system_info` field set changed between polls — possible firmware update |
 
 Fields — `StatusTransition`: `model`, `from_status: str`, `to_status: str`
 Fields — `CounterReset`: `model`, `prev_corrected: int`, `cur_corrected: int`, `prev_uncorrected: int`, `cur_uncorrected: int`
+Fields — `SystemInfoFieldsChanged`: `model`, `gained: frozenset[str]`, `lost: frozenset[str]`
+
+`SystemInfoFieldsChanged` compares parser-level fields only: the set is
+taken after `docsis_status` is derived and before the orchestrator adds
+the `rate_*` fields.
 
 ### Phase: restart / recovery
 

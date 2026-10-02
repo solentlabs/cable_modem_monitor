@@ -351,9 +351,12 @@ def show_changed_files(version: str) -> None:
         print(f"  {f}")
 
     print_info(f"Suggested commit message: chore: bump version to {version}")
-    print_info("After committing and merging to main:")
-    print_info("  git checkout main && git pull")
-    print_info(f"  git tag v{version}")
+    # Tag the merge commit by SHA without checking out main; see RELEASING.md step 4.
+    print_info("After committing and merging to main, tag the merge commit by SHA:")
+    print_info("  git fetch origin")
+    print_info("  MERGE_SHA=$(gh api repos/solentlabs/cable_modem_monitor/pulls/<PR> -q .merge_commit_sha)")
+    print_info("  git rev-parse origin/main   # must equal $MERGE_SHA")
+    print_info(f'  git tag -a v{version} "$MERGE_SHA" -m "Cable Modem Monitor v{version}"')
     print_info(f"  git push origin v{version}")
     print_info("")
     print_info("Wait for PyPI publish before restarting HA:")

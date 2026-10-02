@@ -143,9 +143,6 @@ isps:
   - "Comcast"
   - "Spectrum"
 
-pii_fields:                  # optional — system_info keys with PII beyond global defaults
-  - home_ssid
-
 notes: |
   SB8200 HTTPS variant with URL token auth.
 
@@ -1688,29 +1685,18 @@ and where to look if something seems wrong.
 Common source fields: `auth_config`, `chipset`, `detection_hints`,
 `release_date`. Any key is valid — use whatever describes the source.
 
-### PII Fields
+### PII
 
-```yaml
-pii_fields:
-  - home_ssid
-```
-
-Declares `system_info` keys reported by this modem that contain
-personally identifiable information beyond the global defaults.
-Consumers (e.g., CMMT) strip the union of
-`pii_fields_global.json` and any modem-specific `pii_fields`
-before telemetry submission.
-
-The global defaults
+`modem.yaml` declares no PII fields. The global denylist
 (`packages/cable_modem_monitor_catalog/scripts/data/pii_fields_global.json`)
-list `mac_address` and `serial_number` as defensive defaults. CMM no
-longer collects these (no parser extracts them; the intake mapping skips
-them — see SYSTEM_INFO_SPEC § Tiered Sensor Model), so the list is a
-safety net rather than an active strip target. Add `pii_fields` to a
-modem's YAML only for fields not already in the global list. Omit the
-key if the modem reports no PII beyond the global defaults.
+lists `mac_address` and `serial_number`. CMM no longer collects either (see
+SYSTEM_INFO_SPEC § System Info Field Tiers), but diagnostics captured before
+their removal still carry them, so catalog_tools `verify_diagnostics` strips
+both from `system_info` when building `verified.json`. It holds its own copy
+of the list and cites the JSON as canonical.
 
-Currently no modem in the catalog carries this key.
+A per-modem PII key enters Core's schema with its first consumer
+(ARCHITECTURE_DECISIONS § Core Schema Model).
 
 ### ISPs and notes
 

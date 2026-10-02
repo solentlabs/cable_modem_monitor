@@ -13,7 +13,7 @@ CodeQL tests are **separate** from Python/pytest tests:
 
 ### Required
 
-- ✅ CodeQL CLI installed at `codeql/codeql`
+- ✅ CodeQL CLI installed locally, where `scripts/dev/test-codeql.sh` expects it (the script's error message names the path)
 - ✅ Helper script `scripts/dev/test-codeql.sh` for command-line testing
 
 ### Optional (for advanced query development)
@@ -78,7 +78,7 @@ This is the fastest way to verify everything works before committing.
 ### CodeQL Tests (2 tests)
 
 - **Location**: CodeQL sidebar OR command line only
-- **Run via**: CodeQL extension or `./test-codeql.sh`
+- **Run via**: CodeQL extension or `bash scripts/dev/test-codeql.sh`
 - **Framework**: CodeQL test framework
 
 **Note**: CodeQL tests **do not** appear in the Python Testing tab - this is expected!
@@ -127,7 +127,7 @@ You asked about the container - here's the breakdown:
 
 - ✅ Faster, no container overhead
 - ✅ Python tests work perfectly (440 tests)
-- ✅ CodeQL tests work via command line (`./test-codeql.sh`)
+- ✅ CodeQL tests work via command line (`bash scripts/dev/test-codeql.sh`)
 - ✅ CodeQL extension works if CLI path is configured (done!)
 - **Recommendation**: This is fine! Stay in the workspace.
 
@@ -154,7 +154,7 @@ The VS Code extension needs to find the CLI. Check:
 This is **expected**! CodeQL tests only appear in:
 
 - CodeQL extension sidebar (if you set up a database)
-- Command line output from `./test-codeql.sh`
+- Command line output from `bash scripts/dev/test-codeql.sh`
 
 ### "I want to see CodeQL results in VS Code"
 
@@ -173,5 +173,5 @@ This is **expected**! CodeQL tests only appear in:
 
 **Best practice:**
 
-- Use `./test-codeql.sh` before committing to verify CodeQL queries
+- Use `bash scripts/dev/test-codeql.sh` before committing to verify CodeQL queries
 - The CI/CD pipeline will also run CodeQL in GitHub Actions

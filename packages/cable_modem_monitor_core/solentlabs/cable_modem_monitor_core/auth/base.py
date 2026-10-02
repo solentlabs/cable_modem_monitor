@@ -37,7 +37,8 @@ class LoginLockoutError(Exception):
     Raised by an auth strategy when the modem reports that it is
     refusing logins to protect itself rather than judging the
     credential; each strategy's spec names the responses that mean it.
-    The orchestrator catches this and applies backoff policy. Defined
+    The collector maps it to ``AUTH_LOCKOUT``, which trips the circuit
+    breaker immediately; there is no lockout backoff. Defined
     here rather than in orchestration so the auth layer can raise it
     without importing upward.
     """

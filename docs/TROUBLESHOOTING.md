@@ -19,6 +19,7 @@ Common issues and solutions for Cable Modem Monitor.
 - [Upstream Sensors Not Appearing](#upstream-sensors-not-appearing)
 - [Orphaned Channel Sensors](#orphaned-channel-sensors)
 - [Ghost Statistics in History](#ghost-statistics-in-history)
+- [Leftover State History](#leftover-state-history)
 - [Duplicate Entities](#duplicate-entities)
 
 ---
@@ -430,6 +431,43 @@ Once you have reviewed the list and are ready to clear:
 The service clears all orphaned statistics directly via HA's recorder and returns the count purged. This is permanent and cannot be undone.
 
 > **Note:** If you switched channel identity modes and want to preserve history rather than delete it, run `cable_modem_monitor.convert_channel_identity` first. That service renames statistics to match the current mode — run it before using this cleanup service.
+
+---
+
+## Leftover State History
+
+### Problem: Removed or Drifting Time Sensors Still in History
+
+**Symptoms:**
+
+- History shows **System Uptime** or **Current Time** sensors, which the integration no longer creates
+- **Last Boot Time** history from before you upgraded to 3.14.0 shows small changes although the modem did not reboot
+
+**Cause:**
+Those sensors wrote a recorder row on most polls. The recorder keeps state history for `purge_keep_days` (default 10), so the rows remain only if you raised it. They are state history, not statistics, so `orphaned_statistics` does not touch them.
+
+**Solution:**
+Run Home Assistant's `recorder.purge_entities` action from **Developer Tools → Actions** in YAML mode. The IDs below use the default `cable_modem` prefix; copy yours from History if they differ. Purging is permanent.
+
+Removed sensors, all history:
+
+```yaml
+action: recorder.purge_entities
+data:
+  entity_id:
+    - sensor.cable_modem_system_uptime
+    - sensor.cable_modem_current_time
+  keep_days: 0
+```
+
+Last Boot Time, keeping its history since the upgrade: set `keep_days` to the number of days since you upgraded to 3.14.0 or later. It counts back from now, so work it out on the day you run it, and round up: a day too many keeps a few old rows, a day too few deletes good ones.
+
+```yaml
+action: recorder.purge_entities
+data:
+  entity_id: sensor.cable_modem_last_boot_time
+  keep_days: 30
+```
 
 ---
 

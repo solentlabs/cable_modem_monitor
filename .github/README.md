@@ -366,7 +366,7 @@ To remove a single modem:
 2. Click the modem entry, open the **⋯** menu, and choose **Delete**.
 3. Confirm. The integration logs out of the modem, removes its device and entities, and deletes the small per-entry state it stored (the channel-bond baseline). Credentials held in Home Assistant's encrypted storage are removed with the entry. No restart is required.
 
-Recorded sensor history is retained according to your Home Assistant **recorder** settings — deleting the integration does not purge it. To clear leftover channel history, use the `orphaned_statistics` service or follow [Ghost Statistics in History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#ghost-statistics-in-history).
+Recorded sensor history is retained according to your Home Assistant **recorder** settings — deleting the integration does not purge it. To clear leftover channel history, use the `orphaned_statistics` service or follow [Ghost Statistics in History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#ghost-statistics-in-history). To clear state history, see [Leftover State History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#leftover-state-history).
 
 To uninstall completely, delete every modem entry as above, then remove **Cable Modem Monitor** from **HACS** (open it, **⋯** menu → **Remove**) and restart Home Assistant.
 
