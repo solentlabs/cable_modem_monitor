@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `snake_case` field, now with a warning naming the source text, the
   field and the page, and the analysis records each mapping's `tier`.
   A near-miss of a known field no longer passes silently. (#221)
+- **The intake score skips the Arris SB8200 (CBN) fixture.** It is
+  hand-built, not a browser capture, and now says so like the other
+  synthetic fixtures, so CBN intake is graded on the Compal CH7465MT
+  capture alone. INTAKE_PIPELINE.md documents the `intake_status`
+  marker.
 - **har-capture floor raised to 0.13.1.** 0.13.0 redacts serials under
   any JSON key naming them, labeled serials in JSON and script bodies,
   and IPv6 and `10.x` addresses, all of which earlier releases left.

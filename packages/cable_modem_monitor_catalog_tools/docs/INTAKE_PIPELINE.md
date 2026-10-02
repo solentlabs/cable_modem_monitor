@@ -307,6 +307,18 @@ would raise the percentage. Only the `INCOMPLETE HARS` list is excluded,
 because a capture that never recorded the flow measures the capture
 rather than the pipeline.
 
+A HAR joins that list by carrying `log._solentlabs.intake_status`; any
+non-empty value skips it, and `intake_reason` is printed beside it.
+Values in use:
+
+| `intake_status` | Meaning |
+|-----------------|---------|
+| `synthetic` | Built by a script or by hand, not recorded from a browser session ([MODEM_INTAKE_WORKFLOW.md § Assembled fixtures](MODEM_INTAKE_WORKFLOW.md#assembled-fixtures)). It records no firmware, so its score would measure the fixture, not the pipeline |
+| `needs-recapture` | A real capture missing part of the flow, such as a session already open when recording began |
+
+The marker is metadata beside `entries` and changes no recorded entry.
+The golden replay still runs every marked HAR.
+
 **Which config a HAR is graded against.** A modem directory may hold
 several HARs, each capturing a different auth variant alongside its own
 `modem-<variant>.yaml`. Both grades resolve the committed config from
