@@ -18,10 +18,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    # Development tools
-    "black>=26.5.1",      # Code formatter
-    "ruff>=0.15.15",      # Linter and import sorter
-    "mypy>=1.20",         # Static type checker
+    # Development tools; black, ruff and mypy pins match .github/workflows/tests.yml,
+    # .pre-commit-config.yaml and requirements-dev.txt, bump them together
+    "black==26.1.0",      # Code formatter
+    "ruff==0.15.12",      # Linter and import sorter
+    "mypy==2.1.0",        # Static type checker
     "pytest>=8.0",        # Test runner
     "pytest-cov>=5.0",    # Coverage reporting
 ]

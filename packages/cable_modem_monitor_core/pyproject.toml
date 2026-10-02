@@ -47,7 +47,7 @@ cbn = ["cryptography>=44.0"]
 dev = [
     "pytest>=8.0",
     "pytest-socket>=0.7",
-    "ruff>=0.15.15",
+    "ruff==0.15.12",  # same pin as .github/workflows/tests.yml and .pre-commit-config.yaml
 ]
 
 [tool.hatch.build.targets.wheel]

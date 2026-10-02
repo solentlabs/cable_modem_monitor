@@ -45,6 +45,22 @@ Categorize each drifted package by **where it is declared**:
   - `requirements-dev.txt`, `requirements-security.txt`, `tests/requirements.txt`
   - root `pyproject.toml` (dev / optional extras)
   - `packages/cable_modem_monitor_catalog_tools/pyproject.toml` (never installed by HA)
+  - `[dependency-groups]` in the Core and Catalog `pyproject.toml` files
+    (dev-only, not shipped)
+  - `pip install` pins in `.github/workflows/*.yml`
+  - `rev:` lines in `.pre-commit-config.yaml`
+
+**Lint, format and type tools move as one.** `ruff`, `black` and `mypy`
+are exact pins with one version each across CI (`tests.yml`), pre-commit,
+`requirements-dev.txt`, `requirements-security.txt` (mypy) and the
+pyproject dev lists. Bumping one copy and leaving the rest lets a rule
+pass locally and fail in CI. Find every copy and change them in the
+same commit:
+
+```bash
+grep -nE '(ruff|black|mypy)(==|>=)|rev: v?[0-9]' .github/workflows/*.yml \
+  .pre-commit-config.yaml requirements-*.txt pyproject.toml packages/*/pyproject.toml
+```
 
 ## Workflow
 
@@ -71,12 +87,13 @@ The drift report (`pip list --outdated`) measures the local venv, not
 our declarations, so most "drift" on this floor-based project is just a
 stale venv:
 
-- Floor already permits the latest (e.g. `black>=26.5.1`, latest
-  `26.5.1`) → **nothing to commit.** CI and users install fresh and
+- Floor already permits the latest (e.g. `pytest-mock>=3.12.0` and a
+  newer release out) → **nothing to commit.** CI and users install fresh and
   already get the latest; only the local `.venv` is behind. Sync it with
   `pip install -U <pkg>` if desired — no tracked change.
-- Spec **excludes** the latest — a cap (`~=`, `<`) or pin (`==`) → this
-  is the only case that needs a file edit, and caps are usually
+- Spec **excludes** the latest — a cap (`~=`, `<`) or pin (`==`), which
+  includes the shared `ruff`/`black`/`mypy` pins and pre-commit `rev:`
+  lines → this is the only case that needs a file edit, and caps are usually
   deliberate (`har-capture~=0.13.1`, `types-requests<2.33.0`). Confirm the
   reason in the nearby comment before touching it.
 
@@ -121,7 +138,7 @@ carries a summary table:
 ```text
 | Package | Old | New | Action | Reason |
 |---------|-----|-----|--------|--------|
-| black   | 26.3.1 | 26.5.1 | bumped | dev tooling |
+| pytest-mock | 3.14.0 | 3.15.1 | bumped | dev tooling |
 | requests| 2.32.3 | (2.34.2) | held | HA-constrained floor |
 ```
 
