@@ -10,7 +10,7 @@
       },
       "model": {
         "title": "Modem Selecteren",
-        "description": "Kies een {manufacturer} modemmodel. Modellen gemarkeerd met * zijn niet geverifieerd.",
+        "description": "Kies een {manufacturer} modemmodel. Modellen gemarkeerd met * zijn niet geverifieerd. Bekijk de [lijst met ondersteunde modems]({catalog_url}).",
         "data": {
           "model": "Modemmodel",
           "entity_prefix": "Entity ID-voorvoegsel",
@@ -71,6 +71,7 @@
       "already_configured": "Deze modem is al geconfigureerd.",
       "missing_input": "Verplichte gegevens ontbreken. Start de configuratie opnieuw.",
       "unknown_model": "Geselecteerde modem niet gevonden in de catalogus.",
+      "unknown_variant": "Geselecteerde variant niet gevonden in de catalogus.",
       "reauth_successful": "Herauthenticatie geslaagd.",
       "reauth_failed": "Herauthenticatie mislukt. Probeer opnieuw."
     }
@@ -104,6 +105,9 @@
       "session_rejected": "Aanmelding geslaagd, maar de modem weigerde het gegevensverzoek. Geen probleem met de inloggegevens; zie de waarschuwing in het Home Assistant-logboek.",
       "parse_failed": "Verbonden, maar kon de modemgegevens niet lezen.",
       "unknown": "Onverwachte fout. Controleer de Home Assistant-logs."
+    },
+    "abort": {
+      "unknown_model": "Geconfigureerde modem niet gevonden in de catalogus."
     }
   }
 }

@@ -10,7 +10,7 @@
       },
       "model": {
         "title": "Select Modem",
-        "description": "Choose a {manufacturer} modem model. Models marked * are unverified.",
+        "description": "Choose a {manufacturer} modem model. Models marked * are unverified. See the [supported modem list]({catalog_url}).",
         "data": {
           "model": "Modem Model",
           "entity_prefix": "Entity ID Prefix",
@@ -71,6 +71,7 @@
       "already_configured": "This modem is already configured.",
       "missing_input": "Required data is missing. Please restart the setup.",
       "unknown_model": "Selected modem not found in catalog.",
+      "unknown_variant": "Selected variant not found in catalog.",
       "reauth_successful": "Reauthentication successful.",
       "reauth_failed": "Reauthentication failed. Please try again."
     }
@@ -104,6 +105,9 @@
       "session_rejected": "Logged in successfully, but the modem refused the data request. Not a credential problem; see the warning in the Home Assistant log.",
       "parse_failed": "Connected but couldn't read modem data.",
       "unknown": "Unexpected error. Check Home Assistant logs."
+    },
+    "abort": {
+      "unknown_model": "Configured modem not found in catalog."
     }
   },
   "services": {

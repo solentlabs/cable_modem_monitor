@@ -10,7 +10,7 @@
       },
       "model": {
         "title": "选择调制解调器",
-        "description": "选择一个 {manufacturer} 调制解调器型号。标有 * 的型号尚未验证。",
+        "description": "选择一个 {manufacturer} 调制解调器型号。标有 * 的型号尚未验证。查看[支持的调制解调器列表]({catalog_url})。",
         "data": {
           "model": "调制解调器型号",
           "entity_prefix": "Entity ID 前缀",
@@ -71,6 +71,7 @@
       "already_configured": "此调制解调器已配置。",
       "missing_input": "缺少必填数据。请重新开始设置。",
       "unknown_model": "在目录中未找到所选调制解调器。",
+      "unknown_variant": "在目录中未找到所选固件变体。",
       "reauth_successful": "重新认证成功。",
       "reauth_failed": "重新认证失败。请重试。"
     }
@@ -104,6 +105,9 @@
       "session_rejected": "登录成功，但调制解调器拒绝了数据请求。这不是凭据问题；请查看 Home Assistant 日志中的警告。",
       "parse_failed": "已连接但无法读取调制解调器数据。",
       "unknown": "意外错误。请查看 Home Assistant 日志。"
+    },
+    "abort": {
+      "unknown_model": "在目录中未找到已配置的调制解调器。"
     }
   }
 }

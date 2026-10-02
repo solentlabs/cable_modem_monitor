@@ -10,7 +10,7 @@
       },
       "model": {
         "title": "Modem auswählen",
-        "description": "Wähle ein {manufacturer}-Modemmodell. Mit * markierte Modelle sind nicht verifiziert.",
+        "description": "Wähle ein {manufacturer}-Modemmodell. Mit * markierte Modelle sind nicht verifiziert. Siehe die [Liste der unterstützten Modems]({catalog_url}).",
         "data": {
           "model": "Modemmodell",
           "entity_prefix": "Entity ID-Präfix",
@@ -71,6 +71,7 @@
       "already_configured": "Dieses Modem ist bereits konfiguriert.",
       "missing_input": "Erforderliche Daten fehlen. Bitte starte die Einrichtung neu.",
       "unknown_model": "Ausgewähltes Modem nicht im Katalog gefunden.",
+      "unknown_variant": "Ausgewählte Variante nicht im Katalog gefunden.",
       "reauth_successful": "Erneute Authentifizierung erfolgreich.",
       "reauth_failed": "Erneute Authentifizierung fehlgeschlagen. Bitte versuche es erneut."
     }
@@ -104,6 +105,9 @@
       "session_rejected": "Anmeldung erfolgreich, aber das Modem hat die Datenanfrage abgelehnt. Kein Problem mit den Anmeldedaten; siehe die Warnung im Home Assistant Protokoll.",
       "parse_failed": "Verbunden, aber Modemdaten konnten nicht gelesen werden.",
       "unknown": "Unerwarteter Fehler. Home Assistant-Logs prüfen."
+    },
+    "abort": {
+      "unknown_model": "Konfiguriertes Modem nicht im Katalog gefunden."
     }
   }
 }

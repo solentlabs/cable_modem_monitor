@@ -79,6 +79,12 @@ _ALL_MANUFACTURERS = "__all__"
 # HA's SelectSelector rejects empty-string option values.
 _DEFAULT_VARIANT = "__default__"
 
+# Supported-modem list linked from the model step. A placeholder, not
+# strings.json text, so translators never touch the URL.
+_CATALOG_MODEM_LIST_URL = (
+    "https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/README.md"
+)
+
 # Cooloff window before options-flow validation re-auths the modem.
 # Some modems (e.g. MB7621) only allow one logged-in session and
 # silently invalidate older sessions when overlapping auths arrive.
@@ -266,7 +272,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
         return self.async_show_form(
             step_id="model",
-            description_placeholders={"manufacturer": mfr_display},
+            description_placeholders={"manufacturer": mfr_display, "catalog_url": _CATALOG_MODEM_LIST_URL},
             data_schema=vol.Schema(
                 {
                     vol.Required("model"): selector.SelectSelector(

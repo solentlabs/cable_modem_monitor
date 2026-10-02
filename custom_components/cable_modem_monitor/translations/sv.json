@@ -10,7 +10,7 @@
       },
       "model": {
         "title": "Välj modem",
-        "description": "Välj en {manufacturer}-modemmodell. Modeller markerade med * är overifierade.",
+        "description": "Välj en {manufacturer}-modemmodell. Modeller markerade med * är overifierade. Se [listan över modem som stöds]({catalog_url}).",
         "data": {
           "model": "Modemmodell",
           "entity_prefix": "Entity ID-prefix",
@@ -71,6 +71,7 @@
       "already_configured": "Detta modem är redan konfigurerat.",
       "missing_input": "Obligatorisk data saknas. Starta om konfigurationen.",
       "unknown_model": "Vald modemmodell hittades inte i katalogen.",
+      "unknown_variant": "Vald variant hittades inte i katalogen.",
       "reauth_successful": "Återautentisering lyckades.",
       "reauth_failed": "Återautentisering misslyckades. Försök igen."
     }
@@ -104,6 +105,9 @@
       "session_rejected": "Inloggningen lyckades, men modemet avvisade databegäran. Inget problem med inloggningsuppgifterna; se varningen i Home Assistant-loggen.",
       "parse_failed": "Ansluten men kunde inte läsa modemdata.",
       "unknown": "Oväntat fel. Kontrollera Home Assistant-loggarna."
+    },
+    "abort": {
+      "unknown_model": "Konfigurerat modem hittades inte i katalogen."
     }
   }
 }

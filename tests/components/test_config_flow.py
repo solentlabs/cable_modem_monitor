@@ -6,7 +6,10 @@ The config flow is tested through HA's flow machinery.
 
 from __future__ import annotations
 
+import ast
 import asyncio
+import json
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -1594,3 +1597,81 @@ async def test_different_entity_prefix_at_same_host_succeeds(hass: HomeAssistant
         )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+# -----------------------------------------------------------------------
+# Strings coverage: aborts and the model-step help link
+# -----------------------------------------------------------------------
+
+_COMPONENT_DIR = Path(__file__).resolve().parents[2] / "custom_components" / "cable_modem_monitor"
+_STRINGS = json.loads((_COMPONENT_DIR / "strings.json").read_text(encoding="utf-8"))
+_CATALOG_MODEM_LIST_URL = (
+    "https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/README.md"
+)
+
+
+def _abort_reasons(class_name: str) -> set[str]:
+    """Collect every literal async_abort(reason=...) in one config_flow.py class."""
+    tree = ast.parse((_COMPONENT_DIR / "config_flow.py").read_text(encoding="utf-8"))
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == class_name)
+    reasons: set[str] = set()
+    for node in ast.walk(cls):
+        if isinstance(node, ast.Call) and getattr(node.func, "attr", None) == "async_abort":
+            for kw in node.keywords:
+                if kw.arg == "reason" and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+                    reasons.add(kw.value.value)
+    return reasons
+
+
+# HA shows the raw reason key when strings.json lacks it, e.g. after a
+# saved modem or variant leaves the catalog.
+#
+# ┌────────────────────────────────┬─────────┐
+# │ flow class                     │ section │
+# ├────────────────────────────────┼─────────┤
+# │ CableModemMonitorConfigFlow    │ config  │
+# │ OptionsFlowHandler             │ options │
+# └────────────────────────────────┴─────────┘
+#
+# fmt: off
+ABORT_SECTION_CASES = [
+    ("CableModemMonitorConfigFlow", "config"),
+    ("OptionsFlowHandler",          "options"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("class_name,section", ABORT_SECTION_CASES, ids=[c[1] for c in ABORT_SECTION_CASES])
+def test_every_abort_reason_has_a_string(class_name: str, section: str):
+    """Every abort reason a flow raises renders from its strings.json section."""
+    reasons = _abort_reasons(class_name)
+    declared = set(_STRINGS[section].get("abort", {}))
+
+    assert reasons, f"no async_abort calls found in {class_name}"
+    assert reasons <= declared, f"{section}.abort missing: {sorted(reasons - declared)}"
+
+
+_LANGUAGE_FILES = sorted(p.name for p in (_COMPONENT_DIR / "translations").glob("*.json"))
+
+
+@pytest.mark.parametrize("language_file", _LANGUAGE_FILES)
+async def test_model_step_description_renders_catalog_link(hass: HomeAssistant, language_file: str):
+    """The model step supplies every placeholder its description uses, in every language."""
+    with patch(
+        "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+        return_value=MOCK_SUMMARIES,
+    ):
+        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={"manufacturer": "__all__"},
+        )
+
+    assert result["step_id"] == "model"
+    language = json.loads((_COMPONENT_DIR / "translations" / language_file).read_text(encoding="utf-8"))
+    description = language["config"]["step"]["model"]["description"]
+
+    # str.format raises KeyError on a placeholder the flow does not supply.
+    rendered = description.format(**result["description_placeholders"])
+
+    assert _CATALOG_MODEM_LIST_URL in rendered

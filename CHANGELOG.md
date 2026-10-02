@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   captures' accuracy, status or grades moved since that card, worst
   first, and which captures entered or left. The fleet percentage hides
   a large change on one modem. Report only; the exit code is unchanged.
+- **Setup links to the supported modem list.** The model step of the
+  config flow links to the catalog's modem list on GitHub.
 
 ### Changed
 
@@ -96,6 +98,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the wrong token or not at all. It now decrypts the password with the
   token it served and fails the login unless it is the test password.
   Test harness only, no change to how Core talks to a modem.
+- **Two setup and options aborts show a message.** When a selected
+  variant, or the configured modem in Configure, is no longer in the
+  catalog, the flow showed the raw key `unknown_variant` or
+  `unknown_model`. Both now have text in every language.
 
 ## [3.14.15-beta.2] - 2026-09-29
 
