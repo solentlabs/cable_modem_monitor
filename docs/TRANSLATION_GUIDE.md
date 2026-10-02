@@ -64,6 +64,10 @@ sensors whose text is mostly standardized technical vocabulary
 language — localizing them would change roughly one word in five while
 adding hundreds of strings to maintain in every language, forever.
 
+Entity icons follow from this. Home Assistant's `icons.json` keys
+entity icons by translation key, and untranslated entities have none,
+so icons are set in Python with `_attr_icon`.
+
 `strings.json` and `translations/en.json` still carry every section,
 including services. Only the other language files are scope-limited.
 

@@ -432,6 +432,11 @@ Configure.
 - Manufacturer, model, variant — these determine the parser and auth
   config. Changing them means starting over.
 
+**No Reconfigure step.** Configure is the one place to change connection
+details; the integration provides no `async_step_reconfigure`. It would
+be a second entry to the same settings and add config-flow strings in
+all 12 languages.
+
 **Polling modes.** Data and health intervals are independently
 configurable, including disabled. See
 [HA_ADAPTER_SPEC.md](HA_ADAPTER_SPEC.md#polling-modes) for the
