@@ -648,11 +648,11 @@ Scan HAR for logout and restart flows:
 | CBN setter call that is not the login | A non-blocking `actions.logout.fun` [ambiguity](#ambiguities-resolve-then-proceed), with the same candidates as the CBN restart row. Nothing in a CBN call names a logout. |
 | No logout visible in HAR | Omit `actions.logout`. Note in the generated YAML that logout behavior could not be confirmed from the HAR. |
 
-An observed POST outranks an earlier observed page GET. Auto-action
-pages — a GET whose form JS fires the operative POST (Netgear
-`/Logout.htm` → `/goform/logout`) — precede that POST in traffic and
-match the same patterns; the POST is the logout, and the page becomes
-its `pre_fetch_url` via the form-evidence rule below.
+An observed write (POST, PUT or PATCH) outranks an earlier observed page
+GET. Auto-action pages — a GET whose form JS fires the operative write
+(Netgear `/Logout.htm` → `/goform/logout`) — precede that write in
+traffic and match the same patterns; the write is the logout, and the
+page becomes its `pre_fetch_url` via the form-evidence rule below.
 
 #### Restart
 
@@ -1801,8 +1801,8 @@ effort. Categories:
 |----------|-------|----------|-----------------|
 | `unmatched_login` | auth | POST endpoint + credential fields | New URL pattern in `auth_patterns.json` or new auth strategy |
 | `auth_unknown` | auth | Signal flags + description | New auth strategy implementation |
-| `unmatched_restart` | actions | POST endpoint + action-like params or JSON body keys | New URL pattern in `action_patterns.json` |
-| `unmatched_logout` | actions | POST endpoint + action-like params or JSON body keys | New URL pattern in `action_patterns.json` |
+| `unmatched_restart` | actions | POST, PUT or PATCH endpoint and method + action-like params or JSON body keys + the index of every entry that sent it; a repeated request is one gap | New URL pattern in `action_patterns.json` |
+| `unmatched_logout` | actions | POST, PUT or PATCH endpoint and method + action-like params or JSON body keys + the index of every entry that sent it; a repeated request is one gap | New URL pattern in `action_patterns.json` |
 
 Well-known modems with standard patterns produce zero core gaps.
 Novel modems produce gaps that require development before onboarding.

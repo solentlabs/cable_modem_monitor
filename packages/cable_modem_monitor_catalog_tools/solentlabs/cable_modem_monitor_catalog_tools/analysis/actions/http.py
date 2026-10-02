@@ -12,7 +12,7 @@ import json
 import re
 from typing import Any
 
-from ...validation.har_utils import is_static_resource, parse_form_params, path_from_url
+from ...validation.har_utils import WRITE_METHODS, is_static_resource, parse_form_params, path_from_url
 from ..types import CoreGap
 from .callsite import find_ajax_callsites
 from .patterns import get_logout_patterns, get_restart_patterns
@@ -92,10 +92,11 @@ def _find_http_action(
 ) -> ActionDetail | None:
     """Find an HTTP action matching any of the given URL patterns.
 
-    A POST match outranks an earlier page GET: auto-action pages (a GET
-    whose form JS fires the operative POST) precede that POST in traffic
-    and match the same patterns, but the POST is the action and the page
-    is only its pre-fetch source (Netgear /Logout.htm -> /goform/logout).
+    A write (POST, PUT, PATCH) match outranks an earlier page GET:
+    auto-action pages (a GET whose form JS fires the operative write)
+    precede that write in traffic and match the same patterns, but the
+    write is the action and the page is only its pre-fetch source
+    (Netgear /Logout.htm -> /goform/logout).
     """
     first_match: tuple[int, dict[str, Any]] | None = None
     for idx, entry in enumerate(entries):
@@ -105,7 +106,7 @@ def _find_http_action(
             continue
         if first_match is None:
             first_match = (idx, entry)
-        if req.get("method", "").upper() == "POST":
+        if req.get("method", "").upper() in WRITE_METHODS:
             first_match = (idx, entry)
             break
 
@@ -438,15 +439,32 @@ def _collect_set_cookie_names(entries: list[dict[str, Any]]) -> frozenset[str]:
     return frozenset(names)
 
 
+def _unmatched_category(
+    indicators: list[str],
+    found_logout: ActionDetail | None,
+    found_restart: ActionDetail | None,
+) -> str | None:
+    """Classify action-like param indicators as an unmatched logout or restart, or None."""
+    # Classify as logout-like or restart-like
+    logout_indicators = {"logout", "logoff"}
+    restart_indicators = {"reboot", "restart", "reset", "action", "security"}
+
+    if not found_logout and logout_indicators & set(indicators):
+        return "unmatched_logout"
+    if not found_restart and restart_indicators & set(indicators):
+        return "unmatched_restart"
+    return None
+
+
 def _detect_unmatched_actions(
     entries: list[dict[str, Any]],
     found_logout: ActionDetail | None,
     found_restart: ActionDetail | None,
     core_gaps: list[CoreGap],
 ) -> None:
-    """Flag POST requests with action-like params as core gaps.
+    """Flag write requests with action-like params as core gaps.
 
-    Scans entries for POSTs whose param names (or JSON body keys) contain
+    Scans entries for POST, PUT and PATCH requests whose param names (or JSON body keys) contain
     action indicators but whose URLs didn't match the pattern lists.
     """
     matched_endpoints = set()
@@ -455,9 +473,12 @@ def _detect_unmatched_actions(
     if found_restart:
         matched_endpoints.add(found_restart.endpoint)
 
-    for entry in entries:
+    # A page that repeats a write (a logout clicked twice) is one gap citing every entry.
+    seen: dict[tuple[str, str, str], CoreGap] = {}
+    for index, entry in enumerate(entries):
         req = entry["request"]
-        if req.get("method", "") != "POST":
+        method = req.get("method", "").upper()
+        if method not in WRITE_METHODS:
             continue
         path = path_from_url(req.get("url", ""))
         if path in matched_endpoints:
@@ -470,30 +491,24 @@ def _detect_unmatched_actions(
             continue
 
         indicators = [ind for ind in _ACTION_PARAM_INDICATORS if any(ind in name.lower() for name in names)]
-        if not indicators:
+        category = _unmatched_category(indicators, found_logout, found_restart)
+        if category is None:
             continue
 
-        # Classify as logout-like or restart-like
-        logout_indicators = {"logout", "logoff"}
-        restart_indicators = {"reboot", "restart", "reset", "action", "security"}
-
-        if not found_logout and indicators and logout_indicators & set(indicators):
-            category = "unmatched_logout"
-        elif not found_restart and restart_indicators & set(indicators):
-            category = "unmatched_restart"
-        else:
+        key = (category, method, path)
+        if key in seen:
+            seen[key].evidence["entries"].append(index)
             continue
-
-        core_gaps.append(
-            CoreGap(
-                phase="actions",
-                category=category,
-                summary=f"POST to {path} has action-like params but URL not in patterns",
-                evidence={
-                    "endpoint": path,
-                    "method": "POST",
-                    **({"json_body": json_body} if json_body else {"params": params}),
-                    "indicators": indicators,
-                },
-            )
+        seen[key] = CoreGap(
+            phase="actions",
+            category=category,
+            summary=f"{method} to {path} has action-like params but URL not in patterns",
+            evidence={
+                "endpoint": path,
+                "method": method,
+                **({"json_body": json_body} if json_body else {"params": params}),
+                "indicators": indicators,
+                "entries": [index],
+            },
         )
+        core_gaps.append(seen[key])

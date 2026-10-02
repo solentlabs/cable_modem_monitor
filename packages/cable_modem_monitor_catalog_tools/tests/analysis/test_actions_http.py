@@ -146,6 +146,44 @@ def test_unmatched_action_post(post_data: dict, expected_category: str | None) -
     assert [g.category for g in core_gaps] == ([expected_category] if expected_category else [])
 
 
+@pytest.mark.parametrize(("method", "gap"), [("POST", True), ("PUT", True), ("PATCH", True), ("GET", False)])
+def test_unmatched_action_any_write_method(method: str, gap: bool) -> None:
+    """A logout sent by any write method at an unknown URL is a core gap; a GET carries no body to read."""
+    entry = _post("/actionHandler/ajaxSet_signout.php", {"mimeType": "application/json", "text": '{"DoLogOut": 1}'})
+    entry["request"]["method"] = method
+    core_gaps: list = []
+    detect_actions([entry], "http", [], core_gaps)
+    assert [g.category for g in core_gaps] == (["unmatched_logout"] if gap else [])
+    assert all(g.evidence["method"] == method for g in core_gaps)
+
+
+def test_repeated_unmatched_action_is_one_gap() -> None:
+    """The same write sent twice is one gap citing both entries; another endpoint is its own."""
+    logout = {"mimeType": "application/json", "text": '{"DoLogOut": 1}'}
+    entries = [
+        _post("/actionHandler/ajaxSet_signout.php", logout),
+        _post("/actionHandler/ajaxSet_signout.php", logout),
+        _post("/actionHandler/ajaxSet_signoff.php", logout),
+    ]
+    core_gaps: list = []
+    detect_actions(entries, "http", [], core_gaps)
+    assert [(g.evidence["endpoint"], g.evidence["entries"]) for g in core_gaps] == [
+        ("/actionHandler/ajaxSet_signout.php", [0, 1]),
+        ("/actionHandler/ajaxSet_signoff.php", [2]),
+    ]
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH"])
+def test_write_outranks_earlier_page_get(method: str) -> None:
+    """The operative write is the action, whatever its method; the page GET before it is not."""
+    page = {"request": {"method": "GET", "url": "http://192.168.100.1/reboot.htm"}, "response": {"status": 200}}
+    write = _post("/api/v1/reboot", {"mimeType": "application/json", "text": '{"reboot": true}'})
+    write["request"]["method"] = method
+    actions = detect_actions([page, write], "http", [], [])
+    assert actions.restart is not None
+    assert (actions.restart.method, actions.restart.endpoint) == (method, "/api/v1/reboot")
+
+
 _COPIED = {"json_body": True, "body": "", "body_evidence": {}, "warning": None}
 
 

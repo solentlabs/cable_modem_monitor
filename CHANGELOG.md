@@ -78,6 +78,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `json_sjcl` and still needs its crypto parameters from page script.
   They had stopped at "Cannot determine auth mechanism" or read as no
   login. (#210, #213)
+- **The intake tools see PUT and PATCH actions.** A logout or restart
+  sent by PUT or PATCH now outranks the page that fires it, as a POST
+  does, and one at an unknown URL is reported as a core gap, once per
+  request shape with every capture entry that sent it. The Arris SB8200
+  PHP logout (`PUT /actionHandler/ajaxSet_logout.php`) was silently
+  dropped before. (#213)
 - **har-capture floor raised to 0.13.1.** 0.13.0 redacts serials under
   any JSON key naming them, labeled serials in JSON and script bodies,
   and IPv6 and `10.x` addresses, all of which earlier releases left.
