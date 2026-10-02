@@ -635,3 +635,46 @@ def test_transport_replays_through_both_runners(
     result = runner(case)
 
     assert result.passed, result.error or result.comparison
+
+
+# The CBN harness decrypts the login Password with the token it served, so
+# a client that encrypts with the wrong key or the wrong password fails the
+# replay instead of passing on wire shape alone.
+# fmt: off
+CBN_BAD_CIPHER_CASES = [
+    # (password override, token override,     id)
+    ("wrong",             None,                "wrong-password"),
+    (None,                "some-other-token",  "wrong-token"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("runner", [run_modem_test, run_modem_test_orchestrated], ids=["direct", "orchestrated"])
+@pytest.mark.parametrize(
+    "password,token",
+    [c[:2] for c in CBN_BAD_CIPHER_CASES],
+    ids=[c[2] for c in CBN_BAD_CIPHER_CASES],
+)
+def test_cbn_replay_fails_on_wrong_ciphertext(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runner: Any, password: str | None, token: str | None
+) -> None:
+    """A login POST that does not decrypt to the harness password fails the replay."""
+    from solentlabs.cable_modem_monitor_core.auth import form_cbn
+    from solentlabs.cable_modem_monitor_core.protocol.cbn import compal_encrypt
+
+    def broken_encrypt(real_password: str, session_token: str) -> str:
+        return compal_encrypt(password or real_password, token or session_token)
+
+    monkeypatch.setattr(form_cbn, "compal_encrypt", broken_encrypt)
+    case = _build_test_dir(
+        tmp_path,
+        modem_yaml=(_PIPELINE_FIXTURES / "modem_cbn.yaml").read_text(),
+        parser_yaml=(_PIPELINE_FIXTURES / "parser_cbn.yaml").read_text(),
+        har_data=load_fixture(_PIPELINE_FIXTURES / "har_cbn_2ch.json"),
+        golden=load_fixture(_PIPELINE_FIXTURES / "golden_qam_2ch.json"),
+    )
+
+    result = runner(case)
+
+    assert result.passed is False
+    assert "Login failed" in result.error

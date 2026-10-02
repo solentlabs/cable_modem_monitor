@@ -91,6 +91,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `channel_grouping` and `status_card_exclude` are documented as
   YAML-only options. `graph_hours` outside 1-168 is now rejected from
   scripts too, matching the form.
+- **CBN replay checks the encrypted password.** The harness accepted
+  any login POST, so a replay passed with the password encrypted under
+  the wrong token or not at all. It now decrypts the password with the
+  token it served and fails the login unless it is the test password.
+  Test harness only, no change to how Core talks to a modem.
 
 ## [3.14.15-beta.2] - 2026-09-29
 

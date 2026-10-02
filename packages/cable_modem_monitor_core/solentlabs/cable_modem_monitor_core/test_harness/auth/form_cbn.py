@@ -1,9 +1,10 @@
 """CBN AES-256-CBC authentication handler.
 
 Speaks the Compal Broadband Networks encrypted login protocol: serves
-a login page with a deterministic ``sessionToken`` cookie, then accepts
-an AES-256-CBC encrypted password POST and returns a success response
-with a rotating session token and SID.
+a login page with a deterministic ``sessionToken`` cookie, then decrypts
+the AES-256-CBC encrypted password POST with the token it served and
+returns a success response with a rotating session token and SID only
+when the plaintext is the test password.
 
 CBN-specific: login, logout, and restart all POST to the same setter
 endpoint, discriminated by the ``fun=N`` parameter in the body. This
@@ -17,10 +18,13 @@ to the same URL). Each response includes a rotated session token.
 
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
 import logging
 import re
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from ..routes import RouteEntry, normalize_path
 from .form import FormAuthHandler
@@ -32,6 +36,7 @@ _logger = logging.getLogger(__name__)
 
 _FUN_RE = re.compile(rb"fun=(\d+)")
 _FUN_TEXT_RE = re.compile(r"fun=(\d+)")
+_PASSWORD_RE = re.compile(rb"(?:^|&)Password=([^&]*)")
 
 
 class FormCbnAuthHandler(FormAuthHandler):
@@ -45,9 +50,9 @@ class FormCbnAuthHandler(FormAuthHandler):
     4. Check response for ``"successful"`` and extract ``SID``.
 
     This handler serves a login page with a known session token,
-    accepts any encrypted password POST, and returns a success
-    response with SID. Credentials are not validated — real
-    credential validation lives in the auth managers.
+    decrypts the login POST's ``Password`` with that token, and returns
+    a success response with SID only when it decrypts to
+    ``_TEST_PASSWORD``. Anything else gets a failed-login body.
 
     CBN-specific: All setter endpoint POSTs (login, logout, restart)
     share the same URL, discriminated by ``fun=N`` in the POST body.
@@ -95,6 +100,7 @@ class FormCbnAuthHandler(FormAuthHandler):
         self._logout_fun = logout_fun
         self._restart_fun = restart_fun
         self._token_counter = 0
+        self._served_token = self._INITIAL_SESSION_TOKEN
 
         # Build fun→response lookup from HAR entries for getter dispatch.
         self._getter_responses = _build_getter_responses(
@@ -105,14 +111,13 @@ class FormCbnAuthHandler(FormAuthHandler):
     @property
     def current_token(self) -> str:
         """The most recently issued session token (deterministic)."""
-        if self._token_counter == 0:
-            return self._INITIAL_SESSION_TOKEN
-        return f"mock-cbn-token-{self._token_counter:04d}"
+        return self._served_token
 
     def _next_token(self) -> str:
         """Generate the next rotating session token."""
         self._token_counter += 1
-        return self.current_token
+        self._served_token = f"mock-cbn-token-{self._token_counter:04d}"
+        return self._served_token
 
     def is_login_request(self, method: str, path: str) -> bool:
         """CBN login: GET login page or any POST to setter endpoint.
@@ -148,7 +153,7 @@ class FormCbnAuthHandler(FormAuthHandler):
         if method == "POST" and norm == self._setter_endpoint:
             fun = self._parse_fun(body)
             if fun == self._login_fun:
-                return self._handle_login_post()
+                return self._handle_login_post(body)
             if fun is not None and fun == self._logout_fun:
                 return self._handle_logout_post()
             if fun is not None and fun == self._restart_fun:
@@ -159,6 +164,9 @@ class FormCbnAuthHandler(FormAuthHandler):
     def _login_page_response(self) -> RouteEntry:
         """Serve login page HTML with initial ``sessionToken`` cookie."""
         html = "<html><body>CBN Login</body></html>"
+        # The client keys its encryption on this cookie, so it is the
+        # token the login POST is decrypted with.
+        self._served_token = self._INITIAL_SESSION_TOKEN
         return RouteEntry(
             status=200,
             headers=[
@@ -171,8 +179,14 @@ class FormCbnAuthHandler(FormAuthHandler):
             body=html,
         )
 
-    def _handle_login_post(self) -> RouteEntry:
-        """Accept login POST and return success with SID."""
+    def _handle_login_post(self, body: bytes) -> RouteEntry:
+        """Return success with SID if the password decrypts right, else a failed login."""
+        plaintext = _decrypt_password(body, self._served_token)
+        if plaintext != self._TEST_PASSWORD:
+            _logger.debug("Mock server: CBN login rejected, password did not decrypt to the test password")
+            # A body with none of the firmware's login tokens is its
+            # wrong-password branch (AUTH_CBN_SPEC.md § Login Token Vocabulary).
+            return RouteEntry(status=200, headers=[("Content-Type", "text/xml")], body="")
         self._authenticated = True
         new_token = self._next_token()
         _logger.debug("Mock server: CBN login accepted, SID=%s", self._TEST_SID)
@@ -246,6 +260,33 @@ class FormCbnAuthHandler(FormAuthHandler):
         """Extract ``fun=N`` from URL-encoded POST body."""
         match = _FUN_RE.search(body)
         return int(match.group(1)) if match else None
+
+
+def _decrypt_password(body: bytes, session_token: str) -> str | None:
+    """Decrypt the login POST's ``Password`` field, or ``None`` if it does not decode."""
+    # Written against the cryptography library directly, not protocol/cbn.py:
+    # a harness sharing Core's crypto code passes any error the two share (#86).
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.padding import PKCS7
+
+    match = _PASSWORD_RE.search(body)
+    if match is None:
+        return None
+    try:
+        decoded = base64.b64decode(unquote(match.group(1).decode("ascii")), validate=True).decode("ascii")
+        if not decoded.startswith(":"):
+            return None
+        ciphertext = bytes.fromhex(decoded[1:])
+        token_bytes = session_token.encode("utf-8")
+        key = hashlib.sha256(token_bytes).digest()
+        iv = hashlib.md5(token_bytes).digest()  # noqa: S324
+        decryptor = Cipher(algorithms.AES(key), modes.CBC(iv)).decryptor()
+        padded = decryptor.update(ciphertext) + decryptor.finalize()
+        unpadder = PKCS7(128).unpadder()
+        plain: bytes = unpadder.update(padded) + unpadder.finalize()
+        return plain.decode("utf-8")
+    except (binascii.Error, UnicodeDecodeError, ValueError):
+        return None
 
 
 def _build_getter_responses(

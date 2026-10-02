@@ -1019,10 +1019,14 @@ ARCHITECTURE_DECISIONS.md § How to extend an existing auth strategy.
 handlers decrypt with the same `protocol/sjcl.py` Core encrypts with, so
 a replay proves the two agree on wire shape and flow, not that the
 encryption matches the firmware: an encoding error both sides share
-passes (#86). The `form_cbn` handler accepts any encrypted password, so
-its replay says nothing about the crypto at all. Crypto correctness
-rests on known-answer tests anchored to reference values from the
-firmware's own JavaScript, and finally on hardware.
+passes (#86). The `form_cbn` handler decrypts the login password
+independently, with the `cryptography` library rather than
+`protocol/cbn.py`, and fails the login unless it recovers the test
+password, so its replay does check the wiring: the token Core keys on
+and the encoding it sends. It cannot check the algorithm itself, which
+the handler restates from the same spec. Crypto correctness rests on
+known-answer tests anchored to reference values from the firmware's own
+JavaScript, and finally on hardware.
 
 The pass criterion follows. `ActionResult.success` now carries the
 response status for HTTP actions, and the runner asserts it, plus the
