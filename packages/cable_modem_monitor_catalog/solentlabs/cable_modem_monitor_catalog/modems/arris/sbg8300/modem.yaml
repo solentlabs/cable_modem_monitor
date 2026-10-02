@@ -118,6 +118,14 @@ notes: |
   unit. After the restart the modem answered session_overtake for about
   ten minutes, then logins succeeded again. Core read it as busy and
   recovered without a takeover.
+
+  Bench soak (2026-10-01 to 10-02, same unit): two more restarts were
+  each back within three minutes, with one session_overtake on the poll
+  right after the command; the ten-minute window did not recur. A power
+  cycle came back with no busy answer. Once the web UI hung (page and
+  HEAD timed out, ping fine) for over three hours; a restart sent then
+  timed out without rebooting, and only a power cycle cleared it. Cause
+  unknown.
   Signal mappings are unexercised: every downstream row was unlocked.
 
   Hand-applied sanitization: the TLS certificate subjectName (the
