@@ -4,7 +4,7 @@ Used by the intake regression to track onboarding capability per action:
 how much of each committed action config the deterministic pipeline
 reproduces from the HAR alone. Grading covers type, identity (method +
 endpoint for http, action_name for hnap, method for json_rpc), params,
-and json_body presence.
+and json_body.
 Other committed fields (pre_fetch_action, action_auth, requires_session,
 response keys) are human-authored config outside what a HAR can show —
 they are deliberately out of grading scope.
@@ -98,8 +98,7 @@ def _grade_params(detected: dict[str, Any], committed: dict[str, Any]) -> Grade:
         notes.append(f"extra params detected: {extra}")
     if differ:
         notes.append(f"param values differ: {differ}")
-    if committed.get("json_body") and not detected.get("json_body"):
-        notes.append("json_body not produced")
+    notes.extend(_json_body_notes(detected, committed))
     for key in ("pre_fetch_url", "endpoint_pattern"):
         det_value = detected.get(key)
         com_value = committed.get(key)
@@ -109,3 +108,22 @@ def _grade_params(detected: dict[str, Any], committed: dict[str, Any]) -> Grade:
     if notes:
         return Grade("partial", "; ".join(notes))
     return Grade("match")
+
+
+def _json_body_notes(detected: dict[str, Any], committed: dict[str, Any]) -> list[str]:
+    """Why the detected json_body falls short of the committed one, if it does."""
+    det_body = detected.get("json_body")
+    com_body = committed.get("json_body")
+    if det_body == com_body:
+        return []
+    if com_body is None:
+        return ["extra json_body detected"]
+    if det_body is None:
+        # Analysis records why it copied no body: the request was never
+        # captured, or its body was captured sanitized or encrypted
+        if detected.get("body") == "unobserved":
+            return ["json_body unobserved: no request in capture"]
+        if detected.get("body") == "encoded":
+            return ["json_body encoded: observed body holds sanitized or encrypted values"]
+        return ["json_body not produced"]
+    return ["json_body differs"]

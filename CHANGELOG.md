@@ -42,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `snake_case` field, now with a warning naming the source text, the
   field and the page, and the analysis records each mapping's `tier`.
   A near-miss of a known field no longer passes silently. (#221)
+- **The intake tools copy an action's observed JSON body.** A captured
+  restart or logout request with a JSON body now becomes the action's
+  `json_body`, so the Sagemcom F3896LG-VMB and Arris SBG8300 restarts
+  are reproduced in full. No body is guessed: an endpoint seen only in
+  page script is marked `unobserved`, and a body holding sanitized or
+  encrypted values is marked `encoded` with its keys, so the next step
+  is a recapture in the first case and Core's `body_encoding: session`
+  in the second.
 - **The intake score skips the Arris SB8200 (CBN) fixture.** It is
   hand-built, not a browser capture, and now says so like the other
   synthetic fixtures, so CBN intake is graded on the Compal CH7465MT

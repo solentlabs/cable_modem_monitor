@@ -337,7 +337,7 @@ against the committed config per HAR
 | Grade | Meaning |
 |-------|---------|
 | `match` | Type, identity (method + endpoint, hnap action_name, or json_rpc method), and params all reproduced |
-| `partial` | Identity matches; params differ, are missing, or json_body not produced |
+| `partial` | Identity matches; params or json_body differ, are missing, or are extra. A missing json_body reads `json_body unobserved` when the capture holds no request, and `json_body encoded` when the observed body held sanitized or encrypted values ([ONBOARDING_SPEC.md § Restart](ONBOARDING_SPEC.md#restart)) |
 | `pipeline_only` | Pipeline detected an action the catalog never adopted — candidate enrichment, or a false positive |
 | `committed_only` | Committed action the pipeline cannot produce from the HAR (human-authored config, or action never fired during capture) |
 | `mismatch` | Type, endpoint, method, or action_name disagree — investigate which side is wrong |

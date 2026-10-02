@@ -1,0 +1,33 @@
+{
+  "_description": "Shape of arris/sbg8300 modem.har: restart PUT whose JSON body sits in text beside an empty params array. A value holding '=' must not be read as form pairs.",
+  "_entries": [
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.0.1/actionHandler/ajaxSet_Reset_Restore.php",
+        "headers": [],
+        "postData": {
+          "mimeType": "application/json",
+          "params": [],
+          "text": "{\"action\":\"restart\",\"module\":\"gateway\",\"note\":\"a=b\"}"
+        }
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "PUT",
+    "endpoint": "/actionHandler/ajaxSet_Reset_Restore.php",
+    "params": {},
+    "json_body": {
+      "action": "restart",
+      "module": "gateway",
+      "note": "a=b"
+    },
+    "source": "observed"
+  }
+}

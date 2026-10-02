@@ -248,6 +248,21 @@ class TestActionsBehavior:
         assert modem["actions"]["restart"]["type"] == "http"
         assert modem["actions"]["restart"]["params"]["action"] == "1"
 
+    def test_restart_action_with_json_body(self) -> None:
+        """An observed JSON body becomes json_body, and the config validates."""
+        fixture = load_fixture(VALID_DIR / "table_no_cookie.json")
+        fixture["_analysis"]["actions"]["restart"] = {
+            "type": "http",
+            "method": "POST",
+            "endpoint": "/rest/v1/system/reboot",
+            "json_body": {"reboot": {"enable": True}},
+        }
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        restart = yaml.safe_load(result.modem_yaml)["actions"]["restart"]
+        assert restart["json_body"] == {"reboot": {"enable": True}}
+        assert "params" not in restart
+
     def test_json_rpc_restart_from_resolution(self) -> None:
         """A resolved actions.restart.method becomes a json_rpc action; the rest comes from the transport."""
         fixture = load_fixture(VALID_DIR / "json_rpc_resolved_restart.json")

@@ -21,6 +21,13 @@ class ActionDetail:
     method: str  # "GET", "POST"
     endpoint: str
     params: dict[str, str] = field(default_factory=dict)
+    # Observed JSON request body, copied verbatim; never synthesized
+    json_body: dict[str, Any] | None = None
+    # Why no body was copied: "encoded" (observed, holds sanitizer
+    # placeholders, so check Core's body_encoding: session and the page
+    # script) or "unobserved" (no request in the capture). Empty otherwise.
+    body: str = ""
+    body_evidence: dict[str, Any] = field(default_factory=dict)
     action_name: str = ""
     credential_params: list[str] = field(default_factory=list)
     source: str = "observed"  # "observed" | "source_inferred"
@@ -40,6 +47,12 @@ class ActionDetail:
         }
         if self.params:
             result["params"] = self.params
+        if self.json_body is not None:
+            result["json_body"] = self.json_body
+        if self.body:
+            result["body"] = self.body
+        if self.body_evidence:
+            result["body_evidence"] = self.body_evidence
         if self.action_name:
             result["action_name"] = self.action_name
         if self.credential_params:
@@ -96,6 +109,24 @@ def _detect_credential_params(params: dict[str, str]) -> set[str]:
         if _COOKIE_DIRECTIVE_PATTERN.match(value):
             continue
         name_lower = name.lower()
-        if any(kw in name_lower for kw in _CREDENTIAL_NAME_KEYWORDS) or _SANITIZER_VALUE_PATTERN.match(value):
+        if any(kw in name_lower for kw in _CREDENTIAL_NAME_KEYWORDS) or is_sanitized_value(value):
             credential_names.add(name)
     return credential_names
+
+
+def is_sanitized_value(value: str) -> bool:
+    """Whether a captured value is a HAR sanitizer placeholder, not the firmware's value."""
+    return bool(_SANITIZER_VALUE_PATTERN.match(value))
+
+
+def sanitized_paths(node: Any, prefix: str = "") -> list[str]:
+    """Dotted paths of every sanitizer placeholder in a parsed JSON value."""
+    if isinstance(node, str):
+        return [prefix] if is_sanitized_value(node) else []
+    if isinstance(node, dict):
+        children: list[tuple[str, Any]] = [(f"{prefix}.{k}" if prefix else str(k), v) for k, v in node.items()]
+    elif isinstance(node, list):
+        children = [(f"{prefix}[{i}]", v) for i, v in enumerate(node)]
+    else:
+        return []
+    return [path for child_prefix, child in children for path in sanitized_paths(child, child_prefix)]

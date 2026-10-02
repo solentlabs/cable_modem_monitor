@@ -1,0 +1,31 @@
+{
+  "_description": "Extracted from arris/tg3442s modem.har: the restart PUT body is an SJCL envelope whose user value the sanitizer replaced. The body is withheld, not copied.",
+  "_entries": [
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.1.1/actionHandler/ajaxSet_Reset_Restore.php",
+        "headers": [],
+        "postData": {
+          "mimeType": "application/json",
+          "params": [],
+          "text": "{\"EncryptedData\": \"44d8b78bec6ce60168d0849c40fd060d7ddf8d50d9194d99ce1f1240d84f7cbd44d8b78bec6ce60168d0849c40fd060d7ddf8d50d9194d\", \"user\": \"FIELD_4bd3da74\"}"
+        }
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "PUT",
+    "endpoint": "/actionHandler/ajaxSet_Reset_Restore.php",
+    "params": {},
+    "source": "observed"
+  },
+  "_expected_warnings_contains": [
+    "not copied"
+  ]
+}

@@ -619,6 +619,7 @@ its `pre_fetch_url` via the form-evidence rule below.
 | Evidence | Config |
 |----------|--------|
 | POST to reboot/restart endpoint with params | `actions.restart: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
+| Request to reboot/restart endpoint with a JSON object body | `actions.restart: { type: http, method: "<observed>", endpoint: "<path>", json_body: {...} }`, the body copied verbatim |
 | HNAP SetConfiguration action with reboot param | `actions.restart: { type: hnap, action_name: "<name>", params: {...} }` |
 | JSON-RPC call that is neither the login nor a data source | A non-blocking `actions.restart.method` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per method, citing the page that sent it (its `Referer`, else the endpoint) and the request body. No method-name rule: call shapes come from confirmed modems only. |
 | CBN setter call that is not the login | A non-blocking `actions.restart.fun` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per `fun` code, citing the page that sent it (its `Referer`, else the endpoint) and the request body. The resolved action takes `type: cbn`. |
@@ -626,6 +627,20 @@ its `pre_fetch_url` via the form-evidence rule below.
 
 **Restart is rarely in the HAR.** Most contributors capture status pages,
 not admin operations. Omitting restart is normal and correct.
+
+**Request bodies come from the capture.** An observed request's body
+becomes `params` (form) or `json_body` (a JSON object), never both.
+When no body is copied, the action records why in `body`, with a
+warning:
+
+| `body` | When | Next step |
+|--------|------|-----------|
+| `encoded` | The observed JSON body holds a sanitizer placeholder (`FIELD_…`, `PASS_…`) at any depth, as an encrypted envelope does (TG3442S). `body_evidence` lists the body's top-level `keys` and the `sanitized` value paths | Check Core's `body_encoding: session` and the page script for the plain body; a recapture shows the same envelope |
+| `unobserved` | The action is only in page source, its method is not GET, and the call site gave no params | A capture of the action |
+
+Page script that builds the body is never copied into `json_body`; a
+wrong reboot body is worse than none
+([MODEM_INTAKE_WORKFLOW.md § Assembled fixtures](MODEM_INTAKE_WORKFLOW.md#assembled-fixtures)).
 
 #### Source-Inferred Call-Site Extraction
 
@@ -1543,6 +1558,8 @@ coordinator skips missing hooks.
 | Dynamic login action, no Core support | "login POST ... carries a query string" — per-session token; without `action_source` support (#189) the bare-action config may be rejected. Confidence drops to `medium`. |
 | HMAC algorithm uncertain (HNAP) | "HNAP HMAC algorithm cannot be confirmed from HAR. Defaulting to `md5`. Verify with contributor." |
 | Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |
+| Action body encoded | "restart action PUT /actionHandler/ajaxSet_Reset_Restore.php: the observed JSON body holds sanitized or encoded values ['user'] and was not copied to json_body." The action carries `body: encoded`. |
+| Action body unobserved | "restart action POST /rest/v1/system/reboot (source_inferred): request body unobserved." The endpoint is in page source but the capture holds no request to it, so neither `params` nor `json_body` is generated. The action carries `body: unobserved`. |
 | parser.py generated | "parser.py was generated for: [reasons]. Review the post-processing logic for correctness." |
 
 ### Ambiguities (resolve, then proceed)
@@ -1732,8 +1749,8 @@ effort. Categories:
 |----------|-------|----------|-----------------|
 | `unmatched_login` | auth | POST endpoint + credential fields | New URL pattern in `auth_patterns.json` or new auth strategy |
 | `auth_unknown` | auth | Signal flags + description | New auth strategy implementation |
-| `unmatched_restart` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
-| `unmatched_logout` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
+| `unmatched_restart` | actions | POST endpoint + action-like params or JSON body keys | New URL pattern in `action_patterns.json` |
+| `unmatched_logout` | actions | POST endpoint + action-like params or JSON body keys | New URL pattern in `action_patterns.json` |
 
 Well-known modems with standard patterns produce zero core gaps.
 Novel modems produce gaps that require development before onboarding.

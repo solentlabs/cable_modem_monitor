@@ -41,6 +41,22 @@ class TestActionsSerialization:
         d = detail.to_dict()
         assert d["params"] == {"action": "1"}
 
+    def test_to_dict_json_body(self) -> None:
+        """json_body serializes when observed and is omitted otherwise."""
+        body = {"reboot": {"enable": True}}
+        assert ActionDetail(type="http", method="POST", endpoint="/r", json_body=body).to_dict()["json_body"] == body
+        assert "json_body" not in ActionDetail(type="http", method="POST", endpoint="/r").to_dict()
+
+    def test_to_dict_body_state(self) -> None:
+        """A body state and its evidence serialize when set and are omitted otherwise."""
+        evidence = {"keys": ["EncryptedData", "user"], "sanitized": ["user"]}
+        encoded = ActionDetail(type="http", method="PUT", endpoint="/r", body="encoded", body_evidence=evidence)
+        assert encoded.to_dict()["body"] == "encoded"
+        assert encoded.to_dict()["body_evidence"] == evidence
+        plain = ActionDetail(type="http", method="PUT", endpoint="/r").to_dict()
+        assert "body" not in plain
+        assert "body_evidence" not in plain
+
     def test_to_dict_includes_action_name(self) -> None:
         """Non-empty action_name included in serialization."""
         detail = ActionDetail(

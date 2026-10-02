@@ -8,6 +8,7 @@ Per docs/ONBOARDING_SPEC.md Phase 4 (HTTP transport).
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -15,7 +16,7 @@ from ...validation.har_utils import is_static_resource, parse_form_params, path_
 from ..types import CoreGap
 from .callsite import find_ajax_callsites
 from .patterns import get_logout_patterns, get_restart_patterns
-from .types import ActionDetail, ActionsDetail
+from .types import ActionDetail, ActionsDetail, sanitized_paths
 
 # ---------------------------------------------------------------------------
 # Endpoint patterns (loaded from action_patterns.json)
@@ -69,6 +70,9 @@ def detect_http_actions(
     if restart is None:
         restart = _find_http_action_in_source(entries, _RESTART_PATTERNS, "restart", cookie_names, warnings)
 
+    for action_name, action in (("logout", logout), ("restart", restart)):
+        _report_unobserved_body(action_name, action, warnings)
+
     # Flag unmatched action-like POSTs as core gaps (only when both traffic
     # and source-scan came up empty — source_inferred counts as found)
     if logout is None or restart is None:
@@ -111,12 +115,28 @@ def _find_http_action(
     idx, entry = first_match
     req = entry["request"]
     path = path_from_url(req.get("url", ""))
-    params = parse_form_params(req.get("postData", {}))
+    params, json_body = _observed_body(req.get("postData", {}))
+    body = ""
+    body_evidence: dict[str, Any] = {}
+    placeholders = sanitized_paths(json_body) if json_body is not None else []
+    if json_body is not None and placeholders:
+        # A placeholder is not the firmware's value; copying the body would
+        # write a wrong one (an SJCL envelope's sanitized user, tg3442s)
+        body, body_evidence = "encoded", {"keys": list(json_body), "sanitized": placeholders}
+        warnings.append(
+            f"{action_name} action {req.get('method', '')} {path}: the observed JSON body holds "
+            f"sanitized or encoded values {placeholders} and was not copied to json_body. Check "
+            f"Core's body_encoding: session and the page script for the plain body."
+        )
+        json_body = None
     detail = ActionDetail(
         type="http",
         method=req.get("method", ""),
         endpoint=path,
         params=params,
+        json_body=json_body,
+        body=body,
+        body_evidence=body_evidence,
     )
     # A captured page whose form posts to this endpoint is the
     # pre-fetch source; deterministic, unlike the keyword
@@ -130,6 +150,36 @@ def _find_http_action(
     else:
         _suggest_pre_fetch_url(entries, idx, path, action_name, warnings)
     return detail
+
+
+def _observed_body(post_data: dict[str, Any]) -> tuple[dict[str, str], dict[str, Any] | None]:
+    """(form params, JSON object body) of a captured request; at most one is non-empty."""
+    text = post_data.get("text", "")
+    # A JSON body is checked first: its values may hold "=", which the form
+    # parser would split into bogus pairs
+    if text.lstrip().startswith("{"):
+        try:
+            body = json.loads(text)
+        except ValueError:
+            body = None
+        if isinstance(body, dict):
+            return {}, body
+    return parse_form_params(post_data), None
+
+
+def _report_unobserved_body(action_name: str, action: ActionDetail | None, warnings: list[str]) -> None:
+    """Mark and warn when a non-GET action came from page source with no body to copy."""
+    # Bodies come from the capture only. Synthesizing one from page script
+    # risks a wrong body, which is worse than none.
+    if action is None or action.source != "source_inferred" or action.method.upper() == "GET" or action.params:
+        return
+    action.body = "unobserved"
+    warnings.append(
+        f"{action_name} action {action.method} {action.endpoint} (source_inferred): request body "
+        f"unobserved. The capture holds no request to this endpoint, so neither params nor "
+        f"json_body is generated. Capture the {action_name} to supply its body; never copy it "
+        f"from page script."
+    )
 
 
 def _find_form_page_for_endpoint(
@@ -396,8 +446,8 @@ def _detect_unmatched_actions(
 ) -> None:
     """Flag POST requests with action-like params as core gaps.
 
-    Scans entries for POSTs whose param names contain action indicators
-    but whose URLs didn't match the pattern lists.
+    Scans entries for POSTs whose param names (or JSON body keys) contain
+    action indicators but whose URLs didn't match the pattern lists.
     """
     matched_endpoints = set()
     if found_logout:
@@ -413,11 +463,13 @@ def _detect_unmatched_actions(
         if path in matched_endpoints:
             continue
 
-        params = parse_form_params(req.get("postData", {}))
-        if not params:
+        params, json_body = _observed_body(req.get("postData", {}))
+        # A JSON body's top-level keys play the role of form param names
+        names = list(json_body) if json_body else list(params)
+        if not names:
             continue
 
-        indicators = [ind for ind in _ACTION_PARAM_INDICATORS if any(ind in name.lower() for name in params)]
+        indicators = [ind for ind in _ACTION_PARAM_INDICATORS if any(ind in name.lower() for name in names)]
         if not indicators:
             continue
 
@@ -440,7 +492,7 @@ def _detect_unmatched_actions(
                 evidence={
                     "endpoint": path,
                     "method": "POST",
-                    "params": params,
+                    **({"json_body": json_body} if json_body else {"params": params}),
                     "indicators": indicators,
                 },
             )

@@ -166,6 +166,8 @@ def _build_single_action(action: dict[str, Any]) -> dict[str, Any]:
             result["pre_fetch_url"] = action["pre_fetch_url"]
         if action.get("params"):
             result["params"] = action["params"]
+        if action.get("json_body") is not None:
+            result["json_body"] = action["json_body"]
     elif action["type"] == "hnap":
         result["action_name"] = action.get("action_name", "")
         if action.get("params"):

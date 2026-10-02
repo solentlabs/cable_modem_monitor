@@ -53,6 +53,8 @@ def test_http_logout_details(fixture_path: Path) -> None:
         assert result.logout.pre_fetch_url == expected["pre_fetch_url"]
     if "endpoint_pattern" in expected:
         assert result.logout.endpoint_pattern == expected["endpoint_pattern"]
+    # Every fixture pins json_body: observed JSON is copied, anything else yields none
+    assert result.logout.json_body == expected.get("json_body")
 
 
 @pytest.mark.parametrize(
@@ -93,3 +95,103 @@ def test_http_restart_details(fixture_path: Path) -> None:
         assert result.restart.pre_fetch_url == expected["pre_fetch_url"]
     if "endpoint_pattern" in expected:
         assert result.restart.endpoint_pattern == expected["endpoint_pattern"]
+    # Every fixture pins json_body: observed JSON is copied, anything else yields none
+    assert result.restart.json_body == expected.get("json_body")
+
+
+@pytest.mark.parametrize(
+    ("fixture_stem", "gap_reported"),
+    [
+        # Body observed as JSON: copied, no gap
+        ("restart_json_body", False),
+        # Body observed as form params: no gap
+        ("restart_router_status", False),
+        # Body observed but sanitized: withheld, and not reported as unobserved
+        ("restart_json_body_sanitized", False),
+        # Endpoint only in page script: the body is unobserved
+        ("source_inferred_rest_unobserved", True),
+        # Call-site params resolved from source: existing pass-1 rules, no gap
+        ("source_inferred_ajax_restart", False),
+    ],
+)
+def test_unobserved_body_gap(fixture_stem: str, gap_reported: bool) -> None:
+    """A non-GET action with no captured request reports its body as unobserved."""
+    data = load_fixture(FIXTURES_DIR / f"{fixture_stem}.json")
+    warnings: list[str] = []
+    detect_actions(data["_entries"], "http", warnings)
+    assert any("request body unobserved" in w for w in warnings) == gap_reported
+
+
+def _post(path: str, post_data: dict) -> dict:
+    """One POST entry to an endpoint no action pattern matches."""
+    return {"request": {"method": "POST", "url": f"http://192.168.100.1{path}", "postData": post_data}, "response": {}}
+
+
+@pytest.mark.parametrize(
+    ("post_data", "expected_category"),
+    [
+        # Form body with an action-like param name
+        ({"params": [{"name": "RebootAction", "value": "1"}]}, "unmatched_restart"),
+        # JSON body: its top-level keys are read the same way
+        ({"mimeType": "application/json", "text": '{"rebootNow": {"enable": true}}'}, "unmatched_restart"),
+        ({"mimeType": "application/json", "text": '{"doLogout": true}'}, "unmatched_logout"),
+        # JSON body with no action-like key
+        ({"mimeType": "application/json", "text": '{"language": "en"}'}, None),
+    ],
+)
+def test_unmatched_action_post(post_data: dict, expected_category: str | None) -> None:
+    """An action-like POST at an unknown URL is a core gap, whatever its body encoding."""
+    core_gaps: list = []
+    detect_actions([_post("/api/v9/devctl", post_data)], "http", [], core_gaps)
+    assert [g.category for g in core_gaps] == ([expected_category] if expected_category else [])
+
+
+_COPIED = {"json_body": True, "body": "", "body_evidence": {}, "warning": None}
+
+
+@pytest.mark.parametrize(
+    ("fixture_stem", "expected"),
+    [
+        # Plain JSON body: copied (f3896lg-vmb, sbg8300 shapes)
+        ("restart_json_body", _COPIED),
+        ("restart_json_body_put", _COPIED),
+        # Sanitized value at the top level: encoded, withheld (tg3442s shape)
+        (
+            "restart_json_body_sanitized",
+            {
+                "json_body": False,
+                "body": "encoded",
+                "body_evidence": {"keys": ["EncryptedData", "user"], "sanitized": ["user"]},
+                "warning": "not copied",
+            },
+        ),
+        # Sanitized value nested below the top level: encoded, withheld
+        (
+            "restart_json_body_nested_sanitized",
+            {
+                "json_body": False,
+                "body": "encoded",
+                "body_evidence": {"keys": ["action", "auth"], "sanitized": ["auth.user"]},
+                "warning": "not copied",
+            },
+        ),
+        # Endpoint only in page script: unobserved, a different state (f3896lg-zg shape)
+        (
+            "source_inferred_rest_unobserved",
+            {"json_body": False, "body": "unobserved", "body_evidence": {}, "warning": "request body unobserved"},
+        ),
+        # Call-site params from source: no body state
+        ("source_inferred_ajax_restart", {**_COPIED, "json_body": False}),
+    ],
+)
+def test_restart_body_state(fixture_stem: str, expected: dict) -> None:
+    """A restart body is copied, encoded (withheld, with evidence) or unobserved, never guessed."""
+    data = load_fixture(FIXTURES_DIR / f"{fixture_stem}.json")
+    warnings: list[str] = []
+    result = detect_actions(data["_entries"], "http", warnings)
+    assert result.restart is not None
+    assert (result.restart.json_body is not None) == expected["json_body"]
+    assert result.restart.body == expected["body"]
+    assert result.restart.body_evidence == expected["body_evidence"]
+    if expected["warning"]:
+        assert any(expected["warning"] in w and "restart" in w for w in warnings), warnings
