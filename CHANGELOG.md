@@ -135,6 +135,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   variant, or the configured modem in Configure, is no longer in the
   catalog, the flow showed the raw key `unknown_variant` or
   `unknown_model`. Both now have text in every language.
+- **`validate_har` accepts Basic-auth captures.** It hard-stopped any
+  capture whose first request carried an `Authorization` header as an
+  existing session, but Basic sends credentials on every request, so
+  the Netgear CM600 and C3700 captures could not pass. Other schemes
+  and session cookies still stop.
 
 ## [3.14.15-beta.2] - 2026-09-29
 

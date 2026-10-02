@@ -217,6 +217,8 @@ Check the **first request** in the HAR:
 | Returns 401/403 | Pre-auth captured, auth challenge visible | Continue |
 | Returns HTML login page (form, no data) | Pre-auth captured, form-based auth | Continue |
 | First request has `Cookie` header with session value | Browser had existing session | **HARD STOP**: Request fresh HAR |
+| First request has `Authorization: Basic`, every response 200 | Basic auth sends credentials on every request; the header is the login, not a session | Continue |
+| First request has another `Authorization` scheme, every response 200 | Browser had existing session | **HARD STOP**: Request fresh HAR |
 | Returns 301/302 redirect to login page | Pre-auth captured | Continue |
 
 **The login's own redirect must land somewhere the capture holds.** When

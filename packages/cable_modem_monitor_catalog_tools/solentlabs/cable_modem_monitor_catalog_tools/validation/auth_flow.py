@@ -49,7 +49,7 @@ def validate_auth_flow(entries: list[dict[str, Any]], issues: list[str]) -> bool
     """Check whether the HAR contains an auth flow. Returns True if detected.
 
     Appends HARD STOP issues for: session cookies on first request,
-    Authorization header on first request (post-auth HAR).
+    non-Basic Authorization header on first request (post-auth HAR).
     """
     first_req = entries[0]["request"]
     first_resp = entries[0]["response"]
@@ -197,11 +197,17 @@ def _scan_auth_artifacts(entries: list[dict[str, Any]]) -> AuthArtifacts:
 
 
 def _has_authorization_on_first_request(entries: list[dict[str, Any]]) -> bool:
-    """Check if the first request has an Authorization header (post-auth HAR)."""
+    """Check if the first request has a non-Basic Authorization header (post-auth HAR)."""
     all_200 = all(e["response"].get("status") == 200 for e in entries)
     if not all_200:
         return False
-    return "authorization" in lower_headers(entries[0]["request"])
+    authorization = lower_headers(entries[0]["request"]).get("authorization")
+    if authorization is None:
+        return False
+    # Basic auth sends credentials on every request, so the header is the
+    # login itself, not a leftover session. Keyed on the scheme because
+    # validation runs before analysis knows the strategy.
+    return authorization.split(" ", 1)[0].lower() != "basic"
 
 
 def _is_login_url(url: str) -> bool:
