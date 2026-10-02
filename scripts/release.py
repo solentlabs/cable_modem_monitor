@@ -8,18 +8,19 @@ handles all git operations.
 Steps:
 1. Validate version format
 2. Check git working directory is clean
-3. Run `make validate-ci` (full CI mirror — lint, format, type-check,
+3. Check open code-scanning alerts on main and the release branch (gh api)
+4. Run `make validate-ci` (full CI mirror — lint, format, type-check,
    tests, intake regression, PII check, catalog README freshness)
-4. Verify translations/en.json matches strings.json
-5. Update version in all required files:
+5. Verify translations/en.json matches strings.json
+6. Update version in all required files:
    - custom_components/cable_modem_monitor/manifest.json
    - custom_components/cable_modem_monitor/const.py
    - tests/components/test_version_and_startup.py
    - packages/cable_modem_monitor_core/pyproject.toml
    - packages/cable_modem_monitor_catalog/pyproject.toml
-6. Update CHANGELOG.md
-7. Verify all version files are consistent
-8. Print changed files and suggested next steps
+7. Update CHANGELOG.md
+8. Verify all version files are consistent
+9. Print changed files and suggested next steps
 
 Usage:
     python scripts/release.py 3.5.2                    # Full release prep
@@ -363,6 +364,110 @@ def show_changed_files(version: str) -> None:
     print_info("  gh run watch $(gh run list -w 'Publish to PyPI' --json databaseId -q '.[0].databaseId')")
 
 
+_GITHUB_REPO = "solentlabs/cable_modem_monitor"
+_ALERT_LINE = '"#\\(.number) \\(.rule.id) (\\(.rule.severity)) '
+_ALERT_LINE += '\\(.most_recent_instance.location.path):\\(.most_recent_instance.location.start_line)"'
+
+
+def _gh_api_lines(repo_root: Path, endpoint: str, jq: str, paginate: bool) -> list[str]:
+    """Run a read-only ``gh api`` GET and return its non-empty output lines."""
+    command = ["gh", "api", *(["--paginate"] if paginate else []), endpoint, "--jq", jq]
+    result = subprocess.run(command, capture_output=True, text=True, check=True, cwd=repo_root)
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def _git_output(repo_root: Path, *args: str) -> str:
+    """Return the stripped stdout of a read-only git command."""
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=True, cwd=repo_root).stdout.strip()
+
+
+def _unfixed_on_branch(repo_root: Path, alerts: list[str], release_ref: str) -> list[str]:
+    """Return the main alerts whose instance on the release branch is not ``fixed``."""
+    blocking = []
+    for alert in alerts:
+        number = alert[1:].split(" ", 1)[0]  # _ALERT_LINE starts with "#<number> "
+        states = _gh_api_lines(
+            repo_root,
+            f"repos/{_GITHUB_REPO}/code-scanning/alerts/{number}/instances?ref={release_ref}&per_page=100",
+            ".[].state",
+            paginate=True,
+        )
+        # No instance on the branch proves nothing, so only an explicit "fixed" excuses it.
+        if states and all(state == "fixed" for state in states):
+            print_info(f"  {alert} is open on main but fixed on {release_ref}")
+        else:
+            blocking.append(alert)
+    return blocking
+
+
+def _analysis_problem(repo_root: Path, ref: str, head_sha: str | None) -> str | None:
+    """Return why the ref's CodeQL analysis cannot vouch for its alert list, or None."""
+    # An unanalysed ref lists no alerts, so an empty list proves nothing without an
+    # analysis behind it. The release branch (head_sha given) must be analysed at local
+    # HEAD; main only needs an analysis, since main is not what ships.
+    latest = _gh_api_lines(
+        repo_root,
+        f"repos/{_GITHUB_REPO}/code-scanning/analyses?ref={ref}&per_page=1&sort=created&direction=desc",
+        '.[0].commit_sha // ""',
+        paginate=False,
+    )
+    if not latest:
+        return f"No CodeQL analysis for {ref}. Push it and wait for CodeQL to finish."
+    if head_sha is not None and latest != [head_sha]:
+        return (
+            f"Latest CodeQL analysis of {ref} is at {latest[0]}, but HEAD is {head_sha}. "
+            "Push HEAD and wait for CodeQL to finish."
+        )
+    return None
+
+
+def check_code_scanning_alerts(repo_root: Path) -> bool:
+    """Fail on open alerts on the branch, main alerts not fixed on it, or a branch not analysed at HEAD."""
+    branch = _git_output(repo_root, "rev-parse", "--abbrev-ref", "HEAD")
+    if branch == "HEAD":
+        print_error("Detached HEAD: run release.py from the release branch.")
+        return False
+
+    # Name every ref: the alerts endpoint defaults to the default branch, which hid
+    # alert 132 on its branch before the beta.23 merge.
+    refs = ["refs/heads/main"] + ([] if branch == "main" else [f"refs/heads/{branch}"])
+    release_ref = f"refs/heads/{branch}"
+    head_sha = _git_output(repo_root, "rev-parse", "HEAD")
+    print_info(f"Checking open code-scanning alerts on {', '.join(refs)}...")
+    clean = True
+    for ref in refs:
+        try:
+            problem = _analysis_problem(repo_root, ref, head_sha if ref == release_ref else None)
+            if problem:
+                print_error(problem)
+                clean = False
+                continue
+            alerts = _gh_api_lines(
+                repo_root,
+                f"repos/{_GITHUB_REPO}/code-scanning/alerts?state=open&ref={ref}&per_page=100",
+                f".[] | {_ALERT_LINE}",
+                paginate=True,
+            )
+            # A main alert the release fixes would otherwise block its own release.
+            if ref != release_ref:
+                alerts = _unfixed_on_branch(repo_root, alerts, release_ref)
+        except FileNotFoundError:
+            print_error("gh CLI not found; it is needed to query code-scanning alerts.")
+            return False
+        except subprocess.CalledProcessError as e:
+            print_error(f"Code-scanning query for {ref} failed: {(e.stderr or '').strip()}")
+            return False
+        if alerts:
+            print_error(f"{len(alerts)} open code-scanning alert(s) on {ref}:")
+            for alert in alerts:
+                print_error(f"  {alert}")
+            clean = False
+
+    if clean:
+        print_success("No open code-scanning alerts")
+    return clean
+
+
 def run_validate_ci(repo_root: Path) -> bool:
     """Run the full local CI mirror (`make validate-ci`).
 
@@ -643,6 +748,9 @@ def _run_release(args: argparse.Namespace, repo_root: Path) -> None:
 
     # Validate preconditions
     validate_release_preconditions(version, repo_root)
+
+    # Open CodeQL alerts on main or this branch stop the release, any severity
+    _exit_on_failure(check_code_scanning_alerts(repo_root))
 
     # Full CI mirror against the pre-bump tree; rewritten files re-checked below
     _exit_on_failure(run_validate_ci(repo_root))

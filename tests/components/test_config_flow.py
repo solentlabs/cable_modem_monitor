@@ -1165,7 +1165,7 @@ async def test_options_password_preserved(hass: HomeAssistant):
         await hass.config_entries.async_setup(entry.entry_id)
 
         result: Any = await hass.config_entries.options.async_init(entry.entry_id)
-        result = await hass.config_entries.options.async_configure(
+        await hass.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 "host": "192.168.100.1",
