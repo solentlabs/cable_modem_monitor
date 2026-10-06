@@ -690,6 +690,7 @@ words:
   - genielogin
 
   # Spec/doc vocabulary (incl. British spellings)
+  - pageref
   - Correctables
   - unspaced
   - unredacted

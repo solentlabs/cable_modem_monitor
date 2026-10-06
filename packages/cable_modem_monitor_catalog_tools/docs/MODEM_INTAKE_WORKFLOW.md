@@ -169,24 +169,25 @@ golden. First use: Netgear CM2500, issue #189 — maintainer bench
 session as base, CM3000 DocsisStatus.htm body as template.
 
 **Hybrid (same device, maintainer-declared).** When the evidence for
-one physical device is spread across multiple real captures — e.g.,
-an early capture with intact data endpoints and a later capture of
-the same unit that alone covers new pages or actions but whose data
-responses were destroyed by a sanitizer bug — the most complete
-session is the template and the bodies it lost are substituted from
-the other referenced capture(s). Every byte comes from a referenced
-capture; nothing is fabricated, and no values are edited beyond the
-sanctioned PII value redaction. `log.comment` lists every
-transplanted entry and states the same-device and firmware
-continuity evidence (device identity fields, byte-identical
-firmware-served assets, the evidence issue's history); the
-round-trip must reproduce the prior golden exactly, adding only
-fields the newly covered pages enable. Because every byte is a real
-observation of the specific unit, the entry keeps its status — it
-continues to rest on its own verification evidence. First use:
-Sercomm DM1000, issue #92 — the 2026-06-18 session capture as
-template, data endpoint bodies from the 2026-01-05 capture of the
-same unit.
+one physical device is spread across multiple real captures — a later
+capture covers an action the first never sent, or a sanitizer bug
+destroyed one capture's data responses — one capture is the template
+and the entries it lacks are transplanted whole from the others. Each
+transplanted entry keeps its own `startedDateTime` and `pageref`, and
+its source page is added to `log.pages`. `log.creator` names the
+fixture a composite. Every byte comes from a referenced capture;
+nothing is fabricated, and no values are edited beyond the sanctioned
+PII value redaction. `log.comment` lists every transplanted entry and
+states the same-device and firmware continuity evidence (device
+identity fields, byte-identical firmware-served pages and assets, the
+evidence issue's history); the round-trip must reproduce the prior
+golden exactly, adding only fields the newly covered pages enable.
+Because every byte is a real observation of the specific unit, the
+entry keeps its status — it continues to rest on its own verification
+evidence. Uses: Sercomm DM1000, issue #92 (the 2026-07-21 session,
+with the login, version and CM status pages from the 2026-01-05
+capture); Ubee EVW32C-0N, issue #221 (the 2026-10-01 session, with the
+reboot request from the 2026-10-02 capture).
 
 ## Inputs
 
@@ -195,6 +196,7 @@ You provide one of:
 - A HAR file path (local) — most common when you're working on your own modem.
 - A GitHub issue number with an attached HAR — when triaging a submission.
 - A modem manufacturer + model name — looks up an existing HAR in the catalog (useful for re-running the pipeline on a known-good HAR, e.g. after a Core change).
+- A follow-up capture for an entry already in the catalog, supplying what the first lacked (usually a restart). Analyze it alone, then fold the entries it adds into the existing fixture as a [hybrid](#assembled-fixtures) so the golden still round-trips.
 
 ## Pipeline Flow
 
