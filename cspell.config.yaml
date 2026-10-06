@@ -691,6 +691,13 @@ words:
   - ajaxset
   - genielogin
 
+  # Tooling config words (.gitignore, tasks.json, Copilot instructions)
+  - elif
+  - rulebook
+  - sarif
+  - testproj
+  - tmpclaude
+
   # Spec/doc vocabulary (incl. British spellings)
   - pageref
   - refetches

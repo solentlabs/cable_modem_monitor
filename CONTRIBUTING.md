@@ -19,7 +19,7 @@ The encouraged contribution path is **expanding modem support** — the catalog 
 
 - **Bug reports** — file directly via the bug template.
 - **Modem support requests** — file directly via the modem-request template.
-- **Adding modem support yourself** — use the catalog intake pipeline — Claude Code: `/modem-intake`; other AI tools: load [`skills/modem-intake.md`](skills/modem-intake.md) as context. See [Adding Modem Support](#adding-modem-support).
+- **Adding modem support yourself** — use the catalog intake pipeline — Claude Code: `/modem-intake`; other AI tools: load [`.claude/skills/modem-intake/SKILL.md`](.claude/skills/modem-intake/SKILL.md) as context. See [Adding Modem Support](#adding-modem-support).
 - **New features, sensors, architecture changes** — start a [Discussion](https://github.com/solentlabs/cable_modem_monitor/discussions/new?category=ideas), not an Issue. Issues are for features whose shape is already clear; Discussions are for shaping the idea. This avoids the situation where a contributor invests time in a full design that doesn't fit the project's direction.
 - **Core code changes (`packages/cable_modem_monitor_core/`)** — start a Discussion regardless of size. Core is the shared substrate every supported modem depends on; a regression there breaks every modem at once. The bar is correspondingly high (regression tests, golden files, real-modem evidence).
 - **Refactors that touch more than two files** — start as a Discussion. Small, scoped fixes outside Core can go straight to PR.

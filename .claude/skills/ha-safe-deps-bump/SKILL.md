@@ -3,13 +3,7 @@ name: ha-safe-deps-bump
 description: Bump drifted dependencies to latest while holding HA-constrained runtime deps within Home Assistant's package_constraints. Use when check_owned_deps or the validate-ci footer reports outdated declared dependencies.
 ---
 
-<!-- Master copy: skills/ha-safe-deps-bump.md — edit there, not in .claude/skills/ -->
-
 # HA-Safe Dependency Bump Skill
-
-> **Invocation note**: Project-local skills in `skills/` are not registered as Skill tool
-> targets — `Skill("ha-safe-deps-bump")` will return "Unknown skill". Read this file and
-> execute the steps directly. This is a Claude Code limitation, not a config gap.
 
 Update declared dependencies that have drifted behind their latest
 releases, **without** raising a floor past what Home Assistant allows.

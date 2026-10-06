@@ -63,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   endpoint the capture sent different bodies, such as a shared reboot
   and factory-reset form, stores none and asks for a capture of the
   action alone. (#221)
+- **Project skills live in `.claude/skills/<name>/SKILL.md`.** One
+  tracked copy per skill, used in place: `skills/` and the
+  `sync_skills.sh` copy step on folder open are gone. Old flat copies
+  in `.claude/skills/` stay ignored and can be deleted.
 - **The intake tools read the HNAP hmac algorithm from the page's
   script first.** A loaded `hmac_md5.js` or `hmac_sha256.js` decides,
   then the `HNAP_AUTH` hash length. With neither, the algorithm is an

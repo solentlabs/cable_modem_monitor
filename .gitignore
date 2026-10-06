@@ -21,6 +21,10 @@ __pycache__/
 .DS_Store
 .claude/*
 !.claude/settings.json
+# Project skills are tracked <name>/SKILL.md directories; flat .md files
+# left by the retired sync script stay ignored
+!.claude/skills/
+.claude/skills/*.md
 .aider*
 
 # Node (npx markdownlint-cli2)

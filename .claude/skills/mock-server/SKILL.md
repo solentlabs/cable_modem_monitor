@@ -3,13 +3,7 @@ name: mock-server
 description: Replay a catalog modem's HAR against the mock server. Two modes — an automated pipeline check (auth, parse, golden comparison) and a persistent server a local Home Assistant can point at to inspect the device page and entities.
 ---
 
-<!-- Master copy: skills/mock-server.md — edit there, not in .claude/skills/ -->
-
 # Mock Server Skill
-
-> **Invocation note**: Project-local skills in `skills/` are not registered as Skill tool
-> targets — `Skill("mock-server")` will return "Unknown skill". Read this file and
-> execute the steps directly. This is a Claude Code limitation, not a config gap.
 
 `HARMockServer` replays HAR-captured responses with real auth simulation.
 It speaks the same protocols as production (none, basic, form, form_nonce,

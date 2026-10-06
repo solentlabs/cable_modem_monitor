@@ -3,13 +3,7 @@ name: soak-analysis
 description: Analyze a soak test log file from Home Assistant, flag anomalies, compare intervals, and produce a structured assessment. Use when a user provides HA logs for stability analysis.
 ---
 
-<!-- Master copy: skills/soak-analysis.md — edit there, not in .claude/skills/ -->
-
 # Soak Analysis Skill
-
-> **Invocation note**: Project-local skills in `skills/` are not registered as Skill tool
-> targets — `Skill("soak-analysis")` will return "Unknown skill". Read this file and
-> execute the steps directly. This is a Claude Code limitation, not a config gap.
 
 Analyze Cable Modem Monitor soak test logs from Home Assistant. Parses
 polling, health checks, recovery events, and timing data, then flags

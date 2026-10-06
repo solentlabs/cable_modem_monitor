@@ -3,13 +3,7 @@ name: modem-confirm
 description: Process a contributor's diagnostics download into a modem.verified.json, flip the catalog status to confirmed, and draft the commit message and issue reply. Covers Steps 13–16 of the modem intake workflow.
 ---
 
-<!-- Master copy: skills/modem-confirm.md — edit there, not in .claude/skills/ -->
-
 # Modem Confirm
-
-> **Invocation note**: Project-local skills in `skills/` are not registered as Skill tool
-> targets — `Skill("modem-confirm")` will return "Unknown skill". Read this file and
-> execute the steps directly. This is a Claude Code limitation, not a config gap.
 
 Read `packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md`
 Steps 13 through 16 in full before doing anything else. Execute each step
