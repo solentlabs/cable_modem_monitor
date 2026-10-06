@@ -207,7 +207,6 @@
   ],
   "_transport": "json_rpc",
   "_expected_strategy": "json_rpc",
-  "_expected_confidence": "high",
   "_expected_fields": {
     "endpoint": "/cgi-bin/api.cgi",
     "login_method": "SYS.login",

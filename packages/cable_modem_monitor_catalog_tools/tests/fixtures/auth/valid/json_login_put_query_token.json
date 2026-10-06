@@ -63,7 +63,6 @@
   ],
   "_transport": "http",
   "_expected_strategy": "",
-  "_expected_confidence": "low",
   "_expected_ambiguities": {
     "auth.strategy": {
       "blocking": true,

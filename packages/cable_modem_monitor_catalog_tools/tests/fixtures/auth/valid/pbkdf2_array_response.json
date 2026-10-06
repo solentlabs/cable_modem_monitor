@@ -22,5 +22,5 @@
   ],
   "_transport": "http",
   "_expected_strategy": "form_pbkdf2",
-  "_expected_confidence": "medium"
+  "_expected_warning": "form_pbkdf2"
 }

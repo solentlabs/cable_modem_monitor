@@ -14,8 +14,7 @@
       "fields": {
         "login_endpoint": "/php/ajaxSet_Password.php",
         "login_page": "/"
-      },
-      "confidence": "high"
+      }
     },
     "session": {
       "headers": {"X-Requested-With": "XMLHttpRequest"},

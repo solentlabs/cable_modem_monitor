@@ -55,13 +55,12 @@ INVALID_FIXTURES = collect_fixtures(INVALID_DIR)
 
 @pytest.mark.parametrize("fixture_path", VALID_FIXTURES, ids=[f.stem for f in VALID_FIXTURES])
 def test_valid_auth_strategy(fixture_path: Path) -> None:
-    """Correct strategy and confidence for each valid fixture."""
+    """Correct strategy for each valid fixture."""
     data = load_fixture(fixture_path)
     warnings: list[str] = []
     hard_stops: list[str] = []
     result = detect_auth(data["_entries"], data["_transport"], warnings, hard_stops)
     assert result.strategy == data["_expected_strategy"]
-    assert result.confidence == data["_expected_confidence"]
     assert not hard_stops
 
 
@@ -73,7 +72,6 @@ def test_invalid_auth_hard_stop(fixture_path: Path) -> None:
     hard_stops: list[str] = []
     result = detect_auth(data["_entries"], data["_transport"], warnings, hard_stops)
     assert result.strategy == data["_expected_strategy"]
-    assert result.confidence == data["_expected_confidence"]
     assert any(data["_expected_hard_stop"] in hs for hs in hard_stops)
 
 
@@ -273,12 +271,10 @@ class TestAuthDetailSerialization:
     """AuthDetail.to_dict() produces expected output."""
 
     def test_to_dict(self) -> None:
-        """Serialization includes strategy, fields, and confidence."""
-        detail = AuthDetail(strategy="form", fields={"action": "/login"}, confidence="high")
+        """Serialization holds strategy and fields; doubt is a warning or a candidates ambiguity, never a score."""
+        detail = AuthDetail(strategy="form", fields={"action": "/login"})
         d = detail.to_dict()
-        assert d["strategy"] == "form"
-        assert d["fields"]["action"] == "/login"
-        assert d["confidence"] == "high"
+        assert d == {"strategy": "form", "fields": {"action": "/login"}}
 
 
 # =====================================================================
@@ -704,12 +700,23 @@ class TestFormPbkdf2EmptyGuard:
     """Edge case: empty pbkdf2_entries returns minimal detail."""
 
     def test_empty_pbkdf2_entries(self) -> None:
-        """Empty pbkdf2 entries returns medium confidence without fields."""
+        """Empty pbkdf2 entries returns no fields; the shape warning needs an exchange to cite."""
         signals = _HttpAuthSignals(pbkdf2_entries=[], has_any_auth_signal=True)
-        result = _extract_form_pbkdf2(signals)
+        warnings: list[str] = []
+        result = _extract_form_pbkdf2(signals, warnings)
         assert result.strategy == "form_pbkdf2"
-        assert result.confidence == "medium"
         assert not result.fields
+        assert warnings == []
+
+
+@pytest.mark.parametrize(("drop_page", "warned"), [(False, False), (True, True)], ids=["page-captured", "no-page"])
+def test_form_sjcl_without_login_page_warns(drop_page: bool, warned: bool) -> None:
+    """form_sjcl with no captured login page names what it could not read; with the page it is silent."""
+    entries = load_fixture(VALID_DIR / "form_sjcl_encrypted.json")["_entries"]
+    warnings: list[str] = []
+    result = detect_auth(entries[1:] if drop_page else entries, "http", warnings, [])
+    assert result.strategy == "form_sjcl"
+    assert any("form_sjcl" in w and "login page" in w for w in warnings) == warned
 
 
 # =====================================================================
@@ -763,7 +770,7 @@ class TestDynamicFormAction:
     """
 
     def test_emits_action_source_when_core_supports_it(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Core with action_source: emitted, confidence stays high."""
+        """Core with action_source: emitted, no warning needed."""
         from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth import http as auth_http
 
         monkeypatch.setattr(auth_http, "_core_supports_action_source", lambda: True)
@@ -772,10 +779,9 @@ class TestDynamicFormAction:
         assert result.strategy == "form"
         assert result.fields["action"] == "/goform/Login"
         assert result.fields["action_source"] == "login_page"
-        assert result.confidence == "high"
 
-    def test_warns_and_downgrades_without_core_support(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Core without action_source: no field, loud warning, medium confidence."""
+    def test_warns_without_core_support(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Core without action_source: no field, a loud warning."""
         from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth import http as auth_http
 
         monkeypatch.setattr(auth_http, "_core_supports_action_source", lambda: False)
@@ -784,7 +790,6 @@ class TestDynamicFormAction:
         assert result.strategy == "form"
         assert result.fields["action"] == "/goform/Login"
         assert "action_source" not in result.fields
-        assert result.confidence == "medium"
         assert any("query" in w and "action_source" in w for w in warnings)
 
     def test_warns_when_login_page_not_captured(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -796,7 +801,6 @@ class TestDynamicFormAction:
         result = detect_auth(_dynamic_action_entries(with_login_page=False), "http", warnings, [], [])
         assert result.strategy == "form"
         assert "action_source" not in result.fields
-        assert result.confidence == "medium"
         assert any("login page" in w.lower() for w in warnings)
 
     def test_static_action_unaffected(self) -> None:
@@ -810,7 +814,6 @@ class TestDynamicFormAction:
         result = detect_auth(entries, "http", warnings, [], [])
         assert result.strategy == "form"
         assert "action_source" not in result.fields
-        assert result.confidence == "high"
         assert not any("action_source" in w for w in warnings)
 
 

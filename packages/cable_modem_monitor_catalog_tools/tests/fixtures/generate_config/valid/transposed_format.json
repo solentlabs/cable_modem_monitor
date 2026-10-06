@@ -6,7 +6,7 @@
   "_analysis": {
     "transport": "http",
     "confidence": "high",
-    "auth": {"strategy": "none", "fields": {}, "confidence": "high"},
+    "auth": {"strategy": "none", "fields": {}},
     "session": {"headers": {}},
     "actions": {"logout": null, "restart": null},
     "sections": {

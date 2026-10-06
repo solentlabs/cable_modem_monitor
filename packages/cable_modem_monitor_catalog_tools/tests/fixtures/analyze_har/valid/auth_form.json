@@ -95,7 +95,6 @@
   },
   "_expected_transport": "http",
   "_expected_auth_strategy": "form",
-  "_expected_auth_confidence": "high",
   "_expected_auth_fields": {
     "action": "/goform/login",
     "method": "POST",

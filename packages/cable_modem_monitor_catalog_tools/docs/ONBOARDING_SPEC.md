@@ -557,9 +557,8 @@ per-session token published in the login form's `action` (Netgear
 `?id=`), never config — `action` always gets the bare path. When the
 capture includes the login page and the installed Core's `FormAuth`
 accepts `action_source` (#189), the analyzer emits
-`action_source: login_page`; otherwise it warns and downgrades
-confidence to `medium`, because the firmware may reject a bare-action
-POST. See `MODEM_YAML_SPEC.md` § `form` (the **Dynamic POST URLs**
+`action_source: login_page`; otherwise it warns, because the firmware
+may reject a bare-action POST. See `MODEM_YAML_SPEC.md` § `form` (the **Dynamic POST URLs**
 passage) for the runtime contract.
 
 #### `form_pbkdf2` — detecting `login_success`
@@ -1605,7 +1604,7 @@ coordinator skips missing hooks.
 |-----------|---------|
 | No logout flow in HAR | "No logout endpoint observed in HAR. If this modem has single-session limits, a logout action will be needed." |
 | No parseable data sections | "no parseable data sections detected" — auth and actions still analyzed; no parser can be generated (common on unprovisioned modems serving placeholder pages). |
-| Dynamic login action, no Core support | "login POST ... carries a query string" — per-session token; without `action_source` support (#189) the bare-action config may be rejected. Confidence drops to `medium`. |
+| Dynamic login action, no Core support | "login POST ... carries a query string" — per-session token; without `action_source` support (#189) the bare-action config may be rejected. |
 | HMAC algorithm uncertain (HNAP) | "HNAP HMAC algorithm cannot be confirmed from HAR. Defaulting to `md5`. Verify with contributor." |
 | Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |
 | Action body encoded | "restart action PUT /actionHandler/ajaxSet_Reset_Restore.php: the observed JSON body holds sanitized or encoded values ['user'] and was not copied to json_body." The action carries `body: encoded`. |
@@ -1715,8 +1714,7 @@ detection, format detection, and field mapping extraction.
   "confidence": "high",
   "auth": {
     "strategy": "form",
-    "fields": { "action": "/goform/login", "...": "..." },
-    "confidence": "high"
+    "fields": { "action": "/goform/login", "...": "..." }
   },
   "session": {
     "cookie_name": "session",

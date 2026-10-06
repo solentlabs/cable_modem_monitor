@@ -49,7 +49,7 @@ def detect_auth(
         ambiguities: Mutable list to append ambiguities to.
 
     Returns:
-        AuthDetail with strategy, extracted fields, and confidence.
+        AuthDetail with strategy and extracted fields.
     """
     if core_gaps is None:
         core_gaps = []

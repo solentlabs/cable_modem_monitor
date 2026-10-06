@@ -47,7 +47,6 @@
   ],
   "_transport": "http",
   "_expected_strategy": "form",
-  "_expected_confidence": "high",
   "_expected_fields": {
     "action": "/setup.cgi",
     "username_field": "login_user",

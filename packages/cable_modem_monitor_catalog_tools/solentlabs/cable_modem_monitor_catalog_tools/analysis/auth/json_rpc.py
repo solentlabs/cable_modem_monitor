@@ -79,7 +79,7 @@ def detect_json_rpc_auth(
         fields["token_path"], fields["token_param"] = token
 
     ambiguities.extend(_error_code_ambiguities(entries, fields["login_method"]))
-    return AuthDetail(strategy="json_rpc", fields=fields, confidence="high")
+    return AuthDetail(strategy="json_rpc", fields=fields)
 
 
 def _token_pairing(entries: list[dict[str, Any]], login_index: int) -> tuple[str, str] | None:

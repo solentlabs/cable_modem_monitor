@@ -67,7 +67,7 @@ def is_json_login(entry: dict[str, Any]) -> bool:
         return False
     if "json" not in (request.get("postData") or {}).get("mimeType", "").lower():
         return False
-    # The path is the signal: the same encrypted envelope also carries keepalives and restarts.
+    # The path is the signal: the same encrypted envelope also carries keepalive calls and restarts.
     segment = path_from_url(request.get("url", "")).rsplit("/", 1)[-1].lower()
     if "login" not in segment:
         return False
@@ -123,7 +123,7 @@ def json_login_ambiguity(
                 candidates=[Candidate(value=name, evidence=evidence[name]) for name in candidates],
             )
         )
-    return AuthDetail(strategy="", confidence="low", candidates=candidates)
+    return AuthDetail(strategy="", candidates=candidates)
 
 
 def _bearer(

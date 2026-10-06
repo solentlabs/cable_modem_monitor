@@ -89,7 +89,7 @@ def detect_http_auth(
         ambiguities: Mutable list to append the JSON login's strategy ambiguity to.
 
     Returns:
-        AuthDetail with strategy, extracted fields, and confidence.
+        AuthDetail with strategy and extracted fields.
     """
     if core_gaps is None:
         core_gaps = []
@@ -99,7 +99,7 @@ def detect_http_auth(
 
     # No auth signals at all -> none
     if not signals.has_any_auth_signal:
-        return AuthDetail(strategy="none", confidence="high")
+        return AuthDetail(strategy="none")
 
     # 401 + WWW-Authenticate: Digest -> HARD STOP (unsupported)
     if signals.digest_challenge:
@@ -109,7 +109,7 @@ def detect_http_auth(
             "Digest auth is not yet supported. "
             "See ONBOARDING_SPEC Phase 2 for supported auth strategies."
         )
-        return AuthDetail(strategy="digest", confidence="high")
+        return AuthDetail(strategy="digest")
 
     # 401 + WWW-Authenticate: Basic -> basic
     if signals.basic_challenge:
@@ -121,11 +121,11 @@ def detect_http_auth(
 
     # SJCL AES-CCM encrypted login -> form_sjcl (must check before pbkdf2)
     if signals.sjcl_login_entry is not None:
-        return _extract_form_sjcl(entries, signals)
+        return _extract_form_sjcl(entries, signals, warnings)
 
     # JSON POST with PBKDF2 salt flow -> form_pbkdf2
     if signals.pbkdf2_entries:
-        return _extract_form_pbkdf2(signals)
+        return _extract_form_pbkdf2(signals, warnings)
 
     # JSON login to a login path -> its strategy is an ambiguity
     detail = json_login_ambiguity(entries, signals.json_login_entries, warnings, ambiguities)
@@ -157,7 +157,7 @@ def detect_http_auth(
             },
         )
     )
-    return AuthDetail(strategy="unknown", confidence="low")
+    return AuthDetail(strategy="unknown")
 
 
 # ---------------------------------------------------------------------------
@@ -389,7 +389,6 @@ def _extract_basic(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> 
     return AuthDetail(
         strategy="basic",
         fields={"challenge_cookie": signals.basic_challenge_cookie},
-        confidence="high",
     )
 
 
@@ -490,7 +489,6 @@ def _extract_url_token(
     return AuthDetail(
         strategy="url_token",
         fields=fields,
-        confidence="high",
     )
 
 
@@ -591,6 +589,7 @@ def _extract_sjcl_encrypt_aad(post_text: str) -> str:
 def _extract_form_sjcl(
     entries: list[dict[str, Any]],
     signals: _HttpAuthSignals,
+    warnings: list[str],
 ) -> AuthDetail:
     """Extract form_sjcl auth fields from SJCL AES-CCM login flow."""
     entry = signals.sjcl_login_entry
@@ -611,7 +610,12 @@ def _extract_form_sjcl(
             break
 
     session_validation = _find_sjcl_session_validation(entries, entry, csrf_header)
-    confidence = "high" if signals.sjcl_login_page_html else "medium"
+    if not signals.sjcl_login_page_html:
+        warnings.append(
+            f"{WARNING_PREFIX} form_sjcl: no captured login page sets the SJCL variables "
+            f"({', '.join(_SJCL_PAGE_VARS)}), so login_page falls back to '/'. Recapture including "
+            "the pre-login page load."
+        )
 
     return AuthDetail(
         strategy="form_sjcl",
@@ -623,14 +627,20 @@ def _extract_form_sjcl(
             "encrypt_aad": encrypt_aad,
             "decrypt_aad": "nonce",
         },
-        confidence=confidence,
     )
 
 
-def _extract_form_pbkdf2(signals: _HttpAuthSignals) -> AuthDetail:
+def _extract_form_pbkdf2(signals: _HttpAuthSignals, warnings: list[str]) -> AuthDetail:
     """Extract form_pbkdf2 auth fields from salt/challenge flow."""
     if not signals.pbkdf2_entries:
-        return AuthDetail(strategy="form_pbkdf2", confidence="medium")
+        return AuthDetail(strategy="form_pbkdf2")
+    # The strategy rests on the exchange's shape alone, and a bearer login can
+    # look the same (INTAKE_PIPELINE § Detection Owes the LLM Evidence)
+    warnings.append(
+        f"{WARNING_PREFIX} form_pbkdf2 was inferred from {len(signals.pbkdf2_entries)} salt-exchange "
+        "request(s) alone; a bearer or JSON login can look the same. Check the login response "
+        "against MODEM_INTAKE_WORKFLOW Step 4 before generating."
+    )
 
     # The first PBKDF2 entry is typically the salt request
     first_entry = signals.pbkdf2_entries[0]
@@ -669,7 +679,6 @@ def _extract_form_pbkdf2(signals: _HttpAuthSignals) -> AuthDetail:
     return AuthDetail(
         strategy="form_pbkdf2",
         fields=fields,
-        confidence="medium",
     )
 
 
@@ -715,7 +724,6 @@ def _extract_form_nonce(signals: _HttpAuthSignals) -> AuthDetail:
     return AuthDetail(
         strategy="form_nonce",
         fields=fields,
-        confidence="high",
     )
 
 
@@ -807,7 +815,6 @@ def _extract_form(
     # the login form's action (Netgear ?id=). path_from_url strips it, so
     # the config needs action_source: login_page to read it live; without
     # that the bare-action POST may be rejected by the firmware (#189).
-    confidence = "high"
     query = urlsplit(url).query
     if query:
         if login_page and _core_supports_action_source():
@@ -819,7 +826,6 @@ def _extract_form(
                 "but the capture has no login page GET to read it from. Recapture "
                 "including the pre-login page load."
             )
-            confidence = "medium"
         else:
             warnings.append(
                 f"{WARNING_PREFIX} login POST {post_path}?{query} carries a query "
@@ -828,12 +834,10 @@ def _extract_form(
                 "support (#189), so the firmware may reject logins posted to the "
                 "bare action. Verify login on hardware before shipping the entry."
             )
-            confidence = "medium"
 
     return AuthDetail(
         strategy="form",
         fields=fields,
-        confidence=confidence,
     )
 
 

@@ -62,6 +62,8 @@ ignoreWords:
   # German example heading in the link-checker slug tests
   - überblick
   # Non-English example strings and glossary terms in TRANSLATION_GUIDE.md
+  # (and a Polish firmware lockout message in an auth test fixture)
+  - Zablokowano
   - Anmeldung
   - Authentifizierung
   - fehlgeschlagen

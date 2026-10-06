@@ -63,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   endpoint the capture sent different bodies, such as a shared reboot
   and factory-reset form, stores none and asks for a capture of the
   action alone. (#221)
+- **The intake tools drop the auth `confidence` score.** Nothing read
+  it. Where it was the only sign of doubt, a warning now says what the
+  strategy rests on: `form_pbkdf2` always, and `form_sjcl` when no
+  captured login page sets its variables.
 - **The intake score skips the Arris SB8200 (CBN) fixture.** It is
   hand-built, not a browser capture, and now says so like the other
   synthetic fixtures, so CBN intake is graded on the Compal CH7465MT

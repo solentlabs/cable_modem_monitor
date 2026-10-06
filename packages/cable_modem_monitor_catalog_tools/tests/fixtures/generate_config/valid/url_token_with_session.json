@@ -13,8 +13,7 @@
         "login_page": "/status.html",
         "login_prefix": "login_",
         "success_indicator": "Downstream"
-      },
-      "confidence": "high"
+      }
     },
     "session": {
       "cookie_name": "sessionId",

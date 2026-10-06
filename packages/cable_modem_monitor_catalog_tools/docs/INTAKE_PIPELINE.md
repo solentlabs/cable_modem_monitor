@@ -108,13 +108,12 @@ candidate list and the LLM picks by reading response bodies. Unread
 resources emit key skeletons and the LLM decides what is worth mapping.
 Neither gates, and both hand over evidence rather than a conclusion.
 
-HTTP auth and action detection mostly do not. They return a single answer,
-`AuthDetail.confidence` is serialized and read by nothing, and a failure is
-a hard stop rather than a shortlist. The cost is not missed capability, it
-is **silent wrong confidence**: `sagemcom/f3896lg-zg` is reported
-`form_pbkdf2` with no sign that its login response carries `created.token`,
-the one fact that makes it `bearer`. Nothing downstream learns a decision
-existed.
+HTTP auth detection mostly does not. Outside JSON logins it returns a
+single answer, and a failure is a hard stop rather than a shortlist. The
+cost is not missed capability, it is **a wrong answer with only generic doubt**:
+`sagemcom/f3896lg-zg` is reported `form_pbkdf2`. A warning says that
+strategy rests on the exchange's shape, but nothing reports the login
+response's `created.token`, the one fact that makes it `bearer`.
 
 **The rule.** Where a detection is ambiguous, report the alternatives and
 the wire evidence for each, not the winner alone. Where the capture cannot

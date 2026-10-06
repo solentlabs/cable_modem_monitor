@@ -304,7 +304,6 @@ def _with_strategy_ambiguity(resolution: dict[str, Any] | None) -> dict[str, Any
     fixture["_analysis"]["auth"] = {
         "strategy": "",
         "fields": {},
-        "confidence": "low",
         "candidates": {"bearer": dict(_BEARER_FIELDS)},
     }
     fixture["_analysis"]["ambiguities"] = [

@@ -18,8 +18,7 @@
         "login_page": "",
         "form_selector": "",
         "success": {}
-      },
-      "confidence": "high"
+      }
     },
     "session": {"headers": {}},
     "actions": {"logout": null, "restart": null},

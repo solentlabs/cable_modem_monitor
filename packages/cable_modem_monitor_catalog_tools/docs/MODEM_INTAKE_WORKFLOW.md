@@ -286,7 +286,7 @@ name ([ONBOARDING_SPEC § Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-th
 Report what was detected:
 
 - Transport: `{analysis["transport"]}`
-- Auth: `{analysis["auth"]["strategy"]}` (confidence: `{analysis["auth"]["confidence"]}`);
+- Auth: `{analysis["auth"]["strategy"]}`;
   empty when `auth.strategy` is an ambiguity, with each candidate's fields
   in `analysis["auth"]["candidates"]`
 - Actions: logout={observed/source_inferred/candidates/none}, restart={observed/source_inferred/candidates/none}
@@ -332,8 +332,9 @@ Two rules govern this layer:
   Pipeline Regression) — an extractor change must improve grades or
   leave them unchanged.
 
-If `auth.confidence` is not `high`, or `warnings` is non-empty for the auth
-entry, verify the detected strategy against the HAR before proceeding. Pull
+If any auth warning fired (`form_pbkdf2` always warns, since it rests
+on the salt exchange's shape alone), verify the strategy against the
+HAR before proceeding. Pull
 `analysis["auth"]["fields"]` and cross-check:
 
 | Strategy | Key signal in the HAR |

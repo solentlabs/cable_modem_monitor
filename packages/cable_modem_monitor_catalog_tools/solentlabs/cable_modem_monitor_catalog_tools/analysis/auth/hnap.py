@@ -35,7 +35,6 @@ def detect_hnap_auth(entries: list[dict[str, Any]], warnings: list[str]) -> Auth
     return AuthDetail(
         strategy="hnap",
         fields={"hmac_algorithm": hmac_algorithm},
-        confidence="high",
     )
 
 

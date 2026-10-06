@@ -56,7 +56,6 @@
   },
   "_expected_transport": "hnap",
   "_expected_auth_strategy": "hnap",
-  "_expected_auth_confidence": "high",
   "_expected_auth_fields": {
     "hmac_algorithm": "md5"
   },

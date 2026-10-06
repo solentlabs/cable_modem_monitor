@@ -93,12 +93,12 @@
   },
   "_expected_transport": "http",
   "_expected_auth_strategy": "form_pbkdf2",
-  "_expected_auth_confidence": "medium",
   "_expected_auth_fields": {
     "login_endpoint": "/api/v1/session/login",
     "csrf_header": "X-CSRF-TOKEN"
   },
   "_expected_session_cookie": "PHPSESSID",
   "_expected_logout": null,
-  "_expected_restart": null
+  "_expected_restart": null,
+  "_expected_auth_warning": "form_pbkdf2"
 }

@@ -56,7 +56,8 @@ def test_valid_analysis_auth_strategy(fixture_path: Path, tmp_path: Path) -> Non
     har_file = write_har(tmp_path, data["_har"])
     result = analyze_har(har_file)
     assert result.auth.strategy == data["_expected_auth_strategy"]
-    assert result.auth.confidence == data.get("_expected_auth_confidence", "high")
+    if "_expected_auth_warning" in data:
+        assert any(data["_expected_auth_warning"] in w for w in result.warnings), result.warnings
 
 
 @pytest.mark.parametrize(
@@ -266,7 +267,6 @@ class TestSharedAuthEndpoint:
         """Auth fields come from the credential POST, not the later reboot POST."""
         auth = dm1000_result.auth
         assert auth.strategy == "form"
-        assert auth.confidence == "high"
         assert auth.fields["action"] == "/setup.cgi"
         assert auth.fields["username_field"] == "login_user"
         assert auth.fields["password_field"] == "pws"

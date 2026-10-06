@@ -66,7 +66,6 @@
   },
   "_expected_transport": "http",
   "_expected_auth_strategy": "form_nonce",
-  "_expected_auth_confidence": "high",
   "_expected_auth_fields": {
     "action": "/cgi-bin/adv_pwd_cgi",
     "nonce_field": "ar_nonce",
