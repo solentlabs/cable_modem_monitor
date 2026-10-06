@@ -76,6 +76,7 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         ResourceLoadError,
         RestartCommandFailed,
         RestartCommandSent,
+        RestartSessionRetry,
         SessionCleared,
         SessionRetryFailed,
         SessionRetryStarted,
@@ -304,6 +305,13 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
     if isinstance(event, RestartCommandFailed):
         age = f" (session age {event.session_age_seconds:.0f}s)" if event.session_age_seconds is not None else ""
         return f"Restart command failed [{event.model}] — {event.reason}{age}"
+
+    if isinstance(event, RestartSessionRetry):
+        age = f" (session age {event.session_age_seconds:.0f}s)" if event.session_age_seconds is not None else ""
+        return (
+            f"Restart refused on a reused session [{event.model}] — {event.reason}{age};"
+            " signing in again to retry once"
+        )
 
     if isinstance(event, RecoveryWindowOpened):
         return f"Recovery window open [{event.model}] — reason: {event.reason}"

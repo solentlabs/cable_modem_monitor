@@ -42,6 +42,10 @@ _logger = logging.getLogger(__name__)
 _PLACEHOLDER_PATTERN = re.compile(r"\$\{(\w+)(?::([^}]*))?\}")
 
 
+# The firmware's verdict on a session it no longer accepts (#218).
+_SESSION_REFUSED = "UN-AUTH"
+
+
 def execute_hnap_action(
     session: requests.Session,
     base_url: str,
@@ -312,6 +316,7 @@ def _validate_response(
                 success=False,
                 message=f"Unexpected result: {result_value}",
                 details={"result": result_value},
+                session_refused=result_value == _SESSION_REFUSED,
             )
 
     # No result key or no match — assume success if we got a response

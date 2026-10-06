@@ -2032,7 +2032,8 @@ Procedure:
 3. Execute the `actions.restart` executor (`HTTP` or `HNAP` — see
    § Action Executors). Stop here if it returns
    `ActionResult(success=False)`: steps 4 and 5 are both premised on a
-   reboot that did not happen.
+   reboot that did not happen. A refused reused session retries once
+   first (below).
 4. Clear the collector session (forces fresh auth on the next poll;
    avoids the MB7621-class stale-cookie failure mode).
 5. Call `recovery.begin(reason="restart_command")` so subsequent
@@ -2048,6 +2049,22 @@ reboot that never dispatched, opened a recovery window for it, and
 left the user watching an unchanged uptime counter (#82). The
 executor's result is the only evidence Core has that the command
 landed, so it is not optional to read.
+
+**A refused reused session retries once.** The monitoring session is
+reused across polls, so the modem may have expired it since the last
+one. Polling clears a session the modem rejects and logs in again
+(UC-21); restart does the same (UC-21a). When the executor reports
+`ActionResult.session_refused` on the reused monitoring session,
+`run_restart` clears the session, authenticates fresh and sends the
+action once more; that second result stands. The executor sets
+`session_refused` from the firmware's own verdict: an HNAP
+`<Action>Result` of `UN-AUTH`, or an HTTP status of 401 or 403. Never
+retried: a failure that is not a refusal, a connection drop (the reboot
+itself), a refusal on a session this call just created, any `action_auth`
+action (its session is always fresh), and any success, so a modem that
+rebooted is never asked twice. Not recognized: a stale session answered
+with a login page under 2xx. No firmware is observed to do it, and the
+captured restart of `netgear/cm2500` answers 302.
 
 **Per-action auth (`action_auth` on `HttpAction`):** when
 `actions.restart.action_auth` is set, `execute_action` creates a
@@ -2088,16 +2105,18 @@ Mutex.
 
 ### Logging Contract
 
-Every line includes `[MODEL]`. Two lines total — the command is
-one-shot.
+Every line includes `[MODEL]`. The command is one-shot: one outcome
+line, and one retry line when a refused reused session is retried.
 
 - INFO: `"Restart command sent [MODEL] — session cleared (0.4s)"`
+- INFO: `"Restart refused on a reused session [MODEL] — <reason> (session age <N>s); signing in again to retry once"`
 - ERROR: `"Restart command failed [MODEL] — <reason>"` — an exception,
   or the `ActionResult.message` when the executor reported failure
   (e.g. `Per-action auth failed: Login returned HTTP 401`). A refused
-  action on the monitoring session appends `(session age <N>s)`: the
-  refused session is kept, so every retry reuses it, and its age
-  separates a stale session from a fresh login that was refused (#218).
+  action on the monitoring session appends `(session age <N>s)`, the age of
+  the session the failing command went out on. A refusal retried on a
+  fresh login fails with that fresh session's age, which separates a stale
+  session from a fresh login that was refused (#218).
 
 ---
 
@@ -2357,6 +2376,7 @@ per-poll noise.
 | UC-46 | (retired; no response-timeout phase in the new model) |
 | UC-78 | Data sensors go Unavailable only when the snapshot's ``modem_data`` is None |
 | UC-88 | Reboot-signal check matches on a scheduled poll → recovery window opens |
+| UC-21a | Restart refused on the reused monitoring session → clear, fresh login, one retry |
 | UC-89 | Modem answers the restart but refuses it → `error="command_failed"`, no recovery window |
 
 ---

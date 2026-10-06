@@ -53,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SJCL script, and the aad from the string every encrypt call passes. A
   value the scripts do not state is left out with a warning, never
   defaulted. The TG3442S capture now generates a valid config.
+- **Restart retries once when the modem refuses a stale session.** The
+  monitoring session is reused across polls, so the modem may have
+  expired it by the time Restart is pressed. A refusal on that session
+  (HNAP `UN-AUTH`, HTTP 401 or 403) now clears it, logs in fresh and
+  sends the restart once more, as polling does. Any other failure, and
+  any success, is never retried. (#218)
 - **Restart replay checks the form body.** A restart's form fields must
   appear together in one body the capture posted, so a wrong value on a
   shared reboot and factory-reset form (EVW32C-0N) fails CI. Test

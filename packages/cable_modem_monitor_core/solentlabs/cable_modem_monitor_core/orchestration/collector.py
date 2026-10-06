@@ -279,6 +279,11 @@ class ModemDataCollector:
         return self._auth_manager.session_is_valid(self._session, self._auth_context)
 
     @property
+    def session_reused(self) -> bool:
+        """Whether the last ``authenticate()`` reused a held session rather than logging in."""
+        return self._session_reused
+
+    @property
     def session_age_seconds(self) -> float | None:
         """Seconds since the login that created the current session; None when none is held."""
         if self._authenticated_at is None:

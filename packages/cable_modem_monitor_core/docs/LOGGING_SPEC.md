@@ -260,12 +260,14 @@ the `rate_*` fields.
 |---|---|---|
 | `RestartCommandSent` | INFO | Restart command dispatched and session cleared |
 | `RestartCommandFailed` | ERROR | Restart command failed |
+| `RestartSessionRetry` | INFO | Restart refused on a reused session; clearing it and retrying once |
 | `RecoveryWindowOpened` | INFO | Recovery window started |
 | `RecoveryWindowClosed` | INFO | Recovery window ended |
 | `RecoveryObserverException` | ERROR | Unhandled exception in recovery observer |
 
 Fields — `RestartCommandSent`: `model`, `elapsed_seconds: float`
 Fields — `RestartCommandFailed`: `model`, `reason: str`, `session_age_seconds: float | None`
+Fields — `RestartSessionRetry`: `model`, `reason: str`, `session_age_seconds: float | None`
 
 `RestartCommandFailed.session_age_seconds` — age of the monitoring session the
 command went out on, measured from the login that created it (reuse does not

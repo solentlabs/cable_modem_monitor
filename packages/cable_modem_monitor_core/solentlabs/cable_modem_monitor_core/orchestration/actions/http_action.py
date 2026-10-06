@@ -140,6 +140,8 @@ def execute_http_action(
             success=resp.ok,
             message=f"Action {'completed' if resp.ok else 'refused'} with status {resp.status_code}",
             details={"status_code": resp.status_code},
+            # The data path's stale-session verdict (LOAD_AUTH); any other status says nothing about the session.
+            session_refused=resp.status_code in (401, 403),
         )
     except CONNECTIVITY_ERRORS:
         log_event(_logger, ActionConnectionLost(model=model, transport="http", action_name=action_name, level=level))

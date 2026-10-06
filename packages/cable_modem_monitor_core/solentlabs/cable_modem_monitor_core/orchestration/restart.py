@@ -15,12 +15,13 @@ import time
 from typing import TYPE_CHECKING
 
 from .actions import execute_action
-from .events import RestartCommandFailed, RestartCommandSent
+from .events import RestartCommandFailed, RestartCommandSent, RestartSessionRetry
 from .logging import log_event
 from .models import RestartResult
 
 if TYPE_CHECKING:
     from ..models.modem_config.config import ModemConfig
+    from .actions.base import ActionResult
     from .collector import ModemDataCollector
     from .recovery import Recovery
 
@@ -38,6 +39,27 @@ def _has_action_auth(restart_action: object) -> bool:
     return isinstance(restart_action, HttpAction) and restart_action.action_auth is not None
 
 
+def _authenticate(collector: ModemDataCollector, model: str, start: float) -> RestartResult | None:
+    """Establish the monitoring session; a failed result when the login failed, else None."""
+    # Bypass the circuit breaker: the user asked for a restart, so a recent
+    # bad-credentials streak shouldn't block the command.
+    auth_result = collector.authenticate()
+    if auth_result.success:
+        return None
+    log_event(_logger, RestartCommandFailed(model=model, reason=f"auth failed — {auth_result.error}"))
+    return RestartResult(success=False, elapsed_seconds=time.monotonic() - start, error="command_failed")
+
+
+def _refused_stale_session(collector: ModemDataCollector, restart_action: object, result: ActionResult) -> bool:
+    """A refusal on the reused monitoring session: the modem expired it since the last poll (UC-21a)."""
+    return (
+        not result.success
+        and result.session_refused
+        and not _has_action_auth(restart_action)
+        and collector.session_reused
+    )
+
+
 def run_restart(
     collector: ModemDataCollector,
     modem_config: ModemConfig,
@@ -53,7 +75,9 @@ def run_restart(
        — unless ``actions.restart`` has ``action_auth`` set, in which
        case ``execute_action`` authenticates on a separate fresh session
        and the monitoring session is not needed for the restart command.
-    3. Execute the restart action, and stop if it reports failure.
+    3. Execute the restart action. A refusal on the reused monitoring
+       session clears it, logs in fresh and executes the action once
+       more. Stop if the result is still a failure.
     4. Clear the collector session (forces fresh auth on the next
        poll — some firmware invalidates sessions after a reboot).
     5. Call ``recovery.begin("restart_command")`` so subsequent polls
@@ -80,27 +104,16 @@ def run_restart(
     # dispatch cleanly and the caller should see it as a failed
     # command, not as a nuanced taxonomy of why.
     try:
-        # Step 2 — authenticate. Bypass the circuit breaker: the user
-        # asked for a restart, so a recent bad-credentials streak
-        # shouldn't block the command.
+        # Step 2 — authenticate.
         #
         # Skip when action_auth is set — execute_action will authenticate
         # on a separate fresh session for the action. Establishing the
         # monitoring session here is unnecessary: it is not used for the
         # restart command (e.g., Hub 5 has no monitoring auth at all).
         if not _has_action_auth(actions.restart):
-            auth_result = collector.authenticate()
-            if not auth_result.success:
-                elapsed = time.monotonic() - start
-                log_event(
-                    _logger,
-                    RestartCommandFailed(model=model, reason=f"auth failed — {auth_result.error}"),
-                )
-                return RestartResult(
-                    success=False,
-                    elapsed_seconds=elapsed,
-                    error="command_failed",
-                )
+            auth_failure = _authenticate(collector, model, start)
+            if auth_failure is not None:
+                return auth_failure
 
         # Step 3 — execute the reboot action. Connection errors /
         # timeouts inside the HTTP executor are already swallowed
@@ -111,6 +124,25 @@ def run_restart(
         # or the modem can answer the command 401/404. Neither raises,
         # and neither rebooted anything (#82).
         action_result = execute_action(collector, modem_config, actions.restart)
+
+        # A reused session the modem now refuses is stale, as in polling
+        # (UC-21): clear it, log in fresh, send once more. Only a refusal
+        # retries, so a modem that rebooted is never asked twice.
+        if _refused_stale_session(collector, actions.restart, action_result):
+            log_event(
+                _logger,
+                RestartSessionRetry(
+                    model=model,
+                    reason=action_result.message,
+                    session_age_seconds=collector.session_age_seconds,
+                ),
+            )
+            collector.clear_session()
+            auth_failure = _authenticate(collector, model, start)
+            if auth_failure is not None:
+                return auth_failure
+            action_result = execute_action(collector, modem_config, actions.restart)
+
         if not action_result.success:
             elapsed = time.monotonic() - start
             # Session age tells a refusal on a long-held session from one
@@ -120,8 +152,9 @@ def run_restart(
                 _logger,
                 RestartCommandFailed(model=model, reason=action_result.message, session_age_seconds=session_age),
             )
-            # No command reached the modem, so the monitoring session is
-            # still good and there is no reboot for recovery to watch.
+            # No command reached the modem, so there is no reboot for
+            # recovery to watch. A session refused after the retry is the
+            # fresh login's; one that was not refused is still good.
             return RestartResult(
                 success=False,
                 elapsed_seconds=elapsed,

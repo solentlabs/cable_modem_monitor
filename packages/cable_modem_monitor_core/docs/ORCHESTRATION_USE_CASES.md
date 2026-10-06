@@ -709,6 +709,34 @@ HNAP modems (RESOURCE_LOADING_SPEC § HNAP Batching).
 
 ---
 
+### UC-21a: Restart refused on a reused session
+
+**Preconditions:** A transport whose executor reports session refusal
+(HNAP `UN-AUTH`, HTTP 401 or 403). The monitoring session is reused from
+a prior poll and the modem has expired it. No `action_auth`.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer calls `restart()` | | |
+| 2 | Collector: session valid locally → reuse | | |
+| 3 | Executor sends the restart; the modem refuses it → `session_refused` | | |
+| 4 | `run_restart`: reused session → `collector.clear_session()` | session cleared | INFO retry line |
+| 5 | Collector: fresh login | | |
+| 6 | Executor sends the restart again → accepted | | |
+| 7 | Clear session, open recovery window | | `RestartResult(success=True)` |
+
+**Assertions:**
+
+- The restart is sent once when accepted, never again after a success
+- A refusal on the fresh login returns `command_failed` after one retry,
+  never a second; its log line carries the fresh session's age
+- A failed fresh login on the retry returns `command_failed` with the
+  login's reason and opens no recovery window
+- No retry for a failure that is not a refusal, a refusal on a session
+  this call created, or an `action_auth` action
+
+---
+
 ### UC-22: HNAP server error on fresh session
 
 **Preconditions:** HNAP modem. Fresh login just completed. Modem has
@@ -2326,7 +2354,7 @@ rather than from entry config, so the strategy sets `busy` directly
 that refuses under HTTP 200 gives the status rule nothing to read, and
 before `login_busy` existed the CGA6444VF's refusal failed the
 `login_success` check and tripped the breaker on the first poll, so a
-busy modem sent the user a reauth form. Recognising `MSG_LOGIN_150` in
+busy modem sent the user a reauth form. Recognizing `MSG_LOGIN_150` in
 Core would be the per-modem table the paragraph above refuses. The
 entry declares the pair; Core owns the matcher and the behavior
 (ARCHITECTURE_DECISIONS § Session-busy is a declared criterion).

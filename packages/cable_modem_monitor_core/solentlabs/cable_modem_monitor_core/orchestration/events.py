@@ -478,6 +478,16 @@ class RestartCommandFailed:
 
 
 @dataclass
+class RestartSessionRetry:
+    """Restart refused on a reused monitoring session; clearing it and retrying once."""
+
+    model: str
+    reason: str
+    session_age_seconds: float | None = None
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
 class RecoveryWindowOpened:
     """Recovery window started."""
 
@@ -660,6 +670,7 @@ type OrchestratorEvent = (
     | CounterReset
     | RestartCommandSent
     | RestartCommandFailed
+    | RestartSessionRetry
     | RecoveryWindowOpened
     | RecoveryWindowClosed
     | RecoveryObserverException
