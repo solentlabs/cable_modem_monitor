@@ -37,6 +37,7 @@ A custom Home Assistant integration that monitors your cable modem's signal qual
 - [**Troubleshooting Guide**](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)
 - [**Contributing Guide**](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md)
 - [**Development**](#development) (for contributors)
+- [**Changelog**](https://github.com/solentlabs/cable_modem_monitor/blob/main/CHANGELOG.md)
 
 ---
 
@@ -380,16 +381,6 @@ To uninstall completely, delete every modem entry as above, then remove **Cable 
 
 **📖 See the [Troubleshooting Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)** for solutions to common issues including connection problems, missing sensors, and duplicate entities.
 
-## Contributing
-
-Contributions are welcome! If you have:
-
-- Support for additional modem models
-- Bug fixes
-- Feature improvements
-
-Please see the [Contributing Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md) for details on how to add support for your modem, run tests, and submit changes.
-
 ## Privacy & Security
 
 ### Privacy Protection
@@ -424,20 +415,10 @@ MIT License - see LICENSE file for details. The project's names and logos are no
 
 Cable Modem Monitor is maintained by one person, in the evenings, around a day job. What to expect from replies and reviews, and where to ask what, is in [SUPPORT.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/SUPPORT.md).
 
-Catalog contributions are welcome and are the fastest way to get a new modem supported. If you have AI access, you can do most of the intake yourself: see [AI-Assisted Catalog Contribution](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#ai-assisted-catalog-contribution).
-
 - [GitHub Issues](https://github.com/solentlabs/cable_modem_monitor/issues)
 - [Home Assistant Community Forum](https://community.home-assistant.io/)
 
 ## Resources
-
-### Project Documentation
-
-- [Changelog](https://github.com/solentlabs/cable_modem_monitor/blob/main/CHANGELOG.md) - Version history and release notes
-- [Contributing Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md) - How to contribute code or add modem support
-- [Troubleshooting Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md) - Common issues and solutions
-- [Examples](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/EXAMPLES.md) - Dashboard and automation YAML
-- [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) - Help add support for your modem
 
 ### External Resources
 
