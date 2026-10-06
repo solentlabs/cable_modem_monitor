@@ -157,12 +157,10 @@ A **CoreGap** means the modem uses a pattern that Core doesn't support yet. The 
 | ------------- | --------------- | ----------------- |
 | `unmatched_login` | Login POST to an endpoint not in known patterns | New URL pattern in `auth_patterns.json`, or a new auth strategy |
 | `auth_unknown` | Auth mechanism doesn't match any known strategy | New auth strategy implementation |
-| `unmatched_restart` | Restart action to an unrecognized endpoint | New URL pattern in `action_patterns.json` |
-| `unmatched_logout` | Logout action to an unrecognized endpoint | New URL pattern in `action_patterns.json` |
 
 Well-known modems with standard patterns produce zero gaps. Novel modems produce gaps that require a development effort before onboarding can proceed.
 
-**Gap categories are endpoint-level, and cover auth and actions only.** A
+**Gap categories are endpoint-level, and cover auth only.** A
 data endpoint the generator does not read produces no gap: intake writes a
 `parser.yaml` that simply omits it, and the pipeline reports success. That
 is how the service flow resource behind issue #185 was captured in the HAR,
@@ -386,8 +384,10 @@ so a meaning none of them declares is a legitimate new one, not a
 failure to surface evidence
 ([ONBOARDING_SPEC.md § Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed)).
 An `actions.` path's unoffered value is applied too: a capture without
-the action is normal (ONBOARDING_SPEC Phase 4), as it is for HTTP
-actions, which grade the gap and continue.
+the action is normal (ONBOARDING_SPEC Phase 4). An HTTP action's
+`actions.<kind>.endpoint` is the exception: an endpoint carries no body,
+so it resolves only to a candidate with a stored request, and otherwise
+to an explicit none. Either way the gap is graded and the run continues.
 Each ambiguity is graded:
 
 | Grade | Meaning |
@@ -398,8 +398,9 @@ Each ambiguity is graded:
 | `committed_only` | The committed value was not among the candidates (the HAR fails, except on a `parser.` or `actions.` path) |
 
 A resolved action is graded with the detected ones, built by
-`generate_config`'s own resolution step, so a JSON-RPC restart the
-resolution picked is graded like an observed one.
+`generate_config`'s own resolution steps, so a JSON-RPC restart or an
+HTTP endpoint candidate the resolution picked is graded like an observed
+one.
 
 **Auth grading** compares the pipeline-generated auth block against the
 committed config (`analysis/auth/grading.py`), using the same grade

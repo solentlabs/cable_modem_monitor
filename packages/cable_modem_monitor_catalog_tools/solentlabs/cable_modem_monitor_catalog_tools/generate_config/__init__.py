@@ -19,7 +19,7 @@ from solentlabs.cable_modem_monitor_core.validation.cross_file import validate_c
 from solentlabs.cable_modem_monitor_core.validation.layout import IDENTITY_KEYS, apply_section_spacing
 
 from ..analysis.types import FleetPatterns
-from .ambiguities import apply_resolutions, resolved_auth
+from .ambiguities import apply_resolutions, resolved_actions, resolved_auth
 from .modem import build_modem_dict, type_resolved_actions
 from .parser import build_parser_dict
 from .validation import (
@@ -76,8 +76,10 @@ def generate_config(
     """
     errors: list[str] = []
 
-    # Build modem.yaml dict; a resolved strategy ambiguity supplies the auth fields
-    modem_dict = build_modem_dict({**analysis, "auth": resolved_auth(analysis)}, metadata)
+    # Build modem.yaml dict; a resolved strategy or action-endpoint ambiguity supplies its candidate
+    modem_dict = build_modem_dict(
+        {**analysis, "auth": resolved_auth(analysis), "actions": resolved_actions(analysis)}, metadata
+    )
     # Channel key resolutions rewrite a copy: the caller's analysis stays as analyzed.
     sections = copy.deepcopy(analysis.get("sections"))
     apply_resolutions(analysis, modem_dict, sections, errors)

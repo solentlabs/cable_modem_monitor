@@ -533,7 +533,7 @@ builds the body, and the request that sends the token back. Each
 candidate's fields are under `auth.candidates`; `auth.strategy` stays
 empty until resolved, and `generate_config` builds the auth block from
 the resolved candidate. The path is the signal because the same
-encrypted envelope also carries keepalives and restarts. Among attempts,
+encrypted envelope also carries keepalive calls and restarts. Among attempts,
 the latest 2xx one is the login. A strategy is offered only when Core's
 model for it accepts the login's method; otherwise a warning names the
 strategy the body fits, and nothing is offered.
@@ -646,6 +646,7 @@ Scan HAR for logout and restart flows:
 | POST with pre-fetch page (extract dynamic endpoint) | Add `pre_fetch_url` and `endpoint_pattern` |
 | HNAP action with logout/session-end semantics | `actions.logout: { type: hnap, action_name: "<name>" }` |
 | CBN setter call that is not the login | A non-blocking `actions.logout.fun` [ambiguity](#ambiguities-resolve-then-proceed), with the same candidates as the CBN restart row. Nothing in a CBN call names a logout. |
+| Write with logout-like params to an endpoint no pattern matches | A non-blocking `actions.logout.endpoint` ambiguity, built as in the matching restart row |
 | No logout visible in HAR | Omit `actions.logout`. Note in the generated YAML that logout behavior could not be confirmed from the HAR. |
 
 An observed write (POST, PUT or PATCH) outranks an earlier observed page
@@ -663,6 +664,7 @@ page becomes its `pre_fetch_url` via the form-evidence rule below.
 | HNAP SetConfiguration action with reboot param | `actions.restart: { type: hnap, action_name: "<name>", params: {...} }` |
 | JSON-RPC call that is neither the login nor a data source | A non-blocking `actions.restart.method` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per method, citing the page that sent it (its `Referer`, else the endpoint) and the request body. No method-name rule: call shapes come from confirmed modems only. |
 | CBN setter call that is not the login | A non-blocking `actions.restart.fun` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per `fun` code, citing the page that sent it (its `Referer`, else the endpoint) and the request body. The resolved action takes `type: cbn`. |
+| Write (POST, PUT or PATCH) with action-like params or JSON body keys to an endpoint no pattern matches | A non-blocking `actions.restart.endpoint` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per endpoint, citing every distinct body sent there and the page that sent it (its `Referer`, else the endpoint). An endpoint the capture sent one plain body is stored whole under `actions.candidates.restart`, and the resolution brings that action. One that got different bodies (a shared reboot and factory-reset form) or an encoded body stores none, with a warning: an endpoint never picks among bodies, so it resolves to none and the contributor is asked for a capture of the action alone. No URL rule: patterns come from confirmed modems only. |
 | No restart visible in HAR | Omit `actions.restart`. This is common — most HAR captures don't include a restart. |
 
 **Restart is rarely in the HAR.** Most contributors capture status pages,
@@ -1362,7 +1364,7 @@ endpoints that no part of the generated config reads, each reduced to
 its key skeleton. The result is `unread_resources` in the analysis
 output.
 
-**Why:** gap categories are endpoint-level and cover auth and actions
+**Why:** gap categories are endpoint-level and cover auth
 only (see `analyze_har` below). A data endpoint the generator never maps
 produces no gap and no warning — intake writes a `parser.yaml` that
 omits it and every gate stays green. Issue #185's HAR carried
@@ -1634,7 +1636,10 @@ ambiguities:
   it at review. A blank is never a resolution.
 - **`generate_config`** writes each resolved value at its path; a
   resolved `auth.strategy` also brings that candidate's fields from
-  `auth.candidates` ([JSON login](#json-login)). An
+  `auth.candidates` ([JSON login](#json-login)), and a resolved
+  `actions.<kind>.endpoint` brings that candidate's whole action from
+  `actions.candidates` ([Phase 4](#phase-4-action-detection)); an
+  endpoint without a stored request is an error, since it has no body. An
   explicit "none" leaves the field absent; a null without a reason is a
   blank and is rejected. An unresolved **`blocking`** ambiguity makes
   the result invalid, naming the field and its candidates. A
@@ -1644,7 +1649,8 @@ ambiguities:
 `corroborated_by` when a `status: confirmed` entry declares the same
 value at the same path. When exactly one candidate is corroborated,
 analysis pre-fills `resolution` as `{value, source: fleet}`, still
-reviewed. Entries awaiting verification never corroborate, so an
+reviewed, except at an action endpoint: one endpoint can serve several
+operations, so the body, not the path, names the action. Entries awaiting verification never corroborate, so an
 unconfirmed intake teaches nothing: patterns come from confirmed
 modems only ([MODEM_INTAKE_WORKFLOW.md § Step 4](MODEM_INTAKE_WORKFLOW.md#step-4-analyze-har)).
 
@@ -1801,8 +1807,6 @@ effort. Categories:
 |----------|-------|----------|-----------------|
 | `unmatched_login` | auth | POST endpoint + credential fields | New URL pattern in `auth_patterns.json` or new auth strategy |
 | `auth_unknown` | auth | Signal flags + description | New auth strategy implementation |
-| `unmatched_restart` | actions | POST, PUT or PATCH endpoint and method + action-like params or JSON body keys + the index of every entry that sent it; a repeated request is one gap | New URL pattern in `action_patterns.json` |
-| `unmatched_logout` | actions | POST, PUT or PATCH endpoint and method + action-like params or JSON body keys + the index of every entry that sent it; a repeated request is one gap | New URL pattern in `action_patterns.json` |
 
 Well-known modems with standard patterns produce zero core gaps.
 Novel modems produce gaps that require development before onboarding.

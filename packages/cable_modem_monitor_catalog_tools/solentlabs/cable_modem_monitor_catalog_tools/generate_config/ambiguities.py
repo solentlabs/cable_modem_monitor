@@ -10,7 +10,9 @@ the key's field, written into every array of the analysis section before
 parser.yaml is built. None, or no resolution, drops the key.
 
 ``auth.strategy`` picks one of analysis's strategy candidates, and the
-auth block is built from that candidate's fields.
+auth block is built from that candidate's fields. ``actions.<kind>.endpoint``
+picks one of analysis's action candidates the same way: the action is the
+candidate's whole observed request, body included.
 
 Per docs/ONBOARDING_SPEC.md § Ambiguities.
 """
@@ -19,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..analysis.ambiguity import split_parser_path
+from ..analysis.ambiguity import action_endpoint_kind, split_parser_path
 from ..analysis.mapping.field_resolution import known_field_type
 from .mappings import section_mappings
 
@@ -37,6 +39,18 @@ def resolved_auth(analysis: dict[str, Any]) -> dict[str, Any]:
     return auth
 
 
+def resolved_actions(analysis: dict[str, Any]) -> dict[str, Any]:
+    """The analysis actions, each one resolved from endpoint candidates replaced by that candidate."""
+    actions: dict[str, Any] = dict(analysis.get("actions") or {})
+    candidates = actions.get("candidates") or {}
+    for ambiguity in analysis.get("ambiguities") or []:
+        kind = action_endpoint_kind(ambiguity["field"])
+        value = (ambiguity.get("resolution") or {}).get("value")
+        if kind is not None and value in candidates.get(kind, {}):
+            actions[kind] = candidates[kind][value]
+    return actions
+
+
 def apply_resolutions(
     analysis: dict[str, Any],
     modem_dict: dict[str, Any],
@@ -48,8 +62,18 @@ def apply_resolutions(
         path = ambiguity["field"]
         value = _resolved_value(ambiguity, errors)
         parser_target = split_parser_path(path)
+        kind = action_endpoint_kind(path)
         if parser_target is not None:
             _set_key_field(sections or {}, parser_target, value, path, errors)
+        elif kind is not None:
+            # resolved_actions wrote the whole candidate; an endpoint alone has no body
+            offered = ((analysis.get("actions") or {}).get("candidates") or {}).get(kind, {})
+            if value is not None and value not in offered:
+                listed = ", ".join(offered) or "none"
+                errors.append(
+                    f"{path} resolves to {value}, which has no stored request to write (endpoints with "
+                    f"one: {listed}); resolve it to none, as its analysis warning explains"
+                )
         elif value is not None:
             _set_path(modem_dict, path, value)
 

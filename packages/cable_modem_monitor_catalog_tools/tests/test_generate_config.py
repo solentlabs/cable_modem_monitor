@@ -338,6 +338,85 @@ class TestAuthStrategyResolution:
 
 
 # ---------------------------------------------------------------------------
+# Spot-check: actions.<kind>.endpoint resolution picks a candidate action
+# ---------------------------------------------------------------------------
+
+_RESTART_CANDIDATE = {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/devctl",
+    "source": "observed",
+    "params": {"RebootYes": "0x01", "WipeNo": "0x00"},
+    "pre_fetch_url": "/device.asp",
+}
+
+
+def _with_restart_candidate(resolution: dict[str, Any] | None) -> dict[str, Any]:
+    """table_form_auth with no restart detected and one observed restart candidate."""
+    fixture = load_fixture(VALID_DIR / "table_form_auth.json")
+    actions = fixture["_analysis"].setdefault("actions", {})
+    actions["restart"] = None
+    actions["candidates"] = {"restart": {"/goform/devctl": dict(_RESTART_CANDIDATE)}}
+    fixture["_analysis"]["ambiguities"] = [
+        {
+            "field": "actions.restart.endpoint",
+            "blocking": False,
+            "candidates": [{"value": "/goform/devctl", "evidence": [], "corroborated_by": []}],
+            "resolution": resolution,
+        }
+    ]
+    return fixture
+
+
+# The config holds the request; source is analysis provenance, not config
+_RESTART_WRITTEN = {k: v for k, v in _RESTART_CANDIDATE.items() if k != "source"}
+
+# ┌──────────────────────────────┬────────────────────────┬────────────────────────────┐
+# │ resolution                   │ restart written        │ description                │
+# ├──────────────────────────────┼────────────────────────┼────────────────────────────┤
+# │ /goform/devctl               │ the whole candidate    │ resolved among candidates  │
+# │ none with a reason           │ absent                 │ explicit none              │
+# │ unresolved                   │ absent                 │ non-blocking, omitted      │
+# └──────────────────────────────┴────────────────────────┴────────────────────────────┘
+#
+# fmt: off
+_RESTART_RESOLUTION_CASES: list[tuple[dict[str, Any] | None, dict[str, Any] | None, str]] = [
+    # (resolution,                                  restart written,     id)
+    ({"value": "/goform/devctl"},                   _RESTART_WRITTEN,    "resolved"),
+    ({"value": None, "reason": "not the reboot"},   None,                "explicit-none"),
+    (None,                                          None,                "unresolved"),
+]
+# fmt: on
+
+
+class TestActionEndpointResolution:
+    """A resolved action endpoint brings its candidate's whole action, body included."""
+
+    @pytest.mark.parametrize(
+        ("resolution", "expected"),
+        [(r, e) for r, e, _ in _RESTART_RESOLUTION_CASES],
+        ids=[c[2] for c in _RESTART_RESOLUTION_CASES],
+    )
+    def test_restart_written(self, resolution: dict[str, Any] | None, expected: dict[str, Any] | None) -> None:
+        """The written restart is the resolved candidate, or absent."""
+        fixture = _with_restart_candidate(resolution)
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        restart = (yaml.safe_load(result.modem_yaml).get("actions") or {}).get("restart")
+        assert restart == expected
+
+    @pytest.mark.parametrize("stored", [True, False], ids=["not-offered", "offered-without-request"])
+    def test_endpoint_without_stored_request_is_an_error(self, stored: bool) -> None:
+        """Only a stored request can be written: an unoffered endpoint, or one whose bodies differed, has none."""
+        fixture = _with_restart_candidate({"value": "/goform/devctl" if not stored else "/goform/other"})
+        if not stored:
+            fixture["_analysis"]["actions"]["candidates"] = {}
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert not result.validation.valid
+        assert any("actions.restart.endpoint" in e and "no stored request" in e for e in result.validation.errors)
+
+
+# ---------------------------------------------------------------------------
 # Spot-check: channel key resolutions (parser.<section>.<key>)
 # ---------------------------------------------------------------------------
 

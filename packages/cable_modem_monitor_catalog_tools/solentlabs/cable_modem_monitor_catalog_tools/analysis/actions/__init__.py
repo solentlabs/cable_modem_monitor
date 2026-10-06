@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..types import CoreGap
+from ..ambiguity import Ambiguity
 from .hnap import detect_hnap_actions
 from .http import detect_http_actions
 from .types import ActionDetail, ActionsDetail
@@ -23,7 +23,7 @@ def detect_actions(
     entries: list[dict[str, Any]],
     transport: str,
     warnings: list[str] | None = None,
-    core_gaps: list[CoreGap] | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> ActionsDetail:
     """Detect logout and restart actions from HAR entries.
 
@@ -34,15 +34,15 @@ def detect_actions(
         entries: HAR ``log.entries`` list.
         transport: Detected transport (``http``, ``hnap`` or ``cbn``).
         warnings: Mutable list to append suggestions to.
-        core_gaps: Mutable list to append core gap items to.
+        ambiguities: Mutable list to append action endpoint candidates to.
 
     Returns:
         ActionsDetail with detected actions and credential annotations.
     """
     if warnings is None:
         warnings = []
-    if core_gaps is None:
-        core_gaps = []
+    if ambiguities is None:
+        ambiguities = []
     if transport == "hnap":
         result = detect_hnap_actions(entries)
     elif transport == "cbn":
@@ -50,6 +50,6 @@ def detect_actions(
         # invent an http action that transport cbn rejects.
         result = ActionsDetail()
     else:
-        result = detect_http_actions(entries, warnings, core_gaps)
+        result = detect_http_actions(entries, warnings, ambiguities)
     result._classify_credentials()
     return result

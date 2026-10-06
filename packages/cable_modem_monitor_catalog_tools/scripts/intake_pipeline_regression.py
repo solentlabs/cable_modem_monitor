@@ -41,7 +41,7 @@ import yaml
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading import grade_actions
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.grading import grade_auth
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
-from solentlabs.cable_modem_monitor_catalog_tools.generate_config.ambiguities import apply_resolutions
+from solentlabs.cable_modem_monitor_catalog_tools.generate_config.ambiguities import apply_resolutions, resolved_actions
 from solentlabs.cable_modem_monitor_catalog_tools.generate_config.modem import type_resolved_actions
 from solentlabs.cable_modem_monitor_catalog_tools.grading import GRADE_SEVERITY
 from solentlabs.cable_modem_monitor_catalog_tools.regression import (
@@ -378,9 +378,9 @@ def _grade_actions_stage(
     """Grade detected actions, plus any a resolution produced, against the committed config.
 
     Runs before generation so actions are graded even when a later stage
-    fails. A resolved action (the json_rpc restart) is built by
-    generate_config's own resolution step, so the grade sees exactly
-    what generation writes.
+    fails. A resolved action (the json_rpc restart, an http endpoint
+    candidate) is built by generate_config's own resolution steps, so the
+    grade sees exactly what generation writes.
     """
     if not committed:
         return
@@ -388,7 +388,7 @@ def _grade_actions_stage(
     # Actions only: no sections, so channel key resolutions have nothing to rewrite.
     apply_resolutions(analysis_data, resolved, None, [])
     type_resolved_actions(resolved)
-    detected = {**(analysis_data.get("actions") or {}), **resolved.get("actions", {})}
+    detected = {**resolved_actions(analysis_data), **resolved.get("actions", {})}
     result.grades["actions"] = grade_actions(detected, committed.get("actions"))
 
 

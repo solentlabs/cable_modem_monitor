@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions import detect_actions
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.types import ActionsDetail
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.ambiguity import Ambiguity
 from tests._helpers import collect_fixtures, load_fixture
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "actions" / "http"
@@ -127,50 +129,140 @@ def _post(path: str, post_data: dict) -> dict:
     return {"request": {"method": "POST", "url": f"http://192.168.100.1{path}", "postData": post_data}, "response": {}}
 
 
+def _detect(entries: list[dict]) -> tuple[ActionsDetail, list[Ambiguity]]:
+    """Detect HTTP actions; return the actions and the ambiguities."""
+    ambiguities: list[Ambiguity] = []
+    actions = detect_actions(entries, "http", [], ambiguities)
+    return actions, ambiguities
+
+
 @pytest.mark.parametrize(
-    ("post_data", "expected_category"),
+    ("post_data", "expected_field"),
     [
         # Form body with an action-like param name
-        ({"params": [{"name": "RebootAction", "value": "1"}]}, "unmatched_restart"),
+        ({"params": [{"name": "RebootAction", "value": "1"}]}, "actions.restart.endpoint"),
         # JSON body: its top-level keys are read the same way
-        ({"mimeType": "application/json", "text": '{"rebootNow": {"enable": true}}'}, "unmatched_restart"),
-        ({"mimeType": "application/json", "text": '{"doLogout": true}'}, "unmatched_logout"),
+        ({"mimeType": "application/json", "text": '{"rebootNow": {"enable": true}}'}, "actions.restart.endpoint"),
+        ({"mimeType": "application/json", "text": '{"doLogout": true}'}, "actions.logout.endpoint"),
         # JSON body with no action-like key
         ({"mimeType": "application/json", "text": '{"language": "en"}'}, None),
     ],
 )
-def test_unmatched_action_post(post_data: dict, expected_category: str | None) -> None:
-    """An action-like POST at an unknown URL is a core gap, whatever its body encoding."""
-    core_gaps: list = []
-    detect_actions([_post("/api/v9/devctl", post_data)], "http", [], core_gaps)
-    assert [g.category for g in core_gaps] == ([expected_category] if expected_category else [])
+def test_unmatched_action_write_is_candidate(post_data: dict, expected_field: str | None) -> None:
+    """An action-like write at an unknown URL is a non-blocking endpoint candidate."""
+    _, ambiguities = _detect([_post("/api/v9/devctl", post_data)])
+    expected = [(expected_field, False, ["/api/v9/devctl"])] if expected_field else []
+    assert [(a.field, a.blocking, [c.value for c in a.candidates]) for a in ambiguities] == expected
 
 
-@pytest.mark.parametrize(("method", "gap"), [("POST", True), ("PUT", True), ("PATCH", True), ("GET", False)])
-def test_unmatched_action_any_write_method(method: str, gap: bool) -> None:
-    """A logout sent by any write method at an unknown URL is a core gap; a GET carries no body to read."""
+@pytest.mark.parametrize(("method", "candidate"), [("POST", True), ("PUT", True), ("PATCH", True), ("GET", False)])
+def test_unmatched_action_any_write_method(method: str, candidate: bool) -> None:
+    """A logout sent by any write method at an unknown URL is a candidate; a GET carries no body to read."""
     entry = _post("/actionHandler/ajaxSet_signout.php", {"mimeType": "application/json", "text": '{"DoLogOut": 1}'})
     entry["request"]["method"] = method
-    core_gaps: list = []
-    detect_actions([entry], "http", [], core_gaps)
-    assert [g.category for g in core_gaps] == (["unmatched_logout"] if gap else [])
-    assert all(g.evidence["method"] == method for g in core_gaps)
+    actions, ambiguities = _detect([entry])
+    assert [a.field for a in ambiguities] == (["actions.logout.endpoint"] if candidate else [])
+    candidates = actions.candidates.get("logout", {})
+    assert [(c.method, c.json_body) for c in candidates.values()] == ([(method, {"DoLogOut": 1})] if candidate else [])
 
 
-def test_repeated_unmatched_action_is_one_gap() -> None:
-    """The same write sent twice is one gap citing both entries; another endpoint is its own."""
+def test_repeated_unmatched_action_is_one_candidate() -> None:
+    """The same write sent twice is one candidate; another endpoint is another candidate of the same ambiguity."""
     logout = {"mimeType": "application/json", "text": '{"DoLogOut": 1}'}
     entries = [
         _post("/actionHandler/ajaxSet_signout.php", logout),
         _post("/actionHandler/ajaxSet_signout.php", logout),
         _post("/actionHandler/ajaxSet_signoff.php", logout),
     ]
-    core_gaps: list = []
-    detect_actions(entries, "http", [], core_gaps)
-    assert [(g.evidence["endpoint"], g.evidence["entries"]) for g in core_gaps] == [
-        ("/actionHandler/ajaxSet_signout.php", [0, 1]),
-        ("/actionHandler/ajaxSet_signoff.php", [2]),
+    _, ambiguities = _detect(entries)
+    assert [(a.field, [(c.value, len(c.evidence)) for c in a.candidates]) for a in ambiguities] == [
+        (
+            "actions.logout.endpoint",
+            [("/actionHandler/ajaxSet_signout.php", 1), ("/actionHandler/ajaxSet_signoff.php", 1)],
+        )
     ]
+
+
+# One form, two operations: radios pick which, so only an observed body is safe to replay
+_SHARED_FORM = (
+    '<form action=/goform/devctl method=POST name="Device">'
+    '<input type="radio" name="RebootYes" value=0x01><input type="radio" name="RebootNo" value=0x00 CHECKED>'
+    '<input type="radio" name="WipeYes" value=0x01><input type="radio" name="WipeNo" value=0x00 CHECKED></form>'
+)
+_REBOOT = "RebootYes=0x01&WipeNo=0x00"
+_WIPE = "RebootNo=0x00&WipeYes=0x01"
+
+
+def _page(path: str) -> dict:
+    """A captured page whose form posts to /goform/devctl."""
+    return {
+        "request": {"method": "GET", "url": f"http://192.168.100.1{path}"},
+        "response": {"status": 200, "content": {"text": _SHARED_FORM}},
+    }
+
+
+def _sent(body: str, referer: str = "/device.asp", mime: str = "application/x-www-form-urlencoded") -> dict:
+    """The form's POST to /goform/devctl from ``referer``."""
+    write = _post("/goform/devctl", {"mimeType": mime, "text": body})
+    write["request"]["headers"] = [{"name": "Referer", "value": f"http://192.168.100.1{referer}"}]
+    return write
+
+
+def test_candidate_carries_the_observed_request() -> None:
+    """The candidate is the request as sent: its exact body, the sending page as evidence and pre-fetch."""
+    actions, ambiguities = _detect([_page("/device.asp"), _sent(_REBOOT)])
+
+    assert actions.restart is None
+    restart = actions.candidates["restart"]["/goform/devctl"]
+    assert (restart.type, restart.method, restart.source) == ("http", "POST", "observed")
+    assert restart.params == {"RebootYes": "0x01", "WipeNo": "0x00"}
+    assert restart.pre_fetch_url == "/device.asp"
+    assert [[(e.source, e.snippet) for e in c.evidence] for c in ambiguities[0].candidates] == [
+        [("/device.asp", _REBOOT)]
+    ]
+    assert actions.to_dict()["candidates"]["restart"]["/goform/devctl"]["params"] == restart.params
+
+
+_ENCODED = '{"reboot": {"user": "FIELD_0a1b2c3d"}}'
+
+# ┌───────────────────────────────┬──────────┬──────────────────────────────┬──────────────────────────────┐
+# │ writes to /goform/devctl      │ stored   │ evidence snippets            │ description                  │
+# ├───────────────────────────────┼──────────┼──────────────────────────────┼──────────────────────────────┤
+# │ reboot, reboot                │ yes      │ reboot                       │ a repeat adds nothing        │
+# │ wipe, reboot                  │ no       │ wipe, reboot                 │ bodies differ: none written  │
+# │ encoded JSON body             │ no       │ the encoded body             │ no firmware value to send    │
+# └───────────────────────────────┴──────────┴──────────────────────────────┴──────────────────────────────┘
+#
+# fmt: off
+_BODY_CASES: list[tuple[list[dict], bool, list[str], str]] = [
+    # (writes,                                          stored, snippets,           id)
+    ([_sent(_REBOOT), _sent(_REBOOT)],                  True,   [_REBOOT],          "repeat"),
+    ([_sent(_WIPE), _sent(_REBOOT)],                    False,  [_WIPE, _REBOOT],   "bodies-differ"),
+    ([_sent(_ENCODED, mime="application/json")],        False,  [_ENCODED],         "encoded"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("writes", "stored", "snippets"), [(w, s, n) for w, s, n, _ in _BODY_CASES], ids=[c[3] for c in _BODY_CASES]
+)
+def test_candidate_stored_only_with_one_plain_body(writes: list[dict], stored: bool, snippets: list[str]) -> None:
+    """An endpoint names an action only when the capture sent it one plain body; every body is evidence."""
+    actions, ambiguities = _detect([_page("/device.asp"), *writes])
+    assert ("/goform/devctl" in actions.candidates.get("restart", {})) == stored
+    assert [e.snippet for e in ambiguities[0].candidates[0].evidence] == snippets
+
+
+def test_params_only_body_is_evidence() -> None:
+    """A capture that kept form params but no body text still shows the LLM what was sent."""
+    _, ambiguities = _detect([_post("/api/v9/devctl", {"params": [{"name": "RebootAction", "value": "1"}]})])
+    assert [e.snippet for e in ambiguities[0].candidates[0].evidence] == ["RebootAction=1"]
+
+
+def test_pre_fetch_is_the_sending_page() -> None:
+    """Two pages post to one endpoint: the pre-fetch is the page that sent the request."""
+    actions, _ = _detect([_page("/status.asp"), _page("/device.asp"), _sent(_REBOOT, referer="/device.asp")])
+    assert actions.candidates["restart"]["/goform/devctl"].pre_fetch_url == "/device.asp"
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH"])

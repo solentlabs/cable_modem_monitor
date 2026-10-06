@@ -10,6 +10,7 @@ Per docs/ONBOARDING_SPEC.md § Ambiguities.
 
 from __future__ import annotations
 
+import re
 from dataclasses import (
     dataclass,
     field as dataclass_field,
@@ -73,7 +74,9 @@ def corroborate(ambiguities: list[Ambiguity], confirmed_config_values: dict[str,
             candidate.corroborated_by = list(declared.get(candidate.value, []))
         corroborated = [c for c in ambiguity.candidates if c.corroborated_by]
         # Still reviewed: fleet evidence narrows the judgment, the user confirms it.
-        if ambiguity.resolution is None and len(corroborated) == 1:
+        # An action endpoint is never pre-filled: one endpoint can serve several
+        # operations (a multi-purpose CGI), so the body, not the path, names it.
+        if ambiguity.resolution is None and len(corroborated) == 1 and action_endpoint_kind(ambiguity.field) is None:
             ambiguity.resolution = {"value": corroborated[0].value, "source": "fleet"}
 
 
@@ -94,3 +97,14 @@ def split_parser_path(path: str) -> tuple[str, str] | None:
     # The key is the rest of the path, so a dotted wire key survives.
     section, _, key = path[len(PARSER_PATH_PREFIX) :].partition(".")
     return section, key
+
+
+# An HTTP action no pattern found offers endpoint candidates (ONBOARDING_SPEC § Phase 4);
+# resolving one brings that candidate's whole observed request.
+_ACTION_ENDPOINT_PATH = re.compile(r"^actions\.(logout|restart)\.endpoint$")
+
+
+def action_endpoint_kind(path: str) -> str | None:
+    """The action an endpoint-candidate path names (logout or restart), or None."""
+    match = _ACTION_ENDPOINT_PATH.match(path)
+    return match.group(1) if match else None

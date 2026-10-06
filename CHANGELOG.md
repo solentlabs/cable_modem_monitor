@@ -56,6 +56,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   encrypted values is marked `encoded` with its keys, so the next step
   is a recapture in the first case and Core's `body_encoding: session`
   in the second.
+- **The intake tools offer an unknown action endpoint as a candidate.**
+  A captured restart or logout sent to a URL no pattern knows was a core
+  gap that stopped intake. It is now an `actions.<kind>.endpoint`
+  ambiguity whose candidate is the request as sent, body included. An
+  endpoint the capture sent different bodies, such as a shared reboot
+  and factory-reset form, stores none and asks for a capture of the
+  action alone. (#221)
 - **The intake score skips the Arris SB8200 (CBN) fixture.** It is
   hand-built, not a browser capture, and now says so like the other
   synthetic fixtures, so CBN intake is graded on the Compal CH7465MT

@@ -70,13 +70,22 @@ class ActionsDetail:
 
     logout: ActionDetail | None = None
     restart: ActionDetail | None = None
+    # Observed writes offered for an action not found, by kind then endpoint;
+    # resolving actions.<kind>.endpoint picks one (ONBOARDING_SPEC § Phase 4)
+    candidates: dict[str, dict[str, ActionDetail]] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict for MCP tool output."""
-        return {
+        result: dict[str, Any] = {
             "logout": self.logout.to_dict() if self.logout else None,
             "restart": self.restart.to_dict() if self.restart else None,
         }
+        if self.candidates:
+            result["candidates"] = {
+                kind: {endpoint: action.to_dict() for endpoint, action in by_endpoint.items()}
+                for kind, by_endpoint in self.candidates.items()
+            }
+        return result
 
     def _classify_credentials(self) -> None:
         """Identify and neutralize credential params in detected actions.
@@ -86,7 +95,8 @@ class ActionsDetail:
         ``credential_params`` so the MCP output annotates which params
         were credentials vs action triggers.
         """
-        for action in (self.logout, self.restart):
+        offered = [action for by_endpoint in self.candidates.values() for action in by_endpoint.values()]
+        for action in (self.logout, self.restart, *offered):
             if action and action.params:
                 cred_names = _detect_credential_params(action.params)
                 action.credential_params = sorted(cred_names)

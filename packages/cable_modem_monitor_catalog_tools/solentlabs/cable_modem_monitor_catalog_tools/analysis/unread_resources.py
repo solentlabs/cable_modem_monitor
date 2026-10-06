@@ -4,8 +4,8 @@ Lists the HAR's JSON endpoints that the generated config will not read,
 each with its key skeleton and value types. It is the LLM's view of what
 nothing in the pipeline looked at.
 
-**Why this exists:** gap categories are endpoint-level and cover auth and
-actions only. A data endpoint the generator never maps produces no gap
+**Why this exists:** gap categories are endpoint-level and cover auth
+only. A data endpoint the generator never maps produces no gap
 and no warning — intake writes a ``parser.yaml`` that omits it, every
 gate stays green, and the page is invisible. Issue #185's HAR carried
 ``/rest/v1/cablemodem/serviceflows`` at 200 with four registered Tier-2
@@ -192,7 +192,9 @@ def _mapped_endpoints(
             if isinstance(value, str) and value:
                 mapped.add(_normalize_endpoint(value))
 
-    for action in (actions.logout, actions.restart):
+    # Like strategy candidates, an unresolved action's candidates name requests the capture made.
+    offered = [action for by_endpoint in actions.candidates.values() for action in by_endpoint.values()]
+    for action in (actions.logout, actions.restart, *offered):
         if action is None:
             continue
         for value in (action.endpoint, action.pre_fetch_url):

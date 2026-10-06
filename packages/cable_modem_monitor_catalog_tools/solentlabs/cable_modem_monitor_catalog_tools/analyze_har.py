@@ -128,7 +128,7 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
     session_result = SessionDetail.detect(entries, transport_result.transport, auth_result.strategy, warnings)
 
     # Phase 4: Actions
-    actions_result = detect_actions(entries, transport_result.transport, warnings, core_gaps)
+    actions_result = detect_actions(entries, transport_result.transport, warnings, ambiguities)
     if transport_result.transport == "cbn":
         ambiguities.extend(cbn_action_ambiguities(entries))
 

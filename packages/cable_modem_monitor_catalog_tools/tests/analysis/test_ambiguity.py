@@ -89,3 +89,15 @@ def test_to_dict_contract() -> None:
         ],
         "resolution": None,
     }
+
+
+def test_action_endpoint_never_prefilled() -> None:
+    """A corroborated action endpoint is annotated but not pre-filled: the body, not the path, names the operation."""
+    ambiguity = Ambiguity(
+        field="actions.restart.endpoint",
+        blocking=False,
+        candidates=[Candidate(value="/setup.cgi", evidence=[Evidence(source="/page", snippet="todo=save")])],
+    )
+    corroborate([ambiguity], {"actions.restart.endpoint": {"/setup.cgi": ["x/1"]}})
+    assert ambiguity.candidates[0].corroborated_by == ["x/1"]
+    assert ambiguity.resolution is None

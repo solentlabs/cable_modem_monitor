@@ -287,8 +287,14 @@ Report what was detected:
 - Auth: `{analysis["auth"]["strategy"]}` (confidence: `{analysis["auth"]["confidence"]}`);
   empty when `auth.strategy` is an ambiguity, with each candidate's fields
   in `analysis["auth"]["candidates"]`
-- Actions: logout={observed/source_inferred/none}, restart={observed/source_inferred/none}
+- Actions: logout={observed/source_inferred/candidates/none}, restart={observed/source_inferred/candidates/none}
   - `observed` — request appeared in HAR traffic (highest confidence)
+  - `candidates` — an action-like write went to an endpoint no pattern matches;
+    resolve `actions.<kind>.endpoint` from its cited page and body like any
+    ambiguity, and the resolution brings that request's action whole. An
+    endpoint the capture sent several bodies, or an encoded one, stores no
+    request: resolve it to none and ask the contributor for a capture of
+    the action alone, never a body chosen from the evidence
   - `source_inferred` — endpoint referenced in captured page source or matches a
     working family-member modem in the catalog (add to config; flag for contributor
     confirmation that the endpoint works and, separately, whether a Cookie header
@@ -355,8 +361,6 @@ doesn't support yet. **Stop config generation.** Report:
    - `unmatched_login`: new login URL pattern needed in `auth_patterns.json`,
      or a new auth strategy needed in Core
    - `auth_unknown`: new auth strategy needed in Core
-   - `unmatched_restart` / `unmatched_logout`: new action URL pattern needed
-     in `action_patterns.json`
 
 Format the report so it can be pasted into a GitHub issue for a
 development effort. Do NOT try to resolve gaps by patching the
