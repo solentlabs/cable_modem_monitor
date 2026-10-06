@@ -957,7 +957,7 @@ class ConnectionStatus(Enum):
     NO_SIGNAL = "no_signal"
 
 # Note: The "Degraded" display state in the HA Status sensor cascade
-# comes from HealthStatus.DEGRADED (ICMP responds, HTTP fails), which
+# comes from HealthStatus.DEGRADED (ICMP responds, TCP fails), which
 # is a health probe signal. ConnectionStatus has no DEGRADED value.
 
 

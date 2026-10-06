@@ -122,6 +122,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Status sensor's diagnosis names the right probes.** Degraded
+  said "HTTP is failing" and ICMP Blocked said "HTTP works"; both states
+  come from ping and a TCP connect, so the texts now say "responds to
+  ICMP but not to TCP" and "responds to TCP but not to ICMP".
 - **The READMEs no longer claim encrypted credential storage.** Home
   Assistant keeps a config entry's credentials in its configuration
   files, not in encrypted storage. The status list, the health-probe

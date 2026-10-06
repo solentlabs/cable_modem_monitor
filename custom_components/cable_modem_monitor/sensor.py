@@ -118,8 +118,9 @@ def _compute_display_status(
 
 _DIAGNOSIS_MAP: dict[HealthStatus, str] = {
     HealthStatus.RESPONSIVE: "Modem is responsive to health probes",
-    HealthStatus.DEGRADED: ("Modem responds to ICMP but HTTP is failing" " — web server may be hung"),
-    HealthStatus.ICMP_BLOCKED: ("HTTP works but ICMP is blocked" " — network may filter ping"),
+    # Status comes from ICMP and TCP; HTTP HEAD only measures latency (ORCHESTRATION_SPEC § Probe Strategy)
+    HealthStatus.DEGRADED: ("Modem responds to ICMP but not to TCP" " — web server may be hung"),
+    HealthStatus.ICMP_BLOCKED: ("Modem responds to TCP but not to ICMP" " — network may filter ping"),
     HealthStatus.UNRESPONSIVE: ("Modem is not responding to any health probes"),
 }
 

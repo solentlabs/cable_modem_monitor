@@ -16,7 +16,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     HealthStatus,
 )
 
-from custom_components.cable_modem_monitor.sensor import _compute_display_status
+from custom_components.cable_modem_monitor.sensor import _DIAGNOSIS_MAP, _compute_display_status
 
 # Aliases for table readability
 _C = ConnectionStatus
@@ -81,3 +81,32 @@ def test_compute_display_status(
 ) -> None:
     """Verify the 10-level priority cascade produces the correct display state."""
     assert _compute_display_status(connection, health, docsis) == expected
+
+
+# Status comes from ICMP and TCP only; HTTP HEAD is latency (ORCHESTRATION_SPEC § Probe Strategy),
+# so a diagnosis names the probes that decided it.
+#
+# ┌──────────────┬─────────────────────────────────────────────────────────────────┐
+# │ health       │ diagnosis                                                       │
+# ├──────────────┼─────────────────────────────────────────────────────────────────┤
+# │ responsive   │ Modem is responsive to health probes                            │
+# │ degraded     │ Modem responds to ICMP but not to TCP — web server may be hung  │
+# │ icmp_blocked │ Modem responds to TCP but not to ICMP — network may filter ping │
+# │ unresponsive │ Modem is not responding to any health probes                    │
+# └──────────────┴─────────────────────────────────────────────────────────────────┘
+#
+# fmt: off
+DIAGNOSIS_CASES: list[tuple[HealthStatus, str]] = [
+    (HealthStatus.RESPONSIVE,   "Modem is responsive to health probes"),
+    (HealthStatus.DEGRADED,     "Modem responds to ICMP but not to TCP — web server may be hung"),
+    (HealthStatus.ICMP_BLOCKED, "Modem responds to TCP but not to ICMP — network may filter ping"),
+    (HealthStatus.UNRESPONSIVE, "Modem is not responding to any health probes"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(("health", "diagnosis"), DIAGNOSIS_CASES, ids=[c[0].value for c in DIAGNOSIS_CASES])
+def test_diagnosis_names_the_deciding_probes(health: HealthStatus, diagnosis: str) -> None:
+    """Each health state's diagnosis describes the ICMP and TCP probes that set it, never HTTP."""
+    assert _DIAGNOSIS_MAP[health] == diagnosis
+    assert "HTTP" not in _DIAGNOSIS_MAP[health]

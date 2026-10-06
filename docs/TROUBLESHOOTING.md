@@ -66,7 +66,7 @@ The integration uses health probes to diagnose connectivity independently of dat
 | ICMP | TCP | Health Status | Diagnosis |
 | ------ | ------ | --------------- | ----------- |
 | Pass | Pass | `responsive` | Fully responsive |
-| Pass | Fail | `degraded` | Answers ping but refuses connections; web server may be hung |
+| Pass | Fail | `degraded` | Answers ping but not TCP; web server may be hung |
 | Fail | Pass | `icmp_blocked` | Network blocks ICMP |
 | Fail | Fail | `unresponsive` | Modem is down |
 
