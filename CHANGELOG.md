@@ -111,6 +111,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The intake score reads a POSTed page from its POST.** A page
+  parser.yaml fetches by POST (`requests:`) was graded from the last
+  response to its URL, so a later GET serving empty tables would have
+  replaced the filled ones. It is now read only from a response to the
+  declared request.
 - **The Arris SB8200 PHP firmware can be picked in setup.** On
   3.14.15-beta.2 "JSON Login (php)" was missing from the SB8200
   picker: its directory holds only a named variant file, and catalog

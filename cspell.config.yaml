@@ -693,6 +693,7 @@ words:
 
   # Spec/doc vocabulary (incl. British spellings)
   - pageref
+  - refetches
   - Correctables
   - unspaced
   - unredacted

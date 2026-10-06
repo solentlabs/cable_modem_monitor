@@ -44,6 +44,12 @@ Keys are the URL paths on the fetch list. Values are parsed HTML.
   modems to share a single parser.yaml.
 - Values are `BeautifulSoup` objects parsed from the response body
 - One entry per unique path (see deduplication below)
+- A capture read offline (`build_resource_dict(har, requests=...)`)
+  takes each path's last 200 response. A path parser.yaml declares in
+  `requests:` takes only a response to that request (its method and
+  every declared form field), as the loader fetches it, and is absent
+  when the capture holds none: a GET of the same URL can serve empty
+  tables ([PARSING_SPEC.md § Fetch List Derivation](PARSING_SPEC.md#fetch-list-derivation)).
 
 ### HTTP Transport — Structured Formats
 

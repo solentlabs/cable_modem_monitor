@@ -21,8 +21,9 @@ import base64
 import json
 import logging
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qsl, urlparse
 from xml.etree.ElementTree import Element, ParseError
 
@@ -30,6 +31,9 @@ import defusedxml.ElementTree as DefusedET
 from bs4 import BeautifulSoup
 
 from .loaders.html_normalize import normalize_html
+
+if TYPE_CHECKING:
+    from .models.parser_config.config import ResourceRequest
 
 _logger = logging.getLogger(__name__)
 
@@ -115,6 +119,7 @@ def build_resource_dict(
     har_path: str,
     transport: str | None = None,
     getter_endpoint: str = "/xml/getter.xml",
+    requests: Mapping[str, ResourceRequest] | None = None,
 ) -> dict[str, Any]:
     """Build a resource dict from HAR response bodies.
 
@@ -128,6 +133,8 @@ def build_resource_dict(
         har_path: Path to the HAR file.
         transport: The entry's transport, when the caller knows it.
         getter_endpoint: The CBN getter path (``form_cbn`` auth's field).
+        requests: parser.yaml's ``requests:`` map; a path it declares takes
+            only a response to that request.
 
     Returns:
         Resource dict for the ``ModemParserCoordinator``.
@@ -147,7 +154,7 @@ def build_resource_dict(
     if hnap_resources:
         return hnap_resources
 
-    return _build_http_resources(entries)
+    return _build_http_resources(entries, requests or {})
 
 
 def json_rpc_har_results(entries: list[dict[str, Any]]) -> dict[str, Any]:
@@ -285,6 +292,7 @@ def _build_hnap_resources(
 
 def _build_http_resources(
     entries: list[dict[str, Any]],
+    requests: Mapping[str, ResourceRequest],
 ) -> dict[str, Any]:
     """Build HTTP resource dict from HAR entries.
 
@@ -306,6 +314,10 @@ def _build_http_resources(
         url_path = urlparse(url).path
         if not url_path:
             continue
+        # A path parser.yaml fetches by POST is read from that POST, as the
+        # loader fetches it: a GET of the same URL may serve empty tables
+        if url_path in requests and not _answers_request(request, requests[url_path]):
+            continue
 
         content = response.get("content", {})
         text = _content_text(content, url_path)
@@ -317,6 +329,21 @@ def _build_http_resources(
             resources[url_path] = decoded
 
     return resources
+
+
+def _answers_request(request: dict[str, Any], spec: ResourceRequest) -> bool:
+    """Whether a captured request is the declared one: its method, and every declared form field."""
+    if request.get("method", "").upper() != spec.method:
+        return False
+    post_data = request.get("postData") or {}
+    # The body text is what went on the wire; params can be sanitized apart
+    # from it, or kept encoded, so they stand in only when there is no text.
+    text = post_data.get("text") or ""
+    if text:
+        sent = dict(parse_qsl(text, keep_blank_values=True))
+    else:
+        sent = {p.get("name", ""): p.get("value", "") for p in post_data.get("params") or []}
+    return all(sent.get(name) == value for name, value in spec.form.items())
 
 
 def _content_text(content: dict[str, Any], url: str) -> str:

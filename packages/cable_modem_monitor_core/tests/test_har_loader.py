@@ -20,6 +20,7 @@ from solentlabs.cable_modem_monitor_core.har import (
     build_resource_dict,
     load_har_json,
 )
+from solentlabs.cable_modem_monitor_core.models.parser_config.config import ResourceRequest
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "har_loader"
 
@@ -584,3 +585,65 @@ def test_cbn_getter_endpoint_is_configurable(tmp_path: Path) -> None:
     assert set(
         build_resource_dict(str(_har_file(tmp_path, calls)), transport="cbn", getter_endpoint="/cgi/get.xml")
     ) == {"10"}
+
+
+# =============================================================================
+# requests: a path parser.yaml fetches by POST is graded from that POST
+# =============================================================================
+
+_STATUS = "https://192.168.100.1/cmconnectionstatus.php"
+_STATUS_PATH = "/cmconnectionstatus.php"
+_FILLED = "<table><tr><td>filled</td></tr></table>"
+_EMPTY = "<table></table>"
+_MORE = {_STATUS_PATH: ResourceRequest(method="POST", form={"more": "1"})}
+
+
+def _posted(body: str, form: str = "more=1&submit=Please+wait", params: list[dict] | None = None) -> dict:
+    """The page's own form POST back to the status URL."""
+    entry = _har_entry(_STATUS, body, method="POST")
+    entry["request"]["postData"] = {"mimeType": "application/x-www-form-urlencoded", "text": form}
+    if params is not None:
+        entry["request"]["postData"]["params"] = params
+    return entry
+
+
+# Params kept apart from the body text, as a sanitizer or an encoded export leaves them
+_STALE_PARAMS = [{"name": "more", "value": "FIELD_0a1b2c3d"}]
+
+
+# ┌──────────────────────────┬─────────────┬──────────────┬──────────────────────────────────────┐
+# │ entries                  │ requests    │ resource     │ description                          │
+# ├──────────────────────────┼─────────────┼──────────────┼──────────────────────────────────────┤
+# │ POST filled, GET empty   │ POST more=1 │ filled       │ a later GET cannot replace the POST  │
+# │ GET empty, POST filled   │ POST more=1 │ filled       │ the POST, wherever it sits           │
+# │ POST filled, GET empty   │ none        │ empty        │ undeclared path: last 200 wins       │
+# │ GET empty                │ POST more=1 │ absent       │ no POST captured: nothing to grade   │
+# │ POST more=0              │ POST more=1 │ absent       │ a different form is another request  │
+# │ POST text more=1, params │ POST more=1 │ filled       │ the body text decides, not params    │
+# └──────────────────────────┴─────────────┴──────────────┴──────────────────────────────────────┘
+#
+# fmt: off
+REQUEST_CASES: list[tuple[list[dict], dict[str, ResourceRequest] | None, str | None, str]] = [
+    # (entries,                                          requests, resource text, id)
+    ([_posted(_FILLED), _har_entry(_STATUS, _EMPTY)],    _MORE,    "filled",      "post-then-get"),
+    ([_har_entry(_STATUS, _EMPTY), _posted(_FILLED)],    _MORE,    "filled",      "get-then-post"),
+    ([_posted(_FILLED), _har_entry(_STATUS, _EMPTY)],    None,     "",            "undeclared-last-wins"),
+    ([_har_entry(_STATUS, _EMPTY)],                      _MORE,    None,          "no-post-captured"),
+    ([_posted(_FILLED, form="more=0")],                  _MORE,    None,          "form-differs"),
+    ([_posted(_FILLED, params=_STALE_PARAMS)],           _MORE,    "filled",      "text-over-params"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("entries", "requests", "text"), [c[:3] for c in REQUEST_CASES], ids=[c[3] for c in REQUEST_CASES]
+)
+def test_requests_select_the_declared_response(
+    tmp_path: Path, entries: list[dict], requests: dict[str, ResourceRequest] | None, text: str | None
+) -> None:
+    """A path parser.yaml fetches by POST takes only that POST's response, as the runtime loader fetches it."""
+    resources = build_resource_dict(str(_har_file(tmp_path, entries)), requests=requests)
+    if text is None:
+        assert _STATUS_PATH not in resources
+    else:
+        assert resources[_STATUS_PATH].get_text() == text

@@ -89,7 +89,9 @@ def generate_golden_file(
 
     # Load HAR and build resource dict
     try:
-        resources = build_resource_dict(har_path, transport=transport, getter_endpoint=getter_endpoint)
+        resources = build_resource_dict(
+            har_path, transport=transport, getter_endpoint=getter_endpoint, requests=parser_config.requests
+        )
     except Exception as e:
         return GenerateGoldenFileResult(
             golden_file={},

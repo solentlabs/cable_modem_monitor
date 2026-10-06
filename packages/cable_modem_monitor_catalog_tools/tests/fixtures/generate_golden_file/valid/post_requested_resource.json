@@ -1,0 +1,69 @@
+{
+  "_description": "A path parser.yaml fetches by POST is graded from the POST, not a later GET of the same URL",
+  "_parser_yaml": "requests:\n  /status.php:\n    method: POST\n    form:\n      more: \"1\"\ndownstream:\n  format: table\n  resource: /status.php\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n        - index: 1\n          field: frequency\n          type: frequency\n      channel_type:\n        fixed: qam\n",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "url": "http://10.0.0.1/status.php",
+            "method": "POST",
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "text": "more=1"
+            }
+          },
+          "response": {
+            "status": 200,
+            "content": {
+              "mimeType": "text/html",
+              "text": "<html><body><table><tr><td>1</td><td>507000000</td></tr></table></body></html>"
+            }
+          }
+        },
+        {
+          "request": {
+            "url": "http://10.0.0.1/status.php",
+            "method": "GET"
+          },
+          "response": {
+            "status": 200,
+            "content": {
+              "mimeType": "text/html",
+              "text": "<html><body><table></table></body></html>"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "_expected_channel_counts": {
+    "downstream": 1,
+    "upstream": 0
+  },
+  "_expected_system_info_fields": [
+    "downstream_channel_count",
+    "upstream_channel_count"
+  ],
+  "_expected_missing_system_info_fields": [
+    "docsis_status",
+    "hardware_version",
+    "software_version",
+    "system_uptime"
+  ],
+  "_expected_golden_file": {
+    "downstream": [
+      {
+        "channel_id": 1,
+        "channel_number": 1,
+        "frequency": 507000000,
+        "channel_type": "qam"
+      }
+    ],
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 1,
+      "upstream_channel_count": 0
+    }
+  }
+}
