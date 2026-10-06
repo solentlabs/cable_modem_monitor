@@ -546,8 +546,12 @@ The token is the first value the login response issued, from a header or
 a JSON string of 8 or more characters that no earlier request sent, that a
 later request sends back: as a request header (`token_placement: header`),
 as `Authorization: Bearer` (the default placement), or inside a URL query
-parameter (`query`, with the text before it as `token_prefix`). A login
-with no such value gets a warning. `json_sjcl`'s crypto parameters come from
+parameter (`query`, with the text before it as `token_prefix`). Failing
+those, a value a later request's URL path carries unchanged (a logout
+`DELETE .../token/<value>`) is the token when later requests send
+`Authorization: Bearer`: the sanitizer can give one token a different
+placeholder in the header than in the response, hiding the match. A
+login with no such value gets a warning. `json_sjcl`'s crypto parameters come from
 the capture's own scripts, never a default: `pbkdf2_iterations` and
 `pbkdf2_key_length` from the `DEFAULT_SJCL_ITERATIONS` and
 `DEFAULT_SJCL_KEYSIZEBITS` constants (names in `auth_patterns.json`, from

@@ -29,6 +29,10 @@ from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.http import (
     classify_form_fields,
     detect_encoding,
 )
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.json_login import (
+    is_json_login,
+    json_login_ambiguity,
+)
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.patterns import (
     _fleet_password_field_names,
     get_fleet_password_field_names,
@@ -324,6 +328,122 @@ def test_json_sjcl_constants_cite_the_script() -> None:
     evidence = [e for a in ambiguities for c in a.candidates for e in c.evidence if e.source == "/js/sjclCrypto.js"]
     assert evidence
     assert any("DEFAULT_SJCL_ITERATIONS = 1000" in e.snippet for e in evidence)
+
+
+# A bearer token the sanitizer gave different placeholders in the response and the header.
+# ┌────────────────────────┬───────────────────────────────────────────┬──────────────────────────────┐
+# │ variant                │ later requests                            │ token_path                   │
+# ├────────────────────────┼───────────────────────────────────────────┼──────────────────────────────┤
+# │ path_with_bearer       │ Bearer on data, token in a logout path    │ created.token                │
+# │ path_without_bearer    │ no Authorization, token in a logout path  │ none (placement unknown)     │
+# │ short_value_in_path    │ Bearer on data, 7-char token in the path  │ none (too short to trust)    │
+# │ value_only_in_a_body   │ Bearer on data, token in a request body   │ none (a body is not a path)  │
+# │ bearer_value_matches   │ the token itself sent as Bearer           │ created.token (placement)    │
+# └────────────────────────┴───────────────────────────────────────────┴──────────────────────────────┘
+_TOKEN = "FIELD_57d04873"
+_API = "https://192.168.100.1/rest/v1"
+_BEARER_OTHER = {"Authorization": "Bearer AUTH_8240d9b2"}
+_BEARER_TOKEN_FIELDS = {"login_endpoint": "/rest/v1/user/login", "username_field": "", "token_path": "created.token"}
+_BEARER_NO_TOKEN_FIELDS = {"login_endpoint": "/rest/v1/user/login", "username_field": ""}
+_BEARER_PATH_VARIANTS: list[tuple[str, list[tuple[str, str, dict[str, str], str]], str, dict[str, Any]]] = [
+    # (id, later requests as (method, url, headers, body), token, expected candidate fields)
+    (
+        "path_with_bearer",
+        [("GET", f"{_API}/state", _BEARER_OTHER, ""), ("DELETE", f"{_API}/user/3/token/{_TOKEN}", _BEARER_OTHER, "")],
+        _TOKEN,
+        _BEARER_TOKEN_FIELDS,
+    ),
+    (
+        "path_without_bearer",
+        [("GET", f"{_API}/state", {}, ""), ("DELETE", f"{_API}/user/3/token/{_TOKEN}", {}, "")],
+        _TOKEN,
+        _BEARER_NO_TOKEN_FIELDS,
+    ),
+    (
+        "short_value_in_path",
+        [("GET", f"{_API}/state", _BEARER_OTHER, ""), ("DELETE", f"{_API}/user/3/token/abc1234", _BEARER_OTHER, "")],
+        "abc1234",
+        _BEARER_NO_TOKEN_FIELDS,
+    ),
+    (
+        "value_only_in_a_body",
+        [("GET", f"{_API}/state", _BEARER_OTHER, ""), ("PUT", f"{_API}/user/3", _BEARER_OTHER, f'{{"t": "{_TOKEN}"}}')],
+        _TOKEN,
+        _BEARER_NO_TOKEN_FIELDS,
+    ),
+    (
+        "bearer_value_matches",
+        [
+            ("GET", f"{_API}/state", {"Authorization": f"Bearer {_TOKEN}"}, ""),
+            ("DELETE", f"{_API}/user/3/token/{_TOKEN}", {"Authorization": f"Bearer {_TOKEN}"}, ""),
+        ],
+        _TOKEN,
+        _BEARER_TOKEN_FIELDS,
+    ),
+]
+
+
+def _request_entry(
+    method: str, url: str, headers: dict[str, str], body: str, response: str, status: int
+) -> dict[str, Any]:
+    request: dict[str, Any] = {
+        "method": method,
+        "url": url,
+        "headers": [{"name": name, "value": value} for name, value in headers.items()],
+        "cookies": [],
+    }
+    if body:
+        request["postData"] = {"mimeType": "application/json", "text": body}
+    return {
+        "request": request,
+        "response": {
+            "status": status,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": len(response), "mimeType": "application/json", "text": response},
+        },
+    }
+
+
+def _bearer_session(token: str, later: list[tuple[str, str, dict[str, str], str]]) -> list[dict[str, Any]]:
+    login = _request_entry(
+        "POST",
+        f"{_API}/user/login",
+        {"Content-Type": "application/json"},
+        '{"password": "FIELD_bd10aedb"}',
+        json.dumps({"created": {"token": token, "userLevel": "regular", "userId": 3}}),
+        201,
+    )
+    return [login, *(_request_entry(m, u, h, b, "{}", 200) for m, u, h, b in later)]
+
+
+def _json_login_candidates(entries: list[dict[str, Any]], warnings: list[str], ambiguities: list[Ambiguity]) -> Any:
+    """The JSON-login builder on its own: a login-shaped URL like /user/login reaches it only via the classifier."""
+    return json_login_ambiguity(entries, [e for e in entries if is_json_login(e)], warnings, ambiguities)
+
+
+@pytest.mark.parametrize(
+    ("later", "token", "expected"),
+    [(v[1], v[2], v[3]) for v in _BEARER_PATH_VARIANTS],
+    ids=[v[0] for v in _BEARER_PATH_VARIANTS],
+)
+def test_bearer_token_path_from_a_value_in_a_later_url_path(
+    later: list[tuple[str, str, dict[str, str], str]], token: str, expected: dict[str, Any]
+) -> None:
+    """A response value a later URL path carries is the token when later requests send a Bearer."""
+    warnings: list[str] = []
+    result = _json_login_candidates(_bearer_session(token, later), warnings, [])
+    assert result.candidates["bearer"] == expected
+    assert ("token_path" in expected) != any("no later request sends back" in w for w in warnings), warnings
+
+
+def test_bearer_path_evidence_cites_the_request_and_the_scheme() -> None:
+    """The candidate names the path that carries the token and the Authorization scheme."""
+    later = _BEARER_PATH_VARIANTS[0][1]
+    ambiguities: list[Ambiguity] = []
+    _json_login_candidates(_bearer_session(_TOKEN, later), [], ambiguities)
+    snippets = [e.snippet for a in ambiguities for c in a.candidates for e in c.evidence]
+    assert any("created.token" in s and "URL path" in s and "Authorization: Bearer" in s for s in snippets), snippets
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH"])

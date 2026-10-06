@@ -59,6 +59,7 @@ class _Token:
     carrier: str  # request header the token rides in, for "header"
     prefix: str  # query text before the token, for "query"
     reuse: dict[str, Any]
+    in_path: bool = False  # seen in a later URL path, with a Bearer scheme on later requests
 
 
 def is_json_login(entry: dict[str, Any]) -> bool:
@@ -268,7 +269,35 @@ def _find_token(entries: list[dict[str, Any]], index: int) -> _Token | None:
                 best = _Token(source, name, *reuse, reuse=entries[at])
                 best_at = at
                 break
-    return best
+    return best or _token_in_a_path(entries, index, issued, sent_before)
+
+
+def _token_in_a_path(
+    entries: list[dict[str, Any]], index: int, issued: list[tuple[str, str, str]], sent_before: set[str]
+) -> _Token | None:
+    """An issued value a later URL path carries, when later requests send a Bearer.
+
+    The sanitizer can give a token one placeholder in the response and
+    another in the header, so the header never matches the response.
+    """
+    later = entries[index + 1 :]
+    if not any(_sends_bearer(entry["request"]) for entry in later):
+        return None
+    for source, name, value in issued:
+        if len(value) < _MIN_TOKEN_LENGTH or value in sent_before:
+            continue
+        for entry in later:
+            if value in urlsplit(entry["request"].get("url", "")).path:
+                return _Token(source, name, "authorization", "", "", reuse=entry, in_path=True)
+    return None
+
+
+def _sends_bearer(request: dict[str, Any]) -> bool:
+    """Whether a request carries ``Authorization: Bearer``."""
+    return any(
+        h.get("name", "").lower() == "authorization" and h.get("value", "").startswith("Bearer ")
+        for h in request.get("headers", [])
+    )
 
 
 def _placement(request: dict[str, Any], value: str) -> tuple[str, str, str] | None:
@@ -295,6 +324,14 @@ def _token_evidence(token: _Token | None) -> list[Evidence]:
         "authorization": "Authorization: Bearer",
     }[token.placement]
     request = token.reuse["request"]
+    if token.in_path:
+        return [
+            Evidence(
+                source=path_from_url(request.get("url", "")),
+                snippet=f"token from {issued} appears in the URL path of {request.get('method', '')}; "
+                "later requests send Authorization: Bearer",
+            )
+        ]
     return [
         Evidence(
             source=path_from_url(request.get("url", "")),

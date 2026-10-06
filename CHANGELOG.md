@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Intake finds a bearer token the sanitizer renamed.** A login
+  response value that reappears unchanged in a later request's URL path
+  (a logout `DELETE .../token/<value>`) is the token when later requests
+  send `Authorization: Bearer`. Before, a bearer candidate whose header
+  carried a different placeholder had no `token_path`.
 - **Intake reads the `json_sjcl` crypto parameters from the capture.**
   PBKDF2 iterations and key length come from the constants in the loaded
   SJCL script, and the aad from the string every encrypt call passes. A
