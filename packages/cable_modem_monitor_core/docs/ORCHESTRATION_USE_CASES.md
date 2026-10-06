@@ -737,6 +737,34 @@ a prior poll and the modem has expired it. No `action_auth`.
 
 ---
 
+### UC-21b: Reachable modem, reused session keeps failing
+
+**Preconditions:** A session-bearing modem. The reused session no longer
+works (the modem drops the connection on every data request), while the
+modem still answers ICMP and TCP probes. A health monitor is configured.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Poll: reused session → connection dropped → `CONNECTIVITY` | backoff 1 poll | `unreachable` |
+| 2 | Next poll: a fresh probe reads data path up → backoff cleared, failure counted (1) | | |
+| 3 | Poll fails the same way; the next poll counts it (2), then (3) | | |
+| 4 | Third count: best-effort logout, `clear_session()` | session cleared, count 0 | INFO line |
+| 5 | Same poll: fresh login → data | | `online` |
+
+**Assertions:**
+
+- The count advances only on a failure on a reused session followed by a
+  fresh probe reading data-path-up
+- A success, a failure on a fresh session, or a fresh probe reading down
+  resets it; a stale or missing probe counts nothing
+- Fewer than `SESSION_STUCK_THRESHOLD` failures never clear the session
+- The fresh login's outcome follows the ordinary paths: a refused
+  credential trips the breaker as any login would, a busy refusal is
+  `AUTH_UNAVAILABLE`
+- No health monitor: nothing counts and behavior is unchanged
+
+---
+
 ### UC-22: HNAP server error on fresh session
 
 **Preconditions:** HNAP modem. Fresh login just completed. Modem has

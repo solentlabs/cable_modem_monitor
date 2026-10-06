@@ -167,9 +167,11 @@ Fields — `StubPageDetected`: `model`, `path: str`, `anchors_found: int`,
 | `SessionRetryStarted` | INFO | Single-poll session retry started for LOAD_AUTH or LOAD_INTEGRITY |
 | `SessionRetrySucceeded` | INFO | Retry succeeded — fresh login obtained in same poll |
 | `SessionRetryFailed` | INFO | Retry failed — policy recording signal as auth failure |
+| `StuckSessionCleared` | INFO | Reused session dropped after repeated connection failures while the modem answers probes |
 
 Fields — `SessionRetryStarted` / `SessionRetrySucceeded`: `model`, `signal_name: str`
 Fields — `SessionRetryFailed`: `model`, `signal_name: str`, `streak: int`, `threshold: int`
+Fields — `StuckSessionCleared`: `model`, `failures: int`
 
 ### Phase: probe / health
 

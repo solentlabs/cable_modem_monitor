@@ -269,6 +269,15 @@ class SessionRetrySucceeded:
 
 
 @dataclass
+class StuckSessionCleared:
+    """Reused session dropped after repeated connection failures while the modem answers probes."""
+
+    model: str
+    failures: int
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
 class SessionRetryFailed:
     """Single-poll retry failed — policy recording signal as auth failure.
 
@@ -654,6 +663,7 @@ type OrchestratorEvent = (
     | SessionRetryStarted
     | SessionRetrySucceeded
     | SessionRetryFailed
+    | StuckSessionCleared
     | HealthStatusReport
     | HealthRecoveryDetected
     | HealthBackoffCleared

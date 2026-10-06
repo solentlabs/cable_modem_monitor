@@ -208,11 +208,34 @@ class CollectorSignal(Enum):
 | `AUTH_FAILED` | Trip circuit breaker immediately, report `auth_failed`. Covers 401/403 (credentials rejected, UC-87) and 404 (login endpoint absent, UC-87b) |
 | `AUTH_UNAVAILABLE` | Abort poll, report `unreachable`. No auth streak, no circuit breaker, no credential surface — the modem answered "try later", which is not a verdict on the credential (see UC-87a) |
 | `AUTH_LOCKOUT` | Trip circuit breaker immediately, report `auth_failed` |
-| `CONNECTIVITY` | Abort, report `unreachable`, apply connectivity backoff |
+| `CONNECTIVITY` | Abort, report `unreachable`, apply connectivity backoff. After `SESSION_STUCK_THRESHOLD` consecutive failures on a reused session while the health probes show the modem reachable, drop the session (UC-21b) |
 | `LOAD_ERROR` | Abort, report `unreachable` |
 | `LOAD_AUTH` | For single-session modems (`actions.logout` configured): attempt logout (best-effort; skipped if `requires_session: true` and the session is not valid) before clearing session. Then clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-17, UC-18) |
 | `LOAD_INTEGRITY` | Same as `LOAD_AUTH` — for single-session modems, attempt logout (best-effort) before clearing session. Clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-19a) |
 | `PARSE_ERROR` | Abort, report `parser_issue` |
+
+**A reachable modem whose reused session keeps failing.** A reused
+session can stop working without the modem saying so: it drops the
+connection (`RemoteDisconnected`), which is `CONNECTIVITY`, and
+`CONNECTIVITY` never clears the session. The entry then reports
+`unreachable` on every poll until the integration is reloaded. The
+orchestrator counts a failed collection when the failure was on a
+reused session and a health probe taken after it shows the data path up
+(`HealthStatus.data_path_up`, the reading that also clears the
+backoff). At `SESSION_STUCK_THRESHOLD` such failures in a row it
+attempts the best-effort logout and clears the session, and the same
+poll logs in fresh. A success, a failure on a fresh session, or a fresh
+probe reading down resets the count, and a missing or stale probe counts
+nothing, so a modem that is down or a network that dropped never
+triggers it.
+
+```python
+SESSION_STUCK_THRESHOLD: int = 3  # CONNECTIVITY on a reused session, modem reachable (UC-21b)
+```
+
+The threshold is a Core constant beside `AUTH_FAILURE_THRESHOLD`, never
+per-modem config. The fresh login takes the path any login takes; it
+adds no prompt.
 
 ### State Ownership
 
@@ -509,7 +532,9 @@ class Orchestrator:
            (``HealthStatus.data_path_up``: RESPONSIVE or ICMP_BLOCKED,
            the latter proven by a live TCP pass since UC-59a), clear
            the backoff (modem is proven reachable, no reason to keep
-           skipping)
+           skipping). That same reading counts the failed collection
+           toward the stuck-session threshold (below); a fresh probe that
+           reads down resets the count
         3. Check connectivity backoff — decrement counter. If still > 0
            after decrement, return UNREACHABLE. If counter reached 0,
            backoff is cleared and collection proceeds.

@@ -85,6 +85,7 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         StaleSessionRecoveryDisabled,
         StatusTransition,
         StubPageDetected,
+        StuckSessionCleared,
         SystemInfoFieldsChanged,
         ZeroChannelsNoSystemInfo,
     )
@@ -220,6 +221,12 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
 
     if isinstance(event, SessionRetryStarted):
         return f"{event.signal_name} [{event.model}] — clearing session and retrying once in same poll"
+
+    if isinstance(event, StuckSessionCleared):
+        return (
+            f"Reused session dropped [{event.model}] — {event.failures} connection failures while the"
+            " modem answers probes; signing in again"
+        )
 
     if isinstance(event, SessionRetrySucceeded):
         return f"{event.signal_name} recovered [{event.model}] — fresh login succeeded in same poll"

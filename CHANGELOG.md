@@ -53,6 +53,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SJCL script, and the aad from the string every encrypt call passes. A
   value the scripts do not state is left out with a warning, never
   defaulted. The TG3442S capture now generates a valid config.
+- **A stuck session is dropped when the modem is reachable.** A reused
+  session the modem silently stops honoring (it drops every connection)
+  was reused forever, so the entry stayed unreachable until the
+  integration was reloaded. After three such failures in a row, each
+  followed by a health probe showing the modem up, the session is
+  logged out, cleared and re-established. Outages, network drops and
+  fresh logins never count.
 - **Restart retries once when the modem refuses a stale session.** The
   monitoring session is reused across polls, so the modem may have
   expired it by the time Restart is pressed. A refusal on that session
