@@ -1003,14 +1003,30 @@ the capture:
   where the capture pins one body shape to one path. `/HNAP1/` carries
   every action, and har-capture empties credential bodies to `{}`;
   neither says anything about shape, so neither is indexed.
+- **A restart's form field the capture never carried is refused.** A
+  form body is exempt from the JSON-key rule because a browser posts
+  hidden fields Core has no reason to send. A restart is the exception:
+  one endpoint can serve reboot and factory reset by field values
+  alone (EVW32C-0N, `ResetYes=0x01` against `ResetFactoryYes=0x01`),
+  so a wrong value is a factory reset that replay would pass. A
+  restart's `name=value` pairs must all appear together in one body the
+  capture posted to that method and path. Fewer fields pass; an
+  unrecorded field or value fails. Not checked: an endpoint the capture
+  never posted to, and one shared with login (DM1000 `/setup.cgi`),
+  where the body cannot say which request it is. A captured value that
+  is a har-capture placeholder (`FIELD_`, `PASS_`, `AUTH_` plus eight
+  hex digits, or `[REDACTED]`) matches any value, since the capture
+  records that a value existed, not what it was: the XB8's `csrfp_token`
+  and the MB7621's password fields.
 
 **What replay does not verify: the request line past method, path,
 and login query-param names.** A login POST must carry the query-param
 *names* the capture recorded at that path (values are never compared —
 a dynamic `?id=` changes per page load), which is what makes a missing
 parameter fail the replay. Everything else inside the request is
-invisible: a header, a form-encoded field, or a query value that Core
-omits or invents matches the capture regardless. Where a modem
+invisible: a header, a form-encoded field (outside a restart's body,
+above), or a query value that Core omits or invents matches the
+capture regardless. Where a modem
 validates one of those, no capture can fail the test, and the
 assertion has to be written against the request Core builds. See
 ARCHITECTURE_DECISIONS.md § How to extend an existing auth strategy.

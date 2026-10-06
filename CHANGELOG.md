@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Restart replay checks the form body.** A restart's form fields must
+  appear together in one body the capture posted, so a wrong value on a
+  shared reboot and factory-reset form (EVW32C-0N) fails CI. Test
+  harness only, no change to how Core talks to a modem.
 - **`jsonrpc` is now `json_rpc`** as a transport, auth strategy and
   action type, matching the underscore in `form_cbn` and `url_token`.
   An entry that still says `jsonrpc` fails validation. The shipped SDMC
