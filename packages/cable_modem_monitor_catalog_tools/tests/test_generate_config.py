@@ -328,6 +328,17 @@ class TestAuthStrategyResolution:
         auth = yaml.safe_load(result.modem_yaml)["auth"]
         assert auth == {"strategy": "bearer", **_BEARER_FIELDS, "cookie_name": "session"}
 
+    def test_resolved_none_writes_no_auth_fields(self) -> None:
+        """A `none` candidate carries no fields: the auth block is the bare strategy."""
+        fixture = _with_strategy_ambiguity({"value": "none"})
+        fixture["_analysis"]["auth"]["candidates"]["none"] = {}
+        fixture["_analysis"]["ambiguities"][0]["candidates"].append(
+            {"value": "none", "evidence": [], "corroborated_by": []}
+        )
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert yaml.safe_load(result.modem_yaml).get("auth", {"strategy": "none"}) == {"strategy": "none"}
+
     def test_unresolved_strategy_blocks(self) -> None:
         """No resolution: generation names the ambiguity and its candidates."""
         fixture = _with_strategy_ambiguity(None)

@@ -47,6 +47,8 @@ _MIN_TOKEN_LENGTH = 8
 # Response headers that echo or describe the request, never a token.
 _NOT_TOKEN_HEADERS = frozenset({"set-cookie", "date", "content-type", "content-length", "expires", "last-modified"})
 _SNIPPET_RADIUS = 60
+# Paths or requests an evidence snippet names before it stops listing.
+_EXAMPLES = 3
 
 
 @dataclass
@@ -60,6 +62,7 @@ class _Token:
     prefix: str  # query text before the token, for "query"
     reuse: dict[str, Any]
     in_path: bool = False  # seen in a later URL path, with a Bearer scheme on later requests
+    value: str = ""  # the issued value, to find every request that carries it
 
 
 def is_json_login(entry: dict[str, Any]) -> bool:
@@ -109,6 +112,9 @@ def json_login_ambiguity(
         return None
     if password_keys:
         candidates["bearer"], evidence["bearer"] = _bearer(entry, body, password_keys[0], token, warnings)
+        evidence["bearer"].extend(_carrier_evidence(entries, index, token))
+        if none_evidence := _unauthenticated_reads(entries, index, token):
+            candidates["none"], evidence["none"] = {}, none_evidence
     else:
         candidates["json_sjcl"], evidence["json_sjcl"] = _json_sjcl(entries, index, cipher_keys[0], token, warnings)
 
@@ -163,6 +169,82 @@ def _bearer(
         "its value not ciphertext-shaped",
     )
     return fields, [login, *_token_evidence(token)]
+
+
+def _carries_credential(request: dict[str, Any], token: _Token | None, session_cookies: frozenset[str]) -> bool:
+    """Whether a request sends an Authorization header, a cookie the login set, or the login's token."""
+    headers = request.get("headers", [])
+    if any(h.get("name", "").lower() == "authorization" for h in headers):
+        return True
+    if session_cookies & _request_cookie_names(request):
+        return True
+    if token is None or not token.value:
+        return False
+    return token.value in request.get("url", "") or any(token.value in h.get("value", "") for h in headers)
+
+
+def _login_cookie_names(login: dict[str, Any]) -> frozenset[str]:
+    """Names of the cookies the login response sets."""
+    response = login["response"]
+    names = {c.get("name", "") for c in response.get("cookies", [])}
+    names.update(
+        h.get("value", "").split("=", 1)[0].strip()
+        for h in response.get("headers", [])
+        if h.get("name", "").lower() == "set-cookie"
+    )
+    return frozenset(names - {""})
+
+
+def _request_cookie_names(request: dict[str, Any]) -> frozenset[str]:
+    """Names of the cookies a request sends, from its cookie list or Cookie header."""
+    names = {c.get("name", "") for c in request.get("cookies", [])}
+    for header in request.get("headers", []):
+        if header.get("name", "").lower() == "cookie":
+            names.update(part.split("=", 1)[0].strip() for part in header.get("value", "").split(";"))
+    return frozenset(names - {""})
+
+
+def _is_read(entry: dict[str, Any]) -> bool:
+    """A GET the modem answered 2xx."""
+    return bool(entry["request"].get("method", "").upper() == "GET" and 200 <= entry["response"].get("status", 0) < 300)
+
+
+def _unauthenticated_reads(entries: list[dict[str, Any]], index: int, token: _Token | None) -> list[Evidence]:
+    """Evidence for ``none``: GETs answered 2xx without a credential, and not one GET that carries one."""
+    reads = [(i, e) for i, e in enumerate(entries) if i != index and _is_read(e)]
+    cookies = _login_cookie_names(entries[index])
+    plain = [(i, e) for i, e in reads if not _carries_credential(e["request"], token, cookies)]
+    if not plain or len(plain) != len(reads):
+        return []
+    before = sum(1 for i, _ in plain if i < index)
+    paths = [path_from_url(e["request"].get("url", "")) for _, e in plain]
+    return [
+        Evidence(
+            source=paths[0],
+            snippet=f"{len(plain)} GET requests answered 2xx with no Authorization header, login cookie or token, "
+            f"{before} before the login and {len(plain) - before} after (e.g. {', '.join(paths[:_EXAMPLES])})",
+        )
+    ]
+
+
+def _carrier_evidence(entries: list[dict[str, Any]], index: int, token: _Token | None) -> list[Evidence]:
+    """Evidence for ``bearer``: how many GET and write requests after the login carry a credential."""
+    cookies = _login_cookie_names(entries[index])
+    carriers = [e for e in entries[index + 1 :] if _carries_credential(e["request"], token, cookies)]
+    if not carriers:
+        return []
+    reads = [e for e in carriers if e["request"].get("method", "").upper() == "GET"]
+    writes = [e for e in carriers if e not in reads]
+    listed = ", ".join(
+        f"{e['request'].get('method', '')} {path_from_url(e['request'].get('url', ''))}" for e in writes[:_EXAMPLES]
+    )
+    return [
+        Evidence(
+            source=path_from_url(carriers[0]["request"].get("url", "")),
+            snippet=f"after the login, {len(reads)} GET and {len(writes)} write requests carry a credential"
+            + (f" ({listed})" if listed else ""),
+        )
+    ]
 
 
 def _bearer_token_fields(token: _Token) -> dict[str, Any]:
@@ -266,7 +348,7 @@ def _find_token(entries: list[dict[str, Any]], index: int) -> _Token | None:
         for at in range(index + 1, min(best_at, len(entries))):
             reuse = _placement(entries[at]["request"], value)
             if reuse is not None:
-                best = _Token(source, name, *reuse, reuse=entries[at])
+                best = _Token(source, name, *reuse, reuse=entries[at], value=value)
                 best_at = at
                 break
     return best or _token_in_a_path(entries, index, issued, sent_before)
@@ -288,7 +370,7 @@ def _token_in_a_path(
             continue
         for entry in later:
             if value in urlsplit(entry["request"].get("url", "")).path:
-                return _Token(source, name, "authorization", "", "", reuse=entry, in_path=True)
+                return _Token(source, name, "authorization", "", "", reuse=entry, in_path=True, value=value)
     return None
 
 

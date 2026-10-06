@@ -133,6 +133,7 @@
       "candidates": {
         "bearer": [
           "/actionHandler/ajaxSet_login.php",
+          "/at_a_glance.php",
           "/at_a_glance.php"
         ]
       }

@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Intake offers `none` beside `bearer`.** When every GET in a
+  bearer-login capture was answered without an Authorization header,
+  login cookie or token, `none` is a second `auth.strategy` candidate.
+  Each candidate cites its evidence: the unauthenticated reads, and
+  every request that carries a credential after the login.
 - **Intake finds a bearer token the sanitizer renamed.** A login
   response value that reappears unchanged in a later request's URL path
   (a logout `DELETE .../token/<value>`) is the token when later requests

@@ -446,6 +446,73 @@ def test_bearer_path_evidence_cites_the_request_and_the_scheme() -> None:
     assert any("created.token" in s and "URL path" in s and "Authorization: Bearer" in s for s in snippets), snippets
 
 
+# `none` is offered beside bearer when the capture's reads need no credential.
+# ┌───────────────────────────┬───────────────────────────────────────────────┬───────────────┐
+# │ variant                   │ capture                                       │ candidates    │
+# ├───────────────────────────┼───────────────────────────────────────────────┼───────────────┤
+# │ reads_before_login        │ 3 plain GETs, login, token only on a reboot   │ bearer, none  │
+# │ reads_after_login         │ login, 1 plain GET                            │ bearer, none  │
+# │ reads_carry_the_token     │ login, GET with Bearer                        │ bearer        │
+# │ one_read_carries_it       │ a plain GET and a Bearer GET                  │ bearer        │
+# │ no_reads                  │ login, token on a reboot, no GET              │ bearer        │
+# │ failed_reads_only         │ a plain GET answered 401, login               │ bearer        │
+# │ reads_carry_login_cookie  │ login sets a cookie, a later GET sends it     │ bearer        │
+# └───────────────────────────┴───────────────────────────────────────────────┴───────────────┘
+_TOKEN_VALUE = "test-bearer-token"
+_Spec = tuple[str, str, dict[str, str], str, int]
+_LOGIN: _Spec = ("POST", f"{_API}/user/login", {"Content-Type": "application/json"}, '{"password": "pw"}', 200)
+_PLAIN_READ: _Spec = ("GET", f"{_API}/cablemodem/downstream", {}, "", 200)
+_BEARER_READ: _Spec = ("GET", f"{_API}/cablemodem/state", {"Authorization": f"Bearer {_TOKEN_VALUE}"}, "", 200)
+_REBOOT: _Spec = ("POST", f"{_API}/system/reboot", {"Authorization": f"Bearer {_TOKEN_VALUE}"}, '{"reboot": 1}', 200)
+_COOKIE_READ: _Spec = ("GET", f"{_API}/cablemodem/state", {"Cookie": "PHPSESSID=abc123"}, "", 200)
+_NONE_VARIANTS: list[tuple[str, list[_Spec], list[str]]] = [
+    ("reads_before_login", [_PLAIN_READ, _PLAIN_READ, _PLAIN_READ, _LOGIN, _REBOOT], ["bearer", "none"]),
+    ("reads_after_login", [_LOGIN, _PLAIN_READ], ["bearer", "none"]),
+    ("reads_carry_the_token", [_LOGIN, _BEARER_READ], ["bearer"]),
+    ("one_read_carries_it", [_PLAIN_READ, _LOGIN, _BEARER_READ], ["bearer"]),
+    ("no_reads", [_LOGIN, _REBOOT], ["bearer"]),
+    ("failed_reads_only", [("GET", f"{_API}/cablemodem/downstream", {}, "", 401), _LOGIN], ["bearer"]),
+    ("reads_carry_login_cookie", [_PLAIN_READ, _LOGIN, _COOKIE_READ], ["bearer"]),
+]
+
+
+def _none_session(spec: list[_Spec]) -> list[dict[str, Any]]:
+    login_body = json.dumps({"created": {"token": _TOKEN_VALUE, "userId": 3}})
+    entries = [
+        _request_entry(m, u, h, b, login_body if u.endswith("/user/login") else "{}", status)
+        for m, u, h, b, status in spec
+    ]
+    for entry in entries:
+        if entry["request"]["url"].endswith("/user/login"):
+            entry["response"]["headers"].append({"name": "Set-Cookie", "value": "PHPSESSID=abc123; path=/"})
+    return entries
+
+
+@pytest.mark.parametrize(
+    ("spec", "offered"), [(v[1], v[2]) for v in _NONE_VARIANTS], ids=[v[0] for v in _NONE_VARIANTS]
+)
+def test_none_is_offered_beside_bearer_when_reads_need_no_token(spec: list[_Spec], offered: list[str]) -> None:
+    """The candidates follow what the GETs show, and `none` carries no fields."""
+    ambiguities: list[Ambiguity] = []
+    result = _json_login_candidates(_none_session(spec), [], ambiguities)
+    assert list(result.candidates) == offered
+    assert [c.value for a in ambiguities for c in a.candidates] == offered
+    if "none" in offered:
+        assert result.candidates["none"] == {}
+
+
+def test_none_and_bearer_cite_what_the_capture_shows() -> None:
+    """`none` counts the unauthenticated reads; `bearer` counts who carries the token."""
+    ambiguities: list[Ambiguity] = []
+    _json_login_candidates(_none_session(_NONE_VARIANTS[0][1]), [], ambiguities)
+    evidence = {c.value: [e.snippet for e in c.evidence] for a in ambiguities for c in a.candidates}
+    assert any(
+        "3 GET" in s and "no Authorization header, login cookie or token" in s and "3 before the login" in s
+        for s in evidence["none"]
+    )
+    assert any("0 GET and 1 write" in s and "POST /rest/v1/system/reboot" in s for s in evidence["bearer"])
+
+
 @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH"])
 def test_form_login_keeps_its_method(method: str) -> None:
     """A form login sent by any write method is detected, and the config sends it the same way."""

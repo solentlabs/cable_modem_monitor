@@ -540,6 +540,7 @@ strategy the body fits, and nothing is offered.
 | Candidate | Offered when | Fields |
 |-----------|--------------|--------|
 | `bearer` | A password-shaped key holds a value that is not ciphertext-shaped (values are often redacted, so only the shape is checked) | `login_endpoint`; `method` unless POST; `username_field` unless `username` (`""` with no username key); `extra_fields`, where a value equal to the modem's host becomes `{host}`; token source and placement |
+| `none` | Offered beside `bearer`: at least one GET answered 2xx with no `Authorization` header, login cookie or token, and no GET carries one | No fields. Cites the unauthenticated GETs, how many fall before and after the login, and, on `bearer`, every request that carries the token (a token only a write sends back is an action's credential) |
 | `json_sjcl` | A key holds ciphertext (32 or more hex characters) and no password-shaped key holds anything else | `login_page`, the latest page before the login with a password input that names the ciphertext key; `login_endpoint`; `method` unless PUT; `token_header`; `pbkdf2_iterations`, `pbkdf2_key_length` and `aad` when the capture's scripts carry them |
 
 The token is the first value the login response issued, from a header or

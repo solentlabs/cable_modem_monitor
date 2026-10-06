@@ -69,6 +69,7 @@
       "candidates": {
         "bearer": [
           "/actionHandler/ajaxSet_login.php",
+          "/cmconnectionstatus.php",
           "/cmconnectionstatus.php"
         ]
       }

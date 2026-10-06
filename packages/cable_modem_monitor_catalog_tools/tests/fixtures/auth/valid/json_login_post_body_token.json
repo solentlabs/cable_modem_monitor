@@ -70,6 +70,7 @@
       "candidates": {
         "bearer": [
           "/api/session_login",
+          "/api/status",
           "/api/status"
         ]
       }
