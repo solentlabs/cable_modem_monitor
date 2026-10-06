@@ -24,6 +24,7 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import BearerA
 from ...validation.har_utils import WARNING_PREFIX, WRITE_METHODS, path_from_url
 from ..ambiguity import Ambiguity, Candidate, Evidence
 from .patterns import is_password_field_name, is_username_field_name
+from .sjcl_params import read_sjcl_params
 from .types import AuthDetail
 
 # A ciphertext value: client-side crypto leaves hex where a password would be.
@@ -224,7 +225,9 @@ def _json_sjcl(
                 snippet=text[max(0, at - _SNIPPET_RADIUS) : at + len(cipher_key) + _SNIPPET_RADIUS],
             )
         )
-    return fields, [*found, *_token_evidence(token)]
+    params, params_evidence = read_sjcl_params(entries, warnings)
+    fields.update(params)
+    return fields, [*found, *params_evidence, *_token_evidence(token)]
 
 
 def _is_ciphertext(value: Any) -> bool:

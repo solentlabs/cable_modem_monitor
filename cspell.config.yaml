@@ -700,6 +700,9 @@ words:
 
   # Spec/doc vocabulary (incl. British spellings)
   - pageref
+  - KEYSIZEBITS
+  - Mencrypt
+  - tlen
   - refetches
   - Correctables
   - unspaced

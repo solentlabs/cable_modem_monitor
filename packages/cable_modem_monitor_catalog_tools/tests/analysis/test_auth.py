@@ -9,6 +9,7 @@ inputs.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -204,6 +205,125 @@ def test_json_login_candidates_follow_the_wire(method: str | None, password: str
     assert offered == expected
     if not expected:
         assert any(str(method) in w and "bearer" in w for w in warnings), warnings
+
+
+# json_sjcl crypto parameters come from the capture's scripts, never a default.
+# ┌───────────────────────────┬──────────────────────────────────────────────┬───────────────────────────────┐
+# │ variant                   │ capture                                      │ candidate carries             │
+# ├───────────────────────────┼──────────────────────────────────────────────┼───────────────────────────────┤
+# │ constants_and_aad         │ sjclCrypto.js constants + one aad literal    │ iterations, key_length, aad   │
+# │ aad_only                  │ one aad literal, no constants script         │ aad; warns for the other two  │
+# │ conflicting_constants     │ two scripts declare different iterations     │ no iterations; warns          │
+# │ two_aad_literals          │ calls pass two different aad literals        │ no aad; warns                 │
+# │ call_split_over_lines     │ the aad literal on the call's second line    │ aad                           │
+# │ definition_is_not_a_call  │ the wrapper's own `function` header          │ aad from the real call only   │
+# │ no_encrypt_call           │ no sjclCCMencrypt call anywhere              │ no aad; warns                 │
+# └───────────────────────────┴──────────────────────────────────────────────┴───────────────────────────────┘
+_SJCL_URL = "https://192.168.1.1/js/sjclCrypto.js"
+_CONSTANTS = "var DEFAULT_SJCL_ITERATIONS = 1000;\nvar DEFAULT_SJCL_KEYSIZEBITS = 128;\n"
+_PAGE_CALL = 'd.EncryptedData=sjclCCMencrypt(k,JSON.stringify(x),iv,"aad-text",128);'
+_SJCL_VARIANTS: list[tuple[str, list[tuple[str, str]], str | None, dict[str, Any], list[str]]] = [
+    # (id, extra script entries, page call override, expected crypto fields, expected warning fragments)
+    (
+        "constants_and_aad",
+        [(_SJCL_URL, _CONSTANTS)],
+        None,
+        {"pbkdf2_iterations": 1000, "pbkdf2_key_length": 128, "aad": "aad-text"},
+        [],
+    ),
+    ("aad_only", [], None, {"aad": "aad-text"}, ["pbkdf2_iterations", "pbkdf2_key_length"]),
+    (
+        "conflicting_constants",
+        [(_SJCL_URL, _CONSTANTS), ("https://192.168.1.1/js/other.js", "var DEFAULT_SJCL_ITERATIONS = 2000;")],
+        None,
+        {"pbkdf2_key_length": 128, "aad": "aad-text"},
+        ["pbkdf2_iterations"],
+    ),
+    (
+        "two_aad_literals",
+        [(_SJCL_URL, _CONSTANTS)],
+        _PAGE_CALL + 'e=sjclCCMencrypt(k,y,iv,"other",128);',
+        {"pbkdf2_iterations": 1000, "pbkdf2_key_length": 128},
+        ["aad"],
+    ),
+    (
+        "call_split_over_lines",
+        [(_SJCL_URL, _CONSTANTS)],
+        'd.EncryptedData = sjclCCMencrypt(k, JSON.stringify(x),\n    iv, "aad-text",\n    128);',
+        {"pbkdf2_iterations": 1000, "pbkdf2_key_length": 128, "aad": "aad-text"},
+        [],
+    ),
+    (
+        "definition_is_not_a_call",
+        [(_SJCL_URL, _CONSTANTS + "function sjclCCMencrypt(key, plain, iv, aad, tlen) { return 1; }")],
+        None,
+        {"pbkdf2_iterations": 1000, "pbkdf2_key_length": 128, "aad": "aad-text"},
+        [],
+    ),
+    (
+        "no_encrypt_call",
+        [(_SJCL_URL, _CONSTANTS)],
+        "var x = 1;",
+        {"pbkdf2_iterations": 1000, "pbkdf2_key_length": 128},
+        ["aad"],
+    ),
+]
+_CRYPTO_FIELDS = ("pbkdf2_iterations", "pbkdf2_key_length", "aad")
+
+
+def _script_entry(url: str, text: str) -> dict[str, Any]:
+    return {
+        "request": {"method": "GET", "url": url, "headers": [], "cookies": []},
+        "response": {
+            "status": 200,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": len(text), "mimeType": "application/javascript", "text": text},
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    ("scripts", "page_call", "expected", "warned"),
+    [(v[1], v[2], v[3], v[4]) for v in _SJCL_VARIANTS],
+    ids=[v[0] for v in _SJCL_VARIANTS],
+)
+def test_json_sjcl_crypto_params_come_from_the_capture(
+    scripts: list[tuple[str, str]], page_call: str | None, expected: dict[str, Any], warned: list[str]
+) -> None:
+    """The candidate carries the iterations, key length and aad the scripts state, else warns."""
+    data = load_fixture(VALID_DIR / "json_login_encrypted_body.json")
+    entries = data["_entries"]
+    if page_call is not None:
+        # The fixture repeats the call in every page that builds the envelope.
+        for entry in entries:
+            content = entry["response"].get("content", {})
+            call = re.compile(r"d\.EncryptedData=sjclCCMencrypt\([^;]*;")
+            content["text"] = call.sub(lambda _: page_call, content.get("text", ""))
+        assert any(page_call in e["response"].get("content", {}).get("text", "") for e in entries)
+    entries.extend(_script_entry(url, text) for url, text in scripts)
+    warnings: list[str] = []
+    ambiguities: list[Ambiguity] = []
+    result = detect_auth(entries, "http", warnings, [], ambiguities=ambiguities)
+    carried = {k: v for k, v in result.candidates["json_sjcl"].items() if k in _CRYPTO_FIELDS}
+    assert carried == expected
+    for field in _CRYPTO_FIELDS:
+        if field not in expected:
+            assert any(field in w for w in warnings), (field, warnings)
+        else:
+            assert not any(field in w for w in warnings), (field, warnings)
+    assert set(warned) == {f for f in _CRYPTO_FIELDS if any(f in w for w in warnings)}
+
+
+def test_json_sjcl_constants_cite_the_script() -> None:
+    """A constant read from a script is evidence on the candidate, naming that script."""
+    data = load_fixture(VALID_DIR / "json_login_encrypted_body.json")
+    data["_entries"].append(_script_entry(_SJCL_URL, _CONSTANTS))
+    ambiguities: list[Ambiguity] = []
+    detect_auth(data["_entries"], "http", [], [], ambiguities=ambiguities)
+    evidence = [e for a in ambiguities for c in a.candidates for e in c.evidence if e.source == "/js/sjclCrypto.js"]
+    assert evidence
+    assert any("DEFAULT_SJCL_ITERATIONS = 1000" in e.snippet for e in evidence)
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH"])

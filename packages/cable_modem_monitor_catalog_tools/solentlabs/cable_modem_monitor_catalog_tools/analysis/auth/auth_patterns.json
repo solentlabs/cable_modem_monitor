@@ -29,6 +29,13 @@
     "hmac_md5.js": "md5",
     "hmac_sha256.js": "sha256"
   },
+  "json_sjcl_script_constants": {
+    "pbkdf2_iterations": "DEFAULT_SJCL_ITERATIONS",
+    "pbkdf2_key_length": "DEFAULT_SJCL_KEYSIZEBITS"
+  },
+  "json_sjcl_encrypt_calls": [
+    "sjclCCMencrypt"
+  ],
   "sjcl_page_variables": [
     "myIv",
     "mySalt",

@@ -344,7 +344,7 @@ HAR before proceeding. Pull
 | `form_pbkdf2` | A preliminary request fires before credentials are submitted and the response contains a salt value. `pbkdf2_iterations` and `pbkdf2_key_length` should match values visible in that exchange. |
 | `form_sjcl` | The credential POST body is an encrypted SJCL JSON blob, not plain form fields. `encrypt_aad` and `decrypt_aad` should match the AAD strings in the login JS. |
 | `bearer` | The JSON login body has a password key whose value is not ciphertext, and a value its response issued (a header such as `X-CSRF-Token`, or a JSON field) comes back on later requests. |
-| `json_sjcl` | The JSON login body is ciphertext plus the username, with no password key, built by the login page's SJCL script. Set `pbkdf2_iterations`, `pbkdf2_key_length` and `aad` from that script. |
+| `json_sjcl` | The JSON login body is ciphertext plus the username, with no password key, built by the login page's SJCL script. The tool reads `pbkdf2_iterations`, `pbkdf2_key_length` and `aad` from the captured scripts; set any it warns are missing from that script. |
 
 If the detected strategy or any extracted field looks wrong, correct
 `analysis["auth"]` before calling `generate_config` — don't patch the

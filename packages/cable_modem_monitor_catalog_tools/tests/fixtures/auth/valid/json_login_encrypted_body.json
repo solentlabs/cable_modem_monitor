@@ -229,6 +229,7 @@
         "json_sjcl": [
           "/actionHandler/ajaxSet_login.php",
           "/login.php",
+          "/login.php",
           "/actionHandler/ajaxSet_SessionActive.php"
         ]
       }
@@ -238,7 +239,8 @@
     "json_sjcl": {
       "login_page": "/login.php",
       "login_endpoint": "/actionHandler/ajaxSet_login.php",
-      "token_header": "X-CSRF-Token"
+      "token_header": "X-CSRF-Token",
+      "aad": "aad-text"
     }
   }
 }

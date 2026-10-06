@@ -540,16 +540,21 @@ strategy the body fits, and nothing is offered.
 | Candidate | Offered when | Fields |
 |-----------|--------------|--------|
 | `bearer` | A password-shaped key holds a value that is not ciphertext-shaped (values are often redacted, so only the shape is checked) | `login_endpoint`; `method` unless POST; `username_field` unless `username` (`""` with no username key); `extra_fields`, where a value equal to the modem's host becomes `{host}`; token source and placement |
-| `json_sjcl` | A key holds ciphertext (32 or more hex characters) and no password-shaped key holds anything else | `login_page`, the latest page before the login with a password input that names the ciphertext key; `login_endpoint`; `method` unless PUT; `token_header` |
+| `json_sjcl` | A key holds ciphertext (32 or more hex characters) and no password-shaped key holds anything else | `login_page`, the latest page before the login with a password input that names the ciphertext key; `login_endpoint`; `method` unless PUT; `token_header`; `pbkdf2_iterations`, `pbkdf2_key_length` and `aad` when the capture's scripts carry them |
 
 The token is the first value the login response issued, from a header or
 a JSON string of 8 or more characters that no earlier request sent, that a
 later request sends back: as a request header (`token_placement: header`),
 as `Authorization: Bearer` (the default placement), or inside a URL query
 parameter (`query`, with the text before it as `token_prefix`). A login
-with no such value gets a warning. `json_sjcl`'s PBKDF2 parameters and
-AAD live in page script the tool does not read; `generate_config`
-validation names them.
+with no such value gets a warning. `json_sjcl`'s crypto parameters come from
+the capture's own scripts, never a default: `pbkdf2_iterations` and
+`pbkdf2_key_length` from the `DEFAULT_SJCL_ITERATIONS` and
+`DEFAULT_SJCL_KEYSIZEBITS` constants (names in `auth_patterns.json`, from
+confirmed modems), and `aad` from the string literal every
+`sjclCCMencrypt` call passes as its fourth argument. A value the
+scripts do not give, or give two ways, is left out with a warning, and
+`generate_config` validation names it.
 
 **Dynamic form action.** A query string on the login POST URL is a
 per-session token published in the login form's `action` (Netgear

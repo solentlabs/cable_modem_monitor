@@ -158,6 +158,18 @@ def get_hnap_hmac_scripts() -> dict[str, str]:
     return dict(data["hnap_hmac_scripts"])
 
 
+def get_json_sjcl_script_constants() -> dict[str, str]:
+    """Return json_sjcl config fields mapped to the JS constant that declares each."""
+    data = _load_patterns()
+    return dict(data["json_sjcl_script_constants"])
+
+
+def get_json_sjcl_encrypt_calls() -> tuple[str, ...]:
+    """Return the JS functions whose fourth argument is the json_sjcl aad."""
+    data = _load_patterns()
+    return tuple(data["json_sjcl_encrypt_calls"])
+
+
 def get_sjcl_page_variables() -> tuple[str, ...]:
     """Return JS variable names that indicate SJCL AES-CCM auth.
 

@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Intake reads the `json_sjcl` crypto parameters from the capture.**
+  PBKDF2 iterations and key length come from the constants in the loaded
+  SJCL script, and the aad from the string every encrypt call passes. A
+  value the scripts do not state is left out with a warning, never
+  defaulted. The TG3442S capture now generates a valid config.
 - **Restart replay checks the form body.** A restart's form fields must
   appear together in one body the capture posted, so a wrong value on a
   shared reboot and factory-reset form (EVW32C-0N) fails CI. Test
