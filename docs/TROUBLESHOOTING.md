@@ -61,12 +61,12 @@ Cable modems periodically reboot or become busy during channel maintenance. This
 
 #### 2. Network Issues vs. Web Server Issues
 
-The integration uses health probes (ICMP ping and HTTP HEAD/GET) to diagnose connectivity independently of data collection:
+The integration uses health probes to diagnose connectivity independently of data collection. Status comes from ICMP ping and a TCP connect; an HTTP HEAD, where the modem supports it, only measures latency:
 
-| ICMP | HTTP | Health Status | Diagnosis |
+| ICMP | TCP | Health Status | Diagnosis |
 | ------ | ------ | --------------- | ----------- |
 | Pass | Pass | `responsive` | Fully responsive |
-| Pass | Fail | `degraded` | Web server may be hung |
+| Pass | Fail | `degraded` | Answers ping but refuses connections; web server may be hung |
 | Fail | Pass | `icmp_blocked` | Network blocks ICMP |
 | Fail | Fail | `unresponsive` | Modem is down |
 
@@ -243,7 +243,7 @@ The `sensor.cable_modem_status` entity combines three independent signals into a
 The three input signals are:
 
 - **connection_status** — from the data collection pipeline (auth, fetch, parse)
-- **health_status** — from lightweight health probes (ICMP, HTTP)
+- **health_status** — from lightweight health probes (ICMP, TCP)
 - **docsis_status** — from downstream channel lock status
 
 See [ENTITY_MODEL_SPEC.md § Status Sensor](../custom_components/cable_modem_monitor/docs/ENTITY_MODEL_SPEC.md#status-sensor) for full details.

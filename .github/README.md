@@ -16,7 +16,7 @@
 [![AI Assisted](https://img.shields.io/badge/AI-Claude%20Assisted-5A67D8.svg)](https://claude.ai)
 [![Supported Modems](https://img.shields.io/badge/Supported%20Modems-View%20Catalog-blue.svg)](#supported-modems)
 
-A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
+A custom Home Assistant integration that monitors your cable modem's signal quality, power levels and error rates, so line problems show up before they cause outages.
 
 <!-- markdownlint-disable MD033 -->
 <picture>
@@ -24,8 +24,6 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard" width="500">
 </picture>
 <!-- markdownlint-enable MD033 -->
-
-Monitor your cable modem's signal quality, errors, and connection health in real-time.
 
 > **⭐ If you find this integration useful, please star this repo!**
 > It helps others discover the project and shows that the integration is actively used.
@@ -67,7 +65,7 @@ Monitor your cable modem's signal quality, errors, and connection health in real
 - 🔄 **Remote Control**: Restart your modem from Home Assistant
 - 🤖 **Automation Ready**: Trigger actions on signal degradation or errors
 - 🔐 **Local-Only**: All processing on your Home Assistant instance — no cloud services
-- 🛡️ **Security Focused**: CodeQL scanned on every push, weekly schedule, and PR
+- 🛡️ **Security Focused**: CodeQL scans every push to the main and feature branches, every pull request to main, and weekly
 - 🔌 **Plug & Play**: Easy UI configuration, no YAML editing needed
 
 ### See It In Action
@@ -120,13 +118,13 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
   - Frequency (Hz)
   - Corrected/Uncorrected errors
 - **Summary Sensors**: Total corrected and uncorrected downstream errors, where the modem's catalog entry declares them
-- **Unified Status**: Single sensor showing operational state (Operational/Degraded/Not Locked/Unresponsive)
+- **Unified Status**: One sensor combining connection, health and DOCSIS lock (see [Modem Status](#modem-status))
 - **System Information**: Software version, uptime, channel counts, and last boot time
 - **Health Monitoring**: Real-time modem health checks with:
   - Ping latency monitoring
   - HTTP response time tracking
   - Automatic health status assessment
-  - Circuit breaker pattern for reliability
+- **Login protection**: Rejected credentials trip a circuit breaker that stops further login attempts until you re-enter credentials or reload the integration; on some modems repeated bad logins cause a lockout or even a restart
 
 ### Control & Automation
 
@@ -138,13 +136,13 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
 
 ### Developer Friendly
 
-- **Extensible**: Plugin architecture makes adding new modem models easy
+- **Extensible**: Each modem is a catalog entry of YAML config, with Python only for firmware quirks
 - **Well Tested**: comprehensive test coverage across Core, Catalog, Catalog Tools, and HA integration suites — see CI badge above for current pass status
 - **Type Safe**: Full type hints, mypy and pyright validation
 
 ## Supported Modems
 
-This integration supports modems from ARRIS, Compal, Hitron, Motorola, Netgear, SerComm, Technicolor, and Virgin Media. Compatibility varies based on firmware versions and ISP customizations.
+This integration supports modems from ARRIS, CommScope, Compal, Hitron, Motorola, Netgear, Sagemcom, SDMC, Sercomm, Technicolor and Ubee, including ISP-branded boxes such as Virgin Media and Xfinity. Compatibility varies with firmware and ISP customization.
 
 > **[View the Supported Modems List](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)** - Complete list with DOCSIS versions, ISP compatibility, verification status, and model timelines.
 
@@ -219,7 +217,7 @@ After setup, configure via **Settings → Devices & Services → Cable Modem Mon
 - **Host**: Update modem IP / URL
 - **Credentials**: Update username/password if your modem requires authentication
 - **Polling Interval**: How often to fetch full modem status (30 seconds – 24 hours, default: 10 minutes)
-- **Health Check Interval**: How often to run lightweight reachability probes (default: 30 seconds; uses ICMP ping and TCP connect — no HTTP requests between data polls)
+- **Health Check Interval**: How often to run lightweight reachability probes (default: 30 seconds). Status comes from ICMP ping and a TCP connect; an HTTP HEAD measures latency where the modem supports it
 
 Modem Model and Channel Identity are install-time choices, not editable here. The model is fixed; Channel Identity (number vs ID) can be switched by removing and re-adding the integration (see [Known Limitations](#known-limitations)).
 
@@ -256,13 +254,7 @@ Channel Identity is set when you add the integration. To switch, remove and re-a
 
 ### Modem Status
 
-- `sensor.cable_modem_status`: Unified pass/fail status combining connection, health, and DOCSIS lock state
-  - **Operational**: All good - data parsed, DOCSIS locked, reachable
-  - **ICMP Blocked**: HTTP works but ping fails (check parser `supports_icmp` setting)
-  - **Partial Lock**: Some downstream channels not locked
-  - **Not Locked**: DOCSIS not locked to ISP
-  - **Parser Error**: Modem reachable but data couldn't be parsed
-  - **Unresponsive**: Can't reach modem via ICMP or TCP
+- `sensor.cable_modem_status`: One state combining connection, health probes and DOCSIS lock, such as Operational, Unresponsive, Auth Failed, No Signal or Partial Lock. All ten states, in priority order, are in [Understanding the Status Sensor](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#understanding-the-status-sensor).
 
 ### System Information
 
@@ -370,7 +362,7 @@ To remove a single modem:
 
 1. Go to **Settings → Devices & Services → Cable Modem Monitor**.
 2. Click the modem entry, open the **⋯** menu, and choose **Delete**.
-3. Confirm. The integration logs out of the modem, removes its device and entities, and deletes the small per-entry state it stored (the channel-bond baseline). Credentials held in Home Assistant's encrypted storage are removed with the entry. No restart is required.
+3. Confirm. The integration logs out of the modem, removes its device and entities, and deletes the small per-entry state it stored (the channel-bond baseline). The credentials stored with the entry are removed with it. No restart is required.
 
 Recorded sensor history is retained according to your Home Assistant **recorder** settings — deleting the integration does not purge it. To clear leftover channel history, use the `orphaned_statistics` service or follow [Ghost Statistics in History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#ghost-statistics-in-history). To clear state history, see [Leftover State History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#leftover-state-history).
 
@@ -406,11 +398,11 @@ Please see the [Contributing Guide](https://github.com/solentlabs/cable_modem_mo
 - **Read-Only by Default**: Only reads data from your modem; the only write action is a user-invoked restart
 - **Diagnostic Logs**: Private IPs (RFC1918) and filesystem paths are scrubbed from log lines included in the diagnostics file. Modem identity (model, firmware, channel data) is included verbatim — review before sharing publicly. The diagnostics file embeds a `_review_before_sharing` checklist to help you spot anything sensitive
 - **HAR Captures**: When onboarding a new modem, [har-capture](https://github.com/solentlabs/har-capture) sanitizes HAR files (passwords, tokens, MACs) before you submit them
-- **Secure Credentials**: Stored in Home Assistant's encrypted storage
+- **Credentials**: Kept in the Home Assistant config entry; the integration sends them only to the modem
 
 ### Security Features
 
-- **CodeQL Scanning**: Automated security analysis on every push, weekly schedule, and pull request.
+- **CodeQL Scanning**: Automated security analysis on every push to the main and feature branches, every pull request to main, and weekly.
   - **Standard CodeQL Python suite**: 100+ security queries covering OWASP Top 10 and broad CWE coverage — command injection, hardcoded credentials, SSL/TLS misuse, path traversal, XXE, and more.
   - **Custom queries**: One project-specific query at `cable-modem-monitor-ql/queries/no_timeout.ql` flags HTTP requests without explicit timeouts, which would otherwise hang the integration on unreachable modems.
 - **Security Documentation**: See [CodeQL Testing Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/reference/CODEQL_TESTING_GUIDE.md) for details
@@ -419,8 +411,9 @@ Please see the [Contributing Guide](https://github.com/solentlabs/cable_modem_mo
 ### Authentication Support
 
 - HTTP Basic Authentication
-- Form-based authentication
-- HNAP/SOAP authentication
+- Form and JSON logins, including nonce, salted (PBKDF2) and encrypted (SJCL) variants
+- Bearer-token, JSON-RPC, URL-token and HNAP/SOAP logins
+- CBN logins (Compal and ARRIS)
 - No authentication (for open modems)
 
 ## License
@@ -453,7 +446,7 @@ Catalog contributions are welcome and are the fastest way to get a new modem sup
 
 ### Related Solent Labs Projects
 
-- [har-capture](https://github.com/solentlabs/har-capture) - Zero-dependency Python library for sanitizing HAR files. Used by this integration to safely capture diagnostic data from cable modems without exposing passwords or network credentials.
+- [har-capture](https://github.com/solentlabs/har-capture) - Zero-dependency Python library for sanitizing HAR files. Contributors use it to capture a modem's web interface for a modem request without exposing passwords or network credentials.
 
 ## Legal & Safety
 

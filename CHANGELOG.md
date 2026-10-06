@@ -122,6 +122,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The READMEs no longer claim encrypted credential storage.** Home
+  Assistant keeps a config entry's credentials in its configuration
+  files, not in encrypted storage. The status list, the health-probe
+  description (status comes from ping and TCP; an HTTP HEAD only
+  measures latency), the supported manufacturers and auth methods, the
+  CodeQL triggers, har-capture's role and the catalog structure are
+  corrected too.
 - **The Arris TG3442DE login reads `p_status` as its firmware does.**
   Success is `AdminMatch` (or any role's `...Match`) or `Default`, as
   the page's own `loginPasswordChk()` decides; a bare `Match` is no

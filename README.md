@@ -14,7 +14,7 @@ Monitor your cable modem's signal quality, power levels, and error rates from Ho
 - **Connection health.** Status, uptime, last boot time, and reboot detection from counter resets.
 - **Health probes.** Ping and HTTP latency on a separate cadence from the full data poll.
 - **Remote restart.** Reboot the modem from a Home Assistant button.
-- **Local-only.** No cloud, no telemetry. Credentials stored in Home Assistant's encrypted storage.
+- **Local-only.** No cloud, no telemetry. Credentials stay in the Home Assistant config entry; the integration sends them only to the modem.
 
 ## Dashboard
 
@@ -24,7 +24,7 @@ Monitor your cable modem's signal quality, power levels, and error rates from Ho
 
 ## Supported modems
 
-Modems from ARRIS, Compal, Hitron, Motorola, Netgear, SerComm, Technicolor, and Virgin Media. Compatibility varies by firmware and ISP customization.
+Modems from ARRIS, CommScope, Compal, Hitron, Motorola, Netgear, Sagemcom, SDMC, Sercomm, Technicolor and Ubee, including ISP-branded boxes such as Virgin Media and Xfinity. Compatibility varies by firmware and ISP customization.
 
 Check the [catalog of supported modems on PyPI](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/) before installing. Every supported model is listed with DOCSIS version and verification status.
 
@@ -39,7 +39,7 @@ Modem not listed? [File a request](https://github.com/solentlabs/cable_modem_mon
 
 ## Privacy and security
 
-All processing happens on your Home Assistant instance. The integration reads from the modem's local web interface; the only write action is a user-invoked restart button. Every push is scanned by GitHub CodeQL.
+All processing happens on your Home Assistant instance. The integration reads from the modem's local web interface; the only write action is a user-invoked restart button. GitHub CodeQL scans every push to the main and feature branches, every pull request to main, and weekly.
 
 ## Using the integration
 

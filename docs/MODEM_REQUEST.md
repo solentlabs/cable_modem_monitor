@@ -45,8 +45,9 @@ to finish loading.**
 **Step 4. Visit every status page, waiting 3–5 seconds on each.**
 *Some data loads after the page appears.*
 
-**Step 5. If a page has a Refresh button, click it once.**
-*On some modems it fetches data differently from the page load.*
+**Step 5. If a page has a button that loads or shows more data
+(Refresh, More, Show channels), click it once.**
+*On some modems that button fetches data the page load does not.*
 
 ### Finishing
 
@@ -75,7 +76,9 @@ If you find anything:
 
 1. Replace it with `***REDACTED***` and save.
 2. Re-gzip: `gzip -kf -9 your-file.sanitized.har`
-3. Confirm the files are clean and match:
+3. Check that the edited file still matches the `.gz`, and scan for
+   known personal-data patterns (MACs, serials, IPs, emails, passwords,
+   tokens). A clean scan can't prove nothing slipped through:
    `har-capture validate your-file.sanitized.har --patterns network-device`
 4. Say what you redacted in your issue, so the redaction rules can be
    improved.
