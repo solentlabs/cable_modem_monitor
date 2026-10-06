@@ -128,12 +128,12 @@ class TestHandleLoginPost:
         assert handler.is_authenticated({}) is True
 
     def test_post_login_returns_json(self) -> None:
-        """POST login returns JSON with p_status=Match."""
+        """POST login returns JSON with the captured firmware's p_status=AdminMatch."""
         handler = _make_handler()
         response = handler.handle_login("POST", "/api/login", b"data", {})
         assert response is not None
         body = json.loads(response.body)
-        assert body["p_status"] == "Match"
+        assert body["p_status"] == "AdminMatch"
 
     def test_post_login_with_csrf_returns_encrypted_data(self) -> None:
         """With csrf_header configured, response includes encryptData."""

@@ -830,14 +830,15 @@ are UTF-8 encoded.
 4. **POST login** — send
    `{"EncryptData": hex(ciphertext), "Name": "<user>", "AuthData": "<encrypt_aad>"}`.
    Server responds with
-   `{"p_status": "AdminMatch"|"Match", "encryptData": "<hex>"}`.
+   `{"p_status": "AdminMatch", "encryptData": "<hex>"}`.
 5. **Decrypt nonce** — AES-CCM decrypt `hex_decode(encryptData)`
    with AAD `decrypt_aad.utf8` to extract the CSRF nonce.
 6. **POST session validation** — if `session_validation_endpoint` is
    configured, POST with the `csrf_header` to finalize the session.
 
-**Success detection:** The login response JSON `p_status` field must
-be `"AdminMatch"` or `"Match"`. Any other value is treated as failure.
+**Success detection:** read from `p_status` as the firmware reads it;
+the values are in
+[AUTH_SJCL_SPEC.md § Firmware Assumptions](AUTH_SJCL_SPEC.md#firmware-assumptions).
 
 Evidence: Arris Touchstone gateway firmwares that embed the SJCL
 library in their web interface. Constants are found in `base_95x.js`

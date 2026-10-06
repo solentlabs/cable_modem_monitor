@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+from solentlabs.cable_modem_monitor_core.auth.base import LoginLockoutError
 from solentlabs.cable_modem_monitor_core.auth.form_sjcl import (
     FormSjclAuthManager,
     _fetch_page_vars,
@@ -107,6 +108,35 @@ class TestFetchPageVars:
             _fetch_page_vars(session, "http://modem/", 10)
 
 
+# base_95x.js loginPasswordChk(): success when "Match" sits past index 0 or the
+# status is "Default"; "Lockout" blocks the GUI. A bare "Match" is not a login.
+#
+# ┌──────────────┬──────────┬───────────────────────────────┐
+# │ p_status     │ outcome  │ description                   │
+# ├──────────────┼──────────┼───────────────────────────────┤
+# │ AdminMatch   │ success  │ admin login                   │
+# │ UserMatch    │ success  │ any role's ...Match           │
+# │ Default      │ success  │ default-password login        │
+# │ Match        │ rejected │ bare Match: index 0, not > 0  │
+# │ (empty)      │ rejected │ no status                     │
+# │ None         │ rejected │ not a string                  │
+# │ Lockout      │ lockout  │ firmware anti-brute-force     │
+# └──────────────┴──────────┴───────────────────────────────┘
+#
+# fmt: off
+_P_STATUS_CASES: list[tuple[str | None, str, str]] = [
+    # (p_status,     outcome,    id)
+    ("AdminMatch",   "success",  "admin-match"),
+    ("UserMatch",    "success",  "role-match"),
+    ("Default",      "success",  "default"),
+    ("Match",        "rejected", "bare-match"),
+    ("",             "rejected", "empty"),
+    (None,           "rejected", "none"),
+    ("Lockout",      "lockout",  "lockout"),
+]
+# fmt: on
+
+
 class TestFormSjclAuthManager:
     """FormSjclAuthManager AES-CCM encrypted form auth."""
 
@@ -139,28 +169,31 @@ class TestFormSjclAuthManager:
         session_call = mock_post.call_args_list[1]
         assert "json" not in session_call.kwargs
 
-    def test_login_rejected(self, session: requests.Session) -> None:
-        """Reports error when p_status is not AdminMatch."""
-        config = _make_config()
-        manager = FormSjclAuthManager(config)
-
-        page_resp = _page_response(_login_page_html())
-
+    @pytest.mark.parametrize(
+        ("p_status", "outcome"), [(p, o) for p, o, _ in _P_STATUS_CASES], ids=[c[2] for c in _P_STATUS_CASES]
+    )
+    def test_login_p_status(self, session: requests.Session, p_status: str | None, outcome: str) -> None:
+        """p_status is read as the firmware's loginPasswordChk() reads it."""
+        manager = FormSjclAuthManager(_make_config())
         login_resp = MagicMock()
         login_resp.status_code = 200
-        login_resp.json.return_value = {
-            "p_status": "Lockout",
-            "encryptData": "",
-        }
+        login_resp.json.return_value = {"p_status": p_status, "encryptData": _TEST_ENCRYPTED_NONCE}
+        session_resp = MagicMock()
+        session_resp.status_code = 200
 
         with (
-            patch.object(session, "get", return_value=page_resp),
-            patch.object(session, "post", return_value=login_resp),
+            patch.object(session, "get", return_value=_page_response(_login_page_html())),
+            patch.object(session, "post", side_effect=[login_resp, session_resp]),
         ):
-            result = manager.authenticate(session, "http://192.168.0.1", "admin", "wrong")
+            if outcome == "lockout":
+                with pytest.raises(LoginLockoutError, match="Lockout"):
+                    manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+                return
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
 
-        assert result.success is False
-        assert "Lockout" in result.error
+        assert result.success is (outcome == "success")
+        if outcome == "rejected":
+            assert repr(p_status) in (result.error or "")
 
     def test_missing_iv_variable(self, session: requests.Session) -> None:
         """Reports error when login page is missing myIv."""
@@ -563,7 +596,7 @@ def test_login_matches_sjcl_reference(session: requests.Session, vec: dict[str, 
 
     login_resp = MagicMock()
     login_resp.status_code = 200
-    login_resp.json.return_value = {"p_status": "Match", "encryptData": vec["expected_nonce_ciphertext_hex"]}
+    login_resp.json.return_value = {"p_status": "AdminMatch", "encryptData": vec["expected_nonce_ciphertext_hex"]}
     session_resp = MagicMock()
     session_resp.status_code = 200
 

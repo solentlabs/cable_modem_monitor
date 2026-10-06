@@ -118,6 +118,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Arris TG3442DE login reads `p_status` as its firmware does.**
+  Success is `AdminMatch` (or any role's `...Match`) or `Default`, as
+  the page's own `loginPasswordChk()` decides; a bare `Match` is no
+  longer accepted, and `Lockout` now reports a lockout instead of
+  wrong credentials.
 - **The intake score reads a POSTed page from its POST.** A page
   parser.yaml fetches by POST (`requests:`) was graded from the last
   response to its URL, so a later GET serving empty tables would have

@@ -75,7 +75,9 @@ Step-by-step with explicit encoding at every boundary:
 
 4. POST login (login_endpoint):
    {"EncryptData": hex(ciphertext), "Name": "<user>", "AuthData": "<encrypt_aad>"}
-   Response: {"p_status": "AdminMatch"|"Match", "encryptData": "<hex>"}
+   Response: {"p_status": "AdminMatch", "encryptData": "<hex>"}
+   Success: "Match" after the first character (AdminMatch), or "Default".
+   "Lockout" raises a lockout (AUTH_LOCKOUT); anything else is a rejected login.
    Sets session cookie (auth.cookie_name)
 
 5. Decrypt response:
@@ -99,7 +101,7 @@ Touchstone firmware family, not inherent to SJCL:
 | POST field names | `EncryptData`, `Name`, `AuthData` | `base_95x.js` login() function | Other vendors may use different field names |
 | Plaintext structure | `{"Password": "<pw>", "Nonce": "<sessionId>"}` | `base_95x.js` login() function | JSON keys are firmware-specific |
 | Response encrypted field | `encryptData` (lowercase 'e') | HAR response from ajaxSet_Password.php | Field name is firmware-specific |
-| Success field and values | `p_status` in (`"AdminMatch"`, `"Match"`) | HAR response, `base_95x.js` loginPasswordChk() | Success detection is firmware-specific |
+| Success field and values | `p_status` holds `Match` past index 0 (`AdminMatch`) or equals `Default`; `Lockout` is a lockout; a bare `Match` is not a login | `base_95x.js` loginPasswordChk() (TG3442DE capture, 2026-04-03) | Success detection is firmware-specific |
 | PBKDF2 hash algorithm | SHA-256 | SJCL default | Universal for SJCL but hardcoded in code |
 
 A second SJCL wire format did appear (`json_sjcl` below). It differs on

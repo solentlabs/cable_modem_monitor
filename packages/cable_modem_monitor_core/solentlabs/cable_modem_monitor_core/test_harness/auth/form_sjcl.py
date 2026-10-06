@@ -141,7 +141,9 @@ class FormSjclAuthHandler(FormAuthHandler):
         """
         import json
 
-        response_data: dict[str, str] = {"p_status": "Match"}
+        # The captured firmware's success status; a bare "Match" is not one
+        # (base_95x.js loginPasswordChk, AUTH_SJCL_SPEC)
+        response_data: dict[str, str] = {"p_status": "AdminMatch"}
 
         if self._csrf_header:
             key = sjcl.derive_key(

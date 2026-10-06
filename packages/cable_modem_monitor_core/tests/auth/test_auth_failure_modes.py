@@ -515,7 +515,7 @@ _NO_REQUEST_CLASSIFICATION = {"bearer", "json_rpc", "json_sjcl"}
 # any later one gets an empty 200. A guard that swallowed a connectivity
 # exception would then run on to a failed AuthResult instead of raising.
 _SJCL_PAGE = "var myIv = 'aabbccddeeff0011';\nvar mySalt = '1122334455667788';\n"
-_SJCL_MATCH = {"p_status": "Match"}
+_SJCL_MATCH = {"p_status": "AdminMatch"}
 _HNAP_CHALLENGE = {"LoginResponse": {"Challenge": "c", "PublicKey": "p", "Cookie": "k", "LoginResult": "OK"}}
 # fmt: off
 _CLASSIFYING: list[tuple[str, str, dict[str, Any], list[str | dict[str, Any]]]] = [
