@@ -63,6 +63,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   endpoint the capture sent different bodies, such as a shared reboot
   and factory-reset form, stores none and asks for a capture of the
   action alone. (#221)
+- **The intake tools read the HNAP hmac algorithm from the page's
+  script first.** A loaded `hmac_md5.js` or `hmac_sha256.js` decides,
+  then the `HNAP_AUTH` hash length. With neither, the algorithm is an
+  ambiguity with both candidates, where it used to default to md5. The
+  Arris S33v3 auth config is now reproduced in full; the S34's
+  algorithm, which its capture cannot show, is a choice instead of a
+  wrong md5.
 - **The intake tools drop the auth `confidence` score.** Nothing read
   it. Where it was the only sign of doubt, a warning now says what the
   strategy rests on: `form_pbkdf2` always, and `form_sjcl` when no

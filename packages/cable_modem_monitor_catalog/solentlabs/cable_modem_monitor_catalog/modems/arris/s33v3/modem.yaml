@@ -79,9 +79,9 @@ notes: |
   SerialNumber and StatusSoftwareSerialNum became [REDACTED] (fields
   check_fixture_pii does not scan), and the TLS cert subjectName became
   XXXXXXXXXXXX, the form the cert-identifier gate reads as redacted.
-  HNAP_AUTH is redacted throughout this capture, so the intake
-  pipeline's hmac_algorithm detector has no hash to measure and falls
-  back to md5. The committed sha256 came from the 2026-07-09 capture.
+  HNAP_AUTH is redacted throughout this capture; the hmac_sha256.js it
+  loads gives the intake pipeline sha256. The committed sha256 came
+  from the 2026-07-09 capture.
   Playwright recorded the wrong body for the Action="login" response in
   both captures: Content-Length 45, a longer GetMultipleHNAPs body. Not
   edited; the harness synthesizes the HNAP login anyway.

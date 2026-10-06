@@ -402,19 +402,18 @@ recognized through its own committed config.
 
 #### HNAP transport
 
-Auth is always `hnap`. The only variable is `hmac_algorithm`:
+Auth is always `hnap`. The only variable is `hmac_algorithm`, read in
+this order:
 
 | Evidence | Algorithm |
 |----------|-----------|
+| The capture loads exactly one of `hmac_md5.js` and `hmac_sha256.js` (names in `auth_patterns.json`, from confirmed modems); both loaded falls through | that script's algorithm |
 | HNAP_AUTH hash is 32 hex chars (128 bits) | `md5` |
 | HNAP_AUTH hash is 64 hex chars (256 bits) | `sha256` |
-| Cannot determine from HAR alone | Flag — check model documentation or contributor info |
+| Neither (no script; the header absent or redacted) | A blocking `auth.hmac_algorithm` [ambiguity](#ambiguities-resolve-then-proceed) with candidates `md5` and `sha256`, never a default |
 
-**Note:** The HNAP_AUTH hash length in the HAR may be ambiguous if the
-HAR was captured post-auth (hash computed client-side). If the HAR
-includes the Login action response, the `Challenge` and `PublicKey`
-fields confirm the protocol but not the algorithm. Default to `md5`
-(most common) and flag for verification.
+The `Challenge` and `PublicKey` of a captured Login response confirm the
+protocol but not the algorithm.
 
 #### JSON-RPC transport
 
@@ -1605,7 +1604,6 @@ coordinator skips missing hooks.
 | No logout flow in HAR | "No logout endpoint observed in HAR. If this modem has single-session limits, a logout action will be needed." |
 | No parseable data sections | "no parseable data sections detected" — auth and actions still analyzed; no parser can be generated (common on unprovisioned modems serving placeholder pages). |
 | Dynamic login action, no Core support | "login POST ... carries a query string" — per-session token; without `action_source` support (#189) the bare-action config may be rejected. |
-| HMAC algorithm uncertain (HNAP) | "HNAP HMAC algorithm cannot be confirmed from HAR. Defaulting to `md5`. Verify with contributor." |
 | Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |
 | Action body encoded | "restart action PUT /actionHandler/ajaxSet_Reset_Restore.php: the observed JSON body holds sanitized or encoded values ['user'] and was not copied to json_body." The action carries `body: encoded`. |
 | Action body unobserved | "restart action POST /rest/v1/system/reboot (source_inferred): request body unobserved." The endpoint is in page source but the capture holds no request to it, so neither `params` nor `json_body` is generated. The action carries `body: unobserved`. |
@@ -2411,7 +2409,7 @@ default_host: "192.168.100.1"
 
 auth:
   strategy: hnap
-  hmac_algorithm: md5  # from HNAP_AUTH hash length (32 hex chars)
+  hmac_algorithm: md5  # from the loaded hmac_md5.js
 
 hardware:
   docsis_version: "3.1"
@@ -2530,9 +2528,8 @@ downstream:
    a `channel_type` field. A DOCSIS 3.0 modem with a `channel_type`
    column (QAM/ATDMA only) correctly returns "3.0". Human should verify.
 
-3. **HMAC algorithm detection is best-effort.** HNAP hash length
-   heuristic works for MD5 (32 hex) vs SHA256 (64 hex) but can't
-   distinguish other algorithms. No other algorithms are currently
+3. **HMAC algorithm detection knows two algorithms.** The hmac script
+   and the hash length tell MD5 from SHA256 only; no other algorithm is
    known in the modem landscape.
 
 5. **Restart actions are almost never in HAR captures.** Contributors

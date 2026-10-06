@@ -152,6 +152,12 @@ def get_pbkdf2_salt_triggers() -> tuple[str, ...]:
     return tuple(data["pbkdf2_salt_triggers"])
 
 
+def get_hnap_hmac_scripts() -> dict[str, str]:
+    """Return HNAP hmac script file names mapped to the algorithm each one implements."""
+    data = _load_patterns()
+    return dict(data["hnap_hmac_scripts"])
+
+
 def get_sjcl_page_variables() -> tuple[str, ...]:
     """Return JS variable names that indicate SJCL AES-CCM auth.
 

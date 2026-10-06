@@ -25,6 +25,10 @@
   "pbkdf2_salt_triggers": [
     "seeksalthash"
   ],
+  "hnap_hmac_scripts": {
+    "hmac_md5.js": "md5",
+    "hmac_sha256.js": "sha256"
+  },
   "sjcl_page_variables": [
     "myIv",
     "mySalt",

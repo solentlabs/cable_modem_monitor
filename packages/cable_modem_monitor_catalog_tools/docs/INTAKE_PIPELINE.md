@@ -141,10 +141,13 @@ never asked. The fitting measure is whether the correct answer was among the
 candidates offered, and whether un-inferable cases were flagged as gaps.
 [Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed) are the
 first detection that emits candidates, and the regression scores them that
-way ([Ambiguity resolution](#intake-pipeline-regression)). A JSON login's
-strategy is one ([ONBOARDING_SPEC.md § JSON login](ONBOARDING_SPEC.md#json-login));
-other auth and action detection still returns one answer, so its
-exact-match grades stand as the interim proxy.
+way ([Ambiguity resolution](#intake-pipeline-regression)). They cover a
+JSON login's strategy ([ONBOARDING_SPEC.md § JSON login](ONBOARDING_SPEC.md#json-login)),
+an HNAP `hmac_algorithm` the capture cannot show
+([ONBOARDING_SPEC.md § HNAP transport](ONBOARDING_SPEC.md#hnap-transport)),
+JSON-RPC error codes and restarts, CBN action codes, and HTTP action
+endpoints no pattern knows. Detection that returns one answer keeps its
+exact-match grade as the interim proxy.
 
 ---
 

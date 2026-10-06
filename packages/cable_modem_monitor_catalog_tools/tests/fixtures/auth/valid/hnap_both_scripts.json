@@ -1,0 +1,72 @@
+{
+  "_description": "Both hmac scripts loaded: neither decides, so the HNAP_AUTH header length does",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/js/SOAP/hmac_sha256.js",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/javascript"
+          }
+        ],
+        "content": {
+          "mimeType": "application/javascript",
+          "text": "function hex_hmac_sha256(k, d) {}"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/js/SOAP/hmac_md5.js",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/javascript"
+          }
+        ],
+        "content": {
+          "mimeType": "application/javascript",
+          "text": "function hex_hmac_md5(k, d) {}"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "/HNAP1/",
+        "headers": [
+          {
+            "name": "HNAP_AUTH",
+            "value": "abcdef1234567890abcdef1234567890 12345"
+          }
+        ],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {
+          "size": 10,
+          "text": "{}"
+        }
+      }
+    }
+  ],
+  "_transport": "hnap",
+  "_expected_strategy": "hnap",
+  "_expected_fields": {
+    "hmac_algorithm": "md5"
+  }
+}

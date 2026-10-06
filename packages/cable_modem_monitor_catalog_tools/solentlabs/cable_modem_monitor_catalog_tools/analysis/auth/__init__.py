@@ -56,7 +56,7 @@ def detect_auth(
     if ambiguities is None:
         ambiguities = []
     if transport == "hnap":
-        return detect_hnap_auth(entries, warnings)
+        return detect_hnap_auth(entries, warnings, ambiguities)
     if transport == "json_rpc":
         return detect_json_rpc_auth(entries, warnings, ambiguities)
     if transport == "cbn":
