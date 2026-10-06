@@ -486,7 +486,8 @@ Check HAR entries for login flow:
   │
   ├── POST, PUT or PATCH with JSON body containing credentials
   │   ├── Login page has SJCL JS variables (myIv, mySalt, encryptflag)?
-  │   │   POST body contains EncryptData field?
+  │   │   POST body contains EncryptData field, or (the body emptied by the
+  │   │   sanitizer) the login response carries encryptData?
   │   │   └── strategy: form_sjcl
   │   │       Extract: login_page, login_endpoint,
   │   │                session_validation_endpoint,
@@ -494,7 +495,7 @@ Check HAR entries for login flow:
   │   │       (pbkdf2_iterations, pbkdf2_key_length, ccm_tag_length
   │   │        extracted from JS or set to SJCL defaults)
   │   │
-  │   ├── Multi-request salt/challenge flow?
+  │   ├── Multi-request salt/challenge flow (a request carries a salt trigger)?
   │   │   └── strategy: form_pbkdf2
   │   │       Extract: login_endpoint, salt_trigger,
   │   │                pbkdf2_iterations, pbkdf2_key_length,
@@ -521,11 +522,11 @@ Check HAR entries for login flow:
 
 A JSON body sent to a path whose last segment contains `login`, with a
 password- or username-shaped key, can be more than one strategy. The
-branch sees only what the branches above leave: any JSON body sent to a
-login-pattern URL (`/login`, `/cgi-bin/`, ...) goes to `form_pbkdf2`
-first, so a bearer login there is never offered (`sagemcom/f3896lg-zg`,
-[INTAKE_PIPELINE.md § Intake Pipeline Regression](INTAKE_PIPELINE.md#intake-pipeline-regression)). Analysis
-does not pick: it reports a blocking `auth.strategy`
+branch sees only what the branches above leave. A JSON body sent to a
+login-pattern URL (`/login`, `/cgi-bin/`, ...) is `form_pbkdf2` only when
+a request carries a salt trigger; without one it reaches this branch, and
+a body no candidate fits is a named stop, never a `form_pbkdf2` guess.
+Analysis does not pick: it reports a blocking `auth.strategy`
 [ambiguity](#ambiguities-resolve-then-proceed) whose candidates are the
 strategies the body fits, each citing the login request, the page that
 builds the body, and the request that sends the token back. Each

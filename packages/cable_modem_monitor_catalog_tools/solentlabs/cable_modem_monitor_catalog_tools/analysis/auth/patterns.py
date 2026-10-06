@@ -185,6 +185,12 @@ def get_sjcl_post_fields() -> tuple[str, ...]:
     return tuple(data["sjcl_post_fields"])
 
 
+def get_sjcl_response_fields() -> tuple[str, ...]:
+    """Return login-response JSON keys that indicate SJCL AES-CCM auth."""
+    data = _load_patterns()
+    return tuple(data["sjcl_response_fields"])
+
+
 def get_session_cookie_indicators() -> frozenset[str]:
     """Return session cookie name indicators (case-insensitive substrings).
 

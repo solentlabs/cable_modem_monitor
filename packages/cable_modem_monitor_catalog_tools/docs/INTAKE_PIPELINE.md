@@ -111,9 +111,9 @@ Neither gates, and both hand over evidence rather than a conclusion.
 HTTP auth detection mostly does not. Outside JSON logins it returns a
 single answer, and a failure is a hard stop rather than a shortlist. The
 cost is not missed capability, it is **a wrong answer with only generic doubt**:
-`sagemcom/f3896lg-zg` is reported `form_pbkdf2`. A warning says that
-strategy rests on the exchange's shape, but nothing reports the login
-response's `created.token`, the one fact that makes it `bearer`.
+a login read as the first strategy that matched, with nothing reporting
+the evidence that makes it another (a response's `created.token`, the
+one fact that makes a login `bearer`).
 
 **The rule.** Where a detection is ambiguous, report the alternatives and
 the wire evidence for each, not the winner alone. Where the capture cannot
@@ -415,27 +415,20 @@ analysis output), auth is graded from the generated config, so it
 requires generation to succeed.
 
 **Auth strategy mismatches that are correct by design.** A `strategy:
-mismatch` normally means one side is wrong, but six standing lines are
+mismatch` normally means one side is wrong, but three standing lines are
 none of them a catalog error. They are reported, never suppressed — the
 report states what the pipeline can do, and hiding a known limit would
-make it read as capability. Four causes:
+make it read as capability. Two causes:
 
 | Cause | Modems |
 |-------|--------|
-| **Claimed by form_pbkdf2 first.** The HTTP tree tries form_pbkdf2 before the JSON login branch, and takes any JSON body sent to a login-pattern URL, so `bearer` is never offered there | `sagemcom/f3896lg-zg` |
-| **Capture carries no evidence.** The committed strategy is right about the hardware; the HAR cannot show it | `netgear/c7000v2`, `technicolor/tc4400` — committed `basic`, but zero 401 challenges and zero `Authorization` headers. `arris/tg3442de` — committed `form_sjcl`, but both login POST bodies are `{}`, so the SJCL fields the branch keys on are gone and the login URL falls through to the PBKDF2 bucket |
-| **Action-scoped auth read as primary.** `auth: none` plus `actions.restart.action_auth: bearer` — the only login in the capture fired for the restart action, and the data path really is unauthenticated | `sagemcom/f3896lg-vmb` |
+| **Capture carries no evidence.** The committed strategy is right about the hardware; the HAR cannot show it | `netgear/c7000v2`, `technicolor/tc4400` — committed `basic`, but zero 401 challenges and zero `Authorization` headers |
 | **Credential shape the detector cannot name.** The login posts `arguments=<base64 of user:pass>`; the credential test is field-name based, so a generic `arguments` parameter reads as carrying no credentials | `arris/sb6190` (b64 variant) |
 
 None of these is a catalog defect, and no entry above should be changed to
-make a line turn green. Nor does closing them require teaching the detector
-every shape: each one has wire evidence that would let a reader settle it —
-`created.token` in a login response, a login POST that precedes only a
-reboot. Reporting that evidence and the matching catalog precedent is the
-fix, per [Detection Owes the LLM
-Evidence](#detection-owes-the-llm-evidence-not-a-verdict). The two `basic`
-lines have no evidence in the capture at all, and their correct outcome is a
-gap report asking for a clean recapture.
+make a line turn green. The two `basic` lines have no evidence in the
+capture at all, and their correct outcome is a gap report asking for a
+clean recapture.
 
 **Auth fixture audit** runs at the end of every sweep. For each form-auth
 modem with `login_page` configured, it verifies that the committed HAR

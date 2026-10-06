@@ -10,6 +10,7 @@ Per docs/ONBOARDING_SPEC.md Phase 2 (HTTP transport).
 from __future__ import annotations
 
 import base64
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, NamedTuple
@@ -34,6 +35,7 @@ from .patterns import (
     get_pbkdf2_salt_triggers,
     get_sjcl_page_variables,
     get_sjcl_post_fields,
+    get_sjcl_response_fields,
     has_credential_fields,
     is_password_field_name,
     is_username_field_name,
@@ -50,6 +52,7 @@ _NONCE_ERROR_PREFIX: str = get_nonce_error_prefix()
 _PBKDF2_SALT_TRIGGERS: tuple[str, ...] = get_pbkdf2_salt_triggers()
 _SJCL_PAGE_VARS: tuple[str, ...] = get_sjcl_page_variables()
 _SJCL_POST_FIELDS: tuple[str, ...] = get_sjcl_post_fields()
+_SJCL_RESPONSE_FIELDS: tuple[str, ...] = get_sjcl_response_fields()
 
 # A url_token credential rides in the query string as login_<base64(user:pass)>.
 # The marker must be followed by an actual token and must not be matched
@@ -183,6 +186,8 @@ class _HttpAuthSignals:
     sjcl_login_page_html: str = ""
     pbkdf2_entries: list[dict[str, Any]] = field(default_factory=list)
     json_login_entries: list[dict[str, Any]] = field(default_factory=list)
+    # JSON writes to a login URL that no salt or cipher evidence classifies
+    unclassified_json_logins: list[str] = field(default_factory=list)
     has_401: bool = False
     has_302_after_post: bool = False
     has_authorization_header: bool = False
@@ -203,6 +208,10 @@ class _HttpAuthSignals:
             parts.append(f"POST to {path_from_url(url)}")
         if self.has_set_cookie_after_login:
             parts.append("Set-Cookie after login")
+        parts.extend(
+            f"JSON POST to {path} with no salt, credential or cipher field (an emptied body needs a recapture)"
+            for path in self.unclassified_json_logins
+        )
         return ", ".join(parts) if parts else "ambiguous auth artifacts"
 
 
@@ -313,6 +322,30 @@ def _check_url_token_signals(
             signals.has_any_auth_signal = True
 
 
+def _check_json_post_signals(
+    entry: dict[str, Any],
+    text: str,
+    resp: dict[str, Any],
+    url: str,
+    signals: _HttpAuthSignals,
+) -> None:
+    """Classify a JSON POST as an SJCL, PBKDF2 or other login signal."""
+    # SJCL: the request carries EncryptData/AuthData, or, when the
+    # sanitizer emptied it, the login response carries encryptData
+    if _is_login_url(url) and (any(f in text for f in _SJCL_POST_FIELDS) or _has_json_key(resp, _SJCL_RESPONSE_FIELDS)):
+        signals.sjcl_login_entry = entry
+        signals.has_any_auth_signal = True
+    elif any(trigger in text.lower() for trigger in _PBKDF2_SALT_TRIGGERS):
+        # form_pbkdf2 needs salt evidence; a login-shaped URL is not any
+        signals.pbkdf2_entries.append(entry)
+        signals.has_any_auth_signal = True
+    elif _is_login_url(url):
+        # Still a login: the JSON login candidates or a named stop decide it
+        if not is_json_login(entry):
+            signals.unclassified_json_logins.append(path_from_url(url))
+        signals.has_any_auth_signal = True
+
+
 def _check_post_signals(
     entry: dict[str, Any],
     req: dict[str, Any],
@@ -325,19 +358,8 @@ def _check_post_signals(
     post_data = req.get("postData", {})
     mime = post_data.get("mimeType", "").lower()
 
-    # JSON POST - check for SJCL or PBKDF2
     if "json" in mime:
-        text = post_data.get("text", "")
-
-        # SJCL: POST body contains EncryptData/AuthData fields
-        if _is_login_url(url) and any(f in text for f in _SJCL_POST_FIELDS):
-            signals.sjcl_login_entry = entry
-            signals.has_any_auth_signal = True
-        else:
-            is_salt = any(trigger in text.lower() for trigger in _PBKDF2_SALT_TRIGGERS)
-            if is_salt or _is_login_url(url):
-                signals.pbkdf2_entries.append(entry)
-                signals.has_any_auth_signal = True
+        _check_json_post_signals(entry, post_data.get("text", ""), resp, url, signals)
 
     # Form POST to login-like endpoint. An action POST can share the login
     # endpoint (DM1000: /setup.cgi serves login and reboot), so only a
@@ -861,6 +883,15 @@ def _parse_auth_scheme(www_authenticate: str) -> str:
     """
     token = www_authenticate.strip().split(None, 1)[0] if www_authenticate.strip() else ""
     return token.lower()
+
+
+def _has_json_key(resp: dict[str, Any], keys: tuple[str, ...]) -> bool:
+    """Whether a response body is a JSON object holding any of ``keys``."""
+    try:
+        body = json.loads(resp.get("content", {}).get("text") or "")
+    except ValueError:
+        return False
+    return isinstance(body, dict) and any(key in body for key in keys)
 
 
 def _is_login_url(url: str) -> bool:

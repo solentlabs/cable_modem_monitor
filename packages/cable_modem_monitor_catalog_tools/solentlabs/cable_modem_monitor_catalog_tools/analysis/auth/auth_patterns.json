@@ -45,6 +45,9 @@
     "EncryptData",
     "AuthData"
   ],
+  "sjcl_response_fields": [
+    "encryptData"
+  ],
   "session_cookie_indicators": [
     "sessionid",
     "session",

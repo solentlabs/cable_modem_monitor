@@ -1,0 +1,40 @@
+{
+  "_description": "JSON POST to a login path with no salt, credential or cipher evidence (the body was emptied): a stop that names it, never a form_pbkdf2 guess",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.0.1/api/v1/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 15,
+          "mimeType": "application/json",
+          "text": "{\"status\": \"ok\"}"
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "unknown",
+  "_expected_hard_stop": "JSON POST to /api/v1/login"
+}

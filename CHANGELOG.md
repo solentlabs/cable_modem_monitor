@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Intake reads a login as `form_pbkdf2` only with a salt request.** Any
+  JSON POST to a login-shaped URL used to be `form_pbkdf2`, so bearer
+  logins (`/rest/v1/user/login`) never reached the JSON-login
+  candidates. Now a login the sanitizer left empty is `form_sjcl` when
+  its response carries `encryptData`, and a JSON login with no evidence
+  is a named stop. The TG3442DE, F3896LG-ZG and F3896LG-VMB captures
+  resolve to their committed strategies.
 - **Intake offers `none` beside `bearer`.** When every GET in a
   bearer-login capture was answered without an Authorization header,
   login cookie or token, `none` is a second `auth.strategy` candidate.
