@@ -354,23 +354,13 @@ reply, where a skipped one is visible without re-running the work.
   drift is dangerous: a fix that "also cleans up" adjacent naming,
   structure, or config it wasn't asked to touch creates review
   burden and regressions. Scope the diff to the defect.
-- **One-line docstrings only.** Never multi-paragraph docstrings
-  with Args/Returns/Raises sections — the signature and type
-  annotations carry that information. One short line max. Non-obvious
-  WHY (hidden constraints, caller contracts, mutation side effects)
-  goes to inline comments co-located with the relevant code.
-  Behavioral contracts and design decisions belong in the spec docs
-  (ORCHESTRATION_SPEC, MODEM_YAML_SPEC, etc.) — they are the
-  durable documentation layer, not docstrings.
-- **Keep WHY comments on refactor.** Don't strip section markers
-  (`# Phase 1 — auth`), rationale notes, or numbered-procedure
-  markers during a rewrite. The "default to no comments" rule
-  targets WHAT-noise, not WHY-context.
-- **No em-dashes in code comments.** Punctuate with commas,
-  semicolons, or periods, or split the sentence. Same instinct as
-  the contributor-comms rule below, extended to code. Applies to
-  comments being written or already under edit; don't rewrite
-  existing comments solely for this.
+- **One-line function and class docstrings.** The signature and
+  annotations carry the rest; a non-obvious WHY goes in an inline
+  comment, contracts in the specs. Module docstrings are unaffected.
+  Standard: `docs/CODE_REVIEW.md` § Public API Docstrings.
+- **Keep WHY comments on refactor.** Don't strip section markers,
+  rationale notes or numbered-procedure markers during a rewrite.
+  Standard: `docs/CODE_REVIEW.md` § Comments on Refactor.
 - **Isolate before sprawl.** If a feature would touch >2 files,
   it probably needs its own module. Spreading wiring across
   `button.py`, `sensor.py`, `coordinator.py`, and `__init__.py`
@@ -395,10 +385,6 @@ reply, where a skipped one is visible without re-running the work.
   pipeline tool exists. Serialize with
   `json.dumps(..., indent=2, sort_keys=True, ensure_ascii=False) + "\n"`.
   The golden-file procedure is in `.claude/rules/catalog-data.md`.
-- **Docstring placeholders.** In docstring examples, use template
-  placeholders (`{manufacturer}/{model}/`), not specific fake names
-  (`acme/a100/`). Tests still use concrete strings; docstrings
-  describe the pattern.
 - **No P-numbers in public artifacts.** Roadmap identifiers (`P28`,
   `P34`, etc.) come from an internal roadmap doc that ships only
   locally. Tag annotations, CHANGELOG entries, GitHub release notes,
