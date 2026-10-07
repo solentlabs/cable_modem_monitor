@@ -65,67 +65,40 @@ be absolute. `make link-check` (in `validate-ci`) enforces both.
 
 ### Process
 
-5. **Only the developer stages files.** Never run `git add`. Show
-   the list of changed files and proposed commit message. Let the
-   developer stage them.
-
-6. **No external actions without discussion, per action.** Never
-   create GitHub issues, PRs, commits, pushes, label changes, or any
-   external-facing action without explicit discussion first.
-   Approval of a *plan* containing an external action is not approval
-   of the action — confirm again immediately before executing it.
-   Iterating on draft text ("how about X", "change Y to Z") is
-   drafting, not authorization, even when the developer supplies the
-   final wording; only "post it" / "send it" authorizes the call.
-   Local actions (edits, tests, lint) inherit plan-level approval
-   normally.
-
-7. **Before deleting or moving ANY file, run `rg <filename>` across
-   the entire project.** Files are referenced by non-Python sources
-   (CI workflows, Makefiles, docs, VS Code tasks) that linters don't
-   scan. When any task label, script name, or path changes in
-   `.vscode/tasks.json`, also audit: `scripts/dev/next_steps.txt`,
-   `scripts/dev/welcome_message.txt`, `.devcontainer/post-start.sh`,
-   `docs/setup/GETTING_STARTED.md`. Task name drift is invisible to
-   linters and causes silent breakage in the contributor on-ramp.
-
-8. **Always read a file before writing to it. No exceptions.** Even
-   "I just want to overwrite it" — read first. Local-only/gitignored
-   files especially: no git recovery path. The Write tool errors if
-   you skip the read; do not work around it.
-
-9. **Stop on placeholders.** When reading code, config, or YAML
-   during analysis, halt and flag immediately on `XXX`, `TODO`,
-   `FIXME`, `TBD`, `???`, `undefined`, `placeholder`, `replace_me`.
-   Do not summarize the surrounding architecture as "looks good"
-   while quietly ignoring unfilled values.
-
-10. **Don't offer "revisit later" as an option.** When presenting
-   design choices, offer "ratify now" or "drop the idea entirely."
-   Never present "keep the ambiguity and revisit later" as a third
-   option — deferred items pile up and silently expire.
-
-11. **No "pre-existing" framing.** Don't dismiss code gaps as
-    "pre-existing," "not mine," or "from an earlier session." The
-    full working tree is in scope unless explicitly narrowed. The
-    only valid scope-narrowing reason is *what* the gap is, never
-    *who wrote it first*.
-
-12. **Don't claim unverified fixes** in user-facing replies (GitHub
-    issues, comments). Use hedged language: "should address," "ready
-    to test," "if it works, please post diagnostics." Only claim
-    "fixed" after the user confirms on their hardware.
-
-13. **Never read the HA test config `.storage` directory.** The path
-    is denied in `.claude/settings.json` (`permissions.deny`) and
-    mounted under the `/config` volume in `docker-compose.test.yml`.
-    It contains live modem credentials in plaintext (HA stores
-    config-entry data unencrypted on disk by design). Reading it via
-    any tool — Read, `cat`, `grep`, `rg`, `jq`, `awk`,
-    `python -c "open()"` — leaks the password into the conversation
-    context. The settings.json deny only blocks the Read tool; this
-    rule covers the rest. If you need config-entry fields for
-    analysis, ask the user to paste a redacted excerpt.
+- **Only the developer stages files.** Never run `git add` (denied in
+  settings). Show the changed files and a proposed commit message; the
+  developer stages them.
+- **No external action without discussion, per action.** No GitHub
+  issue, PR, commit, push, label change or other external-facing action
+  without explicit discussion first. Plan approval is not approval of the
+  action: confirm again immediately before executing it. Iterating on
+  draft text is drafting, not authorization, even when the developer
+  supplies the final wording; only "post it" / "send it" authorizes the
+  call. Local actions (edits, tests, lint) inherit plan-level approval.
+- **Before deleting or moving a file, `rg <filename>` across the
+  project.** Non-Python sources (CI workflows, Makefiles, docs, VS Code
+  tasks) reference files and linters don't scan them. When a task label
+  or path changes in `.vscode/tasks.json`, also audit
+  `scripts/dev/next_steps.txt`, `scripts/dev/welcome_message.txt`,
+  `.devcontainer/post-start.sh` and `docs/setup/GETTING_STARTED.md`;
+  drift there is invisible to linters and breaks the contributor on-ramp.
+- **Stop on placeholders.** Halt and flag `XXX`, `TODO`, `FIXME`, `TBD`,
+  `???`, `undefined`, `placeholder` or `replace_me` met while reading
+  code, config or YAML. Don't call the surrounding architecture "looks
+  good" while ignoring unfilled values.
+- **Don't offer "revisit later".** Offer "ratify now" or "drop the idea
+  entirely"; deferred items pile up and silently expire.
+- **No "pre-existing" framing.** Don't dismiss a gap as "pre-existing",
+  "not mine" or "from an earlier session". The working tree is in scope
+  unless explicitly narrowed, and the only valid reason is what the gap
+  is, never who wrote it first.
+- **Don't claim unverified fixes** in user-facing replies. Say "should
+  address", "ready to test", "if it works, please post diagnostics";
+  claim "fixed" only after the user confirms on their hardware.
+- **Never read the HA test config `.storage` directory with any tool.**
+  Settings deny only the Read tool; `cat`, `grep`, `rg`, `jq`, `awk` and
+  `python -c` would leak the plaintext modem credentials too. For
+  config-entry fields, ask the user to paste a redacted excerpt.
 
 ## Diagnosis Discipline
 

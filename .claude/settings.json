@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "_comment_deny": "git staging is never permitted — only the developer stages files (CLAUDE.md rule 4). test-ha-config/.storage/** contains live modem credentials in plaintext; reading it leaks passwords into the conversation context.",
+  "_comment_deny": "git staging is never permitted — only the developer stages files (CLAUDE.md § Process). test-ha-config/.storage/** contains live modem credentials in plaintext; reading it leaks passwords into the conversation context.",
   "_comment_ask": "Core changes requiring explicit per-action confirmation: commits, pushes, history rewrites, and all GitHub write operations.",
   "permissions": {
     "allow": [
