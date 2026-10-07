@@ -1,0 +1,246 @@
+{
+  "_description": "PUT JSON login whose body is ciphertext; a session keepalive and a restart send the same envelope and issue or carry the token, and are not the login",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://192.168.1.1/login.php",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 124,
+          "mimeType": "text/html",
+          "text": "<input type=\"password\" id=\"pw\"><script>var d={};d.EncryptedData=sjclCCMencrypt(k,JSON.stringify(x),iv,\"aad-text\",128);</script>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.1.1/actionHandler/ajaxSet_login.php",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"EncryptedData\": \"44d8b78bec6ce60168d0849c40fd060d7ddf8d50d9194d99ce1f1240d84f7cbd\", \"user\": \"FIELD_9\"}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 85,
+          "mimeType": "application/json",
+          "text": "{\"EncryptedData\": \"44d8b78bec6ce60168d0849c40fd060d7ddf8d50d9194d99ce1f1240d84f7cbd\"}"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.1.1/actionHandler/ajaxSet_SessionActive.php",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"EncryptedData\": \"44d8b78bec6ce60168d0849c40fd060d7ddf8d50d9194d99ce1f1240d84f7cbd\", \"user\": \"FIELD_9\"}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "value": "AUTH_0523f0ad"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://192.168.1.1/at_a_glance.php",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 68,
+          "mimeType": "text/html",
+          "text": "<script>d.EncryptedData=sjclCCMencrypt(k,s,iv,\"aad-text\",128);</script>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.1.1/actionHandler/ajaxSet_login.php",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"EncryptedData\": \"44d8b78bec6ce60168d0849c40fd060d7ddf8d50d9194d99ce1f1240d84f7cbd\", \"user\": \"FIELD_9\"}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Set-Cookie",
+            "value": "PHPSESSID=COOKIE_2; path=/"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "value": "AUTH_65484663"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 85,
+          "mimeType": "application/json",
+          "text": "{\"EncryptedData\": \"44d8b78bec6ce60168d0849c40fd060d7ddf8d50d9194d99ce1f1240d84f7cbd\"}"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://192.168.1.1/actionHandler/ajaxSet_SessionActive.php",
+        "headers": [
+          {
+            "name": "X-CSRF-Token",
+            "value": "AUTH_65484663"
+          }
+        ],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.1.1/actionHandler/ajaxSet_Reset_Restore.php",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "value": "AUTH_65484663"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"EncryptedData\": \"44d8b78bec6ce60168d0849c40fd060d7ddf8d50d9194d99ce1f1240d84f7cbd\", \"user\": \"FIELD_9\"}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 85,
+          "mimeType": "application/json",
+          "text": "{\"EncryptedData\": \"44d8b78bec6ce60168d0849c40fd060d7ddf8d50d9194d99ce1f1240d84f7cbd\"}"
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "",
+  "_expected_ambiguities": {
+    "auth.strategy": {
+      "blocking": true,
+      "candidates": {
+        "json_sjcl": [
+          "/actionHandler/ajaxSet_login.php",
+          "/login.php",
+          "/login.php",
+          "/actionHandler/ajaxSet_SessionActive.php"
+        ]
+      }
+    }
+  },
+  "_expected_candidate_fields": {
+    "json_sjcl": {
+      "login_page": "/login.php",
+      "login_endpoint": "/actionHandler/ajaxSet_login.php",
+      "token_header": "X-CSRF-Token",
+      "aad": "aad-text"
+    }
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "_description": "A resolved restart method becomes a json_rpc action; sections read methods as resources",
+  "_expected_auth_strategy": "json_rpc",
+  "_expected_has_parser": true,
+  "_expected_auth_fields": {
+    "lockout_code": "codeLocked",
+    "session_expired_code": "codeExpired"
+  },
+  "_analysis": {
+    "transport": "json_rpc",
+    "confidence": "high",
+    "auth": {
+      "strategy": "json_rpc",
+      "fields": {
+        "endpoint": "/cgi-bin/api.cgi",
+        "login_method": "SYS.login",
+        "username_field": "userName",
+        "password_field": "userPwd",
+        "token_path": "token",
+        "token_param": "tok"
+      }
+    },
+    "session": {
+      "headers": {}
+    },
+    "actions": {
+      "logout": null,
+      "restart": null
+    },
+    "sections": {
+      "downstream": {
+        "format": "json",
+        "resource": "CM.getDownstream",
+        "array_path": "dss",
+        "mappings": [
+          {
+            "field": "channel_id",
+            "type": "integer",
+            "key": "channel"
+          },
+          {
+            "field": "frequency",
+            "type": "frequency",
+            "key": "frequency"
+          }
+        ],
+        "channel_type": {
+          "fixed": "qam"
+        },
+        "channel_count": 1
+      }
+    },
+    "warnings": [],
+    "hard_stops": [],
+    "ambiguities": [
+      {
+        "field": "auth.lockout_code",
+        "blocking": true,
+        "candidates": [
+          {
+            "value": "codeLocked",
+            "evidence": [
+              {
+                "source": "/page.htm",
+                "snippet": "code===\"codeLocked\""
+              }
+            ],
+            "corroborated_by": []
+          }
+        ],
+        "resolution": {
+          "value": "codeLocked"
+        }
+      },
+      {
+        "field": "auth.session_expired_code",
+        "blocking": true,
+        "candidates": [
+          {
+            "value": "codeExpired",
+            "evidence": [
+              {
+                "source": "/page.htm",
+                "snippet": "code===\"codeExpired\""
+              }
+            ],
+            "corroborated_by": []
+          }
+        ],
+        "resolution": {
+          "value": "codeExpired"
+        }
+      },
+      {
+        "field": "actions.restart.method",
+        "blocking": false,
+        "candidates": [
+          {
+            "value": "SYS.reboot",
+            "evidence": [
+              {
+                "source": "/reboot.htm",
+                "snippet": "{\"jsonrpc\": \"2.0\", \"method\": \"SYS.reboot\", \"params\": [], \"id\": 1}"
+              }
+            ],
+            "corroborated_by": []
+          }
+        ],
+        "resolution": {
+          "value": "SYS.reboot"
+        }
+      }
+    ]
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T400",
+    "default_host": "192.168.0.1",
+    "hardware": {
+      "docsis_version": "3.1"
+    },
+    "status": "awaiting_verification",
+    "attribution": {
+      "contributors": [
+        {
+          "github": "tester",
+          "contribution": "Test"
+        }
+      ]
+    },
+    "isps": [
+      "Various"
+    ]
+  },
+  "_expected_format": "json"
+}

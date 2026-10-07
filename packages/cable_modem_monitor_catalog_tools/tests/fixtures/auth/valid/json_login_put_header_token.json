@@ -1,0 +1,151 @@
+{
+  "_description": "PUT JSON login with a plaintext password; the token arrives in a response header and rides back as a request header",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://192.168.0.1/login.php",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 33,
+          "mimeType": "text/html",
+          "text": "<html><form id=\"f\"></form></html>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.0.1/actionHandler/ajaxSet_login.php",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"username\": \"admin\", \"password\": \"FIELD_1\"}"
+        }
+      },
+      "response": {
+        "status": 409,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 26,
+          "mimeType": "text/html",
+          "text": "Invalid Login Credentials!"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.0.1/actionHandler/ajaxSet_login.php",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"username\": \"admin\", \"password\": \"FIELD_2\"}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          },
+          {
+            "name": "Set-Cookie",
+            "value": "PHPSESSID=COOKIE_1; path=/"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "value": "AUTH_1234abcd"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://192.168.0.1/at_a_glance.php",
+        "headers": [
+          {
+            "name": "X-CSRF-Token",
+            "value": "AUTH_1234abcd"
+          }
+        ],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 13,
+          "mimeType": "text/html",
+          "text": "<html></html>"
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "",
+  "_expected_ambiguities": {
+    "auth.strategy": {
+      "blocking": true,
+      "candidates": {
+        "bearer": [
+          "/actionHandler/ajaxSet_login.php",
+          "/at_a_glance.php",
+          "/at_a_glance.php"
+        ]
+      }
+    }
+  },
+  "_expected_candidate_fields": {
+    "bearer": {
+      "login_endpoint": "/actionHandler/ajaxSet_login.php",
+      "method": "PUT",
+      "token_source": "header",
+      "token_header": "X-CSRF-Token",
+      "token_placement": "header"
+    }
+  }
+}

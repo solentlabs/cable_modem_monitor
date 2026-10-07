@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**49 configurations supported** — 28 confirmed on real hardware, 21 awaiting verification.
+**50 configurations supported** — 29 confirmed on real hardware, 21 awaiting verification.
 
 ---
 
@@ -38,7 +38,6 @@ and share a diagnostics snapshot.
 | SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic |
 | SB8200 (php) | HTML | RCN | — |
 | SBG8300 | HTML | Comcast, Cox, Spectrum | — |
-| TG3442S | HTML | LIWEST | — |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated |
 | C3700 | HTML | Comcast, Cox, Spectrum | synthetic |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | synthetic |
@@ -49,6 +48,7 @@ and share a diagnostics snapshot.
 | CGA4236 | HTML | Unknown | — |
 | CGA6444VF | HTML | Vodafone | — |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy | — |
+| EVW32C-0N | HTML | Telemach | hybrid |
 
 ## Pending Review
 
@@ -80,6 +80,7 @@ Entries with an open capability gap are listed above, not here.
 | SB8200 (body-token) | HTML | Spectrum | synthetic |
 | SB8200 (HNAP) | HNAP | Cox | — |
 | TG3442DE | HTML | Vodafone DE | synthetic |
+| TG3442S | HTML | LIWEST | — |
 | TM1602A | HTML | Spectrum | — |
 | CH7465MT | CBN | Magenta AT | — |
 | CODA56 | HTML | Comcast, Xfinity | — |

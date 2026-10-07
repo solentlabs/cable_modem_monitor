@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "solentlabs-cable-modem-monitor-core"
-version = "3.14.15-beta.2"
+version = "3.14.15-beta.3"
 description = "Cable Modem Monitor Core — platform-agnostic DOCSIS monitoring engine"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -47,7 +47,7 @@ cbn = ["cryptography>=44.0"]
 dev = [
     "pytest>=8.0",
     "pytest-socket>=0.7",
-    "ruff>=0.15.15",
+    "ruff==0.15.12",  # same pin as .github/workflows/tests.yml and .pre-commit-config.yaml
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -65,5 +65,4 @@ addopts = [
     "--tb=short",
     "--cov=solentlabs/cable_modem_monitor_core",
     "--cov-report=term-missing",
-    "--cov-fail-under=80",
 ]

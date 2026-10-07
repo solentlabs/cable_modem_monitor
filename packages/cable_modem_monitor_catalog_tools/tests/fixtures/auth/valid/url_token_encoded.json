@@ -18,7 +18,6 @@
   ],
   "_transport": "http",
   "_expected_strategy": "url_token",
-  "_expected_confidence": "high",
   "_expected_fields": {
     "login_page": "/status.html",
     "login_prefix": "login_",

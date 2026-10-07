@@ -96,7 +96,7 @@ def known_symbols(corpus: str) -> set[str]:
 
 def spec_candidates(text: str) -> list[tuple[str, int, str]]:
     """(name, line, kind) for every symbol one spec file asserts."""
-    cands: list[tuple[str, int, str]] = []
+    candidates: list[tuple[str, int, str]] = []
 
     for start, body in python_blocks(text):
         for rx, kind in (
@@ -107,14 +107,14 @@ def spec_candidates(text: str) -> list[tuple[str, int, str]]:
         ):
             for m in rx.finditer(body):
                 line = start + body[: m.start()].count("\n") + 1
-                cands.append((m.group(1), line, kind))
+                candidates.append((m.group(1), line, kind))
 
     for i, line in enumerate(text.splitlines(), 1):
         for m in RE_INLINE.finditer(line):
             name = m.group(1).split(".")[-1]
-            cands.append((name, i, "inline"))
+            candidates.append((name, i, "inline"))
 
-    return cands
+    return candidates
 
 
 def report(findings: dict[str, list[tuple[str, int, str]]]) -> None:

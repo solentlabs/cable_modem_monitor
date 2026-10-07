@@ -1,0 +1,7 @@
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream

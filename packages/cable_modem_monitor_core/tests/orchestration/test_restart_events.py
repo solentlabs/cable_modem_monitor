@@ -9,6 +9,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from solentlabs.cable_modem_monitor_core.orchestration.actions.base import ActionResult
 from solentlabs.cable_modem_monitor_core.orchestration.events import (
     RestartCommandFailed,
     RestartCommandSent,
@@ -150,6 +151,46 @@ def test_exception_emits_restart_command_failed():
 
     assert result.success is False
     assert_event_emitted(events, RestartCommandFailed, model="MB7621")
+
+
+# ---------------------------------------------------------------------------
+# Refused action — session age reported
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("has_action_auth", "collector_age", "expected_age"),
+    [
+        (False, 18342.5, 18342.5),
+        (False, 2.0, 2.0),
+        (True, 18342.5, None),
+    ],
+    ids=["aged_monitoring_session", "fresh_monitoring_session", "action_auth_session_not_used"],
+)
+def test_refused_action_reports_session_age(has_action_auth: bool, collector_age: float, expected_age: float | None):
+    # A refusal on a long-held session reads differently from one on a fresh login (#218)
+    collector = _make_collector()
+    collector.session_age_seconds = collector_age
+    modem_config = _make_modem_config(model="MB8611")
+    recovery = _make_recovery()
+
+    with (
+        patch(
+            "solentlabs.cable_modem_monitor_core.orchestration.restart._has_action_auth",
+            return_value=has_action_auth,
+        ),
+        patch(
+            "solentlabs.cable_modem_monitor_core.orchestration.restart.execute_action",
+            return_value=ActionResult(success=False, message="Unexpected result: UN-AUTH"),
+        ),
+        capture_events() as events,
+    ):
+        result = run_restart(collector, modem_config, recovery)
+
+    assert result.success is False
+    event = next(e for e in events if isinstance(e, RestartCommandFailed))
+    assert event.reason == "Unexpected result: UN-AUTH"
+    assert event.session_age_seconds == expected_age
 
 
 # ---------------------------------------------------------------------------

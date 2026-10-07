@@ -21,7 +21,9 @@ review, commit authorization).
 - HAR is the single source of truth — every config decision traces to wire evidence
 - Config constraints (transport, auth, format) form the decision framework
 - Deterministic logic lives in MCP tools, not in prompts — repeatable and testable
-- Ambiguity is a hard stop, not a guess — flag for human review
+- Ambiguity is never a guess: analysis reports the candidates and their
+  wire evidence for the LLM to resolve; with nothing to cite, it is a
+  hard stop
 - Metadata not in the HAR is filled via web search, not left as TODOs
 - Generated config must pass Pydantic build-time validation, plus an
   alias-and-brand check: firmware-internal codes (underscore-shaped,
@@ -217,6 +219,8 @@ Check the **first request** in the HAR:
 | Returns 401/403 | Pre-auth captured, auth challenge visible | Continue |
 | Returns HTML login page (form, no data) | Pre-auth captured, form-based auth | Continue |
 | First request has `Cookie` header with session value | Browser had existing session | **HARD STOP**: Request fresh HAR |
+| First request has `Authorization: Basic`, every response 200 | Basic auth sends credentials on every request; the header is the login, not a session | Continue |
+| First request has another `Authorization` scheme, every response 200 | Browser had existing session | **HARD STOP**: Request fresh HAR |
 | Returns 301/302 redirect to login page | Pre-auth captured | Continue |
 
 **The login's own redirect must land somewhere the capture holds.** When
@@ -234,7 +238,8 @@ against the request URL before looking it up, and follow redirect chains
 to a bounded depth.
 
 The same check runs over committed fixtures via `audit_fleet_auth`, which
-reports under AUTH FIXTURE ISSUES in the intake pipeline regression.
+audits each fixture under the variant config it replays with and reports
+under AUTH FIXTURE ISSUES in the intake pipeline regression.
 
 ### Step 3: Auth mechanism identification
 
@@ -242,7 +247,7 @@ reports under AUTH FIXTURE ISSUES in the intake pipeline regression.
 |--------------|----------------|
 | `WWW-Authenticate: Basic` response header | `basic` auth |
 | `WWW-Authenticate: Digest` response header | Digest auth — **unsupported, flag** |
-| POST to login endpoint with credential-shaped form body | `form` (or variant — continue analysis) |
+| POST, PUT or PATCH to login endpoint with credential-shaped form body | `form` (or variant — continue analysis) |
 | `HNAP_AUTH` header on any request | `hnap` auth |
 | URL contains base64-encoded credentials | `url_token` auth |
 | JSON POST with SJCL AES-CCM encrypted payload (`EncryptData`) | `form_sjcl` auth |
@@ -294,8 +299,11 @@ payloads are gone.
 - `none` auth: No `Cookie`, `Authorization`, or session headers on any
   request. Consistent 200 responses. No login endpoints in the URL
   history.
-- Post-auth HAR: Requests carry session cookies, auth headers, or
-  tokens. The session was established before capture started.
+- Post-auth HAR: the first request carries a session cookie or a
+  non-Basic `Authorization` header (the Step 2 hard stops). A cookie
+  that first appears on a later request is not evidence: page scripts
+  set cookies without a `Set-Cookie` header, and many committed fleet
+  HARs show it.
 
 ---
 
@@ -325,7 +333,7 @@ For each entry in HAR:
     │
     ├── Request body is a JSON-RPC 2.0 login call (one "jsonrpc": "2.0"
     │   object whose params[0] carries a password-shaped key)?
-    │   └── YES → transport: jsonrpc (checked after HNAP, over all entries)
+    │   └── YES → transport: json_rpc (checked after HNAP, over all entries)
     │
     ├── Request body is a CBN login (form-encoded, `token` first, a
     │   `fun` code, and a password-shaped field)?
@@ -341,7 +349,7 @@ positives.
 **The login decides JSON-RPC, not any call.** Firmware can make
 JSON-RPC calls that play no part in auth or data: OpenWrt LuCI's `ubus`
 plumbing runs on a modem that logs in with a form and serves HTML. A
-JSON-RPC call makes the transport `jsonrpc` only when it is the login,
+JSON-RPC call makes the transport `json_rpc` only when it is the login,
 meaning its first param is an object with a password-shaped key (the
 Phase 2 credential test). Other JSON-RPC traffic does not count.
 
@@ -367,6 +375,8 @@ responses) is a separate axis — detected in Phase 5.
 Auth detection depends on transport — the constraint table limits valid
 strategies.
 
+Logins arrive by POST, PUT or PATCH; "POST" below means any of them.
+
 **The login POST is selected by credential-shaped field names, not
 recency alone.** A form POST to an auth-pattern URL counts as a login
 only when its body carries a password-shaped field name — names, not
@@ -382,7 +392,8 @@ Password-shaped means either of:
   `auth_patterns.json` — these generalize to firmware never seen
   before;
 - an exact `password_field` name declared by any committed
-  `modem.yaml` — committing a modem teaches the detector its field
+  `modem.yaml` or `modem-{variant}.yaml` — committing a modem teaches
+  the detector its field
   name with no separate pattern-maintenance step. Exact names never
   generalize; only curated substrings do.
 
@@ -394,23 +405,22 @@ recognized through its own committed config.
 
 #### HNAP transport
 
-Auth is always `hnap`. The only variable is `hmac_algorithm`:
+Auth is always `hnap`. The only variable is `hmac_algorithm`, read in
+this order:
 
 | Evidence | Algorithm |
 |----------|-----------|
+| The capture loads exactly one of `hmac_md5.js` and `hmac_sha256.js` (names in `auth_patterns.json`, from confirmed modems); both loaded falls through | that script's algorithm |
 | HNAP_AUTH hash is 32 hex chars (128 bits) | `md5` |
 | HNAP_AUTH hash is 64 hex chars (256 bits) | `sha256` |
-| Cannot determine from HAR alone | Flag — check model documentation or contributor info |
+| Neither (no script; the header absent or redacted) | A blocking `auth.hmac_algorithm` [ambiguity](#ambiguities-resolve-then-proceed) with candidates `md5` and `sha256`, never a default |
 
-**Note:** The HNAP_AUTH hash length in the HAR may be ambiguous if the
-HAR was captured post-auth (hash computed client-side). If the HAR
-includes the Login action response, the `Challenge` and `PublicKey`
-fields confirm the protocol but not the algorithm. Default to `md5`
-(most common) and flag for verification.
+The `Challenge` and `PublicKey` of a captured Login response confirm the
+protocol but not the algorithm.
 
 #### JSON-RPC transport
 
-Auth is always `jsonrpc`. Its fields come from the last login call that
+Auth is always `json_rpc`. Its fields come from the last login call that
 answered `result`:
 
 | Field | Evidence |
@@ -477,9 +487,10 @@ Check HAR entries for login flow:
   │   │
   │   └── Ambiguous response format → flag for human review
   │
-  ├── POST with JSON body containing credentials
+  ├── POST, PUT or PATCH with JSON body containing credentials
   │   ├── Login page has SJCL JS variables (myIv, mySalt, encryptflag)?
-  │   │   POST body contains EncryptData field?
+  │   │   POST body contains EncryptData field, or (the body emptied by the
+  │   │   sanitizer) the login response carries encryptData?
   │   │   └── strategy: form_sjcl
   │   │       Extract: login_page, login_endpoint,
   │   │                session_validation_endpoint,
@@ -487,16 +498,16 @@ Check HAR entries for login flow:
   │   │       (pbkdf2_iterations, pbkdf2_key_length, ccm_tag_length
   │   │        extracted from JS or set to SJCL defaults)
   │   │
-  │   ├── Multi-request salt/challenge flow?
+  │   ├── Multi-request salt/challenge flow (a request carries a salt trigger)?
   │   │   └── strategy: form_pbkdf2
   │   │       Extract: login_endpoint, salt_trigger,
   │   │                pbkdf2_iterations, pbkdf2_key_length,
   │   │                double_hash, csrf_init_endpoint, csrf_header,
   │   │                login_success (see below)
   │   │
-  │   └── Single POST login?
-  │       └── strategy: form
-  │           Extract: action, username_field, password_field
+  │   └── Sent to a path naming a login (JSON login, below)?
+  │       └── auth.strategy ambiguity: candidates with evidence,
+  │           each candidate's fields under auth.candidates
   │
   ├── URL contains base64-encoded credentials (login_<base64>)
   │   └── strategy: url_token
@@ -510,14 +521,57 @@ Check HAR entries for login flow:
   └── Cannot determine → HARD STOP
 ```
 
+#### JSON login
+
+A JSON body sent to a path whose last segment contains `login`, with a
+password- or username-shaped key, can be more than one strategy. The
+branch sees only what the branches above leave. A JSON body sent to a
+login-pattern URL (`/login`, `/cgi-bin/`, ...) is `form_pbkdf2` only when
+a request carries a salt trigger; without one it reaches this branch, and
+a body no candidate fits is a named stop, never a `form_pbkdf2` guess.
+Analysis does not pick: it reports a blocking `auth.strategy`
+[ambiguity](#ambiguities-resolve-then-proceed) whose candidates are the
+strategies the body fits, each citing the login request, the page that
+builds the body, and the request that sends the token back. Each
+candidate's fields are under `auth.candidates`; `auth.strategy` stays
+empty until resolved, and `generate_config` builds the auth block from
+the resolved candidate. The path is the signal because the same
+encrypted envelope also carries keepalive calls and restarts. Among attempts,
+the latest 2xx one is the login. A strategy is offered only when Core's
+model for it accepts the login's method; otherwise a warning names the
+strategy the body fits, and nothing is offered.
+
+| Candidate | Offered when | Fields |
+|-----------|--------------|--------|
+| `bearer` | A password-shaped key holds a value that is not ciphertext-shaped (values are often redacted, so only the shape is checked) | `login_endpoint`; `method` unless POST; `username_field` unless `username` (`""` with no username key); `extra_fields`, where a value equal to the modem's host becomes `{host}`; token source and placement |
+| `none` | Offered beside `bearer`: at least one GET answered 2xx with no `Authorization` header, login cookie or token, and no GET carries one | No fields. Cites the unauthenticated GETs, how many fall before and after the login, and, on `bearer`, every request that carries the token (a token only a write sends back is an action's credential) |
+| `json_sjcl` | A key holds ciphertext (32 or more hex characters) and no password-shaped key holds anything else | `login_page`, the latest page before the login with a password input that names the ciphertext key; `login_endpoint`; `method` unless PUT; `token_header`; `pbkdf2_iterations`, `pbkdf2_key_length` and `aad` when the capture's scripts carry them |
+
+The token is the first value the login response issued, from a header or
+a JSON string of 8 or more characters that no earlier request sent, that a
+later request sends back: as a request header (`token_placement: header`),
+as `Authorization: Bearer` (the default placement), or inside a URL query
+parameter (`query`, with the text before it as `token_prefix`). Failing
+those, a value a later request's URL path carries unchanged (a logout
+`DELETE .../token/<value>`) is the token when later requests send
+`Authorization: Bearer`: the sanitizer can give one token a different
+placeholder in the header than in the response, hiding the match. A
+login with no such value gets a warning. `json_sjcl`'s crypto parameters come from
+the capture's own scripts, never a default: `pbkdf2_iterations` and
+`pbkdf2_key_length` from the `DEFAULT_SJCL_ITERATIONS` and
+`DEFAULT_SJCL_KEYSIZEBITS` constants (names in `auth_patterns.json`, from
+confirmed modems), and `aad` from the string literal every
+`sjclCCMencrypt` call passes as its fourth argument. A value the
+scripts do not give, or give two ways, is left out with a warning, and
+`generate_config` validation names it.
+
 **Dynamic form action.** A query string on the login POST URL is a
 per-session token published in the login form's `action` (Netgear
 `?id=`), never config — `action` always gets the bare path. When the
 capture includes the login page and the installed Core's `FormAuth`
 accepts `action_source` (#189), the analyzer emits
-`action_source: login_page`; otherwise it warns and downgrades
-confidence to `medium`, because the firmware may reject a bare-action
-POST. See `MODEM_YAML_SPEC.md` § `form` (the **Dynamic POST URLs**
+`action_source: login_page`; otherwise it warns, because the firmware
+may reject a bare-action POST. See `MODEM_YAML_SPEC.md` § `form` (the **Dynamic POST URLs**
 passage) for the runtime contract.
 
 #### `form_pbkdf2` — detecting `login_success`
@@ -604,26 +658,43 @@ Scan HAR for logout and restart flows:
 | POST with pre-fetch page (extract dynamic endpoint) | Add `pre_fetch_url` and `endpoint_pattern` |
 | HNAP action with logout/session-end semantics | `actions.logout: { type: hnap, action_name: "<name>" }` |
 | CBN setter call that is not the login | A non-blocking `actions.logout.fun` [ambiguity](#ambiguities-resolve-then-proceed), with the same candidates as the CBN restart row. Nothing in a CBN call names a logout. |
+| Write with logout-like params to an endpoint no pattern matches | A non-blocking `actions.logout.endpoint` ambiguity, built as in the matching restart row |
 | No logout visible in HAR | Omit `actions.logout`. Note in the generated YAML that logout behavior could not be confirmed from the HAR. |
 
-An observed POST outranks an earlier observed page GET. Auto-action
-pages — a GET whose form JS fires the operative POST (Netgear
-`/Logout.htm` → `/goform/logout`) — precede that POST in traffic and
-match the same patterns; the POST is the logout, and the page becomes
-its `pre_fetch_url` via the form-evidence rule below.
+An observed write (POST, PUT or PATCH) outranks an earlier observed page
+GET. Auto-action pages — a GET whose form JS fires the operative write
+(Netgear `/Logout.htm` → `/goform/logout`) — precede that write in
+traffic and match the same patterns; the write is the logout, and the
+page becomes its `pre_fetch_url` via the form-evidence rule below.
 
 #### Restart
 
 | Evidence | Config |
 |----------|--------|
 | POST to reboot/restart endpoint with params | `actions.restart: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
+| Request to reboot/restart endpoint with a JSON object body | `actions.restart: { type: http, method: "<observed>", endpoint: "<path>", json_body: {...} }`, the body copied verbatim |
 | HNAP SetConfiguration action with reboot param | `actions.restart: { type: hnap, action_name: "<name>", params: {...} }` |
 | JSON-RPC call that is neither the login nor a data source | A non-blocking `actions.restart.method` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per method, citing the page that sent it (its `Referer`, else the endpoint) and the request body. No method-name rule: call shapes come from confirmed modems only. |
 | CBN setter call that is not the login | A non-blocking `actions.restart.fun` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per `fun` code, citing the page that sent it (its `Referer`, else the endpoint) and the request body. The resolved action takes `type: cbn`. |
+| Write (POST, PUT or PATCH) with action-like params or JSON body keys to an endpoint no pattern matches | A non-blocking `actions.restart.endpoint` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per endpoint, citing every distinct body sent there and the page that sent it (its `Referer`, else the endpoint). An endpoint the capture sent one plain body is stored whole under `actions.candidates.restart`, and the resolution brings that action. One that got different bodies (a shared reboot and factory-reset form) or an encoded body stores none, with a warning: an endpoint never picks among bodies, so it resolves to none and the contributor is asked for a capture of the action alone. No URL rule: patterns come from confirmed modems only. |
 | No restart visible in HAR | Omit `actions.restart`. This is common — most HAR captures don't include a restart. |
 
 **Restart is rarely in the HAR.** Most contributors capture status pages,
 not admin operations. Omitting restart is normal and correct.
+
+**Request bodies come from the capture.** An observed request's body
+becomes `params` (form) or `json_body` (a JSON object), never both.
+When no body is copied, the action records why in `body`, with a
+warning:
+
+| `body` | When | Next step |
+|--------|------|-----------|
+| `encoded` | The observed JSON body holds a sanitizer placeholder (`FIELD_…`, `PASS_…`) at any depth, as an encrypted envelope does (TG3442S). `body_evidence` lists the body's top-level `keys` and the `sanitized` value paths | Check Core's `body_encoding: session` and the page script for the plain body; a recapture shows the same envelope |
+| `unobserved` | The action is only in page source, its method is not GET, and the call site gave no params | A capture of the action |
+
+Page script that builds the body is never copied into `json_body`; a
+wrong reboot body is worse than none
+([MODEM_INTAKE_WORKFLOW.md § Assembled fixtures](MODEM_INTAKE_WORKFLOW.md#assembled-fixtures)).
 
 #### Source-Inferred Call-Site Extraction
 
@@ -716,7 +787,7 @@ Format is constrained by transport:
 | Transport | Format detection |
 |-----------|-----------------|
 | `hnap` | Always `hnap`. See HNAP format detection below. |
-| `jsonrpc` | Always `json`. Each answered call other than the login is a JSON page: resource is the method, JSON is its `result` (a non-object `result` wrapped as `_raw`, as Core's loader does). A method called more than once takes its later `result`, as the replay server and golden generation do (Core's `jsonrpc_har_results`). HTTP JSON detection then runs unchanged, so one array is mapped per call. |
+| `json_rpc` | Always `json`. Each answered call other than the login is a JSON page: resource is the method, JSON is its `result` (a non-object `result` wrapped as `_raw`, as Core's loader does). A method called more than once takes its later `result`, as the replay server and golden generation do (Core's `json_rpc_har_results`). HTTP JSON detection then runs unchanged, so one array is mapped per call. |
 | `http` | Inspect data page responses — see below. JSON responses use `json` (or `json_transposed` for `name`+`indexN` pivot shapes); HTML responses use `table`, `table_transposed`, `javascript`, `javascript_json`, or `html_fields`. |
 
 #### HNAP format detection
@@ -796,10 +867,11 @@ Response body analysis (sniff-then-Content-Type):
   │   │   │
   │   │   └── Cannot determine orientation → examine header row and data rows
   │   │
-  │   ├── Contains <script> with JS variable assignments holding JSON arrays?
+  │   ├── Contains <script> with JS variable assignments holding JSON?
   │   │   └── format: javascript_json
-  │   │       Indicators: variableName = [{...}, ...]; in <script> block,
-  │   │       array of dicts with 2+ keys (channel objects)
+  │   │       Indicators: variableName = [{...}, ...] (array of dicts
+  │   │       with 2+ keys), or variableName = {...} holding a channel
+  │   │       array (json rule below)
   │   │
   │   ├── Contains <script> with function bodies containing delimited data?
   │   │   └── format: javascript
@@ -814,6 +886,13 @@ Response body analysis (sniff-then-Content-Type):
   │
   └── Ambiguous → flag for human review
 ```
+
+**Table cell text.** A row's first cell, the label of a transposed
+table, is read as its own text: text inside a table nested in it (a
+tooltip or help block beside the label) is left out, so "Power Level" is
+not read as "Power Level" plus its help paragraph. Core matches a
+configured label as a substring of the cell text, so the short label
+matches either way. Every other cell is read verbatim, as Core reads it.
 
 **JSON direction inference.** After format classification, JSON pages
 need direction assignment (downstream vs upstream). The pipeline scans:
@@ -913,7 +992,11 @@ type and map filled in by hand.
 | Registered field | Type | Common |
 |-----------------|------|:------:|
 | `boot_status` | string | sometimes |
+| `dhcp_status` | string | rare |
 | `docsis_version` | string | sometimes |
+| `model_name` | string | sometimes |
+| `temperature` | float | rare |
+| `tftp_status` | string | rare |
 | `provisioned_speed_down` | integer | service flow modems |
 | `provisioned_speed_up` | integer | service flow modems |
 | `provisioned_burst_down` | integer | service flow modems |
@@ -925,6 +1008,11 @@ not mapped (no CMM consumer; PII risk). The intake mapping skips them so
 they never enter the pipeline. See
 [Three-tier field mapping](#three-tier-field-mapping) below and
 SYSTEM_INFO_SPEC § Tiered Sensor Model.
+
+An HTML label candidate is a table row of two or more cells: the first
+cell's text is the label, the second's the value. It is kept only when
+Core's own label lookup on the same page returns that value, so an
+emitted `label` selector reads at runtime what intake saw.
 
 #### Three-tier field mapping
 
@@ -943,6 +1031,11 @@ The analysis tool must map ALL detected fields, not just canonical ones:
 
 **Do not skip unrecognized fields.** The graduation path (Tier 3 to
 Tier 2) only works if fields are captured in the first place.
+
+Table, JavaScript and JSON channel mappings in the analysis output carry
+their `tier` (HNAP mappings are positional and carry none), and each
+Tier 3 field raises one warning naming its source text, its generated
+name and where it was found.
 
 #### Format-specific mapping
 
@@ -988,12 +1081,19 @@ for another table or a JavaScript function on the page.
 - Field indices within each record (same approach as JS — examine
   actual data to identify positions)
 
-**`javascript_json` format:** JS variable assignments containing JSON
-arrays of channel objects. Direction is inferred from the variable
-name (e.g., `json_dsData` → downstream). Mapping extraction reuses
-the JSON key→field pipeline, including its channel array rule below.
-The `variable` name is captured in the section output for config
-generation. Only a variable holding an array is detected.
+**`javascript_json` format:** JS variable assignments whose value is
+JSON, read whole from the assignment as Core does (`raw_decode`). The
+`variable` name is captured in the section output for config
+generation.
+
+- A variable holding an array of channel objects is one section.
+  Direction is inferred from the variable name (e.g., `json_dsData` →
+  downstream). Mapping extraction reuses the JSON key→field pipeline.
+- A variable holding an object is detected when it holds a channel
+  array, and is read by the `json` rules below: channel-array
+  selection, skipped-array warnings, direction and channel type per
+  array. It is always emitted in `arrays` form, even with one array,
+  because Core's flat form needs the variable to hold the array.
 
 **`json` format:** Examine JSON response structure to determine:
 
@@ -1084,6 +1184,18 @@ Secondary signal: table `id` attributes (`dsTable`, `usTable`,
 If no direction can be determined, flag for human review. Every modem
 in the HAR corpus uses "Downstream"/"Upstream" as full keywords.
 
+**Companion tables.** A codewords table (a title, header or row label
+containing "codeword") is downstream. When the downstream section is
+already populated from a `table_transposed` table, the codewords table
+becomes a companion of that section instead of being dropped. It is
+kept only when its rows map `channel_id` and at least one of
+`corrected` or `uncorrected`; its other rows follow the three-tier
+mapping (an unregistered row such as `unerrored_codewords` is Tier 3).
+`generate_config` emits the section as a `tables` list whose companion
+entries carry `merge_by: [channel_id]`. Intake does not emit
+`skip_columns`: a firmware that repeats one column's counters in
+another is a per-modem finding, authored from evidence.
+
 #### Row start detection
 
 The analysis must determine where data rows begin in each table. This
@@ -1116,6 +1228,8 @@ Parser.yaml supports 4 selector types. Auto-select using this priority:
 | 4 | `nth` | Fallback — 0-based table index on the page (fragile) |
 
 Higher priority selectors are more robust across firmware updates.
+A title row shared by several tables on the page does not identify any
+of them; selection falls through to a column header unique to the table.
 The selector is configurable in parser.yaml — maintainers can override
 the auto-detected choice.
 
@@ -1286,7 +1400,7 @@ endpoints that no part of the generated config reads, each reduced to
 its key skeleton. The result is `unread_resources` in the analysis
 output.
 
-**Why:** gap categories are endpoint-level and cover auth and actions
+**Why:** gap categories are endpoint-level and cover auth
 only (see `analyze_har` below). A data endpoint the generator never maps
 produces no gap and no warning — intake writes a `parser.yaml` that
 omits it and every gate stays green. Issue #185's HAR carried
@@ -1443,7 +1557,7 @@ Some modems render status indicators as CSS classes or data attributes
 rather than visible text. For example, a provisioning status table may
 use Bootstrap classes (`class="success"`) with glyphicon icons instead
 of displaying the word "Online". The automated Phase 6 label detection
-(which matches visible text via regex) will miss these fields because
+(which reads visible cell text) will miss these fields because
 there is no text content to match against.
 
 These values are configured in parser.yaml using `html_fields` with a
@@ -1527,9 +1641,10 @@ coordinator skips missing hooks.
 |-----------|---------|
 | No logout flow in HAR | "No logout endpoint observed in HAR. If this modem has single-session limits, a logout action will be needed." |
 | No parseable data sections | "no parseable data sections detected" — auth and actions still analyzed; no parser can be generated (common on unprovisioned modems serving placeholder pages). |
-| Dynamic login action, no Core support | "login POST ... carries a query string" — per-session token; without `action_source` support (#189) the bare-action config may be rejected. Confidence drops to `medium`. |
-| HMAC algorithm uncertain (HNAP) | "HNAP HMAC algorithm cannot be confirmed from HAR. Defaulting to `md5`. Verify with contributor." |
+| Dynamic login action, no Core support | "login POST ... carries a query string" — per-session token; without `action_source` support (#189) the bare-action config may be rejected. |
 | Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |
+| Action body encoded | "restart action PUT /actionHandler/ajaxSet_Reset_Restore.php: the observed JSON body holds sanitized or encoded values ['user'] and was not copied to json_body." The action carries `body: encoded`. |
+| Action body unobserved | "restart action POST /rest/v1/system/reboot (source_inferred): request body unobserved." The endpoint is in page source but the capture holds no request to it, so neither `params` nor `json_body` is generated. The action carries `body: unobserved`. |
 | parser.py generated | "parser.py was generated for: [reasons]. Review the post-processing logic for correctness." |
 
 ### Ambiguities (resolve, then proceed)
@@ -1554,7 +1669,12 @@ ambiguities:
 - **`resolution`** is set by the LLM from the evidence, as `{value}`, or
   as `{value: null, reason}` for an explicit "none". The user confirms
   it at review. A blank is never a resolution.
-- **`generate_config`** writes each resolved value at its path. An
+- **`generate_config`** writes each resolved value at its path; a
+  resolved `auth.strategy` also brings that candidate's fields from
+  `auth.candidates` ([JSON login](#json-login)), and a resolved
+  `actions.<kind>.endpoint` brings that candidate's whole action from
+  `actions.candidates` ([Phase 4](#phase-4-action-detection)); an
+  endpoint without a stored request is an error, since it has no body. An
   explicit "none" leaves the field absent; a null without a reason is a
   blank and is rejected. An unresolved **`blocking`** ambiguity makes
   the result invalid, naming the field and its candidates. A
@@ -1564,7 +1684,8 @@ ambiguities:
 `corroborated_by` when a `status: confirmed` entry declares the same
 value at the same path. When exactly one candidate is corroborated,
 analysis pre-fills `resolution` as `{value, source: fleet}`, still
-reviewed. Entries awaiting verification never corroborate, so an
+reviewed, except at an action endpoint: one endpoint can serve several
+operations, so the body, not the path, names the action. Entries awaiting verification never corroborate, so an
 unconfirmed intake teaches nothing: patterns come from confirmed
 modems only ([MODEM_INTAKE_WORKFLOW.md § Step 4](MODEM_INTAKE_WORKFLOW.md#step-4-analyze-har)).
 
@@ -1629,8 +1750,7 @@ detection, format detection, and field mapping extraction.
   "confidence": "high",
   "auth": {
     "strategy": "form",
-    "fields": { "action": "/goform/login", "...": "..." },
-    "confidence": "high"
+    "fields": { "action": "/goform/login", "...": "..." }
   },
   "session": {
     "cookie_name": "session",
@@ -1643,9 +1763,9 @@ detection, format detection, and field mapping extraction.
       "format": "table",
       "resource": "/status.html",
       "mappings": [
-        { "index": 0, "field": "channel_id", "type": "integer" },
-        { "index": 1, "field": "frequency", "type": "frequency", "unit": "Hz" },
-        { "index": 2, "field": "power", "type": "float", "unit": "dBmV" }
+        { "index": 0, "field": "channel_id", "type": "integer", "tier": 1 },
+        { "index": 1, "field": "frequency", "type": "frequency", "unit": "Hz", "tier": 1 },
+        { "index": 2, "field": "power", "type": "float", "unit": "dBmV", "tier": 1 }
       ],
       "selector": { "type": "header_text", "match": "Downstream Bonded Channels" },
       "row_start": 2,
@@ -1657,8 +1777,8 @@ detection, format detection, and field mapping extraction.
       "format": "table",
       "resource": "/status.html",
       "mappings": [
-        { "index": 0, "field": "channel_id", "type": "integer" },
-        { "index": 1, "field": "frequency", "type": "frequency" }
+        { "index": 0, "field": "channel_id", "type": "integer", "tier": 1 },
+        { "index": 1, "field": "frequency", "type": "frequency", "tier": 1 }
       ],
       "selector": { "type": "header_text", "match": "Upstream Bonded Channels" },
       "row_start": 2,
@@ -1699,8 +1819,10 @@ detection, format detection, and field mapping extraction.
 }
 ```
 
-Returns `hard_stops` if transport or auth is ambiguous — the LLM presents
-these to the user for resolution before proceeding.
+Returns `hard_stops` when transport or auth cannot be determined. An auth
+strategy the capture supports in more than one way is an `auth.strategy`
+ambiguity instead, with each candidate's fields under `auth.candidates`
+([JSON login](#json-login)).
 
 **Core gaps** indicate patterns the pipeline detected but Core cannot yet
 handle. When `core_gaps` is non-empty, config generation should not
@@ -1719,8 +1841,6 @@ effort. Categories:
 |----------|-------|----------|-----------------|
 | `unmatched_login` | auth | POST endpoint + credential fields | New URL pattern in `auth_patterns.json` or new auth strategy |
 | `auth_unknown` | auth | Signal flags + description | New auth strategy implementation |
-| `unmatched_restart` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
-| `unmatched_logout` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
 
 Well-known modems with standard patterns produce zero core gaps.
 Novel modems produce gaps that require development before onboarding.
@@ -1797,7 +1917,7 @@ place. If validation fails, returns errors so the LLM can fix and retry.
 Resolved [ambiguities](#ambiguities-resolve-then-proceed) are written at
 their paths before validation; a `parser.` path is applied to the
 analysis section before `parser.yaml` is built. An action resolution
-writes only the identifying field (`method` on `jsonrpc`, `fun` on
+writes only the identifying field (`method` on `json_rpc`, `fun` on
 `cbn`), so the action takes the transport's one action type.
 
 ### `generate_golden_file`
@@ -1807,7 +1927,7 @@ config to extract `ModemData`. This is the same extraction logic the
 pipeline uses, but against HAR content rather than a live server.
 
 **Input:** HAR file path + parser.yaml content + `transport` from
-`analyze_har` (required for `jsonrpc`, whose resources are method names,
+`analyze_har` (required for `json_rpc`, whose resources are method names,
 and `cbn`, whose resources are `fun` codes; others are auto-detected),
 and for `cbn` the `getter_endpoint` (default `/xml/getter.xml`)
 **Output:** `{ golden_file: dict, golden_file_json: str, channel_counts: { downstream: int, upstream: int }, system_info_fields: [str], missing_system_info_fields: [str] }`
@@ -1829,12 +1949,12 @@ genuinely don't expose all four fields.
 
 ### `run_tests`
 
-Invokes Core's test harness for a specific modem directory. This is
-the same harness that Catalog's pytest suite uses — the MCP tool just
-provides a structured interface to it.
+Invokes Core's test harness for a specific modem directory. It calls
+`run_modem_test_orchestrated`, the same orchestrator cycle Catalog's
+pytest suite runs, and returns structured results.
 
 **Input:** Modem directory path (e.g., `modems/motorola/mb7621`)
-**Output:** `{ passed: bool, failures: [{ test: str, expected: any, actual: any, diff: str }] }`
+**Output:** `{ passed: bool, results: [{ test: str, passed: bool, error?: str, diff?: str, failures?: [{ path, expected, actual, hint }] }], errors: [str] }`
 
 ### `write_modem_package`
 
@@ -2163,11 +2283,11 @@ def pytest_generate_tests(metafunc):
 
 ```python
 # packages/cable_modem_monitor_catalog/tests/test_modems.py
-from solentlabs.cable_modem_monitor_core.test_harness import run_modem_test
+from solentlabs.cable_modem_monitor_core.test_harness import run_modem_test_orchestrated
 
 def test_modem_har_replay(modem_test_case):
-    """Each modem's HAR replay produces expected output."""
-    result = run_modem_test(modem_test_case)
+    """Each modem's HAR replay produces expected output via orchestrator."""
+    result = run_modem_test_orchestrated(modem_test_case)
     assert result.passed, result.diff
 ```
 
@@ -2200,7 +2320,7 @@ After all artifacts are placed in the modem directory, the LLM calls
 `run_tests` which invokes Core's test harness:
 
 1. `HARMockServer` built from `test_data/modem.har` (auth-aware)
-2. Full pipeline runs: auth → load → parse
+2. Full orchestrator cycle runs: auth → load → parse → derived fields → logout
 3. Output compared against `test_data/modem.expected.json`
 4. Structured diff returned on failure
 
@@ -2327,7 +2447,7 @@ default_host: "192.168.100.1"
 
 auth:
   strategy: hnap
-  hmac_algorithm: md5  # from HNAP_AUTH hash length (32 hex chars)
+  hmac_algorithm: md5  # from the loaded hmac_md5.js
 
 hardware:
   docsis_version: "3.1"
@@ -2446,9 +2566,8 @@ downstream:
    a `channel_type` field. A DOCSIS 3.0 modem with a `channel_type`
    column (QAM/ATDMA only) correctly returns "3.0". Human should verify.
 
-3. **HMAC algorithm detection is best-effort.** HNAP hash length
-   heuristic works for MD5 (32 hex) vs SHA256 (64 hex) but can't
-   distinguish other algorithms. No other algorithms are currently
+3. **HMAC algorithm detection knows two algorithms.** The hmac script
+   and the hash length tell MD5 from SHA256 only; no other algorithm is
    known in the modem landscape.
 
 5. **Restart actions are almost never in HAR captures.** Contributors

@@ -7,6 +7,301 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.3] - 2026-10-07
+
+### Added
+
+- **Ubee EVW32C-0N** (Telemach, 2.4.1014-SIP), with restart. Awaiting confirmation on hardware. (#221)
+- **Clearing leftover state history.** TROUBLESHOOTING § Leftover State
+  History shows how to purge the System Uptime and Current Time rows,
+  and Last Boot Time rows from before 3.14.0, with Home Assistant's
+  `recorder.purge_entities`. Only installs that raised the recorder's
+  `purge_keep_days` still hold them. (#178)
+- **The intake score can be compared between runs.**
+  `intake_pipeline_regression.py --compare <scorecard>` prints which
+  captures' accuracy, status or grades moved since that card, worst
+  first, and which captures entered or left. The fleet percentage hides
+  a large change on one modem. Report only; the exit code is unchanged.
+  In CI the accuracy step compares against the previous successful run
+  on the same branch (else `main`) and shows the movement in the job
+  summary.
+- **Setup links to the supported modem list.** The model step of the
+  config flow links to the catalog's modem list on GitHub.
+- **Form logins report login-page drift.** A WARNING names a login form
+  that posts somewhere other than the configured URL, a page with more
+  than one form and nothing choosing between them, or a `form_selector`
+  that matches nothing. Each warns once, later repeats log at DEBUG, and
+  the diagnostics download lists the current findings under
+  `login_page_drift`. The login itself is unchanged. (#189)
+- **Arris TG3442S confirmed on hardware.** Verified via contributor
+  diagnostics on 3.14.15-beta.1: 32 downstream and 6 upstream channels
+  locked with no collection error, hardware 7, software
+  01.05.048.01.EURO.NCS, and Restart confirmed by the contributor.
+  (Related to #210)
+
+### Changed
+
+- **Intake reads a login as `form_pbkdf2` only with a salt request.** Any
+  JSON POST to a login-shaped URL used to be `form_pbkdf2`, so bearer
+  logins (`/rest/v1/user/login`) never reached the JSON-login
+  candidates. Now a login the sanitizer left empty is `form_sjcl` when
+  its response carries `encryptData`, and a JSON login with no evidence
+  is a named stop. The TG3442DE, F3896LG-ZG and F3896LG-VMB captures
+  resolve to their committed strategies.
+- **Intake offers `none` beside `bearer`.** When every GET in a
+  bearer-login capture was answered without an Authorization header,
+  login cookie or token, `none` is a second `auth.strategy` candidate.
+  Each candidate cites its evidence: the unauthenticated reads, and
+  every request that carries a credential after the login.
+- **Intake finds a bearer token the sanitizer renamed.** A login
+  response value that reappears unchanged in a later request's URL path
+  (a logout `DELETE .../token/<value>`) is the token when later requests
+  send `Authorization: Bearer`. Before, a bearer candidate whose header
+  carried a different placeholder had no `token_path`.
+- **Intake reads the `json_sjcl` crypto parameters from the capture.**
+  PBKDF2 iterations and key length come from the constants in the loaded
+  SJCL script, and the aad from the string every encrypt call passes. A
+  value the scripts do not state is left out with a warning, never
+  defaulted. The TG3442S capture now generates a valid config.
+- **A stuck session is dropped when the modem is reachable.** A reused
+  session the modem silently stops honoring (it drops every connection)
+  was reused forever, so the entry stayed unreachable until the
+  integration was reloaded. After three such failures in a row, each
+  followed by a health probe showing the modem up, the session is
+  logged out, cleared and re-established. Outages, network drops and
+  fresh logins never count.
+- **Restart retries once when the modem refuses a stale session.** The
+  monitoring session is reused across polls, so the modem may have
+  expired it by the time Restart is pressed. A refusal on that session
+  (HNAP `UN-AUTH`, HTTP 401 or 403) now clears it, logs in fresh and
+  sends the restart once more, as polling does. Any other failure, and
+  any success, is never retried. (#218)
+- **Restart replay checks the form body.** A restart's form fields must
+  appear together in one body the capture posted, so a wrong value on a
+  shared reboot and factory-reset form (EVW32C-0N) fails CI. Test
+  harness only, no change to how Core talks to a modem.
+- **`jsonrpc` is now `json_rpc`** as a transport, auth strategy and
+  action type, matching the underscore in `form_cbn` and `url_token`.
+  An entry that still says `jsonrpc` fails validation. The shipped SDMC
+  NE6037 entry is updated. (#215)
+- **A refused restart logs the session it was sent on.** The
+  `Restart command failed` line now ends with the age of that session,
+  and an HNAP pre-fetch line shows the firmware's result (`UN-AUTH`,
+  `OK`) instead of just a key count. A refusal on a session held for
+  hours now reads differently from one on a fresh login. (#218)
+- **The intake tools map a `Correctables` column to `corrected`.**
+  `Uncorrectables` already mapped to `uncorrected`; the plural
+  `Correctables` became a stray `correctables` field. (#221)
+- **The intake tools warn on every unregistered channel field.** A
+  header or JSON key outside the field registry still becomes a
+  `snake_case` field, now with a warning naming the source text, the
+  field and the page, and the analysis records each mapping's `tier`.
+  A near-miss of a known field no longer passes silently. (#221)
+- **The intake tools copy an action's observed JSON body.** A captured
+  restart or logout request with a JSON body now becomes the action's
+  `json_body`, so the Sagemcom F3896LG-VMB and Arris SBG8300 restarts
+  are reproduced in full. No body is guessed: an endpoint seen only in
+  page script is marked `unobserved`, and a body holding sanitized or
+  encrypted values is marked `encoded` with its keys, so the next step
+  is a recapture in the first case and Core's `body_encoding: session`
+  in the second.
+- **The intake tools offer an unknown action endpoint as a candidate.**
+  A captured restart or logout sent to a URL no pattern knows was a core
+  gap that stopped intake. It is now an `actions.<kind>.endpoint`
+  ambiguity whose candidate is the request as sent, body included. An
+  endpoint the capture sent different bodies, such as a shared reboot
+  and factory-reset form, stores none and asks for a capture of the
+  action alone. (#221)
+- **Project skills live in `.claude/skills/<name>/SKILL.md`.** One
+  tracked copy per skill, used in place: `skills/` and the
+  `sync_skills.sh` copy step on folder open are gone. Old flat copies
+  in `.claude/skills/` stay ignored and can be deleted.
+- **The intake tools read the HNAP hmac algorithm from the page's
+  script first.** A loaded `hmac_md5.js` or `hmac_sha256.js` decides,
+  then the `HNAP_AUTH` hash length. With neither, the algorithm is an
+  ambiguity with both candidates, where it used to default to md5. The
+  Arris S33v3 auth config is now reproduced in full; the S34's
+  algorithm, which its capture cannot show, is a choice instead of a
+  wrong md5.
+- **The intake tools drop the auth `confidence` score.** Nothing read
+  it. Where it was the only sign of doubt, a warning now says what the
+  strategy rests on: `form_pbkdf2` always, and `form_sjcl` when no
+  captured login page sets its variables.
+- **The intake score skips the Arris SB8200 (CBN) fixture.** It is
+  hand-built, not a browser capture, and now says so like the other
+  synthetic fixtures, so CBN intake is graded on the Compal CH7465MT
+  capture alone. INTAKE_PIPELINE.md documents the `intake_status`
+  marker.
+- **The intake tools read channel arrays inside a JavaScript object.**
+  A page assigning one object that holds every channel array, as the
+  Arris TG3442S and SBG8300 `wan.php` do, now yields `javascript_json`
+  sections in `arrays` form, and an array with no measurement, such as
+  `error_codewords`, is named in a warning. Only a variable holding
+  the channel list itself was detected before. (#210)
+- **The intake tools see JSON and PUT logins.** A JSON login, sent by
+  POST, PUT or PATCH to a login path, now reports its strategy as
+  candidates with the wire evidence for each: `bearer` with its token
+  source and placement when the password key's value is not ciphertext,
+  `json_sjcl` when the body is. A method Core cannot send gets a
+  warning, not a candidate. Generation uses the chosen candidate's fields. The
+  Arris SB8200 PHP capture now reproduces its committed `bearer` login,
+  and the SBG8300 all of it but `login_busy`; the TG3442S capture offers
+  `json_sjcl` and still needs its crypto parameters from page script.
+  They had stopped at "Cannot determine auth mechanism" or read as no
+  login. (#210, #213)
+- **The intake tools see PUT and PATCH actions.** A logout or restart
+  sent by PUT or PATCH now outranks the page that fires it, as a POST
+  does, and one at an unknown URL is reported as a core gap, once per
+  request shape with every capture entry that sent it. The Arris SB8200
+  PHP logout (`PUT /actionHandler/ajaxSet_logout.php`) was silently
+  dropped before. (#213)
+- **har-capture floor raised to 0.13.1.** 0.13.0 redacts serials under
+  any JSON key naming them, labeled serials in JSON and script bodies,
+  and IPv6 and `10.x` addresses, all of which earlier releases left.
+  0.13.1 stops password-label redaction from overwriting JavaScript.
+- **A generated dashboard says why it has no error graphs.** On a modem
+  whose catalog entry declares no error total, `generate_dashboard`
+  dropped the error section without a word. It now emits a note card
+  in its place, and the README describes the three cases: SC-QAM
+  totals on DOCSIS 3.1 and later, all-channel totals on DOCSIS 3.0,
+  and no totals. (#194)
+- **`make spell-check` covers `docs/` and `scripts/`.** It and the CI
+  Spell Check job scanned only catalog modem YAML; both now also check
+  `docs/**/*.md` and the Python and shell scripts under `scripts/`.
+- **The intake tools attach a codewords table to the downstream
+  channels.** A "CM Error Codewords" table beside the main transposed
+  table (Technicolor XB6, XB7, XB8, XB10) was skipped, so a generated
+  config had no error counts. It is now a companion table merged by
+  channel ID when its rows carry a Channel ID and corrected or
+  uncorrected counts; otherwise a warning says it was not attached.
+  Intake accuracy on those four captures rises by 11 to 18 points.
+  `skip_columns` stays hand-authored.
+- **`release.py` stops on open code-scanning alerts.** It stops on any
+  open alert on the release branch, on an open alert on `main` unless
+  the branch has fixed it, and when `main` or the branch's `HEAD` has no
+  CodeQL analysis yet. It needs an authenticated `gh`.
+- **`make link-check` checks `#fragment` anchors.** A fragment on an
+  intra-repo Markdown link must name a heading slug or an explicit `id`
+  in the target file.
+- **black, ruff and mypy are pinned** to 26.1.0, 0.15.12 and 2.1.0
+  across CI, pre-commit and the dev requirements.
+- **CLAUDE.md is restructured.** It is 363 lines, from 601. The CI and
+  dependency rules and the catalog data rules load from `.claude/rules/`
+  when a matching file is touched; diagnosing a user report and the
+  contributor voice are the `diagnose-user-report` and
+  `contributor-comms` skills. The docstring standard is stated once, in
+  `docs/CODE_REVIEW.md`: function and class docstrings are one line,
+  module docstrings are unchanged.
+- **The intake workflow compares the form's login answer and
+  regenerates the README on confirm.** A mismatch with the detected
+  strategy is asked about before generating. The confirm flow
+  regenerates the catalog README (Step 15), the generator runs from the
+  venv, and Step 8 warns that the prettier hook rewrites new YAML.
+- **The modem request form and guide changed.** The form's capture
+  section points to the guide for the commands, including a different
+  modem IP and HTTP Basic Auth. The guide's Step 5 now asks to click any
+  button that loads or shows more data (Refresh, More, Show channels),
+  and its validation step notes that a clean scan cannot prove nothing
+  slipped through. The feature request form drops "Alternatives
+  Considered".
+
+### Fixed
+
+- **The Status sensor's diagnosis names the right probes.** Degraded
+  said "HTTP is failing" and ICMP Blocked said "HTTP works"; both states
+  come from ping and a TCP connect, so the texts now say "responds to
+  ICMP but not to TCP" and "responds to TCP but not to ICMP".
+- **The READMEs no longer claim encrypted credential storage.** Home
+  Assistant keeps a config entry's credentials in its configuration
+  files, not in encrypted storage. The status list, the health-probe
+  description (status comes from ping and TCP; an HTTP HEAD only
+  measures latency), the supported manufacturers and auth methods, the
+  CodeQL triggers, har-capture's role and the catalog structure are
+  corrected too.
+- **The Arris TG3442DE login reads `p_status` as its firmware does.**
+  Success is `AdminMatch` (or any role's `...Match`) or `Default`, as
+  the page's own `loginPasswordChk()` decides; a bare `Match` is no
+  longer accepted, and `Lockout` now reports a lockout instead of
+  wrong credentials.
+- **The intake score reads a POSTed page from its POST.** A page
+  parser.yaml fetches by POST (`requests:`) was graded from the last
+  response to its URL, so a later GET serving empty tables would have
+  replaced the filled ones. It is now read only from a response to the
+  declared request.
+- **The Arris SB8200 PHP firmware can be picked in setup.** On
+  3.14.15-beta.2 "JSON Login (php)" was missing from the SB8200
+  picker: its directory holds only a named variant file, and catalog
+  discovery found directories by their default `modem.yaml`. Discovery
+  now finds a directory by any variant file. (#213)
+- **The intake tools read named variant files.** The committed-fixture
+  auth audit checks each capture against the variant config it replays
+  with, a `password_field` name declared only in a
+  `modem-{variant}.yaml` is learned, and the intake score reads a
+  modem's identity from that same config. All three read `modem.yaml`
+  only. No shipped entry's result changes.
+- **The intake tools no longer propose a modem's model name as its
+  hardware version.** A `Model` label or `model` JSON key now maps to
+  `model_name`. On a page listing Model before Hardware Version, the
+  model name took the `hardware_version` slot. (#221)
+- **System info labels wrapped in a tag inside a table cell are read.**
+  A label such as `<td><label>Hardware Version</label></td>` followed by
+  a value cell returned nothing; the value cell is now found. (#221)
+- **The intake tools find system info labels wrapped in a tag.** A
+  label cell such as `<td><b>Software Version</b></td>` hid the row, so
+  the software info pages of the Arris SB6183, SB6190 and SB8200 and
+  the Technicolor TC4400 proposed no fields. Each row label is now kept
+  when Core's label lookup reads the same value from the page. (#221)
+- **Three catalog fixtures no longer carry device serial numbers.**
+  The fixture gate on har-capture 0.13.1 found the modem serial in the
+  HNAP responses of the Arris S33, S33v2 and SB8200 (HNAP) captures,
+  which the older sanitizer left. Each is replaced with `[REDACTED]`
+  and declared in that modem's notes. The synthetic serial, password
+  and token in the Sagemcom F3896LG-VMB fixture are allowlisted.
+- **The dashboard generator docs match its defaults.** EXAMPLES.md
+  listed Upstream Frequency and Short Titles as off; both are on.
+  Error Rates, off by default, is now listed, and `channel_label`,
+  `channel_grouping` and `status_card_exclude` are documented as
+  YAML-only options. `graph_hours` outside 1-168 is now rejected from
+  scripts too, matching the form.
+- **CBN replay checks the encrypted password.** The harness accepted
+  any login POST, so a replay passed with the password encrypted under
+  the wrong token or not at all. It now decrypts the password with the
+  token it served and fails the login unless it is the test password.
+  Test harness only, no change to how Core talks to a modem.
+- **The intake `run_tests` tool agrees with the catalog suite.** It ran
+  the parser without the orchestrator, so 17 committed modems whose
+  goldens carry error rates failed there while passing CI. It now
+  replays the full orchestrator cycle, as the catalog suite does.
+- **`verify_diagnostics` expects error totals only when the parser sums
+  them.** It warned "partial confirmation" on complete diagnostics from
+  modems whose `parser.yaml` declares no `aggregate:`, such as the Arris
+  SB6190 and Netgear CM1100. (#194)
+- **Two setup and options aborts show a message.** When a selected
+  variant, or the configured modem in Configure, is no longer in the
+  catalog, the flow showed the raw key `unknown_variant` or
+  `unknown_model`. Both now have text in every language.
+- **`validate_har` accepts Basic-auth captures.** It hard-stopped any
+  capture whose first request carried an `Authorization` header as an
+  existing session, but Basic sends credentials on every request, so
+  the Netgear CM600 and C3700 captures could not pass. Other schemes
+  and session cookies still stop.
+- **The intake tools no longer read a CAPTCHA URL as a token login.**
+  The Arris SBG8300 login page fetches `purecaptcha_img.php?t=login_form`,
+  and the detector matched `login_` inside that value, reporting
+  `url_token` for a modem that logs in with a JSON body. The marker must
+  now start a query parameter name.
+- **The intake tools no longer select a table by a title that several
+  tables carry.** On the Arris SB6141 page the downstream, upstream and
+  codewords tables share one title row, so every section selected the
+  first table. A shared title now falls through to a column header
+  unique to the table.
+- **The intake tools read a row label without help text nested in its
+  cell.** The SB6141 "Power Level" cell holds a help paragraph in a
+  nested table, which became part of the field name. A row's first cell
+  is now read as its own text; value cells are read as Core reads them.
+  With the selector fix, SB6141 intake accuracy rises from about 55% to
+  about 95% on both captures.
+
 ## [3.14.15-beta.2] - 2026-09-29
 
 ### Added

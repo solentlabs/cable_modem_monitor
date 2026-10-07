@@ -79,7 +79,6 @@
   ],
   "_transport": "http",
   "_expected_strategy": "form_sjcl",
-  "_expected_confidence": "high",
   "_expected_fields": {
     "login_page": "/",
     "login_endpoint": "/php/ajaxSet_Password.php",

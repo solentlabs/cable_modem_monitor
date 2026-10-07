@@ -49,7 +49,6 @@
   },
   "_expected_transport": "http",
   "_expected_auth_strategy": "url_token",
-  "_expected_auth_confidence": "high",
   "_expected_auth_fields": {
     "login_page": "/status.html",
     "login_prefix": "login_",

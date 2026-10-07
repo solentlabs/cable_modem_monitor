@@ -50,11 +50,10 @@ _JS_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 # Common JS delimiters
 _JS_DELIMITERS: tuple[str, ...] = ("|", ",", ";", "^")
 
-# JS variable assignment containing a JSON array: name = [{...}, ...]
-_JS_JSON_VAR_PATTERN = re.compile(
-    r"(\w+)\s*=\s*(\[.*?\])\s*;",
-    re.DOTALL,
-)
+# JS variable assignment whose value opens a JSON array or object. The
+# value itself is read with raw_decode, as Core's JSJsonParser does: a
+# regex cannot delimit an object whose arrays nest brackets.
+_JS_JSON_VAR_PATTERN = re.compile(r"(\w+)\s*=\s*(?=[\[{])")
 
 
 # -----------------------------------------------------------------------
@@ -224,24 +223,26 @@ def _detect_js_functions(body: str) -> list[DetectedJsFunction]:
 
 
 def _detect_js_json_variables(body: str) -> list[DetectedJsJsonVariable]:
-    """Detect JS variable assignments containing JSON arrays.
+    """Detect JS variables holding a list of channel objects or an object with a channel array."""
+    # Deferred for the import cycle described in dispatcher.py.
+    from ..mapping import extract_json_arrays
 
-    Finds patterns like ``json_dsData = [{...}, ...]`` in
-    ``<script>`` blocks.  Only includes variables whose value
-    parses as a JSON array of dicts with 2+ keys (channel objects).
-    """
+    decoder = json_mod.JSONDecoder()
     variables: list[DetectedJsJsonVariable] = []
 
     for match in _JS_JSON_VAR_PATTERN.finditer(body):
         name = match.group(1)
-        raw_json = match.group(2)
-
         try:
-            data = json_mod.loads(raw_json)
-        except (json_mod.JSONDecodeError, ValueError):
+            data, _ = decoder.raw_decode(body, match.end())
+        except json_mod.JSONDecodeError:
             continue
 
-        if not isinstance(data, list) or not data or not isinstance(data[0], dict) or len(data[0]) < 2:
+        if isinstance(data, list):
+            if not data or not isinstance(data[0], dict) or len(data[0]) < 2:
+                continue
+        # An object qualifies by the json channel-array rule, so a state or
+        # settings object on the page does not claim it as javascript_json.
+        elif not isinstance(data, dict) or not extract_json_arrays(data, "", []):
             continue
 
         variables.append(DetectedJsJsonVariable(name=name, data=data))

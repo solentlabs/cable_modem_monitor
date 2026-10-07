@@ -63,6 +63,7 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         HnapSessionExpired,
         HttpStatusError,
         JsonRpcSessionExpired,
+        LoginPageDriftDetected,
         LogoutExecuted,
         LogoutFailed,
         ParseError,
@@ -75,6 +76,7 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         ResourceLoadError,
         RestartCommandFailed,
         RestartCommandSent,
+        RestartSessionRetry,
         SessionCleared,
         SessionRetryFailed,
         SessionRetryStarted,
@@ -83,6 +85,7 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         StaleSessionRecoveryDisabled,
         StatusTransition,
         StubPageDetected,
+        StuckSessionCleared,
         SystemInfoFieldsChanged,
         ZeroChannelsNoSystemInfo,
     )
@@ -171,6 +174,14 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
             )
         return f"Circuit breaker OPEN [{event.model}] — polling stopped. {remedy}"
 
+    if isinstance(event, LoginPageDriftDetected):
+        prefix = f"Login page drift [{event.model}] — "
+        if event.condition == "action_mismatch":
+            return f"{prefix}login form posts to {event.observed}, config posts to {event.configured}"
+        if event.condition == "multiple_forms":
+            return f"{prefix}{event.observed} on the login page and no form_selector chose one; the first is read"
+        return f"{prefix}form_selector {event.configured!r} matches nothing on the login page ({event.observed})"
+
     if isinstance(event, StaleSessionRecoveryDisabled):
         return (
             f"Recovered stale-session streak reached threshold [{event.model}]"
@@ -210,6 +221,12 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
 
     if isinstance(event, SessionRetryStarted):
         return f"{event.signal_name} [{event.model}] — clearing session and retrying once in same poll"
+
+    if isinstance(event, StuckSessionCleared):
+        return (
+            f"Reused session dropped [{event.model}] — {event.failures} connection failures while the"
+            " modem answers probes; signing in again"
+        )
 
     if isinstance(event, SessionRetrySucceeded):
         return f"{event.signal_name} recovered [{event.model}] — fresh login succeeded in same poll"
@@ -293,7 +310,15 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         return f"Restart command sent [{event.model}] — session cleared ({event.elapsed_seconds:.1f}s)"
 
     if isinstance(event, RestartCommandFailed):
-        return f"Restart command failed [{event.model}] — {event.reason}"
+        age = f" (session age {event.session_age_seconds:.0f}s)" if event.session_age_seconds is not None else ""
+        return f"Restart command failed [{event.model}] — {event.reason}{age}"
+
+    if isinstance(event, RestartSessionRetry):
+        age = f" (session age {event.session_age_seconds:.0f}s)" if event.session_age_seconds is not None else ""
+        return (
+            f"Restart refused on a reused session [{event.model}] — {event.reason}{age};"
+            " signing in again to retry once"
+        )
 
     if isinstance(event, RecoveryWindowOpened):
         return f"Recovery window open [{event.model}] — reason: {event.reason}"
@@ -325,7 +350,11 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
     if isinstance(event, ActionPreFetchCompleted):
         keys = f"{event.key_count} keys" if event.key_count is not None else "no keys"
         fallback = f", fallback: {event.fallback_endpoint}" if event.fallback_endpoint is not None else ""
-        return f"Action pre-fetch completed [{event.model}] — {event.transport}/{event.action_name}: {keys}{fallback}"
+        result = f", result: {event.result}" if event.result is not None else ""
+        return (
+            f"Action pre-fetch completed [{event.model}] — "
+            f"{event.transport}/{event.action_name}: {keys}{result}{fallback}"
+        )
 
     if isinstance(event, ActionPreFetchFailed):
         suffix = (

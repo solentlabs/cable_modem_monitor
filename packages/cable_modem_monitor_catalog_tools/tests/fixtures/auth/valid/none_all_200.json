@@ -7,6 +7,5 @@
     }
   ],
   "_transport": "http",
-  "_expected_strategy": "none",
-  "_expected_confidence": "high"
+  "_expected_strategy": "none"
 }

@@ -26,6 +26,7 @@ strategy".
 
 from __future__ import annotations
 
+import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from types import SimpleNamespace
@@ -46,6 +47,8 @@ from solentlabs.cable_modem_monitor_core.orchestration.auth_failure import (
     _auth_failure_hint,
 )
 
+from tests._helpers import REQUESTS_CONNECTIVITY_CASES, requests_case_id
+
 # ┌───────────────┬──────────────────────┬────────────────────────────────────┐
 # │ strategy      │ declared mode        │ why                                │
 # ├───────────────┼──────────────────────┼────────────────────────────────────┤
@@ -58,7 +61,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.auth_failure import (
 # │ form_sjcl     │ CREDENTIALS_SUSPECT  │ checks, but unproven — see below   │
 # │ bearer        │ CREDENTIALS_SUSPECT  │ checks, but unproven — see below   │
 # │ json_sjcl     │ CREDENTIALS_SUSPECT  │ checks, but unproven — see below   │
-# │ jsonrpc       │ CREDENTIALS_SUSPECT  │ checks, but unproven — see below   │
+# │ json_rpc       │ CREDENTIALS_SUSPECT  │ checks, but unproven — see below   │
 # │ form_pbkdf2   │ SESSION_REJECTED     │ proven — login_success mismatch    │
 # │ hnap          │ SESSION_REJECTED     │ proven — LoginResult mismatch      │
 # └───────────────┴──────────────────────┴────────────────────────────────────┘
@@ -80,7 +83,7 @@ DECLARED_MODES: dict[str, AuthFailureMode] = {
     "form_sjcl":   AuthFailureMode.CREDENTIALS_SUSPECT,
     "bearer":      AuthFailureMode.CREDENTIALS_SUSPECT,
     "json_sjcl":   AuthFailureMode.CREDENTIALS_SUSPECT,
-    "jsonrpc":     AuthFailureMode.CREDENTIALS_SUSPECT,
+    "json_rpc":     AuthFailureMode.CREDENTIALS_SUSPECT,
     "form_pbkdf2": AuthFailureMode.SESSION_REJECTED,
     "hnap":        AuthFailureMode.SESSION_REJECTED,
 }
@@ -97,7 +100,7 @@ _MINIMAL_AUTH: dict[str, dict[str, Any]] = {
     "bearer":      {"login_endpoint": "/login", "token_path": "token"},
     "json_sjcl":   {"login_page": "/login.php", "login_endpoint": "/login", "pbkdf2_iterations": 1000,
                     "pbkdf2_key_length": 128, "aad": "AAD", "token_header": "X-Token"},
-    "jsonrpc":     {"endpoint": "/rpc", "login_method": "login", "username_field": "u", "password_field": "p",
+    "json_rpc":     {"endpoint": "/rpc", "login_method": "login", "username_field": "u", "password_field": "p",
                     "token_path": "token", "token_param": "token"},
     "form_pbkdf2": {"login_endpoint": "/login", "pbkdf2_iterations": 1000, "pbkdf2_key_length": 128},
     "hnap":        {"hmac_algorithm": "md5"},
@@ -500,3 +503,73 @@ def test_timeout_escapes_authenticate(strategy: str, unreachable_url: str) -> No
 
     with pytest.raises(requests.Timeout):
         manager.authenticate(session, unreachable_url, "admin", "pw")
+
+
+# These hold no try block around their login request, so every requests
+# exception escapes them, connectivity or not. The rows below are the
+# strategies that classify, which is where the connectivity predicate lives.
+_NO_REQUEST_CLASSIFICATION = {"bearer", "json_rpc", "json_sjcl"}
+
+# A strategy that classifies more than one request needs a row per request:
+# the earlier requests are answered (`answers`), the target one raises, and
+# any later one gets an empty 200. A guard that swallowed a connectivity
+# exception would then run on to a failed AuthResult instead of raising.
+_SJCL_PAGE = "var myIv = 'aabbccddeeff0011';\nvar mySalt = '1122334455667788';\n"
+_SJCL_MATCH = {"p_status": "AdminMatch"}
+_HNAP_CHALLENGE = {"LoginResponse": {"Challenge": "c", "PublicKey": "p", "Cookie": "k", "LoginResult": "OK"}}
+# fmt: off
+_CLASSIFYING: list[tuple[str, str, dict[str, Any], list[str | dict[str, Any]]]] = [
+    # (id,                      strategy,      overrides,                                 answers)
+    *((s, s, {}, []) for s in sorted(set(DECLARED_MODES) - set(_NO_LOGIN_REQUEST) - _NO_REQUEST_CLASSIFICATION)),
+    ("form-login_page",         "form",        {"login_page": "/login.htm"},              []),
+    ("basic-challenge_cookie",  "basic",       {"challenge_cookie": True},                []),
+    ("form_pbkdf2-csrf_init",   "form_pbkdf2", {"csrf_init_endpoint": "/csrf"},           []),
+    ("form_pbkdf2-login_post",  "form_pbkdf2", {},                                        [{"salt": "s"}]),
+    ("form_sjcl-login_post",    "form_sjcl",   {},                                        [_SJCL_PAGE]),
+    ("form_sjcl-session_check", "form_sjcl",   {"session_validation_endpoint": "/check"}, [_SJCL_PAGE, _SJCL_MATCH]),
+    ("hnap-login",              "hnap",        {},                                        [_HNAP_CHALLENGE]),
+]
+# fmt: on
+
+
+def _answer(body: str | dict[str, Any]) -> requests.Response:
+    """Build a 200 response carrying a text or JSON body."""
+    resp = requests.Response()
+    resp.status_code = 200
+    resp._content = (body if isinstance(body, str) else json.dumps(body)).encode()
+    resp.headers["Content-Type"] = "text/html" if isinstance(body, str) else "application/json"
+    return resp
+
+
+@pytest.mark.parametrize("strategy,overrides,answers", [c[1:] for c in _CLASSIFYING], ids=[c[0] for c in _CLASSIFYING])
+@pytest.mark.parametrize(
+    "exc,connectivity",
+    REQUESTS_CONNECTIVITY_CASES,
+    ids=[requests_case_id(c) for c in REQUESTS_CONNECTIVITY_CASES],
+)
+def test_only_connectivity_escapes_authenticate(
+    strategy: str,
+    overrides: dict[str, Any],
+    answers: list[str | dict[str, Any]],
+    exc: requests.RequestException,
+    connectivity: bool,
+) -> None:
+    """Exactly the connectivity exceptions escape; every other request error is a failed AuthResult."""
+    calls = iter(range(100))
+
+    def respond(*_args: Any, **_kwargs: Any) -> requests.Response:
+        n = next(calls)
+        if n == len(answers):
+            raise exc
+        return _answer(answers[n] if n < len(answers) else {})
+
+    session = requests.Session()
+    session.request = MagicMock(side_effect=respond)  # type: ignore[method-assign]  # rationale: same seam as test_timeout_escapes_authenticate
+    manager = _manager_for(strategy, **overrides)
+
+    if connectivity:
+        with pytest.raises(type(exc)):
+            manager.authenticate(session, "http://127.0.0.1:9", "admin", "pw")
+    else:
+        assert manager.authenticate(session, "http://127.0.0.1:9", "admin", "pw").success is False
+    assert session.request.call_count > len(answers), "the target request was never sent"

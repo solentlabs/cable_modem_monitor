@@ -32,7 +32,6 @@
   ],
   "_transport": "http",
   "_expected_strategy": "url_token",
-  "_expected_confidence": "high",
   "_expected_warning": "client-side credential cookie injection detected",
   "_expected_fields": {
     "inject_credential_cookie": true,

@@ -16,9 +16,9 @@ from typing import Any, Final
 
 import requests
 
-from ..auth.base import AuthContext, AuthResult, BaseAuthManager, LoginLockoutError
+from ..auth.base import AuthContext, AuthResult, BaseAuthManager, LoginLockoutError, LoginPageDrift
 from ..auth.factory import create_auth_manager
-from ..connectivity import create_session
+from ..connectivity import CONNECTIVITY_ERRORS, create_session, is_connectivity_error
 from ..fetch_list import collect_fetch_targets
 from ..loaders.hnap import HNAPLoadError
 from ..loaders.http import (
@@ -48,6 +48,7 @@ from .events import (
     HnapLoadError as HnapLoadErrorEvent,
     HnapSessionExpired,
     JsonRpcSessionExpired,
+    LoginPageDriftDetected,
     LogoutExecuted,
     LogoutFailed,
     ParseError,
@@ -94,6 +95,9 @@ class ModemDataCollector:
         self._auth_context: AuthContext | None = None
         self._last_auth_result: AuthResult | None = None
         self._session_reused: bool = False
+        # Monotonic time of the login that created the current session;
+        # reuse does not reset it.
+        self._authenticated_at: float | None = None
         # First successful login of this collector's lifetime is the
         # setup-confirmation line; re-logins after it are steady state.
         # ORCHESTRATION_SPEC § Logging Contract, auth/resource tier.
@@ -102,6 +106,12 @@ class ModemDataCollector:
         # completed collection of this collector's lifetime confirms the
         # poll returned data, and every one after it is steady state.
         self._collection_complete_logged: bool = False
+        # Login-page drift: the latest fresh login's findings, for the
+        # diagnostics download, and every drift already warned about.
+        # A drift warns once per collector lifetime (LOGGING_SPEC § Level
+        # policy, repeated findings); a real one recurs on every login.
+        self._login_page_drift: tuple[LoginPageDrift, ...] = ()
+        self._login_page_drift_warned: set[LoginPageDrift] = set()
 
         # Persistent session — reused across execute() calls.
         # Created via create_session() so HTTPS modems with self-signed
@@ -146,7 +156,7 @@ class ModemDataCollector:
                 signal=CollectorSignal.AUTH_LOCKOUT,
                 error=str(exc),
             )
-        except (requests.ConnectionError, requests.Timeout) as exc:
+        except CONNECTIVITY_ERRORS as exc:
             error_with_type = f"{type(exc).__name__}: {exc}"
             log_event(
                 _logger,
@@ -211,7 +221,7 @@ class ModemDataCollector:
             return self._classify_hnap_error(exc)
         except ResourceLoadError as exc:
             return self._classify_resource_load_error(exc)
-        except (requests.ConnectionError, requests.Timeout) as exc:
+        except CONNECTIVITY_ERRORS as exc:
             log_event(
                 _logger,
                 ConnectionFailedDuringLoad(
@@ -269,9 +279,26 @@ class ModemDataCollector:
         return self._auth_manager.session_is_valid(self._session, self._auth_context)
 
     @property
+    def session_reused(self) -> bool:
+        """Whether the last ``authenticate()`` reused a held session rather than logging in."""
+        return self._session_reused
+
+    @property
+    def session_age_seconds(self) -> float | None:
+        """Seconds since the login that created the current session; None when none is held."""
+        if self._authenticated_at is None:
+            return None
+        return time.monotonic() - self._authenticated_at
+
+    @property
     def last_resource_fetches(self) -> list[ResourceFetch]:
         """Per-resource timing from the last successful collection."""
         return self._last_resource_fetches
+
+    @property
+    def login_page_drift(self) -> tuple[LoginPageDrift, ...]:
+        """Login-page drift the most recent fresh login found."""
+        return self._login_page_drift
 
     @property
     def last_stub_bodies(self) -> dict[str, str]:
@@ -314,6 +341,7 @@ class ModemDataCollector:
                 self._session.headers[name] = value
         self._auth_context = None
         self._last_auth_result = None
+        self._authenticated_at = None
         log_event(_logger, SessionCleared(model=self._modem_config.model))
 
     def close(self) -> None:
@@ -366,10 +394,12 @@ class ModemDataCollector:
             timeout=self._modem_config.timeout,
             log_level=log_level,
         )
+        self._report_login_page_drift(tuple(result.login_page_drift))
 
         if result.success:
             self._auth_context = result.auth_context
             self._last_auth_result = result
+            self._authenticated_at = time.monotonic()
             log_event(
                 _logger,
                 AuthSucceeded(
@@ -387,6 +417,23 @@ class ModemDataCollector:
             self._fetch_post_login_endpoints()
 
         return result
+
+    def _report_login_page_drift(self, findings: tuple[LoginPageDrift, ...]) -> None:
+        """Record the login's drift findings and log each, WARNING the first time it is seen."""
+        self._login_page_drift = findings
+        for drift in findings:
+            first = drift not in self._login_page_drift_warned
+            self._login_page_drift_warned.add(drift)
+            log_event(
+                _logger,
+                LoginPageDriftDetected(
+                    model=self._modem_config.model,
+                    condition=drift.condition,
+                    configured=drift.configured,
+                    observed=drift.observed,
+                    level=EventLevel.WARNING if first else EventLevel.DEBUG,
+                ),
+            )
 
     def _fetch_post_login_endpoints(self) -> None:
         """GET each declared post-login path in order; responses are discarded.
@@ -453,8 +500,8 @@ class ModemDataCollector:
         if self._modem_config.transport == "cbn":
             return self._load_cbn_resources()
 
-        if self._modem_config.transport == "jsonrpc":
-            return self._load_jsonrpc_resources()
+        if self._modem_config.transport == "json_rpc":
+            return self._load_json_rpc_resources()
 
         return self._load_http_resources(auth_result)
 
@@ -534,16 +581,16 @@ class ModemDataCollector:
         resources = loader.fetch(targets)
         return resources, _to_resource_fetches(loader.resource_fetches)
 
-    def _load_jsonrpc_resources(self) -> tuple[dict[str, Any], list[ResourceFetch]]:
+    def _load_json_rpc_resources(self) -> tuple[dict[str, Any], list[ResourceFetch]]:
         """Fetch JSON-RPC resources, one call per method on the fetch list."""
-        from ..loaders.jsonrpc import JSONRPCLoader
-        from ..protocol.jsonrpc import jsonrpc_params
+        from ..loaders.json_rpc import JsonRpcLoader
+        from ..protocol.json_rpc import json_rpc_params
 
         targets = collect_fetch_targets(self._parser_config, self._post_processor)
-        auth = jsonrpc_params(self._modem_config.auth)
+        auth = json_rpc_params(self._modem_config.auth)
         token_prefix, url_token = self._auth_manager.loader_url_token(self._session, self._auth_context)
 
-        loader = JSONRPCLoader(
+        loader = JsonRpcLoader(
             session=self._session,
             base_url=self._base_url,
             endpoint=auth.endpoint,
@@ -580,7 +627,7 @@ class ModemDataCollector:
         # exception with `from e`, so __cause__ carries the original and
         # status_code is None for these.
         cause = exc.__cause__
-        if exc.status_code is None and isinstance(cause, requests.ConnectionError | requests.Timeout):
+        if exc.status_code is None and is_connectivity_error(cause):
             log_event(
                 _logger,
                 ConnectionFailedDuringLoad(
@@ -637,7 +684,7 @@ class ModemDataCollector:
         cause = exc.__cause__
 
         # Connection/timeout — modem unreachable (UC-30/UC-31)
-        if exc.status_code is None and isinstance(cause, requests.ConnectionError | requests.Timeout):
+        if exc.status_code is None and is_connectivity_error(cause):
             log_event(_logger, HnapConnectionFailed(model=self._modem_config.model, reason=str(exc)))
             return ModemResult(
                 success=False,

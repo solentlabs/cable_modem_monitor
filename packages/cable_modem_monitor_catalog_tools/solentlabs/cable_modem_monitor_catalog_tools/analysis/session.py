@@ -5,7 +5,7 @@ headers (e.g., X-Requested-With), and URL token prefixes.
 
 JSON-RPC transport: the data requests are the POSTed calls, and only
 headers are detected. The query token is auth's ``token_param`` and the
-session carries no cookie (AUTH_JSONRPC_SPEC § Session).
+session carries no cookie (AUTH_JSON_RPC_SPEC § Session).
 
 HNAP transport has implicit session (``uid`` + ``PrivateKey`` cookies,
 ``HNAP_AUTH`` header) -- this phase returns an empty session for HNAP.
@@ -20,8 +20,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..validation.har_utils import is_static_resource, jsonrpc_body, lower_headers
-from .auth.jsonrpc import jsonrpc_login_credentials
+from ..validation.har_utils import is_static_resource, json_rpc_body, lower_headers
+from .auth.json_rpc import json_rpc_login_credentials
 from .auth.patterns import get_session_cookie_indicators
 
 # Cookie names that indicate a session (case-insensitive substring match).
@@ -64,7 +64,7 @@ class SessionDetail:
 
         Args:
             entries: HAR ``log.entries`` list.
-            transport: Detected transport (``http``, ``hnap`` or ``jsonrpc``).
+            transport: Detected transport (``http``, ``hnap`` or ``json_rpc``).
             auth_strategy: Detected auth strategy name.
             warnings: Mutable list to append warnings to.
 
@@ -77,12 +77,12 @@ class SessionDetail:
         if transport == "hnap":
             return cls()
 
-        if transport == "jsonrpc":
+        if transport == "json_rpc":
             calls = [
                 entry
                 for entry in entries
-                if jsonrpc_body(entry["request"]) is not None
-                and jsonrpc_login_credentials(entry["request"]) is None
+                if json_rpc_body(entry["request"]) is not None
+                and json_rpc_login_credentials(entry["request"]) is None
                 and entry["response"].get("status") == 200
             ]
             return cls(headers=_consistent_headers(calls))

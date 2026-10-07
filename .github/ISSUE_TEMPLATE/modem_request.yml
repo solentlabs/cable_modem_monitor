@@ -8,11 +8,11 @@ body:
       value: |
         ## Request Support for a New Modem
 
-        Adding support for your modem starts with a **HAR capture** from its web interface. This records the complete HTTP flow — authentication, API calls, page content — everything needed to build a parser.
+        Adding support for your modem starts with a **HAR capture** from its web interface. This records the full HTTP flow (authentication, API calls, page content) a parser is built from.
 
         **New here?** Read the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) for the full walkthrough — it covers capturing, screening for PII (manually or with AI assist), and submitting.
 
-        **Help grow the catalog.** The catalog includes modems the maintainer can't physically test — it grows when contributors with hardware help analyze captures and propose entries. If you have AI access, you can do significantly more than file a request: analyze your own capture, propose the catalog entry, and help triage other users' submissions. See [AI-Assisted Catalog Contribution](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#ai-assisted-catalog-contribution).
+        **Help grow the catalog.** The maintainer can't test every modem, so the catalog grows when contributors with hardware analyze captures and propose entries. With AI access you can analyze your own capture, propose the catalog entry, and help triage other users' submissions. See [AI-Assisted Catalog Contribution](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#ai-assisted-catalog-contribution).
 
   - type: input
     id: modem-model
@@ -70,22 +70,13 @@ body:
 
         ## How to Capture
 
-        Use [har-capture](https://github.com/solentlabs/har-capture) to record your modem's web interface.
-
-        ```bash
-        # Install (one-time)
-        pip install "har-capture[full]"
-
-        # Capture your modem (--patterns selects the PII rule set; network-device covers modems and routers)
-        har-capture 192.168.100.1 --patterns network-device
-        ```
+        Use [har-capture](https://github.com/solentlabs/har-capture) to record your modem's web interface. The install and capture commands, including the options for a different modem IP or HTTP Basic Auth, are in [section 1 of the Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md#1-capture).
 
         har-capture launches its own controlled chromium window — your regular browser's cookies and login state don't carry over, so there's nothing to clear beforehand.
 
-        **During capture**, follow the click sequence in the
-        [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md#1-capture)
-        — it includes two steps that are easy to miss (a pre-login page visit and a
-        deliberate wrong-password login) that make your capture much more useful.
+        **During capture**, follow the click sequence in that section. Two steps
+        are easy to miss (a pre-login page visit and a deliberate wrong-password
+        login) and make your capture much more useful.
 
         **Before sharing:** Search the `.sanitized.har` file for your WiFi password and any other credentials — the sanitizer is best-effort. See the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md#2-check-for-personal-data) for what to check.
 

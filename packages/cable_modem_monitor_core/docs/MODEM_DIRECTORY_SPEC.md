@@ -131,7 +131,9 @@ variant apart
 ([ARCHITECTURE_DECISIONS.md § The variant name is the user-facing discriminator](ARCHITECTURE_DECISIONS.md#the-variant-name-is-the-user-facing-discriminator)).
 A variant added to a model that already has one, in the same directory
 or a sibling directory, gets a named `modem-{name}.yaml`; a default
-`modem.yaml` has no stem to show.
+`modem.yaml` has no stem to show. A directory may therefore hold only
+named variants: `list_modems()` finds a directory by any variant file,
+not by `modem.yaml`.
 
 Files sharing the same `model` field group under one dropdown entry in the
 config flow. Variant selection happens on Step 2 (see

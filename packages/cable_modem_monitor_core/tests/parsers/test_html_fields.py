@@ -15,12 +15,16 @@ from bs4 import BeautifulSoup
 from solentlabs.cable_modem_monitor_core.models.parser_config.system_info import (
     HTMLFieldsSource,
 )
+from solentlabs.cable_modem_monitor_core.parsers import extract_by_label
 from solentlabs.cable_modem_monitor_core.parsers.formats.html_fields import HTMLFieldsParser
 
 from tests._helpers import collect_fixtures, load_fixture
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "html_fields"
 VALID_FIXTURES = collect_fixtures(FIXTURES_DIR / "valid")
+
+# A labelled row for the public entry point; the cascade itself is covered by fixtures.
+LABELLED_ROW = "<table><tr><td>Hardware Version</td><td>2.1.0</td></tr></table>"
 
 
 def _build_resources(html: str | None, resource_key: str) -> dict[str, BeautifulSoup]:
@@ -49,3 +53,10 @@ def test_extraction(fixture_path: Path) -> None:
     assert result == expected, (
         f"Mismatch for {fixture_path.stem}:\n" f"  actual:   {result}\n" f"  expected: {expected}"
     )
+
+
+def test_extract_by_label_public_entry() -> None:
+    """The public entry point returns the labelled value, or None for an absent label."""
+    soup = BeautifulSoup(LABELLED_ROW, "html.parser")
+    assert extract_by_label(soup, "Hardware Version") == "2.1.0"
+    assert extract_by_label(soup, "Software Version") is None

@@ -42,7 +42,6 @@
   ],
   "_transport": "http",
   "_expected_strategy": "form",
-  "_expected_confidence": "high",
   "_expected_fields": {
     "action": "/goform/login",
     "username_field": "loginUsername",

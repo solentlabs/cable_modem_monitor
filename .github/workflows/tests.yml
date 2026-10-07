@@ -48,6 +48,11 @@ jobs:
   test-packages:
     name: Package Tests (Core + Catalog)
     runs-on: ubuntu-latest
+    # actions: read lets the scorecard step list earlier runs and fetch
+    # their artifact; the repo default token has contents and packages only.
+    permissions:
+      contents: read
+      actions: read
 
     steps:
       - name: Checkout code
@@ -76,8 +81,8 @@ jobs:
           pip install -e packages/cable_modem_monitor_catalog
           # check_fixture_pii.py imports har_capture, and the catalog test
           # suite imports that script. Floor matches pyproject.toml: below
-          # 0.12.2 the scanner skips whole bodies on a stray placeholder.
-          pip install "har-capture~=0.12.2"
+          # 0.13.0 serials under any JSON key naming them go unflagged.
+          pip install "har-capture~=0.13.1"
 
       - name: Run Catalog tests
         working-directory: packages/cable_modem_monitor_catalog
@@ -101,9 +106,32 @@ jobs:
         run: |
           python scripts/check_import_isolation.py
 
+      # Report only: the card of the newest earlier successful run on this
+      # branch (else main) feeds --compare so the job summary shows what
+      # moved. No local mirror: it needs this repo's run history, which a
+      # local `make intake-regression` does not have.
+      - name: Fetch previous intake scorecard
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Via env, never inline in run: a pull request's branch name is attacker-controlled.
+          CURRENT_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          for branch in "$CURRENT_BRANCH" main; do
+            run_id=$(gh run list --workflow tests.yml --branch "$branch" --status success --limit 1 --json databaseId -q '.[0].databaseId // empty')
+            if [ -n "$run_id" ] && gh run download "$run_id" -n intake-pipeline-scorecard -D previous-scorecard; then
+              echo "Compared against run $run_id on $branch"
+              break
+            fi
+          done
+
       - name: Intake pipeline accuracy
         run: |
-          python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py -v --scorecard intake-pipeline-scorecard.json
+          compare=""
+          if [ -f previous-scorecard/intake-pipeline-scorecard.json ]; then
+            compare="--compare previous-scorecard/intake-pipeline-scorecard.json"
+          fi
+          python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py -v --scorecard intake-pipeline-scorecard.json $compare
 
       - name: Upload intake pipeline scorecard
         if: always()
@@ -126,10 +154,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      # ruff, black and mypy pins also live in .pre-commit-config.yaml,
+      # requirements-dev.txt, requirements-security.txt (mypy) and the
+      # root and Core pyproject.toml dev lists; bump every copy together.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff==0.15.2 black==26.1.0 mypy==2.1.0 types-requests types-PyYAML pytest-socket pydantic types-cryptography requests-mock har-capture~=0.12.2
+          pip install ruff==0.15.12 black==26.1.0 mypy==2.1.0 types-requests types-PyYAML pytest-socket pydantic types-cryptography requests-mock har-capture~=0.13.1
           pip install -e packages/cable_modem_monitor_core
           pip install -e packages/cable_modem_monitor_catalog
 
@@ -195,7 +226,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install beautifulsoup4 har-capture~=0.12.2 pyyaml
+          pip install beautifulsoup4 har-capture~=0.13.1 pyyaml
 
       - name: Check fixtures for PII
         run: |
@@ -213,10 +244,11 @@ jobs:
         run: npm install -g cspell@10
 
       - name: Run spell check
-        # Scoped to catalog modem YAML; broader codebase (Python, docs) not yet audited.
+        # Globs mirror the Makefile spell-check target; change both together.
         run: |
           cspell --config cspell.config.yaml \
             "packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/**/*.yaml" \
+            "docs/**/*.md" "scripts/**/*.py" "scripts/**/*.sh" \
             --no-progress
 
   suppression-check:

@@ -1,0 +1,129 @@
+{
+  "_description": "SJCL login whose request body the sanitizer emptied: the response's encryptData marks form_sjcl",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.0.1/",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html; charset=UTF-8"
+          },
+          {
+            "name": "Set-Cookie",
+            "value": "PHPSESSID=abc123; path=/; HttpOnly"
+          }
+        ],
+        "cookies": [
+          {
+            "name": "PHPSESSID",
+            "value": "abc123"
+          }
+        ],
+        "content": {
+          "size": 200,
+          "mimeType": "text/html",
+          "text": "<html><script>\nvar currentSessionId = 'sess_abc';\nvar myIv = 'aabbccddeeff0011';\nvar mySalt = '1122334455667788';\nvar encryptflag = 'true';\n</script></html>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.0.1/php/ajaxSet_Password.php",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "X-Requested-With",
+            "value": "XMLHttpRequest"
+          },
+          {
+            "name": "csrfNonce",
+            "value": "undefined"
+          }
+        ],
+        "cookies": [
+          {
+            "name": "PHPSESSID",
+            "value": "abc123"
+          }
+        ],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Set-Cookie",
+            "value": "PHPSESSID=abc123; path=/; HttpOnly"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 100,
+          "mimeType": "application/json",
+          "text": "{\"p_status\": \"AdminMatch\", \"encryptData\": \"cbd2ef8ec63fc993cbcd49052f671e99\"}"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.0.1/php/ajaxSet_Session.php",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "csrfNonce",
+            "value": "extracted_nonce"
+          }
+        ],
+        "cookies": [
+          {
+            "name": "PHPSESSID",
+            "value": "abc123"
+          }
+        ],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 22,
+          "mimeType": "application/json",
+          "text": "{\"LoginStatus\": \"yes\"}"
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form_sjcl"
+}

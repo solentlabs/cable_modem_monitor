@@ -50,7 +50,7 @@ def test_valid_modem_config(fixture_path: Path):
     config = ModemConfig.model_validate(load_fixture(fixture_path))
     assert config.manufacturer
     assert config.model
-    assert config.transport in ("http", "hnap", "cbn", "jsonrpc")
+    assert config.transport in ("http", "hnap", "cbn", "json_rpc")
 
 
 # ---------------------------------------------------------------------------

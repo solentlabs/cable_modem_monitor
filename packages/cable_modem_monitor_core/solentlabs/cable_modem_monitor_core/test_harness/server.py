@@ -23,11 +23,13 @@ if TYPE_CHECKING:
 
 from .auth import create_auth_handler
 from .routes import (
+    build_form_bodies,
     build_json_body_keys,
     build_login_query_shapes,
     build_routes,
     normalize_path,
     unrecorded_body_keys,
+    unrecorded_form_pairs,
 )
 
 _logger = logging.getLogger(__name__)
@@ -263,6 +265,25 @@ class _MockHandler(BaseHTTPRequestHandler):
                 self._fail_request(
                     f"request body keys not in the capture: {', '.join(sorted(invented))} "
                     f"(captured: {', '.join(sorted(captured_keys))})"
+                )
+                return True
+
+        # A restart's form values decide what the modem does (reboot or
+        # factory reset on one endpoint), so Core may not send a pair the
+        # capture never posted together. Restart only; see ARCHITECTURE.md.
+        captured_forms = server.form_bodies.get((method, path))
+        # A restart that shares its endpoint with login (DM1000 /setup.cgi) is
+        # skipped: the body alone cannot say which of the two this request is.
+        if (
+            captured_forms
+            and server.auth_handler.is_restart_request(method, path)
+            and not server.auth_handler.is_login_request(method, path)
+        ):
+            unrecorded = unrecorded_form_pairs(captured_forms, body)
+            if unrecorded:
+                self._fail_request(
+                    "restart form fields not in the capture: "
+                    + ", ".join(f"{name}={value}" for name, value in sorted(unrecorded))
                 )
                 return True
 
@@ -541,6 +562,7 @@ class HARMockServer(HTTPServer):
         self.login_action = normalize_path(self.auth_handler.login_action)
         self.routes = build_routes(har_entries, login_path=self.login_action)
         self.json_body_keys = build_json_body_keys(har_entries)
+        self.form_bodies = build_form_bodies(har_entries)
         self.login_query_shapes = build_login_query_shapes(har_entries, self.login_action)
         self.login_page = self.auth_handler.login_page
         self.token_prefix = self.auth_handler.token_prefix

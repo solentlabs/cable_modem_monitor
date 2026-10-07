@@ -29,6 +29,7 @@ from .events import (
     SessionRetryStarted,
     SessionRetrySucceeded,
     StatusTransition,
+    StuckSessionCleared,
     SystemInfoFieldsChanged,
 )
 from .logging import log_event
@@ -85,6 +86,9 @@ class Orchestrator:
     """
 
     AUTH_FAILURE_THRESHOLD: int = 6
+    # Connection failures on a reused session, each followed by a probe showing
+    # the modem reachable, before the session is dropped (UC-21b).
+    SESSION_STUCK_THRESHOLD: int = 3
 
     def __init__(
         self,
@@ -135,6 +139,14 @@ class Orchestrator:
         # a modem going down and the next health probe, latest
         # would otherwise report a stale up status.
         self._last_connectivity_failure_at: float | None = None
+
+        # Stuck-session count (UC-21b). A CONNECTIVITY failure waits to be
+        # judged by the first fresh health probe after it: counted when the
+        # failure was on a reused session and the modem reads reachable,
+        # otherwise the count resets. Each failure is judged once.
+        self._failure_awaiting_probe: bool = False
+        self._failed_on_reused_session: bool = False
+        self._reachable_failures: int = 0
 
     def get_modem_data(self) -> ModemSnapshot:
         """Execute a data collection cycle.
@@ -222,6 +234,7 @@ class Orchestrator:
             last_stub_body=self._collector.last_stub_bodies,
             system_info_fields_missing=self._collector.last_system_info_fields_missing,
             system_info_fields_failed=self._collector.system_info_fields_failed,
+            login_page_drift=list(self._collector.login_page_drift),
         )
 
     @property
@@ -311,22 +324,7 @@ class Orchestrator:
                 error=f"Circuit breaker open — {advice.cause}",
             )
 
-        # Health recovery — clear connectivity backoff if the modem
-        # is proven reachable. ICMP_BLOCKED qualifies: since UC-59a it
-        # always carries a live TCP pass, so the data path is proven up
-        # even when ping is filtered. The freshness gate matters: the
-        # health coordinator is on a slower cadence than the data
-        # coordinator during a recovery window, so ``latest`` may still
-        # hold a pre-outage reading. Only trust it if the probe ran
-        # AFTER our last observed connectivity failure.
-        if (
-            self._health_monitor is not None
-            and self._policy.connectivity_backoff_remaining > 0
-            and self._health_monitor.latest.health_status.data_path_up
-            and self._is_health_probe_fresh()
-        ):
-            log_event(_logger, HealthBackoffCleared(model=self._modem_config.model))
-            self._policy.reset_connectivity()
+        self._apply_health_probe()
 
         # Connectivity backoff
         if self._policy.check_connectivity_backoff():
@@ -377,6 +375,49 @@ class Orchestrator:
             if self._health_monitor is not None:
                 self._health_monitor.record_collection_end(collection_success)
 
+    def _apply_health_probe(self) -> None:
+        """Let a fresh health probe clear the connectivity backoff and judge the last failure.
+
+        A data-path-up reading proves the modem reachable, so the backoff is cleared. ICMP_BLOCKED
+        qualifies: since UC-59a it always carries a live TCP pass, so the data path is proven up even
+        when ping is filtered. The freshness gate matters: the health coordinator is on a slower
+        cadence than the data coordinator during a recovery window, so ``latest`` may still hold a
+        pre-outage reading. Only trust it if the probe ran AFTER our last observed connectivity failure.
+        """
+        if (
+            self._health_monitor is None
+            or self._policy.connectivity_backoff_remaining <= 0
+            or not self._is_health_probe_fresh()
+        ):
+            return
+        reachable = self._health_monitor.latest.health_status.data_path_up
+        if reachable:
+            log_event(_logger, HealthBackoffCleared(model=self._modem_config.model))
+            self._policy.reset_connectivity()
+        self._judge_connection_failure(reachable)
+
+    def _judge_connection_failure(self, reachable: bool) -> None:
+        """Judge the last CONNECTIVITY failure once, from a probe taken after it (UC-21b)."""
+        if not self._failure_awaiting_probe:
+            return
+        self._failure_awaiting_probe = False
+        if not (reachable and self._failed_on_reused_session):
+            self._reachable_failures = 0
+            return
+        self._reachable_failures += 1
+        if self._reachable_failures < self.SESSION_STUCK_THRESHOLD:
+            return
+        # The modem answers probes yet drops our reused session on every
+        # request: release the slot on single-session firmware, then clear
+        # so this poll logs in fresh.
+        log_event(
+            _logger,
+            StuckSessionCleared(model=self._modem_config.model, failures=self._reachable_failures),
+        )
+        self._collector.attempt_logout_before_retry()
+        self._collector.clear_session()
+        self._reachable_failures = 0
+
     def _retry_load_auth_once(self, signal: CollectorSignal) -> ModemResult:
         """Retry one auth-integrity failure immediately with a fresh session.
 
@@ -408,6 +449,12 @@ class Orchestrator:
         # health-recovery probe from a stale pre-outage reading.
         if result.signal is CollectorSignal.CONNECTIVITY:
             self._last_connectivity_failure_at = time.monotonic()
+            # A failure no probe has judged when the next one arrives never saw
+            # a fresh probe between them, so the run is not known to be reachable.
+            if self._failure_awaiting_probe:
+                self._reachable_failures = 0
+            self._failure_awaiting_probe = True
+            self._failed_on_reused_session = self._collector.session_reused
 
         # Recovery hook — on CONNECTIVITY failures, Recovery opens a
         # window so HA drops to the faster cadence. Other failure
@@ -427,6 +474,8 @@ class Orchestrator:
     def _handle_success(self, result: ModemResult) -> ModemSnapshot:
         """Process a successful collection result."""
         self._policy.clear_streak()
+        self._reachable_failures = 0
+        self._failure_awaiting_probe = False
 
         modem_data = result.modem_data
         assert modem_data is not None  # guaranteed by success=True

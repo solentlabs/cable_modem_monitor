@@ -51,6 +51,8 @@ git status  # Should be clean
 The release script will:
 
 - Validate version format and clean working directory
+- Stop on open code-scanning alerts, any severity, on the release
+  branch or on `main` (see below)
 - Run tests and code quality checks (pytest, ruff, black, mypy)
 - Verify translations are in sync
 - Update version in manifest.json, const.py, pyproject.toml files, and test assertions
@@ -59,6 +61,23 @@ The release script will:
 
 The script does **not** stage, commit, tag, push, or create releases —
 the developer handles all git operations.
+
+**Code-scanning check.** CodeQL runs only in CI, and its job passes even
+when it uploads new alerts, so `release.py` asks GitHub with `gh api`
+before `make validate-ci` and the version bump. It names each ref (`refs/heads/main` and
+`refs/heads/<current branch>`): the alerts endpoint otherwise answers
+for the default branch, which is how alert 132 went unseen on its
+branch. The release stops on:
+
+- any open alert on the release branch;
+- an open alert on `main`, unless that alert's instance on the release
+  branch is `fixed` (no instance there still blocks), so a release can
+  ship the fix for an alert on `main`;
+- no CodeQL analysis of `main`, or a release branch whose newest
+  analysis is not of local `HEAD`, since an unanalysed ref lists no
+  alerts. Push `HEAD` and let CodeQL finish first.
+
+Needs an authenticated `gh`.
 
 ### 2. Stage, Commit, and Push
 
@@ -483,8 +502,8 @@ gh api repos/solentlabs/cable_modem_monitor/rulesets/10547747 --method PUT --inp
 ```
 
 where `<payload>` is the full ruleset JSON with the corrected `context`
-strings. See CLAUDE.md § "Adding a new CI job" for the rule that
-prevents this drift.
+strings. See `.claude/rules/ci-and-dependencies.md` § "Adding a new CI
+job" for the rule that prevents this drift.
 
 ### Release workflow didn't trigger
 
@@ -492,4 +511,4 @@ Ensure the tag follows the pattern `v*` (e.g., `v3.14.0`). Check `.github/workfl
 
 ---
 
-Last updated: 2026-08-24
+Last updated: 2026-10-02

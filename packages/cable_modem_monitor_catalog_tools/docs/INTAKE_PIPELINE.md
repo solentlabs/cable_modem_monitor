@@ -59,7 +59,7 @@ generate_golden_file ─ parse HAR through generated config
 write_modem_package ── place all files in catalog directory
     │
     ▼
-run_tests ─────── HAR replay → auth → load → parse → golden file diff
+run_tests ─────── HAR replay → orchestrator cycle → golden file diff
     │
     ├── failures? → LLM diagnoses, fixes config, re-runs
     │
@@ -108,13 +108,12 @@ candidate list and the LLM picks by reading response bodies. Unread
 resources emit key skeletons and the LLM decides what is worth mapping.
 Neither gates, and both hand over evidence rather than a conclusion.
 
-Auth and action detection do not. Both return a single answer,
-`AuthDetail.confidence` is serialized and read by nothing, and a failure is
-a hard stop rather than a shortlist. The cost is not missed capability, it
-is **silent wrong confidence**: `sagemcom/f3896lg-zg` is reported
-`form_pbkdf2` with no sign that its login response carries `created.token`,
-the one fact that makes it `bearer`. Nothing downstream learns a decision
-existed.
+HTTP auth detection mostly does not. Outside JSON logins it returns a
+single answer, and a failure is a hard stop rather than a shortlist. The
+cost is not missed capability, it is **a wrong answer with only generic doubt**:
+a login read as the first strategy that matched, with nothing reporting
+the evidence that makes it another (a response's `created.token`, the
+one fact that makes a login `bearer`).
 
 **The rule.** Where a detection is ambiguous, report the alternatives and
 the wire evidence for each, not the winner alone. Where the capture cannot
@@ -142,9 +141,13 @@ never asked. The fitting measure is whether the correct answer was among the
 candidates offered, and whether un-inferable cases were flagged as gaps.
 [Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed) are the
 first detection that emits candidates, and the regression scores them that
-way ([Ambiguity resolution](#intake-pipeline-regression)). Auth and action
-detection still return one answer, so their exact-match grades stand as the
-interim proxy.
+way ([Ambiguity resolution](#intake-pipeline-regression)). They cover a
+JSON login's strategy ([ONBOARDING_SPEC.md § JSON login](ONBOARDING_SPEC.md#json-login)),
+an HNAP `hmac_algorithm` the capture cannot show
+([ONBOARDING_SPEC.md § HNAP transport](ONBOARDING_SPEC.md#hnap-transport)),
+JSON-RPC error codes and restarts, CBN action codes, and HTTP action
+endpoints no pattern knows. Detection that returns one answer keeps its
+exact-match grade as the interim proxy.
 
 ---
 
@@ -156,12 +159,10 @@ A **CoreGap** means the modem uses a pattern that Core doesn't support yet. The 
 | ------------- | --------------- | ----------------- |
 | `unmatched_login` | Login POST to an endpoint not in known patterns | New URL pattern in `auth_patterns.json`, or a new auth strategy |
 | `auth_unknown` | Auth mechanism doesn't match any known strategy | New auth strategy implementation |
-| `unmatched_restart` | Restart action to an unrecognized endpoint | New URL pattern in `action_patterns.json` |
-| `unmatched_logout` | Logout action to an unrecognized endpoint | New URL pattern in `action_patterns.json` |
 
 Well-known modems with standard patterns produce zero gaps. Novel modems produce gaps that require a development effort before onboarding can proceed.
 
-**Gap categories are endpoint-level, and cover auth and actions only.** A
+**Gap categories are endpoint-level, and cover auth only.** A
 data endpoint the generator does not read produces no gap: intake writes a
 `parser.yaml` that simply omits it, and the pipeline reports success. That
 is how the service flow resource behind issue #185 was captured in the HAR,
@@ -307,6 +308,18 @@ would raise the percentage. Only the `INCOMPLETE HARS` list is excluded,
 because a capture that never recorded the flow measures the capture
 rather than the pipeline.
 
+A HAR joins that list by carrying `log._solentlabs.intake_status`; any
+non-empty value skips it, and `intake_reason` is printed beside it.
+Values in use:
+
+| `intake_status` | Meaning |
+|-----------------|---------|
+| `synthetic` | Built by a script or by hand, not recorded from a browser session ([MODEM_INTAKE_WORKFLOW.md § Assembled fixtures](MODEM_INTAKE_WORKFLOW.md#assembled-fixtures)). It records no firmware, so its score would measure the fixture, not the pipeline |
+| `needs-recapture` | A real capture missing part of the flow, such as a session already open when recording began |
+
+The marker is metadata beside `entries` and changes no recorded entry.
+The golden replay still runs every marked HAR.
+
 **Which config a HAR is graded against.** A modem directory may hold
 several HARs, each capturing a different auth variant alongside its own
 `modem-<variant>.yaml`. Both grades resolve the committed config from
@@ -324,8 +337,8 @@ against the committed config per HAR
 
 | Grade | Meaning |
 |-------|---------|
-| `match` | Type, identity (method + endpoint, hnap action_name, or jsonrpc method), and params all reproduced |
-| `partial` | Identity matches; params differ, are missing, or json_body not produced |
+| `match` | Type, identity (method + endpoint, hnap action_name, or json_rpc method), and params all reproduced |
+| `partial` | Identity matches; params or json_body differ, are missing, or are extra. A missing json_body reads `json_body unobserved` when the capture holds no request, and `json_body encoded` when the observed body held sanitized or encrypted values ([ONBOARDING_SPEC.md § Restart](ONBOARDING_SPEC.md#restart)) |
 | `pipeline_only` | Pipeline detected an action the catalog never adopted — candidate enrichment, or a false positive |
 | `committed_only` | Committed action the pipeline cannot produce from the HAR (human-authored config, or action never fired during capture) |
 | `mismatch` | Type, endpoint, method, or action_name disagree — investigate which side is wrong |
@@ -373,8 +386,10 @@ so a meaning none of them declares is a legitimate new one, not a
 failure to surface evidence
 ([ONBOARDING_SPEC.md § Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-then-proceed)).
 An `actions.` path's unoffered value is applied too: a capture without
-the action is normal (ONBOARDING_SPEC Phase 4), as it is for HTTP
-actions, which grade the gap and continue.
+the action is normal (ONBOARDING_SPEC Phase 4). An HTTP action's
+`actions.<kind>.endpoint` is the exception: an endpoint carries no body,
+so it resolves only to a candidate with a stored request, and otherwise
+to an explicit none. Either way the gap is graded and the run continues.
 Each ambiguity is graded:
 
 | Grade | Meaning |
@@ -385,8 +400,9 @@ Each ambiguity is graded:
 | `committed_only` | The committed value was not among the candidates (the HAR fails, except on a `parser.` or `actions.` path) |
 
 A resolved action is graded with the detected ones, built by
-`generate_config`'s own resolution step, so a JSON-RPC restart the
-resolution picked is graded like an observed one.
+`generate_config`'s own resolution steps, so a JSON-RPC restart or an
+HTTP endpoint candidate the resolution picked is graded like an observed
+one.
 
 **Auth grading** compares the pipeline-generated auth block against the
 committed config (`analysis/auth/grading.py`), using the same grade
@@ -399,27 +415,20 @@ analysis output), auth is graded from the generated config, so it
 requires generation to succeed.
 
 **Auth strategy mismatches that are correct by design.** A `strategy:
-mismatch` normally means one side is wrong, but eight standing lines are
+mismatch` normally means one side is wrong, but three standing lines are
 none of them a catalog error. They are reported, never suppressed — the
 report states what the pipeline can do, and hiding a known limit would
-make it read as capability. Four causes:
+make it read as capability. Two causes:
 
 | Cause | Modems |
 |-------|--------|
-| **No branch for the strategy.** The HTTP tree walks none → basic → url_token → form_sjcl → form_pbkdf2 → form_nonce → form. `form_cbn` and `bearer` are not in it, so it cannot emit them | `arris/sb8200-cbn`, `compal/ch7465mt` (`form_cbn`); `sagemcom/f3896lg-zg` (`bearer`) |
-| **Capture carries no evidence.** The committed strategy is right about the hardware; the HAR cannot show it | `netgear/c7000v2`, `technicolor/tc4400` — committed `basic`, but zero 401 challenges and zero `Authorization` headers. `arris/tg3442de` — committed `form_sjcl`, but both login POST bodies are `{}`, so the SJCL fields the branch keys on are gone and the login URL falls through to the PBKDF2 bucket |
-| **Action-scoped auth read as primary.** `auth: none` plus `actions.restart.action_auth: bearer` — the only login in the capture fired for the restart action, and the data path really is unauthenticated | `sagemcom/f3896lg-vmb` |
+| **Capture carries no evidence.** The committed strategy is right about the hardware; the HAR cannot show it | `netgear/c7000v2`, `technicolor/tc4400` — committed `basic`, but zero 401 challenges and zero `Authorization` headers |
 | **Credential shape the detector cannot name.** The login posts `arguments=<base64 of user:pass>`; the credential test is field-name based, so a generic `arguments` parameter reads as carrying no credentials | `arris/sb6190` (b64 variant) |
 
 None of these is a catalog defect, and no entry above should be changed to
-make a line turn green. Nor does closing them require teaching the detector
-every shape: each one has wire evidence that would let a reader settle it —
-`created.token` in a login response, `fun=` codes on a setter endpoint, a
-login POST that precedes only a reboot. Reporting that evidence and the
-matching catalog precedent is the fix, per [Detection Owes the LLM
-Evidence](#detection-owes-the-llm-evidence-not-a-verdict). The two `basic`
-lines have no evidence in the capture at all, and their correct outcome is a
-gap report asking for a clean recapture.
+make a line turn green. The two `basic` lines have no evidence in the
+capture at all, and their correct outcome is a gap report asking for a
+clean recapture.
 
 **Auth fixture audit** runs at the end of every sweep. For each form-auth
 modem with `login_page` configured, it verifies that the committed HAR
@@ -435,8 +444,34 @@ from the scorecard history rather than a committed baseline. Adding a
 modem needs no index or baseline update — discovery walks the catalog
 tree and the new HAR is included automatically on the next run.
 
-The reusable machinery (scorecard building, result classification)
-lives in the unit-tested
+**Comparing two runs.** `--compare <card>` prints which captures moved
+since an earlier scorecard (`regression/compare.py`): accuracy, status,
+and every grade dimension the card holds, worst regression first, then
+captures that entered or left. Captures are keyed by `modem:har_file`, so
+a renamed capture shows as one `LEFT` plus one `ENTERED`. It is report
+only and never changes the exit code; it prints to the console and, in
+CI, to the job summary. Save a card, change the
+pipeline, and compare (CI's card is the `intake-pipeline-scorecard`
+artifact, written as `intake-pipeline-scorecard.json`):
+
+```bash
+python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --scorecard intake-pipeline-scorecard.json
+python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --compare intake-pipeline-scorecard.json
+```
+
+**In CI**, the accuracy step compares against the card of the previous
+successful `tests.yml` run on the same branch (else on `main`) and shows
+the movement in the run's job summary. With no such card (a first run,
+or an artifact past its 90-day retention) it skips the comparison, and a
+failed download never fails the job.
+
+The card records its commit and timestamp but not the scoring
+definition. A comparison across a change to how the score is computed
+reports that change as per-capture movement; check `git log` between
+the two commits before reading it as intake progress.
+
+The reusable machinery (scorecard building and comparison, result
+classification) lives in the unit-tested
 `solentlabs/cable_modem_monitor_catalog_tools/regression/` package and
 is generic over grade dimensions; the script supplies discovery,
 pipeline stages, and printing. The shared grade taxonomy is

@@ -29,6 +29,7 @@ from xml.etree.ElementTree import Element, ParseError
 import defusedxml.ElementTree as DefusedET
 import requests
 
+from ..connectivity import is_connectivity_error
 from ..fetch_list import ResourceTarget
 from .diagnostics import describe_request
 from .http import ResourceLoadError
@@ -116,7 +117,7 @@ class CBNLoader:
             # LOAD_INTEGRITY — auth streak, AUTH_FAILED, reauth prompt for a
             # modem that judged nothing (#200). RESOURCE_LOADING_SPEC
             # § Error Signals: the loader surfaces, policy decides.
-            if isinstance(exc, requests.ConnectionError | requests.Timeout):
+            if is_connectivity_error(exc):
                 raise
             # Everything else becomes LOAD_ERROR, the same conversion
             # loaders/http.py makes. A CBN-specific error type would need

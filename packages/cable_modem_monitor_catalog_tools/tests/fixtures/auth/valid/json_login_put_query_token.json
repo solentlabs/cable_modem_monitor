@@ -1,0 +1,91 @@
+{
+  "_description": "PUT JSON login with an extra body key holding the modem's host; the header token rides back in the data URL query behind a prefix",
+  "_entries": [
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.100.1/actionHandler/ajaxSet_login.php",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"username\": \"FIELD_1\", \"password\": \"FIELD_2\", \"ipAddress\": \"192.168.100.1\"}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "value": "AUTH_d353b071"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://192.168.100.1/cmconnectionstatus.php?ct_AUTH_d353b071",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 13,
+          "mimeType": "text/html",
+          "text": "<html></html>"
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "",
+  "_expected_ambiguities": {
+    "auth.strategy": {
+      "blocking": true,
+      "candidates": {
+        "bearer": [
+          "/actionHandler/ajaxSet_login.php",
+          "/cmconnectionstatus.php",
+          "/cmconnectionstatus.php"
+        ]
+      }
+    }
+  },
+  "_expected_candidate_fields": {
+    "bearer": {
+      "login_endpoint": "/actionHandler/ajaxSet_login.php",
+      "method": "PUT",
+      "extra_fields": {
+        "ipAddress": "{host}"
+      },
+      "token_source": "header",
+      "token_header": "X-CSRF-Token",
+      "token_placement": "query",
+      "token_prefix": "ct_"
+    }
+  }
+}

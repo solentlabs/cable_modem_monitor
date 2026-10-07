@@ -20,7 +20,7 @@ sources:
 
 attribution:
   contributors:
-    - github: DeFlanko
+    - github: https://github.com/DeFlanko
       contribution: "HAR captures and testing"
 
 isps:

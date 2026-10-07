@@ -38,7 +38,6 @@ _LABEL_FIELD_MAP: dict[str, tuple[str, int]] = {
     "sw version": ("software_version", 1),
     "hardware version": ("hardware_version", 1),
     "hw version": ("hardware_version", 1),
-    "model": ("hardware_version", 1),
     "network access": ("docsis_status", 1),
     "cable modem status": ("docsis_status", 1),
     # Tier 2 registered
@@ -46,6 +45,7 @@ _LABEL_FIELD_MAP: dict[str, tuple[str, int]] = {
     "boot state": ("boot_status", 2),
     "docsis version": ("docsis_version", 2),
     "temperature": ("temperature", 2),
+    "model": ("model_name", 2),
     # Identity PII (serial number, MAC) intentionally not mapped — no CMM
     # consumer; see SYSTEM_INFO_SPEC § Tiered Sensor Model.
 }
@@ -72,7 +72,7 @@ _JSON_SYSINFO_MAP: dict[str, tuple[str, int]] = {
     "software_version": ("software_version", 1),
     "hardwareversion": ("hardware_version", 1),
     "hardware_version": ("hardware_version", 1),
-    "model": ("hardware_version", 1),
+    "model": ("model_name", 2),
     "networkaccess": ("docsis_status", 1),
     "network_access": ("docsis_status", 1),
     "status": ("docsis_status", 1),

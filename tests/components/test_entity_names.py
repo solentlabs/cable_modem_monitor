@@ -1,16 +1,14 @@
 """Entity display-name regression guard.
 
 Locks the user-visible name of every entity both platforms create. Entity
-names are migrating from ``_attr_name`` literals to ``translation_key``
-lookups (Gold ``entity-translations``); this table is the evidence that the
-migration renames nothing. Names are what users see in dashboards, history,
+names stay untranslated (docs/TRANSLATION_GUIDE.md § Translated Scope Is
+Deliberately Limited). Names are what users see in dashboards, history,
 and automations, so a silent change here is a user-facing regression even
 though entity IDs stay stable via the registry.
 
 ``_display_name`` mirrors Home Assistant's resolution for static names: an
 explicit ``_attr_name`` wins, otherwise the ``translation_key`` is resolved
-against strings.json. That lets the same table assert before and after the
-migration.
+against strings.json, so the table holds if a name ever moves to a key.
 """
 
 from __future__ import annotations

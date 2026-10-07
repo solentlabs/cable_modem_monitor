@@ -1,5 +1,5 @@
 {
-  "_expected_error": "Input should be 'http', 'hnap', 'cbn' or 'jsonrpc'",
+  "_expected_error": "Input should be 'http', 'hnap', 'cbn' or 'json_rpc'",
   "_config": {
     "manufacturer": "Solent Labs",
     "model": "T1",

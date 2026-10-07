@@ -59,8 +59,8 @@ JSON_SJCL = {
     "token_header": "X-Token",
 }
 JSON_SJCL_SID = {**JSON_SJCL, "cookie_name": _SID}
-JSONRPC = {
-    "strategy": "jsonrpc",
+JSON_RPC = {
+    "strategy": "json_rpc",
     "endpoint": "/rpc",
     "login_method": "login",
     "username_field": "u",
@@ -162,9 +162,9 @@ SESSION_VALIDITY_CASES: list[tuple[dict[str, Any] | None, AuthContext | None, di
     (JSON_SJCL_SID,     NEVER,     {_SID: "C1"},                        False, "json_sjcl_sid-never-cookie"),
     (JSON_SJCL_SID,     CTX,       {_SID: "C1"},                        True,  "json_sjcl_sid-ctx-cookie"),
     (JSON_SJCL_SID,     CTX,       {},                                  False, "json_sjcl_sid-ctx-no_cookie"),
-    # -- jsonrpc (the token is the session; no cookie) ------------------------------
-    (JSONRPC,           NEVER,     {},                                  False, "jsonrpc-never"),
-    (JSONRPC,           CTX_TOKEN, {},                                  True,  "jsonrpc-token"),
+    # -- json_rpc (the token is the session; no cookie) ------------------------------
+    (JSON_RPC,          NEVER,     {},                                  False, "json_rpc-never"),
+    (JSON_RPC,          CTX_TOKEN, {},                                  True,  "json_rpc-token"),
     # -- url_token ----------------------------------------------------------------
     (URL_TOKEN,         NEVER,     {},                                  False, "url_token-never"),
     (URL_TOKEN,         CTX_TOKEN, {},                                  True,  "url_token-token-no_cookie_name"),

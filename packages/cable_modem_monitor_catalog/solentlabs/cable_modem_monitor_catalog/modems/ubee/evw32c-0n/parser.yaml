@@ -1,0 +1,111 @@
+downstream:
+  format: table
+  resource: /UbeeConnection.asp
+  tables:
+    - selector:
+        match: Downstream Bonded Channels
+        type: header_text
+      row_start: 2
+      columns:
+        - index: 0
+          field: channel_id
+          type: integer
+        - index: 1
+          field: lock_status
+          type: lock_status
+        - index: 2
+          field: modulation
+          type: modulation
+        - index: 3
+          field: frequency
+          type: frequency
+          unit: Hz
+        - index: 4
+          field: power
+          type: float
+          unit: dBmV
+        - index: 5
+          field: snr
+          type: float
+          unit: dB
+        - index: 6
+          field: symbol_rate
+          type: integer
+          scale: 1000
+          unit: Ksym/sec
+        - index: 7
+          field: corrected
+          type: integer
+        - index: 8
+          field: uncorrected
+          type: integer
+      channel_type:
+        field: modulation
+        map:
+          QAM256: qam
+
+upstream:
+  format: table
+  resource: /UbeeConnection.asp
+  tables:
+    - selector:
+        match: Upstream Bonded Channels
+        type: header_text
+      row_start: 2
+      columns:
+        - index: 0
+          field: channel_id
+          type: integer
+        - index: 1
+          field: lock_status
+          type: lock_status
+        - index: 3
+          field: symbol_rate
+          type: integer
+          scale: 1000
+          unit: Ksym/sec
+        - index: 4
+          field: frequency
+          type: frequency
+          unit: Hz
+        - index: 5
+          field: power
+          type: float
+          unit: dBmV
+        - index: 2
+          field: channel_type
+          type: string
+          map:
+            ATDMA: atdma
+
+system_info:
+  sources:
+    - format: html_fields
+      resource: /UbeeSysInfo.asp
+      fields:
+        - field: model_name
+          label: Model
+          type: string
+        - field: hardware_version
+          label: Hardware Version
+          type: string
+        - field: software_version
+          label: Firmware Version
+          type: string
+        - field: docsis_status
+          label: Network Access
+          map:
+            Allowed: Operational
+          type: string
+        - format: "{days} days {hours}h:{minutes}m:{seconds}s"
+          field: system_uptime
+          label: System Up Time
+          type: uptime
+
+aggregate:
+  total_corrected:
+    channels: downstream
+    sum: corrected
+  total_uncorrected:
+    channels: downstream
+    sum: uncorrected

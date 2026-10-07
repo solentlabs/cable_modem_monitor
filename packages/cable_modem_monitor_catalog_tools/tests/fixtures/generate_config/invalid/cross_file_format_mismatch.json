@@ -4,7 +4,7 @@
   "_analysis": {
     "transport": "hnap",
     "confidence": "high",
-    "auth": {"strategy": "hnap", "fields": {"hmac_algorithm": "md5"}, "confidence": "high"},
+    "auth": {"strategy": "hnap", "fields": {"hmac_algorithm": "md5"}},
     "session": {"headers": {}},
     "actions": {"logout": null, "restart": null},
     "sections": {

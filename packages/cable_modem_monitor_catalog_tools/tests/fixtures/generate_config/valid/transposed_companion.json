@@ -1,0 +1,55 @@
+{
+  "_description": "Transposed downstream table with a codewords companion: parser.yaml carries a tables list whose second table merges by channel ID",
+  "_expected_auth_strategy": "none",
+  "_expected_has_parser": true,
+  "_expected_format": "table_transposed",
+  "_expected_companion_tables": [
+    {
+      "merge_by": ["channel_id"],
+      "selector_match": "Error Codewords",
+      "row_fields": ["channel_id", "corrected", "uncorrected"]
+    }
+  ],
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {"strategy": "none", "fields": {}},
+    "session": {"headers": {}},
+    "actions": {"logout": null, "restart": null},
+    "sections": {
+      "downstream": {
+        "format": "table_transposed",
+        "resource": "/data.htm",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "label": "Channel ID"},
+          {"field": "frequency", "type": "frequency", "label": "Frequency"},
+          {"field": "power", "type": "float", "unit": "dBmV", "label": "Power Level"}
+        ],
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "channel_type": {"fixed": "qam"},
+        "channel_count": 8,
+        "companions": [
+          {
+            "mappings": [
+              {"field": "channel_id", "type": "integer", "label": "Channel ID"},
+              {"field": "corrected", "type": "integer", "label": "Correctable Codewords"},
+              {"field": "uncorrected", "type": "integer", "label": "Uncorrectable Codewords"}
+            ],
+            "selector": {"type": "header_text", "match": "Error Codewords"}
+          }
+        ]
+      }
+    },
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T351",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.0"},
+    "status": "confirmed",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Transposed table with codewords capture"}]},
+    "isps": ["Various"]
+  }
+}

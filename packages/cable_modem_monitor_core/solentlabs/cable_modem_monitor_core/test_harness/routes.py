@@ -8,9 +8,10 @@ from __future__ import annotations
 import base64
 import contextlib
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, parse_qsl, urlparse
 
 
 @dataclass
@@ -115,7 +116,8 @@ def build_json_body_keys(
     because the comparison would mean nothing:
 
     - Form-encoded posts. A browser submits hidden fields Core has no
-      reason to replicate.
+      reason to replicate. A restart's
+      form body is checked separately (``build_form_bodies``).
     - Endpoints the capture posted more than one shape to. HNAP carries
       every action over ``/HNAP1/``, so the path names the transport
       rather than the operation, and ``Login`` would look invented
@@ -145,6 +147,65 @@ def build_json_body_keys(
         seen[key] = parsed_keys
 
     return {key: value for key, value in seen.items() if key not in multiplexed}
+
+
+FormPairs = frozenset[tuple[str, str]]
+
+
+def _form_pairs(text: str) -> FormPairs | None:
+    """Return the ``(name, value)`` pairs of a form body; ``None`` if it is not one."""
+    if "=" not in text or _top_level_keys(text) is not None:
+        return None
+    return frozenset(parse_qsl(text, keep_blank_values=True))
+
+
+def build_form_bodies(
+    har_entries: list[dict[str, Any]],
+) -> dict[tuple[str, str], tuple[FormPairs, ...]]:
+    """Map ``(method, path)`` to every distinct form body the capture posted there.
+
+    Unlike ``build_json_body_keys`` this keeps all bodies: one form
+    endpoint can carry reboot and factory reset by field values alone,
+    so the comparison is against each body, never a merge of them.
+    """
+    seen: dict[tuple[str, str], list[FormPairs]] = {}
+    for entry in har_entries:
+        request = entry.get("request", {})
+        pairs = _form_pairs(str(request.get("postData", {}).get("text", "")))
+        if not pairs:
+            continue
+        path = normalize_path(urlparse(request.get("url", "")).path)
+        if not path:
+            continue
+        bodies = seen.setdefault((request.get("method", "GET").upper(), path), [])
+        if pairs not in bodies:
+            bodies.append(pairs)
+    return {key: tuple(bodies) for key, bodies in seen.items()}
+
+
+def unrecorded_form_pairs(captured: tuple[FormPairs, ...], body: bytes) -> FormPairs:
+    """Return the pairs Core sent that no single captured body carried together.
+
+    One direction only, as ``unrecorded_body_keys``: fewer fields pass.
+    Pairs are reported against the captured body that needs the fewest
+    changes, so a wrong value names itself instead of the whole body.
+    """
+    sent = _form_pairs(body.decode("utf-8", errors="replace"))
+    if not sent:
+        return frozenset()
+    return min((_unmatched(sent, candidate) for candidate in captured), key=len, default=frozenset())
+
+
+# What har-capture leaves where a value was sensitive (ONBOARDING_SPEC
+# § sanitizer patterns). The capture says a value was there, not what it
+# was, so only the field name can be compared.
+_SANITIZER_PLACEHOLDER_RE = re.compile(r"(?:(?:FIELD|PASS|AUTH)_[0-9a-f]{8}|\[REDACTED\])")
+
+
+def _unmatched(sent: FormPairs, captured: FormPairs) -> FormPairs:
+    """Return the sent pairs *captured* does not account for, placeholders matching any value."""
+    redacted = {name for name, value in captured if _SANITIZER_PLACEHOLDER_RE.fullmatch(value)}
+    return frozenset(pair for pair in sent if pair not in captured and pair[0] not in redacted)
 
 
 def build_login_query_shapes(

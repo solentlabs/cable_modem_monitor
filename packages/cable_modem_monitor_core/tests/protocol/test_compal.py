@@ -14,9 +14,9 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import FormCbn
 from solentlabs.cable_modem_monitor_core.protocol.cbn import cbn_params, compal_encrypt
 
 # ---------------------------------------------------------------------------
-# Known test vectors — generated from the Python implementation and verified
-# via round-trip decrypt.  The algorithm mirrors CBN_Encrypt from Compal's
-# encrypt_cryptoJS.js: AES-256-CBC, key=SHA256(token), iv=MD5(token),
+# Known test vectors, verified against the firmware's own CBN_Encrypt:
+# encrypt_cryptoJS.js and CryptoJS 3.1.2 from the CH7465MT capture, run in
+# node, produce all four. AES-256-CBC, key=SHA256(token), iv=MD5(token),
 # output = base64(":" + hex(ciphertext)).
 # ---------------------------------------------------------------------------
 

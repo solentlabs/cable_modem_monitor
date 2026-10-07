@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.js_endpoints import (
-    detect_uncalled_jsonrpc_methods,
+    detect_uncalled_json_rpc_methods,
     detect_uncaptured_endpoints,
     extract_endpoints_from_js,
 )
@@ -199,7 +199,7 @@ def test_warning_count_matches_expected(fixture_path: Path) -> None:
 
 
 # =====================================================================
-# detect_uncalled_jsonrpc_methods — table-driven
+# detect_uncalled_json_rpc_methods — table-driven
 # =====================================================================
 
 
@@ -247,10 +247,10 @@ _UNCALLED_CASES: list[tuple[list[dict[str, Any]], list[str], str]] = [
     [c[:2] for c in _UNCALLED_CASES],
     ids=[c[2] for c in _UNCALLED_CASES],
 )
-def test_detect_uncalled_jsonrpc_methods(js_entries: list[dict[str, Any]], expected: list[str]) -> None:
+def test_detect_uncalled_json_rpc_methods(js_entries: list[dict[str, Any]], expected: list[str]) -> None:
     """A method named in JS whose namespace a captured call uses, but which no call used, is a recapture prompt."""
     warnings: list[str] = []
-    detect_uncalled_jsonrpc_methods([_login_call(), *js_entries], warnings)
+    detect_uncalled_json_rpc_methods([_login_call(), *js_entries], warnings)
     prefix = "WARNING: JS names a JSON-RPC method not called in HAR: "
     assert all(w.startswith(prefix) for w in warnings)
     assert [w.removeprefix(prefix) for w in warnings] == expected

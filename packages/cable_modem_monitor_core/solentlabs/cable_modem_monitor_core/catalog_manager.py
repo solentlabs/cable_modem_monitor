@@ -37,7 +37,7 @@ class ModemSummary:
         auth_strategy: Auth strategy of the default variant. For
             multi-variant modems, the config flow loads variant-specific
             auth strategy in Step 2.
-        transport: Network transport protocol (``"http"``, ``"hnap"``, ``"cbn"``, or ``"jsonrpc"``).
+        transport: Network transport protocol (``"http"``, ``"hnap"``, ``"cbn"``, or ``"json_rpc"``).
         path: Filesystem path to the modem directory in the catalog.
         sibling_dirs: Paths of other catalog directories that share this
             modem's ``(manufacturer, model)`` identity. Populated by
@@ -61,8 +61,9 @@ class ModemSummary:
 def list_modems(catalog_path: Path) -> list[ModemSummary]:
     """Walk the catalog and return summaries of all modems.
 
-    Reads identity fields from each ``modem.yaml`` in the catalog
-    directory. Returns a flat list suitable for config flow dropdowns,
+    Reads identity fields from each modem directory's ``modem.yaml``, or
+    from its first ``modem-{variant}.yaml`` when it has no default
+    variant. Returns a flat list suitable for config flow dropdowns,
     search, or filtering.
 
     Directories that share the same ``(manufacturer, model)`` identity
@@ -91,7 +92,14 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
         _logger.warning("Catalog path does not exist: %s", catalog_path)
         return raw_results
 
-    for modem_yaml in sorted(catalog_path.rglob("modem.yaml")):
+    # A directory is a modem when it holds any variant file. A sibling
+    # directory may ship only modem-{name}.yaml (MODEM_DIRECTORY_SPEC.md
+    # § modem.yaml / modem-{variant}.yaml), so the default modem.yaml
+    # cannot be the discovery key.
+    for modem_dir in sorted({p.parent for p in catalog_path.rglob("modem*.yaml")}):
+        modem_yaml = _summary_source(modem_dir)
+        if modem_yaml is None:
+            continue
         try:
             summary = _load_summary(modem_yaml)
             if summary is not None:
@@ -127,6 +135,14 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
         len(raw_results),
     )
     return grouped
+
+
+def _summary_source(modem_dir: Path) -> Path | None:
+    """The file a directory's summary is read from: modem.yaml, else its first named variant."""
+    default = modem_dir / "modem.yaml"
+    if default.is_file():
+        return default
+    return next(iter(sorted(modem_dir.glob("modem-*.yaml"))), None)
 
 
 def _any_variant_confirmed(dirs: list[Path]) -> bool:

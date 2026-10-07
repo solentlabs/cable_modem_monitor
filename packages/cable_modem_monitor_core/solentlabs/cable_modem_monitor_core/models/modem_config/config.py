@@ -40,7 +40,7 @@ class ModemConfig(BaseModel):
     model: str
     model_aliases: list[str] = Field(default_factory=list)
     brands: list[str] = Field(default_factory=list)
-    transport: Literal["http", "hnap", "cbn", "jsonrpc"]
+    transport: Literal["http", "hnap", "cbn", "json_rpc"]
     default_host: str
 
     # Timeout

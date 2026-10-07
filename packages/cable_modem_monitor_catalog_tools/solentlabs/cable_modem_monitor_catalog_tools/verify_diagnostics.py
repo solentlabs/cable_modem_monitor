@@ -23,6 +23,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+import yaml
 from solentlabs.cable_modem_monitor_core.models.field_registry import (
     SYSTEM_INFO_FIELDS,
     canonicalize_channel_keys,
@@ -86,18 +87,13 @@ _CHANNEL_ARRAY_KEYS: tuple[str, ...] = ("downstream_channels", "upstream_channel
 # packages/cable_modem_monitor_catalog/scripts/data/pii_fields_global.json
 _PII_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({"mac_address", "serial_number"})
 
-# Aggregate system_info fields not in field_registry.SYSTEM_INFO_FIELDS
-# (which covers Tier-1 always-present modem facts). Aggregates are
-# computed from channel data and should always be present once channels
-# are populated.
+# Error totals, expected only when the modem's parser.yaml declares them
+# under ``aggregate:``. A modem that omits the aggregate on purpose (see
+# PARSING_SPEC § Aggregate Fields) is complete without them.
 _AGGREGATE_SYSTEM_INFO_FIELDS: tuple[str, ...] = (
     "total_corrected",
     "total_uncorrected",
 )
-
-# system_info fields we expect populated on a healthy confirmation.
-# Missing or null values trigger a "partial confirmation" warning.
-_EXPECTED_SYSTEM_INFO_FIELDS: tuple[str, ...] = tuple(SYSTEM_INFO_FIELDS) + _AGGREGATE_SYSTEM_INFO_FIELDS
 
 
 @dataclass
@@ -214,7 +210,7 @@ def verify_diagnostics(
     verified_path = modem_dir / "test_data" / f"{fixture_stem}.verified.json"
     yaml_path = modem_dir / f"{fixture_stem}.yaml"
 
-    warnings = _collect_warnings(data)
+    warnings = _collect_warnings(data, _expected_system_info_fields(modem_dir / "parser.yaml"))
 
     verified_json = _build_verified_json(
         data=data,
@@ -285,7 +281,15 @@ def _build_verified_json(
     return out
 
 
-def _collect_warnings(data: dict[str, Any]) -> list[str]:
+def _expected_system_info_fields(parser_path: Path) -> tuple[str, ...]:
+    """Tier-1 system_info fields plus the error totals parser.yaml aggregates."""
+    parser_config: Any = yaml.safe_load(parser_path.read_text(encoding="utf-8")) if parser_path.exists() else None
+    aggregate = (parser_config or {}).get("aggregate") or {}
+    declared = tuple(f for f in _AGGREGATE_SYSTEM_INFO_FIELDS if f in aggregate)
+    return tuple(SYSTEM_INFO_FIELDS) + declared
+
+
+def _collect_warnings(data: dict[str, Any], expected_system_info_fields: tuple[str, ...]) -> list[str]:
     """Surface drift, partial-confirmation, and shape surprises.
 
     Warnings are advisory — they don't block transformation. The
@@ -319,7 +323,7 @@ def _collect_warnings(data: dict[str, Any]) -> list[str]:
 
     # system_info completeness
     sysinfo = data.get("system_info") or {}
-    missing_fields = [f for f in _EXPECTED_SYSTEM_INFO_FIELDS if sysinfo.get(f) in (None, "")]
+    missing_fields = [f for f in expected_system_info_fields if sysinfo.get(f) in (None, "")]
     if missing_fields:
         warnings.append(
             f"system_info missing fields {missing_fields} — looks like a "

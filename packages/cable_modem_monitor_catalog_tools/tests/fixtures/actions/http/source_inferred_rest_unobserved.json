@@ -1,0 +1,29 @@
+{
+  "_description": "Extracted from sagemcom/f3896lg-zg modem.har: the reboot endpoint appears only in index.js. The capture holds no request to it, so no body is generated and the gap is reported.",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://192.168.100.1/index.js",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": "D=async()=>{try{u(!0),p(!0),await e.post(\"/rest/v1/system/reboot\",{reboot:{enable:!0}}),setTimeout(F,NZt)}catch{qe.error(\"Failed to initiate reboot.\")}finally{u(!1)}};"
+        }
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/rest/v1/system/reboot",
+    "params": {},
+    "source": "source_inferred"
+  },
+  "_expected_warnings_contains": [
+    "request body unobserved"
+  ]
+}

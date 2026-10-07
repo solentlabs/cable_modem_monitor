@@ -463,7 +463,7 @@ def test_uptime_pattern_no_match_returns_none() -> None:
 
 def test_uptime_pattern_cached_on_repeat() -> None:
     """Repeat calls with the same format reuse the compiled pattern (cache hit branch)."""
-    from solentlabs.cable_modem_monitor_core.parsers.type_conversion import (
+    from solentlabs.cable_modem_monitor_core.parsers.uptime import (
         _uptime_pattern_cache,
     )
 

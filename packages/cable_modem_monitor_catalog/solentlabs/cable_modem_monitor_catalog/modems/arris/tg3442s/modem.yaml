@@ -38,7 +38,7 @@ hardware:
   docsis_version: "3.1"
   chipset: "Intel Puma 7 (FHCE2752M)"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config:
@@ -51,7 +51,9 @@ sources:
     busy login; [303] accepted login, Set-Cookie PHPSESSID and X-CSRF-Token'
   logout_action:
     "test_data/modem.har — logout() in at_a_glance.php [59] lines 855-861;
-    [274] [277] [389] PUT with the PHPSESSID cookie and X-CSRF-Token, 200"
+    [274] [389] PUT with the PHPSESSID cookie and X-CSRF-Token, 200. [277]
+    carries only the LastBootTime cookie, also 200; likely sent by
+    login.php's 401 handler (line 361) after the keep-alive [275] got 401"
   restart_action:
     "test_data/modem.har — restore_reboot.php [361] line 937 builds
     {action: 'restart', module: 'gateway'} and setResetInfo() (line 1044)
@@ -90,6 +92,14 @@ notes: |
   recorded body is byte-identical to [57]'s although the session key
   differs, so the entry relies only on the status and the token header.
   Single admin session at a time; logout runs after every poll.
+
+  Logout requires_session: true, against the ADR rule of thumb
+  (ARCHITECTURE_DECISIONS.md § Session concurrency) that a cookie-less
+  logout means false. [277] got 200 without a cookie after [274] had
+  already ended the only session, so it shows the endpoint accepts the
+  request, not that it frees one. With false, Core would send it before a
+  login retry, the eviction it never does; with true the worst case is a
+  skipped logout.
 
   Data: everything comes from wan.php [140]. Channels are the
   channelData object (line 846): 31 SC-QAM downstream, 1 OFDM, 6 ATDMA

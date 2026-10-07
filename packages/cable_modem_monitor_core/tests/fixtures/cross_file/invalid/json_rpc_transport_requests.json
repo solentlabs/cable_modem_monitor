@@ -1,0 +1,58 @@
+{
+  "_expected_error": "requests: is only valid for transport 'http'",
+  "_modem": {
+    "attribution": {
+      "contributors": [
+        {
+          "contribution": "Test",
+          "github": "tester"
+        }
+      ]
+    },
+    "auth": {
+      "endpoint": "/rpc",
+      "login_method": "login",
+      "password_field": "p",
+      "strategy": "json_rpc",
+      "token_param": "token",
+      "token_path": "token",
+      "username_field": "u"
+    },
+    "default_host": "192.168.0.1",
+    "hardware": {
+      "docsis_version": "3.1"
+    },
+    "isps": [
+      "Various"
+    ],
+    "manufacturer": "Solent Labs",
+    "model": "T950",
+    "status": "awaiting_verification",
+    "transport": "json_rpc"
+  },
+  "_parser": {
+    "downstream": {
+      "array_path": "dss",
+      "channel_type": {
+        "fixed": "qam"
+      },
+      "fields": [
+        {
+          "field": "channel_id",
+          "key": "channel",
+          "type": "integer"
+        }
+      ],
+      "format": "json",
+      "resource": "CM.getDownstream"
+    },
+    "requests": {
+      "CM.getDownstream": {
+        "form": {
+          "a": "1"
+        },
+        "method": "POST"
+      }
+    }
+  }
+}

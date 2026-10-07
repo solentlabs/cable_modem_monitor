@@ -93,7 +93,7 @@ upstream:
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `format` | string | yes | `json` --- selects `JSONParser` |
-| `resource` | string | yes | Key in the resource dict: URL path, or method name on `jsonrpc` |
+| `resource` | string | yes | Key in the resource dict: URL path, or method name on `json_rpc` |
 | `array_path` | string | yes* | Dot-notation path to the channel array |
 | `fields` | list | yes* | Key-to-field mappings within each JSON object |
 | `fields[].key` | string | yes | JSON key name in the source object |

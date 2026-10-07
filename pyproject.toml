@@ -13,15 +13,16 @@ dependencies = [
     # Runtime dependencies
     "requests>=2.34.2",   # HTTP client for modem polling
     "pydantic>=2.0",      # Data validation and modeling
-    "har-capture~=0.12.2", # HAR sanitization + PII validation; library API (custom_patterns kwarg) used in catalog scripts; 0.12.2 floor is a hard one: below it check_content skipped a whole body on any stray placeholder (209 of 750 fleet entries unscanned) and labeled default Wi-Fi credentials survived sanitization
+    "har-capture~=0.13.1", # HAR sanitization + PII validation; library API (custom_patterns kwarg) used in catalog scripts; 0.13.1 floor is a hard one: below 0.13.0 serials under any JSON key naming them, labeled serials in JSON and script bodies, and IPv6 and 10.x addresses went unredacted and unflagged; 0.13.1 stops password-label redaction from overwriting JavaScript
 ]
 
 [project.optional-dependencies]
 dev = [
-    # Development tools
-    "black>=26.5.1",      # Code formatter
-    "ruff>=0.15.15",      # Linter and import sorter
-    "mypy>=1.20",         # Static type checker
+    # Development tools; black, ruff and mypy pins match .github/workflows/tests.yml,
+    # .pre-commit-config.yaml and requirements-dev.txt, bump them together
+    "black==26.1.0",      # Code formatter
+    "ruff==0.15.12",      # Linter and import sorter
+    "mypy==2.1.0",        # Static type checker
     "pytest>=8.0",        # Test runner
     "pytest-cov>=5.0",    # Coverage reporting
 ]
@@ -100,7 +101,6 @@ combine-as-imports = true
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]           # Allow unused imports for package exposure
-"tests/**/*.py" = ["B011", "S101"] # Allow assert and safe eval in tests
 "scripts/**/*.py" = [
     "T201",     # Allow print statements
     "PLW1510",  # Allow subprocess.run without check (dev scripts handle errors manually)

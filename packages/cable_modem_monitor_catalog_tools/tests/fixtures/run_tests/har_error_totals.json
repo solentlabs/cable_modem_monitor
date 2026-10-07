@@ -1,0 +1,22 @@
+{
+  "_description": "HAR with 1 downstream channel and zero error counters, no auth",
+  "log": {
+    "entries": [
+      {
+        "request": {
+          "method": "GET",
+          "url": "http://192.168.100.1/status.html"
+        },
+        "response": {
+          "content": {
+            "mimeType": "text/html",
+            "text": "<html><body>\n<table>\n<tr><th colspan=\"5\">Downstream Channels</th></tr>\n<tr><th>Channel</th><th>Frequency</th><th>Power</th><th>Corrected</th><th>Uncorrected</th></tr>\n<tr><td>1</td><td>507000000 Hz</td><td>2.5 dBmV</td><td>0</td><td>0</td></tr>\n</table>\n</body></html>\n"
+          },
+          "headers": [],
+          "status": 200
+        }
+      }
+    ],
+    "version": "1.2"
+  }
+}

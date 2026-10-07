@@ -74,6 +74,7 @@ HEADER_CASES = [
     ("DCID",                                "channel_id",      1,  "",    "cm3500b downstream channel id"),
     ("Correcteds",                          "corrected",       1,  "",    "cm3500b corrected variant"),
     ("Uncorrectables",                      "uncorrected",     1,  "",    "cm3500b uncorrectable variant"),
+    ("Correctables",                        "corrected",       1,  "",    "netgear/ubee correctable plural"),
     ("Width",                               "channel_width",   2,  "",    "sb8200 width shorthand"),
     # TC4400 non-standard column headers
     ("Channel Index",                       "channel_number",  1,  "",    "tc4400 channel index"),

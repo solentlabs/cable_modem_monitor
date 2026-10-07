@@ -10,7 +10,7 @@
       },
       "model": {
         "title": "Selecionar Modem",
-        "description": "Escolha um modelo de modem {manufacturer}. Modelos marcados com * não foram verificados.",
+        "description": "Escolha um modelo de modem {manufacturer}. Modelos marcados com * não foram verificados. Consulte a [lista de modems compatíveis]({catalog_url}).",
         "data": {
           "model": "Modelo do Modem",
           "entity_prefix": "Prefixo de Entity ID",
@@ -71,6 +71,7 @@
       "already_configured": "Este modem já está configurado.",
       "missing_input": "Dados obrigatórios estão faltando. Por favor, reinicie a configuração.",
       "unknown_model": "Modem selecionado não encontrado no catálogo.",
+      "unknown_variant": "Variante selecionada não encontrada no catálogo.",
       "reauth_successful": "Reautenticação realizada com sucesso.",
       "reauth_failed": "Falha na reautenticação. Por favor, tente novamente."
     }
@@ -104,6 +105,9 @@
       "session_rejected": "Login realizado com sucesso, mas o modem recusou a requisição de dados. Não é um problema de credenciais; consulte o aviso no log do Home Assistant.",
       "parse_failed": "Conectado, mas não foi possível ler os dados do modem.",
       "unknown": "Erro inesperado. Verifique os logs do Home Assistant."
+    },
+    "abort": {
+      "unknown_model": "Modem configurado não encontrado no catálogo."
     }
   }
 }

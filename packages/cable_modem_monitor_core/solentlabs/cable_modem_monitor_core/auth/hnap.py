@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import requests
 
+from ..connectivity import is_connectivity_error
 from ..protocol.hnap import (
     HNAP_ENDPOINT,
     HNAP_NAMESPACE,
@@ -173,7 +174,7 @@ class HnapAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
-            if isinstance(e, requests.ConnectionError | requests.Timeout):
+            if is_connectivity_error(e):
                 raise
             return AuthResult(
                 success=False,
@@ -270,7 +271,7 @@ class HnapAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
-            if isinstance(e, requests.ConnectionError | requests.Timeout):
+            if is_connectivity_error(e):
                 raise
             return AuthResult(
                 success=False,

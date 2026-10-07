@@ -440,7 +440,7 @@ force the expensive path to run at the cheap path's frequency.
 ### Transport is a protocol identifier, not a constraint funnel
 
 **Decision:** The `transport` field in modem.yaml identifies the wire
-protocol: `http`, `hnap`, `cbn`, or `jsonrpc`. For `http`, auth,
+protocol: `http`, `hnap`, `cbn`, or `json_rpc`. For `http`, auth,
 session, and format are configured independently (qualified — some
 auth/session pairings are linked; see MODEM_YAML_SPEC.md
 auth-session-action consistency rules). For the others, the protocol
@@ -473,10 +473,10 @@ expect `dict`. Misconfigured modem.yaml is rejected at load time.
 
 **Decision:** A firmware that POSTs every call as a
 [JSON-RPC 2.0](https://www.jsonrpc.org/specification) envelope to one
-endpoint is the `jsonrpc` transport. Resources are keyed by method
+endpoint is the `json_rpc` transport. Resources are keyed by method
 name. The loader strips the envelope and hands the parser `result`,
 which the `json` formats read. Login is the transport's one strategy,
-`jsonrpc`; restart is a `type: jsonrpc` action. The error codes that
+`json_rpc`; restart is a `type: json_rpc` action. The error codes that
 change Core's behaviour (`lockout_code`, `session_expired_code`) are
 entry values.
 
@@ -499,7 +499,7 @@ send `params: []`. A dialect that names its operation inside `params`
 (OpenWrt ubus, where `method` is always `call`) extends the resource
 key to carry params; it is not a second transport. Error codes are
 compared by equality on `error.code`; a new code that changes behaviour
-is a new optional field on the `jsonrpc` model, never a list in Core.
+is a new optional field on the `json_rpc` model, never a list in Core.
 
 ### The published constraint tables are generated, not written
 
@@ -565,7 +565,7 @@ entity.
 `protocol/hnap.py` for HMAC signing and constants, `protocol/cbn.py`
 for the AES-256-CBC encryption `form_cbn` auth needs, `protocol/sjcl.py`
 for the SJCL PBKDF2 and AES-CCM that `form_sjcl` and `json_sjcl` share,
-`protocol/jsonrpc.py` for the envelope `jsonrpc` auth, loader, and
+`protocol/json_rpc.py` for the envelope `json_rpc` auth, loader, and
 actions share.
 
 **Rationale:** HNAP signing is used by auth, loaders, and action
@@ -577,7 +577,7 @@ consumer still owns its transport-specific flow.
 ### Transport-scoped action executors with single dispatch
 
 **Decision:** `http_action.py`, `hnap_action.py`, `cbn_action.py`, and
-`jsonrpc_action.py` implement their own protocols; one
+`json_rpc_action.py` implement their own protocols; one
 `execute_action()` dispatches to them.
 
 **Rationale:** The protocols have nothing in common at the wire
@@ -944,6 +944,16 @@ credential forms (PBKDF2 hashes, SJCL/CBN encrypted blobs) are
 left intact in the snippet — they are protocol-shaped, not the
 user's secret, and they're often the diagnostic signal a
 maintainer needs to confirm the strategy ran.
+
+**Login-page drift is logged, not corrected.** A criterion mismatch and
+a wrong password both end ``AUTH_FAILED``, and the one input the
+``form`` strategy read but never recorded was the login page saying to
+post elsewhere (#189). It now reports a form action that differs from
+the config, more than one form with nothing choosing among them, and a
+``form_selector`` that matches nothing (LOGGING_SPEC.md
+``LoginPageDriftDetected``). No fallback or correction follows: no
+catalog capture shows drift, and a logged finding in a user's
+diagnostics is the evidence a corrective design would need.
 
 ### LOAD_INTEGRITY failure detail via diagnostics download
 
@@ -1542,7 +1552,11 @@ no knowledge of recovery.
 
 **Decision:** Recovery timing lives as class attributes on
 `Recovery` in `orchestration/recovery.py` (e.g. `WINDOW_SECONDS`).
-Modem YAML and action models carry no timing fields.
+Modem YAML and action models carry no recovery timing or failure-count
+fields. The one per-modem timing value is the request `timeout`
+([MODEM_YAML_SPEC.md § Timeout](MODEM_YAML_SPEC.md#timeout)): it
+measures that modem's own web server and changes behavior for no other
+modem.
 
 **Rationale:** "How long a reboot takes" varies by firmware version,
 CMTS load, and DOCSIS ranging — none of which are modem-class
@@ -1550,10 +1564,13 @@ characteristics. Bench-tuning values per modem doesn't scale:
 firmware updates silently invalidate them, and a value too short or
 too long produces misleading UX or wasted polls.
 
-**Constrains:** New modems cannot introduce grace/timeout fields on
-action models or in `modem.yaml`. Recovery timing is a global
-concern. If future needs justify user-configurable cadence/window
-settings, they live in HA's options flow, not per-modem config.
+**Constrains:** New modems cannot introduce recovery grace, window or
+failure-threshold fields on action models or in `modem.yaml`. Recovery
+timing and thresholds are global concerns. A per-modem value is
+acceptable only if it measures that modem's own web server and cannot
+change behavior for other modems. If future needs justify
+user-configurable cadence/window settings, they live in HA's options
+flow, not per-modem config.
 
 ### Reboot-signal trigger is a simple threshold vote, bounded harm
 

@@ -1,0 +1,86 @@
+{
+  "_description": "JSON bearer login sent to a login-pattern path with no salt evidence: offered as a candidate, never claimed as form_pbkdf2",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://10.0.0.1/api/v1/user/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"password\": \"FIELD_1\"}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 51,
+          "mimeType": "application/json",
+          "text": "{\"data\": {\"token\": \"tok-5f2a9c\", \"level\": \"admin\"}}"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://10.0.0.1/api/status",
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Bearer tok-5f2a9c"
+          }
+        ],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 2,
+          "mimeType": "application/json",
+          "text": "{}"
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "",
+  "_expected_ambiguities": {
+    "auth.strategy": {
+      "blocking": true,
+      "candidates": {
+        "bearer": [
+          "/api/v1/user/login",
+          "/api/status",
+          "/api/status"
+        ]
+      }
+    }
+  },
+  "_expected_candidate_fields": {
+    "bearer": {
+      "login_endpoint": "/api/v1/user/login",
+      "username_field": "",
+      "token_path": "data.token"
+    }
+  }
+}

@@ -19,6 +19,7 @@ Common issues and solutions for Cable Modem Monitor.
 - [Upstream Sensors Not Appearing](#upstream-sensors-not-appearing)
 - [Orphaned Channel Sensors](#orphaned-channel-sensors)
 - [Ghost Statistics in History](#ghost-statistics-in-history)
+- [Leftover State History](#leftover-state-history)
 - [Duplicate Entities](#duplicate-entities)
 
 ---
@@ -42,7 +43,7 @@ Common issues and solutions for Cable Modem Monitor.
 | Authentication phase failed | WARNING | Sanitized response logged; never demoted |
 | Circuit breaker open | ERROR | Persistent auth failure; polling halted |
 
-Success-path logs (auth details, resource loading) fire at INFO on the first poll and drop to DEBUG after, to avoid flooding multi-modem logs.
+Success-path logging is described in [Understanding Log Output](#understanding-log-output).
 
 See [ORCHESTRATION_SPEC.md § Logging Contract](../packages/cable_modem_monitor_core/docs/ORCHESTRATION_SPEC.md#logging-contract) for the full logging contract.
 
@@ -60,16 +61,16 @@ Cable modems periodically reboot or become busy during channel maintenance. This
 
 #### 2. Network Issues vs. Web Server Issues
 
-The integration uses health probes (ICMP ping and HTTP HEAD/GET) to diagnose connectivity independently of data collection:
+The integration uses health probes to diagnose connectivity independently of data collection. Status comes from ICMP ping and a TCP connect; an HTTP HEAD, where the modem supports it, only measures latency:
 
-| ICMP | HTTP | Health Status | Diagnosis |
+| ICMP | TCP | Health Status | Diagnosis |
 | ------ | ------ | --------------- | ----------- |
 | Pass | Pass | `responsive` | Fully responsive |
-| Pass | Fail | `degraded` | Web server may be hung |
+| Pass | Fail | `degraded` | Answers ping but not TCP; web server may be hung |
 | Fail | Pass | `icmp_blocked` | Network blocks ICMP |
 | Fail | Fail | `unresponsive` | Modem is down |
 
-Health probes are lightweight and run on their own cadence. Status transitions log at INFO (recovery) or WARNING (degradation); steady-state produces no visible output at default log levels.
+Probes are lightweight and run on their own cadence. Transitions log at INFO (recovery) or WARNING (degradation); steady state logs nothing at default levels.
 
 See [ORCHESTRATION_SPEC.md § HealthMonitor](../packages/cable_modem_monitor_core/docs/ORCHESTRATION_SPEC.md#healthmonitor) for probe strategy and configuration details.
 
@@ -85,7 +86,7 @@ See [ORCHESTRATION_SPEC.md § HealthMonitor](../packages/cable_modem_monitor_cor
 
 **What's Happening:**
 
-The modem's embedded web server has hung while the underlying network stack continues working. The modem's DOCSIS functions (internet connectivity) remain operational, but the status web server is unresponsive.
+The modem's web server has hung while its network stack and DOCSIS functions (your internet) keep working.
 
 Common causes:
 
@@ -103,7 +104,6 @@ WARNING: Health check [MB7621]: degraded — ICMP 2.0ms, TCP timeout, HTTP HEAD 
 
 1. **Wait for internal watchdog** (often works within hours)
    - Most modems have internal monitoring that will restart the hung web server
-   - Your internet connection continues working during this time
    - The integration will automatically recover once HTTP responds
 
 2. **Power cycle the modem** (immediate fix)
@@ -130,7 +130,7 @@ WARNING: Health check [MB7621]: degraded — ICMP 2.0ms, TCP timeout, HTTP HEAD 
 2. Check for special characters (some auth strategies may need escaping)
 3. Update credentials in integration settings:
    - Settings > Devices & Services > Cable Modem Monitor
-   - Click Configure > Update credentials
+   - Click Configure, enter the username and password (leave the password blank to keep the current one)
 
 #### 4. Incorrect IP Address or Port
 
@@ -213,7 +213,7 @@ If you see `icmp_blocked` status:
 
 Consumer cable modems typically allow only one authenticated web session at a time. When two Home Assistant instances poll the same modem, each authentication from one instance silently invalidates the other's session. The integration's LOAD_AUTH recovery handles each collision transparently by re-authenticating in the same poll, but sustained sub-minute polling from two instances can overwhelm the modem's web server and cause read timeouts that surface as Unreachable.
 
-The modem itself remains operational during these events: the DOCSIS data plane is independent of the management web interface, so your internet keeps working and ICMP keeps responding.
+The modem stays operational: the DOCSIS data plane is independent of the management web interface, so internet and ICMP keep working.
 
 **Solution:**
 
@@ -242,7 +242,7 @@ The `sensor.cable_modem_status` entity combines three independent signals into a
 The three input signals are:
 
 - **connection_status** — from the data collection pipeline (auth, fetch, parse)
-- **health_status** — from lightweight health probes (ICMP, HTTP)
+- **health_status** — from lightweight health probes (ICMP, TCP)
 - **docsis_status** — from downstream channel lock status
 
 See [ENTITY_MODEL_SPEC.md § Status Sensor](../custom_components/cable_modem_monitor/docs/ENTITY_MODEL_SPEC.md#status-sensor) for full details.
@@ -307,11 +307,10 @@ logger:
     solentlabs.cable_modem_monitor_catalog: debug
 ```
 
-All three are needed. The `custom_components` logger covers the Home
-Assistant layer only; auth, resource loading, and orchestration detail
-(including the messages shown above) comes from the core library, and
-modem matching comes from the catalog. These are the integration's
-declared `loggers` in `manifest.json`.
+All three are needed: `custom_components` covers the Home Assistant
+layer only, the core library logs auth, resource loading and
+orchestration (including the messages above), and the catalog logs
+modem matching. They match the `loggers` declared in `manifest.json`.
 
 After enabling debug logging:
 
@@ -336,12 +335,11 @@ See [ORCHESTRATION_SPEC.md § Logging Contract](../packages/cable_modem_monitor_
 
 **Solution:**
 
-1. **Upgrade to latest version** - Early versions had upstream parsing issues
-2. **Check logs** for parsing errors:
+1. **Check logs** for parsing errors:
    - Settings > System > Logs
    - Search for "cable_modem_monitor"
-3. **Enable debug logging** to see detailed parsing
-4. **Reload the integration**:
+2. **Enable debug logging** to see detailed parsing
+3. **Reload the integration**:
    - Settings > Devices & Services > Cable Modem Monitor
    - Click ... (three dots) > Reload
 
@@ -421,15 +419,52 @@ The response lists orphaned entity IDs as comments. Nothing is deleted. Example:
 
 ### Step 2 — Purge
 
-Once you have reviewed the list and are ready to clear:
+After reviewing the list:
 
 1. In **Developer Tools → Actions**, select **Cable Modem Monitor: List Orphaned Statistics** again
 2. Check **Execute**
 3. Click **Perform Action**
 
-The service clears all orphaned statistics directly via HA's recorder and returns the count purged. This is permanent and cannot be undone.
+The service clears all orphaned statistics directly via HA's recorder and returns the count purged. This cannot be undone.
 
-> **Note:** If you switched channel identity modes and want to preserve history rather than delete it, run `cable_modem_monitor.convert_channel_identity` first. That service renames statistics to match the current mode — run it before using this cleanup service.
+> **Note:** To keep history after switching channel identity modes, run `cable_modem_monitor.convert_channel_identity` first. It renames statistics to match the current mode.
+
+---
+
+## Leftover State History
+
+### Problem: Removed or Drifting Time Sensors Still in History
+
+**Symptoms:**
+
+- History shows **System Uptime** or **Current Time** sensors, which the integration no longer creates
+- **Last Boot Time** history from before you upgraded to 3.14.0 shows small changes although the modem did not reboot
+
+**Cause:**
+Those sensors wrote a recorder row on most polls. The recorder keeps state history for `purge_keep_days` (default 10), so the rows remain only if you raised it. They are state history, not statistics, so `orphaned_statistics` does not touch them.
+
+**Solution:**
+Run Home Assistant's `recorder.purge_entities` action from **Developer Tools → Actions** in YAML mode. The IDs below use the default `cable_modem` prefix; copy yours from History if they differ. Purging is permanent.
+
+Removed sensors, all history:
+
+```yaml
+action: recorder.purge_entities
+data:
+  entity_id:
+    - sensor.cable_modem_system_uptime
+    - sensor.cable_modem_current_time
+  keep_days: 0
+```
+
+Last Boot Time, keeping its history since the upgrade: set `keep_days` to the number of days since you upgraded to 3.14.0 or later. It counts back from now, so work it out on the day you run it, and round up: a day too many keeps a few old rows, a day too few deletes good ones.
+
+```yaml
+action: recorder.purge_entities
+data:
+  entity_id: sensor.cable_modem_last_boot_time
+  keep_days: 30
+```
 
 ---
 
@@ -503,7 +538,7 @@ If you encounter issues not covered here:
    - Includes: configuration, modem data, recent logs (sanitized), error details
 4. **Open an Issue**: [GitHub Issues](https://github.com/solentlabs/cable_modem_monitor/issues)
    - Include your modem model
-   - Attach diagnostics file (includes logs automatically)
+   - Attach the diagnostics file
    - If diagnostics aren't available, include manual logs
 
 ---

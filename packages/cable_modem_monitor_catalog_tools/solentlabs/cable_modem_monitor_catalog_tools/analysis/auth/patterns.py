@@ -59,9 +59,9 @@ def fleet_password_names(names: frozenset[str] | None) -> Iterator[None]:
 
 
 def collect_password_field_names(catalog_root: Path, exclude: Path | None = None) -> frozenset[str]:
-    """Collect declared password_field names from committed modem.yaml configs outside ``exclude``."""
+    """Collect declared password_field names from committed modem*.yaml configs outside ``exclude``."""
     names: set[str] = set()
-    for modem_yaml_path in sorted(catalog_root.rglob("modem.yaml")):
+    for modem_yaml_path in sorted(catalog_root.rglob("modem*.yaml")):
         if exclude is not None and modem_yaml_path.is_relative_to(exclude):
             continue
         try:
@@ -109,6 +109,16 @@ def is_password_field_name(name: str) -> bool:
     return lower in _active_password_names()
 
 
+# Checked after is_password_field_name: "loginPassword" matches both.
+_USERNAME_FIELD_INDICATORS = ("username", "user", "login")
+
+
+def is_username_field_name(name: str) -> bool:
+    """Check if a field name reads as a username field."""
+    lower = name.lower()
+    return any(ind in lower for ind in _USERNAME_FIELD_INDICATORS)
+
+
 def has_credential_fields(post_data: dict[str, Any]) -> bool:
     """Check if form POST data carries a password-shaped field name."""
     # Names, not values; HAR sanitizers redact values.
@@ -142,6 +152,24 @@ def get_pbkdf2_salt_triggers() -> tuple[str, ...]:
     return tuple(data["pbkdf2_salt_triggers"])
 
 
+def get_hnap_hmac_scripts() -> dict[str, str]:
+    """Return HNAP hmac script file names mapped to the algorithm each one implements."""
+    data = _load_patterns()
+    return dict(data["hnap_hmac_scripts"])
+
+
+def get_json_sjcl_script_constants() -> dict[str, str]:
+    """Return json_sjcl config fields mapped to the JS constant that declares each."""
+    data = _load_patterns()
+    return dict(data["json_sjcl_script_constants"])
+
+
+def get_json_sjcl_encrypt_calls() -> tuple[str, ...]:
+    """Return the JS functions whose fourth argument is the json_sjcl aad."""
+    data = _load_patterns()
+    return tuple(data["json_sjcl_encrypt_calls"])
+
+
 def get_sjcl_page_variables() -> tuple[str, ...]:
     """Return JS variable names that indicate SJCL AES-CCM auth.
 
@@ -155,6 +183,12 @@ def get_sjcl_post_fields() -> tuple[str, ...]:
     """Return POST body field names that indicate SJCL encrypted payload."""
     data = _load_patterns()
     return tuple(data["sjcl_post_fields"])
+
+
+def get_sjcl_response_fields() -> tuple[str, ...]:
+    """Return login-response JSON keys that indicate SJCL AES-CCM auth."""
+    data = _load_patterns()
+    return tuple(data["sjcl_response_fields"])
 
 
 def get_session_cookie_indicators() -> frozenset[str]:

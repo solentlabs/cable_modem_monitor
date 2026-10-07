@@ -10,8 +10,7 @@
       "fields": {
         "getter_endpoint": "/xml/getter.xml",
         "setter_endpoint": "/xml/setter.xml"
-      },
-      "confidence": "high"
+      }
     },
     "session": {
       "headers": {},

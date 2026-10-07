@@ -14,7 +14,7 @@ Seven entry points:
 * :func:`place_token_header` — send a login's token back as a named
   request header (``bearer``, ``json_sjcl``).
 * :func:`extract_token` — read a string token at a dot-separated path
-  in a parsed body (``bearer``, ``jsonrpc``).
+  in a parsed body (``bearer``, ``json_rpc``).
 * :func:`parse_json_dict` — parse an existing ``Response`` as a
   JSON dict (with double-decode, type check, DEBUG log).
 * :func:`post_json` — POST JSON payload **and** parse the
@@ -33,6 +33,7 @@ from typing import Any
 
 import requests
 
+from ..connectivity import is_connectivity_error
 from .base import AuthResult
 
 _logger = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ def post_json(
     try:
         resp = session.post(url, json=payload, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         return AuthResult(success=False, error=f"POST failed: {type(e).__name__}: {e}")
 
@@ -207,7 +208,7 @@ def post_form(
     try:
         resp = session.post(url, data=payload, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         return AuthResult(success=False, error=f"POST failed: {type(e).__name__}: {e}")
 

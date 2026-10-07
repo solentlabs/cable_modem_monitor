@@ -9,8 +9,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 from .signals import CollectorSignal
+
+if TYPE_CHECKING:
+    from ..auth.base import LoginPageDriftCondition
 
 
 class EventLevel(IntEnum):
@@ -152,6 +156,17 @@ class StaleSessionRecoveryDisabled:
     level: EventLevel = field(default=EventLevel.INFO, init=False)
 
 
+@dataclass
+class LoginPageDriftDetected:
+    """The pre-fetched login page disagrees with the form config. Level is caller-determined."""
+
+    model: str
+    condition: LoginPageDriftCondition
+    configured: str
+    observed: str
+    level: EventLevel  # caller-determined: WARNING the first time this drift is seen, DEBUG after
+
+
 # ---------------------------------------------------------------------------
 # Phase: session
 # ---------------------------------------------------------------------------
@@ -250,6 +265,15 @@ class SessionRetrySucceeded:
 
     model: str
     signal_name: str  # "LOAD_AUTH" or "LOAD_INTEGRITY"
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
+class StuckSessionCleared:
+    """Reused session dropped after repeated connection failures while the modem answers probes."""
+
+    model: str
+    failures: int
     level: EventLevel = field(default=EventLevel.INFO, init=False)
 
 
@@ -456,7 +480,20 @@ class RestartCommandFailed:
 
     model: str
     reason: str
+    # Age of the monitoring session the command was sent on; None when
+    # none was used (action_auth, or the login itself failed).
+    session_age_seconds: float | None = None
     level: EventLevel = field(default=EventLevel.ERROR, init=False)
+
+
+@dataclass
+class RestartSessionRetry:
+    """Restart refused on a reused monitoring session; clearing it and retrying once."""
+
+    model: str
+    reason: str
+    session_age_seconds: float | None = None
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
 
 
 @dataclass
@@ -498,7 +535,7 @@ class ActionStarted:
     """Action dispatched. Level is caller-determined."""
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
+    transport: str  # "hnap" | "http" | "cbn" | "json_rpc"
     action_name: str
     level: EventLevel  # caller-determined
 
@@ -508,7 +545,7 @@ class ActionCompleted:
     """Response received on success path. Level is caller-determined."""
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
+    transport: str  # "hnap" | "http" | "cbn" | "json_rpc"
     action_name: str
     status_code: int | None
     result: str
@@ -520,7 +557,7 @@ class ActionConnectionLost:
     """Connection dropped during action — expected during modem restart. Level is caller-determined."""
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
+    transport: str  # "hnap" | "http" | "cbn" | "json_rpc"
     action_name: str
     level: EventLevel  # caller-determined
 
@@ -530,7 +567,7 @@ class ActionFailed:
     """Bad response format, unexpected result, or request error."""
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
+    transport: str  # "hnap" | "http" | "cbn" | "json_rpc"
     action_name: str
     reason: str
     level: EventLevel = field(default=EventLevel.WARNING, init=False)
@@ -545,11 +582,14 @@ class ActionPreFetchCompleted:
     """
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
+    transport: str  # "hnap" | "http" | "cbn" | "json_rpc"
     action_name: str
     key_count: int | None
     fallback_endpoint: str | None
     level: EventLevel  # caller-determined
+    # HNAP firmware's own verdict (<Action>Result), e.g. "OK" or "UN-AUTH";
+    # None when the transport or response carries none.
+    result: str | None = None
 
 
 @dataclass
@@ -561,7 +601,7 @@ class ActionPreFetchFailed:
     """
 
     model: str
-    transport: str  # "hnap" | "http" | "cbn" | "jsonrpc"
+    transport: str  # "hnap" | "http" | "cbn" | "json_rpc"
     action_name: str
     reason: str
     fallback_endpoint: str | None
@@ -611,6 +651,7 @@ type OrchestratorEvent = (
     | AuthCircuitBreakerOpen
     | CircuitBreakerPollingBlocked
     | StaleSessionRecoveryDisabled
+    | LoginPageDriftDetected
     | SessionReused
     | SessionCleared
     | LogoutExecuted
@@ -622,6 +663,7 @@ type OrchestratorEvent = (
     | SessionRetryStarted
     | SessionRetrySucceeded
     | SessionRetryFailed
+    | StuckSessionCleared
     | HealthStatusReport
     | HealthRecoveryDetected
     | HealthBackoffCleared
@@ -638,6 +680,7 @@ type OrchestratorEvent = (
     | CounterReset
     | RestartCommandSent
     | RestartCommandFailed
+    | RestartSessionRetry
     | RecoveryWindowOpened
     | RecoveryWindowClosed
     | RecoveryObserverException

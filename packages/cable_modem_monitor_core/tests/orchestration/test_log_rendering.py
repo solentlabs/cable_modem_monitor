@@ -10,7 +10,12 @@ from __future__ import annotations
 import logging
 
 import pytest
-from solentlabs.cable_modem_monitor_core.orchestration.events import AuthFailed
+from solentlabs.cable_modem_monitor_core.orchestration.events import (
+    ActionPreFetchCompleted,
+    AuthFailed,
+    EventLevel,
+    RestartCommandFailed,
+)
 from solentlabs.cable_modem_monitor_core.orchestration.logging import log_event
 
 
@@ -92,3 +97,61 @@ def test_log_parser_matches_what_the_adapter_emits(
     match = CORE_PATTERNS["auth_fail"].search(line)
     assert match is not None, "log_parser cannot read the line the adapter emits"
     assert match.group(2) == "MB7621"
+
+
+@pytest.mark.parametrize(
+    ("event", "expected", "absent"),
+    [
+        (
+            ActionPreFetchCompleted(
+                model="MB8611",
+                transport="hnap",
+                action_name="GetMotoStatusSecXXX",
+                key_count=1,
+                fallback_endpoint=None,
+                level=EventLevel.INFO,
+                result="UN-AUTH",
+            ),
+            "hnap/GetMotoStatusSecXXX: 1 keys, result: UN-AUTH",
+            None,
+        ),
+        (
+            ActionPreFetchCompleted(
+                model="MB8611",
+                transport="http",
+                action_name="/reboot.html",
+                key_count=None,
+                fallback_endpoint=None,
+                level=EventLevel.INFO,
+            ),
+            "http//reboot.html: no keys",
+            "result:",
+        ),
+        (
+            RestartCommandFailed(model="MB8611", reason="Unexpected result: UN-AUTH", session_age_seconds=18342.4),
+            "Unexpected result: UN-AUTH (session age 18342s)",
+            None,
+        ),
+        (
+            RestartCommandFailed(model="MB8611", reason="auth failed"),
+            "Restart command failed [MB8611] — auth failed",
+            "session age",
+        ),
+    ],
+    ids=["prefetch_result", "prefetch_no_result", "restart_session_age", "restart_no_session"],
+)
+def test_restart_diagnosis_lines(
+    caplog: pytest.LogCaptureFixture,
+    event: ActionPreFetchCompleted | RestartCommandFailed,
+    expected: str,
+    absent: str | None,
+) -> None:
+    # A rejected pre-fetch and a stale session must be readable from the log alone (#218)
+    logger = logging.getLogger("test.restart.render")
+    with caplog.at_level(logging.DEBUG, logger="test.restart.render"):
+        log_event(logger, event)
+
+    line = caplog.records[0].getMessage()
+    assert expected in line
+    if absent is not None:
+        assert absent not in line

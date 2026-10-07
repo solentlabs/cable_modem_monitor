@@ -144,24 +144,31 @@ Example:
 
 ### Public API Docstrings
 
-All public functions and classes must have docstrings:
+All public functions and classes must have docstrings. A function or
+class docstring is one short line: the signature and type annotations
+carry the arguments, return value and exceptions, so `Args:`,
+`Returns:` and `Raises:` sections are not used.
 
 ```python
 def process_data(raw: str, validate: bool = True) -> dict[str, Any]:
-    """Process raw modem data into structured format.
-
-    Args:
-        raw: Raw HTML or JSON string from modem
-        validate: Whether to validate the output schema
-
-    Returns:
-        Parsed data dictionary with keys: downstream, upstream, system_info
-
-    Raises:
-        ParseError: If raw data cannot be parsed
-        ValidationError: If validate=True and output fails schema check
-    """
+    """Process raw modem data into structured format."""
 ```
+
+A non-obvious WHY (a hidden constraint, a caller contract, a mutation
+side effect) goes in an inline comment next to the code it explains.
+Behavioral contracts and design decisions belong in the spec docs
+(ORCHESTRATION_SPEC, MODEM_YAML_SPEC, etc.), the durable documentation
+layer, not in docstrings. Module docstrings are covered above.
+
+Docstring examples use template placeholders (`{manufacturer}/{model}/`),
+not specific fake names (`acme/a100/`). Tests still use concrete
+strings; docstrings describe the pattern.
+
+### Comments on Refactor
+
+Keep WHY comments when rewriting code: section markers
+(`# Phase 1 — auth`), rationale notes and numbered-procedure markers.
+The "default to no comments" rule targets WHAT-noise, not WHY-context.
 
 ### Type Hints (required)
 

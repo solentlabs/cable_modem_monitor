@@ -180,3 +180,56 @@ def test_unoffered_action_is_graded_not_failed() -> None:
     assert grades["actions.restart.fun"].status == "committed_only"
     assert analysis["ambiguities"][0]["resolution"] == {"value": 8}
     assert failures == []
+
+
+# =============================================================================
+# Action endpoint paths resolve only to a stored candidate request
+# =============================================================================
+
+_ACTION_PATH = "actions.restart.endpoint"
+
+
+def _action_analysis(offered: list[str], stored: list[str]) -> dict[str, Any]:
+    """An endpoint ambiguity offering ``offered``, with a stored request for each of ``stored``."""
+    return {
+        "actions": {"restart": None, "candidates": {"restart": {e: {"type": "http", "endpoint": e} for e in stored}}},
+        "ambiguities": [
+            {
+                "field": _ACTION_PATH,
+                "blocking": False,
+                "candidates": [{"value": v, "evidence": [], "corroborated_by": []} for v in offered],
+                "resolution": None,
+            }
+        ],
+    }
+
+
+_RESTART_AT_A = {"actions": {"restart": {"type": "http", "endpoint": "/a"}}}
+_NOT_AMONG = {"value": None, "reason": "committed /a not among the candidates"}
+_NOT_STORED = {"value": None, "reason": "committed /a has no stored request"}
+
+# ┌──────────┬──────────┬─────────────┬────────────────┬──────────┬─────────────────────────────────────┐
+# │ offered  │ stored   │ resolution  │ grade          │ failure  │ description                         │
+# ├──────────┼──────────┼─────────────┼────────────────┼──────────┼─────────────────────────────────────┤
+# │ /a       │ /a       │ /a          │ match          │ no       │ one stored request, resolved        │
+# │ /a       │ (none)   │ none        │ committed_only │ no       │ bodies differed: nothing to write   │
+# │ /b       │ /b       │ none        │ committed_only │ no       │ committed endpoint never offered    │
+# └──────────┴──────────┴─────────────┴────────────────┴──────────┴─────────────────────────────────────┘
+#
+# fmt: off
+ACTION_CASES: list[tuple[dict[str, Any], Any, str, str]] = [
+    # (analysis,                           resolution,      grade,            id)
+    (_action_analysis(["/a"], ["/a"]),     {"value": "/a"}, "match",          "stored"),
+    (_action_analysis(["/a"], []),         _NOT_STORED,     "committed_only", "bodies-differed"),
+    (_action_analysis(["/b"], ["/b"]),     _NOT_AMONG,      "committed_only", "not-offered"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("analysis,resolution,grade", [c[:3] for c in ACTION_CASES], ids=[c[3] for c in ACTION_CASES])
+def test_action_endpoint_resolution(analysis: dict[str, Any], resolution: Any, grade: str) -> None:
+    """An endpoint resolves only to a stored request; otherwise it is an explicit none and never a stage failure."""
+    grades, failures = resolve_from_committed(analysis, _RESTART_AT_A)
+    assert analysis["ambiguities"][0]["resolution"] == resolution
+    assert grades[_ACTION_PATH].status == grade
+    assert failures == []

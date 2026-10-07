@@ -51,7 +51,19 @@ ignoreWords:
   - Vonk
   - Fzcw
   - didnt
+  - dlindnegm
+  - Tatsh
+  - thon
+  # Contributor handles (CHANGELOG credits) and encoded fragments in test data
+  - Boby
+  - squatto
+  - dvcm
+  - Dsensors
+  # German example heading in the link-checker slug tests
+  - überblick
   # Non-English example strings and glossary terms in TRANSLATION_GUIDE.md
+  # (and a Polish firmware lockout message in an auth test fixture)
+  - Zablokowano
   - Anmeldung
   - Authentifizierung
   - fehlgeschlagen
@@ -60,6 +72,8 @@ ignoreWords:
   # Source citations in catalog modem.yaml: publication name, Dutch product name
   - Telecompaper
   - zwart
+  # Source citation in docs/ATTRIBUTION.md: company name
+  - Obkio
 
 words:
   # Home Assistant tooling
@@ -196,6 +210,7 @@ words:
   - Technicolor
   - Telephonics
   - Touchstone
+  - Ubee
 
   # ISPs / providers
   - Altice
@@ -225,6 +240,7 @@ words:
   - teksavvy
   - TEKS
   - Tele
+  - Telemach
   - Telus
   - TNETC
   - Unitymedia
@@ -369,6 +385,7 @@ words:
   - rebrands
   - relogin
   - slugification
+  - slugifying
   - solentlabs
   - triaging
   - unbonded
@@ -518,6 +535,7 @@ words:
   - libreadline
   - libsqlite
   - mdev
+  - pids
   - setsid
   - tasklist
   - textconv
@@ -529,6 +547,9 @@ words:
   - glyphicons
 
   # British / alternate spellings (used in comments and docs)
+  - recognise
+  - initialiser
+  - analyser
   - Analysed
   - artefacts
   - behaviour
@@ -545,8 +566,10 @@ words:
   - serialises
   - standardises
   - summarises
+  - unanalysed
 
   # Abbreviations used in production code
+  - JRPC
   - applation
   - authing
   - coro
@@ -570,6 +593,16 @@ words:
   - withoutloginkey
 
   # Test data constants (intentional placeholder values in fixtures)
+  - zzsecret
+  - geheimcode
+  - correcthorse
+  - nokey
+  - loginform
+  - linklocal
+  - freqd
+  - errcodeword
+  - ofdmach
+  - devctl
   - anykey
   - appletv
   - familyroom
@@ -652,10 +685,35 @@ words:
   - uncorrectederrors
 
   # Auth pattern / firmware form identifiers
+  - purecaptcha
+  - lockedout
+  - ubus
   - ajaxset
   - genielogin
 
+  # Tooling config words (.gitignore, tasks.json, Copilot instructions)
+  - elif
+  - rulebook
+  - sarif
+  - testproj
+  - tmpclaude
+
   # Spec/doc vocabulary (incl. British spellings)
+  - pageref
+  - KEYSIZEBITS
+  - Mencrypt
+  - tlen
+  - refetches
+  - Correctables
+  - unspaced
+  - unredacted
+  - unreachability
+  - unexcluded
+  - undotted
+  - slugifies
+  - repr
+  - reposted
+  - misaligning
   - absoluting
   - baselined
   - browsable
@@ -664,11 +722,13 @@ words:
   - defences
   - formedness
   - gatekeeping
+  - intraword
   - Liskov
   - NCIP
   - optimise
   - pingable
   - redactions
+  - setext
   - timespan
   - typetracking
   - unconfigured

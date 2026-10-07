@@ -2,7 +2,7 @@
 
 Implements the HTTP branch of the ONBOARDING_SPEC Phase 2 decision tree.
 Walks: none -> basic -> url_token -> form_sjcl -> form_pbkdf2 ->
-form_nonce -> form -> hard stop.
+JSON login (an auth.strategy ambiguity) -> form_nonce -> form -> hard stop.
 
 Per docs/ONBOARDING_SPEC.md Phase 2 (HTTP transport).
 """
@@ -10,6 +10,7 @@ Per docs/ONBOARDING_SPEC.md Phase 2 (HTTP transport).
 from __future__ import annotations
 
 import base64
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, NamedTuple
@@ -18,12 +19,15 @@ from urllib.parse import urljoin, urlsplit
 from ...validation.har_utils import (
     HARD_STOP_PREFIX,
     WARNING_PREFIX,
+    WRITE_METHODS,
     has_set_cookie,
     lower_headers,
     parse_form_params,
     path_from_url,
 )
+from ..ambiguity import Ambiguity
 from ..types import CoreGap
+from .json_login import is_json_login, json_login_ambiguity
 from .patterns import (
     get_login_url_patterns,
     get_nonce_error_prefix,
@@ -31,8 +35,10 @@ from .patterns import (
     get_pbkdf2_salt_triggers,
     get_sjcl_page_variables,
     get_sjcl_post_fields,
+    get_sjcl_response_fields,
     has_credential_fields,
     is_password_field_name,
+    is_username_field_name,
 )
 from .types import AuthDetail
 
@@ -46,14 +52,16 @@ _NONCE_ERROR_PREFIX: str = get_nonce_error_prefix()
 _PBKDF2_SALT_TRIGGERS: tuple[str, ...] = get_pbkdf2_salt_triggers()
 _SJCL_PAGE_VARS: tuple[str, ...] = get_sjcl_page_variables()
 _SJCL_POST_FIELDS: tuple[str, ...] = get_sjcl_post_fields()
+_SJCL_RESPONSE_FIELDS: tuple[str, ...] = get_sjcl_response_fields()
 
 # A url_token credential rides in the query string as login_<base64(user:pass)>.
 # The marker must be followed by an actual token and must not be matched
 # anywhere in the URL: /cgi-bin/login_cgi is a script name and
 # /Admin_Login_Lock.txt is a status file, and both used to register as
 # url_token auth, outranking the correct strategy and emitting a bogus
-# login_page.
-_URL_TOKEN_QUERY = re.compile(r"(login(?:_|%5f))([A-Za-z0-9+/=%]{4,})", re.IGNORECASE)
+# login_page. The marker must also start a parameter name: inside a value
+# it is page text (SBG8300's CAPTCHA image is ?t=login_form).
+_URL_TOKEN_QUERY = re.compile(r"(?:^|&)(login(?:_|%5f))([A-Za-z0-9+/=%]{4,})", re.IGNORECASE)
 _BASE64_CHARS = re.compile(r"^[A-Za-z0-9+/=]{4,}$")
 # Bare base64 credential: base64(user:pass) as a query param name with empty value
 _BARE_BASE64_CREDENTIAL = re.compile(r"^[A-Za-z0-9+/]{8,}={0,2}$")
@@ -69,20 +77,22 @@ def detect_http_auth(
     warnings: list[str],
     hard_stops: list[str],
     core_gaps: list[CoreGap] | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> AuthDetail:
     """Walk the HTTP auth decision tree.
 
     Order: none -> basic -> url_token -> form_sjcl -> form_pbkdf2 ->
-    form_nonce -> form -> hard stop.
+    JSON login -> form_nonce -> form -> hard stop.
 
     Args:
         entries: HAR ``log.entries`` list.
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
         core_gaps: Mutable list to append core gap items to.
+        ambiguities: Mutable list to append the JSON login's strategy ambiguity to.
 
     Returns:
-        AuthDetail with strategy, extracted fields, and confidence.
+        AuthDetail with strategy and extracted fields.
     """
     if core_gaps is None:
         core_gaps = []
@@ -92,7 +102,7 @@ def detect_http_auth(
 
     # No auth signals at all -> none
     if not signals.has_any_auth_signal:
-        return AuthDetail(strategy="none", confidence="high")
+        return AuthDetail(strategy="none")
 
     # 401 + WWW-Authenticate: Digest -> HARD STOP (unsupported)
     if signals.digest_challenge:
@@ -102,7 +112,7 @@ def detect_http_auth(
             "Digest auth is not yet supported. "
             "See ONBOARDING_SPEC Phase 2 for supported auth strategies."
         )
-        return AuthDetail(strategy="digest", confidence="high")
+        return AuthDetail(strategy="digest")
 
     # 401 + WWW-Authenticate: Basic -> basic
     if signals.basic_challenge:
@@ -114,19 +124,21 @@ def detect_http_auth(
 
     # SJCL AES-CCM encrypted login -> form_sjcl (must check before pbkdf2)
     if signals.sjcl_login_entry is not None:
-        return _extract_form_sjcl(entries, signals)
+        return _extract_form_sjcl(entries, signals, warnings)
 
     # JSON POST with PBKDF2 salt flow -> form_pbkdf2
     if signals.pbkdf2_entries:
-        return _extract_form_pbkdf2(signals)
+        return _extract_form_pbkdf2(signals, warnings)
+
+    # JSON login to a login path -> its strategy is an ambiguity
+    detail = json_login_ambiguity(entries, signals.json_login_entries, warnings, ambiguities)
+    if detail is not None:
+        return detail
 
     # Form POST to login endpoint
-    if signals.form_post_entry is not None:
-        # Check for nonce-style response
-        if signals.form_nonce_entry is not None:
-            return _extract_form_nonce(signals)
-        # Standard form auth
-        return _extract_form(entries, signals, warnings)
+    detail = _extract_form_login(entries, signals, warnings)
+    if detail is not None:
+        return detail
 
     # Auth signals detected but no strategy matched -> HARD STOP + evidence
     hard_stops.append(
@@ -148,7 +160,7 @@ def detect_http_auth(
             },
         )
     )
-    return AuthDetail(strategy="unknown", confidence="low")
+    return AuthDetail(strategy="unknown")
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +185,9 @@ class _HttpAuthSignals:
     sjcl_login_entry: dict[str, Any] | None = None
     sjcl_login_page_html: str = ""
     pbkdf2_entries: list[dict[str, Any]] = field(default_factory=list)
+    json_login_entries: list[dict[str, Any]] = field(default_factory=list)
+    # JSON writes to a login URL that no salt or cipher evidence classifies
+    unclassified_json_logins: list[str] = field(default_factory=list)
     has_401: bool = False
     has_302_after_post: bool = False
     has_authorization_header: bool = False
@@ -193,6 +208,10 @@ class _HttpAuthSignals:
             parts.append(f"POST to {path_from_url(url)}")
         if self.has_set_cookie_after_login:
             parts.append("Set-Cookie after login")
+        parts.extend(
+            f"JSON POST to {path} with no salt, credential or cipher field (an emptied body needs a recapture)"
+            for path in self.unclassified_json_logins
+        )
         return ", ".join(parts) if parts else "ambiguous auth artifacts"
 
 
@@ -265,9 +284,12 @@ def _check_entry_auth_signals(
     # URL token pattern: login_<base64> or bare base64 credential in URL
     _check_url_token_signals(url, req, entry, signals)
 
-    # POST requests
-    if method == "POST":
+    # Requests with a body: logins arrive by any write method
+    if method.upper() in WRITE_METHODS:
         _check_post_signals(entry, req, resp, url, status, signals)
+        if is_json_login(entry):
+            signals.json_login_entries.append(entry)
+            signals.has_any_auth_signal = True
 
     # Set-Cookie on non-first entry after a login-like POST
     if has_set_cookie(resp) and signals.form_post_entry is not None:
@@ -300,6 +322,30 @@ def _check_url_token_signals(
             signals.has_any_auth_signal = True
 
 
+def _check_json_post_signals(
+    entry: dict[str, Any],
+    text: str,
+    resp: dict[str, Any],
+    url: str,
+    signals: _HttpAuthSignals,
+) -> None:
+    """Classify a JSON POST as an SJCL, PBKDF2 or other login signal."""
+    # SJCL: the request carries EncryptData/AuthData, or, when the
+    # sanitizer emptied it, the login response carries encryptData
+    if _is_login_url(url) and (any(f in text for f in _SJCL_POST_FIELDS) or _has_json_key(resp, _SJCL_RESPONSE_FIELDS)):
+        signals.sjcl_login_entry = entry
+        signals.has_any_auth_signal = True
+    elif any(trigger in text.lower() for trigger in _PBKDF2_SALT_TRIGGERS):
+        # form_pbkdf2 needs salt evidence; a login-shaped URL is not any
+        signals.pbkdf2_entries.append(entry)
+        signals.has_any_auth_signal = True
+    elif _is_login_url(url):
+        # Still a login: the JSON login candidates or a named stop decide it
+        if not is_json_login(entry):
+            signals.unclassified_json_logins.append(path_from_url(url))
+        signals.has_any_auth_signal = True
+
+
 def _check_post_signals(
     entry: dict[str, Any],
     req: dict[str, Any],
@@ -312,19 +358,8 @@ def _check_post_signals(
     post_data = req.get("postData", {})
     mime = post_data.get("mimeType", "").lower()
 
-    # JSON POST - check for SJCL or PBKDF2
     if "json" in mime:
-        text = post_data.get("text", "")
-
-        # SJCL: POST body contains EncryptData/AuthData fields
-        if _is_login_url(url) and any(f in text for f in _SJCL_POST_FIELDS):
-            signals.sjcl_login_entry = entry
-            signals.has_any_auth_signal = True
-        else:
-            is_salt = any(trigger in text.lower() for trigger in _PBKDF2_SALT_TRIGGERS)
-            if is_salt or _is_login_url(url):
-                signals.pbkdf2_entries.append(entry)
-                signals.has_any_auth_signal = True
+        _check_json_post_signals(entry, post_data.get("text", ""), resp, url, signals)
 
     # Form POST to login-like endpoint. An action POST can share the login
     # endpoint (DM1000: /setup.cgi serves login and reboot), so only a
@@ -356,12 +391,26 @@ def _check_post_signals(
 # ---------------------------------------------------------------------------
 
 
+def _extract_form_login(
+    entries: list[dict[str, Any]],
+    signals: _HttpAuthSignals,
+    warnings: list[str],
+) -> AuthDetail | None:
+    """form_nonce or form for a form login, or None without one."""
+    if signals.form_post_entry is None:
+        return None
+    # Check for nonce-style response
+    if signals.form_nonce_entry is not None:
+        return _extract_form_nonce(signals)
+    # Standard form auth
+    return _extract_form(entries, signals, warnings)
+
+
 def _extract_basic(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> AuthDetail:
     """Extract basic auth fields."""
     return AuthDetail(
         strategy="basic",
         fields={"challenge_cookie": signals.basic_challenge_cookie},
-        confidence="high",
     )
 
 
@@ -462,7 +511,6 @@ def _extract_url_token(
     return AuthDetail(
         strategy="url_token",
         fields=fields,
-        confidence="high",
     )
 
 
@@ -549,8 +597,6 @@ def _find_sjcl_session_validation(
 
 def _extract_sjcl_encrypt_aad(post_text: str) -> str:
     """Extract the encrypt AAD from the login POST body's AuthData field."""
-    import json
-
     try:
         body = json.loads(post_text)
         if isinstance(body, dict) and "AuthData" in body:
@@ -563,6 +609,7 @@ def _extract_sjcl_encrypt_aad(post_text: str) -> str:
 def _extract_form_sjcl(
     entries: list[dict[str, Any]],
     signals: _HttpAuthSignals,
+    warnings: list[str],
 ) -> AuthDetail:
     """Extract form_sjcl auth fields from SJCL AES-CCM login flow."""
     entry = signals.sjcl_login_entry
@@ -583,7 +630,12 @@ def _extract_form_sjcl(
             break
 
     session_validation = _find_sjcl_session_validation(entries, entry, csrf_header)
-    confidence = "high" if signals.sjcl_login_page_html else "medium"
+    if not signals.sjcl_login_page_html:
+        warnings.append(
+            f"{WARNING_PREFIX} form_sjcl: no captured login page sets the SJCL variables "
+            f"({', '.join(_SJCL_PAGE_VARS)}), so login_page falls back to '/'. Recapture including "
+            "the pre-login page load."
+        )
 
     return AuthDetail(
         strategy="form_sjcl",
@@ -595,14 +647,20 @@ def _extract_form_sjcl(
             "encrypt_aad": encrypt_aad,
             "decrypt_aad": "nonce",
         },
-        confidence=confidence,
     )
 
 
-def _extract_form_pbkdf2(signals: _HttpAuthSignals) -> AuthDetail:
+def _extract_form_pbkdf2(signals: _HttpAuthSignals, warnings: list[str]) -> AuthDetail:
     """Extract form_pbkdf2 auth fields from salt/challenge flow."""
     if not signals.pbkdf2_entries:
-        return AuthDetail(strategy="form_pbkdf2", confidence="medium")
+        return AuthDetail(strategy="form_pbkdf2")
+    # The strategy rests on the exchange's shape alone, and a bearer login can
+    # look the same (INTAKE_PIPELINE § Detection Owes the LLM Evidence)
+    warnings.append(
+        f"{WARNING_PREFIX} form_pbkdf2 was inferred from {len(signals.pbkdf2_entries)} salt-exchange "
+        "request(s) alone; a bearer or JSON login can look the same. Check the login response "
+        "against MODEM_INTAKE_WORKFLOW Step 4 before generating."
+    )
 
     # The first PBKDF2 entry is typically the salt request
     first_entry = signals.pbkdf2_entries[0]
@@ -641,7 +699,6 @@ def _extract_form_pbkdf2(signals: _HttpAuthSignals) -> AuthDetail:
     return AuthDetail(
         strategy="form_pbkdf2",
         fields=fields,
-        confidence="medium",
     )
 
 
@@ -687,7 +744,6 @@ def _extract_form_nonce(signals: _HttpAuthSignals) -> AuthDetail:
     return AuthDetail(
         strategy="form_nonce",
         fields=fields,
-        confidence="high",
     )
 
 
@@ -765,7 +821,7 @@ def _extract_form(
 
     fields: dict[str, Any] = {
         "action": post_path,
-        "method": "POST",
+        "method": req.get("method", "POST").upper(),
         "username_field": username_field,
         "password_field": password_field,
         "encoding": encoding,
@@ -779,7 +835,6 @@ def _extract_form(
     # the login form's action (Netgear ?id=). path_from_url strips it, so
     # the config needs action_source: login_page to read it live; without
     # that the bare-action POST may be rejected by the firmware (#189).
-    confidence = "high"
     query = urlsplit(url).query
     if query:
         if login_page and _core_supports_action_source():
@@ -791,7 +846,6 @@ def _extract_form(
                 "but the capture has no login page GET to read it from. Recapture "
                 "including the pre-login page load."
             )
-            confidence = "medium"
         else:
             warnings.append(
                 f"{WARNING_PREFIX} login POST {post_path}?{query} carries a query "
@@ -800,12 +854,10 @@ def _extract_form(
                 "support (#189), so the firmware may reject logins posted to the "
                 "bare action. Verify login on hardware before shipping the entry."
             )
-            confidence = "medium"
 
     return AuthDetail(
         strategy="form",
         fields=fields,
-        confidence=confidence,
     )
 
 
@@ -831,6 +883,15 @@ def _parse_auth_scheme(www_authenticate: str) -> str:
     return token.lower()
 
 
+def _has_json_key(resp: dict[str, Any], keys: tuple[str, ...]) -> bool:
+    """Whether a response body is a JSON object holding any of ``keys``."""
+    try:
+        body = json.loads(resp.get("content", {}).get("text") or "")
+    except ValueError:
+        return False
+    return isinstance(body, dict) and any(key in body for key in keys)
+
+
 def _is_login_url(url: str) -> bool:
     """Check if a URL matches known login endpoint patterns."""
     lower = url.lower()
@@ -849,10 +910,7 @@ def classify_form_fields(
     password_field = ""
     hidden_fields: dict[str, str] = {}
 
-    username_indicators = ("username", "user", "login")
-
     for name, value in params.items():
-        lower_name = name.lower()
         # Password checked first: "loginPassword" matches both lists, and
         # password is the more specific signal. First match wins on each
         # axis, since credential inputs precede auxiliary fields like
@@ -861,7 +919,7 @@ def classify_form_fields(
         # constants.
         if is_password_field_name(name):
             password_field = password_field or name
-        elif any(ind in lower_name for ind in username_indicators):
+        elif is_username_field_name(name):
             username_field = username_field or name
         else:
             hidden_fields[name] = value
@@ -1093,8 +1151,6 @@ def _extract_pbkdf2_params_from_response(resp_text: str) -> dict[str, Any]:
     Looks for salt, iterations, and key length fields in the response.
     Returns extracted params as a dict (may be partial or empty).
     """
-    import json
-
     params: dict[str, Any] = {}
     try:
         data = json.loads(resp_text)

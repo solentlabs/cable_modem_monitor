@@ -12,6 +12,8 @@ import hashlib
 import re
 from typing import Any
 
+import pytest
+from solentlabs.cable_modem_monitor_core.protocol.cbn import compal_encrypt
 from solentlabs.cable_modem_monitor_core.test_harness.auth.form_cbn import (
     FormCbnAuthHandler,
 )
@@ -41,9 +43,11 @@ def _make_handler(
     )
 
 
-def _login_body(fun: int = 15, token: str = "tok") -> bytes:
-    """Build a URL-encoded setter POST body."""
-    return f"token={token}&fun={fun}&Username=NULL&Password=enc".encode()
+def _login_body(fun: int = 15, token: str = "tok", password: str | None = None) -> bytes:
+    """Build a URL-encoded setter POST body, by default carrying the right password."""
+    if password is None:
+        password = compal_encrypt(FormCbnAuthHandler._TEST_PASSWORD, FormCbnAuthHandler._INITIAL_SESSION_TOKEN)
+    return f"token={token}&fun={fun}&Username=NULL&Password={password}".encode()
 
 
 # ------------------------------------------------------------------
@@ -168,6 +172,75 @@ class TestHandleLoginPost:
 
 
 # ------------------------------------------------------------------
+# Tests — handle_login POST (the encrypted password is checked)
+# ------------------------------------------------------------------
+
+_INITIAL = FormCbnAuthHandler._INITIAL_SESSION_TOKEN
+_RIGHT = compal_encrypt(FormCbnAuthHandler._TEST_PASSWORD, _INITIAL)
+
+# The harness decrypts the Password field with the token it served and
+# answers a failed login unless the plaintext is the test password.
+# fmt: off
+# ┌────────────────────────────────────────┬──────────────────────────┐
+# │ Password field                         │ description              │
+# ├────────────────────────────────────────┼──────────────────────────┤
+# │ compal_encrypt("wrong", served token)  │ wrong password           │
+# │ compal_encrypt("pw", other token)      │ wrong key and IV         │
+# │ base64(hex(ciphertext)), no ":"        │ missing ":" prefix       │
+# │ "enc"                                  │ not base64               │
+# │ base64(":zz")                          │ not hex                  │
+# │ base64(":" + 15 bytes hex)             │ not a whole AES block    │
+# │ ""                                     │ empty                    │
+# └────────────────────────────────────────┴──────────────────────────┘
+REJECTED_PASSWORDS = [
+    # (password field,                                                       id)
+    (compal_encrypt("wrong", _INITIAL),                                      "wrong-password"),
+    (compal_encrypt("pw", "some-other-token"),                               "wrong-token"),
+    (base64.b64encode(base64.b64decode(_RIGHT)[1:]).decode(),                "no-colon-prefix"),
+    ("enc",                                                                  "not-base64"),
+    (base64.b64encode(b":zz").decode(),                                      "not-hex"),
+    (base64.b64encode(b":" + b"ab" * 15).decode(),                           "partial-block"),
+    ("",                                                                     "empty"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("password", [c[0] for c in REJECTED_PASSWORDS], ids=[c[1] for c in REJECTED_PASSWORDS])
+def test_login_post_rejects_bad_password(password: str) -> None:
+    """A login POST whose Password does not decrypt to the test password fails."""
+    handler = _make_handler()
+    response = handler.handle_login("POST", "/xml/setter.xml", _login_body(password=password), {})
+    assert response is not None
+    assert response.status == 200
+    assert "successful" not in response.body.lower()
+    assert handler.is_authenticated({}) is False
+
+
+def test_login_post_without_password_field_is_rejected() -> None:
+    """A login POST that carries no Password field fails."""
+    handler = _make_handler()
+    response = handler.handle_login("POST", "/xml/setter.xml", b"token=tok&fun=15&Username=NULL", {})
+    assert response is not None
+    assert "successful" not in response.body.lower()
+    assert handler.is_authenticated({}) is False
+
+
+def test_login_key_follows_the_last_served_token() -> None:
+    """After rotations, a fresh login page resets the key to the token it served."""
+    handler = _make_handler(har_entries=[_har_getter_entry(10, "<data/>")])
+    handler.handle_login("POST", "/xml/setter.xml", _login_body(), {})
+    handler.get_route_override("POST", "/xml/getter.xml", _getter_body(fun=10), {})
+    rotated = handler.current_token
+    handler.handle_login("GET", "/common_page/login.html", b"", {})
+
+    stale = handler.handle_login("POST", "/xml/setter.xml", _login_body(password=compal_encrypt("pw", rotated)), {})
+    assert stale is not None and "successful" not in stale.body.lower()
+    handler.handle_login("GET", "/common_page/login.html", b"", {})
+    fresh = handler.handle_login("POST", "/xml/setter.xml", _login_body(password=_RIGHT), {})
+    assert fresh is not None and "successful" in fresh.body.lower()
+
+
+# ------------------------------------------------------------------
 # Tests — handle_login POST (fun=logout → clear session)
 # ------------------------------------------------------------------
 
@@ -276,7 +349,7 @@ class TestTokenRotation:
         handler = _make_handler()
         handler.handle_login("POST", "/xml/setter.xml", _login_body(fun=15), {})
         token_1 = handler.current_token
-        handler.handle_login("POST", "/xml/setter.xml", _login_body(fun=15), {})
+        handler.handle_login("POST", "/xml/setter.xml", _login_body(password=compal_encrypt("pw", token_1)), {})
         token_2 = handler.current_token
         assert token_1 != token_2
         assert token_1 != FormCbnAuthHandler._INITIAL_SESSION_TOKEN
@@ -287,7 +360,8 @@ class TestTokenRotation:
         assert handler.current_token == FormCbnAuthHandler._INITIAL_SESSION_TOKEN
         handler.handle_login("POST", "/xml/setter.xml", _login_body(fun=15), {})
         assert "0001" in handler.current_token
-        handler.handle_login("POST", "/xml/setter.xml", _login_body(fun=15), {})
+        rotated = compal_encrypt("pw", handler.current_token)
+        handler.handle_login("POST", "/xml/setter.xml", _login_body(password=rotated), {})
         assert "0002" in handler.current_token
 
 

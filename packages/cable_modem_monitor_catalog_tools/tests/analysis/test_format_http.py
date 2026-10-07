@@ -219,6 +219,53 @@ class TestJsJsonDetection:
         assert page.js_json_variables == []
 
 
+# =====================================================================
+# Which script assignments are JS JSON variables
+# =====================================================================
+#
+# ┌──────────────────────────────────┬─────────────┬───────────────────────────┐
+# │ assignment                       │ detected as │ description               │
+# ├──────────────────────────────────┼─────────────┼───────────────────────────┤
+# │ ds = [{channel}]                 │ list        │ channel list              │
+# │ ds = [{.. "a];b" ..}]            │ list        │ "];" inside a string      │
+# │ channelData = {"ds": [{channel}]}│ dict        │ object holding a channel  │
+# │                                  │             │ array                     │
+# │ channelData = null; = {...}      │ dict        │ null initialiser first    │
+# │ systemState = {"eth": [{..}]}    │ none        │ no measurement key        │
+# │ obj = {}                         │ none        │ empty object              │
+# │ ui = {show: function() {}}       │ none        │ JS literal, not JSON      │
+# │ codes = {"err": [{"ChannelID"}]} │ none        │ only a companion array    │
+# └──────────────────────────────────┴─────────────┴───────────────────────────┘
+#
+_CHANNEL = '{"ChannelID": "1", "Frequency": "507000000", "PowerLevel": "3.2"}'
+
+# fmt: off
+JS_JSON_VARIABLE_CASES: list[tuple[str, str, str, str]] = [
+    (f"var ds = [{_CHANNEL}];",                                   "ds",          "list", "channel-list"),
+    ('var ds = [{"ChannelID": "1", "Note": "a];b"}];',            "ds",          "list", "bracket-in-string"),
+    (f'let channelData = {{"ds_channels": [{_CHANNEL}]}};',       "channelData", "dict", "object-with-channel-array"),
+    (f'var channelData = null; channelData = {{"ds": [{_CHANNEL}]}};',
+                                                                  "channelData", "dict", "null-initialiser"),
+    ('var systemState = {"ethernet": [{"port": 1, "link": "up"}]};', "",         "none", "no-measurement-key"),
+    ("var obj = {};",                                             "",            "none", "empty-object"),
+    ("var ui = {show: function() { return 1; }};",                "",            "none", "js-literal"),
+    ('var codes = {"err": [{"ChannelID": "1", "Correctable": "0"}]};', "",       "none", "companion-only"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "script,name,kind",
+    [c[:3] for c in JS_JSON_VARIABLE_CASES],
+    ids=[c[3] for c in JS_JSON_VARIABLE_CASES],
+)
+def test_js_json_variable_detection(script: str, name: str, kind: str) -> None:
+    """Array and object values are read whole; an object counts when it holds a channel array."""
+    page = analyze_page(_make_entry("/wan.php", 200, "text/html", f"<html><script>{script}</script></html>"))
+    found = [(v.name, type(v.data).__name__) for v in page.js_json_variables]
+    assert found == ([] if kind == "none" else [(name, kind)])
+
+
 @pytest.mark.parametrize(
     "fixture_path",
     JS_EDGE_CASE_FIXTURES,
@@ -246,6 +293,39 @@ class TestLabelPairDetection:
         assert len(page.label_pairs) >= 1
         labels = [p.label for p in page.label_pairs]
         assert "System Up Time" in labels
+
+
+# Row candidates are kept only when Core's label lookup on the same page
+# returns the same value. Each case is the rows of one table.
+# fmt: off
+TABLE_LABEL_PAIR_CASES = [
+    # (rows,                                                            expected,               desc)
+    ("<tr><td>Uptime</td><td>5 days</td></tr>",                        [("Uptime", "5 days")], "plain cells"),
+    ("<tr><td>Uptime:</td><td>5 days</td></tr>",                       [("Uptime", "5 days")], "colon dropped"),
+    ("<tr><td><b>Uptime</b></td><td>5 days</td></tr>",                 [("Uptime", "5 days")], "label in b"),
+    ("<tr><td><label>Uptime</label></td><td>5 days</td></tr>",         [("Uptime", "5 days")], "label in label"),
+    ("<tr><td><span>Uptime</span></td><td>5 days</td></tr>",           [("Uptime", "5 days")], "label in span"),
+    ("<tr><td>Boot State</td><td>OK</td><td>Operational</td></tr>",    [("Boot State", "OK")], "three cells"),
+    ("<tr><td>1</td><td>12</td><td>3.2</td></tr>"
+     "<tr><td>2</td><td>21</td><td>3.1</td></tr>",                     [("1", "12")],          "channel row rejected"),
+    ("<tr><td>Status</td><td>OK</td></tr>"
+     "<tr><td>Status</td><td>Bad</td></tr>",                           [("Status", "OK")],     "duplicate first wins"),
+    ("<tr><td>Uptime</td></tr>",                                       [],                     "single cell skipped"),
+    ("<tr><td>Info</td><td>"
+     "<table><tr><td>A</td><td>B</td></tr></table></td></tr>",          [("A", "B")],           "nested table skipped"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "rows,expected,desc",
+    TABLE_LABEL_PAIR_CASES,
+    ids=[c[2] for c in TABLE_LABEL_PAIR_CASES],
+)
+def test_table_label_pairs(rows: str, expected: list[tuple[str, str]], desc: str) -> None:
+    """Table rows yield label pairs that Core's label lookup confirms."""
+    pairs = detect_label_pairs(f"<table>{rows}</table>")
+    assert [(p.label, p.value) for p in pairs if p.selector_type == "label"] == expected
 
 
 # =====================================================================
@@ -372,6 +452,55 @@ def test_table_selector(table_id: str, css: str, title: str, preceding: str, idx
     )
     selector = detect_table_selector(table)
     assert selector["type"] == expected_type
+
+
+# Siblings: three tables sharing the title "Channel Values" (first headers
+# Downstream, Upstream, Codewords) and a fourth with a title of its own.
+# fmt: off
+SHARED_TITLE_CASES = [
+    # (table_idx,  expected_match,     description)
+    (0,            "Downstream",       "shared title falls to the unique header (first table)"),
+    (1,            "Upstream",         "shared title falls to the unique header (second table)"),
+    (2,            "Codewords",        "shared title falls to the unique header (third table)"),
+    (3,            "Only Title Here",  "a title no other table carries stays the selector"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "idx,expected_match",
+    [c[:2] for c in SHARED_TITLE_CASES],
+    ids=[c[2] for c in SHARED_TITLE_CASES],
+)
+def test_title_shared_by_sibling_tables_is_not_a_selector(idx: int, expected_match: str) -> None:
+    """A title row several tables carry identifies none of them (ONBOARDING_SPEC § Table selector detection)."""
+    siblings = [
+        DetectedTable(
+            table_id="",
+            css_class="",
+            headers=[header, "Channel Values"],
+            rows=[["1"]],
+            preceding_text="",
+            title_row_text="Channel Values",
+            table_index=i,
+        )
+        for i, header in enumerate(["Downstream", "Upstream", "Codewords"])
+    ]
+    siblings.append(
+        DetectedTable(
+            table_id="",
+            css_class="",
+            headers=["Other"],
+            rows=[["1"]],
+            preceding_text="",
+            title_row_text="Only Title Here",
+            table_index=3,
+        )
+    )
+
+    selector = detect_table_selector(siblings[idx], all_tables=siblings)
+
+    assert selector == {"type": "header_text", "match": expected_match}
 
 
 # =====================================================================

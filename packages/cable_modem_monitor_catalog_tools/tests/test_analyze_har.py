@@ -56,7 +56,8 @@ def test_valid_analysis_auth_strategy(fixture_path: Path, tmp_path: Path) -> Non
     har_file = write_har(tmp_path, data["_har"])
     result = analyze_har(har_file)
     assert result.auth.strategy == data["_expected_auth_strategy"]
-    assert result.auth.confidence == data.get("_expected_auth_confidence", "high")
+    if "_expected_auth_warning" in data:
+        assert any(data["_expected_auth_warning"] in w for w in result.warnings), result.warnings
 
 
 @pytest.mark.parametrize(
@@ -266,7 +267,6 @@ class TestSharedAuthEndpoint:
         """Auth fields come from the credential POST, not the later reboot POST."""
         auth = dm1000_result.auth
         assert auth.strategy == "form"
-        assert auth.confidence == "high"
         assert auth.fields["action"] == "/setup.cgi"
         assert auth.fields["username_field"] == "login_user"
         assert auth.fields["password_field"] == "pws"
@@ -353,7 +353,7 @@ class TestNoDataSections:
 # =====================================================================
 
 
-class TestJsonrpcTransport:
+class TestJsonRpcTransport:
     """A JSON-RPC capture is analyzed call by call; its judgments become ambiguities.
 
     No HTTP-tree phase runs over the calls, and nothing stops generation.
@@ -361,23 +361,23 @@ class TestJsonrpcTransport:
 
     @staticmethod
     def _analyze(tmp_path: Path, fleet: FleetPatterns | None = None) -> tuple[AnalysisResult, dict[str, Any]]:
-        data = load_fixture(FIXTURES_DIR / "jsonrpc" / "login_and_data.json")
+        data = load_fixture(FIXTURES_DIR / "json_rpc" / "login_and_data.json")
         return analyze_har(write_har(tmp_path, data["_har"]), fleet=fleet), data
 
-    def test_transport_is_jsonrpc(self, tmp_path: Path) -> None:
+    def test_transport_is_json_rpc(self, tmp_path: Path) -> None:
         result, _ = self._analyze(tmp_path)
-        assert result.transport.transport == "jsonrpc"
+        assert result.transport.transport == "json_rpc"
         assert result.transport.confidence == "high"
 
     def test_no_core_gap(self, tmp_path: Path) -> None:
-        """generate_config has a jsonrpc path, so a JSON-RPC capture is not a Core gap."""
+        """generate_config has a json_rpc path, so a JSON-RPC capture is not a Core gap."""
         result, _ = self._analyze(tmp_path)
         assert result.core_gaps == []
 
     def test_auth_fields_from_login_call(self, tmp_path: Path) -> None:
         """The HTTP tree's form_pbkdf2 misread never reaches the output; the login call's fields do."""
         result, data = self._analyze(tmp_path)
-        assert result.auth.strategy == "jsonrpc"
+        assert result.auth.strategy == "json_rpc"
         assert result.auth.fields == data["_expected_auth_fields"]
 
     def test_sections_keyed_by_method(self, tmp_path: Path) -> None:
@@ -423,20 +423,50 @@ class TestJsonrpcTransport:
 
     def test_scanned_fleet_decides_password_names(self, tmp_path: Path) -> None:
         """A login key only the scanned fleet declares is a credential with that fleet, and not without it."""
-        data = load_fixture(FIXTURES_DIR / "jsonrpc" / "login_and_data.json")
+        data = load_fixture(FIXTURES_DIR / "json_rpc" / "login_and_data.json")
         text = data["_har"]["log"]["entries"][0]["request"]["postData"]["text"]
         data["_har"]["log"]["entries"][0]["request"]["postData"]["text"] = text.replace("loginPwd", "zzSecret")
         har = write_har(tmp_path, data["_har"])
         knows = analyze_har(har, fleet=FleetPatterns(password_field_names=frozenset({"zzsecret"})))
         excludes = analyze_har(har, fleet=FleetPatterns(password_field_names=frozenset()))
-        assert (knows.transport.transport, knows.auth.fields["password_field"]) == ("jsonrpc", "zzSecret")
+        assert (knows.transport.transport, knows.auth.fields["password_field"]) == ("json_rpc", "zzSecret")
         assert excludes.transport.transport == "http"
 
     def test_confirmed_fleet_value_prefills_resolution(self, tmp_path: Path) -> None:
         """A candidate a confirmed entry declares is corroborated and pre-fills the resolution."""
-        data = load_fixture(Path(__file__).parent / "fixtures" / "auth" / "valid" / "jsonrpc_login_token.json")
+        data = load_fixture(Path(__file__).parent / "fixtures" / "auth" / "valid" / "json_rpc_login_token.json")
         fleet = FleetPatterns(confirmed_config_values={"auth.lockout_code": {"codeLocked": ["vendor/m1"]}})
         result = analyze_har(write_har(tmp_path, {"log": {"entries": data["_entries"]}}), fleet=fleet)
         lockout = next(a for a in result.ambiguities if a.field == "auth.lockout_code")
         assert lockout.candidates[0].corroborated_by == ["vendor/m1"]
         assert lockout.resolution == {"value": "codeLocked", "source": "fleet"}
+
+
+# =====================================================================
+# JSON login: the strategy is an ambiguity the fleet can corroborate
+# =====================================================================
+
+_JSON_LOGIN = Path(__file__).parent / "fixtures" / "auth" / "valid" / "json_login_put_header_token.json"
+
+
+@pytest.mark.parametrize(
+    ("confirmed", "expected_resolution"),
+    [
+        ({}, None),
+        ({"auth.strategy": {"bearer": ["{manufacturer}/{model}"]}}, {"value": "bearer", "source": "fleet"}),
+    ],
+    ids=["unconfirmed_fleet", "confirmed_bearer_corroborates"],
+)
+def test_json_login_strategy_ambiguity(
+    tmp_path: Path, confirmed: dict[str, dict[str, list[str]]], expected_resolution: dict[str, str] | None
+) -> None:
+    """A JSON login reports strategy candidates and their fields; a confirmed entry pre-fills the one it declares."""
+    entries = load_fixture(_JSON_LOGIN)["_entries"]
+    har = write_har(tmp_path, {"log": {"version": "1.2", "entries": entries}})
+    result = analyze_har(har, fleet=FleetPatterns(confirmed_config_values=confirmed)).to_dict()
+    (ambiguity,) = [a for a in result["ambiguities"] if a["field"] == "auth.strategy"]
+    assert [c["value"] for c in ambiguity["candidates"]] == ["bearer"]
+    assert ambiguity["resolution"] == expected_resolution
+    assert result["auth"]["strategy"] == ""
+    assert result["auth"]["candidates"]["bearer"]["login_endpoint"] == "/actionHandler/ajaxSet_login.php"
+    assert result["hard_stops"] == []

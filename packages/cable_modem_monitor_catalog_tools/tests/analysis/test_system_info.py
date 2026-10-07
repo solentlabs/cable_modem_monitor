@@ -69,6 +69,7 @@ LABEL_CASES = [
     ("Software Version",         "label",       "software_version",  "software version"),
     ("Firmware Version",         "label",       "software_version",  "firmware variant"),
     ("Hardware Version",         "label",       "hardware_version",  "hardware version"),
+    ("Model",                    "label",       "model_name",        "model is the model name"),
     ("Cable Modem Status",       "label",       "docsis_status",     "cable modem status"),
     ("Network Access",           "label",       "docsis_status",     "network access"),
     ("Boot Status",              "label",       "boot_status",       "tier 2 boot status"),
@@ -90,6 +91,69 @@ def test_label_to_field(label: str, selector_type: str, expected_field: str, des
     """Labels map to correct system info fields."""
     field, _tier = _match_label(label, selector_type)
     assert field == expected_field
+
+
+def test_model_label_is_tier_2() -> None:
+    """A Model label maps to the Tier 2 registered model_name."""
+    assert _match_label("Model", "label") == ("model_name", 2)
+
+
+# A page that lists Model before Hardware Version keeps each value in its
+# own field; first-wins dedup used to give hardware_version the model (#221).
+_MODEL = ("Model", "M-100")
+_HW = ("Hardware Version", "1.0")
+_BOTH = {"model_name": "Model", "hardware_version": "Hardware Version"}
+
+# fmt: off
+MODEL_BEFORE_HARDWARE_CASES = [
+    # (pairs (label, value), expected {field: selector_value}, desc)
+    ([_MODEL, _HW],          _BOTH,                            "model first"),
+    ([_HW, _MODEL],          _BOTH,                            "hardware first"),
+    ([_MODEL],               {"model_name": "Model"},          "model only"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "pairs,expected,desc",
+    MODEL_BEFORE_HARDWARE_CASES,
+    ids=[c[2] for c in MODEL_BEFORE_HARDWARE_CASES],
+)
+def test_model_and_hardware_version_labels_stay_separate(
+    pairs: list[tuple[str, str]], expected: dict[str, str], desc: str
+) -> None:
+    """Each label claims its own field regardless of page order."""
+    page = PageAnalysis(
+        resource="/info.html",
+        content_type="text/html",
+        label_pairs=[
+            DetectedLabelPair(label=label, value=value, selector_type="label", selector_value=label, element_id="")
+            for label, value in pairs
+        ],
+    )
+    result = detect_system_info([page], [])
+    assert result is not None, desc
+    assert {f.field: f.selector_value for f in result.sources[0].fields} == expected, desc
+
+
+_JSON_BOTH = {"model_name": "model", "hardware_version": "hardwareVersion"}
+
+# fmt: off
+JSON_MODEL_CASES = [
+    # (json_data,                                   expected {field: key},     desc)
+    ({"model": "M-100"},                            {"model_name": "model"},   "model key"),
+    ({"model": "M-100", "hardwareVersion": "1.0"},  _JSON_BOTH,                "both keys"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("json_data,expected,desc", JSON_MODEL_CASES, ids=[c[2] for c in JSON_MODEL_CASES])
+def test_json_model_key_maps_to_model_name(json_data: dict[str, object], expected: dict[str, str], desc: str) -> None:
+    """A JSON model key maps to model_name, leaving hardware_version to its own key."""
+    page = PageAnalysis(resource="/api/info", content_type="application/json", json_data=json_data)
+    result = detect_system_info([page], [])
+    assert result is not None, desc
+    assert {f.field: f.source for f in result.sources[0].fields} == expected, desc
 
 
 # =====================================================================
@@ -328,6 +392,27 @@ class TestJsSystemInfoDetection:
 
         assert "system_uptime" in detected_fields
         assert "software_version" in detected_fields
+
+    def test_js_model_label_maps_to_model_name(self) -> None:
+        """A Model value in a JS function maps to model_name, not hardware_version."""
+        page = PageAnalysis(
+            resource="/info.html",
+            content_type="text/html",
+            js_functions=[
+                DetectedJsFunction(
+                    name="InitTagValue",
+                    body="",
+                    delimiter="|",
+                    values=["Model", "M-100", "Hardware Version", "1.0"],
+                ),
+            ],
+        )
+        result = detect_system_info([page], [])
+        assert result is not None
+        assert {f.field: f.source for src in result.sources for f in src.fields} == {
+            "model_name": "Model",
+            "hardware_version": "Hardware Version",
+        }
 
     def test_directional_js_function_skipped(self) -> None:
         """Directional JS functions (ds/us) are skipped for system_info."""

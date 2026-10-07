@@ -94,7 +94,7 @@ model_aliases:                    # optional — alternate user-facing names; sh
   - "CommScope SB8200"
 brands:                           # optional — user-visible brand names; become manufacturer-dropdown choices
   - "Surfboard"
-transport: http                    # http | hnap | cbn | jsonrpc
+transport: http                    # http | hnap | cbn | json_rpc
 default_host: "192.168.100.1"
 timeout: 15                        # optional, default 10
 
@@ -143,9 +143,6 @@ isps:
   - "Comcast"
   - "Spectrum"
 
-pii_fields:                  # optional — system_info keys with PII beyond global defaults
-  - home_ssid
-
 notes: |
   SB8200 HTTPS variant with URL token auth.
 
@@ -172,6 +169,11 @@ gates every shipped `modem*.yaml` and `parser.yaml` on it.
 `packages/cable_modem_monitor_catalog/scripts/check_modem_yaml_layout.py --fix`
 repairs spacing; key order is a hand edit.
 
+Schema vocabulary (`transport`, auth `strategy`, action `type`,
+`format`) is snake_case, one underscore between words: `json_rpc`,
+`form_cbn`, `url_token`. Wire vocabulary is not renamed to match; the
+JSON-RPC envelope member stays `jsonrpc`.
+
 ---
 
 ## Identity
@@ -182,11 +184,11 @@ repairs spacing; key order is a hand edit.
 | `model` | string | yes | Model identifier (e.g., "SB8200", "CM1200") |
 | `model_aliases` | list[string] | no | Alternate user-facing model names — rebadges, regional variants, sticker codes (e.g., `["CGM4140COM"]`). Shown in the model line's parenthetical. Firmware-internal codes do not belong here. See [Aliases vs Separate Entries](#aliases-vs-separate-entries). |
 | `brands` | list[string] | no | User-visible brand names from the product/box (e.g., `["Surfboard"]`, or `["Arris"]` on CommScope-made hardware). Feed the config flow's manufacturer dropdown alongside `manufacturer` — a rebranded modem appears under both names while staying one record. Entries must be sourced. |
-| `transport` | enum | yes | `http`, `hnap`, `cbn`, or `jsonrpc` |
+| `transport` | enum | yes | `http`, `hnap`, `cbn`, or `json_rpc` |
 | `default_host` | string | yes | Default IP address (e.g., "192.168.100.1") |
 
 `transport` identifies the transport protocol (`http`, `hnap`, `cbn`,
-or `jsonrpc`). For `http`, auth, session, and format are configured
+or `json_rpc`). For `http`, auth, session, and format are configured
 independently. For the others, the transport constrains
 auth, format, and action types. See [Validation Rules](#validation-rules)
 for details.
@@ -380,7 +382,17 @@ selector, or no `action` attribute logs an ERROR and falls back to
 `action`. It never fails the login, because a modem that accepts the
 static URL must keep working, and it is never silent, because a
 declared source that stopped resolving is a config defect that has to
-surface. Entries leaving `action_source` at `config` are unaffected.
+surface. Entries leaving `action_source` at `config` always post to
+`action`.
+
+**Login-page drift (log only):** with `login_page` set, the strategy
+also reports where the page disagrees with the config: a form `action`
+that differs from `action` (under `action_source: config`), more than
+one `<form>` with no `form_selector` choosing among them, and a declared
+`form_selector` that matches nothing. Each logs a WARNING the first time
+it is seen and lands in the diagnostics download; none changes where the
+login posts or which form is read. Event and levels: LOGGING_SPEC.md
+`LoginPageDriftDetected`.
 
 **Success detection:** If `success` is provided, checks `redirect`
 (path substring match) and/or `indicator` (body substring match).
@@ -818,14 +830,15 @@ are UTF-8 encoded.
 4. **POST login** — send
    `{"EncryptData": hex(ciphertext), "Name": "<user>", "AuthData": "<encrypt_aad>"}`.
    Server responds with
-   `{"p_status": "AdminMatch"|"Match", "encryptData": "<hex>"}`.
+   `{"p_status": "AdminMatch", "encryptData": "<hex>"}`.
 5. **Decrypt nonce** — AES-CCM decrypt `hex_decode(encryptData)`
    with AAD `decrypt_aad.utf8` to extract the CSRF nonce.
 6. **POST session validation** — if `session_validation_endpoint` is
    configured, POST with the `csrf_header` to finalize the session.
 
-**Success detection:** The login response JSON `p_status` field must
-be `"AdminMatch"` or `"Match"`. Any other value is treated as failure.
+**Success detection:** read from `p_status` as the firmware reads it;
+the values are in
+[AUTH_SJCL_SPEC.md § Firmware Assumptions](AUTH_SJCL_SPEC.md#firmware-assumptions).
 
 Evidence: Arris Touchstone gateway firmwares that embed the SJCL
 library in their web interface. Constants are found in `base_95x.js`
@@ -1086,19 +1099,19 @@ Evidence: Compal
 `CBN_Encrypt` function is in `encrypt_cryptoJS.js` which loads CryptoJS
 v3.1.2 (`AES.js`, `sha256.js`, `md5.js`).
 
-### `jsonrpc`
+### `json_rpc`
 
-See [AUTH_JSONRPC_SPEC.md](AUTH_JSONRPC_SPEC.md) for the envelope, auth
+See [AUTH_JSON_RPC_SPEC.md](AUTH_JSON_RPC_SPEC.md) for the envelope, auth
 flow, and error-code handling.
 
 Login is a JSON-RPC 2.0 call to the transport's single endpoint. The
 token it returns is appended to every later call as a URL query
-parameter. The only auth strategy of the `jsonrpc` transport.
+parameter. The only auth strategy of the `json_rpc` transport.
 
 ```yaml
-transport: jsonrpc
+transport: json_rpc
 auth:
-  strategy: jsonrpc
+  strategy: json_rpc
   endpoint: "/cgi-bin/router.php"
   login_method: "MGMT.login"
   username_field: "loginUserName"
@@ -1127,7 +1140,7 @@ firmware's client JS, where the handling branches are visible even
 when every captured call succeeded.
 
 No `actions.logout`: a firmware whose logout touches the server would
-declare it as a [`type: jsonrpc`](#action-schema--type-jsonrpc) action.
+declare it as a [`type: json_rpc`](#action-schema--type-json_rpc) action.
 
 ---
 
@@ -1312,7 +1325,7 @@ actions:
 
 | Field | Type | Required | Description |
 |-------|------| :--------: |-------------|
-| `type` | enum | yes | `http`, `hnap`, `cbn`, or `jsonrpc` |
+| `type` | enum | yes | `http`, `hnap`, `cbn`, or `json_rpc` |
 | `method` | string | yes | HTTP method (`GET`, `POST`, etc.). No default — must be explicit. |
 | `endpoint` | string | yes | URL path to send the request to. May contain `{auth:token}` / `{auth:user_id}` placeholders — see [Auth-value placeholders](#auth-value-placeholders). |
 | `requires_session` | bool | `false` | *Logout only.* `false` = endpoint is unauthenticated and can clear any active server-side session without credentials. `true` = endpoint needs a live session; Core skips the pre-retry logout call when the session is not valid. |
@@ -1344,7 +1357,7 @@ actions:
 
 | Field | Type | Required | Description |
 |-------|------| :--------: |-------------|
-| `type` | enum | yes | `http`, `hnap`, `cbn`, or `jsonrpc` |
+| `type` | enum | yes | `http`, `hnap`, `cbn`, or `json_rpc` |
 | `action_name` | string | yes | HNAP SOAP action to invoke |
 | `pre_fetch_action` | string | no | Action to call first (extract current config for template vars) |
 | `params` | map | no | SOAP parameters. Values with `${key:default}` are replaced with pre-fetch values. |
@@ -1378,21 +1391,21 @@ The executor reads the current `sessionToken` cookie and POSTs
 `token=<sessionToken>&fun=<value>` to `setter_endpoint`. Connection
 errors during restart are treated as success (the modem is rebooting).
 
-### Action schema — `type: jsonrpc`
+### Action schema — `type: json_rpc`
 
 A JSON-RPC 2.0 call to `auth.endpoint`, carrying the session token in
-the query exactly as data calls do. Used by the `jsonrpc` transport.
+the query exactly as data calls do. Used by the `json_rpc` transport.
 
 ```yaml
 actions:
   restart:
-    type: jsonrpc
+    type: json_rpc
     method: "MGMT.reboot"
 ```
 
 | Field | Type | Required | Description |
 |-------|------| :--------: |-------------|
-| `type` | enum | yes | `jsonrpc` |
+| `type` | enum | yes | `json_rpc` |
 | `method` | string | yes | `method` of the call |
 | `params` | list | no | `params` array sent with the call. Default `[]`. |
 
@@ -1683,29 +1696,18 @@ and where to look if something seems wrong.
 Common source fields: `auth_config`, `chipset`, `detection_hints`,
 `release_date`. Any key is valid — use whatever describes the source.
 
-### PII Fields
+### PII
 
-```yaml
-pii_fields:
-  - home_ssid
-```
-
-Declares `system_info` keys reported by this modem that contain
-personally identifiable information beyond the global defaults.
-Consumers (e.g., CMMT) strip the union of
-`pii_fields_global.json` and any modem-specific `pii_fields`
-before telemetry submission.
-
-The global defaults
+`modem.yaml` declares no PII fields. The global denylist
 (`packages/cable_modem_monitor_catalog/scripts/data/pii_fields_global.json`)
-list `mac_address` and `serial_number` as defensive defaults. CMM no
-longer collects these (no parser extracts them; the intake mapping skips
-them — see SYSTEM_INFO_SPEC § Tiered Sensor Model), so the list is a
-safety net rather than an active strip target. Add `pii_fields` to a
-modem's YAML only for fields not already in the global list. Omit the
-key if the modem reports no PII beyond the global defaults.
+lists `mac_address` and `serial_number`. CMM no longer collects either (see
+SYSTEM_INFO_SPEC § System Info Field Tiers), but diagnostics captured before
+their removal still carry them, so catalog_tools `verify_diagnostics` strips
+both from `system_info` when building `verified.json`. It holds its own copy
+of the list and cites the JSON as canonical.
 
-Currently no modem in the catalog carries this key.
+A per-modem PII key enters Core's schema with its first consumer
+(ARCHITECTURE_DECISIONS § Core Schema Model).
 
 ### ISPs and notes
 
@@ -1776,7 +1778,7 @@ the capability lands.
 ### Transport constraints
 
 The transport identifies the protocol. For `hnap`, `cbn` and
-`jsonrpc`, the transport constrains auth, format, and action types. For HTTP, auth,
+`json_rpc`, the transport constrains auth, format, and action types. For HTTP, auth,
 session, and format are configured independently, subject to the
 [auth-session-action consistency](#auth-session-action-consistency)
 rules below.
@@ -1787,7 +1789,7 @@ rules below.
 | `cbn` | `form_cbn` | cookie (rotating sessionToken + stable SID) | `xml` | `cbn` |
 | `hnap` | `hnap` | implicit (uid cookie + HNAP_AUTH header) | `hnap` | `hnap` |
 | `http` | `basic`, `bearer`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `json_sjcl`, `none`, `url_token` | stateless, cookie, CSRF, or url_token | `html_fields`, `javascript`, `javascript_json`, `javascript_vars`, `json`, `json_transposed`, `table`, `table_transposed` | `http` (optional `action_auth`) |
-| `jsonrpc` | `jsonrpc` | login token in the URL query | `json` | `jsonrpc` |
+| `json_rpc` | `json_rpc` | login token in the URL query | `json` | `json_rpc` |
 <!-- END GENERATED: yaml-constraints -->
 
 The format field in parser.yaml determines how the response is decoded.

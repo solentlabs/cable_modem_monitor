@@ -66,7 +66,8 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
         vol.Optional("include_error_rates", default=False): cv.boolean,
         vol.Optional("include_latency", default=True): cv.boolean,
         vol.Optional("include_status_card", default=True): cv.boolean,
-        vol.Optional("graph_hours", default=24): cv.positive_int,
+        # Same 1-168 range the services.yaml selector enforces on the form.
+        vol.Optional("graph_hours", default=24): vol.All(vol.Coerce(int), vol.Range(min=1, max=168)),
         vol.Optional("short_titles", default=True): cv.boolean,
         vol.Optional("channel_label", default="auto"): vol.In(["auto", "full", "id_only", "type_id"]),
         vol.Optional("channel_grouping", default="by_direction"): vol.In(["by_direction", "by_type"]),

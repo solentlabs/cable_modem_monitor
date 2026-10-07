@@ -70,11 +70,11 @@ class CbnAction(BaseModel):
     fun: int
 
 
-class JsonrpcAction(BaseModel):
-    """JSON-RPC 2.0 call to the transport's endpoint. See MODEM_YAML_SPEC.md § type: jsonrpc."""
+class JsonRpcAction(BaseModel):
+    """JSON-RPC 2.0 call to the transport's endpoint. See MODEM_YAML_SPEC.md § type: json_rpc."""
 
     model_config = ConfigDict(extra="forbid")
-    type: Literal["jsonrpc"]
+    type: Literal["json_rpc"]
     method: str
     params: list[Any] = Field(default_factory=list)
 
@@ -83,7 +83,7 @@ ActionConfig = Annotated[
     Annotated[HttpAction, Tag("http")]
     | Annotated[HnapAction, Tag("hnap")]
     | Annotated[CbnAction, Tag("cbn")]
-    | Annotated[JsonrpcAction, Tag("jsonrpc")],
+    | Annotated[JsonRpcAction, Tag("json_rpc")],
     Discriminator("type"),
 ]
 
@@ -103,7 +103,7 @@ class ActionsConfig(BaseModel):
 # its own ordering.
 # ---------------------------------------------------------------------------
 
-_ACTION_MODELS: list[type[BaseModel]] = [CbnAction, HnapAction, HttpAction, JsonrpcAction]
+_ACTION_MODELS: list[type[BaseModel]] = [CbnAction, HnapAction, HttpAction, JsonRpcAction]
 
 
 class ActionTypeRow(NamedTuple):

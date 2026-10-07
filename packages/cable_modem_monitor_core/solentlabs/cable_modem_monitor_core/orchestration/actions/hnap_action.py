@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 import requests
 
+from ...connectivity import CONNECTIVITY_ERRORS
 from ...protocol.hnap import (
     HNAP_ENDPOINT,
     HNAP_NAMESPACE,
@@ -39,6 +40,10 @@ _logger = logging.getLogger(__name__)
 
 # Regex for ${var:default} placeholders in HNAP action params.
 _PLACEHOLDER_PATTERN = re.compile(r"\$\{(\w+)(?::([^}]*))?\}")
+
+
+# The firmware's verdict on a session it no longer accepts (#218).
+_SESSION_REFUSED = "UN-AUTH"
 
 
 def execute_hnap_action(
@@ -94,7 +99,7 @@ def execute_hnap_action(
             headers=headers,
             timeout=timeout,
         )
-    except (requests.ConnectionError, requests.Timeout):
+    except CONNECTIVITY_ERRORS:
         log_event(
             _logger,
             ActionConnectionLost(model=model, transport="hnap", action_name=action.action_name, level=level),
@@ -206,6 +211,10 @@ def _execute_pre_fetch(
     response_key = f"{pre_fetch_action}Response"
     inner = data.get(response_key, data)
     key_count = len(inner) if isinstance(inner, dict) else 0
+    # A key count alone cannot tell a rejected pre-fetch ("UN-AUTH") from
+    # a good one (#218), so surface the firmware's verdict. Logged only;
+    # the action proceeds either way.
+    firmware_result = inner.get(f"{pre_fetch_action}Result") if isinstance(inner, dict) else None
 
     log_event(
         _logger,
@@ -216,6 +225,7 @@ def _execute_pre_fetch(
             key_count=key_count,
             fallback_endpoint=None,
             level=level,
+            result=str(firmware_result) if firmware_result is not None else None,
         ),
     )
 
@@ -306,6 +316,7 @@ def _validate_response(
                 success=False,
                 message=f"Unexpected result: {result_value}",
                 details={"result": result_value},
+                session_refused=result_value == _SESSION_REFUSED,
             )
 
     # No result key or no match — assume success if we got a response

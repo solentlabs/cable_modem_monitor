@@ -1,6 +1,6 @@
 """Phase 5-6 dispatcher - format detection and section assembly.
 
-Routes to transport-specific modules (http / hnap / jsonrpc) for format
+Routes to transport-specific modules (http / hnap / json_rpc) for format
 classification, then delegates to mapping and mapping.system_info
 for Phase 6 extraction. Assembles the ``sections`` output dict.
 
@@ -26,14 +26,16 @@ from .http import (
     classify_page_format,
     identify_data_pages,
 )
-from .jsonrpc import jsonrpc_pages
+from .json_rpc import json_rpc_pages
 from .table_analysis import (
     detect_row_start,
     detect_table_direction,
     detect_table_selector,
     is_channel_table,
+    is_codewords_table,
+    is_transposed,
 )
-from .types import XML_CONTENT_TYPE, PageAnalysis
+from .types import XML_CONTENT_TYPE, DetectedTable, PageAnalysis
 
 # extract_section_mappings is imported inside the _assemble_* helpers
 # below, not here. format and mapping are mutually dependent packages:
@@ -58,7 +60,7 @@ def detect_sections(
 
     Args:
         entries: HAR ``log.entries`` list.
-        transport: Detected transport ("http", "hnap", "jsonrpc" or "cbn").
+        transport: Detected transport ("http", "hnap", "json_rpc" or "cbn").
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
         fleet: Optional fleet patterns for augmented detection.
@@ -71,8 +73,8 @@ def detect_sections(
     if transport == "hnap":
         return detect_hnap_sections(entries, warnings, hard_stops, fleet=fleet)
 
-    if transport == "jsonrpc":
-        return _sections_from_pages(jsonrpc_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
+    if transport == "json_rpc":
+        return _sections_from_pages(json_rpc_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
 
     if transport == "cbn":
         return _sections_from_pages(cbn_pages(entries), warnings, fleet=fleet, ambiguities=ambiguities)
@@ -168,11 +170,19 @@ def _assemble_table_sections(
 ) -> None:
     """Assemble channel sections from HTML table pages."""
     from ..mapping import extract_section_mappings
+    from ..mapping.dispatcher import warn_unregistered_fields
+
+    # With a main table on the page, a codewords table is its companion.
+    has_main = any(is_channel_table(t) and not _is_companion_candidate(t) for t in page.tables)
 
     for table in page.tables:
         # Only consider tables that contain channel data — skip
         # layout, navigation, and provisioning status tables.
         if not is_channel_table(table):
+            continue
+
+        # Handled by _attach_companions once the main table has its section.
+        if has_main and _is_companion_candidate(table):
             continue
 
         direction = detect_table_direction(table, fleet=fleet)
@@ -206,6 +216,54 @@ def _assemble_table_sections(
         section.selector = selector
         section.row_start = row_start
         sections[direction] = section.to_dict()
+        where = f"the table on {page.resource} (index {table.table_index})"
+        warn_unregistered_fields(section, where, warnings, headers=table.headers)
+
+    _attach_companions(page, sections, warnings)
+
+
+def _is_companion_candidate(table: DetectedTable) -> bool:
+    """A transposed codewords table: the kind that extends a downstream table."""
+    return is_channel_table(table) and is_transposed(table) and is_codewords_table(table)
+
+
+def _attach_companions(page: PageAnalysis, sections: dict[str, Any], warnings: list[str]) -> None:
+    """Attach codewords tables to the downstream section they extend (ONBOARDING_SPEC § Table-to-section association).
+
+    Runs after the main pass so a codewords table is found whichever side
+    of the main table it sits on. A table that cannot be attached is
+    reported, never dropped silently.
+    """
+    from ..mapping import extract_companion_mappings
+    from ..mapping.dispatcher import warn_unregistered_fields
+
+    section = sections.get("downstream")
+    main = (
+        section
+        if section and section.get("format") == "table_transposed" and section.get("resource") == page.resource
+        else None
+    )
+
+    for table in page.tables:
+        if not _is_companion_candidate(table):
+            continue
+        selector = detect_table_selector(table, all_tables=page.tables)
+        if section is not None and selector == section.get("selector"):
+            continue
+        companion = (
+            extract_companion_mappings(table, page.resource, "downstream", warnings) if main is not None else None
+        )
+        if main is None or companion is None:
+            warnings.append(
+                f"{WARNING_PREFIX} Codewords table on {page.resource} (index {table.table_index}) "
+                "was not attached: it needs a transposed downstream table on the same page "
+                "and Channel ID plus corrected or uncorrected rows. Review it if it holds error counts."
+            )
+            continue
+        companion.selector = selector
+        main.setdefault("companions", []).append(companion.to_dict())
+        where = f"the codewords table on {page.resource} (index {table.table_index})"
+        warn_unregistered_fields(companion, where, warnings, headers=table.headers)
 
 
 def _assemble_js_sections(
@@ -266,16 +324,23 @@ def _assemble_js_json_sections(
     fleet: FleetPatterns | None = None,
     ambiguities: list[Ambiguity] | None = None,
 ) -> None:
-    """Assemble channel sections from JS-embedded JSON arrays.
+    """Assemble channel sections from JS-embedded JSON.
 
-    Each detected variable (e.g., ``json_dsData``, ``json_usData``)
-    becomes a section.  Direction is inferred from the variable name
-    or from the JSON key structure.
+    A variable holding a list (e.g., ``json_dsData``, ``json_usData``)
+    becomes a section, its direction inferred from the variable name or
+    the JSON key structure. A variable holding an object is read by the
+    ``json`` array rules.
     """
     from ...validation.har_utils import WARNING_PREFIX
     from ..mapping import extract_section_mappings
+    from ..mapping.dispatcher import warn_unregistered_fields
 
     for js_var in page.js_json_variables:
+        if isinstance(js_var.data, dict):
+            _assemble_json_arrays(
+                page, js_var.data, sections, warnings, variable=js_var.name, fleet=fleet, ambiguities=ambiguities
+            )
+            continue
         # Wrap as dict so extract_section_mappings can find the array
         json_data = {"_raw": js_var.data}
 
@@ -315,6 +380,7 @@ def _assemble_js_json_sections(
                 section.channel_type = detect_channel_type_fixed(direction)
             sections[direction] = section.to_dict()
             address_key_ambiguities(section, direction, ambiguities)
+            warn_unregistered_fields(section, f"JS variable '{js_var.name}' on {page.resource}", warnings)
 
 
 def _assemble_json_sections(
@@ -326,32 +392,54 @@ def _assemble_json_sections(
     ambiguities: list[Ambiguity] | None = None,
 ) -> None:
     """Assemble channel sections from a JSON response, one entry per channel array."""
-    from ..mapping import extract_json_arrays
-
     if page.json_data is None:
         return
+    _assemble_json_arrays(page, page.json_data, sections, warnings, fleet=fleet, ambiguities=ambiguities)
+
+
+def _assemble_json_arrays(
+    page: PageAnalysis,
+    data: dict[str, Any],
+    sections: dict[str, Any],
+    warnings: list[str],
+    *,
+    variable: str = "",
+    fleet: FleetPatterns | None = None,
+    ambiguities: list[Ambiguity] | None = None,
+) -> None:
+    """Assemble sections from every channel array in ``data``, a response body or a JS variable's object."""
+    from ..mapping import extract_json_arrays
+    from ..mapping.dispatcher import warn_unregistered_fields
 
     by_direction: dict[str, list[SectionDetail]] = {}
-    for array in extract_json_arrays(page.json_data, page.resource, warnings, fleet=fleet):
-        direction = _place_array(page, array, warnings)
+    for array in extract_json_arrays(data, page.resource, warnings, fleet=fleet):
+        direction = _place_array(page, data, array, warnings)
         if direction != "unknown":
             by_direction.setdefault(direction, []).append(array)
 
     for direction, arrays in by_direction.items():
         if direction in sections:
             continue
-        sections[direction] = arrays[0].to_dict() if len(arrays) == 1 else _arrays_section(arrays)
+        if variable:
+            # javascript_json reads an object only in arrays form; its flat
+            # form needs the variable to hold the array itself.
+            for array in arrays:
+                array.format = "javascript_json"
+            sections[direction] = {**_arrays_section(arrays), "variable": variable}
+        else:
+            sections[direction] = arrays[0].to_dict() if len(arrays) == 1 else _arrays_section(arrays)
         for array in arrays:
             address_key_ambiguities(array, direction, ambiguities)
+            warn_unregistered_fields(array, f"JSON array '{array.array_path}' on {page.resource}", warnings)
 
 
-def _place_array(page: PageAnalysis, array: SectionDetail, warnings: list[str]) -> str:
+def _place_array(page: PageAnalysis, data: dict[str, Any], array: SectionDetail, warnings: list[str]) -> str:
     """The array's direction, with its format and channel type set; "unknown" is warned."""
     direction = _direction_from_resource(page.resource)
     if direction == "unknown":
         direction = _direction_from_array_path(array.array_path)
-    if direction == "unknown" and page.json_data is not None:
-        direction = _direction_from_json(page.json_data)
+    if direction == "unknown":
+        direction = _direction_from_json(data)
     if direction == "unknown":
         warnings.append(
             f"{WARNING_PREFIX} Cannot determine direction for JSON array '{array.array_path}' "

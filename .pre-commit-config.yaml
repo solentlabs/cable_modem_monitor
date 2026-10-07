@@ -4,8 +4,10 @@
 
 repos:
   # Code formatting with Black
+  # ruff, black and mypy revs match the pins in .github/workflows/tests.yml,
+  # requirements-dev.txt and the pyproject.toml dev lists; bump them together.
   - repo: https://github.com/psf/black
-    rev: 26.3.1
+    rev: 26.1.0
     hooks:
       - id: black
         language_version: python3
@@ -35,7 +37,7 @@ repos:
   # package for type resolution — too heavy for pre-commit's isolated env.
   # CI and `mypy . --config-file=mypy.ini` (project venv) check everything.
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.20.2
+    rev: v2.1.0
     hooks:
       - id: mypy
         additional_dependencies:
@@ -61,7 +63,7 @@ repos:
   # Suppression discipline — quality-gate suppressions added in a
   # change must carry a same-line justification comment. Catches the
   # AI antipattern of reaching for `# type: ignore` as a first answer.
-  # See CLAUDE.md § Code Discipline (Suppression discipline).
+  # See docs/CODE_REVIEW.md § Suppression Discipline.
   - repo: local
     hooks:
       - id: suppression-discipline
@@ -74,7 +76,7 @@ repos:
   # Import isolation. A published module that only imports when
   # something else was imported first is an import cycle waiting to
   # break a consumer. Scoped to changed files here; validate-ci sweeps
-  # every module. See CLAUDE.md § Verification Discipline.
+  # every module. See scripts/check_import_isolation.py.
   - repo: local
     hooks:
       - id: import-isolation

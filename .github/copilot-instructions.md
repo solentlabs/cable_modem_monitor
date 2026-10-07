@@ -8,7 +8,7 @@ read them before changing anything.
 - Behavioural guide and index of the authoritative specs:
   [CLAUDE.md](../CLAUDE.md).
 - Catalog work (new modem, HAR fixtures, `modem.yaml`): follow
-  [skills/modem-intake.md](../skills/modem-intake.md).
+  [.claude/skills/modem-intake/SKILL.md](../.claude/skills/modem-intake/SKILL.md).
 
 Three rules to hold to:
 

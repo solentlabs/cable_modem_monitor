@@ -16,5 +16,5 @@ flake8-bandit==4.1.1
 flake8-bugbear==25.11.29
 
 # Type checking
-mypy==1.20.1
+mypy==2.1.0  # same pin as .github/workflows/tests.yml and requirements-dev.txt
 types-requests==2.33.0.20260408

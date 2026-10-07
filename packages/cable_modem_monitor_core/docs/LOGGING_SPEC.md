@@ -42,6 +42,14 @@ operations and `EventLevel.INFO` for first-poll confirmation. This
 preserves the first-poll-INFO / steady-state-DEBUG behaviour without
 per-call-site level selection.
 
+**Repeated findings warn once.** A finding that is not a failure, and
+that recurs on every login while its cause stands, logs at WARNING the
+first time the collector sees it and at DEBUG every time after, for the
+collector's lifetime. "The same" means the same condition with the same
+values; a changed value warns again. The diagnostics download carries
+the current findings, so demoting the repeats loses nothing.
+`LoginPageDriftDetected` follows this rule.
+
 ## Event inventory
 
 ### Phase: connectivity
@@ -68,6 +76,7 @@ Fields — `ConnectivityBackoffReset`: `model`
 | `AuthCircuitBreakerOpen` | ERROR | Circuit breaker opened |
 | `CircuitBreakerPollingBlocked` | ERROR | Per-poll guard — breaker is open; the remedy depends on what tripped it |
 | `StaleSessionRecoveryDisabled` | INFO | Stale-session recovery streak hit threshold; session reuse disabled for this runtime |
+| `LoginPageDriftDetected` | caller-determined | The pre-fetched `form` login page disagrees with the config (log only) |
 
 Fields — `AuthSucceeded`: `model`, `strategy: str`, `status_code: int` (0 when
 no response), `response_url: str` — the path the login response landed on,
@@ -100,6 +109,27 @@ stopped modem picks it up at once. Composing the remedy per event is
 how the 404 wording came to exist on one of these two events and not
 the other.
 Fields — `StaleSessionRecoveryDisabled`: `model`, `streak: int`
+Fields — `LoginPageDriftDetected`: `model`, `condition`, `configured: str`,
+`observed: str`. `condition` is one of:
+
+- `action_mismatch`: with `action_source: config`, the login form's
+  `action`, resolved against the page URL, differs from
+  `{base_url}{action}`. `configured` and `observed` are the two URLs
+  with query values emptied and parameter names kept
+  (`/goform/Login?id=`): a per-load token is one drift, not one per
+  login, and no token reaches the log or diagnostics.
+- `multiple_forms`: the page has more than one `<form>` and no
+  `form_selector` matched one, so the first is read. `observed` is the
+  form count.
+- `selector_miss`: a declared `form_selector` matches nothing.
+  `configured` is the selector, `observed` the form count.
+
+The `form` strategy reports these on `AuthResult.login_page_drift`, on a
+failed login as well as a successful one; the collector emits the event,
+since `auth/` cannot import `orchestration/`. Nothing else reads the
+findings: where the login posts and which form is read do not change.
+Level: WARNING the first time, DEBUG after (§ Level policy). The latest
+login's findings are `login_page_drift` in the diagnostics download.
 
 Response-related fields on `AuthFailed` are `None` when auth failed with a
 connection error (no HTTP response). That case renders as
@@ -137,9 +167,11 @@ Fields — `StubPageDetected`: `model`, `path: str`, `anchors_found: int`,
 | `SessionRetryStarted` | INFO | Single-poll session retry started for LOAD_AUTH or LOAD_INTEGRITY |
 | `SessionRetrySucceeded` | INFO | Retry succeeded — fresh login obtained in same poll |
 | `SessionRetryFailed` | INFO | Retry failed — policy recording signal as auth failure |
+| `StuckSessionCleared` | INFO | Reused session dropped after repeated connection failures while the modem answers probes |
 
 Fields — `SessionRetryStarted` / `SessionRetrySucceeded`: `model`, `signal_name: str`
 Fields — `SessionRetryFailed`: `model`, `signal_name: str`, `streak: int`, `threshold: int`
+Fields — `StuckSessionCleared`: `model`, `failures: int`
 
 ### Phase: probe / health
 
@@ -214,9 +246,15 @@ public issues, so the scrubbed text must be whole before anything trims it.
 |---|---|---|
 | `StatusTransition` | INFO | Connection status changed between polls |
 | `CounterReset` | INFO | Error counters dropped — modem rebooted or stats cleared |
+| `SystemInfoFieldsChanged` | WARNING | `system_info` field set changed between polls — possible firmware update |
 
 Fields — `StatusTransition`: `model`, `from_status: str`, `to_status: str`
 Fields — `CounterReset`: `model`, `prev_corrected: int`, `cur_corrected: int`, `prev_uncorrected: int`, `cur_uncorrected: int`
+Fields — `SystemInfoFieldsChanged`: `model`, `gained: frozenset[str]`, `lost: frozenset[str]`
+
+`SystemInfoFieldsChanged` compares parser-level fields only: the set is
+taken after `docsis_status` is derived and before the orchestrator adds
+the `rate_*` fields.
 
 ### Phase: restart / recovery
 
@@ -224,12 +262,20 @@ Fields — `CounterReset`: `model`, `prev_corrected: int`, `cur_corrected: int`,
 |---|---|---|
 | `RestartCommandSent` | INFO | Restart command dispatched and session cleared |
 | `RestartCommandFailed` | ERROR | Restart command failed |
+| `RestartSessionRetry` | INFO | Restart refused on a reused session; clearing it and retrying once |
 | `RecoveryWindowOpened` | INFO | Recovery window started |
 | `RecoveryWindowClosed` | INFO | Recovery window ended |
 | `RecoveryObserverException` | ERROR | Unhandled exception in recovery observer |
 
 Fields — `RestartCommandSent`: `model`, `elapsed_seconds: float`
-Fields — `RestartCommandFailed`: `model`, `reason: str`
+Fields — `RestartCommandFailed`: `model`, `reason: str`, `session_age_seconds: float | None`
+Fields — `RestartSessionRetry`: `model`, `reason: str`, `session_age_seconds: float | None`
+
+`RestartCommandFailed.session_age_seconds` — age of the monitoring session the
+command went out on, measured from the login that created it (reuse does not
+reset it). A refusal on a session held for hours reads differently from one on
+a fresh login (#218). `None` when no monitoring session was used: the login
+failed, or the action authenticates separately (`action_auth`).
 Fields — `RecoveryWindowOpened`: `model`, `reason: str`, `window_seconds: float`
 Fields — `RecoveryWindowClosed`: `model`, `elapsed_seconds: float`, `last_docsis_status: str`
 Fields — `RecoveryObserverException`: `model`, `exc_type: str`
@@ -246,13 +292,19 @@ Fields — `RecoveryObserverException`: `model`, `exc_type: str`
 | `ActionPreFetchFailed` | WARNING | Pre-fetch connection error or bad response |
 
 Fields — `ActionStarted` / `ActionCompleted` / `ActionConnectionLost`:
-`model`, `transport: str` (`"hnap"` / `"http"` / `"cbn"` / `"jsonrpc"`), `action_name: str`
+`model`, `transport: str` (`"hnap"` / `"http"` / `"cbn"` / `"json_rpc"`), `action_name: str`
 Fields — `ActionCompleted`: adds `status_code: int | None`, `result: str`
 Fields — `ActionFailed`: `model`, `transport: str`, `action_name: str`, `reason: str`
 Fields — `ActionPreFetchFailed`: `model`, `transport: str`, `action_name: str`,
 `reason: str`, `fallback_endpoint: str | None`
 Fields — `ActionPreFetchCompleted`: `model`, `transport: str`,
-`action_name: str`, `key_count: int | None`, `fallback_endpoint: str | None`
+`action_name: str`, `key_count: int | None`, `fallback_endpoint: str | None`,
+`result: str | None`
+
+`ActionPreFetchCompleted.result` — the HNAP firmware's `<Action>Result` value
+(`OK`, `UN-AUTH`, ...) from the pre-fetch response. A key count cannot tell a
+rejected pre-fetch from a good one. `None` when the response carries no such
+key, and always for non-HNAP transports.
 
 `ActionPreFetchFailed.fallback_endpoint` — non-`None` means extraction
 failed but action continues with the static fallback endpoint.
@@ -271,10 +323,10 @@ Fields — `ResourceDecodeError`: `model`, `path: str`, `fmt: str`, `reason: str
 
 `ResourceFetched` is emitted from `orchestration/collector.py` once per
 page after `_load_resources()` succeeds. `ResourceDecodeError` is emitted
-from `_load_http_resources()` and `_load_jsonrpc_resources()` after the
+from `_load_http_resources()` and `_load_json_rpc_resources()` after the
 loader's `fetch()` returns — the loader accumulates
 `decode_errors: list[tuple[str, str, str]]` (path, fmt, reason) during
-the fetch; the collector emits one event per entry. On `jsonrpc` the
+the fetch; the collector emits one event per entry. On `json_rpc` the
 path is the method name and a JSON-RPC `error` names its code in
 `reason`. Both sit in the collector rather than in `loaders/http.py` to
 avoid a circular import.

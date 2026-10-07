@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Markdown intra-repo link and section-pointer checker.
+"""Markdown intra-repo link, anchor and section-pointer checker.
 
 Validates that links in tracked Markdown files resolve to files that
 actually exist in the repository. Two link classes are checked:
@@ -10,10 +10,20 @@ actually exist in the repository. Two link classes are checked:
     (``https://github.com/solentlabs/cable_modem_monitor/blob/<ref>/<path>``)
     resolve ``<path>`` against the repo root.
 
-External URLs and pure in-page anchors (``#section``) are skipped — the
-check is deterministic and offline, so it never fails on network flakiness.
-Anchor fragments are stripped before checking file existence; anchor
-targets themselves are not validated.
+External URLs are skipped: the check is deterministic and offline, so it
+never fails on network flakiness.
+
+Anchors
+-------
+A ``#fragment`` on a link to a Markdown file, or a pure in-page
+``#fragment``, must name an anchor in that file. Anchors are the GitHub
+slugs of its headings (a repeated heading gains ``-1``, ``-2``) plus every
+explicit ``id`` or ``name`` attribute (``<span id="bcm3390">``, which the
+generated catalog README uses). Fragments on non-Markdown targets
+(``tool.py#L10``) are line references and are not checked. Matching is
+exact: GitHub emits lowercase slugs. Links and ids inside code spans and
+code blocks are example text and are skipped. A setext heading counts only
+when its text is one line; a multi-line one is not seen as an anchor.
 
 Motivation: GitHub serves ``.github/README.md`` as the landing page, so a
 relative link written as ``./docs/X`` from that file resolves under
@@ -43,8 +53,8 @@ to catch a wrong name rejects a valid abbreviation. Settling what ``§``
 means across its ~200 uses is the prerequisite for a general gate.
 
 Exit codes:
-  0  All intra-repo links resolve and no pointer names a bold inline
-  1  At least one broken intra-repo link or misdirected section pointer
+  0  All intra-repo links and anchors resolve and no pointer names a bold inline
+  1  At least one broken link or anchor, or a misdirected section pointer
   2  Invocation error
 """
 
@@ -53,7 +63,9 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
+from urllib.parse import unquote
 
 _REPO_BLOB = re.compile(
     r"^https?://github\.com/solentlabs/cable_modem_monitor/(?:blob|tree)/[^/]+/(.+)$",
@@ -77,6 +89,22 @@ _PARENTHETICAL = re.compile(r"\s*\([^()]*\)\s*$")
 # hyphen are excluded — they are load-bearing inside the identifiers these
 # headings name (``get_modem_data``, ``data_path_up``, ``Boot-time``).
 _TOKEN_STRIP = "`*\"'.,;:!?()[]{}<>—–…"
+
+# An explicit anchor: any HTML tag carrying an id or name attribute.
+_HTML_ANCHOR = re.compile(r"<[A-Za-z][^>]*?\b(?:id|name)\s*=\s*[\"']([^\"']+)[\"']")
+# A code span: its text is literal, so markup inside it is neither stripped
+# from a heading nor scanned as a link.
+_CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
+# Inline markup GitHub drops before slugifying, outside code spans: an image
+# vanishes with its alt text, a link keeps its text, HTML tags vanish, and
+# emphasis keeps its text. Intraword underscores (snake_case) are not emphasis.
+_IMAGE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+_INLINE_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_HTML_TAG = re.compile(r"<[^>]+>")
+_UNDERSCORE_EMPHASIS = re.compile(r"(?<!\w)(__?)(\S(?:.*?\S)?)\1(?!\w)")
+_SETEXT_UNDERLINE = re.compile(r"^ {0,3}(?:=+|-+)\s*$")
+_LIST_ITEM = re.compile(r"^ {0,3}(?:[-*+]|\d+[.)])\s")
+_INDENTED = re.compile(r"^(?: {4}|\t)")
 
 
 def _tracked_markdown(repo_root: Path) -> list[Path]:
@@ -138,6 +166,128 @@ def _check_link(
     except ValueError:
         missing = resolved
     return f"{rel}:{lineno}  {target}  ->  missing: {missing}"
+
+
+def _strip_inline_markup(text: str) -> str:
+    """Heading text outside code spans, as GitHub renders it."""
+    text = _HTML_TAG.sub("", _INLINE_LINK.sub(r"\1", _IMAGE.sub("", text)))
+    return _UNDERSCORE_EMPHASIS.sub(r"\2", text).replace("*", "")
+
+
+def _slug_keeps(char: str) -> bool:
+    """GitHub keeps letters, marks, numbers, connector punctuation, space and hyphen."""
+    category = unicodedata.category(char)
+    return category[0] in "LMN" or category == "Pc" or char in " -"
+
+
+def _slugify(heading: str) -> str:
+    """GitHub's anchor slug for one heading's text."""
+    parts: list[str] = []
+    pos = 0
+    for span in _CODE_SPAN.finditer(heading):
+        parts.append(_strip_inline_markup(heading[pos : span.start()]))
+        parts.append(span.group(2))
+        pos = span.end()
+    parts.append(_strip_inline_markup(heading[pos:]))
+    text = "".join(parts).strip().lower()
+    # Space becomes a hyphen and runs are not collapsed ("A — B" is "a--b").
+    return "".join(c for c in text if _slug_keeps(c)).replace(" ", "-")
+
+
+def _indented_code_lines(lines: list[str]) -> set[int]:
+    """Indices of lines in indented code blocks outside fences."""
+    code: set[int] = set()
+    in_fence = in_block = in_list = False
+    prev_blank = True
+    for index, line in enumerate(lines):
+        if _FENCE.match(line):
+            in_fence = not in_fence
+            in_block = prev_blank = False
+            continue
+        if in_fence:
+            continue
+        if not line.strip():
+            prev_blank = True
+            continue
+        if _INDENTED.match(line):
+            # An indented line after a list item continues the item; treating
+            # it as code would hide its links, so the guess errs toward
+            # checking.
+            if in_block or (prev_blank and not in_list):
+                in_block = True
+                code.add(index)
+        else:
+            in_block = False
+            in_list = bool(_LIST_ITEM.match(line)) or (in_list and not prev_blank)
+        prev_blank = False
+    return code
+
+
+def _anchors(md_file: Path) -> set[str]:
+    """Every fragment that lands somewhere in one Markdown file."""
+    anchors: set[str] = set()
+    seen: dict[str, int] = {}
+
+    def add_heading(title: str) -> None:
+        slug = _slugify(title)
+        count = seen.get(slug, 0)
+        seen[slug] = count + 1
+        anchors.add(f"{slug}-{count}" if count else slug)
+
+    lines = md_file.read_text(encoding="utf-8").splitlines()
+    indented_code = _indented_code_lines(lines)
+    in_fence = False
+    # Lines of the paragraph above, for a setext underline.
+    paragraph: list[str] = []
+    for index, line in enumerate(lines):
+        if _FENCE.match(line):
+            in_fence = not in_fence
+            paragraph = []
+            continue
+        if in_fence or index in indented_code or not line.strip():
+            paragraph = []
+            continue
+        anchors.update(_HTML_ANCHOR.findall(_CODE_SPAN.sub("", line)))
+        heading = _HEADING.match(line)
+        if heading:
+            add_heading(heading.group(2))
+            paragraph = []
+        elif _SETEXT_UNDERLINE.match(line) and len(paragraph) == 1:
+            add_heading(paragraph[0])
+            paragraph = []
+        elif _LIST_ITEM.match(line) or line.lstrip().startswith("|"):
+            paragraph = []
+        else:
+            paragraph.append(line)
+    return anchors
+
+
+def _check_anchor(
+    target: str,
+    md_file: Path,
+    lineno: int,
+    repo_root: Path,
+    anchor_cache: dict[Path, set[str]],
+) -> str | None:
+    """Return a dead-anchor description for one link whose file resolves, or None."""
+    if "#" not in target:
+        return None
+    fragment = unquote(target.split("#", 1)[1])
+    if not fragment:
+        return None
+    resolved = md_file if target.startswith("#") else _resolve(target, md_file, repo_root)
+    # Only Markdown carries heading anchors; a fragment on source code is a
+    # line reference. The caller has already reported a missing file.
+    if resolved is None or resolved.suffix.lower() not in (".md", ".markdown"):
+        return None
+    resolved = resolved.resolve()
+    if resolved not in anchor_cache:
+        anchor_cache[resolved] = _anchors(resolved)
+    if fragment in anchor_cache[resolved]:
+        return None
+    rel = md_file.relative_to(repo_root)
+    where = "this file" if resolved == md_file.resolve() else resolved.relative_to(repo_root.resolve())
+    return f"{rel}:{lineno}  {target}  ->  no anchor '#{fragment}' in {where}"
 
 
 def _tokenize(text: str) -> list[str]:
@@ -260,19 +410,26 @@ def _scan_file(
     hacs_files: set[Path],
     basenames: dict[str, list[Path]],
     span_cache: dict[Path, tuple[list[list[str]], list[list[str]]]],
+    anchor_cache: dict[Path, set[str]],
 ) -> list[str]:
-    """Return broken-link and misdirected-pointer descriptions for one Markdown file."""
+    """Return broken-link, dead-anchor and misdirected-pointer descriptions for one file."""
     broken: list[str] = []
     in_fence = False
     lines = md_file.read_text(encoding="utf-8").splitlines()
+    indented_code = _indented_code_lines(lines)
     for index, line in enumerate(lines):
         if _FENCE.match(line):
             in_fence = not in_fence
             continue
         if in_fence:
             continue
-        for match in _LINK.finditer(line):
-            problem = _check_link(match.group(1), md_file, index + 1, repo_root, hacs_files)
+        # Links written as code are example text.
+        links = [] if index in indented_code else _LINK.findall(_CODE_SPAN.sub("", line))
+        for target in links:
+            # A missing file is reported once; its anchor is not checked.
+            problem = _check_link(target, md_file, index + 1, repo_root, hacs_files) or _check_anchor(
+                target, md_file, index + 1, repo_root, anchor_cache
+            )
             if problem:
                 broken.append(problem)
         broken.extend(_check_section_refs(lines, index, md_file, repo_root, basenames, span_cache))
@@ -300,20 +457,22 @@ def main() -> int:
         basenames.setdefault(path.name, []).append(path)
 
     span_cache: dict[Path, tuple[list[list[str]], list[list[str]]]] = {}
+    anchor_cache: dict[Path, set[str]] = {}
     broken: list[str] = []
     for md_file in tracked:
-        broken.extend(_scan_file(md_file, repo_root, hacs_files, basenames, span_cache))
+        broken.extend(_scan_file(md_file, repo_root, hacs_files, basenames, span_cache, anchor_cache))
 
     if broken:
-        print("Broken intra-repo Markdown links and section pointers:\n")
+        print("Broken intra-repo Markdown links, anchors and section pointers:\n")
         for line in broken:
             print(f"  {line}")
         print(f"\n{len(broken)} broken reference(s).")
         print("Use a path that resolves from the file's directory, or an absolute blob URL.")
+        print("For an anchor: cite the target heading's current slug, or add an explicit id.")
         print("For a '§' pointer: promote the bold text to a heading, or cite a real one.")
         return 1
 
-    print("All intra-repo Markdown links and section pointers resolve.")
+    print("All intra-repo Markdown links, anchors and section pointers resolve.")
     return 0
 
 

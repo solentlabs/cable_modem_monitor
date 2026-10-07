@@ -1,5 +1,5 @@
 {
-  "_description": "HNAP auth with no HNAP_AUTH header - defaults to md5 with warning",
+  "_description": "HNAP auth with no HNAP_AUTH header - an hmac_algorithm ambiguity, never a silent md5",
   "_entries": [
     {
       "request": {
@@ -13,9 +13,8 @@
   ],
   "_transport": "hnap",
   "_expected_strategy": "hnap",
-  "_expected_confidence": "high",
-  "_expected_fields": {
-    "hmac_algorithm": "md5"
-  },
-  "_expected_warning": "hmac_algorithm"
+  "_expected_absent_fields": ["hmac_algorithm"],
+  "_expected_ambiguities": {
+    "auth.hmac_algorithm": {"blocking": true, "candidates": {"md5": ["/HNAP1/"], "sha256": ["/HNAP1/"]}}
+  }
 }

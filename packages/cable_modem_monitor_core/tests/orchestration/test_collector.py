@@ -637,6 +637,50 @@ class TestSessionIsValid:
         mock_close.assert_called_once_with()
 
 
+class TestSessionAge:
+    """session_age_seconds measures from the login that created the session."""
+
+    _MONOTONIC = "solentlabs.cable_modem_monitor_core.orchestration.collector.time.monotonic"
+
+    @staticmethod
+    def _collector() -> ModemDataCollector:
+        config = _make_config(auth_type="form", cookie_name="sid")
+        return ModemDataCollector(config, None, None, "http://localhost", "", "")
+
+    @staticmethod
+    def _login(session: requests.Session, *args: Any, **kwargs: Any) -> AuthResult:
+        """Stand in for the auth manager: set the session cookie and succeed."""
+        session.cookies.set("sid", "abc123")
+        return AuthResult(success=True, auth_context=AuthContext())
+
+    def test_none_before_login(self) -> None:
+        """No login held → no age."""
+        assert self._collector().session_age_seconds is None
+
+    def test_reuse_keeps_original_login_time(self) -> None:
+        """Reusing a session does not restart its clock."""
+        collector = self._collector()
+        with (
+            patch.object(collector._auth_manager, "authenticate", side_effect=self._login) as login,
+            patch(self._MONOTONIC, side_effect=[100.0, 5000.0]),
+        ):
+            collector.authenticate()
+            collector.authenticate()
+            assert collector.session_age_seconds == 4900.0
+        assert login.call_count == 1
+
+    def test_clear_session_drops_age(self) -> None:
+        """A cleared session has no age until the next login."""
+        collector = self._collector()
+        with (
+            patch.object(collector._auth_manager, "authenticate", side_effect=self._login),
+            patch(self._MONOTONIC, return_value=100.0),
+        ):
+            collector.authenticate()
+        collector.clear_session()
+        assert collector.session_age_seconds is None
+
+
 # ------------------------------------------------------------------
 # Tests — successful collection (behavioral, inline)
 # ------------------------------------------------------------------
@@ -1727,8 +1771,8 @@ def _rpc_reply(body: dict[str, Any]) -> MagicMock:
     return resp
 
 
-class TestJsonrpcLoadPath:
-    """The jsonrpc transport loads by method name and classifies reply errors.
+class TestJsonRpcLoadPath:
+    """The json_rpc transport loads by method name and classifies reply errors.
 
     RESOURCE_LOADING_SPEC.md § JSON-RPC Loading, with the real loader in
     the path rather than a patched ``_load_resources``.
@@ -1738,11 +1782,11 @@ class TestJsonrpcLoadPath:
 
     @staticmethod
     def _collector() -> ModemDataCollector:
-        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import JsonrpcAuth
+        from solentlabs.cable_modem_monitor_core.models.modem_config.auth import JsonRpcAuth
 
-        config = _make_config(transport="jsonrpc")
-        config.auth = JsonrpcAuth(
-            strategy="jsonrpc",
+        config = _make_config(transport="json_rpc")
+        config.auth = JsonRpcAuth(
+            strategy="json_rpc",
             endpoint="/cgi-bin/router.php",
             login_method="MGMT.login",
             username_field="u",

@@ -9,6 +9,7 @@ import logging
 
 import requests
 
+from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import BasicAuth
 from .base import AuthResult, BaseAuthManager
 
@@ -78,7 +79,7 @@ class BasicAuthManager(BaseAuthManager):
                     list(session.cookies.keys()),
                 )
             except requests.RequestException as e:
-                if isinstance(e, requests.ConnectionError | requests.Timeout):
+                if is_connectivity_error(e):
                     raise
                 return AuthResult(
                     success=False,

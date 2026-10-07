@@ -10,7 +10,7 @@
       },
       "model": {
         "title": "Seleccionar Módem",
-        "description": "Elige un modelo de módem {manufacturer}. Los modelos marcados con * no están verificados.",
+        "description": "Elige un modelo de módem {manufacturer}. Los modelos marcados con * no están verificados. Consulta la [lista de módems compatibles]({catalog_url}).",
         "data": {
           "model": "Modelo de Módem",
           "entity_prefix": "Prefijo de Entity ID",
@@ -71,6 +71,7 @@
       "already_configured": "Este módem ya está configurado.",
       "missing_input": "Faltan datos obligatorios. Por favor, reinicia la configuración.",
       "unknown_model": "El módem seleccionado no se encuentra en el catálogo.",
+      "unknown_variant": "La variante seleccionada no se encuentra en el catálogo.",
       "reauth_successful": "Reautenticación exitosa.",
       "reauth_failed": "La reautenticación falló. Por favor, intenta de nuevo."
     }
@@ -104,6 +105,9 @@
       "session_rejected": "Inicio de sesión correcto, pero el módem rechazó la solicitud de datos. No es un problema de credenciales; consulta la advertencia en el registro de Home Assistant.",
       "parse_failed": "Conectado, pero no se pudieron leer los datos del módem.",
       "unknown": "Error inesperado. Revisa los registros de Home Assistant."
+    },
+    "abort": {
+      "unknown_model": "El módem configurado no se encuentra en el catálogo."
     }
   }
 }

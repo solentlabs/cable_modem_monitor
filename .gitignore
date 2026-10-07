@@ -21,6 +21,12 @@ __pycache__/
 .DS_Store
 .claude/*
 !.claude/settings.json
+# Project skills are tracked <name>/SKILL.md directories; flat .md files
+# left by the retired sync script stay ignored
+!.claude/skills/
+.claude/skills/*.md
+# Path-scoped rules load when Claude touches a matching file
+!.claude/rules/
 .aider*
 
 # Node (npx markdownlint-cli2)
@@ -124,6 +130,10 @@ cookies.txt
 # Regression test output (generated at runtime, never committed)
 *.actual.json
 regression_output.txt
+
+# Intake pipeline scorecards (written by --scorecard; CI uploads its own as an artifact)
+scorecard.json
+intake-pipeline-scorecard.json
 
 # Windows artifact from /dev/null writes
 nul

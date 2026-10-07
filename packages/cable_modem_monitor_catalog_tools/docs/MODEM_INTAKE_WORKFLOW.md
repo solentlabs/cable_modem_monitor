@@ -169,24 +169,25 @@ golden. First use: Netgear CM2500, issue #189 — maintainer bench
 session as base, CM3000 DocsisStatus.htm body as template.
 
 **Hybrid (same device, maintainer-declared).** When the evidence for
-one physical device is spread across multiple real captures — e.g.,
-an early capture with intact data endpoints and a later capture of
-the same unit that alone covers new pages or actions but whose data
-responses were destroyed by a sanitizer bug — the most complete
-session is the template and the bodies it lost are substituted from
-the other referenced capture(s). Every byte comes from a referenced
-capture; nothing is fabricated, and no values are edited beyond the
-sanctioned PII value redaction. `log.comment` lists every
-transplanted entry and states the same-device and firmware
-continuity evidence (device identity fields, byte-identical
-firmware-served assets, the evidence issue's history); the
-round-trip must reproduce the prior golden exactly, adding only
-fields the newly covered pages enable. Because every byte is a real
-observation of the specific unit, the entry keeps its status — it
-continues to rest on its own verification evidence. First use:
-Sercomm DM1000, issue #92 — the 2026-06-18 session capture as
-template, data endpoint bodies from the 2026-01-05 capture of the
-same unit.
+one physical device is spread across multiple real captures — a later
+capture covers an action the first never sent, or a sanitizer bug
+destroyed one capture's data responses — one capture is the template
+and the entries it lacks are transplanted whole from the others. Each
+transplanted entry keeps its own `startedDateTime` and `pageref`, and
+its source page is added to `log.pages`. `log.creator` names the
+fixture a composite. Every byte comes from a referenced capture;
+nothing is fabricated, and no values are edited beyond the sanctioned
+PII value redaction. `log.comment` lists every transplanted entry and
+states the same-device and firmware continuity evidence (device
+identity fields, byte-identical firmware-served pages and assets, the
+evidence issue's history); the round-trip must reproduce the prior
+golden exactly, adding only fields the newly covered pages enable.
+Because every byte is a real observation of the specific unit, the
+entry keeps its status — it continues to rest on its own verification
+evidence. Uses: Sercomm DM1000, issue #92 (the 2026-07-21 session,
+with the login, version and CM status pages from the 2026-01-05
+capture); Ubee EVW32C-0N, issue #221 (the 2026-10-01 session, with the
+reboot request from the 2026-10-02 capture).
 
 ## Inputs
 
@@ -195,6 +196,7 @@ You provide one of:
 - A HAR file path (local) — most common when you're working on your own modem.
 - A GitHub issue number with an attached HAR — when triaging a submission.
 - A modem manufacturer + model name — looks up an existing HAR in the catalog (useful for re-running the pipeline on a known-good HAR, e.g. after a Core change).
+- A follow-up capture for an entry already in the catalog, supplying what the first lacked (usually a restart). Analyze it alone, then fold the entries it adds into the existing fixture as a [hybrid](#assembled-fixtures) so the golden still round-trips.
 
 ## Pipeline Flow
 
@@ -265,6 +267,10 @@ Check four outputs:
 3. **`core_gaps`** — if present, report and stop (Step 5)
 4. **`ambiguities`** — resolve each before Step 7
 
+Resolve every unregistered-field warning before Step 7: keep the field
+as modem-specific (the Tier 3 graduation path in FIELD_REGISTRY), or
+map its source to a known field.
+
 Each ambiguity is a judgment the capture supports and the tool does not
 make: a dotted config path and candidates, each with the evidence that
 shows it (ONBOARDING_SPEC § Ambiguities). Read the evidence and set
@@ -280,9 +286,17 @@ name ([ONBOARDING_SPEC § Ambiguities](ONBOARDING_SPEC.md#ambiguities-resolve-th
 Report what was detected:
 
 - Transport: `{analysis["transport"]}`
-- Auth: `{analysis["auth"]["strategy"]}` (confidence: `{analysis["auth"]["confidence"]}`)
-- Actions: logout={observed/source_inferred/none}, restart={observed/source_inferred/none}
+- Auth: `{analysis["auth"]["strategy"]}`;
+  empty when `auth.strategy` is an ambiguity, with each candidate's fields
+  in `analysis["auth"]["candidates"]`
+- Actions: logout={observed/source_inferred/candidates/none}, restart={observed/source_inferred/candidates/none}
   - `observed` — request appeared in HAR traffic (highest confidence)
+  - `candidates` — an action-like write went to an endpoint no pattern matches;
+    resolve `actions.<kind>.endpoint` from its cited page and body like any
+    ambiguity, and the resolution brings that request's action whole. An
+    endpoint the capture sent several bodies, or an encoded one, stores no
+    request: resolve it to none and ask the contributor for a capture of
+    the action alone, never a body chosen from the evidence
   - `source_inferred` — endpoint referenced in captured page source or matches a
     working family-member modem in the catalog (add to config; flag for contributor
     confirmation that the endpoint works and, separately, whether a Cookie header
@@ -318,8 +332,9 @@ Two rules govern this layer:
   Pipeline Regression) — an extractor change must improve grades or
   leave them unchanged.
 
-If `auth.confidence` is not `high`, or `warnings` is non-empty for the auth
-entry, verify the detected strategy against the HAR before proceeding. Pull
+If any auth warning fired (`form_pbkdf2` always warns, since it rests
+on the salt exchange's shape alone), verify the strategy against the
+HAR before proceeding. Pull
 `analysis["auth"]["fields"]` and cross-check:
 
 | Strategy | Key signal in the HAR |
@@ -328,6 +343,16 @@ entry, verify the detected strategy against the HAR before proceeding. Pull
 | `form_nonce` | Auth response body starts with `Url:` (success) or `Error:` (failure) — no HTTP redirect. The POST body contains a short random numeric value alongside credentials; `nonce_field` should match its field name. |
 | `form_pbkdf2` | A preliminary request fires before credentials are submitted and the response contains a salt value. `pbkdf2_iterations` and `pbkdf2_key_length` should match values visible in that exchange. |
 | `form_sjcl` | The credential POST body is an encrypted SJCL JSON blob, not plain form fields. `encrypt_aad` and `decrypt_aad` should match the AAD strings in the login JS. |
+| `bearer` | The JSON login body has a password key whose value is not ciphertext, and a value its response issued (a header such as `X-CSRF-Token`, or a JSON field) comes back on later requests. |
+| `json_sjcl` | The JSON login body is ciphertext plus the username, with no password key, built by the login page's SJCL script. The tool reads `pbkdf2_iterations`, `pbkdf2_key_length` and `aad` from the captured scripts; set any it warns are missing from that script. |
+
+When triaging an issue, compare its "Does your modem require login?"
+answer with `analysis["auth"]["strategy"]`. The capture is the evidence;
+the answer is a hint. If the answer says login is required and the
+strategy is `none`, or it says no login and the strategy is anything
+else, ask the contributor in the issue before Step 7, stating what each
+side shows. Skip the comparison for "Not sure", and do not ask about
+"password only" against "username and password".
 
 If the detected strategy or any extracted field looks wrong, correct
 `analysis["auth"]` before calling `generate_config` — don't patch the
@@ -347,8 +372,6 @@ doesn't support yet. **Stop config generation.** Report:
    - `unmatched_login`: new login URL pattern needed in `auth_patterns.json`,
      or a new auth strategy needed in Core
    - `auth_unknown`: new auth strategy needed in Core
-   - `unmatched_restart` / `unmatched_logout`: new action URL pattern needed
-     in `action_patterns.json`
 
 Format the report so it can be pasted into a GitHub issue for a
 development effort. Do NOT try to resolve gaps by patching the
@@ -413,9 +436,13 @@ defines; keep that layout through any hand edit, the catalog suite
 gates it.
 
 If the model already has variants (other `modem-*.yaml` files, or
-sibling directories for the same model), render its setup picker
-(`format_variant_labels` over `list_variants`) and read every label as
-a user would. Each must name what sets that variant apart:
+sibling directories for the same model), render its setup picker the
+way the config flow does: find the model with `list_modems`, pass its
+`path` and `sibling_dirs` to `list_variants`, then
+`format_variant_labels`. Calling `list_variants` on the directory
+directly skips discovery and lists a variant the picker cannot reach.
+The new variant must be in the list; read every label as a user would.
+Each must name what sets that variant apart:
 [ARCHITECTURE_DECISIONS.md § The variant name is the user-facing discriminator](../../cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md#the-variant-name-is-the-user-facing-discriminator).
 
 ## Step 8: Generate Golden File + Write Package
@@ -454,6 +481,13 @@ write_result = write_modem_package(output_dir, ...)
 See [ONBOARDING_SPEC.md](ONBOARDING_SPEC.md) for the full
 `write_modem_package` signature.
 
+The generator quotes strings with single quotes where prettier writes
+double quotes, and prettier keeps single quotes around strings that
+contain double quotes. The pre-commit prettier hook rewrites the new
+YAML files and fails the first commit. Run
+`pre-commit run prettier --files <new yaml files>` first and review the
+diff.
+
 ## Step 9: Run Tests
 
 The authoritative check is the catalog suite — it replays the HAR
@@ -468,10 +502,8 @@ On a golden mismatch the replay writes `modem.actual.json` next to the
 HAR. Once the diff is what you intend, promote it to
 `modem.expected.json` and re-run.
 
-`catalog_tools.run_tests(modem_dir)` exists as an MCP tool and returns
-the same structured diff, but it calls the non-orchestrated pipeline,
-so a modem whose golden carries orchestrator-derived fields fails there
-while passing CI. Diagnose with it if you like; decide with pytest.
+`catalog_tools.run_tests(modem_dir)` runs the same orchestrated replay
+and returns the result as a structured diff.
 
 If tests fail, diagnose from the structured diff:
 
@@ -492,7 +524,7 @@ next run.
 Run the generator to keep the catalog index current:
 
 ```bash
-python3 packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py
+.venv/bin/python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py
 ```
 
 Stage `README.md` and `CATALOG_AUDIT.md` alongside the catalog files —
@@ -546,8 +578,8 @@ Open the diagnostics JSON and sanity-check:
   expected counts and locked entries with full fields (frequency,
   power, snr, corrected/uncorrected where applicable)
 - `data.system_info` populated (docsis_status, system_uptime,
-  hardware_version, software_version, total_corrected,
-  total_uncorrected)
+  hardware_version, software_version), plus total_corrected and
+  total_uncorrected when `parser.yaml` declares them under `aggregate:`
 - `data.config_entry.variant` matches the variant the contributor
   used (relevant for multi-variant modems — see Gotchas)
 
@@ -615,6 +647,9 @@ verified.** A confirmation on one variant does not transfer to the
 others — each variant exercises a different transport/auth path and
 must be verified independently.
 
+The flip changes the catalog README's row and counts, so regenerate it as
+in [Step 10](#step-10-regenerate-catalog-readme); CI gates on freshness.
+
 ### Step 15a: Run Catalog Tests
 
 Run the full catalog test suite before committing:
@@ -635,7 +670,8 @@ failing replay writes next to the HAR and re-run until clean.
 
 ### Step 16: Commit and Reply
 
-Stage the two files and commit with this message shape:
+Stage `verified.json`, the YAML, `README.md` and `CATALOG_AUDIT.md` and
+commit with this message shape:
 
 ```text
 feat(catalog): mark <Make> <Model> [(<variant>)] as confirmed
@@ -712,7 +748,9 @@ A diagnostics JSON can show "most things working" — channels
 populated, latency healthy — while one or two `system_info` fields
 are still null. That's not a confirmation; that's an alpha cycle.
 Confirm only when the full system_info block is populated and there
-are no errors in `modem_data`.
+are no errors in `modem_data`. Error totals belong to that block only
+when `parser.yaml` declares an `aggregate:`; a modem that omits it on
+purpose is complete without them.
 
 ## Key Rules
 

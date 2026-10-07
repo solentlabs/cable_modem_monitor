@@ -958,6 +958,10 @@ included automatically when new diagnostics are added to the model.
 - `system_info_fields_failed` — mapped fields whose value type
   conversion rejected, with the raw value (truncated); retained for
   the runtime so intermittent failures stay visible
+- `login_page_drift` — where the `form` login page disagreed with the
+  config on the most recent fresh login (`condition`, `configured`,
+  `observed`; LOGGING_SPEC § `LoginPageDriftDetected`). The log warns
+  once per drift, so this is where a recurring one stays visible
 
 **Auth-failure detail surfaces in `recent_logs`.** When auth fails,
 the collector emits a single sanitized ``WARNING`` log carrying
@@ -1187,12 +1191,11 @@ modem; see FIELD_REGISTRY.md § system_info for the baseline set.
 CMM fires the full snapshot. Consumers are responsible for stripping PII
 before any external transmission. CMM does not collect identity PII
 (`mac_address`, `serial_number`) — no parser extracts them and the intake
-mapping skips them (see SYSTEM_INFO_SPEC § Tiered Sensor Model). The global
+mapping skips them (see SYSTEM_INFO_SPEC § System Info Field Tiers). The global
 denylist
 (`packages/cable_modem_monitor_catalog/scripts/data/pii_fields_global.json`)
-retains them as defensive defaults, and per-modem additions are declared in
-`pii_fields` in each modem's `modem.yaml`, so the strip contract still holds
-if a future field surfaces PII.
+retains them as defensive defaults. `modem.yaml` has no per-modem PII key
+(MODEM_YAML_SPEC § PII).
 
 ---
 
@@ -1233,9 +1236,9 @@ current channel data.
   first configured modem when omitted.
 - Which graphs to include (DS power, DS SNR, DS frequency, US power,
   US frequency, errors, error rates, latency, status card)
-- Graph timespan (hours)
+- `graph_hours` — graph timespan, 1-168; the schema enforces the same
+  range as the form's selector, so a scripted call cannot exceed it
 - `short_titles` — a single global readability toggle for card titles
-- `status_card_exclude` — pass-through fields to drop from the status card
 
 **YAML-only options (accepted by the schema, off the UI form by
 design):** `channel_label` (`auto` / `full` / `id_only` / `type_id`) and
@@ -1243,7 +1246,9 @@ design):** `channel_label` (`auto` / `full` / `id_only` / `type_id`) and
 lines *within* channel graphs. The form is for content selection (which
 cards and graphs you get); these fine cosmetics are left to hand-editing
 the emitted YAML. `short_titles` is the one formatting toggle kept on the
-form, as a single global readability preference.
+form, as a single global readability preference. `status_card_exclude`
+(pass-through fields to drop from the status card) is also YAML-only:
+its valid values depend on the modem, so a static form cannot list them.
 
 **How it works:**
 
@@ -1260,6 +1265,15 @@ error rows. What it is *called* is answered only by the registry, because
 `has_entity_name = True` composes entity IDs from the device name, so
 renaming the device renames them. An ID assembled from `entity_prefix`
 holds only for a default-named, never-renamed install (#205).
+
+**No error total.** When `include_errors` is set and `system_info` has no
+`total_corrected`, but downstream channels carry `corrected` or
+`uncorrected` counters, the error graphs are replaced by a markdown card
+and an INFO log line, both saying the modem's catalog entry declares no
+error total, so per-channel error sensors are present but no total is
+computed. The text holds for every such entry and states no per-modem
+cause (#194). A modem with no per-channel counters gets neither. The
+card is not an entity, so it does not count toward a non-empty result.
 
 Every entity carries a unique ID the integration owns, making the lookup
 exact: `er.async_get_entity_id(domain, DOMAIN, unique_id)`. Unique IDs are

@@ -118,6 +118,13 @@ class TestPlaceholderEndpoints:
         assert [resource.path for resource in unread] == ["/rest/v1/user/3"]
 
 
+def test_strategy_candidate_login_endpoint_is_read() -> None:
+    """An unresolved JSON login's endpoint is the config's, whichever candidate is chosen."""
+    entries = _json_entry("http://192.168.1.1/actionHandler/ajaxSet_login.php", {"EncryptedData": "00"})
+    auth = AuthDetail(strategy="", candidates={"json_sjcl": {"login_endpoint": "/actionHandler/ajaxSet_login.php"}})
+    assert detect_unread_resources(entries, None, auth, ActionsDetail(), "http") == []
+
+
 # =====================================================================
 # Redaction — no response body value reaches the output
 # =====================================================================
@@ -269,7 +276,7 @@ class TestShapeReduction:
 # JSON-RPC — each method is a resource
 # =====================================================================
 
-_RPC_AUTH = AuthDetail(strategy="jsonrpc", fields={"endpoint": "/cgi-bin/router.php", "login_method": "MGMT.login"})
+_RPC_AUTH = AuthDetail(strategy="json_rpc", fields={"endpoint": "/cgi-bin/router.php", "login_method": "MGMT.login"})
 
 
 def _rpc(method: str, reply: dict[str, Any]) -> dict[str, Any]:
@@ -297,7 +304,7 @@ _AB_1 = _rpc("A.b", {"result": {"n": 1}})
 _AB_2 = _rpc("A.b", {"result": {"n": 1, "m": "y"}})
 
 # fmt: off
-_JSONRPC_UNREAD_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], str]] = [
+_JSON_RPC_UNREAD_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], str]] = [
     # (calls,                    sections, unread {method: shape},            id)
     ([_LOGIN, _LOGS],            {},       {"CM.getLogs": [{"time": "str"}]}, "array-result"),
     ([_LOGIN, _DS],              _READ,    {},                                "section-reads-it"),
@@ -310,19 +317,19 @@ _JSONRPC_UNREAD_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], dict[str
 
 @pytest.mark.parametrize(
     "calls,sections,expected",
-    [c[:3] for c in _JSONRPC_UNREAD_CASES],
-    ids=[c[3] for c in _JSONRPC_UNREAD_CASES],
+    [c[:3] for c in _JSON_RPC_UNREAD_CASES],
+    ids=[c[3] for c in _JSON_RPC_UNREAD_CASES],
 )
-def test_jsonrpc_unread_methods(
+def test_json_rpc_unread_methods(
     calls: list[dict[str, Any]], sections: dict[str, Any], expected: dict[str, Any]
 ) -> None:
     """A method that answered result and that neither a section nor the login reads is reported by name."""
-    unread = detect_unread_resources(calls, sections, _RPC_AUTH, ActionsDetail(), "jsonrpc")
+    unread = detect_unread_resources(calls, sections, _RPC_AUTH, ActionsDetail(), "json_rpc")
     assert {resource.path: resource.shape for resource in unread} == expected
 
 
-def test_jsonrpc_capture_still_reports_other_json_by_path() -> None:
+def test_json_rpc_capture_still_reports_other_json_by_path() -> None:
     """JSON a page GETs outside the RPC endpoint is still unread by path; the shared endpoint is not."""
     entries = [_LOGIN, *_json_entry("https://192.168.0.1/lang/en.json", {"hello": "x"})]
-    unread = detect_unread_resources(entries, {}, _RPC_AUTH, ActionsDetail(), "jsonrpc")
+    unread = detect_unread_resources(entries, {}, _RPC_AUTH, ActionsDetail(), "json_rpc")
     assert [resource.path for resource in unread] == ["/lang/en.json"]

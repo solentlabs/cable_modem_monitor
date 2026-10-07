@@ -18,6 +18,5 @@
   ],
   "_transport": "http",
   "_expected_strategy": "url_token",
-  "_expected_confidence": "high",
   "_expected_warning": "url_token auth response body is empty"
 }

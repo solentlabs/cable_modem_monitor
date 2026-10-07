@@ -1,0 +1,98 @@
+{
+  "_description": "Resolved ambiguities land at their paths; an explicit none leaves the field absent",
+  "_expected_auth_strategy": "json_rpc",
+  "_expected_has_parser": false,
+  "_expected_auth_fields": {
+    "lockout_code": "codeLocked",
+    "token_param": "tok"
+  },
+  "_expected_absent_auth_fields": [
+    "session_expired_code"
+  ],
+  "_analysis": {
+    "transport": "json_rpc",
+    "confidence": "high",
+    "auth": {
+      "strategy": "json_rpc",
+      "fields": {
+        "endpoint": "/cgi-bin/api.cgi",
+        "login_method": "SYS.login",
+        "username_field": "userName",
+        "password_field": "userPwd",
+        "token_path": "token",
+        "token_param": "tok"
+      }
+    },
+    "session": {
+      "headers": {}
+    },
+    "actions": {
+      "logout": null,
+      "restart": null
+    },
+    "sections": null,
+    "warnings": [],
+    "hard_stops": [],
+    "ambiguities": [
+      {
+        "field": "auth.lockout_code",
+        "blocking": true,
+        "candidates": [
+          {
+            "value": "codeLocked",
+            "evidence": [
+              {
+                "source": "/page.htm",
+                "snippet": "code===\"codeLocked\""
+              }
+            ],
+            "corroborated_by": []
+          }
+        ],
+        "resolution": {
+          "value": "codeLocked"
+        }
+      },
+      {
+        "field": "auth.session_expired_code",
+        "blocking": true,
+        "candidates": [
+          {
+            "value": "codeExpired",
+            "evidence": [
+              {
+                "source": "/page.htm",
+                "snippet": "code===\"codeExpired\""
+              }
+            ],
+            "corroborated_by": []
+          }
+        ],
+        "resolution": {
+          "value": null,
+          "reason": "firmware has no expiry check"
+        }
+      }
+    ]
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T400",
+    "default_host": "192.168.0.1",
+    "hardware": {
+      "docsis_version": "3.1"
+    },
+    "status": "awaiting_verification",
+    "attribution": {
+      "contributors": [
+        {
+          "github": "tester",
+          "contribution": "Test"
+        }
+      ]
+    },
+    "isps": [
+      "Various"
+    ]
+  }
+}

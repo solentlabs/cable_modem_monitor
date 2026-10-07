@@ -35,7 +35,8 @@ actions:
     # endpoint source_inferred from restore_reboot.jst inline JS (not observed in HAR).
     # csrfp_token: OWASP CSRFP — token is session-scoped, issued by the login
     # redirect (/at_a_glance.jst). No pre_fetch_url needed; token is already in
-    # the session jar. POST body echoes it. Needs contributor confirmation on hardware.
+    # the session jar. POST body echoes it. Confirmed on hardware (#173,
+    # 2026-06-25).
 
 hardware:
   docsis_version: "4.0"

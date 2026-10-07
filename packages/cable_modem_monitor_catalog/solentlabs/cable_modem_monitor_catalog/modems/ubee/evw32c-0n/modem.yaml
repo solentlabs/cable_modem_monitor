@@ -1,0 +1,81 @@
+manufacturer: Ubee
+model: EVW32C-0N
+model_aliases:
+  - EVW32C
+transport: http
+default_host: 192.168.100.1
+
+auth:
+  strategy: form
+  action: /goform/login
+  login_page: /
+  username_field: loginUsername
+  password_field: loginPassword
+  success:
+    redirect: /UbeeSysInfo.asp
+
+actions:
+  logout:
+    type: http
+    method: GET
+    endpoint: /logout.asp
+    requires_session: false
+  restart:
+    type: http
+    method: POST
+    endpoint: /goform/UbeeConfiguration
+    pre_fetch_url: /UbeeConfiguration.asp
+    params:
+      ResetYes: "0x01"
+      ResetFactoryNo: "0x00"
+
+hardware:
+  docsis_version: "3.0"
+  release_date: "2016"
+
+status: awaiting_verification
+
+sources:
+  model: "[Issue #221 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/221): UbeeSysInfo.asp reports Model EVW32C-0N (entry 8)"
+  model_aliases: "[Telemach Connect](https://telemach.si/connect): names the Ubee EVW32C among the modems Telemach customers can use with the app"
+  auth_config: "[Issue #221 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/221): form POST to /goform/login with loginUsername and loginPassword; the accepted login (entry 7) 302s to /UbeeSysInfo.asp, a wrong password (entry 4) 302s to /login.asp. Username and password sanitize to the same hash in entry 7, so the password is sent verbatim. No cookies set"
+  logout_action: "[Issue #221 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/221): GET /logout.asp (entry 33) carries no Cookie or Authorization header and answers 'You are now logged out'"
+  restart_action: "[Issue #221 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/221): POST /goform/UbeeConfiguration with body ResetYes=0x01&ResetFactoryNo=0x00 (entry 20, from the 2026-10-02 reboot capture) answers 200 'The device has been reset...'. Its Referer is UbeeConfiguration.asp (entry 16), which the restart pre-fetches; that form also sends factory reset to this endpoint, so the params are the observed reboot body"
+  docsis_version: "[Ubee EVW32C user manual (LIWEST)](https://liwest.at/fileadmin/user_upload/Downloads/Anleitungen/Ubee_EVW32C_Benutzerhandbuch_032017.pdf); UbeeSysInfo.asp reports DOCSIS mode DOCSIS 3.0 (Issue #221 HAR, entry 8)"
+  release_date: "[SpeedGuide router database, added 2016-02-28](https://speedguide.net/routers/ubee-evw32c-ac1600-wireless-cable-voip-gateway-3707): database date, a proxy; no launch announcement found"
+  isps: "[Telemach Connect](https://telemach.si/connect): lists the Ubee EVW32C among the modems the Telemach Connect app supports"
+
+attribution:
+  contributors:
+    - github: https://github.com/matevzsi
+      contribution: HAR captures, session and reboot (bridge mode, Telemach Slovenia)
+
+isps:
+  - Telemach
+
+notes: |
+  DOCSIS 3.0 24x8 voice gateway. Form auth with a plain password and an
+  IP-based session (no cookies); GET /logout.asp releases it. Data pages
+  need login: the pre-login GET of /UbeeSysInfo.asp returns the login
+  page (entry 2).
+  Restart posts the captured reboot body. Reboot and factory reset share
+  one form (/goform/UbeeConfiguration, radios ResetYes/ResetNo and
+  ResetFactoryYes/ResetFactoryNo), so the params must stay as captured.
+  The capture is a reboot sent from the modem's own page, not from the
+  integration.
+  The firmware shows no channel ID: its "Channel" column is a receiver
+  slot (1..24 DS, 1..8 US, out of frequency order) and fills channel_id,
+  so ID mode tracks slots, as position mode would. Across the reboot in
+  the 2026-10-02 capture (UbeeConnection.asp, entries 7 and 85), all 24
+  downstream slots changed frequency and so did the set of locked
+  frequencies; the 8 upstream slots kept theirs.
+
+  modem.har is a maintainer-declared HYBRID fixture
+  (MODEM_INTAKE_WORKFLOW § Assembled fixtures): the 2026-10-01 session
+  (#221) plus the reboot request from the 2026-10-02 capture of the same
+  unit, declared in log.comment. Replace it with one full-session
+  capture if one arrives.
+
+references:
+  issues:
+    - "[#221 — [Modem Request] Ubee EVW32C-0N](https://github.com/solentlabs/cable_modem_monitor/issues/221)"

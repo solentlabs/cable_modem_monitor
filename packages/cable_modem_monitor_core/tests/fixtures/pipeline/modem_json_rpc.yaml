@@ -1,0 +1,21 @@
+manufacturer: Solent Labs
+model: T100
+transport: json_rpc
+default_host: 192.168.0.1
+auth:
+  strategy: json_rpc
+  endpoint: "/cgi-bin/router.php"
+  login_method: "MGMT.login"
+  username_field: "loginUserName"
+  password_field: "loginPwd"
+  token_path: "token"
+  token_param: "token"
+hardware:
+  docsis_version: "3.1"
+status: awaiting_verification
+attribution:
+  contributors:
+    - github: test-user
+      contribution: Initial capture
+isps:
+  - Various

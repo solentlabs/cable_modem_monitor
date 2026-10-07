@@ -50,6 +50,7 @@ def _entry(
 # │ redirect without Location  │ nothing to resolve; not our finding          │
 # │ chain fully captured       │ multi-hop landing is still a landing         │
 # │ chain breaks mid-way       │ the gap can be one hop in                    │
+# │ PUT or PATCH login         │ the login's method is not the test           │
 # │ non-login POST redirects   │ an action, not a login — must not fire       │
 # └────────────────────────────┴──────────────────────────────────────────────┘
 
@@ -94,6 +95,16 @@ _CASES: list[tuple[str, list[dict[str, Any]], bool]] = [
             _login(f"{_HOST}/check.jst", 302, "/hop.jst"),
             _entry("GET", f"{_HOST}/hop.jst", 302, "/at_a_glance.jst"),
         ],
+        True,
+    ),
+    (
+        "PUT login, landing absent",
+        [_entry("PUT", f"{_HOST}/check.jst", 302, "/at_a_glance.jst", post_data=_CREDENTIALS)],
+        True,
+    ),
+    (
+        "PATCH login, landing absent",
+        [_entry("PATCH", f"{_HOST}/check.jst", 302, "/at_a_glance.jst", post_data=_CREDENTIALS)],
         True,
     ),
     (

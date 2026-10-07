@@ -10,7 +10,7 @@
       },
       "model": {
         "title": "Wybierz modem",
-        "description": "Wybierz model modemu {manufacturer}. Modele oznaczone * są niezweryfikowane.",
+        "description": "Wybierz model modemu {manufacturer}. Modele oznaczone * są niezweryfikowane. Zobacz [listę obsługiwanych modemów]({catalog_url}).",
         "data": {
           "model": "Model modemu",
           "entity_prefix": "Prefiks Entity ID",
@@ -71,6 +71,7 @@
       "already_configured": "Ten modem jest już skonfigurowany.",
       "missing_input": "Brak wymaganych danych. Uruchom ponownie konfigurację.",
       "unknown_model": "Wybrany modem nie został znaleziony w katalogu.",
+      "unknown_variant": "Wybrany wariant nie został znaleziony w katalogu.",
       "reauth_successful": "Ponowna autoryzacja zakończona pomyślnie.",
       "reauth_failed": "Ponowna autoryzacja nie powiodła się. Spróbuj ponownie."
     }
@@ -104,6 +105,9 @@
       "session_rejected": "Logowanie powiodło się, ale modem odrzucił żądanie danych. To nie problem z danymi logowania; sprawdź ostrzeżenie w dzienniku Home Assistant.",
       "parse_failed": "Połączono, ale nie udało się odczytać danych modemu.",
       "unknown": "Nieoczekiwany błąd. Sprawdź logi Home Assistant."
+    },
+    "abort": {
+      "unknown_model": "Skonfigurowany modem nie został znaleziony w katalogu."
     }
   }
 }

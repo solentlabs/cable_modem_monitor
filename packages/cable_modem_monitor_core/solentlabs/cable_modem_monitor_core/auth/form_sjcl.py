@@ -37,9 +37,10 @@ from typing import Any
 
 import requests
 
+from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormSjclAuth
 from ..protocol import sjcl
-from .base import AuthResult, BaseAuthManager
+from .base import AuthResult, BaseAuthManager, LoginLockoutError
 from .response import post_json
 
 _logger = logging.getLogger(__name__)
@@ -253,7 +254,7 @@ def _fetch_page_vars(
     try:
         resp = session.get(url, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         return AuthResult(success=False, error=f"Login page fetch failed: {type(e).__name__}: {e}")
 
@@ -305,7 +306,12 @@ def _submit_login(
     response, body = result
 
     status = body.get("p_status", "")
-    if status not in ("AdminMatch", "Match"):
+    # The firmware's own rule (base_95x.js loginPasswordChk, AUTH_SJCL_SPEC):
+    # "Match" past index 0 (AdminMatch) or "Default" is a login; "Lockout"
+    # blocks the GUI, which is anti-brute-force, not a credential verdict.
+    if status == "Lockout":
+        raise LoginLockoutError(f"form_sjcl firmware anti-brute-force triggered: p_status={status!r}")
+    if not (isinstance(status, str) and (status.find("Match") > 0 or status == "Default")):
         return AuthResult(
             success=False,
             error=f"Login rejected: p_status={status!r}",
@@ -331,7 +337,7 @@ def _validate_session(
     try:
         resp = session.post(url, timeout=timeout)
     except requests.RequestException as e:
-        if isinstance(e, requests.ConnectionError | requests.Timeout):
+        if is_connectivity_error(e):
             raise
         return AuthResult(
             success=False,

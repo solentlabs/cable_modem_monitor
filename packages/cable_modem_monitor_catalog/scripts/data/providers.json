@@ -25,6 +25,7 @@
     "liwest":      {"abbrev": "LIW",  "name": "LIWEST",                 "color": "5577aa"},
     "unitymedia":  {"abbrev": "UM",   "name": "Unitymedia",             "color": "778899"},
     "telia":       {"abbrev": "TEL",  "name": "Telia",                  "color": "9966aa"},
+    "telemach":    {"abbrev": "TMC",  "name": "Telemach",               "color": "88aa55"},
     "kood":        {"abbrev": "KOOD", "name": "Koodo",                  "color": "77aa88"},
     "brighthouse": {"abbrev": "BRIG", "name": "BrightHouse",            "color": "6688aa"},
     "service electric": {"abbrev": "SERV", "name": "Service Electric Cablevision", "color": "778899"},
@@ -34,7 +35,7 @@
   "display_order": [
     "comcast", "xfinity", "cox", "spectrum", "twc", "rogers", "shaw",
     "videotron", "volia", "pyür", "vodafone", "magenta", "liwest", "unitymedia",
-    "virgin", "ziggo", "telia", "mediacom", "suddenlink", "rcn", "cableone",
+    "virgin", "ziggo", "telia", "telemach", "mediacom", "suddenlink", "rcn", "cableone",
     "kood", "brighthouse", "service electric", "teksavvy", "play"
   ],
   "info": {
@@ -58,6 +59,7 @@
     "liwest":      {"name": "LIWEST Kabelmedien",      "region": "Austria (Upper Austria)", "approval_url": "https://www.liwest.at/", "notes": "Cable and fiber operator based in Linz. Source: https://liwest.at/ueberliwest/das-unternehmen"},
     "unitymedia":  {"name": "Unitymedia",              "region": "Germany (West)",     "approval_url": "", "notes": "Merged into Vodafone (2019)"},
     "telia":       {"name": "Telia",                   "region": "Nordic/Baltic",      "approval_url": "https://www.teliacompany.com/", "notes": "Sweden, Finland, Norway, Baltics"},
+    "telemach":    {"name": "Telemach",                "region": "Slovenia",           "approval_url": "https://telemach.si/connect", "notes": "Its Connect app supports the Ubee EVW32C. Source: https://telemach.si/connect"},
     "kood":        {"name": "Koodo",                   "region": "Canada",             "approval_url": "", "notes": "Telus subsidiary"},
     "brighthouse": {"name": "BrightHouse Networks",    "region": "US (Southeast)",     "approval_url": "", "notes": "Merged into Spectrum (2016). Source: https://en.wikipedia.org/wiki/Bright_House_Networks"},
     "service electric": {"name": "Service Electric Cablevision", "region": "US (Pennsylvania)", "approval_url": "https://www.sectv.com/", "notes": "Family-owned regional ISP since 1948. Source: https://en.wikipedia.org/wiki/Service_Electric"},

@@ -8,12 +8,14 @@ from unittest.mock import patch
 
 import pytest
 import requests
+from solentlabs.cable_modem_monitor_core.auth.base import AuthResult, LoginPageDrift
 from solentlabs.cable_modem_monitor_core.auth.form import (
     FormAuthManager,
     _check_success,
     _discover_hidden_fields,
     _encode_password,
     _login_action_from_page,
+    _login_page_drift,
 )
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     FormAuth,
@@ -810,8 +812,10 @@ def test_unresolvable_source_falls_back_to_configured_action(
     assert "/goform/login" in errors[0].getMessage()
 
 
-def test_config_source_never_reads_the_page(session: requests.Session, caplog: pytest.LogCaptureFixture) -> None:
-    """Entries leaving action_source at config are unaffected: no read, no log, even with a form-less page."""
+def test_config_source_never_posts_to_the_page_action(
+    session: requests.Session, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Left at config, the POST goes to ``action`` whatever the page says, and nothing logs at ERROR."""
     entries, modem_config = load_auth_fixture("har_form_login_with_hidden_fields.json")
 
     with HARMockServer(entries, modem_config=modem_config) as server:
@@ -819,11 +823,234 @@ def test_config_source_never_reads_the_page(session: requests.Session, caplog: p
         manager = FormAuthManager(config)
         manager.configure_session(session, {})
         with (
-            patch(_ACTION_PATCH) as mock_read,
+            patch(_ACTION_PATCH, return_value=f"{server.base_url}/elsewhere"),
+            patch.object(session, "request", wraps=session.request) as mock_req,
             caplog.at_level(logging.ERROR),
         ):
             result = manager.authenticate(session, server.base_url, "admin", "pw")
 
     assert result.success is True
-    mock_read.assert_not_called()
+    assert mock_req.call_args.args[1] == f"{server.base_url}/goform/login"
     assert not [r for r in caplog.records if r.levelno == logging.ERROR]
+
+
+# ---------------------------------------------------------------------------
+# Login-page drift: the pre-fetched page disagrees with the config (log only)
+# ---------------------------------------------------------------------------
+
+_MATCHING_FORM_PAGE = "<html><body><form action='/goform/login'></form></body></html>"
+
+_TWO_FORMS_LOGIN_FIRST = (
+    "<html><body>"
+    "<form id='login' action='/goform/login'></form>"
+    "<form id='search' action='/search'></form>"
+    "</body></html>"
+)
+
+_CONFIGURED = "http://h/goform/login"
+_TWO = "2 forms"
+_ONE = "1 form"
+
+# ┌──────────────────────────────┬──────────┬────────┬─────────────────────────┬───────────────────────────────┐
+# │ page                         │ selector │ source │ configured URL          │ findings                      │
+# ├──────────────────────────────┼──────────┼────────┼─────────────────────────┼───────────────────────────────┤
+# │ one form, action matches     │ ""       │ config │ http://h/goform/login   │ none                          │
+# │ one form, action differs     │ ""       │ config │ http://h/goform/login   │ action_mismatch (no ?id value)│
+# │ only the ?id value differs   │ ""       │ config │ http://h/goform/login?… │ none                          │
+# │ query names differ           │ ""       │ config │ http://h/goform/login?… │ action_mismatch (names only)  │
+# │ no form                      │ ""       │ config │ http://h/goform/login   │ none                          │
+# │ relative action, resolves eq │ ""       │ config │ http://h/cgi-bin/setup… │ none                          │
+# │ relative action, differs     │ ""       │ config │ http://h/setup.cgi      │ action_mismatch (resolved)    │
+# │ two forms, no selector       │ ""       │ config │ http://h/goform/login   │ multiple_forms                │
+# │ two forms, selector hits     │ #login   │ config │ http://h/goform/login   │ none                          │
+# │ one form, selector misses    │ #missing │ config │ http://h/goform/login   │ selector_miss                 │
+# │ two forms, selector misses   │ #missing │ config │ http://h/goform/login   │ selector_miss, multiple_forms │
+# │ action differs, page source  │ ""       │ page   │ http://h/goform/login   │ none (page action is used)    │
+# │ empty page                   │ ""       │ config │ http://h/goform/login   │ none                          │
+# └──────────────────────────────┴──────────┴────────┴─────────────────────────┴───────────────────────────────┘
+
+LOGIN_PAGE_DRIFT_CASES = [
+    pytest.param(_MATCHING_FORM_PAGE, "", "config", "http://h/", _CONFIGURED, (), id="match"),
+    pytest.param(
+        _DYNAMIC_ACTION_PAGE,
+        "",
+        "config",
+        "http://h/",
+        _CONFIGURED,
+        (LoginPageDrift("action_mismatch", _CONFIGURED, "http://h/goform/login?id="),),
+        id="action_mismatch",
+    ),
+    pytest.param(
+        _DYNAMIC_ACTION_PAGE,
+        "",
+        "config",
+        "http://h/",
+        "http://h/goform/login?id=999",
+        (),
+        id="query_value_only_differs",
+    ),
+    pytest.param(
+        _DYNAMIC_ACTION_PAGE,
+        "",
+        "config",
+        "http://h/",
+        "http://h/goform/login?lang=en",
+        (LoginPageDrift("action_mismatch", "http://h/goform/login?lang=", "http://h/goform/login?id="),),
+        id="query_names_differ",
+    ),
+    pytest.param(_NO_FORMS_PAGE, "", "config", "http://h/", _CONFIGURED, (), id="no_form"),
+    pytest.param(
+        _RELATIVE_ACTION_PAGE,
+        "",
+        "config",
+        "http://h/cgi-bin/login.html",
+        "http://h/cgi-bin/setup.cgi",
+        (),
+        id="relative_action_match",
+    ),
+    pytest.param(
+        _RELATIVE_ACTION_PAGE,
+        "",
+        "config",
+        "http://h/cgi-bin/login.html",
+        "http://h/setup.cgi",
+        (LoginPageDrift("action_mismatch", "http://h/setup.cgi", "http://h/cgi-bin/setup.cgi"),),
+        id="relative_action_mismatch",
+    ),
+    pytest.param(
+        _TWO_FORMS_LOGIN_FIRST,
+        "",
+        "config",
+        "http://h/",
+        _CONFIGURED,
+        (LoginPageDrift("multiple_forms", "", _TWO),),
+        id="two_forms",
+    ),
+    pytest.param(_TWO_FORMS_LOGIN_FIRST, "#login", "config", "http://h/", _CONFIGURED, (), id="selector_hit"),
+    pytest.param(
+        _MATCHING_FORM_PAGE,
+        "#missing",
+        "config",
+        "http://h/",
+        _CONFIGURED,
+        (LoginPageDrift("selector_miss", "#missing", _ONE),),
+        id="selector_miss",
+    ),
+    pytest.param(
+        _TWO_FORMS_LOGIN_FIRST,
+        "#missing",
+        "config",
+        "http://h/",
+        _CONFIGURED,
+        (LoginPageDrift("selector_miss", "#missing", _TWO), LoginPageDrift("multiple_forms", "#missing", _TWO)),
+        id="selector_miss_two_forms",
+    ),
+    pytest.param(_DYNAMIC_ACTION_PAGE, "", "login_page", "http://h/", _CONFIGURED, (), id="page_source_no_mismatch"),
+    pytest.param("", "", "config", "http://h/", _CONFIGURED, (), id="empty_page"),
+]
+
+
+@pytest.mark.parametrize("html,selector,source,page_url,configured,expected", LOGIN_PAGE_DRIFT_CASES)
+def test_login_page_drift(
+    html: str,
+    selector: str,
+    source: str,
+    page_url: str,
+    configured: str,
+    expected: tuple[LoginPageDrift, ...],
+) -> None:
+    """Each drift condition is reported with the values that identify it; a page that agrees reports nothing."""
+    config = FormAuth(
+        strategy="form",
+        action="/goform/login",
+        action_source=source,  # type: ignore[arg-type]  # both literals under test
+        login_page="/",
+        form_selector=selector,
+    )
+    assert _login_page_drift(html, config, page_url, configured) == expected
+
+
+# Each drift page against the page the config agrees with, on an accepted
+# and a refused login. The findings are log only, so every field the
+# collector decides on must come out the same.
+_DRIFT_PAGES = [
+    pytest.param(_DYNAMIC_ACTION_PAGE, "", id="action_mismatch"),
+    pytest.param(_TWO_FORMS_LOGIN_FIRST, "", id="two_forms"),
+    pytest.param(_MATCHING_FORM_PAGE, "#missing", id="selector_miss"),
+]
+_LOGIN_OUTCOMES = [
+    pytest.param("har_form_login_with_hidden_fields.json", True, id="accepted"),
+    pytest.param("har_form_login_401.json", False, id="refused"),
+]
+
+
+def _login_with_page(session: requests.Session, fixture: str, page: str, selector: str) -> tuple[AuthResult, str]:
+    """Run one config-source login against ``page``; return the result and the URL the POST went to."""
+    entries, modem_config = load_auth_fixture(fixture)
+    with HARMockServer(entries, modem_config=modem_config) as server:
+        config = FormAuth(strategy="form", action="/goform/login", login_page="/login.html", form_selector=selector)
+        manager = FormAuthManager(config)
+        manager.configure_session(session, {})
+        prefetch = requests.Response()
+        prefetch.status_code = 200
+        prefetch._content = page.encode()
+        prefetch.url = f"{server.base_url}/login.html"
+        with (
+            patch.object(session, "get", return_value=prefetch),
+            patch.object(session, "request", wraps=session.request) as mock_req,
+        ):
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
+        posted = mock_req.call_args.args[1].replace(server.base_url, "")
+    return result, posted
+
+
+def _assert_same_decision(drifted: AuthResult, clean: AuthResult) -> None:
+    assert (drifted.success, drifted.error, drifted.busy) == (clean.success, clean.error, clean.busy)
+    assert drifted.response is not None and clean.response is not None
+    assert (drifted.response.status_code, drifted.response_url) == (clean.response.status_code, clean.response_url)
+
+
+@pytest.mark.parametrize("fixture,accepted", _LOGIN_OUTCOMES)
+@pytest.mark.parametrize("page,selector", _DRIFT_PAGES)
+def test_drift_never_changes_the_auth_decision(page: str, selector: str, fixture: str, accepted: bool) -> None:
+    """success, error, busy, response and the POST URL match the no-drift login exactly."""
+    clean, clean_posted = _login_with_page(requests.Session(), fixture, _MATCHING_FORM_PAGE, "")
+    drifted, drifted_posted = _login_with_page(requests.Session(), fixture, page, selector)
+
+    assert clean.success is accepted
+    assert clean.login_page_drift == ()
+    assert drifted.login_page_drift != ()
+    _assert_same_decision(drifted, clean)
+    assert drifted_posted == clean_posted == "/goform/login"
+
+
+@pytest.mark.parametrize("fixture,accepted", _LOGIN_OUTCOMES)
+def test_a_failing_drift_read_never_changes_the_auth_decision(fixture: str, accepted: bool) -> None:
+    """The drift read blowing up costs the findings, nothing else."""
+    clean, clean_posted = _login_with_page(requests.Session(), fixture, _DYNAMIC_ACTION_PAGE, "")
+    with patch(_ACTION_PATCH, side_effect=RuntimeError("drift read failed")):
+        broken, broken_posted = _login_with_page(requests.Session(), fixture, _DYNAMIC_ACTION_PAGE, "")
+
+    assert clean.success is accepted
+    assert clean.login_page_drift != ()
+    assert broken.login_page_drift == ()
+    _assert_same_decision(broken, clean)
+    assert broken_posted == clean_posted == "/goform/login"
+
+
+def test_drift_rides_on_a_failed_login(session: requests.Session) -> None:
+    """A refused login still carries the drift; it is most useful exactly then."""
+    entries, modem_config = load_auth_fixture("har_form_login_401.json")
+    with HARMockServer(entries, modem_config=modem_config) as server:
+        config = FormAuth(strategy="form", action="/goform/login", login_page="/login.html")
+        manager = FormAuthManager(config)
+        manager.configure_session(session, {})
+        prefetch = requests.Response()
+        prefetch.status_code = 200
+        prefetch._content = _TWO_FORMS_LOGIN_FIRST.encode()
+        prefetch.url = f"{server.base_url}/login.html"
+        with patch.object(session, "get", return_value=prefetch):
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
+
+    assert result.success is False
+    assert result.login_page_drift == (LoginPageDrift("multiple_forms", "", _TWO),)

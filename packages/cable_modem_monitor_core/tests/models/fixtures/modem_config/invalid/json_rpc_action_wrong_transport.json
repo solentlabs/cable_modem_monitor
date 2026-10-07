@@ -1,0 +1,38 @@
+{
+  "_config": {
+    "actions": {
+      "restart": {
+        "method": "MGMT.reboot",
+        "type": "json_rpc"
+      }
+    },
+    "attribution": {
+      "contributors": [
+        {
+          "contribution": "HAR capture",
+          "github": "test-user"
+        }
+      ]
+    },
+    "auth": {
+      "strategy": "none"
+    },
+    "default_host": "192.168.0.1",
+    "hardware": {
+      "docsis_version": "3.1"
+    },
+    "isps": [
+      "Various"
+    ],
+    "manufacturer": "Solent Labs",
+    "model": "T950",
+    "session": {
+      "headers": {
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    },
+    "status": "awaiting_verification",
+    "transport": "http"
+  },
+  "_expected_error": "transport 'http' requires action type 'http'"
+}

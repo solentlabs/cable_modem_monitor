@@ -8,14 +8,15 @@ Per docs/ONBOARDING_SPEC.md Phase 4 (HTTP transport).
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
-from ...validation.har_utils import is_static_resource, parse_form_params, path_from_url
-from ..types import CoreGap
+from ...validation.har_utils import WRITE_METHODS, is_static_resource, lower_headers, parse_form_params, path_from_url
+from ..ambiguity import Ambiguity, Candidate, Evidence
 from .callsite import find_ajax_callsites
 from .patterns import get_logout_patterns, get_restart_patterns
-from .types import ActionDetail, ActionsDetail
+from .types import ActionDetail, ActionsDetail, sanitized_paths
 
 # ---------------------------------------------------------------------------
 # Endpoint patterns (loaded from action_patterns.json)
@@ -43,22 +44,22 @@ _FORM_FIELD_NAME_PATTERN = re.compile(r"<(?:input|button)[^>]*\sname=[\"']([^\"'
 def detect_http_actions(
     entries: list[dict[str, Any]],
     warnings: list[str] | None = None,
-    core_gaps: list[CoreGap] | None = None,
+    ambiguities: list[Ambiguity] | None = None,
 ) -> ActionsDetail:
     """Detect HTTP logout and restart actions.
 
     Args:
         entries: HAR ``log.entries`` list.
         warnings: Mutable list to append suggestions to.
-        core_gaps: Mutable list to append core gap items to.
+        ambiguities: Mutable list to append endpoint candidates to.
 
     Returns:
         ActionsDetail with detected HTTP logout and restart actions.
     """
     if warnings is None:
         warnings = []
-    if core_gaps is None:
-        core_gaps = []
+    if ambiguities is None:
+        ambiguities = []
     cookie_names = _collect_set_cookie_names(entries)
 
     logout = _find_http_action(entries, _LOGOUT_PATTERNS, "logout", warnings)
@@ -69,12 +70,15 @@ def detect_http_actions(
     if restart is None:
         restart = _find_http_action_in_source(entries, _RESTART_PATTERNS, "restart", cookie_names, warnings)
 
-    # Flag unmatched action-like POSTs as core gaps (only when both traffic
-    # and source-scan came up empty — source_inferred counts as found)
-    if logout is None or restart is None:
-        _detect_unmatched_actions(entries, logout, restart, core_gaps)
+    for action_name, action in (("logout", logout), ("restart", restart)):
+        _report_unobserved_body(action_name, action, warnings)
 
-    return ActionsDetail(logout=logout, restart=restart)
+    actions = ActionsDetail(logout=logout, restart=restart)
+    # Offer unmatched action-like writes as candidates (only when both traffic
+    # and source-scan came up empty; source_inferred counts as found)
+    if logout is None or restart is None:
+        ambiguities.extend(_unmatched_action_ambiguities(entries, actions, warnings))
+    return actions
 
 
 _PAGE_EXTENSIONS = frozenset({".asp", ".htm", ".html", ".php"})
@@ -88,10 +92,11 @@ def _find_http_action(
 ) -> ActionDetail | None:
     """Find an HTTP action matching any of the given URL patterns.
 
-    A POST match outranks an earlier page GET: auto-action pages (a GET
-    whose form JS fires the operative POST) precede that POST in traffic
-    and match the same patterns, but the POST is the action and the page
-    is only its pre-fetch source (Netgear /Logout.htm -> /goform/logout).
+    A write (POST, PUT, PATCH) match outranks an earlier page GET:
+    auto-action pages (a GET whose form JS fires the operative write)
+    precede that write in traffic and match the same patterns, but the
+    write is the action and the page is only its pre-fetch source
+    (Netgear /Logout.htm -> /goform/logout).
     """
     first_match: tuple[int, dict[str, Any]] | None = None
     for idx, entry in enumerate(entries):
@@ -101,27 +106,53 @@ def _find_http_action(
             continue
         if first_match is None:
             first_match = (idx, entry)
-        if req.get("method", "").upper() == "POST":
+        if req.get("method", "").upper() in WRITE_METHODS:
             first_match = (idx, entry)
             break
 
     if first_match is None:
         return None
+    return _action_from_entry(entries, first_match[0], action_name, warnings)
 
-    idx, entry = first_match
-    req = entry["request"]
+
+def _action_from_entry(
+    entries: list[dict[str, Any]],
+    idx: int,
+    action_name: str,
+    warnings: list[str],
+) -> ActionDetail:
+    """The action an observed request makes: its method, path and body, plus a form page as pre-fetch."""
+    req = entries[idx]["request"]
     path = path_from_url(req.get("url", ""))
-    params = parse_form_params(req.get("postData", {}))
+    params, json_body = _observed_body(req.get("postData", {}))
+    body = ""
+    body_evidence: dict[str, Any] = {}
+    placeholders = sanitized_paths(json_body) if json_body is not None else []
+    if json_body is not None and placeholders:
+        # A placeholder is not the firmware's value; copying the body would
+        # write a wrong one (an SJCL envelope's sanitized user, tg3442s)
+        body, body_evidence = "encoded", {"keys": list(json_body), "sanitized": placeholders}
+        warnings.append(
+            f"{action_name} action {req.get('method', '')} {path}: the observed JSON body holds "
+            f"sanitized or encoded values {placeholders} and was not copied to json_body. Check "
+            f"Core's body_encoding: session and the page script for the plain body."
+        )
+        json_body = None
     detail = ActionDetail(
         type="http",
         method=req.get("method", ""),
         endpoint=path,
         params=params,
+        json_body=json_body,
+        body=body,
+        body_evidence=body_evidence,
     )
     # A captured page whose form posts to this endpoint is the
     # pre-fetch source; deterministic, unlike the keyword
-    # suggestion below, which stays warning-only
-    form_page = _find_form_page_for_endpoint(entries, path)
+    # suggestion below, which stays warning-only. The page that sent
+    # the request comes first: two pages may post to one endpoint.
+    referer = lower_headers(req).get("referer", "")
+    form_page = _find_form_page_for_endpoint(entries, path, path_from_url(referer) if referer else "")
     if form_page is not None:
         page_path, form_action = form_page
         detail.pre_fetch_url = page_path
@@ -132,12 +163,44 @@ def _find_http_action(
     return detail
 
 
+def _observed_body(post_data: dict[str, Any]) -> tuple[dict[str, str], dict[str, Any] | None]:
+    """(form params, JSON object body) of a captured request; at most one is non-empty."""
+    text = post_data.get("text", "")
+    # A JSON body is checked first: its values may hold "=", which the form
+    # parser would split into bogus pairs
+    if text.lstrip().startswith("{"):
+        try:
+            body = json.loads(text)
+        except ValueError:
+            body = None
+        if isinstance(body, dict):
+            return {}, body
+    return parse_form_params(post_data), None
+
+
+def _report_unobserved_body(action_name: str, action: ActionDetail | None, warnings: list[str]) -> None:
+    """Mark and warn when a non-GET action came from page source with no body to copy."""
+    # Bodies come from the capture only. Synthesizing one from page script
+    # risks a wrong body, which is worse than none.
+    if action is None or action.source != "source_inferred" or action.method.upper() == "GET" or action.params:
+        return
+    action.body = "unobserved"
+    warnings.append(
+        f"{action_name} action {action.method} {action.endpoint} (source_inferred): request body "
+        f"unobserved. The capture holds no request to this endpoint, so neither params nor "
+        f"json_body is generated. Capture the {action_name} to supply its body; never copy it "
+        f"from page script."
+    )
+
+
 def _find_form_page_for_endpoint(
     entries: list[dict[str, Any]],
     endpoint: str,
+    preferred_page: str = "",
 ) -> tuple[str, str] | None:
-    """(page path, form action) for a captured page whose form posts to ``endpoint``."""
-    for entry in entries:
+    """(page path, form action) for a captured page whose form posts to ``endpoint``, ``preferred_page`` first."""
+    ordered = sorted(entries, key=lambda e: path_from_url(e["request"].get("url", "")) != preferred_page)
+    for entry in ordered:
         body = entry.get("response", {}).get("content", {}).get("text", "")
         if not body or "<form" not in body.lower():
             continue
@@ -388,60 +451,81 @@ def _collect_set_cookie_names(entries: list[dict[str, Any]]) -> frozenset[str]:
     return frozenset(names)
 
 
-def _detect_unmatched_actions(
-    entries: list[dict[str, Any]],
+def _unmatched_kind(
+    indicators: list[str],
     found_logout: ActionDetail | None,
     found_restart: ActionDetail | None,
-    core_gaps: list[CoreGap],
-) -> None:
-    """Flag POST requests with action-like params as core gaps.
+) -> str | None:
+    """Classify action-like param indicators as a logout or restart not yet found, or None."""
+    logout_indicators = {"logout", "logoff"}
+    restart_indicators = {"reboot", "restart", "reset", "action", "security"}
 
-    Scans entries for POSTs whose param names contain action indicators
-    but whose URLs didn't match the pattern lists.
-    """
-    matched_endpoints = set()
-    if found_logout:
-        matched_endpoints.add(found_logout.endpoint)
-    if found_restart:
-        matched_endpoints.add(found_restart.endpoint)
+    if not found_logout and logout_indicators & set(indicators):
+        return "logout"
+    if not found_restart and restart_indicators & set(indicators):
+        return "restart"
+    return None
 
-    for entry in entries:
+
+def _unmatched_action_ambiguities(
+    entries: list[dict[str, Any]],
+    actions: ActionsDetail,
+    warnings: list[str],
+) -> list[Ambiguity]:
+    """Non-blocking actions.<kind>.endpoint ambiguities, one candidate per unknown endpoint an action-like write hit."""
+    # No URL rule decides these: patterns come from confirmed modems only, so an
+    # observed write is offered with its evidence and the LLM resolves it. The
+    # candidate's whole action, body included, is kept in actions.candidates.
+    matched_endpoints = {action.endpoint for action in (actions.logout, actions.restart) if action}
+    ambiguities: dict[str, Ambiguity] = {}
+    # (kind, endpoint) -> first entry index of each distinct body sent there
+    bodies: dict[tuple[str, str], dict[str, int]] = {}
+    for index, entry in enumerate(entries):
         req = entry["request"]
-        if req.get("method", "") != "POST":
+        if req.get("method", "").upper() not in WRITE_METHODS:
             continue
         path = path_from_url(req.get("url", ""))
         if path in matched_endpoints:
             continue
 
-        params = parse_form_params(req.get("postData", {}))
-        if not params:
+        params, json_body = _observed_body(req.get("postData", {}))
+        # A JSON body's top-level keys play the role of form param names
+        names = list(json_body) if json_body else list(params)
+        indicators = [ind for ind in _ACTION_PARAM_INDICATORS if any(ind in name.lower() for name in names)]
+        kind = _unmatched_kind(indicators, actions.logout, actions.restart)
+        if kind is None:
             continue
 
-        indicators = [ind for ind in _ACTION_PARAM_INDICATORS if any(ind in name.lower() for name in params)]
-        if not indicators:
-            continue
+        snippet = _body_text(req.get("postData") or {}, params)
+        bodies.setdefault((kind, path), {}).setdefault(snippet, index)
+        ambiguity = ambiguities.setdefault(kind, Ambiguity(field=f"actions.{kind}.endpoint", blocking=False))
+        candidate = next((c for c in ambiguity.candidates if c.value == path), None)
+        if candidate is None:
+            candidate = Candidate(value=path)
+            ambiguity.candidates.append(candidate)
+        # The sending page names the operation; a request without a Referer cites the endpoint.
+        source = path_from_url(lower_headers(req).get("referer") or req.get("url", ""))
+        if all((e.source, e.snippet) != (source, snippet) for e in candidate.evidence):
+            candidate.evidence.append(Evidence(source=source, snippet=snippet))
 
-        # Classify as logout-like or restart-like
-        logout_indicators = {"logout", "logoff"}
-        restart_indicators = {"reboot", "restart", "reset", "action", "security"}
-
-        if not found_logout and indicators and logout_indicators & set(indicators):
-            category = "unmatched_logout"
-        elif not found_restart and restart_indicators & set(indicators):
-            category = "unmatched_restart"
-        else:
-            continue
-
-        core_gaps.append(
-            CoreGap(
-                phase="actions",
-                category=category,
-                summary=f"POST to {path} has action-like params but URL not in patterns",
-                evidence={
-                    "endpoint": path,
-                    "method": "POST",
-                    "params": params,
-                    "indicators": indicators,
-                },
+    for (kind, path), seen in bodies.items():
+        # One endpoint can carry more than one operation (a shared reboot and
+        # factory-reset form), so an endpoint names an action only when the
+        # capture sent it one body; a resolution never picks among bodies.
+        if len(seen) > 1:
+            warnings.append(
+                f"{kind} candidate {path}: the capture sent it {len(seen)} different bodies, so no request "
+                f"is stored and a resolution to it writes nothing. Resolve it to none, and ask for a capture "
+                f"that sends only the {kind}."
             )
-        )
+            continue
+        action = _action_from_entry(entries, next(iter(seen.values())), f"{kind} candidate", warnings)
+        # An encoded body is not the firmware's value; writing the action would send none
+        if action.body != "encoded":
+            actions.candidates.setdefault(kind, {})[path] = action
+    return list(ambiguities.values())
+
+
+def _body_text(post_data: dict[str, Any], params: dict[str, str]) -> str:
+    """The request body as captured, or its form params when the capture kept no text."""
+    return post_data.get("text") or "&".join(f"{name}={value}" for name, value in params.items())

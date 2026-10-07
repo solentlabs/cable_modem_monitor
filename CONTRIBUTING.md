@@ -1,6 +1,6 @@
 # Contributing to Cable Modem Monitor
 
-Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
+Thank you for your interest in contributing!
 
 ## Ways to Contribute
 
@@ -19,7 +19,7 @@ The encouraged contribution path is **expanding modem support** — the catalog 
 
 - **Bug reports** — file directly via the bug template.
 - **Modem support requests** — file directly via the modem-request template.
-- **Adding modem support yourself** — use the catalog intake pipeline — Claude Code: `/modem-intake`; other AI tools: load [`skills/modem-intake.md`](skills/modem-intake.md) as context. See [Adding Modem Support](#adding-modem-support).
+- **Adding modem support yourself** — use the catalog intake pipeline — Claude Code: `/modem-intake`; other AI tools: load [`.claude/skills/modem-intake/SKILL.md`](.claude/skills/modem-intake/SKILL.md) as context.
 - **New features, sensors, architecture changes** — start a [Discussion](https://github.com/solentlabs/cable_modem_monitor/discussions/new?category=ideas), not an Issue. Issues are for features whose shape is already clear; Discussions are for shaping the idea. This avoids the situation where a contributor invests time in a full design that doesn't fit the project's direction.
 - **Core code changes (`packages/cable_modem_monitor_core/`)** — start a Discussion regardless of size. Core is the shared substrate every supported modem depends on; a regression there breaks every modem at once. The bar is correspondingly high (regression tests, golden files, real-modem evidence).
 - **Refactors that touch more than two files** — start as a Discussion. Small, scoped fixes outside Core can go straight to PR.
@@ -37,11 +37,11 @@ This discipline predates AI. Rust requires an [RFC](https://github.com/rust-lang
 Review path depends on which surface the PR touches:
 
 - **Catalog PR** (new modem entry, HAR fixtures, parser.yaml) — reviewed against intake-pipeline standards. This is the encouraged path; usually the fastest to merge.
-- **Core PR** (`packages/cable_modem_monitor_core/`) — heavy scrutiny. Regression tests, golden files, and real-modem evidence are expected. Core PRs without that bar may be closed or held until the evidence is in. The asymmetric bar reflects asymmetric blast radius — Core breakage affects every supported modem at once.
+- **Core PR** (`packages/cable_modem_monitor_core/`) — heavy scrutiny. Regression tests, golden files, and real-modem evidence are expected. Without that bar a Core PR may be closed or held until the evidence is in. Core breakage affects every supported modem at once.
 - **HA adapter PR** (`custom_components/`) — standard review for behavior changes; bug fixes without behavior change move faster.
 - **Docs PR** — standard review.
 - **PR that builds on a prior Discussion** — the Discussion is the design agreement; review focuses on the implementation matching it.
-- **PR that introduces net-new direction without a prior Discussion** — likely to be closed in favor of starting a Discussion. This isn't a judgment on the work — it's a sequencing call. Direction proposals belong in Discussions where they can be shaped collaboratively before code is written. Once the direction is agreed, a follow-up PR is welcome.
+- **PR that introduces net-new direction without a prior Discussion** — likely to be closed in favor of a Discussion. That is a sequencing call, not a judgment on the work: direction is shaped in a Discussion before code is written, and once it is agreed a follow-up PR is welcome.
 - **Issue that should have been a Discussion** — converted to a Discussion (GitHub supports this), or you'll be asked to open one. No need to refile.
 
 PR titles and bodies are not edited by the maintainer — any feedback comes in review or close comments.
@@ -64,8 +64,7 @@ There are two paths, depending on what you want to do:
   [MODEM_INTAKE_WORKFLOW.md](packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md)
   for the full walkthrough.
 
-Either path is valuable. The catalog grows through community contributions
-because the maintainer can't acquire every modem.
+Either path is valuable.
 
 If the intake pipeline stops with a **Core gap** — a pattern the pipeline
 can't classify — the gap report is the contribution. Paste it into your
@@ -132,10 +131,9 @@ Core changes follow the same local environment and the same `make
 validate-ci` gate — no special setup required beyond what catalog
 contributors already have. The difference is scope control, not tooling.
 
-Core is the shared substrate every supported modem depends on. A
-regression there breaks all of them at once. Before writing any Core code:
-start a Discussion, agree on scope, get a green light. PRs that skip this
-step will be closed regardless of code quality.
+Before writing any Core code, start a Discussion, agree on scope and get
+a green light. PRs that skip this step will be closed regardless of code
+quality.
 
 Once a Core PR is submitted with passing tests and golden files, hardware
 sign-off comes from whoever has the affected modem — the contributor, the
@@ -167,7 +165,7 @@ adapter declares them as dependencies in `manifest.json`.
 
 ## AI-Assisted Contribution
 
-AI assistance — Claude Code, Cursor, Copilot, or similar — can lower the bar to contributing significantly, but it amplifies the review-capacity asymmetry described in [Why scope-before-code matters](#why-scope-before-code-matters). The rules below apply to all AI-assisted contributions to this repository.
+AI assistance (Claude Code, Cursor, Copilot, or similar) lowers the bar to contributing but amplifies the review-capacity asymmetry described in [Why scope-before-code matters](#why-scope-before-code-matters). These rules apply to all AI-assisted contributions to this repository.
 
 ### Disclosure
 
@@ -175,7 +173,7 @@ Disclose AI use on your first PR or issue. One sentence — which tool, what rol
 
 ### Read CONTRIBUTING.md alongside CLAUDE.md
 
-Most coding assistants auto-load project-instruction files (`CLAUDE.md` for Claude Code, `.cursorrules` for Cursor, `.github/copilot-instructions.md` for Copilot) but do **not** auto-load `CONTRIBUTING.md`. `CLAUDE.md` is a thin behavioral guide that points to the authoritative docs (`docs/CODE_REVIEW.md`, `packages/cable_modem_monitor_core/docs/ARCHITECTURE.md`, `packages/cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md`) — it is not a substitute for the contribution-flow rules here. Add `CONTRIBUTING.md` to your AI's context explicitly when working on this repository — otherwise your tool will produce work that follows the code rules but skips the process rules (PRs that should have been Discussions, Core changes that bypass scope review, refactors spanning many files without prior alignment).
+Most coding assistants auto-load project-instruction files (`CLAUDE.md` for Claude Code, `.cursorrules` for Cursor, `.github/copilot-instructions.md` for Copilot) but do **not** auto-load `CONTRIBUTING.md`. `CLAUDE.md` is a thin behavioral guide that points to the authoritative docs (`docs/CODE_REVIEW.md`, `packages/cable_modem_monitor_core/docs/ARCHITECTURE.md`, `packages/cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md`); it does not carry the contribution-flow rules here. Add `CONTRIBUTING.md` to your AI's context explicitly, or your tool will follow the code rules and skip the process rules (PRs that should have been Discussions, Core changes that bypass scope review, refactors spanning many files without prior alignment).
 
 ### Know the entity model boundary
 
@@ -201,8 +199,6 @@ Accepting AI-generated changes without reading them produces classic failure mod
 
 ### Review pace and volume
 
-> Project parameter — adjust for your context.
-
 Review turnaround is stated in [SUPPORT.md](SUPPORT.md). Multiple open PRs from one contributor are sequenced, not parallelized — one active work item at a time. This isn't gatekeeping; it reflects the review-capacity reality cited above.
 
 ### Templated redirect
@@ -211,7 +207,7 @@ When a contribution skips the process rules, the response is a short canned redi
 
 > Thanks for the contribution. This needs scope discussion before code — please open a Discussion, and we can scope it together there. Closing this PR for now; reopen or refile after the Discussion lands.
 
-Depersonalized by design. Same message every time, applied consistently to everyone.
+Depersonalized by design: the same message every time, for everyone.
 
 ## AI-Assisted Catalog Contribution
 
@@ -308,12 +304,11 @@ detects auth strategy, classifies response formats, generates
 - [Modem Intake Workflow](packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md)
 - [Onboarding Spec](packages/cable_modem_monitor_catalog_tools/docs/ONBOARDING_SPEC.md)
 
-The catalog tools package is never installed by Home Assistant — it's
-a developer accelerator for catalog growth, open to contributors with
-hardware. The pipeline mechanics are plain Python; the judgment work
-(format detection on ambiguous HTML, metadata enrichment, test failure
-diagnosis) realistically benefits from AI assistance — that's what
-this section's audience brings to the table.
+Home Assistant never installs the catalog tools package; it is a
+developer accelerator open to contributors with hardware. The pipeline
+mechanics are plain Python; the judgment work (format detection on
+ambiguous HTML, metadata enrichment, test failure diagnosis) benefits
+from AI assistance.
 
 Modem configurations live in the catalog package
 (`packages/cable_modem_monitor_catalog/`). Each modem has a
@@ -334,12 +329,11 @@ Standard fork → branch → PR flow.
 quick iteration. Runs the package and integration test suites — same
 pytest CI runs, but it's a *subset* of the full CI gate.
 
-**Pre-push gate**: `make validate-ci`. This is the canonical local
-mirror of the CI Tests workflow — lint, format, type-check, tests,
-intake regression, PII check, and catalog README freshness. If
-`make validate-ci` is green, CI will be green. Pre-push hooks run a
-subset, so failures still surface, but `make validate-ci` is the
-definitive local check.
+**Pre-push gate**: `make validate-ci`. This is the local mirror of the
+CI Tests workflow; the `validate-ci` target in the [Makefile](Makefile)
+lists what it runs. Run it before pushing. CI is still the final gate,
+because some of its settings apply only there. `make install-hooks`
+optionally runs it before every push.
 
 `scripts/release.py` runs `make validate-ci` automatically as part of
 every version bump, so a release can never silently land on top of

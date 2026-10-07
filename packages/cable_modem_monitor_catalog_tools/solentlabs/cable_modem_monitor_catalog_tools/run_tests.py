@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from solentlabs.cable_modem_monitor_core.test_harness.discovery import discover_modem_tests
-from solentlabs.cable_modem_monitor_core.test_harness.runner import TestResult, run_modem_test
+from solentlabs.cable_modem_monitor_core.test_harness.runner import TestResult, run_modem_test_orchestrated
 from solentlabs.cable_modem_monitor_core.validation.parser_sandbox import validate_parser_sandbox
 
 
@@ -42,19 +42,7 @@ class RunTestsResult:
 
 
 def run_tests(modem_dir: str) -> RunTestsResult:
-    """Run the test harness for a modem directory.
-
-    Discovers test cases from the directory structure, runs each
-    through the full pipeline (mock server -> auth -> fetch -> parse ->
-    golden file comparison), and returns structured results.
-
-    Args:
-        modem_dir: Path to a modem directory (e.g.,
-            ``modems/{manufacturer}/{model}``) or a modems root directory.
-
-    Returns:
-        ``RunTestsResult`` with pass/fail and per-test detail.
-    """
+    """Replay every test case under ``modem_dir`` through the orchestrator, as the catalog suite does."""
     path = Path(modem_dir)
     if not path.is_dir():
         return RunTestsResult(
@@ -86,7 +74,8 @@ def run_tests(modem_dir: str) -> RunTestsResult:
     all_passed = True
 
     for case in cases:
-        test_result = run_modem_test(case)
+        # Orchestrated, not parser-only: goldens carry orchestrator-derived fields such as the #164 error rates.
+        test_result = run_modem_test_orchestrated(case)
         results.append(_serialize_result(test_result))
         if not test_result.passed:
             all_passed = False

@@ -25,6 +25,5 @@
   ],
   "_transport": "http",
   "_expected_strategy": "unknown",
-  "_expected_confidence": "low",
   "_expected_hard_stop": "Cannot determine auth mechanism"
 }

@@ -72,7 +72,7 @@ Each extraction format has its own specification:
 
 **Transport** (modem.yaml) controls *how data is fetched* — the resource
 loader. It identifies the transport protocol (`http`, `hnap`, `cbn`,
-or `jsonrpc`).
+or `json_rpc`).
 
 **Format** (parser.yaml, per-section) controls *how data is extracted* —
 the extraction strategy. Each section (`downstream`, `upstream`,
@@ -86,7 +86,7 @@ parser.yaml format   → decode step + extraction strategy (how to extract, per-
 For the `http` transport, format is independent — any format can appear
 with any auth strategy. A modem can mix formats across sections (e.g.,
 `table` for downstream, `javascript` for system_info). For `hnap`,
-`cbn`, and `jsonrpc`, the transport constrains the format (`hnap`,
+`cbn`, and `json_rpc`, the transport constrains the format (`hnap`,
 `xml`, and `json` respectively).
 
 | Transport | Valid Formats | Why |
@@ -94,7 +94,7 @@ with any auth strategy. A modem can mix formats across sections (e.g.,
 | `hnap` | `hnap` | Protocol-defined: SOAP JSON with delimiters |
 | `http` | `table`, `table_transposed`, `html_fields`, `javascript`, `javascript_json`, `json`, `json_transposed` | Format determines decode step; any format supports optional `encoding` property (e.g., `base64` — decoded before format-specific parsing). |
 | `cbn` | `xml` | XML POST API: parameterized POST with XML responses |
-| `jsonrpc` | `json` | JSON-RPC 2.0: `resource` is the method name; the parser reads the call's `result` |
+| `json_rpc` | `json` | JSON-RPC 2.0: `resource` is the method name; the parser reads the call's `result` |
 
 See [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#validation-rules) for the full transport constraint
 table including auth strategies.
@@ -1266,9 +1266,10 @@ modem.yaml stays focused on auth, session, and actions.
 **Precedence rule:** If parser.yaml maps a `system_info` field with
 the same name as an `aggregate` entry (e.g., both produce
 `total_corrected`), the native mapping wins. The coordinator skips
-the aggregate computation for that field. This handles the common
-case: a modem natively reports totals → map them directly. A modem
-that doesn't → declare the aggregate to compute them.
+the aggregate computation for that field. A modem that reports totals
+natively maps them directly; one that doesn't declares the aggregate.
+No catalog modem reports totals natively today, so every total in the
+fleet is computed.
 
 **Empty scope:** If the scoped channel set is empty (e.g.,
 `downstream.qam` but the modem has only OFDM channels), the aggregate

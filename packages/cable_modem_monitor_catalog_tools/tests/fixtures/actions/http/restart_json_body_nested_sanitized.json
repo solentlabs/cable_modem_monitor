@@ -1,0 +1,31 @@
+{
+  "_description": "A restart PUT body with a sanitized value below the top level. The body is withheld, not copied.",
+  "_entries": [
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://192.168.0.1/actionHandler/ajaxSet_Reset_Restore.php",
+        "headers": [],
+        "postData": {
+          "mimeType": "application/json",
+          "params": [],
+          "text": "{\"action\": \"restart\", \"auth\": {\"user\": \"FIELD_4bd3da74\"}}"
+        }
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "PUT",
+    "endpoint": "/actionHandler/ajaxSet_Reset_Restore.php",
+    "params": {},
+    "source": "observed"
+  },
+  "_expected_warnings_contains": [
+    "not copied"
+  ]
+}

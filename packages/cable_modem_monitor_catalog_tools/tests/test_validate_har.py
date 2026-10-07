@@ -131,3 +131,12 @@ def test_scanned_fleet_decides_login_credentials(tmp_path: Path) -> None:
     knows = validate_har(har, fleet=FleetPatterns(password_field_names=frozenset({"zzsecret"})))
     excludes = validate_har(har, fleet=FleetPatterns(password_field_names=frozenset()))
     assert (knows.auth_flow_detected, excludes.auth_flow_detected) == (True, False)
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH"])
+def test_login_submitted_by_any_write_method(tmp_path: Path, method: str) -> None:
+    """A credential submission is a login whatever write method carries it."""
+    data = load_fixture(VALID_DIR / "auth_form.json")
+    data["_har"]["log"]["entries"][1]["request"]["method"] = method
+    result = validate_har(write_har(tmp_path, data["_har"]))
+    assert result.auth_flow_detected is True

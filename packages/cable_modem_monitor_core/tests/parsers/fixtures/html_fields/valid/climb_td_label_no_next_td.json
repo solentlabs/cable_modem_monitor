@@ -1,0 +1,16 @@
+{
+  "_description": "Label tag inside a td with no next td; field omitted",
+  "_html": "<html><body><table><tr><td><label>Hardware Version</label></td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {
+        "label": "Hardware Version",
+        "field": "hardware_version",
+        "type": "string"
+      }
+    ]
+  },
+  "_expected": {}
+}

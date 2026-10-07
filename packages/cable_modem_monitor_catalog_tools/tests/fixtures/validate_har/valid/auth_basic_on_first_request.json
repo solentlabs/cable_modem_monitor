@@ -1,0 +1,19 @@
+{
+  "_expected_auth": true,
+  "_expected_hints": ["http"],
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/", "cookies": [], "headers": [{"name": "Authorization", "value": "Basic SSdtIHNvcnJ5IERhdmUsIEkgY2Fubm90IGRvIHRoYXQ="}]},
+          "response": {"status": 200, "cookies": [], "headers": [], "content": {"size": 8000, "text": ""}}
+        },
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "cookies": [], "headers": [{"name": "Authorization", "value": "Basic SSdtIHNvcnJ5IERhdmUsIEkgY2Fubm90IGRvIHRoYXQ="}]},
+          "response": {"status": 200, "cookies": [], "headers": [], "content": {"size": 8000, "text": ""}}
+        }
+      ]
+    }
+  }
+}

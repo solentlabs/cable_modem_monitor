@@ -83,7 +83,6 @@
   },
   "_expected_transport": "http",
   "_expected_auth_strategy": "form",
-  "_expected_auth_confidence": "high",
   "_expected_session_cookie": "",
   "_expected_logout": {
     "type": "http",

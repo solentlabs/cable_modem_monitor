@@ -1,0 +1,17 @@
+{
+  "_description": "A label cell holding a nested table of help text: the label is the cell's own text, not the help paragraph",
+  "_entry": {
+    "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "headers": []},
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 400,
+        "mimeType": "text/html",
+        "text": "<html><table><tr><th>Downstream</th><th>Bonding Channel Value</th></tr><tr><td>Channel ID</td><td>1</td></tr><tr><td>Power Level<table><tbody><tr><td><small>This reading is a snapshot taken when the page was requested.</small></td></tr></tbody></table></td><td>5 dBmV</td></tr></table></html>"
+      }
+    }
+  },
+  "_expected_table_count": 1,
+  "_expected_rows": [["Channel ID", "1"], ["Power Level", "5 dBmV"]]
+}

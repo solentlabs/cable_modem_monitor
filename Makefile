@@ -31,7 +31,7 @@ help:
 	@echo "  make quick-check  - Quick checks (lint + format, skip type-check)"
 	@echo "  make validate-host - Cross-platform validation (auto-installs tools)"
 	@echo "  make validate-ci   - Full CI-like validation (lint + tests + ha-compat)"
-	@echo "  make spell-check   - Spell check catalog modem YAML files (requires Node.js)"
+	@echo "  make spell-check   - Spell check catalog YAML, docs and scripts (requires Node.js)"
 	@echo "  make changelog-check - Validate CHANGELOG.md structure"
 	@echo "  make commit-lint   - Validate this branch's commit messages (requires Node.js)"
 	@echo "  make install-hooks - Install optional pre-push hook (runs validate-ci)"
@@ -139,7 +139,9 @@ validate-ci: check test intake-regression pii-check spell-check catalog-readme-c
 # Computes fleet onboarding accuracy fresh from the catalog every run
 # (report, not a gate). Trend is tracked via the timestamped scorecard
 # artifact in CI; per-modem parse correctness is gated by the golden
-# replay tests.
+# replay tests. CI also compares against the previous run's card; that
+# fetch has no local mirror because it needs the repo's run history.
+# Locally, save a card and pass it to --compare (INTAKE_PIPELINE.md).
 intake-regression:
 	@echo "🔍 Running intake pipeline accuracy report..."
 	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py
@@ -158,19 +160,20 @@ pii-check:
 	@echo "🔍 Scanning fixtures for PII..."
 	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog/scripts/check_fixture_pii.py
 
-# Spell check for catalog modem files — mirrors CI spell-check job. Requires Node.js (npx).
-# Scoped to catalog modem YAML; broader codebase (Python, docs) not yet audited.
+# Spell check for catalog modem YAML, docs/ and scripts/ — mirrors CI spell-check job.
+# Requires Node.js (npx). Keep the globs identical to the CI job's.
 spell-check:
-	@echo "🔤 Running spell check on catalog modem files..."
+	@echo "🔤 Running spell check on catalog YAML, docs and scripts..."
 	@npx --yes cspell@10 --config cspell.config.yaml \
 		"packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/**/*.yaml" \
+		"docs/**/*.md" "scripts/**/*.py" "scripts/**/*.sh" \
 		--no-progress
 
 # Suppression-discipline scan — mirrors CI suppression-check job.
 # Scans every commit on this branch since origin/main for unjustified
 # `# type: ignore` / `# pyright: ignore` / bare `# noqa` patterns.
 # Matches CI's diff scope (--branch origin/main) so local validation
-# catches what CI would. See CLAUDE.md § Code Discipline.
+# catches what CI would. See docs/CODE_REVIEW.md § Suppression Discipline.
 suppression-check:
 	@echo "🔍 Scanning for unjustified suppressions..."
 	@$(VENV_BIN)/python scripts/check_suppression_discipline.py --branch origin/main
@@ -246,9 +249,9 @@ changelog-check:
 	@$(VENV_BIN)/python scripts/check_changelog.py
 
 # Markdown link check — mirrors CI link-check job. Validates that intra-repo
-# relative and repo-absolute links resolve, and that the HACS-rendered root
-# README uses absolute URLs. Offline and deterministic. See CLAUDE.md
-# § Two READMEs — GitHub vs HACS.
+# relative and repo-absolute links and their #anchors resolve, and that the
+# HACS-rendered root README uses absolute URLs. Offline and deterministic.
+# See CLAUDE.md § Two READMEs — GitHub vs HACS.
 link-check:
 	@echo "🔗 Checking intra-repo Markdown links..."
 	@$(VENV_BIN)/python scripts/check_markdown_links.py

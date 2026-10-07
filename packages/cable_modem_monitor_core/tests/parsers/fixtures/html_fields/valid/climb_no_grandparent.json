@@ -1,0 +1,16 @@
+{
+  "_description": "Span in a div in a td does not climb two levels to the td; field omitted",
+  "_html": "<html><body><table><tr><td><div><span>Hardware Version</span></div></td><td>2.1.0</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {
+        "label": "Hardware Version",
+        "field": "hardware_version",
+        "type": "string"
+      }
+    ]
+  },
+  "_expected": {}
+}

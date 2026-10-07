@@ -4,8 +4,8 @@ Lists the HAR's JSON endpoints that the generated config will not read,
 each with its key skeleton and value types. It is the LLM's view of what
 nothing in the pipeline looked at.
 
-**Why this exists:** gap categories are endpoint-level and cover auth and
-actions only. A data endpoint the generator never maps produces no gap
+**Why this exists:** gap categories are endpoint-level and cover auth
+only. A data endpoint the generator never maps produces no gap
 and no warning — intake writes a ``parser.yaml`` that omits it, every
 gate stays green, and the page is invisible. Issue #185's HAR carried
 ``/rest/v1/cablemodem/serviceflows`` at 200 with four registered Tier-2
@@ -41,7 +41,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from ..validation.har_utils import content_type_of, is_static_resource, jsonrpc_body, jsonrpc_response, path_from_url
+from ..validation.har_utils import content_type_of, is_static_resource, json_rpc_body, json_rpc_response, path_from_url
 from .actions.types import ActionsDetail
 from .auth.types import AuthDetail
 
@@ -83,7 +83,7 @@ def detect_unread_resources(
     """Report the HAR's 2xx JSON endpoints that no part of the config consumes."""
     mapped = _mapped_endpoints(sections, auth, actions)
     # JSON-RPC puts every call behind auth's endpoint; its methods are reported below.
-    rpc_endpoint = _normalize_endpoint(auth.fields.get("endpoint") or "") if transport == "jsonrpc" else None
+    rpc_endpoint = _normalize_endpoint(auth.fields.get("endpoint") or "") if transport == "json_rpc" else None
 
     unread: list[UnreadResource] = []
     for path, (response, body) in sorted(_json_candidates(entries).items()):
@@ -101,12 +101,12 @@ def detect_unread_resources(
                 shape=_shape_of(body),
             )
         )
-    if transport == "jsonrpc":
-        unread.extend(_jsonrpc_unread(entries, sections, auth))
+    if transport == "json_rpc":
+        unread.extend(_json_rpc_unread(entries, sections, auth))
     return unread
 
 
-def _jsonrpc_unread(
+def _json_rpc_unread(
     entries: list[dict[str, Any]],
     sections: dict[str, Any] | None,
     auth: AuthDetail,
@@ -115,8 +115,8 @@ def _jsonrpc_unread(
     read = set(_collect_resources(sections)) | {auth.fields.get("login_method")}
     answered: dict[str, tuple[dict[str, Any], Any]] = {}
     for entry in entries:
-        body = jsonrpc_body(entry.get("request", {}))
-        reply = jsonrpc_response(entry)
+        body = json_rpc_body(entry.get("request", {}))
+        reply = json_rpc_response(entry)
         if body is not None and "result" in reply:
             answered[body["method"]] = (entry.get("response", {}), reply["result"])
     return [
@@ -185,12 +185,16 @@ def _mapped_endpoints(
     """Collect every endpoint the generated config will fetch."""
     mapped = {_normalize_endpoint(resource) for resource in _collect_resources(sections)}
 
-    for name in _AUTH_ENDPOINT_FIELDS:
-        value = auth.fields.get(name)
-        if isinstance(value, str) and value:
-            mapped.add(_normalize_endpoint(value))
+    # An unresolved strategy's candidates all name the login the capture made.
+    for fields in (auth.fields, *auth.candidates.values()):
+        for name in _AUTH_ENDPOINT_FIELDS:
+            value = fields.get(name)
+            if isinstance(value, str) and value:
+                mapped.add(_normalize_endpoint(value))
 
-    for action in (actions.logout, actions.restart):
+    # Like strategy candidates, an unresolved action's candidates name requests the capture made.
+    offered = [action for by_endpoint in actions.candidates.values() for action in by_endpoint.values()]
+    for action in (actions.logout, actions.restart, *offered):
         if action is None:
             continue
         for value in (action.endpoint, action.pre_fetch_url):

@@ -5,7 +5,7 @@
       "version": "1.2",
       "entries": [
         {
-          "request": {"method": "GET", "url": "http://192.168.100.1/", "cookies": [], "headers": [{"name": "Authorization", "value": "Basic QWggYWggYWgsIHlvdSBkaWRudCBzYXkgdGhlIG1hZ2ljIHdvcmQ="}]},
+          "request": {"method": "GET", "url": "http://192.168.100.1/", "cookies": [], "headers": [{"name": "Authorization", "value": "Bearer ah-ah-ah-you-didnt-say-the-magic-word"}]},
           "response": {"status": 200, "cookies": [], "headers": [], "content": {"size": 8000, "text": ""}}
         },
         {

@@ -8,7 +8,8 @@ Cells that contain nested ``<table>`` elements are treated as layout
 wrappers, not data cells — consistent with the parser-side table
 selector in ``parsers.table_selector``.
 
-Label-value pair detection uses regex (no nesting issues).
+Table-row label pairs are kept only when Core's label lookup reads the
+same value; id and inline "Label: Value<BR>" pairs use regex.
 """
 
 from __future__ import annotations
@@ -16,6 +17,8 @@ from __future__ import annotations
 import re
 
 from bs4 import BeautifulSoup, Tag
+from solentlabs.cable_modem_monitor_core.loaders.html_normalize import normalize_html
+from solentlabs.cable_modem_monitor_core.parsers import BLOCK_LEVEL_TAGS, extract_by_label
 
 from .types import DetectedLabelPair, DetectedTable
 
@@ -62,13 +65,6 @@ _REPAIRED_ROW_ATTR = "data-cmm-repaired"
 
 _UNCLOSED_TH_RE = re.compile(
     r"(<th\b[^>]*>)([^<]*)(</td>)",
-    re.IGNORECASE,
-)
-
-_TAG_STRIP = re.compile(r"<[^>]+>")
-
-_LABEL_VALUE_PATTERN = re.compile(
-    r"<t[dh][^>]*>\s*([^<]+?)\s*:?\s*</t[dh]>\s*<t[dh][^>]*>\s*([^<]+?)\s*</t[dh]>",
     re.IGNORECASE,
 )
 
@@ -158,6 +154,13 @@ def _is_data_table(table: Tag) -> bool:
     return not (nested_cells > 0 and nested_cells / total_cells > 0.25)
 
 
+def _own_text(cell: Tag) -> str:
+    """The cell's text without any table nested in it (ONBOARDING_SPEC § Table cell text)."""
+    if cell.find("table") is None:
+        return str(cell.get_text(strip=True))
+    return "".join(str(s) for s in cell.find_all(string=True, recursive=False)).strip()
+
+
 def _extract_rows(table: Tag) -> list[list[str]]:
     """Extract text content from direct table rows.
 
@@ -173,8 +176,9 @@ def _extract_rows(table: Tag) -> list[list[str]]:
             continue
 
         leaf_texts: list[str] = []
-        for cell in cells:
-            text = cell.get_text(strip=True)
+        for position, cell in enumerate(cells):
+            # The label cell alone drops nested help text; values are read as Core reads them.
+            text = _own_text(cell) if position == 0 else cell.get_text(strip=True)
             if not text:
                 # Fallback: i18n attributes contain semantic header labels
                 # when the visible text is injected by JavaScript at runtime.
@@ -385,7 +389,7 @@ def detect_tables(body: str) -> list[DetectedTable]:
 
 
 # -----------------------------------------------------------------------
-# Label-value pair detection (regex — no nesting issues)
+# Label-value pair detection
 # -----------------------------------------------------------------------
 
 
@@ -394,11 +398,9 @@ def detect_label_pairs(body: str) -> list[DetectedLabelPair]:
     pairs: list[DetectedLabelPair] = []
     seen_labels: set[str] = set()
 
-    # Strategy 1: Table cells with label: value pattern
-    for match in _LABEL_VALUE_PATTERN.finditer(body):
-        label = match.group(1).strip().rstrip(":")
-        value = match.group(2).strip()
-        if label and value and label.lower() not in seen_labels:
+    # Strategy 1: table rows, first cell the label, second the value
+    for label, value in _confirmed_row_pairs(body):
+        if label.lower() not in seen_labels:
             seen_labels.add(label.lower())
             pairs.append(
                 DetectedLabelPair(
@@ -442,4 +444,27 @@ def detect_label_pairs(body: str) -> list[DetectedLabelPair]:
                 )
             )
 
+    return pairs
+
+
+def _confirmed_row_pairs(body: str) -> list[tuple[str, str]]:
+    """Return (label, value) from table rows that Core's label lookup reads back."""
+    # Same parse as Core's loader, so the confirmation sees the runtime DOM.
+    soup = BeautifulSoup(normalize_html(body), "html.parser")
+    pairs: list[tuple[str, str]] = []
+    for row in soup.find_all("tr"):
+        cells = row.find_all(["td", "th"], recursive=False)
+        # A cell holding a block-level tag is a layout wrapper, not a label or value.
+        if len(cells) < 2 or cells[0].find(BLOCK_LEVEL_TAGS) or cells[1].find(BLOCK_LEVEL_TAGS):
+            continue
+        label = cells[0].get_text().strip().rstrip(":").strip()
+        value = cells[1].get_text().strip()
+        if not label or not value:
+            continue
+        # Core matches labels by substring, so a row whose label also sits
+        # inside an earlier cell (channel tables of numbers) reads that
+        # cell's neighbour instead; such a row is not a label pair.
+        core_value = extract_by_label(soup, label)
+        if core_value is not None and core_value.strip() == value:
+            pairs.append((label, value))
     return pairs

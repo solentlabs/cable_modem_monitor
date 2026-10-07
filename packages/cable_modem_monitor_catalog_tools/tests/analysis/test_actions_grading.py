@@ -24,7 +24,14 @@ _HNAP_RESTART: dict[str, Any] = {
     "params": {"Action": "reboot"},
 }
 
-_JSONRPC_RESTART: dict[str, Any] = {"type": "jsonrpc", "method": "MGMT.reboot"}
+_JSON_RPC_RESTART: dict[str, Any] = {"type": "json_rpc", "method": "MGMT.reboot"}
+
+_REST_RESTART: dict[str, Any] = {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/rest/v1/system/reboot",
+    "json_body": {"reboot": {"enable": True}},
+}
 
 
 @pytest.mark.parametrize(
@@ -77,20 +84,21 @@ _JSONRPC_RESTART: dict[str, Any] = {"type": "jsonrpc", "method": "MGMT.reboot"}
         # (pre_fetch_action, response_key, ...) are out of grading scope
         (_HNAP_RESTART, {**_HNAP_RESTART, "pre_fetch_action": "GetArrisConfigurationInfo"}, "match"),
         ({**_HNAP_RESTART, "action_name": "SetOther"}, _HNAP_RESTART, "mismatch"),
-        # jsonrpc identity is the method; there is no endpoint on the action
-        (_JSONRPC_RESTART, _JSONRPC_RESTART, "match"),
-        ({**_JSONRPC_RESTART, "method": "MGMT.other"}, _JSONRPC_RESTART, "mismatch"),
-        # Committed json_body the pipeline cannot produce (superhub5 shape)
-        (
-            {"type": "http", "method": "POST", "endpoint": "/rest/v1/system/reboot"},
-            {
-                "type": "http",
-                "method": "POST",
-                "endpoint": "/rest/v1/system/reboot",
-                "json_body": {"reboot": {"enable": True}},
-            },
-            "partial",
-        ),
+        # json_rpc identity is the method; there is no endpoint on the action
+        (_JSON_RPC_RESTART, _JSON_RPC_RESTART, "match"),
+        ({**_JSON_RPC_RESTART, "method": "MGMT.other"}, _JSON_RPC_RESTART, "mismatch"),
+        # Committed json_body the pipeline did not produce from an observed request
+        ({**_REST_RESTART, "json_body": None}, _REST_RESTART, "partial"),
+        # Observed body reproduced exactly (f3896lg-vmb case)
+        (_REST_RESTART, _REST_RESTART, "match"),
+        # Observed body differs from the committed one
+        ({**_REST_RESTART, "json_body": {"reboot": {"enable": False}}}, _REST_RESTART, "partial"),
+        # Body detected where the committed action declares none
+        (_REST_RESTART, {**_REST_RESTART, "json_body": None}, "partial"),
+        # Endpoint only in page script, body unobserved (f3896lg-zg case)
+        ({**_REST_RESTART, "json_body": None, "body": "unobserved"}, _REST_RESTART, "partial"),
+        # Body observed but encoded, withheld (tg3442s case)
+        ({**_REST_RESTART, "json_body": None, "body": "encoded"}, _REST_RESTART, "partial"),
         # Committed yaml params may be non-string scalars
         (
             {"type": "http", "method": "POST", "endpoint": "/x", "params": {"n": "1"}},
@@ -159,8 +167,33 @@ def test_severity_covers_all_statuses() -> None:
     assert GRADE_SEVERITY["match"] < GRADE_SEVERITY["partial"] < GRADE_SEVERITY["mismatch"]
 
 
-def test_jsonrpc_mismatch_names_methods() -> None:
-    """A jsonrpc mismatch reads as the two methods, not an http method and a missing endpoint."""
-    grade = grade_action({**_JSONRPC_RESTART, "method": "MGMT.other"}, _JSONRPC_RESTART)
+def test_json_rpc_mismatch_names_methods() -> None:
+    """A json_rpc mismatch reads as the two methods, not an http method and a missing endpoint."""
+    grade = grade_action({**_JSON_RPC_RESTART, "method": "MGMT.other"}, _JSON_RPC_RESTART)
     assert grade is not None
-    assert grade.detail == "detected jsonrpc MGMT.other vs committed jsonrpc MGMT.reboot"
+    assert grade.detail == "detected json_rpc MGMT.other vs committed json_rpc MGMT.reboot"
+
+
+@pytest.mark.parametrize(
+    ("detected", "committed", "detail"),
+    [
+        ({**_REST_RESTART, "json_body": None}, _REST_RESTART, "json_body not produced"),
+        (
+            {**_REST_RESTART, "json_body": None, "body": "unobserved"},
+            _REST_RESTART,
+            "json_body unobserved: no request in capture",
+        ),
+        (
+            {**_REST_RESTART, "json_body": None, "body": "encoded"},
+            _REST_RESTART,
+            "json_body encoded: observed body holds sanitized or encrypted values",
+        ),
+        ({**_REST_RESTART, "json_body": {"reboot": {}}}, _REST_RESTART, "json_body differs"),
+        (_REST_RESTART, {**_REST_RESTART, "json_body": None}, "extra json_body detected"),
+    ],
+)
+def test_json_body_grade_detail(detected: dict, committed: dict, detail: str) -> None:
+    """A json_body shortfall names its cause: not produced, unobserved, encoded, differs or extra."""
+    grade = grade_action(detected, committed)
+    assert grade is not None
+    assert grade.detail == detail

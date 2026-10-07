@@ -15,7 +15,6 @@
   ],
   "_transport": "hnap",
   "_expected_strategy": "hnap",
-  "_expected_confidence": "high",
   "_expected_fields": {
     "hmac_algorithm": "sha256"
   }

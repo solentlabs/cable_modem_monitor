@@ -1,0 +1,18 @@
+{
+  "_description": "Label for= input inside a td resolves the input before any climb to the next td",
+  "_html": "<html><body><table><tr><td><label for=\"hw\">Hardware Version</label><input id=\"hw\" value=\"2.1.0\" /></td><td>other</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {
+        "label": "Hardware Version",
+        "field": "hardware_version",
+        "type": "string"
+      }
+    ]
+  },
+  "_expected": {
+    "hardware_version": "2.1.0"
+  }
+}

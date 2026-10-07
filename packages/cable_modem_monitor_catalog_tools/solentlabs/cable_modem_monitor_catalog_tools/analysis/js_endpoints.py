@@ -64,7 +64,7 @@ from typing import Any
 from ..validation.har_utils import (
     WARNING_PREFIX,
     is_static_resource,
-    jsonrpc_body,
+    json_rpc_body,
     path_from_url,
 )
 
@@ -125,7 +125,7 @@ _URL_GROUP: dict[re.Pattern[str], int] = {
 }
 
 # The value of a JSON-RPC "method" key, quoted or bare: method:"X.y", "method": "X.y".
-_JSONRPC_METHOD_VALUE = re.compile(r"""["']?\bmethod["']?\s*:\s*["']([^"'\s]+)["']""")
+_JSON_RPC_METHOD_VALUE = re.compile(r"""["']?\bmethod["']?\s*:\s*["']([^"'\s]+)["']""")
 
 # Inline <script> block extraction.  HTML5 lets </script> carry trailing
 # whitespace, attribute-like text, or "/>" before the closing > — match
@@ -206,18 +206,18 @@ def detect_uncaptured_endpoints(
         )
 
 
-def detect_uncalled_jsonrpc_methods(
+def detect_uncalled_json_rpc_methods(
     entries: list[dict[str, Any]],
     warnings: list[str],
 ) -> None:
     """Warn for each JSON-RPC method the firmware JS names that no captured call used."""
-    called = {body["method"] for entry in entries if (body := jsonrpc_body(entry.get("request", {}))) is not None}
+    called = {body["method"] for entry in entries if (body := json_rpc_body(entry.get("request", {}))) is not None}
     namespaces = {method.split(".", 1)[0] for method in called if "." in method}
 
     uncalled: dict[str, set[str]] = {}
     for entry in entries:
         for js_text, label in _extract_js_sources(entry):
-            for match in _JSONRPC_METHOD_VALUE.finditer(_strip_js_comments(js_text)):
+            for match in _JSON_RPC_METHOD_VALUE.finditer(_strip_js_comments(js_text)):
                 method = match.group(1)
                 if method not in called and "." in method and method.split(".", 1)[0] in namespaces:
                     uncalled.setdefault(method, set()).add(label)

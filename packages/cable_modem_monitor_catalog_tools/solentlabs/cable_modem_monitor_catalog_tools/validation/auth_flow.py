@@ -19,6 +19,7 @@ from ..analysis.auth.patterns import (
 from .har_utils import (
     HARD_STOP_PREFIX,
     WARNING_PREFIX,
+    WRITE_METHODS,
     has_set_cookie,
     is_hnap_request,
     lower_headers,
@@ -49,7 +50,7 @@ def validate_auth_flow(entries: list[dict[str, Any]], issues: list[str]) -> bool
     """Check whether the HAR contains an auth flow. Returns True if detected.
 
     Appends HARD STOP issues for: session cookies on first request,
-    Authorization header on first request (post-auth HAR).
+    non-Basic Authorization header on first request (post-auth HAR).
     """
     first_req = entries[0]["request"]
     first_resp = entries[0]["response"]
@@ -96,7 +97,7 @@ def validate_auth_redirect_landing(entries: list[dict[str, Any]], issues: list[s
 
     for entry in entries:
         request = entry["request"]
-        if request.get("method") != "POST" or not _is_login_url(request.get("url", "")):
+        if request.get("method") not in WRITE_METHODS or not _is_login_url(request.get("url", "")):
             continue
         if not has_credential_fields(request.get("postData", {})):
             continue
@@ -181,10 +182,10 @@ def _scan_auth_artifacts(entries: list[dict[str, Any]]) -> AuthArtifacts:
         if is_hnap_request(url, req_hdrs):
             artifacts.hnap = artifacts.any = True
 
-        # A POST without credential-shaped fields is an action posted to the
+        # A write without credential-shaped fields is an action sent to the
         # auth endpoint, not a login; a HAR with no login must not report
         # an auth flow.
-        if method == "POST" and _is_login_url(url) and has_credential_fields(req.get("postData", {})):
+        if method in WRITE_METHODS and _is_login_url(url) and has_credential_fields(req.get("postData", {})):
             artifacts.login_post = artifacts.any = True
 
         if "authorization" in req_hdrs:
@@ -197,11 +198,17 @@ def _scan_auth_artifacts(entries: list[dict[str, Any]]) -> AuthArtifacts:
 
 
 def _has_authorization_on_first_request(entries: list[dict[str, Any]]) -> bool:
-    """Check if the first request has an Authorization header (post-auth HAR)."""
+    """Check if the first request has a non-Basic Authorization header (post-auth HAR)."""
     all_200 = all(e["response"].get("status") == 200 for e in entries)
     if not all_200:
         return False
-    return "authorization" in lower_headers(entries[0]["request"])
+    authorization = lower_headers(entries[0]["request"]).get("authorization")
+    if authorization is None:
+        return False
+    # Basic auth sends credentials on every request, so the header is the
+    # login itself, not a leftover session. Keyed on the scheme because
+    # validation runs before analysis knows the strategy.
+    return authorization.split(" ", 1)[0].lower() != "basic"
 
 
 def _is_login_url(url: str) -> bool:

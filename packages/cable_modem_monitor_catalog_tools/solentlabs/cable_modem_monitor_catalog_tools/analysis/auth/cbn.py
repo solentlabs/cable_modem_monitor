@@ -65,7 +65,7 @@ def detect_cbn_auth(entries: list[dict[str, Any]], warnings: list[str]) -> AuthD
         fields["session_cookie_name"] = cookie
     if "Username" in params:
         fields["username_value"] = params["Username"]
-    return AuthDetail(strategy="form_cbn", fields=fields, confidence="high")
+    return AuthDetail(strategy="form_cbn", fields=fields)
 
 
 def cbn_getter_endpoint(entries: list[dict[str, Any]]) -> str:

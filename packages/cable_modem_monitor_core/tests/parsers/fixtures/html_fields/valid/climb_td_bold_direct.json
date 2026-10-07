@@ -1,0 +1,18 @@
+{
+  "_description": "Non-cascade tag inside a td leaves the td as the leaf match",
+  "_html": "<html><body><table><tr><td><b>Hardware Version</b></td><td>2.1.0</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {
+        "label": "Hardware Version",
+        "field": "hardware_version",
+        "type": "string"
+      }
+    ]
+  },
+  "_expected": {
+    "hardware_version": "2.1.0"
+  }
+}

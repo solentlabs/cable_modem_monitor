@@ -44,6 +44,10 @@ notes: |
   Reboot capability: unknown — SB8200 series historically has reboot disabled by
   ISP firmware. Needs verification on this firmware family before enabling.
 
+  The device serial in modem.har entries 34 (SerialNumber) and 43, 76
+  (StatusSoftwareSerialNum) was redacted here afterwards to [REDACTED].
+  The older automated pass left it; har-capture 0.13.1 flags it.
+
 references:
   issues:
     - "[#165 — [Modem Request] Arris SB8200 v6](https://github.com/solentlabs/cable_modem_monitor/issues/165)"

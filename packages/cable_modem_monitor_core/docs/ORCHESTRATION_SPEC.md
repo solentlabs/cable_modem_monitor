@@ -208,11 +208,34 @@ class CollectorSignal(Enum):
 | `AUTH_FAILED` | Trip circuit breaker immediately, report `auth_failed`. Covers 401/403 (credentials rejected, UC-87) and 404 (login endpoint absent, UC-87b) |
 | `AUTH_UNAVAILABLE` | Abort poll, report `unreachable`. No auth streak, no circuit breaker, no credential surface — the modem answered "try later", which is not a verdict on the credential (see UC-87a) |
 | `AUTH_LOCKOUT` | Trip circuit breaker immediately, report `auth_failed` |
-| `CONNECTIVITY` | Abort, report `unreachable`, apply connectivity backoff |
+| `CONNECTIVITY` | Abort, report `unreachable`, apply connectivity backoff. After `SESSION_STUCK_THRESHOLD` consecutive failures on a reused session while the health probes show the modem reachable, drop the session (UC-21b) |
 | `LOAD_ERROR` | Abort, report `unreachable` |
 | `LOAD_AUTH` | For single-session modems (`actions.logout` configured): attempt logout (best-effort; skipped if `requires_session: true` and the session is not valid) before clearing session. Then clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-17, UC-18) |
 | `LOAD_INTEGRITY` | Same as `LOAD_AUTH` — for single-session modems, attempt logout (best-effort) before clearing session. Clear session, retry once in same poll, increment auth streak if retry fails, report `auth_failed` (see UC-19a) |
 | `PARSE_ERROR` | Abort, report `parser_issue` |
+
+**A reachable modem whose reused session keeps failing.** A reused
+session can stop working without the modem saying so: it drops the
+connection (`RemoteDisconnected`), which is `CONNECTIVITY`, and
+`CONNECTIVITY` never clears the session. The entry then reports
+`unreachable` on every poll until the integration is reloaded. The
+orchestrator counts a failed collection when the failure was on a
+reused session and a health probe taken after it shows the data path up
+(`HealthStatus.data_path_up`, the reading that also clears the
+backoff). At `SESSION_STUCK_THRESHOLD` such failures in a row it
+attempts the best-effort logout and clears the session, and the same
+poll logs in fresh. A success, a failure on a fresh session, or a fresh
+probe reading down resets the count, and a missing or stale probe counts
+nothing, so a modem that is down or a network that dropped never
+triggers it.
+
+```python
+SESSION_STUCK_THRESHOLD: int = 3  # CONNECTIVITY on a reused session, modem reachable (UC-21b)
+```
+
+The threshold is a Core constant beside `AUTH_FAILURE_THRESHOLD`, never
+per-modem config. The fresh login takes the path any login takes; it
+adds no prompt.
 
 ### State Ownership
 
@@ -267,6 +290,7 @@ Example — successful collection with no channels:
 | Pulse | INFO first poll, DEBUG after | Successful poll summaries | `"Collection complete [MODEL] — DS: 24, US: 4 (120ms)"` — visible at INFO for first-poll confirmation, then DEBUG in steady-state to keep success-path logs quiet |
 | Auth/resource | INFO first poll, DEBUG after | Steady-state noise reduction | Auth strategy, session state, resource loading. Visible at INFO for first-poll diagnostics, drops to DEBUG after to avoid flooding multi-modem logs |
 | Failures | WARNING/ERROR always | Never demoted | Auth failures, connectivity errors, parse errors. Always visible regardless of poll count |
+| Repeated findings | WARNING first sighting, DEBUG after | Not failures; recur every login | Login-page drift. Rule in [LOGGING_SPEC.md](LOGGING_SPEC.md) § Level policy |
 | Wire data | DEBUG always | Troubleshooting only | Request/response details, parsing internals |
 
 Status transitions and adaptive-reuse state changes stay at INFO even
@@ -508,7 +532,9 @@ class Orchestrator:
            (``HealthStatus.data_path_up``: RESPONSIVE or ICMP_BLOCKED,
            the latter proven by a live TCP pass since UC-59a), clear
            the backoff (modem is proven reachable, no reason to keep
-           skipping)
+           skipping). That same reading counts the failed collection
+           toward the stuck-session threshold (below); a fresh probe that
+           reads down resets the count
         3. Check connectivity backoff — decrement counter. If still > 0
            after decrement, return UNREACHABLE. If counter reached 0,
            backoff is cleared and collection proceeds.
@@ -956,7 +982,7 @@ class ConnectionStatus(Enum):
     NO_SIGNAL = "no_signal"
 
 # Note: The "Degraded" display state in the HA Status sensor cascade
-# comes from HealthStatus.DEGRADED (ICMP responds, HTTP fails), which
+# comes from HealthStatus.DEGRADED (ICMP responds, TCP fails), which
 # is a health probe signal. ConnectionStatus has no DEGRADED value.
 
 
@@ -2031,7 +2057,8 @@ Procedure:
 3. Execute the `actions.restart` executor (`HTTP` or `HNAP` — see
    § Action Executors). Stop here if it returns
    `ActionResult(success=False)`: steps 4 and 5 are both premised on a
-   reboot that did not happen.
+   reboot that did not happen. A refused reused session retries once
+   first (below).
 4. Clear the collector session (forces fresh auth on the next poll;
    avoids the MB7621-class stale-cookie failure mode).
 5. Call `recovery.begin(reason="restart_command")` so subsequent
@@ -2047,6 +2074,22 @@ reboot that never dispatched, opened a recovery window for it, and
 left the user watching an unchanged uptime counter (#82). The
 executor's result is the only evidence Core has that the command
 landed, so it is not optional to read.
+
+**A refused reused session retries once.** The monitoring session is
+reused across polls, so the modem may have expired it since the last
+one. Polling clears a session the modem rejects and logs in again
+(UC-21); restart does the same (UC-21a). When the executor reports
+`ActionResult.session_refused` on the reused monitoring session,
+`run_restart` clears the session, authenticates fresh and sends the
+action once more; that second result stands. The executor sets
+`session_refused` from the firmware's own verdict: an HNAP
+`<Action>Result` of `UN-AUTH`, or an HTTP status of 401 or 403. Never
+retried: a failure that is not a refusal, a connection drop (the reboot
+itself), a refusal on a session this call just created, any `action_auth`
+action (its session is always fresh), and any success, so a modem that
+rebooted is never asked twice. Not recognized: a stale session answered
+with a login page under 2xx. No firmware is observed to do it, and the
+captured restart of `netgear/cm2500` answers 302.
 
 **Per-action auth (`action_auth` on `HttpAction`):** when
 `actions.restart.action_auth` is set, `execute_action` creates a
@@ -2087,13 +2130,18 @@ Mutex.
 
 ### Logging Contract
 
-Every line includes `[MODEL]`. Two lines total — the command is
-one-shot.
+Every line includes `[MODEL]`. The command is one-shot: one outcome
+line, and one retry line when a refused reused session is retried.
 
 - INFO: `"Restart command sent [MODEL] — session cleared (0.4s)"`
+- INFO: `"Restart refused on a reused session [MODEL] — <reason> (session age <N>s); signing in again to retry once"`
 - ERROR: `"Restart command failed [MODEL] — <reason>"` — an exception,
   or the `ActionResult.message` when the executor reported failure
-  (e.g. `Per-action auth failed: Login returned HTTP 401`).
+  (e.g. `Per-action auth failed: Login returned HTTP 401`). A refused
+  action on the monitoring session appends `(session age <N>s)`, the age of
+  the session the failing command went out on. A refusal retried on a
+  fresh login fails with that fresh session's age, which separates a stale
+  session from a fresh login that was refused (#218).
 
 ---
 
@@ -2353,6 +2401,7 @@ per-poll noise.
 | UC-46 | (retired; no response-timeout phase in the new model) |
 | UC-78 | Data sensors go Unavailable only when the snapshot's ``modem_data`` is None |
 | UC-88 | Reboot-signal check matches on a scheduled poll → recovery window opens |
+| UC-21a | Restart refused on the reused monitoring session → clear, fresh login, one retry |
 | UC-89 | Modem answers the restart but refuses it → `error="command_failed"`, no recovery window |
 
 ---
@@ -2369,7 +2418,7 @@ point for all action execution. Both the collector (logout) and
 orchestrator (restart) call it. The function extracts session, base
 URL, and HNAP credentials from the collector and dispatches to the
 appropriate transport-scoped executor based on the action's type
-discriminator (`http`, `hnap`, `cbn`, or `jsonrpc`).
+discriminator (`http`, `hnap`, `cbn`, or `json_rpc`).
 
 ### HTTP Executor
 
@@ -2399,7 +2448,8 @@ executor. Returns `ActionResult`.
 Phases:
 
 1. **Pre-fetch** (optional): call `pre_fetch_action` HNAP action to
-   retrieve current config values.
+   retrieve current config values. The firmware's `<Action>Result`
+   is logged, not judged: the action proceeds whatever it says.
 2. **Interpolation**: replace `${var:default}` placeholders in `params`
    with values from the pre-fetch response.
 3. **Main request**: HMAC-sign and send a SOAP POST to `/HNAP1/`.
@@ -2412,10 +2462,10 @@ Returns `ActionResult`.
 
 ### JSON-RPC Executor
 
-`jsonrpc_action.execute_jsonrpc_action()` sends one JSON-RPC call
+`json_rpc_action.execute_json_rpc_action()` sends one JSON-RPC call
 (`method`, `params`) to `auth.endpoint` with the session token in the
 query, the same request a data call makes. The envelope comes from
-`protocol.jsonrpc`.
+`protocol.json_rpc`.
 
 A `result` of any value is success. An `error` is a refused action
 whose message names the code, and so is a non-2xx status or a body

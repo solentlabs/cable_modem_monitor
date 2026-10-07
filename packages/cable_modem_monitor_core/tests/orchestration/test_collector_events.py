@@ -10,7 +10,9 @@ import pytest
 import requests
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
-from solentlabs.cable_modem_monitor_core.auth.base import AuthFailureMode
+from solentlabs.cable_modem_monitor_core.auth.base import AuthFailureMode, AuthResult, LoginPageDrift
+from solentlabs.cable_modem_monitor_core.auth.form import _login_page_drift
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import FormAuth
 from solentlabs.cable_modem_monitor_core.orchestration.actions.base import ActionResult
 from solentlabs.cable_modem_monitor_core.orchestration.events import (
     AuthFailed,
@@ -22,6 +24,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.events import (
     HnapLoadError,
     HnapSessionExpired,
     HttpStatusError,
+    LoginPageDriftDetected,
     LogoutExecuted,
     LogoutFailed,
     ParseError,
@@ -212,6 +215,114 @@ def test_auth_succeeded_carries_response_url():
         collector.authenticate()
 
     assert _only_auth_succeeded(events).response_url == "/login.html"
+
+
+# ---------------------------------------------------------------------------
+# LoginPageDriftDetected — WARNING the first time a drift is seen, DEBUG after
+# ---------------------------------------------------------------------------
+
+_MISMATCH_A = LoginPageDrift("action_mismatch", "http://h/goform/login", "http://h/goform/login?id=")
+_MISMATCH_B = LoginPageDrift("action_mismatch", "http://h/goform/login", "http://h/cgi-bin/login")
+_TWO_FORMS = LoginPageDrift("multiple_forms", "", "2 forms")
+_SELECTOR_MISS = LoginPageDrift("selector_miss", "#login", "1 form")
+
+_W = EventLevel.WARNING
+_D = EventLevel.DEBUG
+
+# ┌───────────────────────────────┬──────────────────────────────────────┬──────────────────────────┐
+# │ case                          │ findings per login                   │ levels emitted           │
+# ├───────────────────────────────┼──────────────────────────────────────┼──────────────────────────┤
+# │ same drift, three logins      │ A, A, A                              │ W, D, D                  │
+# │ same condition, new values    │ A, B                                 │ W, W                     │
+# │ a seen drift returns          │ A, B, A                              │ W, W, D                  │
+# │ two conditions in one login   │ (2 forms + miss), (2 forms + miss)   │ W, W, D, D               │
+# │ each condition once           │ A, 2 forms, miss                     │ W, W, W                  │
+# │ no drift                      │ -, -                                 │ none                     │
+# └───────────────────────────────┴──────────────────────────────────────┴──────────────────────────┘
+
+DRIFT_LEVEL_CASES = [
+    pytest.param([(_MISMATCH_A,)] * 3, [_W, _D, _D], id="same_drift_repeats"),
+    pytest.param([(_MISMATCH_A,), (_MISMATCH_B,)], [_W, _W], id="new_values_warn_again"),
+    pytest.param([(_MISMATCH_A,), (_MISMATCH_B,), (_MISMATCH_A,)], [_W, _W, _D], id="seen_drift_returns"),
+    pytest.param([(_TWO_FORMS, _SELECTOR_MISS)] * 2, [_W, _W, _D, _D], id="two_conditions_one_login"),
+    pytest.param([(_MISMATCH_A,), (_TWO_FORMS,), (_SELECTOR_MISS,)], [_W, _W, _W], id="each_condition_once"),
+    pytest.param([(), ()], [], id="no_drift"),
+]
+
+
+def _drift_collector(findings_per_login: list[tuple[LoginPageDrift, ...]], *, success: bool = True):
+    """Collector that logs in afresh on every call, each login reporting the next findings."""
+    collector = _fresh_login_collector()
+    cast(MagicMock, collector._auth_manager).authenticate.side_effect = [
+        AuthResult(success=success, error="" if success else "refused", login_page_drift=f) for f in findings_per_login
+    ]
+    return collector
+
+
+@pytest.mark.parametrize("findings_per_login,expected_levels", DRIFT_LEVEL_CASES)
+def test_login_page_drift_levels(findings_per_login, expected_levels):
+    """Each distinct drift warns once per collector lifetime, then drops to DEBUG."""
+    collector = _drift_collector(findings_per_login)
+
+    with capture_events() as events:
+        for _ in findings_per_login:
+            collector.authenticate()
+
+    drift = [e for e in events if isinstance(e, LoginPageDriftDetected)]
+    assert [e.level for e in drift] == expected_levels
+    assert all(e.model == _MODEL for e in drift)
+
+
+def _token_page(token: str) -> str:
+    return f"<html><body><form action='/goform/login?id={token}'></form></body></html>"
+
+
+def test_rotating_action_token_warns_once():
+    """A #189-shaped page whose ?id changes every load is one drift: one WARNING, then DEBUG, no token kept."""
+    config = FormAuth(strategy="form", action="/goform/login", login_page="/")
+    tokens = ["1740525841", "1740529999"]
+    findings = [_login_page_drift(_token_page(t), config, "http://h/", "http://h/goform/login") for t in tokens]
+    collector = _drift_collector(findings)
+
+    with capture_events() as events:
+        for _ in tokens:
+            collector.authenticate()
+
+    drift = [e for e in events if isinstance(e, LoginPageDriftDetected)]
+    assert [e.level for e in drift] == [_W, _D]
+    assert len(collector._login_page_drift_warned) == 1
+    reported = repr(collector.login_page_drift) + repr([vars(e) for e in drift])
+    assert not any(t in reported for t in tokens)
+    assert collector.login_page_drift == (
+        LoginPageDrift("action_mismatch", "http://h/goform/login", "http://h/goform/login?id="),
+    )
+
+
+def test_login_page_drift_reported_on_failed_login():
+    """A refused login still reports the drift the page showed."""
+    collector = _drift_collector([(_MISMATCH_A,)], success=False)
+
+    with capture_events() as events:
+        collector.authenticate()
+
+    assert_event_emitted(
+        events,
+        LoginPageDriftDetected,
+        condition="action_mismatch",
+        configured=_MISMATCH_A.configured,
+        observed=_MISMATCH_A.observed,
+        level=_W,
+    )
+
+
+def test_login_page_drift_is_the_latest_logins():
+    """Diagnostics read the findings of the most recent login, so a healed page clears them."""
+    collector = _drift_collector([(_TWO_FORMS,), ()])
+
+    collector.authenticate()
+    assert collector.login_page_drift == (_TWO_FORMS,)
+    collector.authenticate()
+    assert collector.login_page_drift == ()
 
 
 # ---------------------------------------------------------------------------

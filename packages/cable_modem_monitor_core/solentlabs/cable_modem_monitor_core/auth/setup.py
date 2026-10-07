@@ -16,8 +16,6 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-import requests
-
 from .. import connectivity
 from .factory import load_strategy_module
 
@@ -66,7 +64,7 @@ def detect_setup_params(
     try:
         session = connectivity.create_session(legacy_ssl=legacy_ssl)
         response = session.get(page_url, timeout=_SETUP_TIMEOUT)
-    except (requests.ConnectionError, requests.Timeout) as exc:
+    except connectivity.CONNECTIVITY_ERRORS as exc:
         # Unreachable or unresponsive: the caller must surface it rather
         # than proceed to a login attempt that cannot succeed.
         _logger.info("Login page unreachable during validation (%s): %s", page_url, exc)

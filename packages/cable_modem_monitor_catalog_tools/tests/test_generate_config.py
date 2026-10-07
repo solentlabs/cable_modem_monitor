@@ -97,6 +97,26 @@ def test_valid_parser_yaml_presence(fixture_path: Path) -> None:
         assert result.parser_yaml is None
 
 
+COMPANION_FIXTURES = [f for f in VALID_FIXTURES if "_expected_companion_tables" in load_fixture(f)]
+
+
+@pytest.mark.parametrize("fixture_path", COMPANION_FIXTURES, ids=[f.stem for f in COMPANION_FIXTURES])
+def test_valid_companion_tables(fixture_path: Path) -> None:
+    """A companion table follows the main table in the section's tables list and merges by key."""
+    fixture = load_fixture(fixture_path)
+    result = generate_config(fixture["_analysis"], fixture["_metadata"])
+    assert result.validation.valid, f"Expected valid output, got errors: {result.validation.errors}"
+    assert result.parser_yaml is not None
+    tables = yaml.safe_load(result.parser_yaml)["downstream"]["tables"]
+
+    expected = fixture["_expected_companion_tables"]
+    assert len(tables) == 1 + len(expected)
+    for table, want in zip(tables[1:], expected, strict=True):
+        assert table["merge_by"] == want["merge_by"]
+        assert table["selector"]["match"] == want["selector_match"]
+        assert [row["field"] for row in table["rows"]] == want["row_fields"]
+
+
 @pytest.mark.parametrize(
     "fixture_path",
     [f for f in VALID_FIXTURES if "_expected_auth_fields" in load_fixture(f)],
@@ -248,15 +268,30 @@ class TestActionsBehavior:
         assert modem["actions"]["restart"]["type"] == "http"
         assert modem["actions"]["restart"]["params"]["action"] == "1"
 
-    def test_jsonrpc_restart_from_resolution(self) -> None:
-        """A resolved actions.restart.method becomes a jsonrpc action; the rest comes from the transport."""
-        fixture = load_fixture(VALID_DIR / "jsonrpc_resolved_restart.json")
-        modem = yaml.safe_load(generate_config(fixture["_analysis"], fixture["_metadata"]).modem_yaml)
-        assert modem["actions"] == {"restart": {"type": "jsonrpc", "method": "SYS.reboot"}}
+    def test_restart_action_with_json_body(self) -> None:
+        """An observed JSON body becomes json_body, and the config validates."""
+        fixture = load_fixture(VALID_DIR / "table_no_cookie.json")
+        fixture["_analysis"]["actions"]["restart"] = {
+            "type": "http",
+            "method": "POST",
+            "endpoint": "/rest/v1/system/reboot",
+            "json_body": {"reboot": {"enable": True}},
+        }
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        restart = yaml.safe_load(result.modem_yaml)["actions"]["restart"]
+        assert restart["json_body"] == {"reboot": {"enable": True}}
+        assert "params" not in restart
 
-    def test_jsonrpc_unresolved_restart_omitted(self) -> None:
+    def test_json_rpc_restart_from_resolution(self) -> None:
+        """A resolved actions.restart.method becomes a json_rpc action; the rest comes from the transport."""
+        fixture = load_fixture(VALID_DIR / "json_rpc_resolved_restart.json")
+        modem = yaml.safe_load(generate_config(fixture["_analysis"], fixture["_metadata"]).modem_yaml)
+        assert modem["actions"] == {"restart": {"type": "json_rpc", "method": "SYS.reboot"}}
+
+    def test_json_rpc_unresolved_restart_omitted(self) -> None:
         """A non-blocking restart left unresolved leaves no actions block, and generation stays valid."""
-        fixture = load_fixture(VALID_DIR / "jsonrpc_resolved_restart.json")
+        fixture = load_fixture(VALID_DIR / "json_rpc_resolved_restart.json")
         fixture["_analysis"]["ambiguities"][-1]["resolution"] = None
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         assert result.validation.valid, result.validation.errors
@@ -268,6 +303,147 @@ class TestActionsBehavior:
         result = generate_config(fixture["_analysis"], fixture["_metadata"])
         modem = yaml.safe_load(result.modem_yaml)
         assert "actions" not in modem
+
+
+# ---------------------------------------------------------------------------
+# Spot-check: auth.strategy resolution picks a candidate's fields
+# ---------------------------------------------------------------------------
+
+_BEARER_FIELDS = {
+    "login_endpoint": "/actionHandler/ajaxSet_login.php",
+    "method": "PUT",
+    "token_source": "header",
+    "token_header": "X-CSRF-Token",
+    "token_placement": "header",
+}
+
+
+def _with_strategy_ambiguity(resolution: dict[str, Any] | None) -> dict[str, Any]:
+    """table_form_auth with its auth replaced by an unsettled JSON login."""
+    fixture = load_fixture(VALID_DIR / "table_form_auth.json")
+    fixture["_analysis"]["auth"] = {
+        "strategy": "",
+        "fields": {},
+        "candidates": {"bearer": dict(_BEARER_FIELDS)},
+    }
+    fixture["_analysis"]["ambiguities"] = [
+        {
+            "field": "auth.strategy",
+            "blocking": True,
+            "candidates": [{"value": "bearer", "evidence": [], "corroborated_by": []}],
+            "resolution": resolution,
+        }
+    ]
+    return fixture
+
+
+class TestAuthStrategyResolution:
+    """The resolved strategy brings its candidate's fields; an unresolved one stops generation."""
+
+    def test_resolved_candidate_fields_written(self) -> None:
+        """A resolved bearer writes the bearer candidate's fields, plus the session cookie."""
+        fixture = _with_strategy_ambiguity({"value": "bearer"})
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        auth = yaml.safe_load(result.modem_yaml)["auth"]
+        assert auth == {"strategy": "bearer", **_BEARER_FIELDS, "cookie_name": "session"}
+
+    def test_resolved_none_writes_no_auth_fields(self) -> None:
+        """A `none` candidate carries no fields: the auth block is the bare strategy."""
+        fixture = _with_strategy_ambiguity({"value": "none"})
+        fixture["_analysis"]["auth"]["candidates"]["none"] = {}
+        fixture["_analysis"]["ambiguities"][0]["candidates"].append(
+            {"value": "none", "evidence": [], "corroborated_by": []}
+        )
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert yaml.safe_load(result.modem_yaml).get("auth", {"strategy": "none"}) == {"strategy": "none"}
+
+    def test_unresolved_strategy_blocks(self) -> None:
+        """No resolution: generation names the ambiguity and its candidates."""
+        fixture = _with_strategy_ambiguity(None)
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert not result.validation.valid
+        assert any("unresolved ambiguity auth.strategy (candidates: bearer)" in e for e in result.validation.errors)
+
+
+# ---------------------------------------------------------------------------
+# Spot-check: actions.<kind>.endpoint resolution picks a candidate action
+# ---------------------------------------------------------------------------
+
+_RESTART_CANDIDATE = {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/devctl",
+    "source": "observed",
+    "params": {"RebootYes": "0x01", "WipeNo": "0x00"},
+    "pre_fetch_url": "/device.asp",
+}
+
+
+def _with_restart_candidate(resolution: dict[str, Any] | None) -> dict[str, Any]:
+    """table_form_auth with no restart detected and one observed restart candidate."""
+    fixture = load_fixture(VALID_DIR / "table_form_auth.json")
+    actions = fixture["_analysis"].setdefault("actions", {})
+    actions["restart"] = None
+    actions["candidates"] = {"restart": {"/goform/devctl": dict(_RESTART_CANDIDATE)}}
+    fixture["_analysis"]["ambiguities"] = [
+        {
+            "field": "actions.restart.endpoint",
+            "blocking": False,
+            "candidates": [{"value": "/goform/devctl", "evidence": [], "corroborated_by": []}],
+            "resolution": resolution,
+        }
+    ]
+    return fixture
+
+
+# The config holds the request; source is analysis provenance, not config
+_RESTART_WRITTEN = {k: v for k, v in _RESTART_CANDIDATE.items() if k != "source"}
+
+# ┌──────────────────────────────┬────────────────────────┬────────────────────────────┐
+# │ resolution                   │ restart written        │ description                │
+# ├──────────────────────────────┼────────────────────────┼────────────────────────────┤
+# │ /goform/devctl               │ the whole candidate    │ resolved among candidates  │
+# │ none with a reason           │ absent                 │ explicit none              │
+# │ unresolved                   │ absent                 │ non-blocking, omitted      │
+# └──────────────────────────────┴────────────────────────┴────────────────────────────┘
+#
+# fmt: off
+_RESTART_RESOLUTION_CASES: list[tuple[dict[str, Any] | None, dict[str, Any] | None, str]] = [
+    # (resolution,                                  restart written,     id)
+    ({"value": "/goform/devctl"},                   _RESTART_WRITTEN,    "resolved"),
+    ({"value": None, "reason": "not the reboot"},   None,                "explicit-none"),
+    (None,                                          None,                "unresolved"),
+]
+# fmt: on
+
+
+class TestActionEndpointResolution:
+    """A resolved action endpoint brings its candidate's whole action, body included."""
+
+    @pytest.mark.parametrize(
+        ("resolution", "expected"),
+        [(r, e) for r, e, _ in _RESTART_RESOLUTION_CASES],
+        ids=[c[2] for c in _RESTART_RESOLUTION_CASES],
+    )
+    def test_restart_written(self, resolution: dict[str, Any] | None, expected: dict[str, Any] | None) -> None:
+        """The written restart is the resolved candidate, or absent."""
+        fixture = _with_restart_candidate(resolution)
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        restart = (yaml.safe_load(result.modem_yaml).get("actions") or {}).get("restart")
+        assert restart == expected
+
+    @pytest.mark.parametrize("stored", [True, False], ids=["not-offered", "offered-without-request"])
+    def test_endpoint_without_stored_request_is_an_error(self, stored: bool) -> None:
+        """Only a stored request can be written: an unoffered endpoint, or one whose bodies differed, has none."""
+        fixture = _with_restart_candidate({"value": "/goform/devctl" if not stored else "/goform/other"})
+        if not stored:
+            fixture["_analysis"]["actions"]["candidates"] = {}
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert not result.validation.valid
+        assert any("actions.restart.endpoint" in e and "no stored request" in e for e in result.validation.errors)
 
 
 # ---------------------------------------------------------------------------
@@ -432,6 +608,65 @@ class TestJsonArraysForm:
         assert [[f["field"] for f in a["fields"] if f["key"] == "status"] for a in arrays] == [
             ["lock_status"],
             ["lock_status"],
+        ]
+
+
+class TestJavascriptJsonArraysForm:
+    """An object variable's arrays become javascript_json arrays, each with its own mappings and type."""
+
+    def test_arrays_written(self) -> None:
+        fixture = load_fixture(VALID_DIR / "json_format.json")
+        fixture["_analysis"]["sections"]["downstream"] = {
+            "format": "javascript_json",
+            "resource": "/wan.php",
+            "variable": "channelData",
+            "arrays": [
+                {
+                    "array_path": "ds_channels",
+                    "mappings": [
+                        {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                        {"key": "Frequency", "field": "frequency", "type": "frequency"},
+                    ],
+                    "channel_type": {"fixed": "qam"},
+                    "channel_count": 31,
+                },
+                {
+                    "array_path": "ofdm_channels",
+                    "mappings": [
+                        {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                        {"key": "Type", "field": "channel_type", "type": "string"},
+                    ],
+                    "channel_type": {"key": "Type", "map": {"OFDM": "ofdm"}},
+                    "channel_count": 1,
+                },
+            ],
+        }
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.validation.valid, result.validation.errors
+        assert result.parser_yaml is not None
+        downstream = yaml.safe_load(result.parser_yaml)["downstream"]
+        assert (downstream["format"], downstream["variable"], "mappings" in downstream) == (
+            "javascript_json",
+            "channelData",
+            False,
+        )
+        assert [(a["array_path"], a.get("channel_type"), a["mappings"]) for a in downstream["arrays"]] == [
+            (
+                "ds_channels",
+                {"fixed": "qam"},
+                [
+                    {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                    {"key": "Frequency", "field": "frequency", "type": "frequency"},
+                ],
+            ),
+            (
+                "ofdm_channels",
+                None,
+                [
+                    {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                    {"key": "Type", "field": "channel_type", "type": "string", "map": {"OFDM": "ofdm"}},
+                ],
+            ),
         ]
 
 

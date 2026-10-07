@@ -22,8 +22,12 @@ class ActionResult:
         details: Structured data from the action (e.g., HNAP response
             values, HTTP status code).  Consumers can inspect this for
             diagnostics without parsing the message.
+        session_refused: The modem refused the command's session (HNAP
+            ``UN-AUTH``, HTTP 401 or 403), so a fresh login may succeed.
+            Restart retries once on it (ORCHESTRATION_SPEC § Restart Action).
     """
 
     success: bool
     message: str = ""
     details: dict[str, Any] = field(default_factory=dict)
+    session_refused: bool = False

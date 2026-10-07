@@ -74,6 +74,24 @@ def extract_section_mappings(
     return None
 
 
+def extract_companion_mappings(
+    table: DetectedTable,
+    resource: str,
+    direction: str,
+    warnings: list[str],
+) -> SectionDetail | None:
+    """A codewords table's mappings when it can merge into the main table by channel ID, else None."""
+    section = _extract_transposed_mappings(table, resource, direction, warnings)
+    if section is None:
+        return None
+    fields = {m.field for m in section.mappings}
+    if "channel_id" not in fields or not fields & {"corrected", "uncorrected"}:
+        return None
+    # The main table decides channel type; a companion only adds columns.
+    section.channel_type = None
+    return section
+
+
 # -----------------------------------------------------------------------
 # Table format (standard)
 # -----------------------------------------------------------------------
@@ -468,6 +486,23 @@ def _json_array_section(
 # -----------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------
+
+
+def warn_unregistered_fields(
+    section: SectionDetail, where: str, warnings: list[str], headers: list[str] | None = None
+) -> None:
+    """Warn once per Tier 3 mapping, naming its source text, its generated field and ``where``."""
+    for m in section.mappings:
+        if m.tier != 3:
+            continue
+        # A table column's source is its header; rows and keys carry their own.
+        source = m.key or m.label
+        if not source and headers is not None and m.index is not None and m.index < len(headers):
+            source = headers[m.index].strip()
+        warnings.append(
+            f"{WARNING_PREFIX} '{source}' in {where} is not a registered field; "
+            f"mapped to unregistered '{m.field}'. Keep it as modem-specific or map it to a known field."
+        )
 
 
 def _list_arrays(data: dict[str, Any], prefix: str = "") -> list[tuple[str, list[dict[str, Any]]]]:
