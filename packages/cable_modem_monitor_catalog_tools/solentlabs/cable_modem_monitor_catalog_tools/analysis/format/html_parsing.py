@@ -154,6 +154,13 @@ def _is_data_table(table: Tag) -> bool:
     return not (nested_cells > 0 and nested_cells / total_cells > 0.25)
 
 
+def _own_text(cell: Tag) -> str:
+    """The cell's text without any table nested in it (ONBOARDING_SPEC § Table cell text)."""
+    if cell.find("table") is None:
+        return str(cell.get_text(strip=True))
+    return "".join(str(s) for s in cell.find_all(string=True, recursive=False)).strip()
+
+
 def _extract_rows(table: Tag) -> list[list[str]]:
     """Extract text content from direct table rows.
 
@@ -169,8 +176,9 @@ def _extract_rows(table: Tag) -> list[list[str]]:
             continue
 
         leaf_texts: list[str] = []
-        for cell in cells:
-            text = cell.get_text(strip=True)
+        for position, cell in enumerate(cells):
+            # The label cell alone drops nested help text; values are read as Core reads them.
+            text = _own_text(cell) if position == 0 else cell.get_text(strip=True)
             if not text:
                 # Fallback: i18n attributes contain semantic header labels
                 # when the visible text is injected by JavaScript at runtime.

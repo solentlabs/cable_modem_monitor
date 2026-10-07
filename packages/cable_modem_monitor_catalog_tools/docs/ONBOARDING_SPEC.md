@@ -887,6 +887,13 @@ Response body analysis (sniff-then-Content-Type):
   └── Ambiguous → flag for human review
 ```
 
+**Table cell text.** A row's first cell, the label of a transposed
+table, is read as its own text: text inside a table nested in it (a
+tooltip or help block beside the label) is left out, so "Power Level" is
+not read as "Power Level" plus its help paragraph. Core matches a
+configured label as a substring of the cell text, so the short label
+matches either way. Every other cell is read verbatim, as Core reads it.
+
 **JSON direction inference.** After format classification, JSON pages
 need direction assignment (downstream vs upstream). The pipeline scans:
 
@@ -1221,6 +1228,8 @@ Parser.yaml supports 4 selector types. Auto-select using this priority:
 | 4 | `nth` | Fallback — 0-based table index on the page (fragile) |
 
 Higher priority selectors are more robust across firmware updates.
+A title row shared by several tables on the page does not identify any
+of them; selection falls through to a column header unique to the table.
 The selector is configurable in parser.yaml — maintainers can override
 the auto-detected choice.
 

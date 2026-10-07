@@ -454,6 +454,55 @@ def test_table_selector(table_id: str, css: str, title: str, preceding: str, idx
     assert selector["type"] == expected_type
 
 
+# Siblings: three tables sharing the title "Channel Values" (first headers
+# Downstream, Upstream, Codewords) and a fourth with a title of its own.
+# fmt: off
+SHARED_TITLE_CASES = [
+    # (table_idx,  expected_match,     description)
+    (0,            "Downstream",       "shared title falls to the unique header (first table)"),
+    (1,            "Upstream",         "shared title falls to the unique header (second table)"),
+    (2,            "Codewords",        "shared title falls to the unique header (third table)"),
+    (3,            "Only Title Here",  "a title no other table carries stays the selector"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "idx,expected_match",
+    [c[:2] for c in SHARED_TITLE_CASES],
+    ids=[c[2] for c in SHARED_TITLE_CASES],
+)
+def test_title_shared_by_sibling_tables_is_not_a_selector(idx: int, expected_match: str) -> None:
+    """A title row several tables carry identifies none of them (ONBOARDING_SPEC § Table selector detection)."""
+    siblings = [
+        DetectedTable(
+            table_id="",
+            css_class="",
+            headers=[header, "Channel Values"],
+            rows=[["1"]],
+            preceding_text="",
+            title_row_text="Channel Values",
+            table_index=i,
+        )
+        for i, header in enumerate(["Downstream", "Upstream", "Codewords"])
+    ]
+    siblings.append(
+        DetectedTable(
+            table_id="",
+            css_class="",
+            headers=["Other"],
+            rows=[["1"]],
+            preceding_text="",
+            title_row_text="Only Title Here",
+            table_index=3,
+        )
+    )
+
+    selector = detect_table_selector(siblings[idx], all_tables=siblings)
+
+    assert selector == {"type": "header_text", "match": expected_match}
+
+
 # =====================================================================
 # Row start detection
 # =====================================================================

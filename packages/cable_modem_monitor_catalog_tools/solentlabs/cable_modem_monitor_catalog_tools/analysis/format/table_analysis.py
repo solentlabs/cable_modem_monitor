@@ -270,7 +270,12 @@ def detect_table_selector(
     if table.table_id:
         return {"type": "id", "match": table.table_id}
 
-    if table.title_row_text:
+    # A title several tables carry identifies none of them: Core matches the
+    # first table, so every section sharing it would read the same table.
+    title_is_shared = all_tables is not None and any(
+        other is not table and other.title_row_text == table.title_row_text for other in all_tables
+    )
+    if table.title_row_text and not title_is_shared:
         if table.title_row_text in table.i18n_header_map:
             tag = table.i18n_header_map[table.title_row_text]
             return {"type": "css", "match": f"{tag}[data-i18n='{table.title_row_text}']"}
