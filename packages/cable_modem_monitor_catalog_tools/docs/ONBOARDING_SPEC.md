@@ -985,8 +985,11 @@ type and map filled in by hand.
 | Registered field | Type | Common |
 |-----------------|------|:------:|
 | `boot_status` | string | sometimes |
+| `dhcp_status` | string | rare |
 | `docsis_version` | string | sometimes |
 | `model_name` | string | sometimes |
+| `temperature` | float | rare |
+| `tftp_status` | string | rare |
 | `provisioned_speed_down` | integer | service flow modems |
 | `provisioned_speed_up` | integer | service flow modems |
 | `provisioned_burst_down` | integer | service flow modems |
@@ -1173,6 +1176,18 @@ Secondary signal: table `id` attributes (`dsTable`, `usTable`,
 
 If no direction can be determined, flag for human review. Every modem
 in the HAR corpus uses "Downstream"/"Upstream" as full keywords.
+
+**Companion tables.** A codewords table (a title, header or row label
+containing "codeword") is downstream. When the downstream section is
+already populated from a `table_transposed` table, the codewords table
+becomes a companion of that section instead of being dropped. It is
+kept only when its rows map `channel_id` and at least one of
+`corrected` or `uncorrected`; its other rows follow the three-tier
+mapping (an unregistered row such as `unerrored_codewords` is Tier 3).
+`generate_config` emits the section as a `tables` list whose companion
+entries carry `merge_by: [channel_id]`. Intake does not emit
+`skip_columns`: a firmware that repeats one column's counters in
+another is a per-modem finding, authored from evidence.
 
 #### Row start detection
 

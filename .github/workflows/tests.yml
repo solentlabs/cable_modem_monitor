@@ -48,6 +48,11 @@ jobs:
   test-packages:
     name: Package Tests (Core + Catalog)
     runs-on: ubuntu-latest
+    # actions: read lets the scorecard step list earlier runs and fetch
+    # their artifact; the repo default token has contents and packages only.
+    permissions:
+      contents: read
+      actions: read
 
     steps:
       - name: Checkout code
@@ -101,9 +106,32 @@ jobs:
         run: |
           python scripts/check_import_isolation.py
 
+      # Report only: the card of the newest earlier successful run on this
+      # branch (else main) feeds --compare so the job summary shows what
+      # moved. No local mirror: it needs this repo's run history, which a
+      # local `make intake-regression` does not have.
+      - name: Fetch previous intake scorecard
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Via env, never inline in run: a pull request's branch name is attacker-controlled.
+          CURRENT_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          for branch in "$CURRENT_BRANCH" main; do
+            run_id=$(gh run list --workflow tests.yml --branch "$branch" --status success --limit 1 --json databaseId -q '.[0].databaseId // empty')
+            if [ -n "$run_id" ] && gh run download "$run_id" -n intake-pipeline-scorecard -D previous-scorecard; then
+              echo "Compared against run $run_id on $branch"
+              break
+            fi
+          done
+
       - name: Intake pipeline accuracy
         run: |
-          python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py -v --scorecard intake-pipeline-scorecard.json
+          compare=""
+          if [ -f previous-scorecard/intake-pipeline-scorecard.json ]; then
+            compare="--compare previous-scorecard/intake-pipeline-scorecard.json"
+          fi
+          python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py -v --scorecard intake-pipeline-scorecard.json $compare
 
       - name: Upload intake pipeline scorecard
         if: always()

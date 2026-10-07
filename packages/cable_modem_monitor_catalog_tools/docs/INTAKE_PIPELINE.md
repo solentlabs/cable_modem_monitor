@@ -448,8 +448,9 @@ tree and the new HAR is included automatically on the next run.
 since an earlier scorecard (`regression/compare.py`): accuracy, status,
 and every grade dimension the card holds, worst regression first, then
 captures that entered or left. Captures are keyed by `modem:har_file`, so
-a renamed capture shows as one `LEFT` plus one `ENTERED`. It is console
-output only and never changes the exit code. Save a card, change the
+a renamed capture shows as one `LEFT` plus one `ENTERED`. It is report
+only and never changes the exit code; it prints to the console and, in
+CI, to the job summary. Save a card, change the
 pipeline, and compare (CI's card is the `intake-pipeline-scorecard`
 artifact, written as `intake-pipeline-scorecard.json`):
 
@@ -457,6 +458,12 @@ artifact, written as `intake-pipeline-scorecard.json`):
 python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --scorecard intake-pipeline-scorecard.json
 python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py --compare intake-pipeline-scorecard.json
 ```
+
+**In CI**, the accuracy step compares against the card of the previous
+successful `tests.yml` run on the same branch (else on `main`) and shows
+the movement in the run's job summary. With no such card (a first run,
+or an artifact past its 90-day retention) it skips the comparison, and a
+failed download never fails the job.
 
 The card records its commit and timestamp but not the scoring
 definition. A comparison across a change to how the score is computed

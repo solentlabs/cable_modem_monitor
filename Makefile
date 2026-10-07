@@ -139,7 +139,9 @@ validate-ci: check test intake-regression pii-check spell-check catalog-readme-c
 # Computes fleet onboarding accuracy fresh from the catalog every run
 # (report, not a gate). Trend is tracked via the timestamped scorecard
 # artifact in CI; per-modem parse correctness is gated by the golden
-# replay tests.
+# replay tests. CI also compares against the previous run's card; that
+# fetch has no local mirror because it needs the repo's run history.
+# Locally, save a card and pass it to --compare (INTAKE_PIPELINE.md).
 intake-regression:
 	@echo "🔍 Running intake pipeline accuracy report..."
 	@$(VENV_BIN)/python packages/cable_modem_monitor_catalog_tools/scripts/intake_pipeline_regression.py

@@ -55,6 +55,13 @@ def test_format_dispatch(fixture_path: Path) -> None:
         assert result[direction]["format"] == data["_expected_format"]
         assert not hard_stops
 
+    # Check companion tables (a further table merged into the section by channel ID)
+    if "_expected_companions" in data:
+        companions = result[data["_expected_direction"]].get("companions", [])
+        assert [(c["selector"]["match"], [m["field"] for m in c["mappings"]]) for c in companions] == [
+            (e["selector_match"], e["fields"]) for e in data["_expected_companions"]
+        ]
+
     # Check expected warning
     if "_expected_warning" in data:
         assert any(data["_expected_warning"] in w for w in warnings)

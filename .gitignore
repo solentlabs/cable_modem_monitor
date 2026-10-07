@@ -129,5 +129,9 @@ cookies.txt
 *.actual.json
 regression_output.txt
 
+# Intake pipeline scorecards (written by --scorecard; CI uploads its own as an artifact)
+scorecard.json
+intake-pipeline-scorecard.json
+
 # Windows artifact from /dev/null writes
 nul

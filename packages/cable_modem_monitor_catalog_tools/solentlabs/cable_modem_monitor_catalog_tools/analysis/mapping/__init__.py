@@ -1,9 +1,9 @@
 """Phase 6 - field mapping extraction for channel sections.
 
-Public API: ``extract_section_mappings`` and ``extract_json_arrays``.
-Implementation in ``dispatcher``.
+Public API: ``extract_section_mappings``, ``extract_companion_mappings`` and
+``extract_json_arrays``. Implementation in ``dispatcher``.
 """
 
-from .dispatcher import extract_json_arrays, extract_section_mappings
+from .dispatcher import extract_companion_mappings, extract_json_arrays, extract_section_mappings
 
-__all__ = ["extract_json_arrays", "extract_section_mappings"]
+__all__ = ["extract_companion_mappings", "extract_json_arrays", "extract_section_mappings"]

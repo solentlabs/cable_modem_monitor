@@ -135,6 +135,37 @@ def test_compare_never_changes_exit_code(
 
 
 @pytest.mark.usefixtures("stubbed_run")
+@pytest.mark.parametrize(
+    "write_card,expected_text",
+    [(w, t) for w, t, _ in OPTION_CASES],
+    ids=[case_id for *_, case_id in OPTION_CASES],
+)
+def test_compare_also_lands_in_the_job_summary(
+    write_card: Callable[[Path], None] | None,
+    expected_text: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """In CI the comparison, or why none was made, is in the job summary too."""
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    argv = ["intake_pipeline_regression.py"]
+    if write_card is not None:
+        card_path = tmp_path / "baseline.json"
+        write_card(card_path)
+        argv += ["--compare", str(card_path)]
+    monkeypatch.setattr(sys, "argv", argv)
+
+    assert _module.main() is None
+
+    text = summary.read_text()
+    if write_card is None:
+        assert "INTAKE COMPARISON" not in text
+    else:
+        assert expected_text in text
+
+
+@pytest.mark.usefixtures("stubbed_run")
 def test_bad_compare_card_still_writes_scorecard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A card --compare cannot read does not stop --scorecard, which runs after it."""
     bad = tmp_path / "baseline.json"

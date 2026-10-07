@@ -574,9 +574,14 @@ def _print_comparison(baseline_path: Path, results: list[ModemResult]) -> None:
         baseline = json.loads(baseline_path.read_text())
         text = render_comparison(compare_scorecards(baseline, build_scorecard(results)))
     except (OSError, ValueError, KeyError, TypeError) as e:
-        print(f"Could not compare against {baseline_path}: {e}\n")
-        return
+        text = f"Could not compare against {baseline_path}: {e}"
     print(text + "\n")
+
+    # Nobody reads a CI step log; the job summary is where a run's result is seen.
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with open(summary_path, "a") as f:
+            f.write(f"```text\n{text}\n```\n")
 
 
 def _write_step_summary(results: list[ModemResult]) -> None:

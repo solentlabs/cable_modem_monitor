@@ -32,8 +32,10 @@ from .table_analysis import (
     detect_table_direction,
     detect_table_selector,
     is_channel_table,
+    is_codewords_table,
+    is_transposed,
 )
-from .types import XML_CONTENT_TYPE, PageAnalysis
+from .types import XML_CONTENT_TYPE, DetectedTable, PageAnalysis
 
 # extract_section_mappings is imported inside the _assemble_* helpers
 # below, not here. format and mapping are mutually dependent packages:
@@ -170,10 +172,17 @@ def _assemble_table_sections(
     from ..mapping import extract_section_mappings
     from ..mapping.dispatcher import warn_unregistered_fields
 
+    # With a main table on the page, a codewords table is its companion.
+    has_main = any(is_channel_table(t) and not _is_companion_candidate(t) for t in page.tables)
+
     for table in page.tables:
         # Only consider tables that contain channel data — skip
         # layout, navigation, and provisioning status tables.
         if not is_channel_table(table):
+            continue
+
+        # Handled by _attach_companions once the main table has its section.
+        if has_main and _is_companion_candidate(table):
             continue
 
         direction = detect_table_direction(table, fleet=fleet)
@@ -209,6 +218,52 @@ def _assemble_table_sections(
         sections[direction] = section.to_dict()
         where = f"the table on {page.resource} (index {table.table_index})"
         warn_unregistered_fields(section, where, warnings, headers=table.headers)
+
+    _attach_companions(page, sections, warnings)
+
+
+def _is_companion_candidate(table: DetectedTable) -> bool:
+    """A transposed codewords table: the kind that extends a downstream table."""
+    return is_channel_table(table) and is_transposed(table) and is_codewords_table(table)
+
+
+def _attach_companions(page: PageAnalysis, sections: dict[str, Any], warnings: list[str]) -> None:
+    """Attach codewords tables to the downstream section they extend (ONBOARDING_SPEC § Table-to-section association).
+
+    Runs after the main pass so a codewords table is found whichever side
+    of the main table it sits on. A table that cannot be attached is
+    reported, never dropped silently.
+    """
+    from ..mapping import extract_companion_mappings
+    from ..mapping.dispatcher import warn_unregistered_fields
+
+    section = sections.get("downstream")
+    main = (
+        section
+        if section and section.get("format") == "table_transposed" and section.get("resource") == page.resource
+        else None
+    )
+
+    for table in page.tables:
+        if not _is_companion_candidate(table):
+            continue
+        selector = detect_table_selector(table, all_tables=page.tables)
+        if section is not None and selector == section.get("selector"):
+            continue
+        companion = (
+            extract_companion_mappings(table, page.resource, "downstream", warnings) if main is not None else None
+        )
+        if main is None or companion is None:
+            warnings.append(
+                f"{WARNING_PREFIX} Codewords table on {page.resource} (index {table.table_index}) "
+                "was not attached: it needs a transposed downstream table on the same page "
+                "and Channel ID plus corrected or uncorrected rows. Review it if it holds error counts."
+            )
+            continue
+        companion.selector = selector
+        main.setdefault("companions", []).append(companion.to_dict())
+        where = f"the codewords table on {page.resource} (index {table.table_index})"
+        warn_unregistered_fields(companion, where, warnings, headers=table.headers)
 
 
 def _assemble_js_sections(

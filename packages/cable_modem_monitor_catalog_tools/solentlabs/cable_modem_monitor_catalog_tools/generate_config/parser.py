@@ -135,6 +135,25 @@ def _transform_transposed(section: dict[str, Any]) -> dict[str, Any]:
         "resource": section.get("resource", ""),
     }
 
+    if section.get("companions"):
+        # Companion tables join the main one by channel ID (FORMAT_TABLE_SPEC § Companion Tables).
+        main_table: dict[str, Any] = {}
+        if section.get("channel_type"):
+            main_table["channel_type"] = section["channel_type"]
+        main_table["rows"] = rows
+        if section.get("selector"):
+            main_table["selector"] = section["selector"]
+        companion_tables = [
+            {
+                "merge_by": ["channel_id"],
+                "rows": [mapping_to_row(m) for m in companion.get("mappings", [])],
+                "selector": companion["selector"],
+            }
+            for companion in section["companions"]
+        ]
+        result["tables"] = [main_table, *companion_tables]
+        return result
+
     if section.get("selector"):
         result["selector"] = section["selector"]
     result["rows"] = rows

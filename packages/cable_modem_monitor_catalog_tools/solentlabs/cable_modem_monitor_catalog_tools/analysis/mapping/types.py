@@ -90,6 +90,9 @@ class SectionDetail:
     fields_per_record: int = 0
     array_path: str = ""
     variable: str = ""
+    # Further tables merged into this section by channel ID (a codewords
+    # table beside the main transposed table).
+    companions: list[SectionDetail] = dataclass_field(default_factory=list)
     # JSON keys the fleet maps to several fields, with a candidate per
     # field. Not serialized: they leave analysis as ambiguities.
     contested_keys: list[tuple[str, list[Candidate]]] = dataclass_field(default_factory=list)
@@ -113,6 +116,7 @@ class SectionDetail:
             ("fields_per_record", self.fields_per_record),
             ("array_path", self.array_path),
             ("variable", self.variable),
+            ("companions", [c.to_dict() for c in self.companions]),
         ]
         for key, value in _optional:
             if value:

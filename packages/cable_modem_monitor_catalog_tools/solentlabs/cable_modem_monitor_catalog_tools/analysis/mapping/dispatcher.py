@@ -74,6 +74,24 @@ def extract_section_mappings(
     return None
 
 
+def extract_companion_mappings(
+    table: DetectedTable,
+    resource: str,
+    direction: str,
+    warnings: list[str],
+) -> SectionDetail | None:
+    """A codewords table's mappings when it can merge into the main table by channel ID, else None."""
+    section = _extract_transposed_mappings(table, resource, direction, warnings)
+    if section is None:
+        return None
+    fields = {m.field for m in section.mappings}
+    if "channel_id" not in fields or not fields & {"corrected", "uncorrected"}:
+        return None
+    # The main table decides channel type; a companion only adds columns.
+    section.channel_type = None
+    return section
+
+
 # -----------------------------------------------------------------------
 # Table format (standard)
 # -----------------------------------------------------------------------

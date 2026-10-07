@@ -1552,7 +1552,11 @@ no knowledge of recovery.
 
 **Decision:** Recovery timing lives as class attributes on
 `Recovery` in `orchestration/recovery.py` (e.g. `WINDOW_SECONDS`).
-Modem YAML and action models carry no timing fields.
+Modem YAML and action models carry no recovery timing or failure-count
+fields. The one per-modem timing value is the request `timeout`
+([MODEM_YAML_SPEC.md § Timeout](MODEM_YAML_SPEC.md#timeout)): it
+measures that modem's own web server and changes behavior for no other
+modem.
 
 **Rationale:** "How long a reboot takes" varies by firmware version,
 CMTS load, and DOCSIS ranging — none of which are modem-class
@@ -1560,10 +1564,13 @@ characteristics. Bench-tuning values per modem doesn't scale:
 firmware updates silently invalidate them, and a value too short or
 too long produces misleading UX or wasted polls.
 
-**Constrains:** New modems cannot introduce grace/timeout fields on
-action models or in `modem.yaml`. Recovery timing is a global
-concern. If future needs justify user-configurable cadence/window
-settings, they live in HA's options flow, not per-modem config.
+**Constrains:** New modems cannot introduce recovery grace, window or
+failure-threshold fields on action models or in `modem.yaml`. Recovery
+timing and thresholds are global concerns. A per-modem value is
+acceptable only if it measures that modem's own web server and cannot
+change behavior for other modems. If future needs justify
+user-configurable cadence/window settings, they live in HA's options
+flow, not per-modem config.
 
 ### Reboot-signal trigger is a simple threshold vote, bounded harm
 

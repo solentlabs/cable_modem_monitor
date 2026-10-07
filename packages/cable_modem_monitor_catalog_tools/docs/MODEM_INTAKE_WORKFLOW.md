@@ -481,6 +481,13 @@ write_result = write_modem_package(output_dir, ...)
 See [ONBOARDING_SPEC.md](ONBOARDING_SPEC.md) for the full
 `write_modem_package` signature.
 
+The generator quotes strings with single quotes where prettier writes
+double quotes, and prettier keeps single quotes around strings that
+contain double quotes. The pre-commit prettier hook rewrites the new
+YAML files and fails the first commit. Run
+`pre-commit run prettier --files <new yaml files>` first and review the
+diff.
+
 ## Step 9: Run Tests
 
 The authoritative check is the catalog suite — it replays the HAR

@@ -111,7 +111,7 @@ def detect_table_direction(
     if direction:
         return direction
 
-    if _is_codewords_table(table):
+    if is_codewords_table(table):
         return "downstream"
 
     if fleet and fleet.selector_directions:
@@ -165,7 +165,7 @@ def _direction_from_text(table: DetectedTable) -> str:
 _CODEWORD_KEYWORDS: frozenset[str] = frozenset({"codeword", "codewords", "errored", "unerrored"})
 
 
-def _is_codewords_table(table: DetectedTable) -> bool:
+def is_codewords_table(table: DetectedTable) -> bool:
     """Check if a table is a codewords/error-stats table.
 
     Looks for codeword-related keywords in the title row, headers,

@@ -97,6 +97,26 @@ def test_valid_parser_yaml_presence(fixture_path: Path) -> None:
         assert result.parser_yaml is None
 
 
+COMPANION_FIXTURES = [f for f in VALID_FIXTURES if "_expected_companion_tables" in load_fixture(f)]
+
+
+@pytest.mark.parametrize("fixture_path", COMPANION_FIXTURES, ids=[f.stem for f in COMPANION_FIXTURES])
+def test_valid_companion_tables(fixture_path: Path) -> None:
+    """A companion table follows the main table in the section's tables list and merges by key."""
+    fixture = load_fixture(fixture_path)
+    result = generate_config(fixture["_analysis"], fixture["_metadata"])
+    assert result.validation.valid, f"Expected valid output, got errors: {result.validation.errors}"
+    assert result.parser_yaml is not None
+    tables = yaml.safe_load(result.parser_yaml)["downstream"]["tables"]
+
+    expected = fixture["_expected_companion_tables"]
+    assert len(tables) == 1 + len(expected)
+    for table, want in zip(tables[1:], expected, strict=True):
+        assert table["merge_by"] == want["merge_by"]
+        assert table["selector"]["match"] == want["selector_match"]
+        assert [row["field"] for row in table["rows"]] == want["row_fields"]
+
+
 @pytest.mark.parametrize(
     "fixture_path",
     [f for f in VALID_FIXTURES if "_expected_auth_fields" in load_fixture(f)],
