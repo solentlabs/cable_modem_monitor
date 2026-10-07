@@ -282,6 +282,8 @@ visible without re-running the work.
   pipeline tool exists. Serialize with
   `json.dumps(..., indent=2, sort_keys=True, ensure_ascii=False) + "\n"`.
   The golden-file procedure is in `.claude/rules/catalog-data.md`.
+- **No contributor details in code.** No handles or literal user inputs
+  in comments, tests or specs: cite issue numbers, use generic values.
 - **No P-numbers in public artifacts.** Roadmap identifiers (`P28`,
   `P34`, etc.) come from an internal roadmap doc that ships only
   locally. Tag annotations, CHANGELOG entries, GitHub release notes,
@@ -335,30 +337,18 @@ When the user gives explicit constraints (e.g., "without closing the PR",
 
 ## Contributor Communications
 
-Voice and content rules for anything posted to GitHub (issues, PRs,
-discussions, release notes) or other public surfaces.
+Before drafting or posting anything public in Ken's name (GitHub issues,
+PRs, discussions, release notes), invoke the `contributor-comms` skill.
+Its core, which applies even if you skip it:
 
-- **Solo-maintainer voice.** Ken writes as "I", never "we/us/our".
-  There is no team.
-- **Humble, short, personal.** First names in greetings; @-mention
-  only when the comment must notify. No usernames-as-names.
-- **No LLM tells.** No "Good news:", no "just landed", no em-dashes,
-  no stylistic hyphens, no "/" separators in prose.
-- **Claims must be referenced.** State only what's verified;
-  inferences get "one possibility is...", never stated as diagnosis.
-  Drop speculative "this also helps X" claims. User-supplied claims
-  get the same ground-truth check before posting.
-- **Attribute Claude.** Never write "I read the code" in Ken's voice
-  if Claude did the analysis.
-- **Post drafts verbatim.** When Ken supplies reply text, post it
-  unmodified — no padding, no fluffing.
-- **Acknowledge input already given.** Reflect a contributor's
-  specific ask back in their own terms; don't re-ask for what they
-  already provided, and skip install/setup walkthroughs for
-  returning contributors.
-- **No contributor details in code.** No handles or literal user
-  inputs in comments, tests, or specs — cite issue numbers, use
-  generic values.
+- **Ken writes as "I"**, never "we/us/our"; there is no team. Humble,
+  short, personal.
+- **No LLM tells:** no "Good news:", "just landed", em-dashes, stylistic
+  hyphens or "/" separators in prose.
+- **State only what's verified;** inferences get "one possibility is...".
+  Never write "I read the code" in Ken's voice when Claude did the
+  analysis.
+- **Post drafts verbatim** when Ken supplies the text.
 
 ## PR and Issue Conventions
 
