@@ -524,7 +524,7 @@ next run.
 Run the generator to keep the catalog index current:
 
 ```bash
-python3 packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py
+.venv/bin/python packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py
 ```
 
 Stage `README.md` and `CATALOG_AUDIT.md` alongside the catalog files —
@@ -647,6 +647,9 @@ verified.** A confirmation on one variant does not transfer to the
 others — each variant exercises a different transport/auth path and
 must be verified independently.
 
+The flip changes the catalog README's row and counts, so regenerate it as
+in [Step 10](#step-10-regenerate-catalog-readme); CI gates on freshness.
+
 ### Step 15a: Run Catalog Tests
 
 Run the full catalog test suite before committing:
@@ -667,7 +670,8 @@ failing replay writes next to the HAR and re-run until clean.
 
 ### Step 16: Commit and Reply
 
-Stage the two files and commit with this message shape:
+Stage `verified.json`, the YAML, `README.md` and `CATALOG_AUDIT.md` and
+commit with this message shape:
 
 ```text
 feat(catalog): mark <Make> <Model> [(<variant>)] as confirmed

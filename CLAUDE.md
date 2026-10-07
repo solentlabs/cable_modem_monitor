@@ -328,10 +328,11 @@ reply, where a skipped one is visible without re-running the work.
   `packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md`
   § HAR Captures Are Immutable Evidence.
 - **No modem-specific behavior in `modem.yaml`.** Config selects and
-  parameterizes Core behaviours; no behavior flags, no per-modem
-  timing knobs. Authority: `MODEM_YAML_SPEC.md` § Principles.
-- **Recovery logic stays generic.** All triggers reach the same code
-  path; no per-modem recovery tuning. Authority:
+  parameterizes Core behaviours: no behavior flags, no per-modem recovery
+  timing or thresholds. The request `timeout` is the one per-modem timing
+  value (`ARCHITECTURE_DECISIONS.md` § Generic timing). Recovery logic
+  stays generic: all triggers reach the same code path; no per-modem
+  recovery tuning. Authority: `MODEM_YAML_SPEC.md` § Principles,
   `ORCHESTRATION_SPEC.md` § Recovery.
 - **HAR intake is the only data path.** When a user's modem isn't
   matching the catalog, the default ask is a fresh HAR — not
@@ -339,31 +340,10 @@ reply, where a skipped one is visible without re-running the work.
   reproducible, auditable, and feeds the catalog_tools pipeline.
   Fall back to direct questions only if `har-capture` genuinely
   can't capture what's needed.
-- **Verified JSON must be faithful.** `modem.verified.json` is a
-  faithful copy of the diagnostics `data` section, not a curated
-  subset. Strip list and format:
-  `packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md`
-  § Build verified.json.
-- **Source all factual claims.** Every factual claim in data files
-  (`providers.json`, `chipsets.json`, modem.yaml notes/sources)
-  must include a reference URL or citation. Without a source, the
-  claim is indistinguishable from fabricated data. If a source
-  can't be found, leave the field empty rather than guessing.
-- **`packages/cable_modem_monitor_catalog/README.md` is auto-generated.**
-  Never edit it directly. Run `python3 packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py`
-  to regenerate.
-
-  Three rules: (1) Contributors are not responsible for
-  regenerating it — the `/modem-confirm` and `/modem-intake` skills handle
-  it as a verified final step and may bundle it with the catalog commit.
-  (2) When multiple catalog changes land in one session, regenerate once
-  after all changes are staged, not per-change. (3) CI gates on README
-  freshness — if a PR fails this check, regenerate and amend before merging.
-- **Catalog data stays true to source; normalization happens at
-  presentation.** Manufacturer styling variation is real signal, not
-  drift — never pre-normalize in the catalog; display layers own
-  case normalization. Authority: `ARCHITECTURE_DECISIONS.md`
-  § Core Schema Model → Catalog data stays true to source.
+- Touching anything under `packages/cable_modem_monitor_catalog*/` loads
+  `.claude/rules/catalog-data.md`: verified.json fidelity, sourcing
+  claims in data files, the generated catalog README, and true-to-source
+  catalog data.
 
 ## Code Discipline
 
