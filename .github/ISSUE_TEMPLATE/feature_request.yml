@@ -51,15 +51,6 @@ body:
       required: false
 
   - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives Considered
-      description: Describe any alternative solutions or features you've considered
-      placeholder: What other approaches could solve this problem?
-    validations:
-      required: false
-
-  - type: textarea
     id: use-case
     attributes:
       label: Use Case

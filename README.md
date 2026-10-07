@@ -5,14 +5,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Supported Modems](https://img.shields.io/badge/Supported%20Modems-View%20Catalog-blue.svg)](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)
 
-Monitor your cable modem's signal quality, power levels, and error rates from Home Assistant. Track connection health, identify line issues before they cause outages, and build automations that alert you when something looks off.
+Monitor your cable modem's signal quality, power levels, and error rates from Home Assistant. Spot line issues before they cause outages, and build automations that alert you when something looks off.
 
 ## What you get
 
 - **Per-channel signal quality.** Power (dBmV), SNR, and frequency for every downstream and upstream channel.
 - **Error tracking.** Corrected and uncorrected error counts, plus per-minute error rates.
 - **Connection health.** Status, uptime, last boot time, and reboot detection from counter resets.
-- **Health probes.** Ping and HTTP latency on a separate cadence from the full data poll.
+- **Health probes.** Ping, TCP and HTTP latency on a separate cadence from the full data poll.
 - **Remote restart.** Reboot the modem from a Home Assistant button.
 - **Local-only.** No cloud, no telemetry. Credentials stay in the Home Assistant config entry; the integration sends them only to the modem.
 
@@ -28,7 +28,7 @@ Modems from ARRIS, CommScope, Compal, Hitron, Motorola, Netgear, Sagemcom, SDMC,
 
 Check the [catalog of supported modems on PyPI](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/) before installing. Every supported model is listed with DOCSIS version and verification status.
 
-Modem not listed? [File a request](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md). The guide walks through capturing the data needed to add support.
+Modem not listed? [File a request](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md); the guide walks through the capture.
 
 ## Setup
 
@@ -39,7 +39,7 @@ Modem not listed? [File a request](https://github.com/solentlabs/cable_modem_mon
 
 ## Privacy and security
 
-All processing happens on your Home Assistant instance. The integration reads from the modem's local web interface; the only write action is a user-invoked restart button. GitHub CodeQL scans every push to the main and feature branches, every pull request to main, and weekly.
+The integration reads from the modem's local web interface; the only write action is a user-invoked restart button. GitHub CodeQL scans every push to the main and feature branches, every pull request to main, and weekly.
 
 ## Using the integration
 

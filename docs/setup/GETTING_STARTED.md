@@ -1,8 +1,8 @@
 # Getting Started
 
 The supported development path is **WSL2 + VS Code Remote WSL** on Windows,
-or native on macOS/Linux. A Dev Container option is also available — see
-[Dev Container (optional)](#dev-container-optional) below.
+or native on macOS/Linux. A [Dev Container](#dev-container-optional) is
+also available.
 
 ---
 
@@ -60,9 +60,9 @@ make validate-ci    # Local CI mirror: lint, types, tests, regression (2-5 min);
 make test           # All three test suites (Core, Catalog, HA)
 ```
 
-Or use the Testing panel (beaker icon) — pytest tests auto-discover.
-If they don't appear: refresh the panel, or check the Python
-interpreter in the bottom-left status bar.
+Or use the Testing panel (beaker icon); pytest tests auto-discover. If
+they don't appear, see
+[Tests not appearing in Testing panel](#tests-not-appearing-in-testing-panel).
 
 > CodeQL tests live in `cable-modem-monitor-ql/tests/` and don't appear
 > in the Testing panel. Run them via GitHub Actions or `codeql test run`.
@@ -133,11 +133,10 @@ hooks) calls `scripts/dev/resolve-venv.sh`, which:
 1. Looks for `.venv` in the current directory.
 2. Falls back to the main worktree via `git rev-parse --git-common-dir`.
 
-Create one anywhere convenient (a sibling directory, or your team's
-preferred worktree location):
+Create one anywhere convenient, such as a sibling directory:
 
 ```bash
-git worktree add ../my-feature feature/v3.14.0
+git worktree add -b feature/my-change ../my-feature main
 cd ../my-feature
 ```
 

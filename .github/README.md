@@ -26,7 +26,7 @@ A custom Home Assistant integration that monitors your cable modem's signal qual
 <!-- markdownlint-enable MD033 -->
 
 > **⭐ If you find this integration useful, please star this repo!**
-> It helps others discover the project and shows that the integration is actively used.
+> It helps others find the project.
 >
 > **🤖 AI-Assisted Development**: This project uses AI-assisted development (Claude) to accelerate implementation while maintaining human oversight for architecture and community decisions.
 
@@ -43,11 +43,11 @@ A custom Home Assistant integration that monitors your cable modem's signal qual
 
 ## Development
 
-**New contributor?** Start with the [Getting Started Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/setup/GETTING_STARTED.md) -- it covers environment setup, running tests, and your first commit in a single document.
+**New contributor?** Start with the [Getting Started Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/setup/GETTING_STARTED.md) (environment setup, running tests, your first commit).
 
 **Returning contributor?** See the [Contributing Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md) for workflow, code style, and PR guidelines.
 
-**Architecture (v3.14):** Two runtime pip packages in `packages/` (Core + Catalog) plus a thin HA adapter in `custom_components/`. A third package — **Catalog Tools** — provides catalog authoring tools (HAR analysis, YAML generation, verification) for contributors and maintainers; it is never installed by HA. See [CONTRIBUTING.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#project-architecture) for details.
+**Architecture:** Two runtime pip packages in `packages/` (Core + Catalog) plus a thin HA adapter in `custom_components/`. A third package, **Catalog Tools**, holds the authoring tools (HAR analysis, YAML generation, verification) for contributors and maintainers; HA never installs it. See [CONTRIBUTING.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#project-architecture) for details.
 
 ---
 
@@ -55,19 +55,19 @@ A custom Home Assistant integration that monitors your cable modem's signal qual
 
 **What it monitors:**
 
-- 📊 **Signal Quality**: Power levels, SNR, frequency for every channel
-- ⚠️ **Error Tracking**: Corrected & uncorrected errors per channel
-- 🔌 **Connection Health**: Status, uptime, and last boot time
-- 💓 **Modem Health**: Real-time ping and HTTP latency monitoring
-- 📈 **Trends**: Full historical data for analysis and graphing
+- 📊 **[Signal Quality](#understanding-the-values)**: Power levels, SNR, frequency for every channel
+- ⚠️ **[Error Tracking](#corrected-vs-uncorrected-errors)**: Corrected & uncorrected errors per channel
+- 🔌 **[Connection Health](#modem-status)**: Status, uptime, and last boot time
+- 💓 **[Modem Health](#latency-monitoring)**: Real-time ping, TCP and HTTP latency monitoring
+- 📈 **[Trends](#examples)**: Full historical data for analysis and graphing
 
 **What it does:**
 
-- 🔄 **Remote Control**: Restart your modem from Home Assistant
-- 🤖 **Automation Ready**: Trigger actions on signal degradation or errors
-- 🔐 **Local-Only**: All processing on your Home Assistant instance — no cloud services
-- 🛡️ **Security Focused**: CodeQL scans every push to the main and feature branches, every pull request to main, and weekly
-- 🔌 **Plug & Play**: Easy UI configuration, no YAML editing needed
+- 🔄 **[Remote Control](#controls)**: Restart your modem from Home Assistant
+- 🤖 **[Automation Ready](#examples)**: Trigger actions on signal degradation or errors
+- 🔐 **[Local-Only](#privacy--security)**: All processing on your Home Assistant instance — no cloud services
+- 🛡️ **[Security Focused](#security-features)**: CodeQL scanning
+- 🔌 **[Plug & Play](#setup)**: Easy UI configuration, no YAML editing needed
 
 ### See It In Action
 
@@ -111,34 +111,24 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
 
 ### Monitoring & Data Collection
 
-- **Easy Setup**: Configure via Home Assistant UI - no YAML editing required
 - **Comprehensive Channel Monitoring**: Tracks all downstream and upstream channels
-- **Per-Channel Metrics**:
-  - Power levels (dBmV)
-  - Signal-to-Noise Ratio (SNR in dB)
-  - Frequency (Hz)
-  - Corrected/Uncorrected errors
+- **Per-Channel Metrics**: Power (dBmV), SNR (dB), frequency (Hz), corrected and uncorrected errors
 - **Summary Sensors**: Total corrected and uncorrected downstream errors, where the modem's catalog entry declares them
 - **Unified Status**: One sensor combining connection, health and DOCSIS lock (see [Modem Status](#modem-status))
 - **System Information**: Software version, uptime, channel counts, and last boot time
-- **Health Monitoring**: Real-time modem health checks with:
-  - Ping latency monitoring
-  - HTTP response time tracking
-  - Automatic health status assessment
+- **Health Monitoring**: Ping, TCP and HTTP latency, plus an automatic health status
 - **Login protection**: Rejected credentials trip a circuit breaker that stops further login attempts until you re-enter credentials or reload the integration; on some modems repeated bad logins cause a lockout or even a restart
 
 ### Control & Automation
 
 - **Modem Control**: Restart your modem directly from Home Assistant
 - **Automation-Friendly**: Last boot time sensor with timestamp device class for reboot detection
-- **Consistent Entity Naming**: All entities use `cable_modem_` prefix for predictability
-- **Historical Data**: All metrics are stored for trend analysis
 - **Dashboard Ready**: Create graphs and alerts based on signal quality
 
 ### Developer Friendly
 
 - **Extensible**: Each modem is a catalog entry of YAML config, with Python only for firmware quirks
-- **Well Tested**: comprehensive test coverage across Core, Catalog, Catalog Tools, and HA integration suites — see CI badge above for current pass status
+- **Well Tested**: Core, Catalog, Catalog Tools and HA integration suites run in CI (badge above)
 - **Type Safe**: Full type hints, mypy and pyright validation
 
 ## Supported Modems
@@ -169,7 +159,7 @@ The catalog grows when contributors with hardware step up. Two paths:
 
 ### Testing a Beta Release
 
-Beta releases install manually — there's no auto-update path on betas. Each beta is a deliberate per-version install.
+Betas don't auto-update; each one is a manual per-version install.
 
 1. In HACS, open **Cable Modem Monitor**.
 2. Click the **⋯** menu → **Redownload**.
@@ -220,7 +210,7 @@ After setup, configure via **Settings → Devices & Services → Cable Modem Mon
 - **Polling Interval**: How often to fetch full modem status (30 seconds – 24 hours, default: 10 minutes)
 - **Health Check Interval**: How often to run lightweight reachability probes (default: 30 seconds). Status comes from ICMP ping and a TCP connect; an HTTP HEAD measures latency where the modem supports it
 
-Modem Model and Channel Identity are install-time choices, not editable here. The model is fixed; Channel Identity (number vs ID) can be switched by removing and re-adding the integration (see [Known Limitations](#known-limitations)).
+Modem Model and Channel Identity are install-time choices, not editable here. See [Known Limitations](#known-limitations).
 
 <!-- markdownlint-disable MD033 -->
 <picture>
@@ -233,7 +223,7 @@ Modem Model and Channel Identity are install-time choices, not editable here. Th
 
 ## Available Sensors
 
-All sensors use the `cable_modem_` prefix for consistent entity naming and easy identification. Supporting entities (system information, error totals and rates, latency, LAN statistics) sit in the device page's Diagnostic section.
+All sensors use the `cable_modem_` prefix. Supporting entities (system information, error totals and rates, latency, LAN statistics) sit in the device page's Diagnostic section.
 
 **Entity Naming Pattern:**
 
@@ -251,7 +241,7 @@ Channel sensor naming depends on the **Channel Identity** mode you picked at set
   - Example: `sensor.cable_modem_us_atdma_ch_3_frequency`
   - DOCSIS 3.1 modems also have OFDM/OFDMA channels: `sensor.cable_modem_ds_ofdm_ch_1_power`
 
-Channel Identity is set when you add the integration. To switch, remove and re-add it in the other mode, then call the `convert_channel_identity` service to rename existing recorder history to match.
+Channel Identity is set when you add the integration; to switch it, see [Known Limitations](#known-limitations).
 
 ### Modem Status
 
@@ -363,9 +353,9 @@ To remove a single modem:
 
 1. Go to **Settings → Devices & Services → Cable Modem Monitor**.
 2. Click the modem entry, open the **⋯** menu, and choose **Delete**.
-3. Confirm. The integration logs out of the modem, removes its device and entities, and deletes the small per-entry state it stored (the channel-bond baseline). The credentials stored with the entry are removed with it. No restart is required.
+3. Confirm. The integration logs out of the modem, removes its device and entities, and deletes the per-entry state it stored (the channel-bond baseline) and the entry's credentials. No restart is required.
 
-Recorded sensor history is retained according to your Home Assistant **recorder** settings — deleting the integration does not purge it. To clear leftover channel history, use the `orphaned_statistics` service or follow [Ghost Statistics in History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#ghost-statistics-in-history). To clear state history, see [Leftover State History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#leftover-state-history).
+Deleting the integration does not purge recorded sensor history; your Home Assistant **recorder** settings govern it. To clear leftover channel history, use the `orphaned_statistics` service or follow [Ghost Statistics in History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#ghost-statistics-in-history). To clear state history, see [Leftover State History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#leftover-state-history).
 
 To uninstall completely, delete every modem entry as above, then remove **Cable Modem Monitor** from **HACS** (open it, **⋯** menu → **Remove**) and restart Home Assistant.
 
@@ -379,7 +369,7 @@ To uninstall completely, delete every modem entry as above, then remove **Cable 
 
 ## Troubleshooting
 
-**📖 See the [Troubleshooting Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)** for solutions to common issues including connection problems, missing sensors, and duplicate entities.
+**📖 The [Troubleshooting Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)** covers connection problems, missing sensors, and duplicate entities.
 
 ## Privacy & Security
 

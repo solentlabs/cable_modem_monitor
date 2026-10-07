@@ -13,9 +13,8 @@ Ready-to-use examples for monitoring your cable modem in Home Assistant.
 
 ## Dashboard Generator Service
 
-The easiest way to create a dashboard is the built-in generator service.
-It reads your modem's actual channel data and produces ready-to-paste
-Lovelace YAML — no manual entity counting required.
+The built-in generator service reads your modem's channel data and
+produces ready-to-paste Lovelace YAML, with no manual entity counting.
 
 ### How to use
 
@@ -81,15 +80,15 @@ In Channel Number mode, lines are named "Ch 1", "Ch 2" and so on.
 
 ## Manual Dashboard Example
 
-If you prefer to build your dashboard by hand, see
-[`examples/manual-dashboard.yaml`](examples/manual-dashboard.yaml) — a
-167-line Lovelace YAML covering the status entities, downstream and
+To build a dashboard by hand, start from
+[`examples/manual-dashboard.yaml`](examples/manual-dashboard.yaml), a
+Lovelace YAML covering the status entities, downstream and
 upstream history graphs, and error totals. Copy it into your
 dashboard's Raw Configuration Editor as a starting point.
 
 The example uses 24 downstream channels (typical for DOCSIS 3.0). If
-your modem has fewer or more, add/remove channel entries following the
-existing pattern. Entity IDs follow the [Entity Naming Pattern in the
+your modem has fewer or more, add or remove channel entries following
+the existing pattern. Entity IDs follow the [Entity Naming Pattern in the
 README](https://github.com/solentlabs/cable_modem_monitor#available-sensors).
 
 ---
