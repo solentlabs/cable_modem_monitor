@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   captures' accuracy, status or grades moved since that card, worst
   first, and which captures entered or left. The fleet percentage hides
   a large change on one modem. Report only; the exit code is unchanged.
+  In CI the accuracy step compares against the previous successful run
+  on the same branch (else `main`) and shows the movement in the job
+  summary.
 - **Setup links to the supported modem list.** The model step of the
   config flow links to the catalog's modem list on GitHub.
 - **Form logins report login-page drift.** A WARNING names a login form
@@ -28,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that matches nothing. Each warns once, later repeats log at DEBUG, and
   the diagnostics download lists the current findings under
   `login_page_drift`. The login itself is unchanged. (#189)
+- **Arris TG3442S confirmed on hardware.** Verified via contributor
+  diagnostics on 3.14.15-beta.1: 32 downstream and 6 upstream channels
+  locked with no collection error, hardware 7, software
+  01.05.048.01.EURO.NCS, and Restart confirmed by the contributor.
+  (Related to #210)
 
 ### Changed
 
@@ -158,6 +166,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`make spell-check` covers `docs/` and `scripts/`.** It and the CI
   Spell Check job scanned only catalog modem YAML; both now also check
   `docs/**/*.md` and the Python and shell scripts under `scripts/`.
+- **The intake tools attach a codewords table to the downstream
+  channels.** A "CM Error Codewords" table beside the main transposed
+  table (Technicolor XB6, XB7, XB8, XB10) was skipped, so a generated
+  config had no error counts. It is now a companion table merged by
+  channel ID when its rows carry a Channel ID and corrected or
+  uncorrected counts; otherwise a warning says it was not attached.
+  Intake accuracy on those four captures rises by 11 to 18 points.
+  `skip_columns` stays hand-authored.
+- **`release.py` stops on open code-scanning alerts.** It stops on any
+  open alert on the release branch, on an open alert on `main` unless
+  the branch has fixed it, and when `main` or the branch's `HEAD` has no
+  CodeQL analysis yet. It needs an authenticated `gh`.
+- **`make link-check` checks `#fragment` anchors.** A fragment on an
+  intra-repo Markdown link must name a heading slug or an explicit `id`
+  in the target file.
+- **black, ruff and mypy are pinned** to 26.1.0, 0.15.12 and 2.1.0
+  across CI, pre-commit and the dev requirements.
+- **CLAUDE.md is restructured.** It is 363 lines, from 601. The CI and
+  dependency rules and the catalog data rules load from `.claude/rules/`
+  when a matching file is touched; diagnosing a user report and the
+  contributor voice are the `diagnose-user-report` and
+  `contributor-comms` skills. The docstring standard is stated once, in
+  `docs/CODE_REVIEW.md`: function and class docstrings are one line,
+  module docstrings are unchanged.
+- **The intake workflow compares the form's login answer and
+  regenerates the README on confirm.** A mismatch with the detected
+  strategy is asked about before generating. The confirm flow
+  regenerates the catalog README (Step 15), the generator runs from the
+  venv, and Step 8 warns that the prettier hook rewrites new YAML.
+- **The modem request form and guide changed.** The form's capture
+  section points to the guide for the commands, including a different
+  modem IP and HTTP Basic Auth. The guide's Step 5 now asks to click any
+  button that loads or shows more data (Refresh, More, Show channels),
+  and its validation step notes that a clean scan cannot prove nothing
+  slipped through. The feature request form drops "Alternatives
+  Considered".
 
 ### Fixed
 
@@ -244,6 +288,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the detector matched `login_` inside that value, reporting
   `url_token` for a modem that logs in with a JSON body. The marker must
   now start a query parameter name.
+- **The intake tools no longer select a table by a title that several
+  tables carry.** On the Arris SB6141 page the downstream, upstream and
+  codewords tables share one title row, so every section selected the
+  first table. A shared title now falls through to a column header
+  unique to the table.
+- **The intake tools read a row label without help text nested in its
+  cell.** The SB6141 "Power Level" cell holds a help paragraph in a
+  nested table, which became part of the field name. A row's first cell
+  is now read as its own text; value cells are read as Core reads them.
+  With the selector fix, SB6141 intake accuracy rises from about 55% to
+  about 95% on both captures.
 
 ## [3.14.15-beta.2] - 2026-09-29
 
