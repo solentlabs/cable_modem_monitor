@@ -32,29 +32,20 @@ over convenience.
 
 ### Specs and Documentation
 
-1. **Specs are the authority.** Code follows specs. No silent
-   deviations. If the code needs to diverge, discuss the gap first,
-   update the spec, then update the code.
-
-2. **Design decisions land in specs, not in conversation.** Every
-   architectural decision made during a session must be committed to
-   the relevant spec file before the session ends. Conversation
-   history is ephemeral — specs are durable.
-
-3. **Docs and code move together.** Every core change reconciles the
-   affected specs (ARCHITECTURE, ORCHESTRATION_SPEC, MODEM_YAML_SPEC,
-   etc.). A code change without a corresponding spec update is
-   incomplete.
-
-4. **Write for clarity and brevity — then cut again.** Before
-   committing any prose (spec text, generated-doc copy, comments,
-   commit bodies), reread it and delete what does not earn its place:
-   throat-clearing openers ("A third situation is…"), restated
-   context, hedges, and clauses that repeat a neighbouring sentence.
-   Say the thing once, in the fewest words that keep it true. A
-   definition a reader has to parse twice is a definition that will
-   get asked about again. This applies to the *first* draft, not a
-   later polish pass — verbose text ships and then nobody trims it.
+- **Specs are the authority.** Code follows specs; no silent deviations.
+  If code must diverge, discuss the gap, update the spec, then the code.
+- **Design decisions land in specs, not in conversation.** Commit every
+  architectural decision to the relevant spec before the session ends;
+  conversation is ephemeral, specs are durable.
+- **Docs and code move together.** A core change reconciles the affected
+  specs (ARCHITECTURE, ORCHESTRATION_SPEC, MODEM_YAML_SPEC, etc.); code
+  without its spec update is incomplete.
+- **Write for clarity and brevity, then cut again.** Before committing
+  prose (spec text, generated-doc copy, comments, commit bodies), delete
+  throat-clearing openers, restated context, hedges and clauses that
+  repeat a neighbour. Say it once in the fewest words that keep it true;
+  a definition read twice gets asked about again. Apply it to the first
+  draft: verbose text ships and nobody trims it.
 
 ### Two READMEs — GitHub vs HACS (do not consolidate)
 
@@ -119,54 +110,44 @@ even if you skip it:
 
 ## Decision Discipline
 
-- **One thing at a time.** Surface decisions sequentially; don't
-  dump 6-row tables of "outstanding work." Long synthesized lists
-  are too much to absorb in one pass and let shortcuts slip
-  through.
+- **One thing at a time.** Surface decisions sequentially; no 6-row
+  tables of "outstanding work", which are too much to absorb and let
+  shortcuts slip through.
 - **Research returns a recommendation, not a paper.** When asked to
-  research, analyze, or assess, default to a 2–3 sentence answer
-  with the single tradeoff that matters. Tables, section headers,
-  Phase-numbered plan scaffolding, ASCII diagrams, and leverage
-  rankings are opt-in — only expand when the user asks "explain
-  why" or "show your work." This rule exists because research
-  prompts repeatedly returned multi-section papers when a
-  recommendation was wanted.
-- **Structure over presentation.** Prioritize the data model and
-  schema; defer presentation polish until the structure is settled.
-- **No judgment shortcuts.** Don't dismiss alternatives with
-  "overkill," "churn," "make-work," or "no cohesion payoff" without
-  weighing real costs and benefits. The shortcut costs more later —
-  either a missed improvement or a re-litigated decision.
-- **Know what you know — don't speculate.** Model what we actually
-  observe; stop there. Don't add inference-based features when the
-  signal is ambiguous (multi-signal voting, tunable thresholds, etc.
-  are tells).
-- **Park side investigations.** When a parallel audit returns
-  results, summarize and surface as a *separate* task. Don't merge
-  the punch list into the active commit batch without explicit
-  ratification.
-- **Avoid refactor thrashing.** After 1–2 "this smells" rounds on
-  the same module, stop and ask for the end state. If rounds 1 and
-  2 haven't converged, round 3 won't either — the underlying issue
-  is the goal isn't clear, not that the current location is wrong.
-- **Don't defer obvious cosmetic fixes.** If a review surfaces a
-  real issue (stale name, drifted docstring, minor nit), fix it in
-  the current pass. *"Whenever we say we should take care of
-  something later, we do not, and that adds to hidden tech debt."*
-  Never write "separate pass if desired" — that's deferral dressed
-  as a suggestion.
+  research, analyze or assess, default to 2–3 sentences with the single
+  tradeoff that matters. Tables, headers, Phase-numbered scaffolding,
+  ASCII diagrams and leverage rankings are opt-in: expand only on
+  "explain why" or "show your work."
+- **Structure over presentation.** Data model and schema first;
+  presentation polish after.
+- **No judgment shortcuts.** Don't dismiss alternatives with "overkill",
+  "churn", "make-work" or "no cohesion payoff" without weighing real
+  costs; the shortcut costs a missed improvement or a re-litigated
+  decision.
+- **Know what you know — don't speculate.** Model what we observe and
+  stop. Inference features on an ambiguous signal (multi-signal voting,
+  tunable thresholds) are tells.
+- **Park side investigations.** Summarize a parallel audit's results and
+  surface them as a separate task; don't merge its punch list into the
+  active commit batch without ratification.
+- **Avoid refactor thrashing.** After 1–2 "this smells" rounds on a
+  module, ask for the end state; if a third round would follow, the goal
+  is unclear, not the location.
+- **Don't defer obvious cosmetic fixes.** Fix a real issue a review
+  surfaces (stale name, drifted docstring, nit) in the current pass:
+  *"Whenever we say we should take care of something later, we do not,
+  and that adds to hidden tech debt."* Never write "separate pass if
+  desired".
 - **Name the governing spec before recommending anything in its
-  subsystem, and say in the reply which one you read.** Code plus
-  tests is not a substitute. The `AUTH_LOCKOUT` mapping was assessed
-  from the signal enum, the HA error map and 12 locale files, and the
-  recommendation was wrong: the real finding was in `AUTH_HNAP_SPEC.md`,
-  which was never opened. Stating the spec out loud makes the omission
-  visible at a glance instead of costing a round trip to discover.
-- **Don't manufacture urgency, and don't dismiss by authorship.**
-  Inflating a remote edge case into a release gate and waving a real
-  gap away as "pre-existing" are the same move: closing a question
-  instead of weighing it. Rank a gap by what it is and what it costs,
-  then say plainly whether it blocks the current cut.
+  subsystem, and say which one you read.** Code and tests are not a
+  substitute: the `AUTH_LOCKOUT` mapping was assessed from the signal
+  enum, the HA error map and 12 locale files, and the real finding was
+  in `AUTH_HNAP_SPEC.md`, never opened. Saying the spec out loud makes
+  an omission visible at a glance.
+- **Don't manufacture urgency.** Inflating a remote edge case into a
+  release gate closes a question instead of weighing it. Rank a gap by
+  what it is and costs, and say plainly whether it blocks the current
+  cut. (Dismissing a gap by authorship is under Process.)
 
 ## Verification Discipline
 

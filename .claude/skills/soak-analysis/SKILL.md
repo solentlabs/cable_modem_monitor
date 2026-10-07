@@ -122,7 +122,7 @@ Summarize findings with this structure:
 ## Notes
 
 - `parse_ha_logs` is in `scripts/dev/analyze_logs.py` (HA-specific,
-  NOT in Core per principle 3)
+  NOT in Core: ARCHITECTURE.md § Invariants, no HA dependencies in Core)
 - The Core-level `analyze_logs` MCP tool only parses Core patterns;
   this skill adds HA lifecycle context (startup, fetch durations,
   deferred entities)
