@@ -18,7 +18,7 @@ import re
 
 from bs4 import BeautifulSoup, Tag
 from solentlabs.cable_modem_monitor_core.loaders.html_normalize import normalize_html
-from solentlabs.cable_modem_monitor_core.parsers import extract_by_label
+from solentlabs.cable_modem_monitor_core.parsers import BLOCK_LEVEL_TAGS, extract_by_label
 
 from .types import DetectedLabelPair, DetectedTable
 
@@ -447,11 +447,6 @@ def detect_label_pairs(body: str) -> list[DetectedLabelPair]:
     return pairs
 
 
-# Mirrors Core's private _BLOCK_LEVEL_TAGS in parsers.formats.html_fields:
-# a cell holding one of these is a layout wrapper, not a label or value.
-_BLOCK_LEVEL_TAGS = ["table", "div", "section", "article", "ul", "ol", "dl"]
-
-
 def _confirmed_row_pairs(body: str) -> list[tuple[str, str]]:
     """Return (label, value) from table rows that Core's label lookup reads back."""
     # Same parse as Core's loader, so the confirmation sees the runtime DOM.
@@ -459,7 +454,8 @@ def _confirmed_row_pairs(body: str) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
     for row in soup.find_all("tr"):
         cells = row.find_all(["td", "th"], recursive=False)
-        if len(cells) < 2 or cells[0].find(_BLOCK_LEVEL_TAGS) or cells[1].find(_BLOCK_LEVEL_TAGS):
+        # A cell holding a block-level tag is a layout wrapper, not a label or value.
+        if len(cells) < 2 or cells[0].find(BLOCK_LEVEL_TAGS) or cells[1].find(BLOCK_LEVEL_TAGS):
             continue
         label = cells[0].get_text().strip().rstrip(":").strip()
         value = cells[1].get_text().strip()

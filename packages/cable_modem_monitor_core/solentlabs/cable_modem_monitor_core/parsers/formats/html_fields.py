@@ -175,7 +175,7 @@ def _label_leaves(soup: BeautifulSoup | Tag, label_lower: str) -> list[Tag]:
 
         # Skip wrapper elements — their get_text() includes all nested
         # content, causing false matches on label text.
-        if element.find(_BLOCK_LEVEL_TAGS):
+        if element.find(BLOCK_LEVEL_TAGS):
             continue
 
         text = element.get_text(strip=True)
@@ -193,7 +193,9 @@ def _label_leaves(soup: BeautifulSoup | Tag, label_lower: str) -> list[Tag]:
 
 
 # Block-level tags that indicate a wrapper element when found as children.
-_BLOCK_LEVEL_TAGS = ["table", "div", "section", "article", "ul", "ol", "dl"]
+# Public: catalog_tools applies the same test to confirm the label pairs
+# Core's lookup can read back.
+BLOCK_LEVEL_TAGS = ["table", "div", "section", "article", "ul", "ol", "dl"]
 
 # Cells whose handler a leaf may borrow from its direct parent, e.g. a
 # <label> or <span> wrapping the label text inside a <td>.
