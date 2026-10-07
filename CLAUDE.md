@@ -57,21 +57,11 @@ over convenience.
 
 ### Two READMEs — GitHub vs HACS (do not consolidate)
 
-The repo intentionally ships two README files for two render
-surfaces. They are not duplicates to merge:
-
-- `.github/README.md` is the **GitHub landing page** (GitHub serves a
-  README from `.github/` in preference to the repo root). Relative
-  links in it resolve from `.github/`, so a `./docs/X` resolves to
-  `.github/docs/X` and 404s — use links that resolve from `.github/`,
-  or absolute
-  `https://github.com/solentlabs/cable_modem_monitor/blob/main/...`
-  URLs.
-- The root `README.md` is what **HACS** renders in its panel. HACS
-  does not resolve repo-relative paths, so this file must use
-  **absolute** URLs only.
-
-When editing either, keep the distinction and the per-file link rule.
+`.github/README.md` is the GitHub landing page; the root `README.md` is
+what HACS renders. They serve different surfaces, so do not merge them.
+HACS resolves no repo-relative paths, so the root README uses absolute
+URLs only; links in `.github/README.md` must resolve from `.github/` or
+be absolute. `make link-check` (in `validate-ci`) enforces both.
 
 ### Process
 
