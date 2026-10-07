@@ -38,7 +38,7 @@ hardware:
   docsis_version: "3.1"
   chipset: "Intel Puma 7 (FHCE2752M)"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config:
