@@ -597,8 +597,6 @@ def _find_sjcl_session_validation(
 
 def _extract_sjcl_encrypt_aad(post_text: str) -> str:
     """Extract the encrypt AAD from the login POST body's AuthData field."""
-    import json
-
     try:
         body = json.loads(post_text)
         if isinstance(body, dict) and "AuthData" in body:
@@ -1153,8 +1151,6 @@ def _extract_pbkdf2_params_from_response(resp_text: str) -> dict[str, Any]:
     Looks for salt, iterations, and key length fields in the response.
     Returns extracted params as a dict (may be partial or empty).
     """
-    import json
-
     params: dict[str, Any] = {}
     try:
         data = json.loads(resp_text)
