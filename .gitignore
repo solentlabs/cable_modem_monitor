@@ -25,6 +25,8 @@ __pycache__/
 # left by the retired sync script stay ignored
 !.claude/skills/
 .claude/skills/*.md
+# Path-scoped rules load when Claude touches a matching file
+!.claude/rules/
 .aider*
 
 # Node (npx markdownlint-cli2)

@@ -502,8 +502,8 @@ gh api repos/solentlabs/cable_modem_monitor/rulesets/10547747 --method PUT --inp
 ```
 
 where `<payload>` is the full ruleset JSON with the corrected `context`
-strings. See CLAUDE.md § "Adding a new CI job" for the rule that
-prevents this drift.
+strings. See `.claude/rules/ci-and-dependencies.md` § "Adding a new CI
+job" for the rule that prevents this drift.
 
 ### Release workflow didn't trigger
 
