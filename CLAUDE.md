@@ -22,6 +22,7 @@
 | Doc authoring (one home per rule, current contract only — no version history, what earns an ADR entry, cross-linking) | `docs/README.md` § Doc Authoring |
 | Specs by package | core: `packages/cable_modem_monitor_core/docs/README.md` · catalog tools: `packages/cable_modem_monitor_catalog_tools/docs/README.md` · HA: `custom_components/cable_modem_monitor/docs/README.md` · project: `docs/README.md` |
 | Reference test (table-driven exemplar) | `tests/lib/test_parse_host_input.py` |
+| Path-scoped rules and skills | `.claude/rules/` (load when matching files are touched) · `.claude/skills/` (invoked) |
 
 ## Core Principles
 
@@ -341,16 +342,17 @@ reply, where a skipped one is visible without re-running the work.
 
 ## Shell Command Generation — Avoid Permission Check Triggers
 
-When generating shell commands:
+Newlines break allowlist matching (`Bash(gh issue view*)` will not match
+a command containing one), so the permission prompt fires.
 
-1. **Never embed newlines or `#` characters inside quoted strings** passed as command arguments
-2. **For multiline shell logic**, write to a `.sh` script file first, then execute the file
-3. **Prefer simple, single-line commands** with explicit arguments
-4. **For JSON parsing**, use `gh`'s built-in jq engine via `--jq`/`-q`. The standalone `jq` binary is **not installed** — piping to it fails with `command not found`, and inside a pipeline that failure is silent. Never pipe `gh` output to `python3 -c`. Example: `gh issue view 152 --json title,body -q '.title, .body[:800]'`
-5. **For JSON that does not come from `gh`**, or logic `--jq` cannot express, write to a fixed path `/tmp/claude_parse.py` (overwrite each time, not per-invocation) and run `python3 /tmp/claude_parse.py`
-6. **Before executing any shell command**, verify it contains no newline characters inside quoted strings and no `#` characters that could be interpreted as hidden arguments
-
-**Why?** Embedded newlines break allowlist pattern matching — `Bash(gh issue view*)` will not match a command containing newlines, so the permission prompt fires even for explicitly allowed prefixes. `--jq` sidesteps this entirely.
+- **No newline or `#` inside a quoted command argument.** Check every
+  command first. Multiline logic goes in a `.sh` file; prefer
+  single-line commands.
+- **`gh` JSON:** use `--jq`/`-q` (`gh issue view 152 --json title -q '.title'`).
+  The `jq` binary is **not installed**: piping to it fails silently in a
+  pipeline. Never pipe `gh` output to `python3 -c`.
+- **Other JSON:** write to the fixed path `/tmp/claude_parse.py`
+  (overwrite each time), then run `python3 /tmp/claude_parse.py`.
 
 ## Before a push
 
@@ -375,19 +377,14 @@ When generating shell commands:
 
 ## Irreversible Operations — STOP and VERIFY
 
-When the user gives explicit constraints (e.g., "without closing the PR", "don't delete X"):
+When the user gives explicit constraints (e.g., "without closing the PR",
+"don't delete X"):
 
-1. **Treat these as HARD BLOCKERS** — not suggestions
-2. **Research/verify the outcome BEFORE executing** — if unsure, ASK first
-3. **If something goes wrong, STOP and ask** — don't try to fix it autonomously
-4. **Never assume** — GitHub branch renames, force pushes, deletions can have cascading effects
-
-Examples of irreversible operations requiring verification:
-
-- Branch renames, deletions, force pushes
-- PR/issue closures
-- Tag deletions
-- Any git operation with `--force`
+- **Treat them as hard blockers**, not suggestions.
+- **Verify the outcome before executing**; if unsure, ask first.
+- **If something goes wrong, stop and ask.** Don't try to fix it autonomously.
+- **Never assume.** Branch renames and deletions, force pushes (any
+  `--force`), PR or issue closures and tag deletions can cascade.
 
 ## Contributor Communications
 
@@ -419,23 +416,16 @@ discussions, release notes) or other public surfaces.
 ## PR and Issue Conventions
 
 No auto-close keywords (`Fixes #X`, `Closes #X`, `Resolves #X`) in PR
-bodies *or* commit messages — GitHub scans every commit in a merge
-and closes regardless of qualifier. Use `Related to #X` /
-`Addresses #X` instead.
+bodies *or* commit messages: GitHub scans every commit in a merge and
+closes regardless of qualifier. Use `Related to #X` / `Addresses #X`.
 
-Commit bodies are gated automatically: `make autoclose-check` runs
-`scripts/check_auto_close_keywords.py` over the merge range, and
-`validate-ci` depends on it. That check scans commit bodies only, by
-design. **PR descriptions are the vector nothing checks** — read the
-body yourself before authorizing any merge to main, and flag every
-match to the developer as a blocker.
+`make autoclose-check` (in `validate-ci`) scans commit bodies only.
+**PR descriptions are the vector nothing checks:** read the body yourself
+before authorizing any merge to main, and flag every match as a blocker.
+The parser doesn't read English: "would resolve #X if…" and "doesn't
+fix #X" both close (PR #145: "still required to confirm fix resolves #81
+specifically" auto-closed #81). This applies equally to a commit Claude
+authored in an earlier session.
 
-The parser doesn't read English: "would resolve #X if…" closes it, and
-so does "doesn't fix #X". This bit PR #145, where "still required to
-confirm fix resolves #81 specifically" auto-closed #81 on merge and it
-had to be reopened by hand. Applies equally when Claude authored the
-offending commit in an earlier session.
-
-Issue label glossary and state semantics live in
-[CONTRIBUTING.md § Issue Labels](CONTRIBUTING.md#issue-labels) and
-[CONTRIBUTING.md § Issue Closing Policy](CONTRIBUTING.md#issue-closing-policy).
+Issue labels and closing policy: [CONTRIBUTING.md § Issue Labels](CONTRIBUTING.md#issue-labels)
+and [§ Issue Closing Policy](CONTRIBUTING.md#issue-closing-policy).
