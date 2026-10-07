@@ -151,106 +151,72 @@ even if you skip it:
 
 ## Verification Discipline
 
-The first three rules govern the rest of this section. Every other rule
-here asks for a check done privately; these three put the check in the
-reply, where a skipped one is visible without re-running the work.
+The first three rules put the check in the reply, where a skipped one is
+visible without re-running the work.
 
-- **Cite what you opened.** When stating a fact or a cause about the
-  system, name the files or commands the claim rests on. A claim about
-  CI cites a workflow file; a claim about history cites `git log`. When
-  the named sources don't cover the claim's domain, the hole shows on
-  the page: *"CI isn't recording the trend (checked: Makefile, the
-  regression script)"* is visibly unsupported, because neither source
-  is CI. This is the forcing function from *name the governing spec*,
-  generalised past specs. Name the *extent*, not just the source:
-  "read: the last 3 comments" is a different claim from "read: the
-  thread." This applies to draft text for a public reply, where each
-  factual claim carries its source when the draft is *presented*, not
-  when it is posted.
+- **Cite what you opened.** When stating a fact or cause about the
+  system, name the files or commands it rests on, and their extent
+  ("read: the last 3 comments" differs from "read: the thread"). If the
+  sources don't cover the claim's domain the hole shows: "CI isn't
+  recording the trend (checked: Makefile, the regression script)" is
+  visibly unsupported, since neither is CI. This holds for draft public
+  text too, including claims the user supplied: each factual claim
+  carries its source when the draft is presented, not when it is posted.
 - **An unexplained number stays unexplained.** Report the measurement;
-  do not supply a cause you have not verified. "I can't account for
-  this yet" is a complete answer. On 2026-07-29 every measurement was
-  correct — fleet accuracy, the per-modem deltas, the four-day zero
-  window — and every wrong conclusion was an invented cause laid over
-  one of them, each disproved by a single `git log` or `grep` that ran
-  only after the user pushed back.
-- **Review your own diff before declaring it done.** For any change to
+  don't supply an unverified cause. "I can't account for this yet" is a
+  complete answer. (2026-07-29: every measurement was correct and every
+  wrong conclusion was an invented cause laid over one, each disproved
+  by a single `git log` or `grep`.)
+- **Review your own diff before declaring it done.** For a change to
   runtime behavior (policy, auth, orchestration, recovery), re-read the
-  full diff as a reviewer hunting for what it breaks, not as the author
-  confirming it works. Name in the reply the failure mode you looked
-  for. Green tool gates are not this check: black, ruff, mypy, pyright,
-  pre-commit and `validate-ci` were all green on the #185 auth change
-  while it would have posted credentials six times at an unknown device
-  and then shown the user the wrong remedy. Both defects were found only
-  because the developer asked for a review, which is not a gate.
-
-- **Verify against ground truth, not against doc claims.** When
-  asked to review a planning doc / status doc / roadmap, summarize
-  what's *actually true* (check code, git, issues), not what the
-  doc *says*.
-- **Read what already shipped before proposing an edit to it.**
-  Before recommending a change to a catalog entry, spec, or doc, run
-  `git log --follow` on the target file and grep CHANGELOG.md for its
-  subject. A file's last commit was often written to settle exactly
-  the question you are about to reopen, and the changelog may already
-  state the opposite of the caveat you are adding. Neither is visible
-  in the file's current text.
+  full diff as a reviewer hunting for what it breaks, and name in the
+  reply the failure mode you looked for. Green gates are not this check:
+  all were green on the #185 auth change while it would have posted
+  credentials six times at an unknown device and shown the user the
+  wrong remedy.
+- **Verify against ground truth, not doc claims.** Reviewing a planning,
+  status or roadmap doc: summarize what is actually true (code, git,
+  issues), not what the doc says.
+- **Read what already shipped before proposing an edit to it.** Before
+  recommending a change to a catalog entry, spec or doc, run
+  `git log --follow` on the target and grep CHANGELOG.md for its subject:
+  its last commit was often written to settle the question you are about
+  to reopen.
 - **Empty output is not an empty set.** Never assert absence from a
-  command whose output you haven't confirmed is well-formed. A `--jq`
-  expression that silently emits nothing is indistinguishable from a
-  real zero: totev#313 was reported as "closed same day, no comments,
-  no fix" and made a session's headline conclusion, when it in fact
-  had two comments that reversed the reading entirely.
-- **Verify the premise before creating a worktree.** For any task
-  that says "remove X" or "clean up Y," `rg` for it on the current
-  branch first. Zero hits means the work is already done — stop
-  before spinning up a worktree.
-- **After any hand-off, audit the full diff before touching
-  anything.** Run `git diff HEAD --stat` and review every changed
-  file. The gitStatus snapshot in the session header can be stale,
-  and another session on the same worktree may have regressed
-  earlier work.
-- **Never spawn a sub-agent to implement a feature that touches
-  existing code, specs, or tests.** Sub-agents lack project history
-  and make unsolicited "cleanup" decisions — removing fields,
-  dropping test coverage, stripping documentation — on things they
-  don't understand. The only safe scope for a sub-agent is narrowly
-  bounded read-only research. If context window pressure makes
-  direct implementation feel necessary, break the task into smaller
-  sessions instead.
+  command whose output you haven't confirmed is well-formed (totev#313
+  was reported "closed same day, no comments" when two comments reversed
+  the reading).
+- **Verify the premise before creating a worktree.** For "remove X" or
+  "clean up Y", `rg` for it on the current branch first; zero hits means
+  it is already done.
+- **After a hand-off, audit the full diff before touching anything**
+  (`git diff HEAD --stat`): the gitStatus snapshot can be stale, and
+  another session may have regressed earlier work.
+- **Never spawn a sub-agent to implement a feature that touches existing
+  code, specs or tests.** Sub-agents lack project history and make
+  unsolicited cleanup decisions (removing fields, dropping coverage,
+  stripping docs). Only bounded read-only research is safe; if context
+  pressure makes direct implementation tempting, split the task into
+  smaller sessions.
 - **Recurring problem = root cause unfixed.** If a fix has to be
-  re-applied within one session, stop fixing the symptom and find
-  what's recreating the failure.
-- **Never dismiss test failures as "pre-existing."** If tests pass
-  on committed code but fail with working-tree changes, it's a
-  regression. Stash and verify on clean state before claiming
-  pre-existing.
-- **Done means done.** When a task is class-scoped ("all issue
-  templates," "all parser docstrings"), apply the criteria
-  consistently to every member. Pass-through skimming for one
-  specific issue isn't done.
-- **Commit before recording done.** Work must be committed to a
-  durable branch before journal/memory says "done," "added," or
-  "implemented." Stashed work on a worktree branch is one
-  `git gc` away from loss.
-- **Run pyright alongside mypy.** `mypy` and Pyright (Pylance) have
-  different strictness. Code passing mypy can still show red
-  squiggles in VS Code. After mypy, run
-  `PYRIGHT_PYTHON_FORCE_VERSION=latest .venv/bin/pyright` over
-  **every file in `git status`, tests included** — Pylance tracks
-  latest pyright, and touched test files are where missed
-  diagnostics repeatedly surface. Do this unprompted before
-  declaring any work unit done, in the same pass as the test run.
-- **Preserve actor when restating prior facts.** When summarizing or
-  recommending based on a prior exchange, the subject/object of "who
-  said/did/decided X" is load-bearing. Compressing "X reported Y"
-  into "we told X about Y" (or vice versa) misrepresents the record
-  even when the surrounding argument is sound. Re-read load-bearing
-  sentences against the actual exchange before submitting.
-- **Verify factual claims before posting externally, even when
-  user-supplied.** The claim originating from the user doesn't exempt
-  it. Public channels (GitHub issues, PR comments) require the same
-  ground-truth check as claims generated here.
+  re-applied within a session, find what is recreating the failure.
+- **Never dismiss test failures as "pre-existing".** If tests pass on
+  committed code but fail with working-tree changes, it is a regression.
+  Verify against the committed code without stashing (stash is
+  forbidden: global CLAUDE.md § Git); ask before creating a worktree.
+- **Done means done.** For a class-scoped task ("all issue templates",
+  "all parser docstrings") apply the criteria to every member; skimming
+  for one issue isn't done.
+- **Before journal or memory says "done", the work is committed** (with
+  the developer's authorization): stashed work is one `git gc` from loss.
+- **Run pyright alongside mypy.** Pyright is stricter in places: after
+  mypy, run `PYRIGHT_PYTHON_FORCE_VERSION=latest .venv/bin/pyright` over
+  every file in `git status`, tests included, unprompted, before
+  declaring a work unit done.
+- **Preserve actor when restating prior facts.** "X reported Y"
+  compressed into "we told X about Y" misrepresents the record even when
+  the argument is sound; re-read load-bearing sentences against the
+  actual exchange.
 
 ## Catalog & Data Discipline
 

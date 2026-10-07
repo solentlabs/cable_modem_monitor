@@ -173,7 +173,7 @@ spell-check:
 # Scans every commit on this branch since origin/main for unjustified
 # `# type: ignore` / `# pyright: ignore` / bare `# noqa` patterns.
 # Matches CI's diff scope (--branch origin/main) so local validation
-# catches what CI would. See CLAUDE.md § Code Discipline.
+# catches what CI would. See docs/CODE_REVIEW.md § Suppression Discipline.
 suppression-check:
 	@echo "🔍 Scanning for unjustified suppressions..."
 	@$(VENV_BIN)/python scripts/check_suppression_discipline.py --branch origin/main

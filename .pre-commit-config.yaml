@@ -63,7 +63,7 @@ repos:
   # Suppression discipline — quality-gate suppressions added in a
   # change must carry a same-line justification comment. Catches the
   # AI antipattern of reaching for `# type: ignore` as a first answer.
-  # See CLAUDE.md § Code Discipline (Suppression discipline).
+  # See docs/CODE_REVIEW.md § Suppression Discipline.
   - repo: local
     hooks:
       - id: suppression-discipline
@@ -76,7 +76,7 @@ repos:
   # Import isolation. A published module that only imports when
   # something else was imported first is an import cycle waiting to
   # break a consumer. Scoped to changed files here; validate-ci sweeps
-  # every module. See CLAUDE.md § Verification Discipline.
+  # every module. See scripts/check_import_isolation.py.
   - repo: local
     hooks:
       - id: import-isolation
