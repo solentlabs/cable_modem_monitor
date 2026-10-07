@@ -102,33 +102,19 @@ be absolute. `make link-check` (in `validate-ci`) enforces both.
 
 ## Diagnosis Discipline
 
-When a runtime error appears in user-supplied logs, **ask for the data
-that would distinguish candidate causes before generating theories.**
-Typically the surrounding ±10 log lines. Don't theorize first; don't
-propose fixes first.
+When a user supplies a log, a runtime error or a bug report, invoke the
+`diagnose-user-report` skill before replying. Its core, which applies
+even if you skip it:
 
-- **Differential test**: every theory must answer "why now and not
-  before?" If it can't, it's incomplete — don't commit to a fix
-  built on it.
+- **Ask for the data that would distinguish candidate causes before
+  theorizing or proposing a fix**, typically the surrounding ±10 log
+  lines.
+- **Every theory must answer "why now and not before?"**
 - **User hypotheses are primary evidence**, not options among yours.
-  Tentative phrasing ("if we... maybe this...") doesn't downgrade
-  the signal — the user has runtime context the codebase doesn't.
-- **External failure modes are invisible to grep.** Install path,
-  network path, runtime config, user actions — none of those show
-  up in codebase searches. When stuck inside the repo, ask: "could
-  this be coming from outside the code?"
-- **Don't propose fixes until you can name what specifically broke
-  and why.** "Probably X" is not a fix-ready diagnosis.
-- **When the task cannot validate a hypothesis, the deliverable is an
-  evidence ledger, not a recommendation.** Some problems have no
-  reproduction, no hardware, and no way to test a theory locally
-  (#120: five months, seven contributor retests, a dozen dead
-  theories). In that state every session invents a fix and every fix
-  collapses under the next question. Report what is closed and what is
-  open, and stop. A theory closed with evidence is worth as much as a
-  change and is the only progress such an issue accepts — the durable
-  output of the 2026-07-27 session was its negative results, not one
-  of its recommendations.
+- **Don't propose a fix until you can name what specifically broke and
+  why.** With no reproduction or hardware, the deliverable is an
+  evidence ledger of what is closed and what is open, not a
+  recommendation.
 
 ## Decision Discipline
 
