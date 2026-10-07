@@ -346,6 +346,14 @@ HAR before proceeding. Pull
 | `bearer` | The JSON login body has a password key whose value is not ciphertext, and a value its response issued (a header such as `X-CSRF-Token`, or a JSON field) comes back on later requests. |
 | `json_sjcl` | The JSON login body is ciphertext plus the username, with no password key, built by the login page's SJCL script. The tool reads `pbkdf2_iterations`, `pbkdf2_key_length` and `aad` from the captured scripts; set any it warns are missing from that script. |
 
+When triaging an issue, compare its "Does your modem require login?"
+answer with `analysis["auth"]["strategy"]`. The capture is the evidence;
+the answer is a hint. If the answer says login is required and the
+strategy is `none`, or it says no login and the strategy is anything
+else, ask the contributor in the issue before Step 7, stating what each
+side shows. Skip the comparison for "Not sure", and do not ask about
+"password only" against "username and password".
+
 If the detected strategy or any extracted field looks wrong, correct
 `analysis["auth"]` before calling `generate_config` — don't patch the
 generated YAML after the fact.

@@ -299,8 +299,11 @@ payloads are gone.
 - `none` auth: No `Cookie`, `Authorization`, or session headers on any
   request. Consistent 200 responses. No login endpoints in the URL
   history.
-- Post-auth HAR: Requests carry session cookies, auth headers, or
-  tokens. The session was established before capture started.
+- Post-auth HAR: the first request carries a session cookie or a
+  non-Basic `Authorization` header (the Step 2 hard stops). A cookie
+  that first appears on a later request is not evidence: page scripts
+  set cookies without a `Set-Cookie` header, and many committed fleet
+  HARs show it.
 
 ---
 
