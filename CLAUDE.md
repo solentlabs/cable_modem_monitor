@@ -244,40 +244,35 @@ visible without re-running the work.
 
 ## Code Discipline
 
-- **TDD for non-trivial bug fixes.** (1) Read relevant specs.
-  (2) Document the use case if missing. (3) Write tests that fail.
-  (4) Implement. (5) Verify tests pass.
-- **Fix the actual bug — no speculative migrations or renames.** AI
-  drift is dangerous: a fix that "also cleans up" adjacent naming,
-  structure, or config it wasn't asked to touch creates review
+- **TDD for non-trivial bug fixes.** Read the relevant specs, document the
+  use case if missing, write tests that fail, implement, verify they pass.
+- **Fix the actual bug.** No speculative migrations or renames: a fix that
+  "also cleans up" adjacent naming, structure or config creates review
   burden and regressions. Scope the diff to the defect.
 - **One-line function and class docstrings.** The signature and
-  annotations carry the rest; a non-obvious WHY goes in an inline
-  comment, contracts in the specs. Module docstrings are unaffected.
-  Standard: `docs/CODE_REVIEW.md` § Public API Docstrings.
+  annotations carry the rest; a non-obvious WHY goes in an inline comment,
+  contracts in the specs. Module docstrings are unaffected
+  (`docs/CODE_REVIEW.md` § Public API Docstrings).
 - **Keep WHY comments on refactor.** Don't strip section markers,
-  rationale notes or numbered-procedure markers during a rewrite.
-  Standard: `docs/CODE_REVIEW.md` § Comments on Refactor.
-- **Isolate before sprawl.** If a feature would touch >2 files,
-  it probably needs its own module. Spreading wiring across
-  `button.py`, `sensor.py`, `coordinator.py`, and `__init__.py`
-  for one concern is the smell.
-- **No infrastructure for hypothetical recurrence.** Before adding
-  a test, CI job, hook, script, or module to address a one-shot
-  incident, state the problem in one sentence and ask: am I
-  protecting against documented past failures, or against a
-  hypothetical future one? If hypothetical, name it as such and
-  let the user choose whether to invest. A wrong command in one
-  GitHub comment doesn't justify a smoke test + Make target + CI
-  job; a doc fix or upstream link does.
-- **Small files are fine** when (a) the logic is clearly bounded
-  (one concern, one reason to change) and (b) the file has a clear
-  docstring explaining what lives there. A 50-line file with one
-  clear concern beats a 50-line addition to a `utils.py` dumping
-  ground.
-- **Type-safety patterns.** Preferred idioms (`Literal` over `str`
-  enums, `model_validate` over `Model(**data)`, `lru_cache` over
-  module-global caches, etc.): `docs/CODE_REVIEW.md` § Type Hints.
+  rationale notes or numbered-procedure markers
+  (`docs/CODE_REVIEW.md` § Comments on Refactor).
+- **Isolate before sprawl.** A feature touching more than two files
+  probably needs its own module; wiring spread across `button.py`,
+  `sensor.py`, `coordinator.py` and `__init__.py` for one concern is the
+  smell.
+- **No infrastructure for hypothetical recurrence.** Before adding a
+  test, CI job, hook, script or module for a one-shot incident, state the
+  problem in one sentence and ask whether it protects against documented
+  past failures or a hypothetical one. If hypothetical, say so and let
+  the user choose whether to invest: a wrong command in one GitHub
+  comment calls for a doc fix or upstream link, not a smoke test + Make
+  target + CI job.
+- **Small files are fine** when bounded (one concern, one reason to
+  change) and docstringed; a 50-line single-concern file beats a 50-line
+  addition to a `utils.py` dumping ground.
+- **Type-safety patterns:** `Literal` over `str` enums, `model_validate`
+  over `Model(**data)`, `lru_cache` over module-global caches; see
+  `docs/CODE_REVIEW.md` § Type Hints.
 - **Use existing pipelines.** Never hand-build artifacts when a
   pipeline tool exists. Serialize with
   `json.dumps(..., indent=2, sort_keys=True, ensure_ascii=False) + "\n"`.
@@ -285,9 +280,9 @@ visible without re-running the work.
 - **No contributor details in code.** No handles or literal user inputs
   in comments, tests or specs: cite issue numbers, use generic values.
 - **No P-numbers in public artifacts.** Roadmap identifiers (`P28`,
-  `P34`, etc.) come from an internal roadmap doc that ships only
-  locally. Tag annotations, CHANGELOG entries, GitHub release notes,
-  and issue replies cite GitHub issue numbers, not roadmap Pxx.
+  `P34`) come from an internal roadmap that ships only locally; tag
+  annotations, CHANGELOG entries, release notes and issue replies cite
+  GitHub issue numbers.
 
 ## Shell Command Generation — Avoid Permission Check Triggers
 
@@ -305,13 +300,12 @@ a command containing one), so the permission prompt fires.
 
 ## Before a push
 
-- Run `make validate-ci` and read `git log @{u}..HEAD`. validate-ci is the
-  full local mirror of CI's Tests workflow; what it covers is its line in
-  the Makefile, so do not restate that list elsewhere. CI runs the whole
-  project, pre-commit hooks check staged files only, and `make test` is a
-  subset. Commits made outside this session ride along and hit CI under
-  your push: flag any in the range you did not verify.
-  `scripts/release.py` runs validate-ci before every version bump.
+- Run `make validate-ci` and read `git log @{u}..HEAD`; flag any commit in
+  the range you did not verify, since commits made outside this session
+  ride along and hit CI under your push. validate-ci mirrors CI's Tests
+  workflow (its coverage is its Makefile line; do not restate it
+  elsewhere), pre-commit checks staged files only, and `make test` is a
+  subset. `scripts/release.py` runs it before every version bump.
 - A green validate-ci does not guarantee a green CI: per-job settings in
   `.github/workflows/` are invisible locally.
 - After the push, confirm every expected CI job ran. A missing job is not
