@@ -1,7 +1,7 @@
 name: New Modem Support Request
 description: Request support for a cable modem model not currently supported
 title: "[Modem Request] "
-labels: ["enhancement", "new modem"]
+labels: ["new modem"]
 body:
   - type: markdown
     attributes:

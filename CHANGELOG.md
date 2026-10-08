@@ -18,9 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Intake stops on the two password-field captures that defeat login-page
   detection.** Analysis hard-stops when the login page it identified has
   no `type="password"` input, and when a data page the config would fetch
-  has one. Both match Core's test, so intake and runtime agree. Three
-  catalog captures now stop and score 0.0% in the intake regression
-  (fleet 89.7% to 82.8%).
+  has one outside a login form. Both match Core's test, so intake and
+  runtime agree. One catalog capture (tg3442de, a stub login page) now
+  stops and scores 0.0% in the intake regression (fleet 89.7% to 87.9%).
+- **Intake no longer reads a login page as a data source.** A response
+  holding a login form is left out of the data pages, so the SB8200's
+  login page (which shows the model name) is no longer mapped into the
+  generated config, where it would have read as an expired session on every
+  poll. A warning names each page left out, and analysis stops when no data
+  page remains.
 
 ## [3.14.15-beta.3] - 2026-10-07
 

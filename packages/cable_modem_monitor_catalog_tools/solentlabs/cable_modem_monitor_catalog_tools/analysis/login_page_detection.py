@@ -6,8 +6,10 @@ captures defeat it, and each is a hard stop that needs human review:
 
 1. The login page auth analysis identified carries no password input
    (a script renders it), so an expired session goes unrecognized.
-2. A data page the config will fetch carries a password input, so every
-   poll reads as an expired session and the auth circuit breaker opens.
+2. A data page the config will fetch carries a password input outside a
+   login form (analysis leaves login forms out of the data pages), so
+   every poll reads as an expired session and the auth circuit breaker
+   opens.
 
 Scope mirrors runtime: HTTP transport, a strategy that holds a session,
 and HTML responses. The data pages are the sections' ``resource`` values,

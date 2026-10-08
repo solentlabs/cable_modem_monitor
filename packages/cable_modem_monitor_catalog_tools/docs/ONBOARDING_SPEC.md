@@ -1678,7 +1678,20 @@ coordinator skips missing hooks.
 | Transport ambiguous | "Cannot determine transport. HNAP markers (HNAP1 URL, SOAPAction, HNAP_AUTH header) were not found, but some data responses are ambiguous. Please confirm the modem's data transport mechanism." |
 | HAR has no data pages (only login flow) | "HAR contains login flow but no data page responses. Please recapture including navigation to the modem's status/signal pages after login." |
 | Login page has no `<input type="password">` | "Login page {path} (entry [{n}], {size} bytes) has no `<input type="password">`, and Core recognizes a login page by that input alone ..." Recapture after the page finishes loading, or Core needs another login-page signal. |
-| Data page has `<input type="password">` | "Data page {path} (entry [{n}]) contains a password field, so Core would read it as a login page on every poll ..." Confirm the page is a data page; if so, Core needs a way to exempt it. |
+| Data page has `<input type="password">` outside a login form | "Data page {path} (entry [{n}]) contains a password field, so Core would read it as a login page on every poll ..." Confirm the page is a data page; if so, Core needs a way to exempt it. |
+| Only login-form pages remain as data pages | "No data page remains: {paths} hold a login form." If one carries the modem's data, Core needs a way to exempt a data page from login-page detection; otherwise recapture with the data pages open. |
+
+Analysis does not read a response holding a login form (a `<form>`
+containing a password input) as a data page. A modem answers the pre-login
+visit with its login page, sometimes at a data URL, and a config that
+fetched it would read as an expired session on every poll. The data-page
+stop therefore reports a password input outside a form, such as a WiFi
+password widget. Each path left out is named in one warning, so a data
+page that embeds its own login form is never lost silently; confirm the
+listed pages are login or settings pages. When every candidate data
+page holds a login form, none remains and analysis stops (Core reads any page
+with a password input as a login page, so such a page cannot be polled as
+data).
 
 Both password-field stops run after analysis (`analysis/login_page_detection.py`)
 and apply only to the HTTP transport with a strategy that holds a session.

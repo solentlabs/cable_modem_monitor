@@ -20,6 +20,8 @@ from solentlabs.cable_modem_monitor_core.loaders.http import _is_login_page
 
 _PASSWORD_PAGE = '<form><input type="password" name="pw"></form>'
 _PLAIN_PAGE = "<html><table><tr><td>Channel</td></tr></table></html>"
+# A bare password widget on a data page: not a login form, so analysis keeps the page and the stop reports it.
+_WIDGET_PAGE = '<table></table><span><input type="password"></span>'
 
 
 def _entry(path: str, body: str, *, status: int = 200, mime: str = "text/html") -> dict[str, Any]:
@@ -130,7 +132,7 @@ def test_non_200_login_page_is_not_a_login_page_response() -> None:
 
 def test_data_page_with_password_input_hard_stops() -> None:
     """A mapped data page carries a password input."""
-    entries = [_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _PASSWORD_PAGE)]
+    entries = [_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _WIDGET_PAGE)]
     issues = _run(entries)
     assert len(issues) == 1
     assert issues[0].startswith(HARD_STOP_PREFIX)
@@ -150,10 +152,16 @@ def test_unmapped_page_with_password_input_is_ignored() -> None:
 
 def test_login_page_that_is_also_a_mapped_resource_hard_stops_once() -> None:
     """One page, both roles: the data-page flag fires, the login page has its input."""
-    entries = [_entry("/status.htm", _PASSWORD_PAGE)]
+    entries = [_entry("/status.htm", _WIDGET_PAGE)]
     issues = _run(entries, login_page="/status.htm")
     assert len(issues) == 1
     assert "Data page" in issues[0]
+
+
+def test_data_page_that_is_a_login_form_is_not_read_as_data() -> None:
+    """A mapped path whose only response is a login form is excluded from data, so nothing is flagged."""
+    entries = [_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _PASSWORD_PAGE)]
+    assert _run(entries) == []
 
 
 def test_login_page_that_is_a_data_page_without_password_is_silent() -> None:
@@ -173,7 +181,7 @@ def test_json_data_page_is_not_scanned() -> None:
 
 def test_repeated_mapped_resource_reports_once() -> None:
     """Two sections naming one resource produce one hard stop."""
-    entries = [_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _PASSWORD_PAGE)]
+    entries = [_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _WIDGET_PAGE)]
     issues = detect_login_page_hard_stops(
         entries,
         {"downstream": {"resource": "/status.htm"}, "upstream": {"resource": "/status.htm"}},
@@ -204,7 +212,7 @@ def test_repeated_mapped_resource_reports_once() -> None:
 )
 def test_out_of_scope_is_silent(strategy: str, transport: str) -> None:
     """Stateless strategies, non-HTTP transports and unresolved auth are not checked."""
-    entries = [_entry("/login.htm", _PLAIN_PAGE), _entry("/status.htm", _PASSWORD_PAGE)]
+    entries = [_entry("/login.htm", _PLAIN_PAGE), _entry("/status.htm", _WIDGET_PAGE)]
     assert _run(entries, strategy=strategy, transport=transport) == []
 
 
@@ -213,14 +221,14 @@ def test_out_of_scope_is_silent(strategy: str, transport: str) -> None:
 )
 def test_session_strategies_over_http_are_checked(strategy: str) -> None:
     """Every stateful HTTP strategy is in scope, derived from Core's models."""
-    entries = [_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _PASSWORD_PAGE)]
+    entries = [_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _WIDGET_PAGE)]
     assert len(_run(entries, strategy=strategy)) == 1
 
 
 def test_evidence_names_the_exits() -> None:
     """Each message names what to do next, not only what was seen."""
     flag_one = _run([_entry("/login.htm", _PLAIN_PAGE), _entry("/status.htm", _PLAIN_PAGE)])[0]
-    flag_two = _run([_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _PASSWORD_PAGE)])[0]
+    flag_two = _run([_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _WIDGET_PAGE)])[0]
     assert "recapture" in flag_one
     assert "Core" in flag_one
     assert "Core" in flag_two

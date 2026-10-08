@@ -19,7 +19,7 @@ from ...validation.har_utils import (
     is_static_resource,
     path_from_url,
 )
-from .html_parsing import detect_label_pairs, detect_tables
+from .html_parsing import detect_label_pairs, detect_tables, has_login_form
 from .table_analysis import is_channel_table, is_transposed
 from .types import (
     DetectedJsFunction,
@@ -61,6 +61,48 @@ _JS_JSON_VAR_PATTERN = re.compile(r"(\w+)\s*=\s*(?=[\[{])")
 # -----------------------------------------------------------------------
 
 
+def _is_data_type_response(entry: dict[str, Any]) -> bool:
+    """Whether a HAR entry answers 200 with non-static content of a data-bearing type."""
+    resp = entry.get("response", {})
+    if resp.get("status", 0) != 200:
+        return False
+    if is_static_resource(entry.get("request", {}).get("url", "")):
+        return False
+    if not has_content(resp):
+        return False
+    return any(ct in content_type_of(resp) for ct in _DATA_CONTENT_TYPES)
+
+
+def _holds_login_form(entry: dict[str, Any]) -> bool:
+    """Whether an HTML response holds a login form (a form containing a password input)."""
+    resp = entry.get("response", {})
+    return "html" in content_type_of(resp) and has_login_form(decode_body(resp))
+
+
+def _is_data_candidate(entry: dict[str, Any]) -> bool:
+    """Whether a HAR entry can be a data page.
+
+    A login form is the login page. Taking a data source from it generates a
+    config that fetches the login page every poll; a modem also answers the
+    pre-login visit with it at the data URL, where it must not outrank the page.
+    """
+    return _is_data_type_response(entry) and not _holds_login_form(entry)
+
+
+def login_pages_left_out(entries: list[dict[str, Any]], data_pages: list[dict[str, Any]]) -> list[str]:
+    """Paths left out of the data pages for holding a login form, in HAR order.
+
+    A path that also answered with a real page is not listed: nothing was lost.
+    """
+    kept = {path_from_url(page.get("request", {}).get("url", "")) for page in data_pages}
+    left_out: dict[str, None] = {}
+    for entry in entries:
+        path = path_from_url(entry.get("request", {}).get("url", ""))
+        if path not in kept and _is_data_type_response(entry) and _holds_login_form(entry):
+            left_out[path] = None
+    return list(left_out)
+
+
 def identify_data_pages(
     entries: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -78,21 +120,10 @@ def identify_data_pages(
     candidates: dict[str, dict[str, Any]] = {}
 
     for entry in entries:
+        if not _is_data_candidate(entry):
+            continue
         resp = entry.get("response", {})
-        req = entry.get("request", {})
-        url = req.get("url", "")
-        status = resp.get("status", 0)
-
-        if status != 200:
-            continue
-        if is_static_resource(url):
-            continue
-        if not has_content(resp):
-            continue
-
-        content_type = content_type_of(resp)
-        if not any(ct in content_type for ct in _DATA_CONTENT_TYPES):
-            continue
+        url = entry.get("request", {}).get("url", "")
 
         path = path_from_url(url)
         existing = candidates.get(path)
