@@ -4,6 +4,7 @@ brands:
   - "SURFboard"
 transport: http
 default_host: "192.168.100.1"
+timeout: 15
 
 auth:
   strategy: bearer
@@ -51,6 +52,11 @@ sources:
   session_headers:
     "test_data/modem-php.har — X-Requested-With: XMLHttpRequest on the
     login [31] [32] and logout [74] [76] requests (jQuery $.ajax)"
+  timeout:
+    "test_data/modem-php.har [46] POST cmconnectionstatus.php answered after
+    10157 ms (server wait 10142 ms) while the GET [33] took 262 ms; #213 diagnostics
+    (beta.3): ReadTimeout at read timeout=10 on /cmconnectionstatus.php, one
+    successful fetch at 10044 ms"
   hardware: "test_data/modem-php.har [60] cmswinfo.php — Docsis 3.1, Hardware
     Version 6, Software Version AB01.06.013_051923_223.0A.NSH; release
     year per [ARRIS SB8200 page](https://www.arris.com/surfboard/products/cable-modems/sb8200/)"

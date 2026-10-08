@@ -40,6 +40,7 @@ from typing import Any
 import yaml
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading import grade_actions
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.grading import grade_auth
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.request_timing import DEFAULT_TIMEOUT, grade_timeout
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
 from solentlabs.cable_modem_monitor_catalog_tools.generate_config.ambiguities import apply_resolutions, resolved_actions
 from solentlabs.cable_modem_monitor_catalog_tools.generate_config.modem import type_resolved_actions
@@ -280,6 +281,7 @@ def _run_pipeline(
         return
 
     _grade_actions_stage(result, analysis_data, committed)
+    _grade_timeout_stage(result, analysis_data, committed)
 
     modem_yaml, parser_yaml = _run_generate(analysis_data, committed, result, fleet=fleet)
     if modem_yaml is None:
@@ -390,6 +392,19 @@ def _grade_actions_stage(
     type_resolved_actions(resolved)
     detected = {**resolved_actions(analysis_data), **resolved.get("actions", {})}
     result.grades["actions"] = grade_actions(detected, committed.get("actions"))
+
+
+def _grade_timeout_stage(
+    result: ModemResult,
+    analysis_data: dict[str, Any],
+    committed: dict[str, Any],
+) -> None:
+    """Grade the suggested timeout against the committed one (from analysis output, like actions)."""
+    if not committed:
+        return
+    timing = analysis_data.get("timing")
+    suggested = timing["suggested_timeout"] if timing else DEFAULT_TIMEOUT
+    result.grades["timeout"] = grade_timeout(suggested, committed.get("timeout", DEFAULT_TIMEOUT))
 
 
 def _grade_auth_stage(

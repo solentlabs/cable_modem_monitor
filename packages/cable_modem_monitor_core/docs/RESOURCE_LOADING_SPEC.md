@@ -564,8 +564,8 @@ schema change if the need arises.
 
 ### MCP onboarding validation
 
-During HAR analysis, the MCP pipeline should flag potential detection
-issues:
+During HAR analysis, the MCP pipeline flags potential detection issues
+(scope and wording: ONBOARDING_SPEC § Error Handling):
 
 1. **Login page without password input** — If the HAR shows a login
    page that has no `<input type="password">` in the initial HTML

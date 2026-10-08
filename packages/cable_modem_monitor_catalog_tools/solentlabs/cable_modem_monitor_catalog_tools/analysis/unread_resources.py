@@ -83,7 +83,7 @@ def detect_unread_resources(
     """Report the HAR's 2xx JSON endpoints that no part of the config consumes."""
     mapped = _mapped_endpoints(sections, auth, actions)
     # JSON-RPC puts every call behind auth's endpoint; its methods are reported below.
-    rpc_endpoint = _normalize_endpoint(auth.fields.get("endpoint") or "") if transport == "json_rpc" else None
+    rpc_endpoint = normalize_endpoint(auth.fields.get("endpoint") or "") if transport == "json_rpc" else None
 
     unread: list[UnreadResource] = []
     for path, (response, body) in sorted(_json_candidates(entries).items()):
@@ -112,7 +112,7 @@ def _json_rpc_unread(
     auth: AuthDetail,
 ) -> list[UnreadResource]:
     """Report each JSON-RPC method that answered result and that neither a section nor the login reads."""
-    read = set(_collect_resources(sections)) | {auth.fields.get("login_method")}
+    read = set(collect_resources(sections)) | {auth.fields.get("login_method")}
     answered: dict[str, tuple[dict[str, Any], Any]] = {}
     for entry in entries:
         body = json_rpc_body(entry.get("request", {}))
@@ -164,7 +164,7 @@ def _json_candidates(
         # Keyed by path, not path+query: cache-busting nonces (the
         # TG3442DE's per-request `_n`) would otherwise make every request
         # its own identity and match no configured resource.
-        path = _normalize_endpoint(path_from_url(url))
+        path = normalize_endpoint(path_from_url(url))
         if path not in candidates or len(text) > sizes[path]:
             candidates[path] = (response, body)
             sizes[path] = len(text)
@@ -183,14 +183,14 @@ def _mapped_endpoints(
     actions: ActionsDetail,
 ) -> set[str]:
     """Collect every endpoint the generated config will fetch."""
-    mapped = {_normalize_endpoint(resource) for resource in _collect_resources(sections)}
+    mapped = {normalize_endpoint(resource) for resource in collect_resources(sections)}
 
     # An unresolved strategy's candidates all name the login the capture made.
     for fields in (auth.fields, *auth.candidates.values()):
         for name in _AUTH_ENDPOINT_FIELDS:
             value = fields.get(name)
             if isinstance(value, str) and value:
-                mapped.add(_normalize_endpoint(value))
+                mapped.add(normalize_endpoint(value))
 
     # Like strategy candidates, an unresolved action's candidates name requests the capture made.
     offered = [action for by_endpoint in actions.candidates.values() for action in by_endpoint.values()]
@@ -199,25 +199,25 @@ def _mapped_endpoints(
             continue
         for value in (action.endpoint, action.pre_fetch_url):
             if value:
-                mapped.add(_normalize_endpoint(value))
+                mapped.add(normalize_endpoint(value))
 
     return mapped
 
 
-def _collect_resources(node: Any) -> Iterator[str]:
+def collect_resources(node: Any) -> Iterator[str]:
     """Yield every ``resource`` value anywhere in the analysis sections tree."""
     if isinstance(node, dict):
         for key, value in node.items():
             if key == "resource" and isinstance(value, str) and value:
                 yield value
             else:
-                yield from _collect_resources(value)
+                yield from collect_resources(value)
     elif isinstance(node, list):
         for item in node:
-            yield from _collect_resources(item)
+            yield from collect_resources(item)
 
 
-def _normalize_endpoint(raw: str) -> str:
+def normalize_endpoint(raw: str) -> str:
     """Reduce a URL, resource, or action endpoint to a leading-slash path."""
     path = path_from_url(raw)
     return path if path.startswith("/") else "/" + path

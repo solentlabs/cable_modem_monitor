@@ -1393,6 +1393,49 @@ detected parameters for maintainer review.
 **HNAP:** Skipped. HNAP uses SOAP-over-HTTP; query parameters are
 not part of the session contract.
 
+### Post-Analysis: Request Timing
+
+A HAR entry records how long each response took. The pipeline takes the
+slowest response among the requests the generated config will poll (the
+mapped `resource` values and the auth `login_endpoint`, `login_page` and
+`action`) and reports it as `timing` in the analysis output:
+
+```json
+"timing": {
+  "slowest_request": {"path": "/cmconnectionstatus.php", "seconds": 10.157},
+  "default_timeout": 10,
+  "suggested_timeout": 15
+}
+```
+
+`suggested_timeout` is the slowest response times `HEADROOM` (1.45),
+rounded up to the next 5 s and never below the default. `enrich_metadata`
+writes it as `timeout` when it exceeds the default and the caller has not
+set one. The value is the Core request timeout
+([MODEM_YAML_SPEC.md § Timeout](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md#timeout)).
+
+**Why 1.45:** two modems have field evidence and they bracket the ratio.
+The XB8 failed past 10 s while its capture shows 6.94 s, so the ratio must
+exceed 1.441 or the hint misses that failure. The SB8200 PHP entry's 15 s
+needs a ratio of 1.477 or less against its 10.157 s capture. 1.45 sits
+inside that window and gives the committed `timeout` for 38 of the 43
+captures with polled timings (1.4 also gives 38 but misses the XB8; 1.5
+gives 37). Two points set the window, so treat the constant as provisional
+until a third modem's field behaviour is on file. The misses (xb6, xb10,
+cm1200) carry a higher committed value than their captured timing needs;
+the catalog does not record a field failure for them. The `TIMEOUT`
+section of the intake regression re-measures the fit on every run.
+
+**Not measured:** variance. A capture holds one sample per request, so
+the hint is a floor from one observation. A modem that varies more than
+its capture shows still needs a field report (#213's modem answered in
+10.157 s in its HAR and 10.044 s in later diagnostics).
+
+**Scope:** HTTP transport only; other transports name resources by
+method or getter, not URL. Actions, static assets and untimed entries
+(`time` of `-1`, an aborted request) are not on the polling path. No hint
+is reported when no polled request carries a time.
+
 ### Post-Analysis: Unread Resources
 
 After request requirements, the pipeline lists the HAR's 2xx JSON
@@ -1634,6 +1677,16 @@ coordinator skips missing hooks.
 | Auth mechanism cannot be determined | "Cannot determine auth mechanism from HAR. Observed: [list evidence]. Missing: [what's needed]. Please provide additional information or a more complete HAR capture." |
 | Transport ambiguous | "Cannot determine transport. HNAP markers (HNAP1 URL, SOAPAction, HNAP_AUTH header) were not found, but some data responses are ambiguous. Please confirm the modem's data transport mechanism." |
 | HAR has no data pages (only login flow) | "HAR contains login flow but no data page responses. Please recapture including navigation to the modem's status/signal pages after login." |
+| Login page has no `<input type="password">` | "Login page {path} (entry [{n}], {size} bytes) has no `<input type="password">`, and Core recognizes a login page by that input alone ..." Recapture after the page finishes loading, or Core needs another login-page signal. |
+| Data page has `<input type="password">` | "Data page {path} (entry [{n}]) contains a password field, so Core would read it as a login page on every poll ..." Confirm the page is a data page; if so, Core needs a way to exempt it. |
+
+Both password-field stops run after analysis (`analysis/login_page_detection.py`)
+and apply only to the HTTP transport with a strategy that holds a session.
+The login page is the one auth analysis identified, and is skipped when the
+config also reads it as data (`url_token` names the status page). Data
+pages are the sections' mapped resources, scanned as the response Phase 5
+parses, not the pre-login visit. See
+[RESOURCE_LOADING_SPEC.md § MCP onboarding validation](../../cable_modem_monitor_core/docs/RESOURCE_LOADING_SPEC.md#mcp-onboarding-validation).
 
 ### Warnings (proceed with flag)
 
@@ -1800,6 +1853,11 @@ detection, format detection, and field mapping extraction.
   },
   "warnings": [],
   "hard_stops": [],
+  "timing": {
+    "slowest_request": { "path": "/rest/v1/cablemodem/downstream", "seconds": 1.9 },
+    "default_timeout": 10,
+    "suggested_timeout": 10
+  },
   "unread_resources": [
     {
       "path": "/rest/v1/cablemodem/eventlog",

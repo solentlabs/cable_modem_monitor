@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Intake reads the capture's response times.** The slowest polled
+  response sets a suggested per-modem `timeout`, written into new entries
+  when it exceeds the 10 s default, and the intake regression grades it
+  against the committed value (41 of 44 match). The SB8200 PHP entry
+  raises its timeout to 15 s: its channel request answers in about 10.1 s.
+  (#213)
+- **Intake stops on the two password-field captures that defeat login-page
+  detection.** Analysis hard-stops when the login page it identified has
+  no `type="password"` input, and when a data page the config would fetch
+  has one. Both match Core's test, so intake and runtime agree. Three
+  catalog captures now stop and score 0.0% in the intake regression
+  (fleet 89.7% to 82.8%).
+
 ## [3.14.15-beta.3] - 2026-10-07
 
 ### Added
