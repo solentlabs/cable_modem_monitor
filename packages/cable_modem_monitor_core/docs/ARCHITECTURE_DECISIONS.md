@@ -329,6 +329,9 @@ fall on the blueprint side for the same reason.
   HA blueprints, not in Core. PR proposals that require relaxing this
   rule (e.g., a signal-health sensor inside Core) are out of scope by
   this decision.
+- A condition composed from probe results, such as a stalled web server
+  (TCP and TLS up, HTTP unanswered), is classification of signals Core
+  already exposes and is not named in Core. It is observed on one modem.
 
 ### Catalog data stays true to source; normalization happens at presentation
 

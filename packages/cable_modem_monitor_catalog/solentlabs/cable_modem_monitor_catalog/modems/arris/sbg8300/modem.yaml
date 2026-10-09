@@ -122,11 +122,24 @@ notes: |
   Bench soak (2026-10-01 to 10-02, same unit): two more restarts were
   each back within three minutes, with one session_overtake on the poll
   right after the command; the ten-minute window did not recur. A power
-  cycle came back with no busy answer. Once the web UI hung (page and
-  HEAD timed out, ping fine) for over three hours; a restart sent then
-  timed out without rebooting, and only a power cycle cleared it. Cause
-  unknown.
+  cycle came back with no busy answer. Once the web UI hung for over
+  three hours; a restart sent then timed out without rebooting.
   Signal mappings are unexercised: every downstream row was unlocked.
+
+  Web-server hang (bench runs 2026-10-02 to 10-08, same unit): TCP, TLS
+  and ping keep answering but no HTTP request is answered, even for a
+  nonexistent path, for 150 s or more. It did not clear in 60 minutes
+  with no traffic; only a power cycle clears it. Only ports 53, 80 and
+  443 answer, and SNMP v2c and v3 got no reply. The first failing request
+  is a stalled wan.php body right after a login. A plain script with no
+  CMM code reproduced it in 14 of 24 runs of back-to-back wan.php
+  fetches on one session, about one hang per 2,800 fetches; the length
+  of the power-off before a run made no detectable difference. Cause
+  unknown.
+
+  Build: software.php [167] line 747 reports RDK-B rdkb-20171127. The
+  unit's opensource.php footer page, not in the HAR, lists lighttpd
+  1.4.33 and PHP 5.4.14.
 
   Hand-applied sanitization: the TLS certificate subjectName (the
   device's bare-hex identifier) is replaced with same-length X on every
