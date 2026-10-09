@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flags are saved only if the modem answers an HTTP GET at that moment;
   otherwise the stored ones stay and the notification says re-detection was
   skipped.
+- **Home Assistant validation warning.** `async_setup` had no
+  `CONFIG_SCHEMA`, which hassfest flags. The integration is config-entry
+  only, so a `cable_modem_monitor:` block in YAML now logs that it is not
+  supported.
 
 ## [3.14.15-beta.3] - 2026-10-07
 

@@ -220,6 +220,8 @@ async_setup_entry(hass, entry)
 Services are **not** registered here. They are integration-global and
 registered once in `async_setup` (see § Services) so they exist before
 any entry is set up and survive an entry being removed and re-added.
+`async_setup` requires a `CONFIG_SCHEMA` (hassfest); the integration has
+no YAML configuration, so it is `cv.config_entry_only_config_schema(DOMAIN)`.
 
 **Steps 1-3 involve sync I/O** — all must run in executor via
 `hass.async_add_executor_job()`. Step 3 delegates to the Core
