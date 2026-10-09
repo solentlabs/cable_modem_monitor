@@ -1659,7 +1659,12 @@ configuration that worked during setup.
 **Rediscovery:** Capabilities are stable — ICMP blocking is a
 network characteristic, HEAD support is a firmware characteristic.
 Neither changes between polls. Rediscovery only happens on
-integration reconfiguration (HA options flow) or re-setup.
+integration reconfiguration (HA options flow), re-setup, or the
+consumer's explicit reset action (HA Reset Entities). A rediscovery
+result is saved only when the modem answers an HTTP GET to `base_url`
+(any status, no redirect followed) at that moment; otherwise the
+stored values stand, because a probe that failed against a modem
+that was not answering is not a finding about the modem.
 
 **Fragile modem override:** For modems where even GET health probes
 carry risk (e.g., S33v2 firmware that crashes under HTTP load),

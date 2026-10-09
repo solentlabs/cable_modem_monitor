@@ -30,6 +30,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_core.config_loader import load_modem_config
+from solentlabs.cable_modem_monitor_core.connectivity import test_http_get
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     RestartResult,
 )
@@ -360,12 +361,13 @@ class ResetEntitiesButton(_ButtonBase):
 
         await self.hass.config_entries.async_reload(self._entry.entry_id)
 
-        probe_msg = ""
         if updated:
             probe_msg = (
                 f"\n\nProbe re-detection: ICMP={'yes' if updated.get(CONF_SUPPORTS_ICMP) else 'no'}, "
                 f"HEAD={'yes' if updated.get(CONF_SUPPORTS_HEAD) else 'no'}"
             )
+        else:
+            probe_msg = "\n\nProbe re-detection skipped; the stored values were kept."
 
         _LOGGER.info("Entity reset complete [%s] — removed %d entities and reloaded", model, len(entities_to_remove))
 
@@ -379,8 +381,8 @@ class ResetEntitiesButton(_ButtonBase):
         """Re-detect ICMP and HTTP HEAD support.
 
         Uses the shared ``detect_probes()`` helper (same logic as the
-        config flow validation pipeline). Returns updated config dict
-        or None if modem is unreachable.
+        config flow validation pipeline). Returns updated config dict,
+        or None when the modem does not answer an HTTP GET.
         """
         data = self._entry.data
         host = data[CONF_HOST]
@@ -397,6 +399,16 @@ class ResetEntitiesButton(_ButtonBase):
             modem_config = await self.hass.async_add_executor_job(load_modem_config, modem_yaml)
         except Exception:
             _LOGGER.warning("Could not load modem config for probe re-detection")
+            return None
+
+        # A probe that fails against a modem that is not answering says
+        # nothing about the modem, so nothing is saved (ORCHESTRATION_SPEC
+        # § Probe Discovery).
+        answered = await self.hass.async_add_executor_job(
+            functools.partial(test_http_get, base_url, legacy_ssl=legacy_ssl)
+        )
+        if not answered:
+            _LOGGER.warning("Probe re-detection skipped — modem did not answer an HTTP GET")
             return None
 
         try:

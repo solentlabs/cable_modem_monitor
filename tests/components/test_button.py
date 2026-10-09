@@ -503,8 +503,10 @@ async def test_reset_button_press_probes_failed(
     # No config entry update when probes failed
     button.hass.config_entries.async_update_entry.assert_not_called()
 
-    # Still reloads
+    # Still reloads, and the notification says the stored values were kept
     button.hass.config_entries.async_reload.assert_awaited_once()
+    message = button.hass.services.async_call.call_args[0][2]["message"]
+    assert "Probe re-detection skipped" in message
 
 
 async def test_reset_button_sets_and_clears_active_operation(
@@ -604,6 +606,7 @@ async def test_redetect_probes_success(
     button.hass.async_add_executor_job = AsyncMock(
         side_effect=[
             MagicMock(),  # load_modem_config
+            True,  # test_http_get: the modem answered
             {"supports_icmp": True, "supports_head": True},  # detect_probes
         ]
     )
@@ -611,6 +614,26 @@ async def test_redetect_probes_success(
     result = await button._redetect_probes()
 
     assert result == {"supports_icmp": True, "supports_head": True}
+
+
+async def test_redetect_probes_skipped_when_modem_does_not_answer(
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """No HTTP answer means no result is saved, and the probes are not run."""
+    entry = _make_entry(mock_runtime_data)
+    button = ResetEntitiesButton(entry)
+    button.hass = MagicMock()
+    button.hass.async_add_executor_job = AsyncMock(
+        side_effect=[
+            MagicMock(),  # load_modem_config
+            False,  # test_http_get: no answer
+        ]
+    )
+
+    result = await button._redetect_probes()
+
+    assert result is None
+    assert button.hass.async_add_executor_job.await_count == 2
 
 
 async def test_redetect_probes_config_load_failure(
@@ -639,6 +662,7 @@ async def test_redetect_probes_detection_failure(
     button.hass.async_add_executor_job = AsyncMock(
         side_effect=[
             MagicMock(),  # load_modem_config succeeds
+            True,  # test_http_get: the modem answered
             ConnectionError("unreachable"),  # detect_probes fails
         ],
     )

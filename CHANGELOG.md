@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "sent".** A dropped connection or timeout on the restart command looks
   the same for a rebooting modem and a stalled web server. The button now
   says the command was sent and the modem did not answer.
+- **Reset Entities no longer saves probe results from a modem that is not
+  answering.** Re-detection ran while the modem was unresponsive and saved
+  ICMP and HEAD as unsupported, so health ran TCP-only afterwards. The new
+  flags are saved only if the modem answers an HTTP GET at that moment;
+  otherwise the stored ones stay and the notification says re-detection was
+  skipped.
 
 ## [3.14.15-beta.3] - 2026-10-07
 

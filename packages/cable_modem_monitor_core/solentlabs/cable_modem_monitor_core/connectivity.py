@@ -329,6 +329,22 @@ def test_icmp(host: str, *, timeout: int = 2) -> bool:
         return False
 
 
+def test_http_get(
+    url: str,
+    *,
+    legacy_ssl: bool = False,
+    timeout: float = _DEFAULT_TIMEOUT,
+) -> bool:
+    """Return True if ``url`` answers an HTTP GET with any status; the body is not read."""
+    try:
+        session = create_session(legacy_ssl=legacy_ssl)
+        resp = session.get(url, timeout=timeout, allow_redirects=False, stream=True)
+        resp.close()
+        return True
+    except (requests.RequestException, OSError):
+        return False
+
+
 def test_http_head(
     url: str,
     *,

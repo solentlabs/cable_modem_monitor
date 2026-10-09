@@ -854,6 +854,12 @@ async def async_press(self) -> None:
         return  # another destructive operation is running
 ```
 
+The reset body re-detects probes first, per ORCHESTRATION_SPEC
+§ Probe Discovery: the new ICMP and HEAD flags are saved only if the
+modem answers an HTTP GET at that moment. When it does not, the stored
+flags stay, the reset continues, and the completion notification says
+probe re-detection was skipped.
+
 Two defences, both required:
 
 1. **`active_operation` check at entry** (via the context manager) —
