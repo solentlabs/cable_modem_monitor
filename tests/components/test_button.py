@@ -175,7 +175,6 @@ async def test_restart_button_press_success(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.async_add_executor_job = AsyncMock(
         return_value=RestartResult(
             success=True,
@@ -226,7 +225,6 @@ async def test_restart_button_press_failure(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.async_add_executor_job = AsyncMock(
         return_value=RestartResult(
             success=False,
@@ -260,7 +258,6 @@ async def test_restart_button_no_state_writes_during_dispatch(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
 
@@ -276,13 +273,14 @@ async def test_restart_button_no_state_writes_during_dispatch(
 
     button.hass.async_add_executor_job = AsyncMock(side_effect=_capture_state)
 
-    await button.async_press()
+    with patch.object(button, "async_write_ha_state") as write_state:
+        await button.async_press()
 
     # Available throughout — overlap protection is the mutex alone.
     assert available_during_restart == [True]
     assert button._attr_available is True
     # No state writes from the handler.
-    assert button.async_write_ha_state.call_count == 0
+    assert write_state.call_count == 0
 
 
 async def test_restart_button_no_state_writes_on_exception(
@@ -293,18 +291,17 @@ async def test_restart_button_no_state_writes_on_exception(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
     button.hass.async_add_executor_job = AsyncMock(
         side_effect=ConnectionError("modem unreachable"),
     )
 
-    with pytest.raises(ConnectionError):
+    with patch.object(button, "async_write_ha_state") as write_state, pytest.raises(ConnectionError):
         await button.async_press()
 
     assert button._attr_available is True
-    assert button.async_write_ha_state.call_count == 0
+    assert write_state.call_count == 0
 
 
 async def test_restart_button_sets_and_clears_active_operation(
@@ -315,7 +312,6 @@ async def test_restart_button_sets_and_clears_active_operation(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
 
@@ -345,7 +341,6 @@ async def test_restart_button_clears_active_operation_on_exception(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
     button.hass.async_add_executor_job = AsyncMock(side_effect=ConnectionError("boom"))
