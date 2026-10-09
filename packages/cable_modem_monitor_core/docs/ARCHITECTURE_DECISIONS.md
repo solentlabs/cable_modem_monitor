@@ -1433,7 +1433,10 @@ on reused session → clear and retry once). Reuse also disables itself:
 after `stale_recovery_threshold` consecutive same-poll recoveries,
 `SignalPolicy` stops attempting it for the rest of the runtime, so
 firmware with a chronically short session TTL does not burn the first
-request of every poll on a session it has already expired.
+request of every poll on a session it has already expired. A connectivity
+failure never clears the session on its own; only repeated failures with
+the modem answering probes do (ORCHESTRATION_SPEC § Signal → Policy
+Mapping), since each relogin risks the lockout this decision guards against.
 
 ### Two modem-side actions only
 
