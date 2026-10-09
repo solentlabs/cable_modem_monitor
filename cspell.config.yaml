@@ -185,7 +185,10 @@ words:
   - FHCE
   - iFixit
   - KOMODO
+  - lighttpd
+  - opensource
   - Puma
+  - rdkb
 
   # Modem manufacturers and product lines
   - Arris
