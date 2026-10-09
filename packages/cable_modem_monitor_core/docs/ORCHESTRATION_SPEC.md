@@ -620,7 +620,9 @@ class Orchestrator:
 
         Returns:
             RestartResult with success flag (True iff the command
-            dispatched cleanly) and an error token.
+            was sent and not refused), an acknowledged flag (False
+            when the connection was lost instead of answered) and an
+            error token.
 
         Raises:
             RestartNotSupportedError: If modem has no restart action.
@@ -1014,6 +1016,9 @@ class RestartResult:
             executor reported success, and the session was cleared
             without raising. An executor that ran and was refused is
             a failure.
+        acknowledged: True when the modem answered the command; False
+            when the connection was lost instead. Read it only when
+            ``success`` is True.
         elapsed_seconds: Wall time of the ``restart()`` call. Typically
             a few seconds (auth + POST + session clear).
         error: Structured error token. Empty on success. On failure:
@@ -1032,6 +1037,7 @@ class RestartResult:
     success: bool
     elapsed_seconds: float
     error: str = ""
+    acknowledged: bool = True
 ```
 
 `to_event_payload()` projects a snapshot onto `SnapshotEventPayload`,
@@ -2058,14 +2064,25 @@ Procedure:
    § Action Executors). Stop here if it returns
    `ActionResult(success=False)`: steps 4 and 5 are both premised on a
    reboot that did not happen. A refused reused session retries once
-   first (below).
+   first (below). A lost connection or timeout is not a failure: the
+   executor reports success with `ActionResult.connection_lost` set,
+   because a rebooting modem drops the connection too.
 4. Clear the collector session (forces fresh auth on the next poll;
    avoids the MB7621-class stale-cookie failure mode).
 5. Call `recovery.begin(reason="restart_command")` so subsequent
    polls run at recovery cadence. The call returns immediately; the
    recovery module owns what happens next.
 6. Return a `RestartResult` — success iff steps 2–5 completed
-   without raising **and** step 3 reported success.
+   without raising **and** step 3 reported success. `acknowledged` is
+   false when step 3 reported `connection_lost`.
+
+**A lost connection is not an acknowledgement.** A rebooting modem and
+a stalled web server (TLS completes, HTTP never answers) both end the
+command in a lost connection, and Core cannot tell them apart.
+`RestartResult` therefore reports `success=True, acknowledged=False`:
+the command was sent and the modem did not answer. Recovery opens as for
+any sent command; the snapshot stream shows what happened. Consumers
+word the unacknowledged case as "sent, no response", never as dispatched.
 
 **A returned failure is a failure.** Per-action auth can be refused
 and the modem can answer the command 401 or 404; neither raises, and
@@ -2105,8 +2122,8 @@ The caller does not block on the reboot itself.
 sees a flakey modem after a restart may want to try again; Core
 lets them. The command either dispatches (possibly re-rebooting
 an already-rebooting modem, which is the caller's intent) or
-fails cleanly with `error="command_failed"` if the modem isn't
-reachable or refuses it. Serialization of rapid button presses is
+fails cleanly with `error="command_failed"` if authentication fails
+or the modem refuses it. Serialization of rapid button presses is
 the consumer's responsibility — HA uses a short-lived mutex (see § Operation
 Mutex in HA_ADAPTER_SPEC).
 

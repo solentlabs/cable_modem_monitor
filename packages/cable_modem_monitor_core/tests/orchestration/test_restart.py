@@ -20,6 +20,7 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from solentlabs.cable_modem_monitor_core.auth.base import LoginLockoutError
 from solentlabs.cable_modem_monitor_core.models.modem_config.actions import (
     HttpAction,
@@ -109,6 +110,36 @@ def test_success_opens_recovery_window() -> None:
     assert result.success is True
     assert result.error == ""
     assert result.elapsed_seconds >= 0
+    assert recovery.active is True
+
+
+def test_answered_command_is_acknowledged() -> None:
+    config = _config()
+    collector = _collector()
+
+    result = run_restart(collector, config, _recovery(config))
+
+    assert result.success is True
+    assert result.acknowledged is True
+
+
+@pytest.mark.parametrize(
+    "lost",
+    [requests.ConnectionError("reset"), requests.Timeout("no answer")],
+    ids=["connection_error", "timeout"],
+)
+def test_lost_connection_is_sent_but_unacknowledged(lost: Exception) -> None:
+    """A rebooting modem and a stalled web server both lose the connection; Core claims no answer."""
+    config = _config()
+    collector = _collector()
+    collector._session.request.side_effect = lost
+    recovery = _recovery(config)
+
+    result = run_restart(collector, config, recovery)
+
+    assert result.success is True
+    assert result.acknowledged is False
+    assert result.error == ""
     assert recovery.active is True
 
 

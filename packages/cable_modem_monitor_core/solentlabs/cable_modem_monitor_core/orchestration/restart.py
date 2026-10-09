@@ -183,8 +183,11 @@ def run_restart(
     # from here on, post-reboot observation is polling's job.
     recovery.begin("restart_command")
 
-    # Step 6 — report. success=True iff steps 2–4 all completed.
+    # Step 6 — report. success=True iff steps 2–4 all completed. A lost
+    # connection is a reboot or a stalled web server; Core cannot tell
+    # which, so it reports the command unacknowledged.
     return RestartResult(
         success=True,
         elapsed_seconds=elapsed,
+        acknowledged=not action_result.connection_lost,
     )

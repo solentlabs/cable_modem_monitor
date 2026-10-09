@@ -216,7 +216,14 @@ class RestartModemButton(_ButtonBase):
             )
             return
 
-        if result.success:
+        if result.success and not result.acknowledged:
+            _LOGGER.info("Restart command sent, modem did not answer [%s] in %.1fs", model, result.elapsed_seconds)
+            await self._notify(
+                f"Restart Command Sent, No Response [{model}]",
+                f"{model} restart command sent in {result.elapsed_seconds:.1f} seconds; the modem did not answer.",
+                _NOTIFY_RESTART,
+            )
+        elif result.success:
             _LOGGER.info("Restart command sent [%s] in %.1fs", model, result.elapsed_seconds)
             await self._notify(
                 f"Restart Command Sent [{model}]",

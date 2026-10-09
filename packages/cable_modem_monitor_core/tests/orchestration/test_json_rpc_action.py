@@ -89,4 +89,5 @@ def test_outcome(effect: Any, success: bool, fragment: str) -> None:
     """Success is read from the envelope; a dropped connection is the modem rebooting."""
     result, _ = _run(effect)
     assert result.success is success
+    assert result.connection_lost is (fragment == "connection lost")
     assert fragment in result.message

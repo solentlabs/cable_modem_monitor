@@ -117,6 +117,7 @@ def test_action_connection_lost_emitted():
     with capture_events() as events:
         result = _call_execute(session, action)
     assert result.success is True
+    assert result.connection_lost is True
     assert_event_emitted(events, ActionConnectionLost, model="SBG6900AC", transport="http")
 
 
@@ -126,6 +127,7 @@ def test_action_connection_lost_on_timeout():
     with capture_events() as events:
         result = _call_execute(session, action)
     assert result.success is True
+    assert result.connection_lost is True
     assert_event_emitted(events, ActionConnectionLost, model="SBG6900AC", transport="http")
 
 

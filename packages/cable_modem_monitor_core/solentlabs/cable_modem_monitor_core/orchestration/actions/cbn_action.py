@@ -62,8 +62,9 @@ def execute_cbn_action(
         log_event(_logger, ActionConnectionLost(model=model, transport="cbn", action_name=action_name, level=level))
         return ActionResult(
             success=True,
-            message=f"CBN action fun={action.fun} sent (connection lost — modem rebooting)",
-            details={"fun": action.fun, "connection_lost": True},
+            message=f"CBN action fun={action.fun} sent (connection lost)",
+            details={"fun": action.fun},
+            connection_lost=True,
         )
     except requests.RequestException as exc:
         log_event(_logger, ActionFailed(model=model, transport="cbn", action_name=action_name, reason=str(exc)))

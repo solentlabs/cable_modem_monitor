@@ -1189,6 +1189,16 @@ def _register_deferred_entity_creation(
     § Deferred Entity Creation.
     """
 
+    removed = False
+
+    def _unsub_once() -> None:
+        """Remove the coordinator listener once; HA's remover raises KeyError on a repeat."""
+        nonlocal removed
+        if removed:
+            return
+        removed = True
+        unsub()
+
     @callback
     def _on_first_data() -> None:
         """Create data-dependent entities on first successful poll."""
@@ -1197,7 +1207,7 @@ def _register_deferred_entity_creation(
         if modem_data is None:
             return
 
-        unsub()
+        _unsub_once()
 
         new_entities = _create_data_dependent_entities(data_coord, entry, modem_data)
         _LOGGER.info(
@@ -1230,7 +1240,7 @@ def _register_deferred_entity_creation(
         )
 
     unsub = data_coord.async_add_listener(_on_first_data)
-    entry.async_on_unload(unsub)
+    entry.async_on_unload(_unsub_once)
 
 
 async def async_setup_entry(

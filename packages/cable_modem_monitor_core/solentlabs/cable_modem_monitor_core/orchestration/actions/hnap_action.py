@@ -106,7 +106,8 @@ def execute_hnap_action(
         )
         return ActionResult(
             success=True,
-            message="Action sent (connection lost — expected for restart)",
+            message="Action sent (connection lost)",
+            connection_lost=True,
         )
 
     # Phase 4: Validate response

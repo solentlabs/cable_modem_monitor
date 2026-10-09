@@ -403,8 +403,10 @@ from the poll data. The sensor platform handles this by:
 3. On each coordinator update, the listener checks for `modem_data`
 4. On the first update with `modem_data is not None`: creates
    data-dependent entities via `async_add_entities` and unsubscribes
-5. `entry.async_on_unload(unsub)` ensures clean teardown if the entry
-   is unloaded before the modem comes online
+5. The unsubscribe is a once-only wrapper (HA's remover raises
+   `KeyError` on a second call). The listener and
+   `entry.async_on_unload` both call the wrapper, so unload is clean
+   whether or not the modem ever came online
 6. Schedules a delayed re-notification task (1 second) that fires
    `coordinator.async_update_listeners()`, ensuring deferred
    entities receive `_handle_coordinator_update()` after their
@@ -525,6 +527,9 @@ User presses "Restart Modem"
  ├─ 4. Send persistent notification:
  │     success → "Restart Command Sent [MODEL]" / "<model> restart
  │               command dispatched in <N.N> seconds."
+ │     success, unacknowledged → "Restart Command Sent, No Response
+ │               [MODEL]" / "<model> restart command sent in <N.N>
+ │               seconds; the modem did not answer."
  │     failure → "Modem Restart Failed [MODEL]" / "<model> restart did
  │               not dispatch: <error>"
  │

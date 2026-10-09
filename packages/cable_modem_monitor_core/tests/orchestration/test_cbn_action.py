@@ -88,6 +88,7 @@ def test_action_scenario(
     )
 
     assert result.success is expected_success
+    assert result.connection_lost is (error_substr == "connection lost")
     if error_substr:
         assert error_substr in result.message.lower()
 

@@ -1514,7 +1514,9 @@ dashboard tells the user what's actually happening.
 
 **Constrains:** Restart never waits, never times out, never
 cancels. Its only failure mode is `command_failed` (auth or action
-executor raised, or the executor reported failure).
+executor raised, or the executor reported failure). A lost connection
+is a sent command reported unacknowledged, since a reboot and a stalled
+web server look the same; Core never claims the modem answered.
 Recovery cannot be triggered by caller request
 other than the three defined paths (command, observed failure,
 reboot-signal check). Consumers cannot observe recovery window

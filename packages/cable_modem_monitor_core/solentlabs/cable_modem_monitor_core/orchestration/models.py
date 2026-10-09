@@ -330,6 +330,9 @@ class RestartResult:
             executor reported success, and the session was cleared
             without raising. An executor that ran and was refused is
             a failure.
+        acknowledged: True when the modem answered the command; False
+            when the connection was lost instead. Read it only when
+            ``success`` is True.
         elapsed_seconds: Wall time of the ``run_restart`` call.
             Typically a few seconds (auth + POST + session clear).
         error: Structured error token. Empty on success.
@@ -342,3 +345,4 @@ class RestartResult:
     success: bool
     elapsed_seconds: float
     error: str = ""
+    acknowledged: bool = True

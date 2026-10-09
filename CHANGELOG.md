@@ -28,6 +28,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   poll. A warning names each page left out, and analysis stops when no data
   page remains.
 
+### Fixed
+
+- **Unloading an entry whose modem was unreachable at startup.** When the
+  first poll returned no data and a later one succeeded, unloading the
+  entry removed the data listener a second time. Home Assistant raised
+  `KeyError`, the unload failed and a reload or the reset button left no
+  entities. The listener is now removed once.
+- **A restart the modem never answered is no longer reported as plain
+  "sent".** A dropped connection or timeout on the restart command looks
+  the same for a rebooting modem and a stalled web server. The button now
+  says the command was sent and the modem did not answer.
+
 ## [3.14.15-beta.3] - 2026-10-07
 
 ### Added

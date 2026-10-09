@@ -196,6 +196,28 @@ async def test_restart_button_press_success(
     mock_data_coordinator.async_request_refresh.assert_awaited_once()
 
 
+async def test_restart_button_press_unacknowledged(
+    mock_data_coordinator: MagicMock,
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """A sent command the modem never answered is worded as such, and does not raise."""
+    entry = _make_entry(mock_runtime_data)
+    button = RestartModemButton(entry)
+    button.hass = MagicMock()
+    button.hass.async_add_executor_job = AsyncMock(
+        return_value=RestartResult(success=True, elapsed_seconds=30.0, acknowledged=False)
+    )
+    button.hass.services.async_call = AsyncMock()
+    mock_data_coordinator.async_request_refresh = AsyncMock()
+
+    await button.async_press()
+
+    payload = button.hass.services.async_call.call_args[0][2]
+    assert "No Response" in payload["title"]
+    assert "did not answer" in payload["message"]
+    mock_data_coordinator.async_request_refresh.assert_awaited_once()
+
+
 async def test_restart_button_press_failure(
     mock_data_coordinator: MagicMock,
     mock_runtime_data: CableModemRuntimeData,
