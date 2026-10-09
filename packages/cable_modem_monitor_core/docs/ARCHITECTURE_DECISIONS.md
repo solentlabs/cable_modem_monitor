@@ -1691,7 +1691,10 @@ clearing without spurious forced polls.
 
 **Constrains:** New reachability consumers use `data_path_up`; a new
 HealthStatus member must define its `data_path_up` value at
-introduction. Display concerns (the Status sensor's 10-level
+introduction. The backoff clear does not branch on the failure that
+set it (connect-level or read-level): a stalled web server with TCP up
+reads as up, and no fleet evidence yet separates the two failure kinds
+at reboot. Display concerns (the Status sensor's 10-level
 cascade) stay granular and are exempt — this decision governs
 reachability logic only. Provisional decisions get an entry in this
 file at the moment they are made; a "v1"/"conservative" label in
