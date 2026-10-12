@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**50 configurations supported** — 30 confirmed on real hardware, 20 awaiting verification.
+**50 configurations supported** — 31 confirmed on real hardware, 19 awaiting verification.
 
 ---
 
@@ -34,7 +34,6 @@ and share a diagnostics snapshot.
 | Modem | Transport | ISPs | Capture |
 |-------|-----------|------|---------|
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity | synthetic |
-| SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom | hybrid |
 | SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic |
 | SB8200 (php) | HTML | RCN | — |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated |
@@ -74,6 +73,7 @@ Entries with an open capability gap are listed above, not here.
 | S33 | HNAP | Comcast, Cox, Spectrum, Xfinity | — |
 | S33 (v2) | HNAP | Comcast, Cox, Spectrum, Xfinity | — |
 | S33 (v3) | HNAP | Comcast, Cox, Spectrum, Xfinity | — |
+| SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom | hybrid |
 | SB6183 | HTML | Comcast, Cox, Spectrum, Xfinity, Mediacom | synthetic |
 | SB6190 (form-nonce) | HTML | Comcast, Spectrum | — |
 | SB8200 (body-token) | HTML | Spectrum | synthetic |

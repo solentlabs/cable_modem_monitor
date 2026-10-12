@@ -1,123 +1,124 @@
 {
   "downstream": [
     {
-      "channel_id": 10,
+      "channel_id": 45,
       "channel_number": 1,
       "channel_type": "qam",
-      "corrected": 573,
-      "frequency": 519000000,
-      "power": 5.0,
-      "snr": 39.0,
-      "uncorrected": 823
+      "corrected": 140,
+      "frequency": 855000000,
+      "power": -1.0,
+      "snr": 38.0,
+      "uncorrected": 3122
     },
     {
-      "channel_id": 9,
+      "channel_id": 41,
       "channel_number": 2,
       "channel_type": "qam",
-      "corrected": 609,
-      "frequency": 513000000,
-      "power": 5.0,
-      "snr": 39.0,
-      "uncorrected": 921
+      "corrected": 1,
+      "frequency": 831000000,
+      "power": -1.0,
+      "snr": 37.0,
+      "uncorrected": 1483
     },
     {
-      "channel_id": 11,
+      "channel_id": 42,
       "channel_number": 3,
       "channel_type": "qam",
-      "corrected": 598,
-      "frequency": 525000000,
-      "power": 5.0,
-      "snr": 39.0,
-      "uncorrected": 638
+      "corrected": 1,
+      "frequency": 837000000,
+      "power": -1.0,
+      "snr": 38.0,
+      "uncorrected": 1565
     },
     {
-      "channel_id": 12,
+      "channel_id": 43,
       "channel_number": 4,
       "channel_type": "qam",
-      "corrected": 551,
-      "frequency": 531000000,
-      "power": 5.0,
-      "snr": 39.0,
-      "uncorrected": 1566
+      "corrected": 0,
+      "frequency": 843000000,
+      "power": -2.0,
+      "snr": 38.0,
+      "uncorrected": 1490
     },
     {
-      "channel_id": 1,
+      "channel_id": 44,
       "channel_number": 5,
       "channel_type": "qam",
-      "corrected": 782,
-      "frequency": 453000000,
-      "power": 5.0,
-      "snr": 39.0,
-      "uncorrected": 739
+      "corrected": 21,
+      "frequency": 849000000,
+      "power": -1.0,
+      "snr": 38.0,
+      "uncorrected": 1455
     },
     {
-      "channel_id": 2,
+      "channel_id": 46,
       "channel_number": 6,
       "channel_type": "qam",
-      "corrected": 824,
-      "frequency": 459000000,
-      "power": 5.0,
-      "snr": 39.0,
-      "uncorrected": 687
+      "corrected": 48,
+      "frequency": 861000000,
+      "power": -2.0,
+      "snr": 38.0,
+      "uncorrected": 1516
     },
     {
-      "channel_id": 3,
+      "channel_id": 47,
       "channel_number": 7,
       "channel_type": "qam",
-      "corrected": 925,
-      "frequency": 465000000,
-      "power": 5.0,
-      "snr": 39.0,
-      "uncorrected": 824
+      "corrected": 0,
+      "frequency": 867000000,
+      "power": -2.0,
+      "snr": 38.0,
+      "uncorrected": 1409
     },
     {
-      "channel_id": 4,
+      "channel_id": 48,
       "channel_number": 8,
       "channel_type": "qam",
-      "corrected": 552,
-      "frequency": 471000000,
-      "power": 5.0,
-      "snr": 39.0,
-      "uncorrected": 761
+      "corrected": 49,
+      "frequency": 873000000,
+      "power": -2.0,
+      "snr": 38.0,
+      "uncorrected": 1575
     }
   ],
   "system_info": {
+    "docsis_status": "Operational",
     "downstream_channel_count": 8,
-    "hardware_version": "7.0",
+    "hardware_version": "8.0",
     "software_version": "SB_KOMODO-1.0.7.3-SCM02-NOSH",
-    "system_uptime": "0 days 00h:09m:47s",
-    "total_corrected": 5414,
-    "total_uncorrected": 6959,
+    "system_uptime": "0 days 00h:36m:57s",
+    "total_corrected": 260,
+    "total_uncorrected": 13615,
     "upstream_channel_count": 4
   },
   "upstream": [
     {
-      "channel_id": 7,
+      "channel_id": 1,
       "channel_number": 1,
       "channel_type": "atdma",
-      "frequency": 30600000,
-      "power": 49.0
+      "frequency": 17600000,
+      "power": 35.0
     },
     {
-      "channel_id": 8,
+      "channel_id": 4,
       "channel_number": 2,
       "channel_type": "atdma",
-      "frequency": 37000000,
-      "power": 48.0
+      "frequency": 36800000,
+      "power": 35.0
     },
     {
-      "channel_id": 5,
+      "channel_id": 3,
       "channel_number": 3,
       "channel_type": "atdma",
-      "frequency": 17800000,
-      "power": 47.0
+      "frequency": 30400000,
+      "power": 35.0
     },
     {
-      "channel_id": 6,
+      "channel_id": 2,
       "channel_number": 4,
       "channel_type": "atdma",
-      "frequency": 24200000,
-      "power": 47.0
+      "frequency": 24000000,
+      "power": 35.0
     }
   ]
 }
