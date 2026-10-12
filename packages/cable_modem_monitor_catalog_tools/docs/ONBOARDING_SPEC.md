@@ -672,6 +672,7 @@ page becomes its `pre_fetch_url` via the form-evidence rule below.
 | Evidence | Config |
 |----------|--------|
 | POST to reboot/restart endpoint with params | `actions.restart: { type: http, method: POST, endpoint: "<path>", params: {...} }` |
+| GET to reboot/restart endpoint with a query string | `actions.restart: { type: http, method: GET, endpoint: "<path>" }`: the path only, the query is not carried and no `params` are built. A GET has no body to copy, and Core never sends `params` as a query ([MODEM_YAML_SPEC.md § Action schema — `type: http`](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md#action-schema--type-http)), so a firmware that needs the query is declared by hand in `endpoint`. |
 | Request to reboot/restart endpoint with a JSON object body | `actions.restart: { type: http, method: "<observed>", endpoint: "<path>", json_body: {...} }`, the body copied verbatim |
 | HNAP SetConfiguration action with reboot param | `actions.restart: { type: hnap, action_name: "<name>", params: {...} }` |
 | JSON-RPC call that is neither the login nor a data source | A non-blocking `actions.restart.method` [ambiguity](#ambiguities-resolve-then-proceed): one candidate per method, citing the page that sent it (its `Referer`, else the endpoint) and the request body. No method-name rule: call shapes come from confirmed modems only. |
