@@ -38,27 +38,26 @@ hardware:
   docsis_version: "3.1"
   chipset: "Intel Puma 7 (FHCE2752M)"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
-  auth_config: "test_data/modem.har — login.php [2] lines 731-748 PUT {username,
-    password} (encryptParametersIfNeeded is disabled, line 235), session
-    overtake branch, X-CSRF-Token kept from the response header;
-    at_a_glance.php [29] lines 321-325 $.ajaxSetup sends it back as the
-    X-CSRF-Token request header; [27] rejected login 409; [28] [775]
-    accepted login, Set-Cookie PHPSESSID and X-CSRF-Token"
+  auth_config: "test_data/modem.har — login.php [2] PUTs {username, password}
+    (encryptParametersIfNeeded is disabled), handles session_overtake and
+    keeps the X-CSRF-Token response header; at_a_glance.php [29]
+    $.ajaxSetup sends it back as a request header; [27] rejected login
+    409; [28] [513] accepted login, Set-Cookie PHPSESSID and X-CSRF-Token"
   logout_action:
-    "test_data/modem.har — logout() in at_a_glance.php [29] lines 761-768;
-    [698] [802] PUT with the PHPSESSID cookie and X-CSRF-Token, 200"
+    "test_data/modem.har — logout() in at_a_glance.php [29]; [440] [607]
+    PUT with the PHPSESSID cookie and X-CSRF-Token, 200"
   restart_action:
-    'test_data/modem.har — restore_reboot.php [671] line 842 builds
-    {action: ''restart'', module: ''gateway''} and setResetInfo() (line 933)
-    PUTs it; [697] plaintext PUT with the PHPSESSID cookie and
-    X-CSRF-Token, 200 {"reboot_gateway":true}'
+    'test_data/modem.har — restore_reboot.php [413] builds {action:
+    ''restart'', module: ''gateway''} and setResetInfo() PUTs it; [439]
+    plaintext PUT with the PHPSESSID cookie and X-CSRF-Token, 200
+    {"reboot_gateway":true}'
   session_headers:
     "test_data/modem.har — X-Requested-With: XMLHttpRequest on the login
-    [27] [28], logout [698] and restart [697] requests (jQuery $.ajax)"
-  brands: "test_data/modem.har [84] wan.php — footer link reads SURFboard"
+    [27] [28], logout [440] and restart [439] requests (jQuery $.ajax)"
+  brands: "test_data/modem.har [82] wan.php — footer link reads SURFboard"
   docsis_version: "[ABT product listing, DOCSIS Version 3.1](https://www.abt.com/ARRIS-SURFboard-DOCSIS-3.1-Gigabit-Cable-Modem-Wi-Fi-Router-SBG8300/p/146268.html)"
   chipset: "[DeviWiki, Arris SBG8300](https://deviwiki.com/wiki/Arris_SBG8300)"
   isps: "[Amazon listing, Comcast Xfinity, Cox, Spectrum](https://www.amazon.com/ARRIS-Surfboard-SBG8300-RB-Approved-Spectrum/dp/B098PFNQV3)"
@@ -66,7 +65,7 @@ sources:
 attribution:
   contributors:
     - github: https://github.com/kwschulz
-      contribution: "Bench HAR captures (2026-09-25, HW 6, SW 01.02.078.04.NCS)"
+      contribution: "Bench HAR captures (2026-09-25 unprovisioned, 2026-10-12 coax-connected; HW 6, SW 01.02.078.04.NCS)"
 
 isps:
   - Comcast
@@ -77,41 +76,47 @@ notes: |
   ARRIS SURFboard SBG8300 gateway, firmware 01.02.078.04.NCS, HW 6.
   HTTPS actionHandler web UI, the same PHP family as arris/tg3442s but
   with parameter encryption switched off, so the login is plaintext.
-  Captured on the maintainer's unprovisioned bench unit.
+  Captured on the maintainer's bench unit, connected to a coax line and
+  provisioned (cm_status OPERATIONAL).
   Entry indices below are into test_data/modem.har.
 
   Login: bearer. login.php PUTs {"username","password"} to
-  ajaxSet_login.php with no other keys. Wrong credentials answer 409
-  "Invalid Login Credentials!" [27]; a separate bench capture shows three
+  ajaxSet_login.php, nothing else. Wrong credentials answer 409 "Invalid
+  Login Credentials!" [27]; a separate bench capture shows three
   consecutive wrong passwords each answering the same 409. The accepted
-  login [28] answers 200 with an empty body, Set-Cookie PHPSESSID and the
-  X-CSRF-Token header, which every later XHR sends back as a request
-  header. The login JS answers {"session_overtake": true} when another
-  session is active and then offers a takeover through
-  ajaxSet_SessionActive.php; not observed. login_busy reads that answer
-  as busy and Core never sends the takeover. Single admin session at a
-  time; logout runs after every poll.
+  login [28] answers 200 with an empty body, Set-Cookie PHPSESSID and an
+  X-CSRF-Token header that every later XHR sends back. When another
+  session is active the login JS answers {"session_overtake": true} and
+  offers a takeover through ajaxSet_SessionActive.php; not observed in
+  the HAR. login_busy reads that answer as busy and Core never sends the
+  takeover. One admin session at a time; logout runs after every poll.
 
-  Data: everything comes from wan.php [84]. Channels are the channelData
-  object (line 751). The unit is unprovisioned (cm_status
-  NOT_SYNCHRONIZED): ds_channels holds 17 rows, every one ChannelID 0,
-  Modulation UNSUPPORTED and NotLocked, so the golden carries 17 unlocked
-  channels and no signal values. The page shows only ds_channels rows
-  whose Modulation contains "QAM"; the parser does not filter. The
-  us_channels, ofdm_channels and ofdma_channels arrays were empty and
-  nothing on the page names their keys, so they are not mapped. The four
-  error_codewords rows carry no ChannelID and are not mapped. The
-  channel mappings are unverified until a provisioned capture exists.
-  system_info comes from the page's Cable Modem block and System Uptime
-  row; DOCSIS Operating Mode reads "unknown" while unprovisioned and is
-  mapped as reported. software_version is the Download Version row, which
-  matches software.php's Firmware Version [167].
+  Data: everything comes from the channelData object in wan.php [82].
+  cm_status is OPERATIONAL: ds_channels has 32 QAM rows, all Locked;
+  ofdm_channels 2, both Locked; us_channels 4 (1 ACTIVE, 3 DISABLE);
+  ofdma_channels 1 (SUCCESS). The page builds its QAM tables only from
+  rows whose Modulation contains "QAM" (createDataTable); the parser does
+  not filter. error_codewords (32 rows) has no ChannelID and cannot merge
+  into channels, so total_corrected and total_uncorrected are not mapped.
+  OFDM and OFDMA first/last active subcarrier and pilot MER are
+  unregistered fields and not mapped; the OFDMA SymbolRate (12) has no
+  unit. Core's lock_status type reads ACTIVE as locked but not DISABLE or
+  SUCCESS, so the golden records the ofdma row as not_locked with no
+  signal values. The 2026-10-12 diagnostics (modem.verified.json, 14
+  minutes after a restart, docsis_status Operational) show 34 downstream
+  and 4 ATDMA upstream channels locked with full fields and the ofdma
+  row still not_locked; they carry no raw LockStatus, so whether the
+  channel is working is not observed. system_info comes
+  from the Cable Modem block and System Uptime row of wan.php (DOCSIS
+  Operating Mode is mapped as reported, 3.1). software_version is its
+  Download Version row, which matches the Firmware Version row of
+  software.php [112].
 
   Restart: restore_reboot.php sends {action: 'restart', module:
-  'gateway'} as plaintext JSON [697]; the reboot outage follows
-  ([699]-[709]) and the unit accepts a new login at [775].
-  Every page load also POSTs ajaxSet_SessionActive.php (keep-alive);
-  polling does not need it.
+  'gateway'} as plaintext JSON [439]. The reboot outage follows
+  ([441]-[512]) and the unit accepts a new login at [513]. Every page
+  load also POSTs ajaxSet_SessionActive.php (keep-alive); polling does
+  not need it.
 
   Bench test (2026-09-25, same unit, no cable signal): login, the
   wan.php fetch and logout ran on every poll, and restart rebooted the
@@ -124,7 +129,7 @@ notes: |
   right after the command; the ten-minute window did not recur. A power
   cycle came back with no busy answer. Once the web UI hung for over
   three hours; a restart sent then timed out without rebooting.
-  Signal mappings are unexercised: every downstream row was unlocked.
+  Those runs had no cable signal: every downstream row was unlocked.
 
   Web-server hang (bench runs 2026-10-02 to 10-08, same unit): TCP, TLS
   and ping keep answering but no HTTP request is answered, even for a
@@ -137,9 +142,9 @@ notes: |
   of the power-off before a run made no detectable difference. Cause
   unknown.
 
-  Build: software.php [167] line 747 reports RDK-B rdkb-20171127. The
-  unit's opensource.php footer page, not in the HAR, lists lighttpd
-  1.4.33 and PHP 5.4.14.
+  Build: software.php [112] reports RDK-B-LLC rdkb-20171127. The
+  opensource.php footer page, not in the HAR, lists lighttpd 1.4.33 and
+  PHP 5.4.14.
 
   Hand-applied sanitization: the TLS certificate subjectName (the
   device's bare-hex identifier) is replaced with same-length X on every

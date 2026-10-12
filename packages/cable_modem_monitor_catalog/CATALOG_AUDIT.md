@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**50 configurations supported** — 29 confirmed on real hardware, 21 awaiting verification.
+**50 configurations supported** — 30 confirmed on real hardware, 20 awaiting verification.
 
 ---
 
@@ -37,7 +37,6 @@ and share a diagnostics snapshot.
 | SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom | hybrid |
 | SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic |
 | SB8200 (php) | HTML | RCN | — |
-| SBG8300 | HTML | Comcast, Cox, Spectrum | — |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated |
 | C3700 | HTML | Comcast, Cox, Spectrum | synthetic |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | synthetic |
@@ -79,6 +78,7 @@ Entries with an open capability gap are listed above, not here.
 | SB6190 (form-nonce) | HTML | Comcast, Spectrum | — |
 | SB8200 (body-token) | HTML | Spectrum | synthetic |
 | SB8200 (HNAP) | HNAP | Cox | — |
+| SBG8300 | HTML | Comcast, Cox, Spectrum | — |
 | TG3442DE | HTML | Vodafone DE | synthetic |
 | TG3442S | HTML | LIWEST | — |
 | TM1602A | HTML | Spectrum | — |
