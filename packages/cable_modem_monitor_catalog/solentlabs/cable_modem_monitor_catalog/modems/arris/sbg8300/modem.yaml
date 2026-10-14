@@ -98,12 +98,12 @@ notes: |
   rows whose Modulation contains "QAM" (createDataTable); the parser does
   not filter. error_codewords (32 rows) has no ChannelID and cannot merge
   into channels, so total_corrected and total_uncorrected are not mapped.
-  OFDM and OFDMA first/last active subcarrier and pilot MER are
-  unregistered fields and not mapped; the OFDMA SymbolRate (12) has no
+  OFDM and OFDMA first/last active subcarrier and the pilot and PLC MER
+  are unregistered fields and not mapped; the OFDMA SymbolRate (12) has no
   unit. Core's lock_status type reads ACTIVE as locked but not DISABLE or
   SUCCESS, so the golden records the ofdma row as not_locked with no
-  signal values. The 2026-10-12 diagnostics (modem.verified.json, 14
-  minutes after a restart, docsis_status Operational) show 34 downstream
+  signal values. The 2026-10-14 diagnostics (modem.verified.json, 16
+  minutes of uptime, docsis_status Operational) show 34 downstream
   and 4 ATDMA upstream channels locked with full fields and the ofdma
   row still not_locked; they carry no raw LockStatus, so whether the
   channel is working is not observed. system_info comes

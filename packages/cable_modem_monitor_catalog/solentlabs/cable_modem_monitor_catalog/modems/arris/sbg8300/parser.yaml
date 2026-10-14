@@ -5,8 +5,8 @@
 #
 # error_codewords rows have no ChannelID, so they cannot merge into
 # channels and total_corrected / total_uncorrected are not declared.
-# OFDM and OFDMA first/last active subcarrier and pilot MER are
-# unregistered fields and not mapped; the OFDMA SymbolRate (12) has no unit.
+# OFDM and OFDMA first/last active subcarrier and the pilot and PLC MER
+# are unregistered fields and not mapped; the OFDMA SymbolRate (12) has no unit.
 
 downstream:
   format: javascript_json
