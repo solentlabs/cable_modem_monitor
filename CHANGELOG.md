@@ -27,6 +27,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generated config, where it would have read as an expired session on every
   poll. A warning names each page left out, and analysis stops when no data
   page remains.
+- **Arris SBG8300 confirmed on hardware.** Bench unit on a coax line:
+  hardware 6, software 01.02.078.04.NCS, 34 downstream and 4 upstream
+  channels locked, status Operational. The OFDMA row reads not locked
+  because Core does not treat its `SUCCESS` as locked.
+- **Arris SB6141 confirmed on hardware.** Hardware 8.0, software
+  SB_KOMODO-1.0.7.3-SCM02-NOSH, 8 downstream and 4 upstream channels,
+  status Operational.
+
+### Changed
+
+- **The SB6141 Status sensor shows the modem's own status.** It reads
+  "Cable Modem Status" from the modem's status page instead of deriving it
+  from channel lock.
+
+### Removed
+
+- **The SB6141 Restart button is removed.** The modem's restart page exists
+  only while the modem is offline. A modem that is online answers 404 on
+  `/reset.htm`, so the button had nothing to press on a working unit.
 
 ### Fixed
 

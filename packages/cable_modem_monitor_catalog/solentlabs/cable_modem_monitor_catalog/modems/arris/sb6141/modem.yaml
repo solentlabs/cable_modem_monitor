@@ -25,9 +25,7 @@ sources:
 attribution:
   contributors:
     - github: https://github.com/captain-coredump
-      contribution: "Initial fixture and parser"
-    - github: https://github.com/vreihen
-      contribution: "HA Community verification (October 2025)"
+      contribution: "Initial fixture and parser; HA Community verification (October 2025)"
     - github: https://github.com/kwschulz
       contribution: "Real hardware captures HW 7.0 + HW 8.0 (April 2026)"
     - github: https://github.com/rct
@@ -64,7 +62,3 @@ notes: |
   the page were gone. Removing the coax restored them, and the unit
   restarted itself about a minute later. It went straight from Offline to
   Operational, so link state and provisioning are not separated.
-
-references:
-  prs:
-    - "[PR #57 — Added support for Arris CM820B modem.](https://github.com/solentlabs/cable_modem_monitor/pull/57)"
