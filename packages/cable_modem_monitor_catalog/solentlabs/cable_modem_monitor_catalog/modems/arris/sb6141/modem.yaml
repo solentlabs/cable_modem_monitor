@@ -13,17 +13,14 @@ hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3380"
   end_of_life: "2019"
-
   release_date: "2011"
 
 status: confirmed
 
 sources:
   auth_config: "Real hardware captures (HW 7.0 + HW 8.0, April 2026) — no login required"
-
   brands: "[Motorola-branded SB6141 user guide](https://d15yx0mnc9teae.cloudfront.net/sites/default/files/Motorola_SB6141_manual.pdf) and [ARRIS SURFboard SB6141 manual](https://www.manualslib.com/manual/777279/Arris-Surfboard-Sb6141.html) — same modem sold under both brands"
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6141"
-  detection_hints: "[HA Community thread](https://community.home-assistant.io/)"
 
 attribution:
   contributors:
@@ -44,30 +41,29 @@ isps:
   - Mediacom
 
 notes: |
-  DOCSIS 3.0 8x4 cable modem (released 2011, EOL 2019). Broadcom BCM3380.
-  No authentication required; the status page is publicly accessible.
-  Transposed table layout (rows = metrics, columns = channels).
-  The codewords (error-count) table title differs by firmware: 1.0.7.3-SCM02
-  reports "Signal Status (Codewords)", 1.0.7.0-SCM00 reports "Signal Stats
-  (Codewords)" (#177). parser.yaml matches both observed titles explicitly via
-  selector fallback.
-  system_info from cmHelpData.htm (firmware, HW version) and indexData.htm (uptime).
-  HW 7.0 and HW 8.0 confirmed on firmware SB_KOMODO-1.0.7.3-SCM02-NOSH.
-  test_data/modem.har is a full browser capture of a HW 8.0 unit on the same
-  firmware (October 2026; har-capture --minimal, since the modem needs no
-  login); entry indices are into it.
+  8x4 channel modem. HW 7.0 and HW 8.0 confirmed on firmware
+  SB_KOMODO-1.0.7.3-SCM02-NOSH. test_data/modem.har is a full browser
+  capture of a HW 8.0 unit on that firmware (October 2026, har-capture
+  --minimal since there is no login); entry indices are into it.
 
-  No restart action. The April 2026 HW 7.0 and HW 8.0 captures (not
-  committed), both taken with the modem offline ("Cable Modem Status:
-  Offline"), hold GET /reset.htm?reset_modem=Restart+Cable+Modem answering
-  200 and a "Restart Cable Modem" form at the foot of cmConfigData.htm. This
-  capture was taken with the modem online on cable (indexData.htm [2]:
-  "Operational"); its cmConfigData.htm [17] has neither that form nor the
-  factory-default note, and both GET /reset.htm and GET
-  /reset.htm?reset_modem=Restart+Cable+Modem answered 404 on that unit. No
-  other capture or user report shows a restart on an online SB6141. Why the
-  page is absent online is not established (provisioning is one possibility).
-  A capture from an online unit that shows the form would restore the action.
+  The codewords table title differs by firmware: 1.0.7.3-SCM02 reports
+  "Signal Status (Codewords)", 1.0.7.0-SCM00 "Signal Stats (Codewords)"
+  (#177). parser.yaml matches both.
+
+  No restart action: the restart page exists only while the modem is
+  offline. The April 2026 HW 7.0 and HW 8.0 captures (not committed), taken
+  at "Cable Modem Status: Offline", hold GET
+  /reset.htm?reset_modem=Restart+Cable+Modem answering 200 and a "Restart
+  Cable Modem" form at the foot of cmConfigData.htm. This capture is online
+  (indexData.htm [2]: "Operational"): cmConfigData.htm [17] has neither that
+  form nor the factory-default note, and GET /reset.htm and the reset_modem
+  URL both answer 404. No other capture or user report shows a restart on
+  an online SB6141. A bench run on 2026-10-14 (not committed; one HW 8.0
+  unit, same firmware) followed the modem's state. Offline, a GET /reset.htm
+  rebooted the unit. Within one poll of Operational the form, the note and
+  the page were gone. Removing the coax restored them, and the unit
+  restarted itself about a minute later. It went straight from Offline to
+  Operational, so link state and provisioning are not separated.
 
 references:
   prs:
