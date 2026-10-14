@@ -47,13 +47,12 @@ downstream:
           type: string
         - key: ChannelWidth
           field: channel_width
-          type: integer
+          type: frequency
         - key: NumActiveSubcarrier
           field: active_subcarriers
           type: integer
-        - key: PlcScAvgMer
-          field: snr
-          type: float
+        # Average RxMER of the data subcarriers; the page also reports
+        # pilot and PLC averages.
         - key: DataScAvgMer
           field: snr
           type: float
