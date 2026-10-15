@@ -11,15 +11,12 @@ and the method name for ``json_rpc``.
 from __future__ import annotations
 
 import json
-import re
 from typing import Any, Literal
+from urllib.parse import parse_qsl
 
-from ...validation.har_utils import json_rpc_body, lower_headers, path_from_url
-from ..auth.cbn import cbn_call
+from .auth.base import _segments, _template_match
 
 RestartEvidence = Literal["captured", "not captured", "n/a"]
-
-_PLACEHOLDER = re.compile(r"\{[^}]*\}")
 
 
 def restart_evidence(config: dict[str, Any], entries: list[dict[str, Any]]) -> RestartEvidence:
@@ -38,30 +35,43 @@ def _sends(action: dict[str, Any], request: dict[str, Any]) -> bool:
     if kind == "hnap":
         return _hnap_action(request) == action.get("action_name")
     if kind == "cbn":
-        params = cbn_call(request)
-        return params is not None and dict(params)["fun"] == str(action.get("fun"))
+        return str(request.get("method", "")).upper() == "POST" and _form_params(request).get("fun") == str(
+            action.get("fun")
+        )
     if kind == "json_rpc":
-        body = json_rpc_body(request)
-        return body is not None and body["method"] == action.get("method")
+        body = _json_body(request)
+        return body is not None and body.get("jsonrpc") == "2.0" and body.get("method") == action.get("method")
     return False
 
 
 def _http_match(action: dict[str, Any], request: dict[str, Any]) -> bool:
-    """Same method, and a path equal to the endpoint with each placeholder as one segment."""
+    """Same method, and the harness's own path match with queries ignored."""
     if str(request.get("method", "")).upper() != str(action.get("method", "")).upper():
         return False
-    pieces = _PLACEHOLDER.split(path_from_url(str(action.get("endpoint", ""))))
-    pattern = "[^/]+".join(re.escape(piece) for piece in pieces)
-    return re.fullmatch(pattern, path_from_url(str(request.get("url", "")))) is not None
+    declared = str(action.get("endpoint", "")).split("?", 1)[0]
+    sent = str(request.get("url", "")).split("://", 1)[-1]
+    sent_path = "/" + sent.split("/", 1)[1] if "/" in sent else "/"
+    return _template_match(_segments(declared), _segments(sent_path.split("?", 1)[0]))
 
 
 def _hnap_action(request: dict[str, Any]) -> str | None:
     """The action an HNAP request names: its SOAPAction header, else the body's top-level key."""
-    soap_action = lower_headers(request).get("soapaction", "").strip('"')
-    if soap_action:
-        return soap_action.rsplit("/", 1)[-1]
+    for header in request.get("headers") or []:
+        if str(header.get("name", "")).lower() == "soapaction":
+            return str(header.get("value", "")).strip('"').rsplit("/", 1)[-1]
+    body = _json_body(request)
+    return next(iter(body), None) if body else None
+
+
+def _json_body(request: dict[str, Any]) -> dict[str, Any] | None:
+    """The request body parsed as a JSON object, or None."""
     try:
         body = json.loads((request.get("postData") or {}).get("text") or "")
     except ValueError:
         return None
-    return next(iter(body), None) if isinstance(body, dict) else None
+    return body if isinstance(body, dict) else None
+
+
+def _form_params(request: dict[str, Any]) -> dict[str, str]:
+    """The form-encoded body's parameters."""
+    return dict(parse_qsl((request.get("postData") or {}).get("text") or "", keep_blank_values=True))

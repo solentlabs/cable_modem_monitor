@@ -33,6 +33,7 @@ from .discovery import (
 )
 from .golden_file import ComparisonResult, compare_golden_file
 from .loader import ServerConfig, load_server_from_modem_dir
+from .restart_evidence import RestartEvidence, restart_evidence
 from .runner import ActionTestResult, TestResult, run_modem_restart_test, run_modem_test, run_modem_test_orchestrated
 from .server import HARMockServer
 
@@ -41,6 +42,7 @@ __all__ = [
     "ComparisonResult",
     "HARMockServer",
     "ModemTestCase",
+    "RestartEvidence",
     "RestartTestCase",
     "ServerConfig",
     "TestResult",
@@ -49,6 +51,7 @@ __all__ = [
     "discover_restart_tests",
     "load_server_from_modem_dir",
     "resolve_modem_config",
+    "restart_evidence",
     "run_modem_restart_test",
     "run_modem_test",
     "run_modem_test_orchestrated",

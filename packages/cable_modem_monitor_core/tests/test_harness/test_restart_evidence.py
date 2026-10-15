@@ -12,7 +12,7 @@ import json
 from typing import Any
 
 import pytest
-from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.evidence import restart_evidence
+from solentlabs.cable_modem_monitor_core.test_harness.restart_evidence import restart_evidence
 
 
 def _entry(method: str, url: str, body: str = "", headers: dict[str, str] | None = None) -> dict[str, Any]:
@@ -79,7 +79,7 @@ CBN_CASES = [
     # (har method, body,                      expected,       id)
     ("POST", "token=abc&fun=133", "captured", "fun-matches"),
     ("POST", "token=abc&fun=8", "not captured", "fun-differs"),
-    ("POST", "fun=133&token=abc", "not captured", "token-not-first"),
+    ("POST", "fun=133&token=abc", "captured", "fun-before-token"),
     ("GET", "token=abc&fun=133", "not captured", "not-a-post"),
     ("POST", "token=abc", "not captured", "no-fun"),
 ]

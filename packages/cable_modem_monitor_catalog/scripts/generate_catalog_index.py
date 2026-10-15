@@ -35,13 +35,13 @@ from catalog_reference import (  # noqa: E402  # pyright: ignore[reportMissingIm
     isp_to_badge,
     protocol_to_badge,
 )
-from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.evidence import (  # noqa: E402
-    restart_evidence,
-)
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (  # noqa: E402
     get_strategy_display_labels,
 )
-from solentlabs.cable_modem_monitor_core.test_harness import resolve_modem_config  # noqa: E402
+from solentlabs.cable_modem_monitor_core.test_harness import (  # noqa: E402
+    resolve_modem_config,
+    restart_evidence,
+)
 
 CATALOG_DIR = catalog_root / "solentlabs" / "cable_modem_monitor_catalog" / "modems"
 
