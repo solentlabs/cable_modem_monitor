@@ -1598,7 +1598,7 @@ hardware:
 | `firmware` | string | no | Firmware family identifier for catalog documentation (e.g., `"TB01"`). Not shown in the UI. |
 | `chipset` | string | no | Modem chipset (informational) |
 | `release_date` | string | no | Year or date the hardware was released (e.g., `"2017"` or `"2017-06"`). Used in the catalog timeline. |
-| `end_of_life` | string | no | Year or date the hardware reached end-of-life. Omit if still current. |
+| `end_of_life` | string | no | Year or date the manufacturer stopped offering the hardware, per its product page or notice. Omit if still current. Retailer discontinuation and last-firmware dates go in `notes`. |
 
 ---
 
