@@ -14,7 +14,7 @@ files; this document explains the choices that shaped them.
 | [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging, credential reconfiguration as reconstruction |
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
-| [Recovery Architecture](#recovery-architecture) | Restart vs recovery, generic timing, reboot-signal vote, observer callback, no session preservation |
+| [Recovery Architecture](#recovery-architecture) | Restart vs recovery, restart never state-gated, generic timing, reboot-signal vote, observer callback, no session preservation |
 | [Testing Strategy](#testing-strategy) | HAR replay, conformance gates every modem, greenfield from specs, fresh-context capture, test placement by code under test |
 | [Onboarding](#onboarding) | MCP for deterministic steps, catalog_tools owns the spec, inference vs assembly, no fallback |
 | [Config Flow](#config-flow) | Cross-directory grouping, variant label design |
@@ -1527,6 +1527,24 @@ Recovery cannot be triggered by caller request
 other than the three defined paths (command, observed failure,
 reboot-signal check). Consumers cannot observe recovery window
 progress — they see the snapshot stream and react to that.
+
+### Restart is offered whatever the modem's state
+
+**Decision:** A declared restart action is always offered. Core and the
+consumer never gate its availability on modem state (online, offline,
+recovering, provisioned or not).
+
+**Rationale:** Gating needs a per-modem signal for which modems are
+state-bound, and `modem.yaml` carries no behavior flags
+(MODEM_YAML_SPEC § Principles). A generic state rule would disable
+restart on every modem that restarts while online. A modem whose
+restart endpoint answers only in some state needs no special case: an
+HTTP action answered with a non-2xx status is reported as refused with
+that status, so a press in the wrong state says so.
+
+**Constrains:** No state-gated restart, no availability field in
+`actions.restart`. Evidence of a modem whose restart exists only in one
+state does not change this; it is declared as a plain action.
 
 ### One recovery concept, multiple triggers
 

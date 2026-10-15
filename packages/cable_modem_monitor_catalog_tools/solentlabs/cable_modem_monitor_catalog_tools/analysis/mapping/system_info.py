@@ -9,6 +9,7 @@ Per docs/ONBOARDING_SPEC.md Phase 6 and docs/PARSING_SPEC.md system_info section
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -230,6 +231,11 @@ def _match_label_pairs(
 
         seen_fields.add(field_name)
         field_type, field_format, field_map = field_shape(field_name, pair.value, vocabulary)
+        selector_value, pattern = pair.selector_value, ""
+        if pair.selector_type == "css_pattern":
+            # A label stacked in a shared cell is read by a pattern over the cell,
+            # not looked up as a selector.
+            selector_value, pattern = "td", _stacked_cell_pattern(pair.label)
         fields.append(
             SystemInfoFieldDetail(
                 field=field_name,
@@ -237,11 +243,19 @@ def _match_label_pairs(
                 format=field_format,
                 map=field_map,
                 selector_type=pair.selector_type,
-                selector_value=pair.selector_value,
+                selector_value=selector_value,
+                pattern=pattern,
             )
         )
 
     return fields
+
+
+def _stacked_cell_pattern(label: str) -> str:
+    """Regex capturing the value after ``label:`` on its line of a shared cell."""
+    # Spaces stay literal so the pattern reads like the committed ones.
+    escaped = re.escape(label).replace("\\ ", " ")
+    return rf"{escaped}:\s*([^<\n]+)"
 
 
 def _match_label(

@@ -982,7 +982,8 @@ the capture:
   body where the firmware expects an encrypted one. Logout keeps the
   capture's answer unconditionally. Most captures
   record data collection only, so a synthesized response remains the
-  common case for restart.
+  common case for restart. A synthesized answer proves dispatch only:
+  Core sent the declared request, not that the firmware accepts it.
 - **Action matching is uniform.** Logout and restart are matched from
   the declared `actions:` block for every strategy, not re-implemented
   per handler. When each handler matched for itself, `basic` and

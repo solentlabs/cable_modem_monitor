@@ -328,6 +328,25 @@ def test_table_label_pairs(rows: str, expected: list[tuple[str, str]], desc: str
     assert [(p.label, p.value) for p in pairs if p.selector_type == "label"] == expected
 
 
+STACKED_CELL_CASES = [
+    # (cell html, expected (label, value) pairs, desc)
+    ("Model Name: X1<BR>Hardware Version: 7.0<BR>", [("Model Name", "X1"), ("Hardware Version", "7.0")], "spaced"),
+    ("HW_REV: 3<BR>SW_REV: 9.1.103S<BR>", [("HW_REV", "3"), ("SW_REV", "9.1.103S")], "underscore keeps both"),
+    ("BOOT_V2: 1.0<BR>", [("BOOT_V2", "1.0")], "digit in a label"),
+]
+
+
+@pytest.mark.parametrize(
+    "cell,expected,desc",
+    STACKED_CELL_CASES,
+    ids=[c[2] for c in STACKED_CELL_CASES],
+)
+def test_stacked_cell_label_pairs(cell: str, expected: list[tuple[str, str]], desc: str) -> None:
+    """Label: value lines stacked in one cell keep their full labels."""
+    pairs = detect_label_pairs(f"<table><tr><td>{cell}</td></tr></table>")
+    assert [(p.label, p.value) for p in pairs if p.selector_type == "css_pattern"] == expected
+
+
 # =====================================================================
 # Table direction detection — table-driven
 # =====================================================================

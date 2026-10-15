@@ -270,6 +270,15 @@ Check five outputs:
    capture shows a polled response too slow for the default; `enrich_metadata`
    sets `timeout` from it. Confirm the value fits the modem before Step 7
 
+**Stacked info cells.** Some pages list `Label: value` lines in one cell,
+each ending in `<BR>`. Analysis reads each line as a pair, and a line
+whose label the vocabulary does not know is dropped without a warning.
+Open the info page, compare its lines with the generated `system_info`,
+and add a missing field as `css: td` with a `pattern` like
+`Hardware Version:\s*([^<\n]+)`; the SB6141, CM820B and TM1602A entries
+are examples. Check what a label holds, not what it is called: the
+SB6141 `Firmware Name` line carries the software version.
+
 Resolve every unregistered-field warning before Step 7: keep the field
 as modem-specific (the Tier 3 graduation path in FIELD_REGISTRY), or
 map its source to a known field.

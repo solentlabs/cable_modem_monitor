@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The catalog audit shows whether each entry's capture holds its restart.**
+  A new Restart column reads `captured`, `not captured` or `n/a` (no restart
+  declared). A restart the capture lacks replays against a synthesized
+  answer, so its test proves only that Core sends the declared request. Read
+  the column with Capture: a restart inside a synthetic fixture was written
+  to match Core, not observed.
+
+### Fixed
+
+- **Intake reads labels stacked in a shared info cell.** A line such as
+  `Hardware Version: 7.0<BR>` was detected but written as a selector no page
+  matches, so the generated config read nothing. It is now a `td` pattern, as
+  the committed entries write it. Labels with an underscore or a digit
+  (`HW_REV`, `SW_REV`) were also cut short and the second was dropped; both
+  now keep their full names.
+
 ## [3.14.15-beta.4] - 2026-10-15
 
 ### Added

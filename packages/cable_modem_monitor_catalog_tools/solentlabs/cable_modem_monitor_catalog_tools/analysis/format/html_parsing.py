@@ -71,7 +71,7 @@ _UNCLOSED_TH_RE = re.compile(
 # Inline "Label: Value<BR>" pattern — some modems embed system info
 # as BR-delimited text inside a single <TD> cell (e.g., SB6141 cmHelpData.htm).
 _BR_LABEL_VALUE_PATTERN = re.compile(
-    r"([A-Z][A-Za-z ]+?)\s*:\s*([^\n<]+?)\s*<[Bb][Rr]\s*/?>",
+    r"([A-Z][A-Za-z0-9_ ]+?)\s*:\s*([^\n<]+?)\s*<[Bb][Rr]\s*/?>",
 )
 
 _ID_VALUE_PATTERN = re.compile(
