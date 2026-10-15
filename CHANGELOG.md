@@ -27,10 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generated config, where it would have read as an expired session on every
   poll. A warning names each page left out, and analysis stops when no data
   page remains.
-- **Arris SBG8300 confirmed on hardware.** Bench unit on a coax line:
-  hardware 6, software 01.02.078.04.NCS, 34 downstream and 4 upstream
-  channels locked, status Operational. The OFDMA row reads not locked
-  because Core does not treat its `SUCCESS` as locked.
+- **Arris SBG8300 confirmed on hardware, and it now reports upstream, OFDM
+  and OFDMA channels.** Earlier betas mapped only the downstream QAM
+  channels. Bench unit on a coax line: hardware 6, software
+  01.02.078.04.NCS, 34 downstream and 4 upstream channels locked, status
+  Operational. The OFDMA row reads not locked because Core does not treat
+  its `SUCCESS` as locked.
 - **Arris SB6141 confirmed on hardware.** Hardware 8.0, software
   SB_KOMODO-1.0.7.3-SCM02-NOSH, 8 downstream and 4 upstream channels,
   status Operational.
@@ -68,10 +70,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CONFIG_SCHEMA`, which hassfest flags. The integration is config-entry
   only, so a `cable_modem_monitor:` block in YAML now logs that it is not
   supported.
-- **SBG8300 OFDM channel width is in Hz.** The channel width attribute read
-  192 and 96, where every other modem reports Hz. It now reads 192000000 and
-  96000000. The channel's SNR is the data-subcarrier average as before; the
-  unused PLC mapping is removed.
 
 ## [3.14.15-beta.3] - 2026-10-07
 
