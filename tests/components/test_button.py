@@ -175,7 +175,6 @@ async def test_restart_button_press_success(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.async_add_executor_job = AsyncMock(
         return_value=RestartResult(
             success=True,
@@ -196,6 +195,28 @@ async def test_restart_button_press_success(
     mock_data_coordinator.async_request_refresh.assert_awaited_once()
 
 
+async def test_restart_button_press_unacknowledged(
+    mock_data_coordinator: MagicMock,
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """A sent command the modem never answered is worded as such, and does not raise."""
+    entry = _make_entry(mock_runtime_data)
+    button = RestartModemButton(entry)
+    button.hass = MagicMock()
+    button.hass.async_add_executor_job = AsyncMock(
+        return_value=RestartResult(success=True, elapsed_seconds=30.0, acknowledged=False)
+    )
+    button.hass.services.async_call = AsyncMock()
+    mock_data_coordinator.async_request_refresh = AsyncMock()
+
+    await button.async_press()
+
+    payload = button.hass.services.async_call.call_args[0][2]
+    assert "No Response" in payload["title"]
+    assert "did not answer" in payload["message"]
+    mock_data_coordinator.async_request_refresh.assert_awaited_once()
+
+
 async def test_restart_button_press_failure(
     mock_data_coordinator: MagicMock,
     mock_runtime_data: CableModemRuntimeData,
@@ -204,7 +225,6 @@ async def test_restart_button_press_failure(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.async_add_executor_job = AsyncMock(
         return_value=RestartResult(
             success=False,
@@ -238,7 +258,6 @@ async def test_restart_button_no_state_writes_during_dispatch(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
 
@@ -254,13 +273,14 @@ async def test_restart_button_no_state_writes_during_dispatch(
 
     button.hass.async_add_executor_job = AsyncMock(side_effect=_capture_state)
 
-    await button.async_press()
+    with patch.object(button, "async_write_ha_state") as write_state:
+        await button.async_press()
 
     # Available throughout — overlap protection is the mutex alone.
     assert available_during_restart == [True]
     assert button._attr_available is True
     # No state writes from the handler.
-    assert button.async_write_ha_state.call_count == 0
+    assert write_state.call_count == 0
 
 
 async def test_restart_button_no_state_writes_on_exception(
@@ -271,18 +291,17 @@ async def test_restart_button_no_state_writes_on_exception(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
     button.hass.async_add_executor_job = AsyncMock(
         side_effect=ConnectionError("modem unreachable"),
     )
 
-    with pytest.raises(ConnectionError):
+    with patch.object(button, "async_write_ha_state") as write_state, pytest.raises(ConnectionError):
         await button.async_press()
 
     assert button._attr_available is True
-    assert button.async_write_ha_state.call_count == 0
+    assert write_state.call_count == 0
 
 
 async def test_restart_button_sets_and_clears_active_operation(
@@ -293,7 +312,6 @@ async def test_restart_button_sets_and_clears_active_operation(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
 
@@ -323,7 +341,6 @@ async def test_restart_button_clears_active_operation_on_exception(
     entry = _make_entry(mock_runtime_data)
     button = RestartModemButton(entry)
     button.hass = MagicMock()
-    button.async_write_ha_state = MagicMock()
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
     button.hass.async_add_executor_job = AsyncMock(side_effect=ConnectionError("boom"))
@@ -486,8 +503,10 @@ async def test_reset_button_press_probes_failed(
     # No config entry update when probes failed
     button.hass.config_entries.async_update_entry.assert_not_called()
 
-    # Still reloads
+    # Still reloads, and the notification says the stored values were kept
     button.hass.config_entries.async_reload.assert_awaited_once()
+    message = button.hass.services.async_call.call_args[0][2]["message"]
+    assert "Probe re-detection skipped" in message
 
 
 async def test_reset_button_sets_and_clears_active_operation(
@@ -587,6 +606,7 @@ async def test_redetect_probes_success(
     button.hass.async_add_executor_job = AsyncMock(
         side_effect=[
             MagicMock(),  # load_modem_config
+            True,  # test_http_get: the modem answered
             {"supports_icmp": True, "supports_head": True},  # detect_probes
         ]
     )
@@ -594,6 +614,26 @@ async def test_redetect_probes_success(
     result = await button._redetect_probes()
 
     assert result == {"supports_icmp": True, "supports_head": True}
+
+
+async def test_redetect_probes_skipped_when_modem_does_not_answer(
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """No HTTP answer means no result is saved, and the probes are not run."""
+    entry = _make_entry(mock_runtime_data)
+    button = ResetEntitiesButton(entry)
+    button.hass = MagicMock()
+    button.hass.async_add_executor_job = AsyncMock(
+        side_effect=[
+            MagicMock(),  # load_modem_config
+            False,  # test_http_get: no answer
+        ]
+    )
+
+    result = await button._redetect_probes()
+
+    assert result is None
+    assert button.hass.async_add_executor_job.await_count == 2
 
 
 async def test_redetect_probes_config_load_failure(
@@ -622,6 +662,7 @@ async def test_redetect_probes_detection_failure(
     button.hass.async_add_executor_job = AsyncMock(
         side_effect=[
             MagicMock(),  # load_modem_config succeeds
+            True,  # test_http_get: the modem answered
             ConnectionError("unreachable"),  # detect_probes fails
         ],
     )

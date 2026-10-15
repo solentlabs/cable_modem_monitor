@@ -334,6 +334,16 @@ def _extract_i18n_header_map(table: Tag) -> dict[str, str]:
     return i18n_map
 
 
+def has_login_form(body: str) -> bool:
+    """Whether the page holds a login form: a ``<form>`` containing a password input."""
+    soup = BeautifulSoup(body, "html.parser")
+    return any(
+        str(field.get("type", "")).lower() == "password"
+        for form in soup.find_all("form")
+        for field in form.find_all("input")
+    )
+
+
 def detect_tables(body: str) -> list[DetectedTable]:
     """Detect HTML tables in a page body.
 

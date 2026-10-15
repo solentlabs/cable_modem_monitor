@@ -130,6 +130,47 @@ class TestNewOnboarding:
 
 
 # ---------------------------------------------------------------------------
+# Timeout inference from the capture's request timing
+# ---------------------------------------------------------------------------
+
+
+def _timed_analysis(suggested: int, default: int = 10) -> dict[str, Any]:
+    """Minimal analysis carrying a request-timing hint."""
+    analysis = _minimal_analysis()
+    analysis["timing"] = {
+        "slowest_request": {"path": "/status.html", "seconds": 10.157},
+        "default_timeout": default,
+        "suggested_timeout": suggested,
+    }
+    return analysis
+
+
+class TestTimeoutInference:
+    """A polled response too slow for the default sets the timeout."""
+
+    def test_slow_capture_sets_timeout(self) -> None:
+        """A suggestion above the default becomes metadata."""
+        result = enrich_metadata(_timed_analysis(15))
+        assert result.metadata["timeout"] == 15
+        assert "timeout" in result.inferred
+
+    def test_default_suggestion_stays_implicit(self) -> None:
+        """A suggestion equal to the default writes no timeout key."""
+        result = enrich_metadata(_timed_analysis(10))
+        assert "timeout" not in result.metadata
+        assert "timeout" not in result.inferred
+
+    def test_no_timing_stays_implicit(self) -> None:
+        """Analysis without a timing hint writes no timeout key."""
+        assert "timeout" not in enrich_metadata(_minimal_analysis()).metadata
+
+    def test_user_timeout_wins(self) -> None:
+        """A caller-supplied timeout is never overwritten by the hint."""
+        result = enrich_metadata(_timed_analysis(15), user_input={"timeout": 20})
+        assert result.metadata["timeout"] == 20
+
+
+# ---------------------------------------------------------------------------
 # Use case 2: MVP review — analysis + user_input
 # ---------------------------------------------------------------------------
 

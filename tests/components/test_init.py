@@ -157,6 +157,22 @@ async def test_async_setup_registers_services():
     mock_reg.assert_called_once_with(hass)
 
 
+def test_config_schema_rejects_yaml_setup(caplog: pytest.LogCaptureFixture):
+    """hassfest requires CONFIG_SCHEMA beside async_setup; the integration is entry-only.
+
+    An empty configuration passes silently; a YAML block for the domain is
+    logged as unsupported.
+    """
+    from custom_components.cable_modem_monitor import CONFIG_SCHEMA
+    from custom_components.cable_modem_monitor.const import DOMAIN
+
+    assert CONFIG_SCHEMA({}) == {}
+    assert "does not support YAML setup" not in caplog.text
+
+    CONFIG_SCHEMA({DOMAIN: {}})
+    assert "does not support YAML setup" in caplog.text
+
+
 # -----------------------------------------------------------------------
 # async_unload_entry
 # -----------------------------------------------------------------------

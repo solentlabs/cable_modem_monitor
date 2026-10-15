@@ -260,12 +260,15 @@ result = analyze_har(har_path, fleet=fleet)
 analysis = result.to_dict()
 ```
 
-Check four outputs:
+Check five outputs:
 
 1. **`hard_stops`** — if non-empty, report and stop
 2. **`warnings`** — note for later, don't stop
 3. **`core_gaps`** — if present, report and stop (Step 5)
 4. **`ambiguities`** — resolve each before Step 7
+5. **`timing`** — when `suggested_timeout` exceeds `default_timeout`, the
+   capture shows a polled response too slow for the default; `enrich_metadata`
+   sets `timeout` from it. Confirm the value fits the modem before Step 7
 
 Resolve every unregistered-field warning before Step 7: keep the field
 as modem-specific (the Tier 3 graduation path in FIELD_REGISTRY), or

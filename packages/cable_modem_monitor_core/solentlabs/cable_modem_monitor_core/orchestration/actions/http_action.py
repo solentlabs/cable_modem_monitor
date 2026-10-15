@@ -147,7 +147,8 @@ def execute_http_action(
         log_event(_logger, ActionConnectionLost(model=model, transport="http", action_name=action_name, level=level))
         return ActionResult(
             success=True,
-            message="Action sent (connection lost — expected for restart)",
+            message="Action sent (connection lost)",
+            connection_lost=True,
         )
 
 

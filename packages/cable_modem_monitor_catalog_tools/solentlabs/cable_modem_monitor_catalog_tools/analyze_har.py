@@ -31,7 +31,9 @@ from .analysis.auth import AuthDetail, detect_auth
 from .analysis.auth.patterns import fleet_password_names
 from .analysis.format import detect_sections
 from .analysis.js_endpoints import detect_uncalled_json_rpc_methods, detect_uncaptured_endpoints
+from .analysis.login_page_detection import detect_login_page_hard_stops
 from .analysis.request_requirements import detect_request_requirements
+from .analysis.request_timing import RequestTiming, detect_request_timing
 from .analysis.session import SessionDetail
 from .analysis.transport import TransportResult
 from .analysis.types import CoreGap, FleetPatterns
@@ -52,6 +54,7 @@ class AnalysisResult:
     core_gaps: list[CoreGap] = field(default_factory=list)
     unread_resources: list[UnreadResource] = field(default_factory=list)
     ambiguities: list[Ambiguity] = field(default_factory=list)
+    timing: RequestTiming | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict matching the MCP tool output contract."""
@@ -67,6 +70,8 @@ class AnalysisResult:
             # Informational, never a gate — every HAR has unread endpoints.
             "unread_resources": [resource.to_dict() for resource in self.unread_resources],
         }
+        if self.timing is not None:
+            result["timing"] = self.timing.to_dict()
         if self.core_gaps:
             result["core_gaps"] = [gap.to_dict() for gap in self.core_gaps]
         if self.ambiguities:
@@ -137,6 +142,9 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
         entries, transport_result.transport, warnings, hard_stops, fleet=fleet, ambiguities=ambiguities
     )
 
+    # Post-analysis: the two password-input checks Core's login-page detection depends on
+    hard_stops.extend(detect_login_page_hard_stops(entries, sections, auth_result, transport_result.transport))
+
     # An unprovisioned modem serves placeholder pages, so auth analyzes
     # cleanly while sections come back empty; without this warning the
     # contributor first learns of it as a failure three tools later.
@@ -153,6 +161,9 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
 
     # Post-analysis: Request requirements detection
     detect_request_requirements(entries, transport_result.transport, session_result, warnings)
+
+    # Post-analysis: the slowest polled response and the timeout it supports
+    timing = detect_request_timing(entries, sections, auth_result, transport_result.transport)
 
     # Post-analysis: Unread resource reporting
     unread = detect_unread_resources(
@@ -177,6 +188,7 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
         core_gaps=core_gaps,
         unread_resources=unread,
         ambiguities=ambiguities,
+        timing=timing,
     )
 
 

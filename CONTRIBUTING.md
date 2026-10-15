@@ -433,9 +433,18 @@ own gate is closed.
 
 ## Issue Labels
 
+Type labels (`bug`, `new modem`, `enhancement`) are mutually
+exclusive — exactly one applies, set from the reporter's opening post
+and changed only when the form mis-sorted it. A later turn in the
+thread (a bug that became a new variant) does not change it.
+`verification` reports and tracking issues carry no type.
+`duplicate`, `wontfix` and `invalid` stack on the type; reports
+exclude them.
+
 State labels (`needs-triage`, `in-development`, `needs-testing`,
 `needs-data`, `backlog`) are mutually exclusive — exactly one
-applies. Same for `release:vX.Y` labels. Everything else stacks.
+applies to an open issue, and a closed issue carries none. Same for
+`release:vX.Y` labels. Everything else stacks.
 
 - `needs-triage` — auto-applied; replaced with a real state on first read
 - `in-development` — code being written or in an unreleased branch

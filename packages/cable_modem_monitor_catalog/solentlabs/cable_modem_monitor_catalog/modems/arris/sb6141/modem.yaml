@@ -9,36 +9,36 @@ default_host: "192.168.100.1"
 auth:
   strategy: none
 
-actions:
-  restart:
-    type: http
-    method: GET
-    endpoint: "/reset.htm"
-    params:
-      reset_modem: "Restart Cable Modem"
-
 hardware:
   docsis_version: "3.0"
-  chipset: "Broadcom BCM3380"
-  end_of_life: "2019"
-
+  chipset: "Intel Puma 5"
+  end_of_life: "2022"
   release_date: "2011"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config: "Real hardware captures (HW 7.0 + HW 8.0, April 2026) — no login required"
-
   brands: "[Motorola-branded SB6141 user guide](https://d15yx0mnc9teae.cloudfront.net/sites/default/files/Motorola_SB6141_manual.pdf) and [ARRIS SURFboard SB6141 manual](https://www.manualslib.com/manual/777279/Arris-Surfboard-Sb6141.html) — same modem sold under both brands"
-  chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6141"
-  detection_hints: "[HA Community thread](https://community.home-assistant.io/)"
+  chipset: "Maintainer's teardown of one SB6141 unit, 2026-10-14. Green board
+    marked 'SB6141 MAIN BOARD - 581887-002 REV4 - 30-JUL-2014'. Chip 1:
+    Zentel A3R56E40ABF-8E, 526ZEN31, 56096784G-C (DDR2 SDRAM). Chip 2:
+    RTL8211EG, F5E40P3, GF37B (Realtek gigabit PHY). Chip 3: iMC07, W530TH22,
+    SLHCY, DNCE2530G (the SoC). Intel lists DNCE2530G as a cable DOCSIS
+    product ([PCN 110800-01](https://intel.pcn.captnemo.in/pcn/805797/)).
+    [BoxMatrix Puma5](https://boxmatrix.info/wiki/Puma5) says Intel renamed
+    the TI TNETC4800 Puma 5 to DNCE2500 and lists DNCE2500GUS; it does not
+    list DNCE2530G, so the Puma 5 family is inferred from the shared DNCE25xx
+    series. The Broadcom BCM3380 this file used to state had no source and
+    matches none of the three chips."
+  end_of_life: "[Wayback captures of the manufacturer's SB6141 product page](https://web.archive.org/cdx/search/cdx?url=surfboard.com/products/cable-modems/sb6141*): live (HTTP 200) through 2021-12-09, redirected (302, 301) in captures dated 2022-12-23. The 2018-09-14, 2020-10-19 and 2021-10-26 captures show no end-of-life wording. The page was removed between 2021-12-09 and 2022-12-23; 2022 is the likelier year, not proven. No manufacturer notice found."
+  release_date: "[Motorola SB6141 datasheet, © 2011, document dated 8/11](https://content.abt.com/documents/48624/SB6141-US-EN.pdf)"
+  isps: "[Amazon listing, Comcast Xfinity, Cox, Charter, Time Warner, Mediacom, Bright House](https://www.amazon.com/dp/B00AJHDZSI); [Cox support article for the SB6141, ports and status lights, last updated 2025-07-03](https://www.cox.com/residential/support/arris--surfboard-sb6141.html)"
 
 attribution:
   contributors:
     - github: https://github.com/captain-coredump
-      contribution: "Initial fixture and parser"
-    - github: https://github.com/vreihen
-      contribution: "HA Community verification (October 2025)"
+      contribution: "Initial fixture and parser; HA Community verification (October 2025)"
     - github: https://github.com/kwschulz
       contribution: "Real hardware captures HW 7.0 + HW 8.0 (April 2026)"
     - github: https://github.com/rct
@@ -52,16 +52,35 @@ isps:
   - Mediacom
 
 notes: |
-  DOCSIS 3.0 8x4 cable modem (released 2011, EOL 2019). Broadcom BCM3380.
-  No authentication required; the status page is publicly accessible.
-  Transposed table layout (rows = metrics, columns = channels).
-  The codewords (error-count) table title differs by firmware: 1.0.7.3-SCM02
-  reports "Signal Status (Codewords)", 1.0.7.0-SCM00 reports "Signal Stats
-  (Codewords)" (#177). parser.yaml matches both observed titles explicitly via
-  selector fallback.
-  system_info from cmHelpData.htm (firmware, HW version) and indexData.htm (uptime).
-  HW 7.0 and HW 8.0 confirmed on firmware SB_KOMODO-1.0.7.3-SCM02-NOSH.
+  8x4 channel modem. HW 7.0 and HW 8.0 confirmed on firmware
+  SB_KOMODO-1.0.7.3-SCM02-NOSH. test_data/modem.har is a full browser
+  capture of a HW 8.0 unit on that firmware (October 2026, har-capture
+  --minimal since there is no login); entry indices are into it.
 
-references:
-  prs:
-    - "[PR #57 — Added support for Arris CM820B modem.](https://github.com/solentlabs/cable_modem_monitor/pull/57)"
+  The codewords table title differs by firmware: 1.0.7.3-SCM02 reports
+  "Signal Status (Codewords)", 1.0.7.0-SCM00 "Signal Stats (Codewords)"
+  (#177). parser.yaml matches both.
+
+  No restart action: the restart page exists only while the modem is
+  offline. The April 2026 HW 7.0 and HW 8.0 captures (not committed), taken
+  at "Cable Modem Status: Offline", hold GET
+  /reset.htm?reset_modem=Restart+Cable+Modem answering 200 and a "Restart
+  Cable Modem" form at the foot of cmConfigData.htm. This capture is online
+  (indexData.htm [2]: "Operational"): cmConfigData.htm [17] has neither that
+  form nor the factory-default note, and GET /reset.htm and the reset_modem
+  URL both answer 404. No other capture or user report shows a restart on
+  an online SB6141. A bench run on 2026-10-14 (not committed; one HW 8.0
+  unit, same firmware) followed the modem's state. Offline, a GET /reset.htm
+  rebooted the unit. Within one poll of Operational the form, the note and
+  the page were gone. Removing the coax restored them, and the unit
+  restarted itself about a minute later. It went straight from Offline to
+  Operational, so link state and provisioning are not separated.
+
+  Lifecycle dates. Last firmware we have seen: SB_KOMODO-1.0.7.3-SCM02-NOSH,
+  Firmware Build Time Apr 22 2019 15:16:24 (cmHelpData.htm, modem.har [32] and
+  modem-fw1070.har [2]); a build time, not a release or support notice.
+  Retailer CDW lists the modem as discontinued on April 04, 2017
+  (https://www.cdw.com/product/motorola-surfboard-sb6141-cable-modem/3004694).
+  Comcast: "it does appear that it is no longer compatible with our services"
+  (Xfinity Community Forum thread opened 2021-08-18,
+  https://forums.xfinity.com/conversations/your-home-network/is-arris-sb6141-end-of-life/611cdce1c7b0494106c77622).

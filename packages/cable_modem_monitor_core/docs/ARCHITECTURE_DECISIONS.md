@@ -329,6 +329,9 @@ fall on the blueprint side for the same reason.
   HA blueprints, not in Core. PR proposals that require relaxing this
   rule (e.g., a signal-health sensor inside Core) are out of scope by
   this decision.
+- A condition composed from probe results, such as a stalled web server
+  (TCP and TLS up, HTTP unanswered), is classification of signals Core
+  already exposes and is not named in Core. It is observed on one modem.
 
 ### Catalog data stays true to source; normalization happens at presentation
 
@@ -1433,7 +1436,10 @@ on reused session → clear and retry once). Reuse also disables itself:
 after `stale_recovery_threshold` consecutive same-poll recoveries,
 `SignalPolicy` stops attempting it for the rest of the runtime, so
 firmware with a chronically short session TTL does not burn the first
-request of every poll on a session it has already expired.
+request of every poll on a session it has already expired. A connectivity
+failure never clears the session on its own; only repeated failures with
+the modem answering probes do (ORCHESTRATION_SPEC § Signal → Policy
+Mapping), since each relogin risks the lockout this decision guards against.
 
 ### Two modem-side actions only
 
@@ -1514,7 +1520,9 @@ dashboard tells the user what's actually happening.
 
 **Constrains:** Restart never waits, never times out, never
 cancels. Its only failure mode is `command_failed` (auth or action
-executor raised, or the executor reported failure).
+executor raised, or the executor reported failure). A lost connection
+is a sent command reported unacknowledged, since a reboot and a stalled
+web server look the same; Core never claims the modem answered.
 Recovery cannot be triggered by caller request
 other than the three defined paths (command, observed failure,
 reboot-signal check). Consumers cannot observe recovery window
@@ -1686,7 +1694,10 @@ clearing without spurious forced polls.
 
 **Constrains:** New reachability consumers use `data_path_up`; a new
 HealthStatus member must define its `data_path_up` value at
-introduction. Display concerns (the Status sensor's 10-level
+introduction. The backoff clear does not branch on the failure that
+set it (connect-level or read-level): a stalled web server with TCP up
+reads as up, and no fleet evidence yet separates the two failure kinds
+at reboot. Display concerns (the Status sensor's 10-level
 cascade) stay granular and are exempt — this decision governs
 reachability logic only. Provisional decisions get an entry in this
 file at the moment they are made; a "v1"/"conservative" label in

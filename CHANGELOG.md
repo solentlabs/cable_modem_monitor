@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.4] - 2026-10-15
+
+### Added
+
+- **Intake reads the capture's response times.** The slowest polled
+  response sets a suggested per-modem `timeout`, written into new entries
+  when it exceeds the 10 s default, and the intake regression grades it
+  against the committed value (41 of 44 match). The SB8200 PHP entry
+  raises its timeout to 15 s: its channel request answers in about 10.1 s.
+  (#213)
+- **Intake stops on the two password-field captures that defeat login-page
+  detection.** Analysis hard-stops when the login page it identified has
+  no `type="password"` input, and when a data page the config would fetch
+  has one outside a login form. Both match Core's test, so intake and
+  runtime agree. One catalog capture (tg3442de, a stub login page) now
+  stops and scores 0.0% in the intake regression (fleet 89.7% to 87.9%).
+- **Intake no longer reads a login page as a data source.** A response
+  holding a login form is left out of the data pages, so the SB8200's
+  login page (which shows the model name) is no longer mapped into the
+  generated config, where it would have read as an expired session on every
+  poll. A warning names each page left out, and analysis stops when no data
+  page remains.
+- **Arris SBG8300 confirmed on hardware, and it now reports upstream, OFDM
+  and OFDMA channels.** Earlier betas mapped only the downstream QAM
+  channels. Bench unit on a coax line: hardware 6, software
+  01.02.078.04.NCS, 34 downstream and 4 upstream channels locked, status
+  Operational. The OFDMA row reads not locked because Core does not treat
+  its `SUCCESS` as locked.
+- **Arris SB6141 confirmed on hardware.** Hardware 8.0, software
+  SB_KOMODO-1.0.7.3-SCM02-NOSH, 8 downstream and 4 upstream channels,
+  status Operational.
+
+### Changed
+
+- **The SB6141 Status sensor shows the modem's own status.** It reads
+  "Cable Modem Status" from the modem's status page instead of deriving it
+  from channel lock.
+
+### Removed
+
+- **The SB6141 Restart button is removed.** The modem's restart page exists
+  only while the modem is offline. A modem that is online answers 404 on
+  `/reset.htm`, so the button had nothing to press on a working unit.
+
+### Fixed
+
+- **Unloading an entry whose modem was unreachable at startup.** When the
+  first poll returned no data and a later one succeeded, unloading the
+  entry removed the data listener a second time. Home Assistant raised
+  `KeyError`, the unload failed and a reload or the reset button left no
+  entities. The listener is now removed once.
+- **A restart the modem never answered is no longer reported as plain
+  "sent".** A dropped connection or timeout on the restart command looks
+  the same for a rebooting modem and a stalled web server. The button now
+  says the command was sent and the modem did not answer.
+- **Reset Entities no longer saves probe results from a modem that is not
+  answering.** Re-detection ran while the modem was unresponsive and saved
+  ICMP and HEAD as unsupported, so health ran TCP-only afterwards. The new
+  flags are saved only if the modem answers an HTTP GET at that moment;
+  otherwise the stored ones stay and the notification says re-detection was
+  skipped.
+- **Home Assistant validation warning.** `async_setup` had no
+  `CONFIG_SCHEMA`, which hassfest flags. The integration is config-entry
+  only, so a `cable_modem_monitor:` block in YAML now logs that it is not
+  supported.
+
 ## [3.14.15-beta.3] - 2026-10-07
 
 ### Added

@@ -3,7 +3,7 @@
 The call carries the session token in the query, the same request a
 data call makes. A ``result`` of any value is success; an ``error``, a
 non-2xx, or a body that is not an envelope is a refused action. A
-dropped connection or timeout is the modem rebooting.
+dropped connection or timeout is success with ``connection_lost`` set.
 
 See ORCHESTRATION_SPEC.md § JSON-RPC Executor.
 """
@@ -51,8 +51,9 @@ def execute_json_rpc_action(
         log_event(_logger, ActionConnectionLost(model=model, transport="json_rpc", action_name=method, level=level))
         return ActionResult(
             success=True,
-            message=f"JSON-RPC action {method} sent (connection lost — modem rebooting)",
-            details={"method": method, "connection_lost": True},
+            message=f"JSON-RPC action {method} sent (connection lost)",
+            details={"method": method},
+            connection_lost=True,
         )
     except requests.RequestException as exc:
         log_event(_logger, ActionFailed(model=model, transport="json_rpc", action_name=method, reason=str(exc)))

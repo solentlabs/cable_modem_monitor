@@ -12,7 +12,7 @@ from __future__ import annotations
 import posixpath
 from typing import Any
 
-from ...validation.har_utils import WARNING_PREFIX
+from ...validation.har_utils import HARD_STOP_PREFIX, WARNING_PREFIX
 from ..ambiguity import Ambiguity
 from ..mapping.channel_detection import detect_channel_type_fixed
 from ..mapping.channel_keys import address_key_ambiguities
@@ -25,6 +25,7 @@ from .http import (
     analyze_page,
     classify_page_format,
     identify_data_pages,
+    login_pages_left_out,
 )
 from .json_rpc import json_rpc_pages
 from .table_analysis import (
@@ -96,8 +97,25 @@ def _detect_http_sections(
     mappings for channel sections, and detects system_info sources.
     """
     data_pages = identify_data_pages(entries)
+    # A login page is expected to be left out; a data page that embeds its own login
+    # form would be too, so each path is named for the reader to confirm.
+    left_out = login_pages_left_out(entries, data_pages)
+    if left_out:
+        warnings.append(
+            f"{WARNING_PREFIX} {', '.join(left_out)} hold a login form and were not read as data pages. "
+            "If one carries data, the capture needs that page without the login form."
+        )
     if not data_pages:
         warnings.append(f"{WARNING_PREFIX} No data pages found in HAR. Cannot detect format or field mappings.")
+        if left_out:
+            # Core reads any page with a password input as an expired session, so a
+            # data page that holds one cannot be polled; that is a Core enhancement.
+            hard_stops.append(
+                f"{HARD_STOP_PREFIX} No data page remains: {', '.join(left_out)} hold a login form. "
+                "If one carries the modem's data, Core needs a way to exempt a data page from "
+                "login-page detection before this modem can be polled; otherwise recapture with "
+                "the data pages open."
+            )
         return {}
 
     # Phase 5: Analyze each data page

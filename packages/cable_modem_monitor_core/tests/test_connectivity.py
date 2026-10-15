@@ -13,6 +13,7 @@ from solentlabs.cable_modem_monitor_core.connectivity import (
     LegacySSLAdapter,
     create_session,
     detect_protocol,
+    test_http_get as probe_http_get,
     test_http_head as probe_http_head,
     test_icmp as probe_icmp,
 )
@@ -466,6 +467,62 @@ class TestHttpHead:
         mock_create.return_value = session
 
         assert probe_http_head("http://192.168.100.1") is False
+
+
+# =====================================================================
+# probe_http_get()
+# =====================================================================
+
+# Any HTTP answer proves the web server is alive; only silence is a failure.
+# fmt: off
+HTTP_GET_CASES = [
+    # (id, status or exception, answered)
+    ("200",             200,                                     True),
+    ("302 not followed", 302,                                    True),
+    ("401",             401,                                     True),
+    ("404",             404,                                     True),
+    ("500",             500,                                     True),
+    ("connection error", requests.exceptions.ConnectionError(),  False),
+    ("read timeout",    requests.exceptions.ReadTimeout(),       False),
+    ("connect timeout", requests.exceptions.ConnectTimeout(),    False),
+    ("os error",        OSError("unreachable"),                  False),
+]
+# fmt: on
+
+
+class TestHttpGet:
+    """HTTP GET liveness probe."""
+
+    @pytest.mark.parametrize(
+        "outcome,answered",
+        [c[1:] for c in HTTP_GET_CASES],
+        ids=[c[0] for c in HTTP_GET_CASES],
+    )
+    @patch("solentlabs.cable_modem_monitor_core.connectivity.create_session")
+    def test_answer_is_any_response(self, mock_create: MagicMock, outcome: object, answered: bool) -> None:
+        """Any status is an answer; a connection error, timeout or OS error is not."""
+        session = MagicMock()
+        if isinstance(outcome, BaseException):
+            session.get.side_effect = outcome
+        else:
+            session.get.return_value.status_code = outcome
+        mock_create.return_value = session
+
+        assert probe_http_get("http://192.168.100.1") is answered
+
+    @patch("solentlabs.cable_modem_monitor_core.connectivity.create_session")
+    def test_does_not_follow_redirects_or_read_the_body(self, mock_create: MagicMock) -> None:
+        """The probe asks for headers only and releases the connection."""
+        session = MagicMock()
+        mock_create.return_value = session
+
+        probe_http_get("http://192.168.100.1", timeout=3)
+
+        kwargs = session.get.call_args.kwargs
+        assert kwargs["allow_redirects"] is False
+        assert kwargs["stream"] is True
+        assert kwargs["timeout"] == 3
+        session.get.return_value.close.assert_called_once()
 
 
 # =====================================================================

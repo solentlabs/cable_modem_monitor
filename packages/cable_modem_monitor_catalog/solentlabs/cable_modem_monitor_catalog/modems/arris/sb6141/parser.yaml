@@ -74,6 +74,10 @@ system_info:
     - format: html_fields
       resource: "/indexData.htm"
       fields:
+        - label: "Cable Modem Status"
+          field: docsis_status
+          type: string
+
         - label: "System Up Time"
           field: system_uptime
           type: uptime

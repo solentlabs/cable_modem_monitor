@@ -801,7 +801,7 @@ reported by roughly half the fleet.
 | ----- | ---- | ----- |
 | `frequency` | int | Hz; lower edge of active subcarrier band (when available). See [FIELD_REGISTRY.md § `frequency` semantics](FIELD_REGISTRY.md#frequency-semantics). |
 | `power` | float | dBmV (PLC power) |
-| `snr` | float | Average RxMER in dB |
+| `snr` | float | Average RxMER in dB. Where a modem reports pilot, PLC and data averages separately, the data-subcarrier average |
 | `corrected` | int | LDPC codeword corrections (when available) |
 | `uncorrected` | int | Uncorrectable LDPC codewords (when available) |
 | `modulation` | str | Optional. PLC subcarrier modulation in canonical form (e.g., `"QAM4096"`). The parser MUST normalize via `map:` or omit the field if the source carries non-modulation strings. Common offenders: channel-type restatements (`"OFDM"`, `"OFDMA"`, `"OFDM PLC"`, `"Other"`), DOCSIS 3.1 profile IDs, and IUC lists (`"0,1,3,4"`, `"3, 4, 5, 6, 9..."`). See [Canonical modulation values](#canonical-modulation-values). |

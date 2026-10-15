@@ -1,0 +1,102 @@
+{
+  "verified_at": "2026-10-12",
+  "version": "3.14.15-beta.3",
+  "config_entry": {
+    "title": "ARRIS SB6141 (192.168.100.1)",
+    "host": "192.168.100.1",
+    "manufacturer": "ARRIS",
+    "model": "SB6141",
+    "variant": null,
+    "protocol": "http",
+    "legacy_ssl": false,
+    "has_credentials": false,
+    "supports_icmp": true,
+    "supports_head": true,
+    "channel_identity": "number"
+  },
+  "core_diagnostics": {
+    "poll_duration": 1.1835865790053504,
+    "auth_failure_streak": 0,
+    "circuit_breaker_open": false,
+    "circuit_trip_signal": null,
+    "session_is_valid": true,
+    "auth_strategy": "none",
+    "connectivity_streak": 0,
+    "connectivity_backoff_remaining": 0,
+    "stale_session_recovery_streak": 0,
+    "session_reuse_disabled": false,
+    "resource_fetches": [
+      {
+        "path": "/cmSignalData.htm",
+        "duration_ms": 905.5,
+        "size_bytes": 4853,
+        "status_code": 200,
+        "content_type": ""
+      },
+      {
+        "path": "/indexData.htm",
+        "duration_ms": 38.7,
+        "size_bytes": 2447,
+        "status_code": 200,
+        "content_type": ""
+      },
+      {
+        "path": "/cmHelpData.htm",
+        "duration_ms": 137.1,
+        "size_bytes": 5388,
+        "status_code": 200,
+        "content_type": ""
+      }
+    ],
+    "last_poll_at": "2026-10-12T20:42:24.991937+00:00",
+    "last_stub_body": {},
+    "system_info_fields_missing": [],
+    "system_info_fields_failed": {},
+    "login_page_drift": []
+  },
+  "data_coordinator": {
+    "last_update_success": true,
+    "update_interval": "0:10:00"
+  },
+  "health_coordinator": {
+    "last_update_success": true,
+    "update_interval": "0:00:30"
+  },
+  "modem_data": {
+    "connection_status": "online",
+    "collector_signal": "ok",
+    "health_status": "responsive",
+    "icmp_latency_ms": 12.503,
+    "tcp_latency_ms": 4.606003989465535,
+    "http_latency_ms": 32.05399601053446,
+    "error": ""
+  },
+  "system_info": {
+    "docsis_status": "Operational",
+    "system_uptime": "0 days 01h:40m:10s",
+    "hardware_version": "8.0",
+    "software_version": "SB_KOMODO-1.0.7.3-SCM02-NOSH",
+    "downstream_channel_count": 8,
+    "upstream_channel_count": 4,
+    "total_corrected": 261,
+    "total_uncorrected": 13615,
+    "rate_corrected": 0.0,
+    "rate_uncorrected": 0.0
+  },
+  "downstream_channels": [
+    {"channel_type": "qam", "channel_id": 45, "channel_number": 1, "frequency": 855000000, "power": -1.0, "snr": 38.0, "corrected": 141, "uncorrected": 3122},
+    {"channel_type": "qam", "channel_id": 41, "channel_number": 2, "frequency": 831000000, "power": -1.0, "snr": 38.0, "corrected": 1, "uncorrected": 1483},
+    {"channel_type": "qam", "channel_id": 42, "channel_number": 3, "frequency": 837000000, "power": -1.0, "snr": 38.0, "corrected": 1, "uncorrected": 1565},
+    {"channel_type": "qam", "channel_id": 43, "channel_number": 4, "frequency": 843000000, "power": -2.0, "snr": 38.0, "corrected": 0, "uncorrected": 1490},
+    {"channel_type": "qam", "channel_id": 44, "channel_number": 5, "frequency": 849000000, "power": -1.0, "snr": 38.0, "corrected": 21, "uncorrected": 1455},
+    {"channel_type": "qam", "channel_id": 46, "channel_number": 6, "frequency": 861000000, "power": -2.0, "snr": 38.0, "corrected": 48, "uncorrected": 1516},
+    {"channel_type": "qam", "channel_id": 47, "channel_number": 7, "frequency": 867000000, "power": -2.0, "snr": 38.0, "corrected": 0, "uncorrected": 1409},
+    {"channel_type": "qam", "channel_id": 48, "channel_number": 8, "frequency": 873000000, "power": -2.0, "snr": 38.0, "corrected": 49, "uncorrected": 1575}
+  ],
+  "upstream_channels": [
+    {"channel_type": "atdma", "channel_id": 1, "channel_number": 1, "frequency": 17600000, "power": 35.0},
+    {"channel_type": "atdma", "channel_id": 4, "channel_number": 2, "frequency": 36800000, "power": 35.0},
+    {"channel_type": "atdma", "channel_id": 3, "channel_number": 3, "frequency": 30400000, "power": 35.0},
+    {"channel_type": "atdma", "channel_id": 2, "channel_number": 4, "frequency": 24000000, "power": 35.0}
+  ]
+}

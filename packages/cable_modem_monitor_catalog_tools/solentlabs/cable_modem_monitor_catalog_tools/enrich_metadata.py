@@ -150,6 +150,12 @@ def _apply_inferences(
             hw["docsis_version"] = docsis
             result.inferred.append("hardware.docsis_version")
 
+    # timeout — a polled response too slow for the default; the default stays implicit
+    timing = analysis.get("timing")
+    if "timeout" not in metadata and timing and timing["suggested_timeout"] > timing["default_timeout"]:
+        metadata["timeout"] = timing["suggested_timeout"]
+        result.inferred.append("timeout")
+
     # status — default to awaiting_verification for new modems
     if "status" not in metadata:
         metadata["status"] = "awaiting_verification"

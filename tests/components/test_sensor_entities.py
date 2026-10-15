@@ -1222,7 +1222,7 @@ def test_deferred_creation_noop_while_no_data(mock_runtime_data):
 # │ ModemInfoSensor          │ coord failed        │ ModemSensorBase subclass: coord failed   │
 # │ ModemStatusSensor        │ coord failed        │ own available property: last_update_success│
 # └──────────────────────────┴─────────────────────┴──────────────────────────────────────────┘
-SENSOR_COORD_FAILED_CASES = [
+SENSOR_COORD_FAILED_CASES: list[tuple[type[Any], dict[str, Any], str]] = [
     (ModemSoftwareVersionSensor, {}, "software_version"),
     (ModemInfoSensor,            {}, "modem_info"),
     (ModemStatusSensor,          {}, "modem_status"),
@@ -1554,8 +1554,56 @@ def test_deferred_creation_cleanup_on_unload(mock_runtime_data):
 
     _register_deferred_entity_creation(coord, entry, add_entities)
 
-    # The unsub callable should be registered for cleanup
-    entry.async_on_unload.assert_called_once_with(unsub_fn)
+    # A cleanup callable is registered, and calling it removes the listener
+    entry.async_on_unload.assert_called_once()
+    cleanup = entry.async_on_unload.call_args[0][0]
+    cleanup()
+    unsub_fn.assert_called_once_with()
+
+
+def test_deferred_creation_unload_after_first_data_removes_listener_once(mock_runtime_data):
+    """Unload after the one-shot fired must not remove the listener a second time.
+
+    HA's coordinator remover pops the listener id, so a second call raises
+    KeyError and fails the unload.
+    """
+    from custom_components.cable_modem_monitor.sensor import (
+        _register_deferred_entity_creation,
+    )
+
+    removed: list[int] = []
+
+    def remover() -> None:
+        if removed:
+            raise KeyError("listener already removed")
+        removed.append(1)
+
+    coord = MagicMock()
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.UNREACHABLE,
+        docsis_status=DocsisStatus.NOT_LOCKED,
+        modem_data=None,
+    )
+    coord.async_add_listener.return_value = remover
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = MOCK_ENTRY_DATA
+    entry.runtime_data = mock_runtime_data
+
+    _register_deferred_entity_creation(coord, entry, MagicMock())
+    listener_fn = coord.async_add_listener.call_args[0][0]
+    cleanup = entry.async_on_unload.call_args[0][0]
+
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data=MOCK_MODEM_DATA,
+    )
+    listener_fn()
+    cleanup()
+
+    assert removed == [1]
 
 
 # -----------------------------------------------------------------------

@@ -25,9 +25,13 @@ class ActionResult:
         session_refused: The modem refused the command's session (HNAP
             ``UN-AUTH``, HTTP 401 or 403), so a fresh login may succeed.
             Restart retries once on it (ORCHESTRATION_SPEC § Restart Action).
+        connection_lost: The connection dropped or timed out instead of
+            being answered. Reported as success because a rebooting modem
+            does the same; restart reads it as "sent, unacknowledged".
     """
 
     success: bool
     message: str = ""
     details: dict[str, Any] = field(default_factory=dict)
     session_refused: bool = False
+    connection_lost: bool = False

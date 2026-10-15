@@ -40,6 +40,7 @@ analyze_har(fleet) ◄───┘ transport, auth, session, actions, format, fi
     │
     ├── hard_stops? → stop, report to user
     ├── core_gaps? → stop, report what Core needs (see below)
+    ├── timing → slowest polled response and the timeout it supports
     ├── unread_resources → key skeletons of the endpoints nothing read
     │
     ▼
@@ -86,6 +87,7 @@ The pipeline separates deterministic logic (repeatable, testable Python code) fr
 | Auth detection | Pattern matching against `auth_patterns.json` | Intended: ambiguous cases presented for a decision. Today the detector returns one strategy and no alternatives — see [Detection Owes the LLM Evidence](#detection-owes-the-llm-evidence-not-a-verdict) |
 | Format detection | HNAP: deterministic. HTTP: candidate list | HTTP: LLM reads response bodies, picks format |
 | Field mapping | Column/field extraction from HAR content, service flow aggregate detection, fleet patterns augment direction and system_info label detection | — |
+| Request timing | Slowest polled response in the HAR, rounded up for headroom over the default timeout | Judge whether the suggested `timeout` fits the modem |
 | Unread resources | Subtract every endpoint the config reads from the HAR's 2xx JSON endpoints; reduce each remainder to its key skeleton | Read the skeletons and decide whether anything there is worth mapping |
 | Metadata enrichment | Inference from analysis + defaults | Web search for missing fields (chipset, ISPs) |
 | Config generation | Pydantic validation, constraint checking | Fix validation errors and retry |
@@ -330,6 +332,10 @@ capture to a config that does not describe it, and reports the
 disagreement as a pipeline defect: before this was fixed, the four
 SB8200 variants and the SB6190 nonce capture produced five auth
 `mismatch` lines in which the detector and the catalog in fact agreed.
+
+**Timeout grading** compares the pipeline's `suggested_timeout` (the default when no hint)
+against the committed `timeout` per HAR: `match` or `mismatch`. It is the measurement behind
+the timing hint's 1.45 ratio ([ONBOARDING_SPEC.md § Request Timing](ONBOARDING_SPEC.md#post-analysis-request-timing)).
 
 **Actions grading** compares pipeline-detected logout/restart actions
 against the committed config per HAR

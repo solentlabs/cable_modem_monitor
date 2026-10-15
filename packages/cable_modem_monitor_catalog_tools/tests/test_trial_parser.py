@@ -52,8 +52,8 @@ class TestTrialParseSuccess:
         result = trial_parse(_SB6141_HAR, _SB6141_PARSER)
         ds = result.golden_file.get("downstream", [])
         assert len(ds) == 8
-        assert ds[0]["channel_id"] == 10
-        assert ds[0]["frequency"] == 519000000
+        assert ds[0]["channel_id"] == 45
+        assert ds[0]["frequency"] == 855000000
 
 
 class TestTrialParseFailure:

@@ -302,7 +302,9 @@ class TestUC50BothProbes:
 
         monitor, session = _make_monitor()
         session.head.return_value = _mock_http_response(0.012)
-        info = monitor.ping()
+        # A fixed TCP time: the real clock around the mocked socket varies with load.
+        with patch.object(monitor, "_measure_tcp_connect", return_value=0.0):
+            info = monitor.ping()
 
         assert info.health_status == HealthStatus.RESPONSIVE
         assert info.icmp_latency_ms == 4.0
@@ -354,7 +356,8 @@ class TestUC50BothProbes:
 
         monitor, session = _make_monitor()
         session.head.return_value = redirect_response
-        info = monitor.ping()
+        with patch.object(monitor, "_measure_tcp_connect", return_value=0.0):
+            info = monitor.ping()
 
         session.head.assert_called_once_with(
             "http://192.168.100.1",

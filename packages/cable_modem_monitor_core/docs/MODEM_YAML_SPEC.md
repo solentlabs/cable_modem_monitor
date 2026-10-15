@@ -1323,13 +1323,24 @@ actions:
       MotoSecurityAction: "1"
 ```
 
+A GET whose fields ride in the URL, as a browser form with
+`method="get"` sends them, declares the query in `endpoint`:
+
+```yaml
+actions:
+  restart:
+    type: http
+    method: GET
+    endpoint: "/reset.htm?reset_modem=Restart+Cable+Modem"
+```
+
 | Field | Type | Required | Description |
 |-------|------| :--------: |-------------|
 | `type` | enum | yes | `http`, `hnap`, `cbn`, or `json_rpc` |
 | `method` | string | yes | HTTP method (`GET`, `POST`, etc.). No default — must be explicit. |
-| `endpoint` | string | yes | URL path to send the request to. May contain `{auth:token}` / `{auth:user_id}` placeholders — see [Auth-value placeholders](#auth-value-placeholders). |
+| `endpoint` | string | yes | URL path to send the request to, sent as written: a query string in it (`/reset.htm?reset_modem=Restart+Cable+Modem`) goes out as the URL query. May contain `{auth:token}` / `{auth:user_id}` placeholders — see [Auth-value placeholders](#auth-value-placeholders). |
 | `requires_session` | bool | `false` | *Logout only.* `false` = endpoint is unauthenticated and can clear any active server-side session without credentials. `true` = endpoint needs a live session; Core skips the pre-retry logout call when the session is not valid. |
-| `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`. Mutually exclusive with `json_body`. |
+| `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`, on every method including `GET`; `params` never reach the URL query. A form that submits with `method="get"` carries its fields in the query, so declare them in `endpoint`. Mutually exclusive with `json_body`. |
 | `json_body` | map | no | JSON request body. If present, body is `application/json`. Mutually exclusive with `params`. Use for REST APIs that accept JSON. |
 | `body_encoding` | enum | `plain` | `session`: send `json_body` wrapped the way the session's auth strategy encodes request bodies (e.g. [`json_sjcl`](#json_sjcl)'s SJCL envelope). Requires `json_body`, and an auth strategy that encodes action bodies (the one in `action_auth` when set). |
 | `headers` | map | no | Per-action headers. Merged with session-level `headers` (action wins on conflict). |
@@ -1587,7 +1598,7 @@ hardware:
 | `firmware` | string | no | Firmware family identifier for catalog documentation (e.g., `"TB01"`). Not shown in the UI. |
 | `chipset` | string | no | Modem chipset (informational) |
 | `release_date` | string | no | Year or date the hardware was released (e.g., `"2017"` or `"2017-06"`). Used in the catalog timeline. |
-| `end_of_life` | string | no | Year or date the hardware reached end-of-life. Omit if still current. |
+| `end_of_life` | string | no | Year or date the manufacturer stopped offering the hardware, per its product page or notice. Omit if still current. Retailer discontinuation and last-firmware dates go in `notes`. |
 
 ---
 

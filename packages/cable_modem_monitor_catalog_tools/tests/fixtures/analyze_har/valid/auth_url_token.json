@@ -21,7 +21,7 @@
             "cookies": [
               {"name": "sessionId", "value": "tok123"}
             ],
-            "content": {"size": 5000, "text": "<html>Downstream Bonded Channels</html>"}
+            "content": {"size": 5000, "text": "<html><table><tr><th colspan=\"6\">Downstream Bonded Channels</th></tr><tr><th>Channel</th><th>Lock Status</th><th>Frequency</th><th>Power</th><th>SNR</th><th>Modulation</th></tr><tr><td>1</td><td>Locked</td><td>507000000 Hz</td><td>1.0 dBmV</td><td>38.0 dB</td><td>QAM256</td></tr></table></html>"}
           }
         },
         {

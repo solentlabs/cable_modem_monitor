@@ -220,6 +220,8 @@ async_setup_entry(hass, entry)
 Services are **not** registered here. They are integration-global and
 registered once in `async_setup` (see § Services) so they exist before
 any entry is set up and survive an entry being removed and re-added.
+`async_setup` requires a `CONFIG_SCHEMA` (hassfest); the integration has
+no YAML configuration, so it is `cv.config_entry_only_config_schema(DOMAIN)`.
 
 **Steps 1-3 involve sync I/O** — all must run in executor via
 `hass.async_add_executor_job()`. Step 3 delegates to the Core
@@ -403,8 +405,10 @@ from the poll data. The sensor platform handles this by:
 3. On each coordinator update, the listener checks for `modem_data`
 4. On the first update with `modem_data is not None`: creates
    data-dependent entities via `async_add_entities` and unsubscribes
-5. `entry.async_on_unload(unsub)` ensures clean teardown if the entry
-   is unloaded before the modem comes online
+5. The unsubscribe is a once-only wrapper (HA's remover raises
+   `KeyError` on a second call). The listener and
+   `entry.async_on_unload` both call the wrapper, so unload is clean
+   whether or not the modem ever came online
 6. Schedules a delayed re-notification task (1 second) that fires
    `coordinator.async_update_listeners()`, ensuring deferred
    entities receive `_handle_coordinator_update()` after their
@@ -525,6 +529,9 @@ User presses "Restart Modem"
  ├─ 4. Send persistent notification:
  │     success → "Restart Command Sent [MODEL]" / "<model> restart
  │               command dispatched in <N.N> seconds."
+ │     success, unacknowledged → "Restart Command Sent, No Response
+ │               [MODEL]" / "<model> restart command sent in <N.N>
+ │               seconds; the modem did not answer."
  │     failure → "Modem Restart Failed [MODEL]" / "<model> restart did
  │               not dispatch: <error>"
  │
@@ -848,6 +855,12 @@ async def async_press(self) -> None:
         _LOGGER.warning(...)
         return  # another destructive operation is running
 ```
+
+The reset body re-detects probes first, per ORCHESTRATION_SPEC
+§ Probe Discovery: the new ICMP and HEAD flags are saved only if the
+modem answers an HTTP GET at that moment. When it does not, the stored
+flags stay, the reset continues, and the completion notification says
+probe re-detection was skipped.
 
 Two defences, both required:
 
