@@ -180,6 +180,7 @@ words:
   - chipset
   - chipsets
   - DHCE
+  - DNCE
   - AnandTech
   - Averna
   - FHCE
@@ -189,6 +190,10 @@ words:
   - opensource
   - Puma
   - rdkb
+  - Realtek
+  - SLHCY
+  - Wayback
+  - Zentel
 
   # Modem manufacturers and product lines
   - Arris
