@@ -627,6 +627,28 @@ class TestExtractEdgeCases:
         fields = {m.field for m in result.mappings}
         assert "frequency" in fields
 
+    def test_transposed_msym_symbol_rate_keeps_fraction(self) -> None:
+        """A transposed "5.120 Msym/sec" row maps as a float with unit and 1e6 scale, not a truncated integer."""
+        table = DetectedTable(
+            table_id="",
+            css_class="",
+            headers=["", "Ch 1", "Ch 2"],
+            rows=[
+                ["Frequency", "17600000 Hz", "36800000 Hz"],
+                ["Symbol Rate", "5.120 Msym/sec", "2.560 Msym/sec"],
+                ["Power Level", "35 dBmV", "35 dBmV"],
+            ],
+            preceding_text="",
+            title_row_text="",
+            table_index=0,
+        )
+        result = extract_section_mappings(
+            fmt="table_transposed", table=table, resource="/data.htm", direction="upstream"
+        )
+        assert result is not None
+        (mapping,) = [m for m in result.mappings if m.field == "symbol_rate"]
+        assert (mapping.type, mapping.unit, mapping.scale) == ("float", "Msym/sec", 1_000_000)
+
     def test_transposed_no_recognizable_labels(self) -> None:
         """Transposed table with no recognized labels returns None."""
         table = DetectedTable(

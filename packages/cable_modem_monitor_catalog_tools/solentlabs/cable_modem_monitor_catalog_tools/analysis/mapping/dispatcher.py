@@ -29,7 +29,7 @@ from .field_resolution import (
     match_json_key_to_field,
 )
 from .filter_detection import detect_filter_table
-from .symbol_rate import symbol_rate_unit_and_scale
+from .symbol_rate import symbol_rate_field_type, symbol_rate_unit_and_scale
 from .types import FieldMapping, SectionDetail
 
 # A table or a list of objects holds channels only when it maps one of these.
@@ -133,6 +133,7 @@ def _extract_table_mappings(
         scale = None
         if field_name == "symbol_rate":
             unit, scale = symbol_rate_unit_and_scale(sample_values, unit, warnings)
+            field_type = symbol_rate_field_type(field_type, scale)
 
         mappings.append(
             FieldMapping(
@@ -204,6 +205,7 @@ def _extract_transposed_mappings(
         row_unit, scale = "", None
         if field_name == "symbol_rate":
             row_unit, scale = symbol_rate_unit_and_scale(sample_values, unit, warnings)
+            field_type = symbol_rate_field_type(field_type, scale)
 
         mappings.append(
             FieldMapping(
@@ -383,6 +385,7 @@ def _resolve_js_symbol_rate(
         if m.field == "symbol_rate" and fields_per_record and m.offset is not None:
             samples = data_values[m.offset :: fields_per_record]
             m.unit, m.scale = symbol_rate_unit_and_scale(samples, m.unit, warnings)
+            m.type = symbol_rate_field_type(m.type, m.scale)
 
 
 # -----------------------------------------------------------------------
@@ -458,6 +461,7 @@ def _json_array_section(
         if field_name == "symbol_rate":
             samples = [str(ch[key]) for ch in channel_array if isinstance(ch, dict) and ch.get(key) is not None]
             key_unit, scale = symbol_rate_unit_and_scale(samples, unit, warnings)
+            field_type = symbol_rate_field_type(field_type, scale)
         mappings.append(
             FieldMapping(
                 field=field_name,

@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Intake reads symbol rates printed in Msym/sec.** A cell such as
+  `5.120 Msym/sec` was read as ksym/s with no unit to strip, so the generated
+  config dropped the value. It is now scaled from Msym/s to Sym/s and kept
+  fractional, so the SB6141 capture reproduces its committed entry.
 - **Intake reads labels stacked in a shared info cell.** A line such as
   `Hardware Version: 7.0<BR>` was detected but written as a selector no page
   matches, so the generated config read nothing. It is now a `td` pattern, as
