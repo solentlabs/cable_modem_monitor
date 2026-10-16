@@ -14,7 +14,7 @@ import json
 from typing import Any, Literal
 from urllib.parse import parse_qsl
 
-from .auth.base import _segments, _template_match
+from .endpoint_match import url_matches_endpoint
 
 RestartEvidence = Literal["captured", "not captured", "n/a"]
 
@@ -48,10 +48,7 @@ def _http_match(action: dict[str, Any], request: dict[str, Any]) -> bool:
     """Same method, and the harness's own path match with queries ignored."""
     if str(request.get("method", "")).upper() != str(action.get("method", "")).upper():
         return False
-    declared = str(action.get("endpoint", "")).split("?", 1)[0]
-    sent = str(request.get("url", "")).split("://", 1)[-1]
-    sent_path = "/" + sent.split("/", 1)[1] if "/" in sent else "/"
-    return _template_match(_segments(declared), _segments(sent_path.split("?", 1)[0]))
+    return url_matches_endpoint(str(action.get("endpoint", "")), str(request.get("url", "")))
 
 
 def _hnap_action(request: dict[str, Any]) -> str | None:

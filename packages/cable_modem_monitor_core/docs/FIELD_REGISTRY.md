@@ -65,7 +65,9 @@ How this convention was chosen: CM2050V's reported OFDM frequency
 (690 MHz) overlaps SC-QAM channels at 642–651 MHz if interpreted as
 center, which is physically impossible (no spectrum sharing). Lower
 edge places the 96 MHz block at 690–786 MHz, clear of SC-QAM, matching
-DOCSIS 3.1 OSSI MIB `docsIf31CmDsOfdmChanLowerBoundaryFrequency`.
+`DOCS-IF31-MIB` `docsIf31CmtsDsOfdmChanLowerBdryFreq`, the lowest active
+subcarrier when no guardband is defined. The MIB's CM tables carry no
+boundary or channel-width object.
 
 ### Canonical channel key order (JSON serialization)
 

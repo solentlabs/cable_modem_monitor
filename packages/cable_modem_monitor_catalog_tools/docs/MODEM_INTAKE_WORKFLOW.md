@@ -491,7 +491,9 @@ write_result = write_modem_package(output_dir, ...)
 ```
 
 See [ONBOARDING_SPEC.md](ONBOARDING_SPEC.md) for the full
-`write_modem_package` signature.
+`write_modem_package` signature. A non-empty `errors` means nothing was
+written: read it, fix the config or recapture. `warnings` list declared
+action URLs the capture never requests; note them in the PR.
 
 The generator quotes strings with single quotes where prettier writes
 double quotes, and prettier keeps single quotes around strings that

@@ -464,9 +464,9 @@ def _print_result_actions(result: ModemResult) -> None:
 
 def _print_auth_audit(catalog_root: Path) -> None:
     """Run auth fixture audit and print any issues found."""
-    from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import audit_fleet_auth
+    from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import audit_fleet_auth, audit_fleet_endpoints
 
-    issues = audit_fleet_auth(catalog_root)
+    issues = audit_fleet_auth(catalog_root) + audit_fleet_endpoints(catalog_root)
     if not issues:
         return
     print("AUTH FIXTURE ISSUES (report only — verify against hardware):")

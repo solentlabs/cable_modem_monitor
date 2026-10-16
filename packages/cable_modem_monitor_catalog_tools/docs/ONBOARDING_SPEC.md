@@ -2044,7 +2044,8 @@ golden file dict, HAR file path, optional parser.py string
   "modem_dir": "modems/motorola/mb7621",
   "files_written": ["modem.yaml", "parser.yaml", "test_data/modem.har", "test_data/modem.expected.json"],
   "files_skipped": [],
-  "errors": []
+  "errors": [],
+  "warnings": []
 }
 ```
 
@@ -2063,6 +2064,22 @@ This prevents a class of silent failures where the mock server test passes
 because `_discover_hidden_fields()` returned empty. The check only applies
 to `strategy: form` with a non-empty `login_page` — all other strategies
 are unaffected.
+
+**Validation gate — declared URLs appear in the capture:** Every URL the
+modem.yaml declares must match a request in its own HAR (path segments
+compare exactly, queries are ignored, `{...}` segments are wild). An
+absent `auth.action`, `auth.endpoint`, `auth.login_endpoint`,
+`auth.csrf_init_endpoint`, `auth.session_validation_endpoint` or
+`session.post_login_endpoints` entry is an error and nothing is written:
+the capture had to exercise it, and a hand-written value it never shows
+has nothing to contradict it. An absent `actions.restart` or
+`actions.logout` URL (`endpoint`, `pre_fetch_url`,
+`action_auth.login_endpoint`) is a `warnings` entry, since nobody presses
+Restart during a capture. `auth.login_page` has its own gate above.
+`audit_fleet_endpoints` runs the same check over committed entries and
+reports the error cases; `make intake-regression` prints them under
+`AUTH FIXTURE ISSUES`. Committed entries are never failed or edited to
+satisfy it.
 
 **Creates standard catalog structure:**
 

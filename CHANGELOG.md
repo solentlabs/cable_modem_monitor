@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answer, so its test proves only that Core sends the declared request. Read
   the column with Capture: a restart inside a synthetic fixture was written
   to match Core, not observed.
+- **Intake refuses auth URLs the capture never requests.** A login, CSRF init
+  or post-login URL written into a new `modem.yaml` must match a request in
+  that modem's own HAR, or the package is not written. A restart or logout
+  URL the capture lacks is a warning, since nobody presses Restart during a
+  capture. `make intake-regression` reports the same gap in committed entries
+  under `AUTH FIXTURE ISSUES`; none are edited or failed.
 
 ### Fixed
 

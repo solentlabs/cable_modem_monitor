@@ -30,6 +30,7 @@ from typing import Any
 import yaml
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.patterns import collect_password_field_names
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
+from solentlabs.cable_modem_monitor_catalog_tools.validation.endpoint_grounding import check_endpoints_in_har
 from solentlabs.cable_modem_monitor_catalog_tools.validation.fixture_integrity import check_login_page_in_har
 from solentlabs.cable_modem_monitor_core.test_harness import resolve_modem_config
 
@@ -220,6 +221,36 @@ def audit_fleet_auth(catalog_path: Path) -> list[AuthAuditIssue]:
 
         issues.extend(_redirect_landing_issues(entries, modem_rel, har_path.name))
 
+    return issues
+
+
+def audit_fleet_endpoints(catalog_path: Path) -> list[AuthAuditIssue]:
+    """Report declared auth URLs that a fixture's own capture never requests.
+
+    The same check ``write_modem_package`` enforces at intake, run over
+    committed entries, where it reports and never fails. Action endpoints
+    (restart, logout) are left out: nobody presses Restart during a
+    capture, so their absence is the normal case.
+    """
+    issues: list[AuthAuditIssue] = []
+    for har_path in sorted(catalog_path.rglob("test_data/*.har")):
+        modem_dir = har_path.parent.parent
+        config_path = resolve_modem_config(har_path.stem, modem_dir)
+        if config_path is None:
+            continue
+        try:
+            config: Any = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+            with open(har_path, encoding="utf-8") as f:
+                entries: list[Any] = json.load(f).get("log", {}).get("entries", [])
+        except (yaml.YAMLError, OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(config, dict):
+            continue
+        modem_rel = str(modem_dir.relative_to(catalog_path))
+        issues.extend(
+            AuthAuditIssue(modem=modem_rel, har=har_path.name, issue=stop)
+            for stop in check_endpoints_in_har(config, entries).stops
+        )
     return issues
 
 

@@ -31,6 +31,7 @@ from .discovery import (
     discover_restart_tests,
     resolve_modem_config,
 )
+from .endpoint_match import url_matches_endpoint
 from .golden_file import ComparisonResult, compare_golden_file
 from .loader import ServerConfig, load_server_from_modem_dir
 from .restart_evidence import RestartEvidence, restart_evidence
@@ -55,4 +56,5 @@ __all__ = [
     "run_modem_restart_test",
     "run_modem_test",
     "run_modem_test_orchestrated",
+    "url_matches_endpoint",
 ]
