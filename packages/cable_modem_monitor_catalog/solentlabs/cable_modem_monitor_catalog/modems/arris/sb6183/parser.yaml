@@ -98,6 +98,9 @@ system_info:
     - format: html_fields
       resource: /RgSwInfo.asp
       fields:
+        - field: hardware_version
+          label: Hardware Version
+          type: string
         - field: software_version
           label: Software Version
           type: string

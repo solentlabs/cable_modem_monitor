@@ -56,6 +56,11 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         metafunc.parametrize("modem_test_case", cases, ids=lambda c: c.name)
     if "modem_yaml_path" in metafunc.fixturenames:
         paths = _discover_modem_yamls()
+        # A module may declare ``applies_to_entry(modem_yaml_path)``; entries it
+        # rejects are never collected, so "not this kind of modem" is not a skip.
+        applies = getattr(metafunc.module, "applies_to_entry", None)
+        if applies is not None:
+            paths = [p for p in paths if applies(p)]
         metafunc.parametrize("modem_yaml_path", paths, ids=lambda p: str(p.relative_to(CATALOG_MODEMS_PATH)))
     if "parser_yaml_path" in metafunc.fixturenames:
         paths = _discover_parser_yamls()

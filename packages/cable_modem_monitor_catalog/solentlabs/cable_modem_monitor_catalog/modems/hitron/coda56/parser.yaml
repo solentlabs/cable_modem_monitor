@@ -55,6 +55,9 @@ upstream:
       field: power
       type: float
       unit: "dBmV"
+    - key: bandwidth
+      field: channel_width
+      type: integer
     - key: modtype
       field: modulation
       type: modulation

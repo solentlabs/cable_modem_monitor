@@ -100,6 +100,11 @@ def _forbidden_password_forms() -> list[str]:
     ]
 
 
+def applies_to_entry(modem_yaml_path: Path) -> bool:
+    """Whether the entry declares an auth block (placeholder entries awaiting HAR data do not)."""
+    return load_modem_config(modem_yaml_path).auth is not None
+
+
 def test_failed_server_capture(
     modem_yaml_path: Path,
     caplog: pytest.LogCaptureFixture,
@@ -107,14 +112,10 @@ def test_failed_server_capture(
     """Run the collector against a 401-everything server and check the log.
 
     Asserts the failure-detail invariants for every modem in the
-    catalog.
+    catalog that declares an auth block.
     """
     modem_config = load_modem_config(modem_yaml_path)
-
-    # Modems with no auth block at all (placeholder/unsupported entries
-    # awaiting HAR data) skip — there's nothing to validate.
-    if modem_config.auth is None:
-        pytest.skip("no auth block configured")
+    assert modem_config.auth is not None  # applies_to_entry collects only entries with an auth block
 
     modem_dir = modem_yaml_path.parent
     parser_yaml = modem_dir / "parser.yaml"

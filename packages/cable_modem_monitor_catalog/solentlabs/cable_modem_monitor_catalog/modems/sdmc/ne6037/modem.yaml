@@ -57,7 +57,9 @@ notes: |
   method names the operation. The login token rides as ?token= and
   the firmware's client renews it before it lapses; Core logs in again
   when a call answers msgLoginExpiredText. Lockout message states a
-  one-minute block.
+  one-minute block. The capture's only `bandwidth` key is in the Wi-Fi
+  access-point list (STATUS.getApList), so the DOCSIS channel arrays
+  carry no channel width to map.
 
 references:
   issues:

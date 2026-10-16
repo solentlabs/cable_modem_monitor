@@ -61,10 +61,18 @@ upstream:
       label: "Frequency"
       type: frequency
       unit: "Hz"
+    - field: symbol_rate
+      label: "Symbol Rate"
+      type: float
+      unit: "Msym/sec"
+      scale: 1000000 # Msym/s → Sym/s
     - field: power
       label: "Power Level"
       type: float
       unit: "dBmV"
+    - field: ranging_status
+      label: "Ranging Status"
+      type: string
   selector:
     match: "Upstream"
     type: header_text

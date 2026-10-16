@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   URL the capture lacks is a warning, since nobody presses Restart during a
   capture. `make intake-regression` reports the same gap in committed entries
   under `AUTH FIXTURE ISSUES`; none are edited or failed.
+- **Seven modems report fields their status pages already showed.** Upstream
+  channels gain symbol rate on the SB6141, SB6190 and MB7621, and ranging
+  status on the SB6141. The SB6190's downstream channels gain modulation, and
+  the SB6183 gains hardware version. Channel width is read on the Hitron
+  CODA56 and the Technicolor CGA4236 and CGA6444VF.
 
 ### Fixed
 

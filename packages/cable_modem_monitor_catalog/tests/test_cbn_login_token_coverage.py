@@ -70,11 +70,11 @@ def _is_cbn(modem_yaml_path: Path) -> bool:
     return config.auth is not None and config.auth.strategy == "form_cbn"
 
 
+applies_to_entry = _is_cbn
+
+
 def test_login_tokens_are_handled(modem_yaml_path: Path) -> None:
     """No CBN entry's firmware emits a login token the auth manager ignores."""
-    if not _is_cbn(modem_yaml_path):
-        pytest.skip("not a form_cbn entry")
-
     tokens = _login_token_set(modem_yaml_path.parent)
     if not tokens:
         pytest.skip("no CBN firmware JS in this entry's captures")

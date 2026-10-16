@@ -244,6 +244,7 @@
       "channel_id": 33,
       "channel_number": 25,
       "channel_type": "ofdm",
+      "channel_width": 189950012,
       "frequency": 264000000,
       "lock_status": "locked",
       "power": 4.2,
@@ -253,6 +254,7 @@
       "channel_id": 34,
       "channel_number": 26,
       "channel_type": "ofdm",
+      "channel_width": 109950012,
       "frequency": 822000000,
       "lock_status": "locked",
       "power": 5.0,
@@ -304,6 +306,7 @@
       "channel_id": 5,
       "channel_number": 5,
       "channel_type": "ofdma",
+      "channel_width": 35000000,
       "frequency": 46000000,
       "modulation": "QAM16",
       "power": 35.2

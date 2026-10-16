@@ -97,28 +97,36 @@
       "channel_number": 1,
       "channel_type": "atdma",
       "frequency": 17600000,
-      "power": 35.0
+      "power": 35.0,
+      "ranging_status": "Success",
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 4,
       "channel_number": 2,
       "channel_type": "atdma",
       "frequency": 36800000,
-      "power": 35.0
+      "power": 35.0,
+      "ranging_status": "Success",
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 3,
       "channel_number": 3,
       "channel_type": "atdma",
       "frequency": 30400000,
-      "power": 35.0
+      "power": 35.0,
+      "ranging_status": "Success",
+      "symbol_rate": 5120000
     },
     {
       "channel_id": 2,
       "channel_number": 4,
       "channel_type": "atdma",
       "frequency": 24000000,
-      "power": 35.0
+      "power": 35.0,
+      "ranging_status": "Success",
+      "symbol_rate": 5120000
     }
   ]
 }
