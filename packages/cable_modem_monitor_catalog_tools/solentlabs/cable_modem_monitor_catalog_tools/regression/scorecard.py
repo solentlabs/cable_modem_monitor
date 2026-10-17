@@ -12,8 +12,8 @@ from ..grading import GRADE_SEVERITY
 from .results import ModemResult, fleet_accuracy, result_status
 
 
-def build_scorecard(results: list[ModemResult]) -> dict[str, Any]:
-    """Build a JSON-serialisable scorecard for trend tracking."""
+def build_scorecard(results: list[ModemResult], detection: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Build a JSON-serialisable scorecard for trend tracking; ``detection`` is the auto-detect block, when scored."""
     matching, total, fleet_pct = fleet_accuracy(results)
     failed_count = sum(1 for r in results if r.stage_failed)
 
@@ -50,6 +50,8 @@ def build_scorecard(results: list[ModemResult]) -> dict[str, Any]:
         }
         for r in results
     ]
+    if detection is not None:
+        card["detection"] = detection
     return card
 
 

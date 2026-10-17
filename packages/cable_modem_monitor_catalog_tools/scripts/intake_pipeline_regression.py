@@ -11,6 +11,7 @@ as a fresh submission. For each modem:
 3. Compare generated golden file against committed golden file
 4. Compute field-level accuracy (matching / total committed fields)
 5. Grade detected actions against the committed modem.yaml actions
+6. Grade auto-detect against each HAR's landing response (a report section)
 
 Reports fleet-wide accuracy percentage and per-action grades so
 onboarding capability and consistency can be tracked over time. This is
@@ -53,11 +54,24 @@ from solentlabs.cable_modem_monitor_catalog_tools.regression import (
 )
 from solentlabs.cable_modem_monitor_catalog_tools.regression.ambiguities import resolve_from_committed
 from solentlabs.cable_modem_monitor_catalog_tools.regression.compare import compare_scorecards, render_comparison
+from solentlabs.cable_modem_monitor_catalog_tools.regression.detection_accuracy import (
+    DetectionResult,
+    detection_scorecard,
+    grade_har,
+    landing_captures,
+    render_detection_report,
+)
 from solentlabs.cable_modem_monitor_catalog_tools.regression.golden_compare import (
     count_fields,
     count_matching_fields,
     diff_golden_files,
 )
+from solentlabs.cable_modem_monitor_catalog_tools.regression.marker_accuracy import (
+    render_marker_report,
+    score_markers,
+)
+from solentlabs.cable_modem_monitor_core.catalog_manager import list_modems
+from solentlabs.cable_modem_monitor_core.har import load_har_json
 from solentlabs.cable_modem_monitor_core.test_harness import resolve_modem_config
 
 CATALOG_ROOT = (
@@ -572,13 +586,32 @@ def _print_grades_sections(results: list[ModemResult]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Detection accuracy
+# ---------------------------------------------------------------------------
+
+
+def run_detection_accuracy(modems: list[tuple[str, Path, Path]]) -> tuple[list[DetectionResult], list[Path]]:
+    """Grade auto-detect over every HAR given with the whole catalog's names; also return the catalog's entry paths."""
+    summaries = list_modems(CATALOG_ROOT)
+    default_hosts = {s.default_host for s in summaries}
+    results: list[DetectionResult] = []
+    for modem_id, har_path, modem_dir in modems:
+        entry = next((s for s in summaries if modem_dir in (s.path, *s.sibling_dirs)), None)
+        if entry is None:
+            continue
+        entries = load_har_json(har_path).get("log", {}).get("entries", [])
+        results.append(grade_har(modem_id, har_path.name, entries, entry, summaries, default_hosts))
+    return results, [s.path for s in summaries]
+
+
+# ---------------------------------------------------------------------------
 # Scorecard and CI summary
 # ---------------------------------------------------------------------------
 
 
-def _write_scorecard(path: Path, results: list[ModemResult]) -> None:
+def _write_scorecard(path: Path, results: list[ModemResult], detection: dict[str, Any] | None = None) -> None:
     """Write JSON scorecard to disk."""
-    scorecard = build_scorecard(results)
+    scorecard = build_scorecard(results, detection)
     path.write_text(json.dumps(scorecard, indent=2) + "\n")
     print(f"Scorecard written to {path}")
 
@@ -702,6 +735,12 @@ def main() -> None:
         results.append(r)
 
     _print_summary(results, incomplete=incomplete)
+    # Every committed HAR, including the ones the pipeline skips as incomplete:
+    # detection reads only the landing response, which an incomplete capture may hold.
+    detection_results, entry_paths = run_detection_accuracy(modems)
+    marker_scores = score_markers(landing_captures(detection_results), entry_paths)
+    print(render_detection_report(detection_results) + "\n")
+    print(render_marker_report(marker_scores, len(entry_paths)) + "\n")
     _print_auth_audit(CATALOG_ROOT)
     _write_step_summary(results)
 
@@ -709,7 +748,7 @@ def main() -> None:
         _print_comparison(args.compare, results)
 
     if args.scorecard:
-        _write_scorecard(args.scorecard, results)
+        _write_scorecard(args.scorecard, results, detection_scorecard(detection_results, marker_scores))
 
 
 if __name__ == "__main__":

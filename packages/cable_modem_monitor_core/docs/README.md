@@ -9,6 +9,7 @@
 | [AUTH_CBN_SPEC.md](AUTH_CBN_SPEC.md) | `form_cbn` — CBN AES-256-CBC protocol, session token rotation |
 | [AUTH_HNAP_SPEC.md](AUTH_HNAP_SPEC.md) | `hnap` — HNAP HMAC challenge-response protocol, HNAP_AUTH header, lockout handling |
 | [AUTH_JSON_RPC_SPEC.md](AUTH_JSON_RPC_SPEC.md) | `json_rpc` — JSON-RPC 2.0 envelope, login call, token in the query, error codes as entry values |
+| [DETECTION_SPEC.md](DETECTION_SPEC.md) | Auto-detect — host sweep, landing-page probe, name matching against the catalog |
 | [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md) | modem.yaml schema — identity, auth, session, actions |
 | [MODEM_DIRECTORY_SPEC.md](MODEM_DIRECTORY_SPEC.md) | Catalog directory structure, file roles, assembly rules |
 | [PARSING_SPEC.md](PARSING_SPEC.md) | Parsing overview — common concepts, output contract, channel types, aggregates, post-processing |

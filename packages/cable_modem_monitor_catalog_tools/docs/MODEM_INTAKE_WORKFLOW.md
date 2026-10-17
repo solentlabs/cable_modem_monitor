@@ -414,7 +414,8 @@ For each item in `enrich_result.missing`:
   in `sources.release_date`. Feeds the catalog README timeline;
   entries without it are silently omitted from that rendering.
 - **isps**: web search `"{model} compatible ISPs"`
-- **default_host**: usually 192.168.100.1 for DOCSIS modems
+- **default_host**: taken from the HAR (the host most requests went to);
+  confirm it is the modem's own address
 - **brands**: user-visible box branding. Check firmware brand fields in
   the HAR (e.g. `customer`) and retail listings. Entries become
   manufacturer-dropdown buckets and must carry a source.

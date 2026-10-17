@@ -19,8 +19,9 @@ with authenticated polling.
 │ Step 1a: Select manufacturer                    │
 │   [Technicolor           ▼]                     │
 │                                                 │
-│   Options: "All", plus one per manufacturer     │
-│   in the catalog. "All" shows every modem.      │
+│   Options: "Auto-detect", "All", plus one per   │
+│   manufacturer in the catalog. "All" shows      │
+│   every modem. See § Auto-detect.               │
 │                                                 │
 │   Source: Core's list_modems(catalog_path)   │
 │   returns all modem summaries. HA filters       │
@@ -134,6 +135,59 @@ CI fails when it is stale.
 **Physical vs logical:** The catalog is organized by manufacturer on disk
 (`modems/{mfr}/{model}/`). The dropdown presents a logical view — users
 see brands and aliases without needing to know the directory structure.
+
+### Auto-detect
+
+"Auto-detect" is the first Step 1a option, above "All". It narrows the
+modem choice; it never makes it. The user confirms every result.
+Contract: Core's
+[DETECTION_SPEC.md](../../../packages/cable_modem_monitor_core/docs/DETECTION_SPEC.md).
+
+```mermaid
+flowchart TD
+    A[Auto-detect chosen] --> B[Sweep catalog default_host addresses]
+    B -->|nothing answers| N[No-match page]
+    B -->|one or more answer| C[Match landing pages]
+    C -->|1 model| D[Confirm page]
+    C -->|2 to 4 models| E[Pick list]
+    C -->|5+ models, or only maker or brand names| F[Step 1b filtered to the matched names]
+    C -->|nothing named| N
+    D -->|Yes| V[Step 2 variant, if more than one]
+    D -->|No| N
+    E --> V
+    F --> V
+    N --> M[Manual selection with host prefilled]
+```
+
+**Confirm page.** Names the modem and the address that answered, and
+quotes the page text that matched (`Detection.match.matched`). Yes continues to
+Step 2; No opens the no-match page.
+
+**Pick list.** The matched models, ending in the existing variant
+question. When more than one address produced a match, each row names its
+address; otherwise rows do not.
+
+**Matched names only.** When the page names a maker or brand but no
+model, or five or more models, Step 1a is skipped and Step 1b opens
+filtered to that name. When it names several, Step 1a lists only those.
+
+**Entity prefix and channel identity.** Asked on the confirm and pick
+pages with the same fields as Step 1b, which asks them itself on the
+filtered route.
+
+**Host.** The address that answered carries to Step 3. The user is not
+asked for a host before detection.
+
+**No-match page.** Shown when nothing answers, nothing is named, or the
+user rejects the confirm page. It says the modem was not identified,
+which can mean it is not supported, shows what the device answered
+(`Detection.observation`), and offers:
+
+- continue to manual selection, host prefilled with the first address
+  that answered, else the modem default;
+- the supported modem list, linked through the flow's `{catalog_url}`
+  description placeholder;
+- [requesting support for a modem](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md).
 
 ### Step 2: Variant (conditional)
 

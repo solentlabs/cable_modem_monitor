@@ -15,6 +15,7 @@ from .signals import CollectorSignal
 
 if TYPE_CHECKING:
     from ..auth.base import LoginPageDriftCondition
+    from ..detection import Observation
 
 
 class EventLevel(IntEnum):
@@ -637,6 +638,39 @@ class ResourceDecodeError:
 
 
 # ---------------------------------------------------------------------------
+# Phase: detection (before any modem is chosen, so events carry a host)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class DetectionProbeResult:
+    """One host's credential-free probe. Level is internally computed.
+
+    INFO when the host answered, DEBUG when it did not: most catalog
+    addresses are silent on any given network.
+    """
+
+    host: str
+    observation: Observation | None
+    reason: str | None
+    level: EventLevel = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.level = EventLevel.INFO if self.observation is not None else EventLevel.DEBUG
+
+
+@dataclass
+class DetectionMatched:
+    """The catalog names an answering host's landing page carries."""
+
+    host: str
+    models: list[str]
+    buckets: list[str]
+    matched: list[str]
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+# ---------------------------------------------------------------------------
 # Union type — all orchestration events
 # ---------------------------------------------------------------------------
 
@@ -692,4 +726,6 @@ type OrchestratorEvent = (
     | ActionPreFetchFailed
     | ResourceFetched
     | ResourceDecodeError
+    | DetectionProbeResult
+    | DetectionMatched
 )

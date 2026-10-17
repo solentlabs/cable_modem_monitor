@@ -29,6 +29,7 @@ from .analysis.actions.json_rpc import restart_ambiguity
 from .analysis.ambiguity import Ambiguity, corroborate
 from .analysis.auth import AuthDetail, detect_auth
 from .analysis.auth.patterns import fleet_password_names
+from .analysis.default_host import detect_default_host
 from .analysis.format import detect_sections
 from .analysis.js_endpoints import detect_uncalled_json_rpc_methods, detect_uncaptured_endpoints
 from .analysis.login_page_detection import detect_login_page_hard_stops
@@ -55,6 +56,7 @@ class AnalysisResult:
     unread_resources: list[UnreadResource] = field(default_factory=list)
     ambiguities: list[Ambiguity] = field(default_factory=list)
     timing: RequestTiming | None = None
+    default_host: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict matching the MCP tool output contract."""
@@ -70,6 +72,8 @@ class AnalysisResult:
             # Informational, never a gate — every HAR has unread endpoints.
             "unread_resources": [resource.to_dict() for resource in self.unread_resources],
         }
+        if self.default_host:
+            result["default_host"] = self.default_host
         if self.timing is not None:
             result["timing"] = self.timing.to_dict()
         if self.core_gaps:
@@ -189,6 +193,7 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
         unread_resources=unread,
         ambiguities=ambiguities,
         timing=timing,
+        default_host=detect_default_host(entries),
     )
 
 
@@ -218,6 +223,7 @@ def _analyze_json_rpc(
         warnings=warnings,
         unread_resources=unread,
         ambiguities=ambiguities,
+        default_host=detect_default_host(entries),
     )
 
 

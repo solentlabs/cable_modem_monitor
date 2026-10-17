@@ -1165,6 +1165,12 @@ underlying exchange. Strategies do interact with login pages during
 *execution* (extracting hidden fields, nonces, salts); the ban is on
 using them to choose the strategy.
 
+Matching a device against signals observed in catalog captures is not
+auth discovery. It reads no login mechanics and selects no strategy. It
+can only point at entries that already exist, and the strategy always
+comes from the entry the user confirms. See
+[Detection narrows, never decides](#detection-narrows-never-decides).
+
 ---
 
 ### `AuthResult.auth_context` is typed
@@ -1894,7 +1900,7 @@ later as a confusing discovery miss.
 
 ---
 
-### No fallback or auto-detection
+### No generic fallback
 
 **Decision:** If no `modem.yaml` matches, the integration cannot help.
 There is no generic scraper fallback.
@@ -1903,6 +1909,35 @@ There is no generic scraper fallback.
 produces plausible-looking wrong data. The answer to an unsupported
 modem is a HAR capture and a catalog entry, which is a path that ends
 in real support rather than a permanent approximation.
+
+---
+
+### Detection narrows, never decides
+
+**Decision:** Auto-detect may narrow the catalog choice to the entries
+a device could be. It sends credential-free `GET /` requests to the
+`default_host` addresses the catalog records, follows redirects, and
+matches the response text against the manufacturer, model, aliases and
+brands the catalog holds. Matching is exact and returns every hit, with
+no scoring, weighting or threshold. The user confirms the result, and no
+hit falls through to the manual flow unchanged. Contract:
+[DETECTION_SPEC.md](DETECTION_SPEC.md).
+
+**Rationale:** Narrowing uses only data already in the catalog, so
+nothing new is generated or maintained and nothing can drift from the
+catalog. A shortlist the user confirms cannot produce the
+plausible-looking wrong data the generic fallback was rejected for. A
+failed match points the user to the supported-modem list and the
+support-request path (HAR capture), and attempts no fallback. Detection
+signals beyond page text need a gap measured in the detection accuracy
+report ([INTAKE_PIPELINE.md § Detection Accuracy](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#detection-accuracy)), not an
+anticipated one.
+
+Narrowing never removes a modem the device could be. An entry stays
+unless the catalog shows it cannot present what the device showed, and an
+entry with no capture is never removed. A signal that has removed a real
+entry in the report only orders the candidates
+([INTAKE_PIPELINE.md § Marker accuracy](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#marker-accuracy)).
 
 ---
 

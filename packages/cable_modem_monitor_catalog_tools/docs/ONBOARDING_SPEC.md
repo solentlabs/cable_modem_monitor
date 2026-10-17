@@ -1518,7 +1518,8 @@ can never call an endpoint unread that the config in fact reads.
 
 Hardware metadata, branding, and ISP information are not present in the
 HAR. The `enrich_metadata` MCP tool handles the inferrable subset:
-`default_host` from HAR request URLs, `hardware.docsis_version` from
+`default_host` from HAR request URLs (the host most requests went to, as
+`analyze_har` reports it), `hardware.docsis_version` from
 OFDM/OFDMA channel presence. It reports what was inferred, what's still
 missing, and any conflicts with existing config. The LLM fills remaining
 gaps by searching the web using the manufacturer and model as search terms.
@@ -1533,7 +1534,7 @@ gaps by searching the web using the manufacturer and model as search terms.
 | `brands` | User-visible brand names from the box or retail listings (e.g., SB8200 → "Surfboard", the CommScope-made G54 → "Arris"). Also check firmware brand fields in the HAR (e.g., `customer`). Brands become manufacturer-dropdown choices and appear in the model line's parenthetical, so entries must be names users actually see, and must be sourced. | Omit if no branding found |
 | `model_aliases` | Alternate user-facing model names only — rebadges, regional variants, and sticker codes users encounter. Shown in the model line's parenthetical. Firmware-internal `product`/platform codes do NOT belong here — they stay in the HAR as evidence. If the name is a different product users would purchase and search for, create a separate catalog entry instead. See `MODEM_YAML_SPEC.md` § Aliases vs Separate Entries. | Omit if no aliases found |
 | `isps` | Search "{model} ISP" or "{model} compatible". Also check the GitHub issue — contributors often mention their ISP. | `["Various"]` if unknown |
-| `default_host` | Most cable modems use `192.168.100.1`. Some (Compal, some gateways) use `10.0.0.1` or `192.168.0.1`. Check modem documentation if contributor didn't provide it. | `"192.168.100.1"` |
+| `default_host` | Taken from the HAR: the host most requests went to. Confirm it is the modem's own address, since a capture made through a forward or proxy names another. Some modems (Compal, some gateways) use `10.0.0.1` or `192.168.0.1`; check modem documentation if the HAR is unclear. | `"192.168.100.1"`, only when the HAR names no host |
 
 #### Evidence sources (ranked by reliability)
 
@@ -1815,6 +1816,7 @@ detection, format detection, and field mapping extraction.
 {
   "transport": "http",
   "confidence": "high",
+  "default_host": "192.168.100.1",
   "auth": {
     "strategy": "form",
     "fields": { "action": "/goform/login", "...": "..." }

@@ -763,7 +763,11 @@ class ModemSummary:
         auth_strategy: Auth strategy of the default variant. For
             multi-variant modems, the config flow loads variant-specific
             auth strategy in Step 2.
+        transport: Transport of the primary directory ("http", "hnap",
+            "cbn" or "json_rpc").
         path: Filesystem path to the modem directory in the catalog.
+        sibling_dirs: Other catalog directories sharing this modem's
+            (manufacturer, model) identity under a different transport.
     """
 
     manufacturer: str
@@ -774,7 +778,9 @@ class ModemSummary:
     status: str
     default_host: str
     auth_strategy: str
+    transport: str
     path: Path
+    sibling_dirs: list[Path]
 ```
 
 ### Catalog Manager
@@ -785,16 +791,22 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
 
     Reads identity fields from each modem.yaml (and modem-{variant}.yaml)
     in the catalog directory. Returns a flat list suitable for config flow
-    dropdowns, search, or filtering.
+    dropdowns, search, or filtering. Directories sharing a
+    (manufacturer, model) identity, case-insensitive, collapse into one
+    summary; the first by path is primary and the rest are its
+    sibling_dirs. Status is the aggregate across them: confirmed when any
+    variant is.
 
     The consumer owns the UI pattern — dropdowns, typeahead, flat list.
     This API returns everything; the consumer filters client-side.
+    Auto-detect (DETECTION_SPEC.md) reads these summaries to match a
+    device's landing page.
 
     Args:
         catalog_path: Root of the catalog modems directory.
 
     Returns:
-        List of ModemSummary, one per modem (default variant).
+        List of ModemSummary, one per unique (manufacturer, model).
     """
 ```
 
