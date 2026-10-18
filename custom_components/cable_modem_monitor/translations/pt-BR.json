@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Monitor de Modem a Cabo",
-        "description": "Selecione um fabricante ou escolha 'Todos'.",
+        "description": "Selecione um fabricante, escolha 'Todos' ou escolha 'Auto-detect' para procurar seu modem na rede.",
         "data": {
           "manufacturer": "Fabricante"
         }
@@ -56,6 +56,38 @@
           "username": "Usuário",
           "password": "Senha"
         }
+      },
+      "detect_confirm": {
+        "title": "Modem encontrado",
+        "description": "O Auto-detect encontrou **{model}** em {host}.\n\nO Auto-detect apenas reduz as opções. Confirme que este é o seu modem.",
+        "data": {
+          "choice": "Este é o seu modem?",
+          "entity_prefix": "Prefixo de Entity ID",
+          "channel_identity": "Nomenclatura de canais"
+        },
+        "data_description": {
+          "choice": "Escolha a primeira opção para continuar. A segunda mostra outras correspondências prováveis da busca e a terceira abre a lista completa de fabricantes.",
+          "entity_prefix": "Adiciona o nome do modelo ou IP aos Entity IDs. Necessário ao monitorar múltiplos modems.",
+          "channel_identity": "Número do canal nomeia as entidades pela posição da linha no modem (estável entre reinicializações). ID do canal usa o ID de canal DOCSIS (corresponde ao diagnóstico do provedor, mas pode mudar ao reiniciar)."
+        }
+      },
+      "detect_pick": {
+        "title": "Modems encontrados",
+        "description": "A página que respondeu menciona mais de um modelo. Escolha o seu. Modelos marcados com * não foram verificados.",
+        "data": {
+          "model": "Modelo do Modem",
+          "entity_prefix": "Prefixo de Entity ID",
+          "channel_identity": "Nomenclatura de canais"
+        },
+        "data_description": {
+          "model": "Selecione o modelo do seu modem na lista.",
+          "entity_prefix": "Adiciona o nome do modelo ou IP aos Entity IDs. Necessário ao monitorar múltiplos modems.",
+          "channel_identity": "Número do canal nomeia as entidades pela posição da linha no modem (estável entre reinicializações). ID do canal usa o ID de canal DOCSIS (corresponde ao diagnóstico do provedor, mas pode mudar ao reiniciar)."
+        }
+      },
+      "no_match": {
+        "title": "Modem não identificado",
+        "description": "O Auto-detect não identificou seu modem. Isso pode significar que ele ainda não é compatível.\n\nO que respondeu:\n\n{observed}\n\nEscolha o seu modem manualmente a seguir. Consulte a [lista de modems compatíveis]({catalog_url}) ou [solicite suporte para o seu modem]({request_url})."
       }
     },
     "error": {

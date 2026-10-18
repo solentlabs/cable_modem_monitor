@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Cable Modem Monitor",
-        "description": "选择制造商或选择「全部」。",
+        "description": "选择制造商、选择「全部」，或选择「Auto-detect」在网络中查找您的调制解调器。",
         "data": {
           "manufacturer": "制造商"
         }
@@ -56,6 +56,38 @@
           "username": "用户名",
           "password": "密码"
         }
+      },
+      "detect_confirm": {
+        "title": "已找到调制解调器",
+        "description": "Auto-detect 在 {host} 找到了 **{model}**。\n\nAuto-detect 只会缩小选择范围。请确认这是您的调制解调器。",
+        "data": {
+          "choice": "这是您的调制解调器吗？",
+          "entity_prefix": "Entity ID 前缀",
+          "channel_identity": "信道命名"
+        },
+        "data_description": {
+          "choice": "选择第一项继续。第二项列出搜索中其他可能的匹配项，第三项打开完整的制造商列表。",
+          "entity_prefix": "将型号名称或 IP 添加到实体 ID。监控多个调制解调器时必填。",
+          "channel_identity": "信道编号根据调制解调器中的行位置命名实体（重启后保持稳定）。信道 ID 使用 DOCSIS 信道 ID（与 ISP 诊断一致，但重启后可能改变）。"
+        }
+      },
+      "detect_pick": {
+        "title": "找到的调制解调器",
+        "description": "响应的页面提到了多个型号。请选择您的型号。标有 * 的型号尚未验证。",
+        "data": {
+          "model": "调制解调器型号",
+          "entity_prefix": "Entity ID 前缀",
+          "channel_identity": "信道命名"
+        },
+        "data_description": {
+          "model": "从列表中选择您的调制解调器型号。",
+          "entity_prefix": "将型号名称或 IP 添加到实体 ID。监控多个调制解调器时必填。",
+          "channel_identity": "信道编号根据调制解调器中的行位置命名实体（重启后保持稳定）。信道 ID 使用 DOCSIS 信道 ID（与 ISP 诊断一致，但重启后可能改变）。"
+        }
+      },
+      "no_match": {
+        "title": "未能识别调制解调器",
+        "description": "Auto-detect 未能识别您的调制解调器。这可能意味着它尚未受支持。\n\n响应内容：\n\n{observed}\n\n接下来请手动选择您的调制解调器。查看[支持的调制解调器列表]({catalog_url})，或[申请支持您的调制解调器]({request_url})。"
       }
     },
     "error": {

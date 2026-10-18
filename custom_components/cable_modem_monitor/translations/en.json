@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Cable Modem Monitor",
-        "description": "Select a manufacturer or choose 'All'.",
+        "description": "Select a manufacturer, choose 'All', or choose 'Auto-detect' to look for your modem on the network.",
         "data": {
           "manufacturer": "Manufacturer"
         }
@@ -56,6 +56,38 @@
           "username": "Username",
           "password": "Password"
         }
+      },
+      "detect_confirm": {
+        "title": "Modem Found",
+        "description": "Auto-detect found **{model}** at {host}.\n\nAuto-detect only narrows the choice. Confirm that this is your modem.",
+        "data": {
+          "choice": "Is this your modem?",
+          "entity_prefix": "Entity ID Prefix",
+          "channel_identity": "Channel Naming"
+        },
+        "data_description": {
+          "choice": "Choose the first option to continue. The second lists the other likely matches from the search, and the third opens the full manufacturer list.",
+          "entity_prefix": "Adds model name or IP to entity IDs. Required when monitoring multiple modems.",
+          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
+        }
+      },
+      "detect_pick": {
+        "title": "Modems Found",
+        "description": "The page that answered mentions more than one model. Choose yours. Models marked * are unverified.",
+        "data": {
+          "model": "Modem Model",
+          "entity_prefix": "Entity ID Prefix",
+          "channel_identity": "Channel Naming"
+        },
+        "data_description": {
+          "model": "Select your modem model from the list.",
+          "entity_prefix": "Adds model name or IP to entity IDs. Required when monitoring multiple modems.",
+          "channel_identity": "Channel Number names entities after the modem's row position (stable across reboots). Channel ID uses the DOCSIS Channel ID (matches ISP diagnostics but can change on reboot)."
+        }
+      },
+      "no_match": {
+        "title": "Modem Not Identified",
+        "description": "Auto-detect did not identify your modem. That can mean it is not supported yet.\n\nWhat answered:\n\n{observed}\n\nChoose your modem yourself next. See the [supported modem list]({catalog_url}), or [request support for your modem]({request_url})."
       }
     },
     "error": {

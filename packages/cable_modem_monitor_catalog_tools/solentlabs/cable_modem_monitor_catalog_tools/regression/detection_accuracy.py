@@ -2,26 +2,36 @@
 
 Feeds ``intake_pipeline_regression.py``. The landing response is the
 HAR's recorded ``GET /`` followed through recorded redirects; it goes
-through Core's ``match_page()`` with the catalog's own names, so no HAR
-teaches the matcher about itself. See INTAKE_PIPELINE.md § Detection
-Accuracy.
+through Core's ``match_page()``, ``read_reply()`` and ``narrow()`` with
+the catalog's own names and config signals, so no HAR teaches the matcher
+about itself. See INTAKE_PIPELINE.md § Detection Accuracy.
 """
 
 from __future__ import annotations
 
 import base64
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
 from solentlabs.cable_modem_monitor_core.catalog_manager import ModemSummary
-from solentlabs.cable_modem_monitor_core.detection import Observation, PageMatch, describe_response, match_page
+from solentlabs.cable_modem_monitor_core.detection import (
+    Observation,
+    PageMatch,
+    Reply,
+    describe_response,
+    match_page,
+    narrow,
+    read_reply,
+)
 
 from .marker_accuracy import MARKERS, Capture, HarScore
 
 OUTCOMES = ("EXACT", "MAKER_ONLY", "NO_HIT", "WRONG", "NOT_TESTABLE")
+ENTRY_OUTCOMES = ("MATCHED", "RANKED", "UNRANKED", "LOST", "NOT_TESTABLE")
+_TIER_OUTCOME = {1: "MATCHED", 2: "RANKED", 3: "UNRANKED"}
 
 # Matches DETECTION_SPEC.md § Sweep: redirects followed, limit 5.
 _MAX_REDIRECTS = 5
@@ -35,6 +45,9 @@ class LandingResponse:
     status: int
     headers: dict[str, str]
     body: bytes
+    # Every response of the redirect chain as (url, headers, body), and the cookie names the chain set.
+    hops: tuple[tuple[str, dict[str, str], bytes], ...] = ()
+    cookies: tuple[str, ...] = ()
 
 
 @dataclass
@@ -48,6 +61,11 @@ class DetectionResult:
     match: PageMatch | None = None
     observation: Observation | None = None
     entry_path: Path | None = None
+    entry_outcome: str = "NOT_TESTABLE"
+    reply: Reply | None = None
+    candidates: int = 0
+    tier_1: int = 0
+    declared: list[str] = field(default_factory=list)
 
 
 def _is_root_get(entry: dict[str, Any]) -> bool:
@@ -81,6 +99,7 @@ def landing_response(entries: list[dict[str, Any]]) -> LandingResponse | None:
         return None
 
     visited = {id(current)}
+    chain = [current]
     for _ in range(_MAX_REDIRECTS):
         url = current["request"]["url"]
         location = _location(current["response"])
@@ -101,6 +120,7 @@ def landing_response(entries: list[dict[str, Any]]) -> LandingResponse | None:
             break
         visited.add(id(following))
         current = following
+        chain.append(current)
 
     response = current["response"]
     return LandingResponse(
@@ -108,7 +128,18 @@ def landing_response(entries: list[dict[str, Any]]) -> LandingResponse | None:
         status=response.get("status", 0),
         headers=_header_map(response),
         body=_body(response),
+        hops=tuple((e["request"]["url"], _header_map(e["response"]), _body(e["response"])) for e in chain),
+        cookies=tuple(dict.fromkeys(name for e in chain for name in _cookie_names(e["response"]))),
     )
+
+
+def _cookie_names(response: dict[str, Any]) -> list[str]:
+    """Names of the cookies one recorded response sets, from its Set-Cookie headers and its cookies list."""
+    names = [
+        h["value"].split("=", 1)[0].strip() for h in response.get("headers", []) if h["name"].lower() == "set-cookie"
+    ]
+    names += [c["name"] for c in response.get("cookies", []) if c.get("name")]
+    return [name for name in names if name]
 
 
 def grade_detection(match: PageMatch | None, entry: ModemSummary) -> str:
@@ -142,8 +173,22 @@ def grade_har(
 
     observation, text = describe_response(landing.url, landing.status, landing.headers, landing.body)
     match = match_page(text, summaries)
+    reply = read_reply(landing.hops, landing.cookies)
+    candidates = narrow(summaries, match, reply, observation)
+    own = next((c for c in candidates if c.summary.path == entry.path), None)
     return DetectionResult(
-        modem, har_file, grade_detection(match, entry), on_default_host, match, observation, entry.path
+        modem,
+        har_file,
+        grade_detection(match, entry),
+        on_default_host,
+        match,
+        observation,
+        entry.path,
+        entry_outcome=_TIER_OUTCOME[own.tier] if own else "LOST",
+        reply=reply,
+        candidates=len(candidates),
+        tier_1=sum(1 for c in candidates if c.tier == 1),
+        declared=[*entry.landing_signals.paths, *entry.landing_signals.cookies],
     )
 
 
@@ -166,15 +211,43 @@ def _describe_observation(observation: Observation) -> str:
     return ", ".join(parts)
 
 
+def _describe_reply(result: DetectionResult) -> str:
+    reply = result.reply
+    assert reply is not None
+    server = f", server: {reply.server}" if reply.server else ""
+    cookies = f", cookies: {', '.join(reply.cookies)}" if reply.cookies else ""
+    return f"the reply points at {len(reply.paths)} paths{cookies}{server}"
+
+
 def render_detection_report(results: list[DetectionResult]) -> str:
-    """Render the report: the five counts, each WRONG with its matched names, each NO_HIT with its observation."""
-    tally = Counter(r.outcome for r in results)
+    """Render the report: entry outcomes, name outcomes, each LOST and UNRANKED entry, each WRONG and NO_HIT page."""
+    names = Counter(r.outcome for r in results)
+    entries = Counter(r.entry_outcome for r in results)
     reached = sum(1 for r in results if r.on_default_host)
+    graded = [r for r in results if r.entry_outcome != "NOT_TESTABLE"]
     lines = [
-        f"DETECTION ACCURACY — auto-detect vs landing response ({len(results)} HARs, report only):",
-        "  " + "  ".join(f"{outcome} {tally.get(outcome, 0)}" for outcome in OUTCOMES),
+        f"DETECTION ACCURACY — auto-detect vs landing response ({len(results)} HARs):",
+        "  Entry outcomes: " + "  ".join(f"{outcome} {entries.get(outcome, 0)}" for outcome in ENTRY_OUTCOMES),
+        "  Name outcomes: " + "  ".join(f"{outcome} {names.get(outcome, 0)}" for outcome in OUTCOMES),
         f"  Captured on a catalog default_host (the sweep would reach): {reached} of {len(results)}",
     ]
+    if graded:
+        lines.append(
+            f"  Candidates per graded HAR: mean {sum(r.candidates for r in graded) / len(graded):.1f},"
+            f" tier 1 mean {sum(r.tier_1 for r in graded) / len(graded):.1f}"
+        )
+
+    lost = [r for r in results if r.entry_outcome == "LOST"]
+    lines.append("  LOST: none" if not lost else "  LOST (a real modem removed, fails the regression):")
+    for r in lost:
+        assert r.observation is not None
+        lines.append(f"    {r.modem} ({r.har_file}): {_describe_observation(r.observation)}")
+
+    unranked = [r for r in results if r.entry_outcome == "UNRANKED"]
+    lines.append("  UNRANKED: none" if not unranked else "  UNRANKED (nothing the config declares was in the reply):")
+    for r in unranked:
+        declared = ", ".join(r.declared) or "nothing"
+        lines.append(f"    {r.modem} ({r.har_file}): declared {declared}; {_describe_reply(r)}")
 
     wrong = [r for r in results if r.outcome == "WRONG"]
     lines.append("  WRONG: none" if not wrong else "  WRONG:")
@@ -202,6 +275,7 @@ def landing_captures(results: list[DetectionResult]) -> list[Capture]:
 def detection_scorecard(results: list[DetectionResult], scores: list[HarScore]) -> dict[str, Any]:
     """The scorecard's detection block: outcome counts, and per HAR its outcome and each marker's two numbers."""
     tally = Counter(r.outcome for r in results)
+    entry_tally = Counter(r.entry_outcome for r in results)
     by_label = {s.label: s for s in scores}
     hars = []
     for r in results:
@@ -211,6 +285,8 @@ def detection_scorecard(results: list[DetectionResult], scores: list[HarScore]) 
                 "modem": r.modem,
                 "har_file": r.har_file,
                 "outcome": r.outcome,
+                "entry_outcome": r.entry_outcome,
+                "candidates": r.candidates,
                 "markers": (
                     {
                         marker: {
@@ -224,4 +300,8 @@ def detection_scorecard(results: list[DetectionResult], scores: list[HarScore]) 
                 ),
             }
         )
-    return {"summary": {outcome: tally.get(outcome, 0) for outcome in OUTCOMES}, "hars": hars}
+    return {
+        "summary": {outcome: tally.get(outcome, 0) for outcome in OUTCOMES},
+        "entry_summary": {outcome: entry_tally.get(outcome, 0) for outcome in ENTRY_OUTCOMES},
+        "hars": hars,
+    }

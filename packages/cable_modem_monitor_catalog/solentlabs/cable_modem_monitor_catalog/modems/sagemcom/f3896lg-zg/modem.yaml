@@ -31,6 +31,10 @@ hardware:
   chipset: "Broadcom BCM3390"
   release_date: "2022-10"
 
+detection:
+  http_headers:
+    - "lighttpd"
+
 status: confirmed
 
 sources:

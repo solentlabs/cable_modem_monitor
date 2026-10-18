@@ -71,6 +71,7 @@ for the contract.
 | [Actions](#actions) | Restart and logout — one action type per transport |
 | [Hardware](#hardware) | DOCSIS version, hw_version, firmware, chipset |
 | [Health](#health) | Health probe configuration (fragile modems) |
+| [Detection](#detection) | `Server` products Auto-detect ranks by |
 | [Metadata](#metadata) | Status, attribution, sources, ISPs, notes |
 | [Validation Rules](#validation-rules) | Transport constraints, required fields, consistency checks |
 | [Multi-Variant Modems](#multi-variant-modems) | Naming, shared files, assembly |
@@ -126,6 +127,11 @@ health:
   http_probe: false      # disable TCP/HEAD probes for fragile modems
   supports_head: false   # modem rejects HTTP HEAD (HEAD probe skipped, no fallback)
   supports_icmp: true    # hint; auto-detection overrides at setup
+
+# Detection (written by the intake pipeline)
+detection:
+  http_headers:
+    - "ARRIS Server"
 
 # Metadata
 status: confirmed
@@ -260,6 +266,8 @@ seconds.
 Override for slow modems — some cable modems take 12-20 seconds to
 render data pages, particularly those with older chipsets or HTTPS
 endpoints.
+
+---
 
 ---
 
@@ -1643,6 +1651,32 @@ overrides at setup → user options (highest priority).
 
 Most modems omit this section — defaults are correct. Only declare it
 when a modem is known to be fragile.
+
+---
+
+## Detection
+
+```yaml
+detection:
+  http_headers:
+    - "ARRIS Server"
+    - "micro_httpd"
+```
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `detection.http_headers` | list[string] | no | The `Server` header products (the text before `/`) the entry's landing replies showed. Auto-detect ranks the entry higher when the device's `Server` is listed. It never removes an entry. |
+
+The intake pipeline writes the field from the entry's own HARs
+([INTAKE_PIPELINE.md § Detection Headers](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#detection-headers))
+and CI fails when it is stale; it is never hand-authored. An absent field
+means the entry has no recorded `Server` to rank by.
+
+Auto-detect's other evidence is not stored here. It is read from fields
+this spec already defines: `auth.cookie_name`, `login_page`,
+`login_endpoint`, `action` and the like, plus `parser.yaml` resources
+([DETECTION_SPEC.md § Signals](DETECTION_SPEC.md#signals)). `detection`
+is read from the entry's primary `modem.yaml`, like the identity fields.
 
 ---
 

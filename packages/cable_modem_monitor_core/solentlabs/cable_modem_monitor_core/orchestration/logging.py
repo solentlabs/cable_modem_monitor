@@ -58,6 +58,7 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         ConnectivityBackoffReset,
         ConnectivityFailureDetected,
         CounterReset,
+        DetectionChosen,
         DetectionMatched,
         DetectionProbeResult,
         HealthBackoffCleared,
@@ -402,8 +403,12 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         return (
             f"Detection match [{event.host}] — page names: {named}"
             f" (models: {', '.join(event.models) or 'none'};"
-            f" makers and brands: {', '.join(event.buckets) or 'none'})"
+            f" makers and brands: {', '.join(event.buckets) or 'none'};"
+            f" signals: {', '.join(event.signals) or 'none'}; candidates: {event.candidates})"
         )
+
+    if isinstance(event, DetectionChosen):
+        return f"Detection chosen — {event.outcome}, host: {event.host or 'none'}, selected: {event.selected or 'none'}"
 
     # Defensive — all event types must be handled above.
     return repr(event)

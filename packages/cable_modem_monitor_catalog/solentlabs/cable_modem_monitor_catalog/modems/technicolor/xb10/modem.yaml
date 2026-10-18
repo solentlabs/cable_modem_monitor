@@ -43,6 +43,10 @@ hardware:
   chipset: "Broadcom BCM33941UD"
   release_date: "2025"
 
+detection:
+  http_headers:
+    - "Xfinity Broadband Router Server"
+
 status: confirmed
 
 sources:

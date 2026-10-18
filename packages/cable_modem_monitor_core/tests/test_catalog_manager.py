@@ -12,6 +12,7 @@ from solentlabs.cable_modem_monitor_core.catalog_manager import (
     list_modems,
     list_variants,
 )
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import LandingSignals
 
 
 def _write_modem_yaml(path: Path, data: dict[str, Any]) -> None:
@@ -566,3 +567,92 @@ class TestVariantInfo:
         assert info.isps == []
         assert info.notes is None
         assert info.status == "awaiting_verification"
+
+
+_PARSER_YAML = """\
+downstream:
+  format: table
+  resource: /status.html
+  tables:
+    - selector:
+        type: header_text
+        match: Downstream
+      row_start: 1
+      columns:
+        - index: 0
+          field: channel_id
+          type: integer
+      channel_type:
+        fixed: qam
+"""
+
+
+def _identity(model: str, **extra: Any) -> dict[str, Any]:
+    return {
+        "manufacturer": "Solent Labs",
+        "model": model,
+        "transport": "http",
+        "default_host": "192.168.100.1",
+        "status": "confirmed",
+        **extra,
+    }
+
+
+class TestDetectionFields:
+    """list_modems() fills the fields Auto-detect reads (DETECTION_SPEC.md § Signals)."""
+
+    def test_signals_come_from_the_auth_config_and_the_parser_resources(self, tmp_path: Path) -> None:
+        entry = tmp_path / "solent" / "t100"
+        _write_modem_yaml(
+            entry,
+            _identity("T100", auth={"strategy": "form", "action": "/login.cgi", "cookie_name": "SID"}),
+        )
+        (entry / "parser.yaml").write_text(_PARSER_YAML)
+
+        summary = list_modems(tmp_path)[0]
+
+        assert summary.landing_signals.paths == ("/login.cgi", "/status.html")
+        assert summary.landing_signals.cookies == ("SID",)
+
+    def test_signals_and_strategies_span_every_variant_and_sibling_directory(self, tmp_path: Path) -> None:
+        primary = tmp_path / "solent" / "t100"
+        _write_modem_yaml(primary, _identity("T100", auth={"strategy": "none"}))
+        (primary / "modem-v2.yaml").write_text(
+            yaml.dump(_identity("T100", auth={"strategy": "form", "action": "/a.cgi", "cookie_name": "A"}))
+        )
+        sibling = tmp_path / "solent" / "t100-cbn"
+        _write_modem_yaml(sibling, _identity("T100", transport="cbn", auth={"strategy": "form_cbn"}))
+
+        summary = list_modems(tmp_path)[0]
+
+        assert summary.auth_strategies == ["none", "form", "form_cbn"]
+        assert summary.landing_signals.paths == ("/a.cgi", "/common_page/login.html")
+        assert summary.landing_signals.cookies == ("A", "sessionToken")
+
+    def test_detection_headers_is_read_from_modem_yaml(self, tmp_path: Path) -> None:
+        _write_modem_yaml(
+            tmp_path / "solent" / "t100",
+            _identity("T100", detection={"http_headers": ["micro_httpd", "ARRIS Server"]}),
+        )
+
+        assert list_modems(tmp_path)[0].server_headers == ["micro_httpd", "ARRIS Server"]
+
+    def test_entry_without_detection_data_has_empty_fields(self, tmp_path: Path) -> None:
+        _write_modem_yaml(tmp_path / "solent" / "t100", _identity("T100"))
+
+        summary = list_modems(tmp_path)[0]
+
+        assert summary.landing_signals == LandingSignals()
+        assert summary.server_headers == []
+        assert summary.auth_strategies == ["none"]
+
+    def test_unreadable_auth_or_parser_costs_the_signals_not_the_entry(self, tmp_path: Path) -> None:
+        entry = tmp_path / "solent" / "t100"
+        _write_modem_yaml(entry, _identity("T100", auth={"strategy": "not_a_strategy"}))
+        (entry / "parser.yaml").write_text("downstream: [")
+
+        summary = list_modems(tmp_path)[0]
+
+        assert summary.model == "T100"
+        assert summary.landing_signals == LandingSignals()
+        assert summary.auth_strategies == ["not_a_strategy"]

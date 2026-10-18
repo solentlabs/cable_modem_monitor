@@ -19,6 +19,10 @@ hardware:
   release_date: "2015"
   chipset: "Intel Puma DHCE2652"
 
+detection:
+  http_headers:
+    - "NET-DK"
+
 status: confirmed
 
 sources:

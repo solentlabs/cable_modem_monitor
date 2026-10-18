@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Kabelmodem-monitor",
-        "description": "Välj en tillverkare eller välj 'Alla'.",
+        "description": "Välj en tillverkare, välj 'Alla' eller välj 'Auto-detect' för att leta efter ditt modem i nätverket.",
         "data": {
           "manufacturer": "Tillverkare"
         }
@@ -56,6 +56,38 @@
           "username": "Användarnamn",
           "password": "Lösenord"
         }
+      },
+      "detect_confirm": {
+        "title": "Modem hittat",
+        "description": "Auto-detect hittade **{model}** på {host}.\n\nAuto-detect begränsar bara valet. Bekräfta att detta är ditt modem.",
+        "data": {
+          "choice": "Är detta ditt modem?",
+          "entity_prefix": "Entity ID-prefix",
+          "channel_identity": "Kanalnamngivning"
+        },
+        "data_description": {
+          "choice": "Välj det första alternativet för att fortsätta. Det andra visar andra sannolika träffar från sökningen och det tredje öppnar hela tillverkarlistan.",
+          "entity_prefix": "Lägger till modellnamn eller IP till Entity ID:n. Krävs vid övervakning av flera modem.",
+          "channel_identity": "Kanalnummer namnger entiteter efter modemets radposition (stabilt mellan omstarter). Kanal-ID använder DOCSIS kanal-ID (matchar internetleverantörens diagnostik men kan ändras vid omstart)."
+        }
+      },
+      "detect_pick": {
+        "title": "Hittade modem",
+        "description": "Sidan som svarade nämner mer än en modell. Välj din. Modeller markerade med * är overifierade.",
+        "data": {
+          "model": "Modemmodell",
+          "entity_prefix": "Entity ID-prefix",
+          "channel_identity": "Kanalnamngivning"
+        },
+        "data_description": {
+          "model": "Välj din modemmodell från listan.",
+          "entity_prefix": "Lägger till modellnamn eller IP till Entity ID:n. Krävs vid övervakning av flera modem.",
+          "channel_identity": "Kanalnummer namnger entiteter efter modemets radposition (stabilt mellan omstarter). Kanal-ID använder DOCSIS kanal-ID (matchar internetleverantörens diagnostik men kan ändras vid omstart)."
+        }
+      },
+      "no_match": {
+        "title": "Modemet identifierades inte",
+        "description": "Auto-detect identifierade inte ditt modem. Det kan betyda att det inte stöds ännu.\n\nVad som svarade:\n\n{observed}\n\nVälj ditt modem själv härnäst. Se [listan över modem som stöds]({catalog_url}) eller [begär stöd för ditt modem]({request_url})."
       }
     },
     "error": {

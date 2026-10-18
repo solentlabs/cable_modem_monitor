@@ -29,6 +29,10 @@ hardware:
   docsis_version: "3.1"
   release_date: "2025-06"
 
+detection:
+  http_headers:
+    - "lighttpd"
+
 status: awaiting_verification
 
 sources:

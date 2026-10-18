@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Monitor de Módem de Cable",
-        "description": "Seleccione un fabricante o elija 'Todos'.",
+        "description": "Selecciona un fabricante, elige 'Todos' o elige 'Auto-detect' para buscar tu módem en la red.",
         "data": {
           "manufacturer": "Fabricante"
         }
@@ -56,6 +56,38 @@
           "username": "Usuario",
           "password": "Contraseña"
         }
+      },
+      "detect_confirm": {
+        "title": "Módem encontrado",
+        "description": "Auto-detect encontró **{model}** en {host}.\n\nAuto-detect solo reduce las opciones. Confirma que este es tu módem.",
+        "data": {
+          "choice": "¿Es este tu módem?",
+          "entity_prefix": "Prefijo de Entity ID",
+          "channel_identity": "Nomenclatura de canales"
+        },
+        "data_description": {
+          "choice": "Elige la primera opción para continuar. La segunda muestra otras coincidencias probables de la búsqueda y la tercera abre la lista completa de fabricantes.",
+          "entity_prefix": "Agrega el nombre del modelo o la IP a los Entity ID. Requerido cuando se monitorean múltiples módems.",
+          "channel_identity": "Número de canal nombra las entidades según la posición de fila del módem (estable entre reinicios). ID de canal usa el ID de canal DOCSIS (coincide con los diagnósticos del ISP, pero puede cambiar al reiniciar)."
+        }
+      },
+      "detect_pick": {
+        "title": "Módems encontrados",
+        "description": "La página que respondió menciona más de un modelo. Elige el tuyo. Los modelos marcados con * no están verificados.",
+        "data": {
+          "model": "Modelo de Módem",
+          "entity_prefix": "Prefijo de Entity ID",
+          "channel_identity": "Nomenclatura de canales"
+        },
+        "data_description": {
+          "model": "Selecciona tu modelo de módem de la lista.",
+          "entity_prefix": "Agrega el nombre del modelo o la IP a los Entity ID. Requerido cuando se monitorean múltiples módems.",
+          "channel_identity": "Número de canal nombra las entidades según la posición de fila del módem (estable entre reinicios). ID de canal usa el ID de canal DOCSIS (coincide con los diagnósticos del ISP, pero puede cambiar al reiniciar)."
+        }
+      },
+      "no_match": {
+        "title": "Módem no identificado",
+        "description": "Auto-detect no identificó tu módem. Puede significar que aún no es compatible.\n\nLo que respondió:\n\n{observed}\n\nElige tu módem tú mismo a continuación. Consulta la [lista de módems compatibles]({catalog_url}) o [solicita compatibilidad para tu módem]({request_url})."
       }
     },
     "error": {

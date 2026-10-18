@@ -27,6 +27,10 @@ HNAP_NAMESPACE = "http://purenetworks.com/HNAP1/"
 # Fixed HNAP endpoint.
 HNAP_ENDPOINT = "/HNAP1/"
 
+# The client script every captured HNAP login page loads (S33 and SB8200 landing
+# replies); Auto-detect reads it as the transport's signal (DETECTION_SPEC.md § Signals).
+HNAP_CLIENT_SCRIPT = "/js/SOAP/SOAPAction.js"
+
 # Timestamp modulo to match firmware's 32-bit integer handling.
 # From SOAPAction.js: Math.floor(Date.now()) % 2000000000000
 _TIMESTAMP_MODULO = 2_000_000_000_000

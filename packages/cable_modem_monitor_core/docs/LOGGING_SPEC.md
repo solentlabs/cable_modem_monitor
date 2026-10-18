@@ -347,7 +347,7 @@ instead of `model`.
 | Event | Level | When |
 |---|---|---|
 | `DetectionProbeResult` | internally-determined¹ | A probed host answered, or did not |
-| `DetectionMatched` | INFO | An answering host's landing page was matched against the catalog |
+| `DetectionMatched` | INFO | An answering host's reply was matched against the catalog |
 | `DetectionChosen` | INFO | The user's final choice at the end of the Auto-detect flow |
 
 ¹ INFO when the host answered, DEBUG when it did not: most catalog
@@ -360,9 +360,10 @@ the page `<title>` (cut at 100 characters), `WWW-Authenticate` and whether
 a password field is present.
 Fields — `DetectionMatched`: `host`, `models: list[str]` (manufacturer and
 model of each entry named), `buckets: list[str]`, `matched: list[str]`
-(`PageMatch.matched`, the page's own spelling). Emitted for every answering
-host, including one that names nothing, so the log shows what the page said
-when the user lands on the no-match page.
+(`PageMatch.matched`, the page's own spelling), `signals: list[str]`
+(the signals found for tier-1 entries) and `candidates: int`. Emitted for every answering
+host, including one that names nothing, so the log shows what the device
+showed when the user lands on the no-match page.
 Fields — `DetectionChosen`: `outcome: str` (`confirmed`, `picked`,
 `filtered`, `rejected` or `no_match`), `host: str | None` (the address
 carried to Step 3), `selected: str | None` (manufacturer and model the

@@ -15,6 +15,10 @@ hardware:
   end_of_life: "2022"
   release_date: "2011"
 
+detection:
+  http_headers:
+    - "NET-DK"
+
 status: confirmed
 
 sources:

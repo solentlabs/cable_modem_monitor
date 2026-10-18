@@ -667,6 +667,18 @@ class DetectionMatched:
     models: list[str]
     buckets: list[str]
     matched: list[str]
+    signals: list[str] = field(default_factory=list)
+    candidates: int = 0
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
+class DetectionChosen:
+    """Where the Auto-detect flow ended; emitted by the HA config flow, not by detect()."""
+
+    outcome: str
+    host: str | None
+    selected: str | None
     level: EventLevel = field(default=EventLevel.INFO, init=False)
 
 
@@ -728,4 +740,5 @@ type OrchestratorEvent = (
     | ResourceDecodeError
     | DetectionProbeResult
     | DetectionMatched
+    | DetectionChosen
 )

@@ -10,6 +10,7 @@ import logging
 import pytest
 from solentlabs.cable_modem_monitor_core.detection import Observation
 from solentlabs.cable_modem_monitor_core.orchestration.events import (
+    DetectionChosen,
     DetectionMatched,
     DetectionProbeResult,
     EventLevel,
@@ -33,12 +34,13 @@ LEVEL_CASES = [
     (DetectionProbeResult(host="h", observation=OBSERVATION, reason=None), EventLevel.INFO, "probe-answered"),
     (DetectionProbeResult(host="h", observation=None, reason="ConnectTimeout"), EventLevel.DEBUG, "probe-silent"),
     (DetectionMatched(host="h", models=[], buckets=[], matched=[]), EventLevel.INFO, "matched"),
+    (DetectionChosen(outcome="confirmed", host="h", selected="Acme AB600"), EventLevel.INFO, "chosen"),
 ]
 
 
 @pytest.mark.parametrize(("event", "level", "case_id"), LEVEL_CASES, ids=[c[-1] for c in LEVEL_CASES])
 def test_detection_event_levels(
-    event: DetectionProbeResult | DetectionMatched, level: EventLevel, case_id: str
+    event: DetectionProbeResult | DetectionMatched | DetectionChosen, level: EventLevel, case_id: str
 ) -> None:
     assert event.level == level
 
@@ -65,16 +67,27 @@ LINE_CASES = [
         "matched",
     ),
     (
+        DetectionMatched("h:80", [], [], [], ["/check.jst", "SID"], 3),
+        ["signals: /check.jst, SID", "candidates: 3"],
+        "matched-signals",
+    ),
+    (
         DetectionMatched("h:80", [], [], []),
-        ["nothing in the catalog", "models: none", "makers and brands: none"],
+        ["nothing in the catalog", "models: none", "makers and brands: none", "signals: none", "candidates: 0"],
         "matched-nothing",
     ),
+    (
+        DetectionChosen("confirmed", "h:80", "Acme AB600"),
+        ["confirmed", "host: h:80", "selected: Acme AB600"],
+        "chosen",
+    ),
+    (DetectionChosen("no_match", None, None), ["no_match", "host: none", "selected: none"], "chosen-nothing"),
 ]
 
 
 @pytest.mark.parametrize(("event", "expected", "case_id"), LINE_CASES, ids=[c[-1] for c in LINE_CASES])
 def test_detection_event_lines(
-    event: DetectionProbeResult | DetectionMatched,
+    event: DetectionProbeResult | DetectionMatched | DetectionChosen,
     expected: list[str],
     case_id: str,
     caplog: pytest.LogCaptureFixture,

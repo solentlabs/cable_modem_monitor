@@ -1915,29 +1915,37 @@ in real support rather than a permanent approximation.
 ### Detection narrows, never decides
 
 **Decision:** Auto-detect may narrow the catalog choice to the entries
-a device could be. It sends credential-free `GET /` requests to the
-`default_host` addresses the catalog records, follows redirects, and
-matches the response text against the manufacturer, model, aliases and
-brands the catalog holds. Matching is exact and returns every hit, with
-no scoring, weighting or threshold. The user confirms the result, and no
-hit falls through to the manual flow unchanged. Contract:
+a device could be. It sends one credential-free `GET /` to each
+`default_host` address the catalog records and reads that single reply.
+It compares the reply with what each entry's own configuration says its
+login surface looks like: the auth strategy reports the paths and cookie
+names its config declares, `parser.yaml` adds its data-page paths, and
+names on the page (manufacturer, model, aliases, brands) and the `Server`
+product add more. These order the candidates. One contradiction removes
+an entry: a password field on the reply removes an entry whose every
+variant is no-auth. The user confirms the result. Contract:
 [DETECTION_SPEC.md](DETECTION_SPEC.md).
 
-**Rationale:** Narrowing uses only data already in the catalog, so
-nothing new is generated or maintained and nothing can drift from the
-catalog. A shortlist the user confirms cannot produce the
-plausible-looking wrong data the generic fallback was rejected for. A
-failed match points the user to the supported-modem list and the
-support-request path (HAR capture), and attempts no fallback. Detection
-signals beyond page text need a gap measured in the detection accuracy
-report ([INTAKE_PIPELINE.md § Detection Accuracy](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#detection-accuracy)), not an
-anticipated one.
+**Rationale:** Landing pages often name nothing, but the reply still
+carries a pattern, and the entry's configuration already describes the
+login surface it belongs to, so almost nothing new is stored: only the
+`Server` product, which the pipeline derives from the entry's HARs
+([INTAKE_PIPELINE.md § Detection Headers](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#detection-headers)).
+A shortlist the user confirms cannot produce the plausible-looking wrong
+data the generic fallback was rejected for.
 
-Narrowing never removes a modem the device could be. An entry stays
-unless the catalog shows it cannot present what the device showed, and an
-entry with no capture is never removed. A signal that has removed a real
-entry in the report only orders the candidates
-([INTAKE_PIPELINE.md § Marker accuracy](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#marker-accuracy)).
+**Constraints.** A registered modem is always among the candidates.
+A missing name or signal removes nothing: a script-driven login can
+reference none of what its config declares, and the fleet shows it
+(INTAKE_PIPELINE.md § Detection Accuracy lists each such entry). A
+contradiction is added only while the accuracy report shows it removing
+no real modem. A device that matches nothing sends the user to the
+ordinary manufacturer step with the supported-modem list and the
+support-request path (HAR capture) at hand; there is no fallback.
+Detection does not authenticate. A landing-response marker removes
+entries at runtime only as
+[INTAKE_PIPELINE.md § Marker accuracy](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#marker-accuracy)
+permits.
 
 ---
 

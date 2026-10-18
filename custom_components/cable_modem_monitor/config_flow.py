@@ -3,7 +3,7 @@
 Four-step setup wizard that guides the user from "I want to monitor
 my modem" to a working integration entry:
 
-    Step 1a  — Select manufacturer (or "All")
+    Step 1a  — Select manufacturer ("Auto-detect", "All", or a name)
     Step 1b  — Select model + entity prefix
     Step 2   — Select variant  (skipped for single-variant modems)
     Step 3   — Enter connection details (host, credentials)
@@ -35,7 +35,11 @@ from solentlabs.cable_modem_monitor_core.catalog_manager import (
     ModemSummary,
     VariantInfo,
 )
+from solentlabs.cable_modem_monitor_core.detection import detect
+from solentlabs.cable_modem_monitor_core.orchestration.events import DetectionChosen
+from solentlabs.cable_modem_monitor_core.orchestration.logging import log_event
 
+from .config_flow_detect import DetectionPlan, Tier1, plan_detection
 from .config_flow_helpers import (
     build_model_display_name,
     build_model_options,
@@ -75,6 +79,14 @@ _LOGGER = logging.getLogger(__name__)
 # Sentinel value for the "All manufacturers" option
 _ALL_MANUFACTURERS = "__all__"
 
+# Sentinel value for the "Auto-detect" option (CONFIG_FLOW_SPEC § Auto-detect)
+_AUTO_DETECT = "__detect__"
+
+# Values of the confirm page's three-way choice (CONFIG_FLOW_SPEC § Auto-detect)
+_CONFIRM_YES = "yes"
+_CONFIRM_OTHERS = "others"
+_CONFIRM_MANUAL = "manual"
+
 # Sentinel value for the default variant (modem.yaml, name=None).
 # HA's SelectSelector rejects empty-string option values.
 _DEFAULT_VARIANT = "__default__"
@@ -84,6 +96,9 @@ _DEFAULT_VARIANT = "__default__"
 _CATALOG_MODEM_LIST_URL = (
     "https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/README.md"
 )
+
+# Linked from the no-match page; a placeholder, like the catalog list URL.
+_MODEM_REQUEST_URL = "https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md"
 
 # Cooloff window before options-flow validation re-auths the modem.
 # Some modems (e.g. MB7621) only allow one logged-in session and
@@ -157,6 +172,17 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         self._selected_modem_dir: Path | None = None
         # Carried from connection step for retry on error
         self._connection_input: dict[str, Any] | None = None
+        # Auto-detect state (CONFIG_FLOW_SPEC § Auto-detect). Reset by
+        # _leave_detection when the user falls back to manual selection.
+        self._detect_attempted: bool = False
+        self._detect_plan: DetectionPlan | None = None
+        # How the user reached Step 1b/2 from detection, for DetectionChosen.
+        self._detect_filtered: bool = False
+        # Step 1b lists only these models.
+        self._restrict_models: list[ModemSummary] | None = None
+        # Address that answered, per matched model; Step 3 host default.
+        self._model_hosts: dict[Path, str] = {}
+        self._prefill_host: str | None = None
 
     @staticmethod
     @callback
@@ -174,18 +200,21 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         self,
         user_input: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
-        """Step 1a — Select manufacturer."""
+        """Step 1a — Select manufacturer, or Auto-detect."""
         if not self._summaries:
             self._summaries = await load_modem_catalog(self.hass)
 
         if user_input is not None:
+            if user_input["manufacturer"] == _AUTO_DETECT:
+                return await self._async_run_detection()
             self._selected_manufacturer = user_input["manufacturer"]
             return await self.async_step_model()
 
-        manufacturers = get_manufacturers(self._summaries)
-        options = [
-            selector.SelectOptionDict(value=_ALL_MANUFACTURERS, label="All"),
-        ] + [selector.SelectOptionDict(value=m, label=m) for m in manufacturers]
+        options = [selector.SelectOptionDict(value=_ALL_MANUFACTURERS, label="All")] + [
+            selector.SelectOptionDict(value=m, label=m) for m in get_manufacturers(self._summaries)
+        ]
+        if not self._detect_attempted:
+            options.insert(1, selector.SelectOptionDict(value=_AUTO_DETECT, label="Auto-detect"))
 
         return self.async_show_form(
             step_id="user",
@@ -223,44 +252,22 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             if self._selected_summary is None:
                 return self.async_abort(reason="unknown_model")
 
-            # Check for variants — includes sibling transport directories
-            self._variants = await load_variant_list(
-                self.hass,
-                self._selected_summary.path,
-                self._selected_summary.sibling_dirs or None,
+            if self._detect_filtered:
+                self._log_chosen("filtered", self._host_for(self._selected_summary), self._selected_summary)
+            return await self._async_continue_with_summary(
+                self._selected_summary,
+                user_input.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE),
+                user_input.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.NUMBER),
             )
-
-            # Store entity prefix and channel identity for later
-            self._connection_input = {
-                CONF_ENTITY_PREFIX: user_input.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE),
-                CONF_CHANNEL_IDENTITY: user_input.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.NUMBER),
-            }
-
-            if len(self._variants) > 1:
-                return await self.async_step_variant()
-
-            # Single variant — skip Step 2
-            if self._variants:
-                await self._apply_variant(self._variants[0])
-            else:
-                self._selected_modem_dir = self._selected_summary.path
-            return await self.async_step_connection()
 
         # Build model dropdown — All lists one row per user-facing name
         bucket = None if self._selected_manufacturer == _ALL_MANUFACTURERS else self._selected_manufacturer
-        model_options = [
-            selector.SelectOptionDict(value=value, label=label)
-            for value, label in build_model_options(self._summaries, bucket)
-        ]
-
-        # Entity prefix options
-        prefix_options = _build_prefix_options(self.hass)
-
-        # Channel identity options
-        identity_options = [
-            selector.SelectOptionDict(value=ChannelIdentity.NUMBER, label="Channel Number (recommended)"),
-            selector.SelectOptionDict(value=ChannelIdentity.ID, label="Channel ID (DOCSIS)"),
-        ]
+        rows = build_model_options(self._restrict_models or self._summaries, bucket)
+        if self._restrict_models:
+            # Detection's order (named entries first) outranks the alphabetical default.
+            rank = {f"{m.manufacturer}/{m.model}": i for i, m in enumerate(self._restrict_models)}
+            rows = sorted(rows, key=lambda row: rank[row[0].split("|", 1)[0]])
+        model_options = [selector.SelectOptionDict(value=value, label=label) for value, label in rows]
 
         # Show selected manufacturer in the step description.
         # "All" becomes empty so the description reads naturally:
@@ -281,26 +288,243 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Required(
-                        CONF_ENTITY_PREFIX,
-                        default=prefix_options[0]["value"],
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=prefix_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                    vol.Required(
-                        CONF_CHANNEL_IDENTITY,
-                        default=ChannelIdentity.NUMBER,
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=identity_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
+                    **self._prefix_identity_fields(),
                 }
             ),
+        )
+
+    def _prefix_identity_fields(self) -> dict[Any, Any]:
+        """Entity prefix and channel identity fields, shared by Step 1b and the Auto-detect pages."""
+        prefix_options = _build_prefix_options(self.hass)
+        identity_options = [
+            selector.SelectOptionDict(value=ChannelIdentity.NUMBER, label="Channel Number (recommended)"),
+            selector.SelectOptionDict(value=ChannelIdentity.ID, label="Channel ID (DOCSIS)"),
+        ]
+        return {
+            vol.Required(CONF_ENTITY_PREFIX, default=prefix_options[0]["value"]): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=prefix_options, mode=selector.SelectSelectorMode.DROPDOWN)
+            ),
+            vol.Required(CONF_CHANNEL_IDENTITY, default=ChannelIdentity.NUMBER): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=identity_options, mode=selector.SelectSelectorMode.DROPDOWN)
+            ),
+        }
+
+    async def _async_continue_with_summary(
+        self,
+        summary: ModemSummary,
+        entity_prefix: str,
+        channel_identity: str,
+    ) -> config_entries.ConfigFlowResult:
+        """Resolve variants for a chosen modem and advance to Step 2 or Step 3."""
+        self._selected_summary = summary
+
+        # Check for variants — includes sibling transport directories
+        self._variants = await load_variant_list(
+            self.hass,
+            summary.path,
+            summary.sibling_dirs or None,
+        )
+
+        # Store entity prefix and channel identity for later; the host
+        # default carries the address that answered detection, if any.
+        self._connection_input = {
+            CONF_ENTITY_PREFIX: entity_prefix,
+            CONF_CHANNEL_IDENTITY: channel_identity,
+        }
+        host = self._host_for(summary)
+        if host is not None:
+            self._connection_input[CONF_HOST] = host
+
+        if len(self._variants) > 1:
+            return await self.async_step_variant()
+
+        # Single variant — skip Step 2
+        if self._variants:
+            await self._apply_variant(self._variants[0])
+        else:
+            self._selected_modem_dir = summary.path
+        return await self.async_step_connection()
+
+    # -----------------------------------------------------------------
+    # Auto-detect (CONFIG_FLOW_SPEC § Auto-detect)
+    # -----------------------------------------------------------------
+
+    def _host_for(self, summary: ModemSummary) -> str | None:
+        """The address that answered for this modem, else the prefill; None means the catalog default."""
+        return self._model_hosts.get(summary.path) or self._prefill_host
+
+    def _log_chosen(self, outcome: str, host: str | None, summary: ModemSummary | None) -> None:
+        """Emit DetectionChosen for where the Auto-detect flow ended."""
+        selected = f"{summary.manufacturer} {summary.model}" if summary else None
+        log_event(_LOGGER, DetectionChosen(outcome=outcome, host=host, selected=selected))
+
+    def _leave_detection(self) -> None:
+        """Drop the detection state so manual selection starts from the full catalog."""
+        self._detect_filtered = False
+        self._restrict_models = None
+        self._model_hosts = {}
+        self._selected_manufacturer = _ALL_MANUFACTURERS
+
+    async def _async_run_detection(self) -> config_entries.ConfigFlowResult:
+        """Sweep the catalog addresses off the event loop and open the page the result calls for."""
+        self._detect_attempted = True
+        try:
+            detections = await self.hass.async_add_executor_job(detect, self._summaries)
+        except Exception:
+            # Auto-detect is a best attempt: a failed sweep must never block manual setup.
+            _LOGGER.warning("Auto-detect failed; continuing with manual selection", exc_info=True)
+            self._log_chosen("no_match", None, None)
+            return await self.async_step_user()
+        plan = plan_detection(detections)
+        self._detect_plan = plan
+        self._model_hosts = {}
+        for entry in plan.tier_1:
+            self._model_hosts.setdefault(entry.summary.path, entry.detection.host)
+        self._prefill_host = plan.tier_1[0].detection.host if plan.tier_1 else plan.first_answered
+
+        if plan.route == "confirm":
+            return await self.async_step_detect_confirm()
+        if plan.route == "pick":
+            return await self.async_step_detect_pick()
+        if plan.route == "filtered_models":
+            self._detect_filtered = True
+            self._restrict_models = list({e.summary.path: e.summary for e in plan.tier_1}.values())
+            return await self.async_step_model()
+        self._log_chosen("no_match", plan.first_answered, None)
+        if plan.route == "manufacturers":
+            # Something answered and nothing identified it: the ordinary manufacturer step, host carried.
+            return await self.async_step_user()
+        return await self.async_step_no_match()
+
+    async def async_step_detect_confirm(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Confirm the one modem the reply points at, or ask for the other likely matches."""
+        plan = self._detect_plan
+        if plan is None or plan.route != "confirm":
+            return self.async_abort(reason="missing_input")
+        candidate = plan.tier_1[0]
+        host = candidate.detection.host
+
+        if user_input is not None:
+            choice = user_input["choice"]
+            prefix = user_input.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE)
+            identity = user_input.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.NUMBER)
+            if choice == _CONFIRM_YES:
+                self._log_chosen("confirmed", host, candidate.summary)
+                return await self._async_continue_with_summary(candidate.summary, prefix, identity)
+            if choice == _CONFIRM_OTHERS:
+                others = list(
+                    {
+                        e.summary.path: e
+                        for e in [*plan.tier_1, *plan.tier_2]
+                        if e.summary.path != candidate.summary.path
+                    }.values()
+                )
+                if others:
+                    for entry in others:
+                        self._model_hosts.setdefault(entry.summary.path, entry.detection.host)
+                    self._detect_filtered = True
+                    self._restrict_models = [e.summary for e in others]
+                    return await self.async_step_model()
+                self._log_chosen("rejected", host, None)
+                self._leave_detection()
+                self._prefill_host = plan.first_answered
+                return await self.async_step_user()
+            # Choose manually: back to the start, host carried.
+            self._log_chosen("rejected", host, None)
+            self._leave_detection()
+            self._prefill_host = plan.first_answered
+            return await self.async_step_user()
+
+        return self.async_show_form(
+            step_id="detect_confirm",
+            description_placeholders={
+                "model": build_model_display_name(candidate.summary),
+                "host": host,
+            },
+            data_schema=vol.Schema(
+                {
+                    vol.Required("choice", default=_CONFIRM_YES): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                selector.SelectOptionDict(value=_CONFIRM_YES, label="Yes, this is my modem"),
+                                selector.SelectOptionDict(value=_CONFIRM_OTHERS, label="No, show other likely matches"),
+                                selector.SelectOptionDict(value=_CONFIRM_MANUAL, label="No, I'll choose manually"),
+                            ],
+                            mode=selector.SelectSelectorMode.LIST,
+                        )
+                    ),
+                    **self._prefix_identity_fields(),
+                }
+            ),
+        )
+
+    def _pick_label(self, candidate: Tier1, *, name_host: bool) -> str:
+        """Pick-list row: the model label, plus its address when several addresses matched."""
+        label = build_model_display_name(candidate.summary)
+        return f"{label} ({candidate.detection.host})" if name_host else label
+
+    async def async_step_detect_pick(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Pick among the 2 to 4 modems the page named."""
+        plan = self._detect_plan
+        if plan is None or not plan.tier_1:
+            return self.async_abort(reason="missing_input")
+
+        if user_input is not None:
+            index = int(user_input["model"])
+            if not 0 <= index < len(plan.tier_1):
+                return self.async_abort(reason="unknown_model")
+            candidate = plan.tier_1[index]
+            self._log_chosen("picked", candidate.detection.host, candidate.summary)
+            # A candidate's own address, not the first one that named any model.
+            self._model_hosts[candidate.summary.path] = candidate.detection.host
+            return await self._async_continue_with_summary(
+                candidate.summary,
+                user_input.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE),
+                user_input.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.NUMBER),
+            )
+
+        name_host = len({c.detection.host for c in plan.tier_1}) > 1
+        options = [
+            selector.SelectOptionDict(value=str(i), label=self._pick_label(c, name_host=name_host))
+            for i, c in enumerate(plan.tier_1)
+        ]
+        return self.async_show_form(
+            step_id="detect_pick",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("model"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=options, mode=selector.SelectSelectorMode.DROPDOWN)
+                    ),
+                    **self._prefix_identity_fields(),
+                }
+            ),
+        )
+
+    async def async_step_no_match(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Say the modem was not identified, show what answered, and offer manual selection."""
+        plan = self._detect_plan
+        if user_input is not None:
+            self._leave_detection()
+            self._prefill_host = plan.first_answered if plan else None
+            return await self.async_step_user()
+
+        return self.async_show_form(
+            step_id="no_match",
+            description_placeholders={
+                "observed": plan.observed if plan else "-",
+                "catalog_url": _CATALOG_MODEM_LIST_URL,
+                "request_url": _MODEM_REQUEST_URL,
+            },
+            data_schema=vol.Schema({}),
         )
 
     # -----------------------------------------------------------------

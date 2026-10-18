@@ -43,6 +43,7 @@ from solentlabs.cable_modem_monitor_catalog_tools.analysis.actions.grading impor
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.grading import grade_auth
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.request_timing import DEFAULT_TIMEOUT, grade_timeout
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
+from solentlabs.cable_modem_monitor_catalog_tools.detection_headers import stale_entries
 from solentlabs.cable_modem_monitor_catalog_tools.generate_config.ambiguities import apply_resolutions, resolved_actions
 from solentlabs.cable_modem_monitor_catalog_tools.generate_config.modem import type_resolved_actions
 from solentlabs.cable_modem_monitor_catalog_tools.grading import GRADE_SEVERITY
@@ -604,6 +605,23 @@ def run_detection_accuracy(modems: list[tuple[str, Path, Path]]) -> tuple[list[D
     return results, [s.path for s in summaries]
 
 
+def _fail_on_detection_problems(detection_results: list[DetectionResult]) -> None:
+    """Exit non-zero when detection removed a real modem or a committed detection.http_headers is stale."""
+    # INTAKE_PIPELINE.md § Detection Accuracy: a real modem removed by detection breaks the invariant.
+    lost = [r.modem for r in detection_results if r.entry_outcome == "LOST"]
+    if lost:
+        print(f"Detection removed a real modem: {', '.join(lost)}")
+        sys.exit(1)
+
+    # INTAKE_PIPELINE.md § Detection Headers: the committed detection.http_headers must match the entry's HARs.
+    stale = stale_entries(list_modems(CATALOG_ROOT))
+    if stale:
+        print("Stale detection.http_headers (run scripts/update_detection_headers.py):")
+        for path in stale:
+            print(f"  {path.relative_to(CATALOG_ROOT)}")
+        sys.exit(1)
+
+
 # ---------------------------------------------------------------------------
 # Scorecard and CI summary
 # ---------------------------------------------------------------------------
@@ -749,6 +767,8 @@ def main() -> None:
 
     if args.scorecard:
         _write_scorecard(args.scorecard, results, detection_scorecard(detection_results, marker_scores))
+
+    _fail_on_detection_problems(detection_results)
 
 
 if __name__ == "__main__":

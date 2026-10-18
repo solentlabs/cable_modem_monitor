@@ -24,7 +24,8 @@ from solentlabs.cable_modem_monitor_catalog_tools.regression.detection_accuracy 
 )
 from solentlabs.cable_modem_monitor_catalog_tools.regression.marker_accuracy import MARKERS, score_markers
 from solentlabs.cable_modem_monitor_core.catalog_manager import ModemSummary
-from solentlabs.cable_modem_monitor_core.detection import Observation, PageMatch, match_page
+from solentlabs.cable_modem_monitor_core.detection import Observation, PageMatch, Reply, match_page
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import LandingSignals
 
 ENTRY = ModemSummary(manufacturer="Acme", model="AB600", brands=["Cosmos"], path=Path("acme/ab600"))
 OTHER = ModemSummary(manufacturer="Acme", model="AB700", path=Path("acme/ab700"))
@@ -199,7 +200,7 @@ def test_report_counts_every_outcome_and_lists_wrong_and_no_hit() -> None:
 
     report = render_detection_report(results)
 
-    for count in ("EXACT 1", "MAKER_ONLY 1", "NO_HIT 1", "WRONG 1", "NOT_TESTABLE 1"):
+    for count in ("EXACT 1", "MAKER_ONLY 1", "NO_HIT 1", "WRONG 1", "NOT_TESTABLE 1", "LOST 0"):
         assert count in report
     assert "b/three" in report and "Bolt ZZ1" in report
     assert "c/four" in report and "micro_httpd" in report and "/login" in report
@@ -236,6 +237,7 @@ def test_detection_scorecard_records_outcomes_and_each_markers_two_numbers() -> 
     block = detection_scorecard(results, scores)
 
     assert block["summary"] == {"EXACT": 1, "MAKER_ONLY": 0, "NO_HIT": 0, "WRONG": 0, "NOT_TESTABLE": 1}
+    assert block["entry_summary"] == {"MATCHED": 0, "RANKED": 0, "UNRANKED": 0, "LOST": 0, "NOT_TESTABLE": 2}
     graded, untestable = block["hars"]
     assert graded["markers"]["scheme"] == {"narrowing": 2, "wrongly_removed": None}
     assert set(graded["markers"]) == set(MARKERS)
@@ -245,3 +247,98 @@ def test_detection_scorecard_records_outcomes_and_each_markers_two_numbers() -> 
 def test_build_scorecard_carries_the_detection_block_only_when_given() -> None:
     assert "detection" not in build_scorecard([])
     assert build_scorecard([], {"summary": {}, "hars": []})["detection"] == {"summary": {}, "hars": []}
+
+
+# ---------------------------------------------------------------------------
+# Entry outcomes: where the HAR's own entry lands in narrow()
+# ---------------------------------------------------------------------------
+
+
+def _hop_entries() -> list[dict[str, Any]]:
+    root = _entry("http://h/", status=302, headers={"Location": "/login", "Set-Cookie": "SID=1; Path=/"})
+    root["response"]["cookies"] = [{"name": "EXTRA", "value": "2"}]
+    return [root, _entry("http://h/login", body='<script src="/app.js">', headers={"Server": "lighttpd/1.4"})]
+
+
+def test_landing_response_keeps_every_hop_and_the_cookie_names_the_chain_set() -> None:
+    landing = landing_response(_hop_entries())
+
+    assert landing is not None
+    assert [url for url, _, _ in landing.hops] == ["http://h/", "http://h/login"]
+    assert landing.cookies == ("SID", "EXTRA")
+
+
+_SIG = LandingSignals
+
+
+def _own(**kwargs: Any) -> ModemSummary:
+    return ModemSummary(manufacturer="Acme", model="AB600", path=Path("acme/ab600"), **kwargs)
+
+
+# ┌──────────────────────────────────────────────┬──────────────────────────────┬──────────────┐
+# │ entry                                        │ landing reply                │ outcome      │
+# ├──────────────────────────────────────────────┼──────────────────────────────┼──────────────┤
+# │ signal /app.js declared                      │ points at /app.js            │ MATCHED      │
+# │ cookie SID declared                          │ chain set SID                │ MATCHED      │
+# │ page names the model                         │ -                            │ MATCHED      │
+# │ server_headers lighttpd                    │ Server lighttpd/1.4          │ RANKED       │
+# │ nothing declared                             │ -                            │ UNRANKED     │
+# │ signal /other.js declared                    │ points at /app.js            │ UNRANKED     │
+# │ auth none                                    │ page holds a password field  │ LOST         │
+# └──────────────────────────────────────────────┴──────────────────────────────┴──────────────┘
+#
+# fmt: off
+ENTRY_OUTCOME_CASES = [
+    (dict(landing_signals=_SIG(("/app.js",))),   '<script src="/app.js">',  "MATCHED",  "path_signal"),
+    (dict(landing_signals=_SIG((), ("SID",))),   "<html></html>",           "MATCHED",  "cookie_signal"),
+    ({},                                         "Acme AB600",              "MATCHED",  "model_named"),
+    (dict(server_headers=["lighttpd"]),        "<html></html>",           "RANKED",   "server_listed"),
+    ({},                                         "<html></html>",           "UNRANKED", "nothing_declared"),
+    (dict(landing_signals=_SIG(("/other.js",))), "<html></html>",           "UNRANKED", "signal_absent"),
+    (dict(auth_strategies=["none"]),             '<input type="password">', "LOST",     "login_form_on_no_auth"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("config", "page", "outcome", "case_id"), ENTRY_OUTCOME_CASES, ids=[c[-1] for c in ENTRY_OUTCOME_CASES]
+)
+def test_grade_har_entry_outcome(config: dict[str, Any], page: str, outcome: str, case_id: str) -> None:
+    entries = _hop_entries()
+    entries[1]["response"]["content"]["text"] = page
+    entry = _own(**config)
+    catalog = [entry, OTHER, STRANGER]
+
+    result = grade_har("acme/ab600", "modem.har", entries, entry, catalog, {"h"})
+
+    assert result.entry_outcome == outcome
+
+
+def test_grade_har_without_a_landing_reply_has_no_entry_outcome() -> None:
+    result = grade_har("acme/ab600", "modem.har", [_entry("http://h/status.html")], ENTRY, CATALOG, {"h"})
+
+    assert result.entry_outcome == "NOT_TESTABLE"
+
+
+def test_report_lists_lost_and_unranked_entries_with_what_the_config_declared() -> None:
+    results = [
+        _result("a/one", "NO_HIT", entry_outcome="MATCHED", candidates=5, tier_1=1, observation=OBSERVATION),
+        _result(
+            "b/two",
+            "NO_HIT",
+            entry_outcome="UNRANKED",
+            candidates=9,
+            observation=OBSERVATION,
+            declared=["/login.cgi", "SID"],
+            reply=Reply(["/a.js", "/b.js"], ["PHPSESSID"], "lighttpd"),
+        ),
+        _result("c/three", "NO_HIT", entry_outcome="LOST", candidates=4, observation=OBSERVATION),
+    ]
+
+    report = render_detection_report(results)
+
+    assert "MATCHED 1  RANKED 0  UNRANKED 1  LOST 1" in report
+    assert "mean 6.0" in report and "tier 1 mean 0.3" in report
+    assert "declared /login.cgi, SID; the reply points at 2 paths, cookies: PHPSESSID, server: lighttpd" in report
+    assert "LOST (a real modem removed" in report and "c/three" in report
+    assert "a/one (modem.har): declared" not in report

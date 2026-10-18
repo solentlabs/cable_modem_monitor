@@ -13,6 +13,10 @@ hardware:
   chipset: Intel Puma 6
   release_date: "2014"
 
+detection:
+  http_headers:
+    - "lighttpd"
+
 status: confirmed
 
 sources:

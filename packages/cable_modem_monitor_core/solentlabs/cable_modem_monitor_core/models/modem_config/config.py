@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .actions import ActionsConfig, HttpAction
 from .auth import AuthConfig, get_transport_strategy_sets
+from .detection import DetectionConfig
 from .health import HealthConfig
 from .metadata import AttributionConfig, GapEntry, HardwareConfig, ReferencesConfig
 from .session import SessionConfig
@@ -60,6 +61,9 @@ class ModemConfig(BaseModel):
 
     # Health
     health: HealthConfig | None = None
+
+    # Detection
+    detection: DetectionConfig | None = None
 
     # Metadata
     status: ModemStatus

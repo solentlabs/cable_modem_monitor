@@ -15,6 +15,13 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import TypeAdapter
+
+from .config_loader import load_parser_config
+from .fetch_list import collect_fetch_targets
+from .models.modem_config.auth import AuthConfig, AuthStrategyBase, LandingSignals, build_landing_signals
+
+_AUTH: TypeAdapter[AuthStrategyBase] = TypeAdapter(AuthConfig)
 
 _logger = logging.getLogger(__name__)
 
@@ -43,6 +50,12 @@ class ModemSummary:
             modem's ``(manufacturer, model)`` identity. Populated by
             ``list_modems()`` when multiple directories represent the
             same hardware under different transports.
+        auth_strategies: The ``auth.strategy`` of every variant in this
+            directory and its siblings, each once, default variant first.
+        landing_signals: Paths and cookie names the entry's auth configs
+            and parser resources declare (DETECTION_SPEC.md § Signals).
+        server_headers: ``Server`` products the entry's landing replies
+            showed, from ``modem.yaml`` ``detection.http_headers``.
     """
 
     manufacturer: str
@@ -56,6 +69,9 @@ class ModemSummary:
     transport: str = "http"
     path: Path = field(default_factory=lambda: Path("."))
     sibling_dirs: list[Path] = field(default_factory=list)
+    auth_strategies: list[str] = field(default_factory=list)
+    landing_signals: LandingSignals = field(default_factory=LandingSignals)
+    server_headers: list[str] = field(default_factory=list)
 
 
 def list_modems(catalog_path: Path) -> list[ModemSummary]:
@@ -128,6 +144,7 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
         all_dirs = [summary.path] + summary.sibling_dirs
         if _any_variant_confirmed(all_dirs):
             summary.status = "confirmed"
+        summary.auth_strategies, summary.landing_signals, summary.server_headers = _detection_fields(all_dirs)
 
     _logger.info(
         "Catalog discovery: %d modems found (%d directories)",
@@ -143,6 +160,57 @@ def _summary_source(modem_dir: Path) -> Path | None:
     if default.is_file():
         return default
     return next(iter(sorted(modem_dir.glob("modem-*.yaml"))), None)
+
+
+def _variant_files(directory: Path) -> list[Path]:
+    """The directory's ``modem*.yaml`` files, the default variant first."""
+    return sorted(directory.glob("modem*.yaml"), key=lambda p: (p.stem != "modem", p.name))
+
+
+def _detection_fields(dirs: list[Path]) -> tuple[list[str], LandingSignals, list[str]]:
+    """Auth strategies, landing signals and ``Server`` products for one entry's directories."""
+    strategies: list[str] = []
+    paths: list[str] = []
+    cookies: list[str] = []
+    servers: list[str] = []
+    for directory in dirs:
+        for yaml_path in _variant_files(directory):
+            try:
+                raw = yaml.safe_load(yaml_path.read_text())
+            except Exception:
+                _logger.debug("Unreadable variant file: %s", yaml_path, exc_info=True)
+                continue
+            if not isinstance(raw, dict):
+                continue
+            auth = raw.get("auth") or {}
+            strategies.append(auth.get("strategy", "none"))
+            try:
+                signals = _AUTH.validate_python(auth).landing_signals() if auth else LandingSignals()
+            except Exception:
+                _logger.debug("No landing signals from %s", yaml_path, exc_info=True)
+                signals = LandingSignals()
+            paths.extend(signals.paths)
+            cookies.extend(signals.cookies)
+            servers.extend((raw.get("detection") or {}).get("http_headers", []))
+    for directory in dirs:
+        paths.extend(_parser_paths(directory))
+    return (
+        list(dict.fromkeys(strategies)),
+        build_landing_signals(tuple(paths), tuple(cookies)),
+        list(dict.fromkeys(servers)),
+    )
+
+
+def _parser_paths(directory: Path) -> list[str]:
+    """The data-page paths a directory's parser.yaml reads; none when it has no readable parser."""
+    parser_yaml = directory / "parser.yaml"
+    if not parser_yaml.is_file():
+        return []
+    try:
+        return [target.path for target in collect_fetch_targets(load_parser_config(parser_yaml))]
+    except Exception:
+        _logger.debug("No parser paths from %s", parser_yaml, exc_info=True)
+        return []
 
 
 def _any_variant_confirmed(dirs: list[Path]) -> bool:

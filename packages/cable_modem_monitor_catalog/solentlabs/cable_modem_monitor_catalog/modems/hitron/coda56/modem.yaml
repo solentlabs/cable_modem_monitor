@@ -16,6 +16,10 @@ hardware:
   chipset: "Intel Puma 7 (FHCE2703)"
   release_date: "2022"
 
+detection:
+  http_headers:
+    - "GoAhead-Webs"
+
 status: confirmed
 
 sources:

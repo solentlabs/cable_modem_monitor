@@ -15,6 +15,10 @@ hardware:
 
   release_date: "2016"
 
+detection:
+  http_headers:
+    - "lighttpd"
+
 status: awaiting_verification
 
 sources:

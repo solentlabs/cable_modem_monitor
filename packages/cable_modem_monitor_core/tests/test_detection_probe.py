@@ -31,6 +31,7 @@ from solentlabs.cable_modem_monitor_core.detection import (
     _sweep_hosts,
     detect,
 )
+from solentlabs.cable_modem_monitor_core.models.modem_config.auth import LandingSignals
 from solentlabs.cable_modem_monitor_core.orchestration.events import (
     DetectionMatched,
     DetectionProbeResult,
@@ -281,8 +282,8 @@ def test_five_redirects_is_within_the_limit() -> None:
 
 
 @pytest.mark.filterwarnings("ignore::urllib3.exceptions.InsecureRequestWarning")
-def test_https_is_tried_when_http_yields_no_response(tls_dir: Path) -> None:
-    """A TLS-only listener cannot answer a plain request; the same host answers over https."""
+def test_a_tls_listener_answers_on_the_first_attempt(tls_dir: Path) -> None:
+    """https is tried first (CONFIG_FLOW_SPEC § Step 4 prefers HTTPS); its answer wins and http is not tried."""
     with serve(tls=tls_dir) as site:
         site.routes["/"] = _page()
 
@@ -291,6 +292,7 @@ def test_https_is_tried_when_http_yields_no_response(tls_dir: Path) -> None:
     assert len(result) == 1
     assert result[0].observation.scheme == "https"
     assert [s.model for s in result[0].match.models] == ["AB600"]
+    assert site.requests_for("/") == 1
 
 
 @pytest.mark.filterwarnings("ignore::urllib3.exceptions.InsecureRequestWarning")
@@ -306,15 +308,15 @@ def test_redirect_may_cross_from_http_to_https(tls_dir: Path) -> None:
     assert result[0].observation.final_path == "/login"
 
 
-def test_http_answer_wins_over_https() -> None:
-    """The first response wins: https is not tried once http answered."""
+def test_http_is_tried_when_https_yields_no_response() -> None:
+    """A plain-http modem cannot answer a TLS handshake; the same host answers over http."""
     with serve() as site:
         site.routes["/"] = _page()
 
         result = detect(_summaries(site.host), timeout=TIMEOUT)
 
     assert result[0].observation.scheme == "http"
-    assert site.requests_for("/") == 1
+    assert [s.model for s in result[0].match.models] == ["AB600"]
 
 
 # ---------------------------------------------------------------------------
@@ -501,3 +503,87 @@ def test_each_probed_host_logs_one_probe_result_and_each_answer_logs_its_match()
         matched=["Acme", "AB600"],
     )
     assert len([e for e in events if isinstance(e, DetectionMatched)]) == 1
+
+
+# ---------------------------------------------------------------------------
+# Reply evidence and candidates
+# ---------------------------------------------------------------------------
+
+
+def test_reply_carries_paths_cookies_and_server_across_the_redirect_chain() -> None:
+    with serve() as site:
+        site.routes["/"] = Reply(status=302, headers={"Location": "/login.html", "Set-Cookie": "SID=1; Path=/"})
+        site.routes["/login.html"] = Reply(
+            headers={"Content-Type": "text/html", "Server": "lighttpd/1.4.67"},
+            body=b'<script src="/js/app.js"></script><form action="/go.cgi">',
+        )
+
+        result = detect(_summaries(site.host), timeout=TIMEOUT)
+
+    reply = result[0].reply
+    assert reply.paths == ["/js/app.js", "/go.cgi"]
+    assert reply.cookies == ["SID"]
+    assert reply.server == "lighttpd"
+
+
+def test_candidates_rank_the_entry_whose_config_signals_are_in_the_reply() -> None:
+    with serve() as site:
+        site.routes["/"] = Reply(
+            headers={"Content-Type": "text/html"},
+            body=b'<form action="/check.jst"><input type="text">',
+        )
+        catalog = [
+            ModemSummary(manufacturer="Acme", model="Other", default_host=site.host),
+            ModemSummary(
+                manufacturer="Acme",
+                model="Mine",
+                default_host=site.host,
+                landing_signals=LandingSignals(("/check.jst",)),
+            ),
+        ]
+
+        with capture_events() as events:
+            result = detect(catalog, timeout=TIMEOUT)
+
+    assert [(c.summary.model, c.tier, c.signals) for c in result[0].candidates] == [
+        ("Mine", 1, ["/check.jst"]),
+        ("Other", 3, []),
+    ]
+    assert_event_emitted(events, DetectionMatched, host=site.host, signals=["/check.jst"], candidates=2)
+
+
+def test_a_login_form_removes_a_no_auth_entry_from_the_candidates() -> None:
+    with serve() as site:
+        site.routes["/"] = Reply(headers={"Content-Type": "text/html"}, body=b'<input type="password" name="pw">')
+        catalog = [
+            ModemSummary(manufacturer="Acme", model="Open", default_host=site.host, auth_strategies=["none"]),
+            ModemSummary(manufacturer="Acme", model="Closed", default_host=site.host, auth_strategies=["form"]),
+        ]
+
+        result = detect(catalog, timeout=TIMEOUT)
+
+    assert [c.summary.model for c in result[0].candidates] == ["Closed"]
+
+
+def test_schemes_are_tried_https_first_then_http(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The order follows CONFIG_FLOW_SPEC § Step 4: a TLS answer is preferred; http only when https gets none."""
+    import requests
+    from solentlabs.cable_modem_monitor_core import detection
+
+    urls: list[str] = []
+
+    class Silent:
+        trust_env = True
+        max_redirects = 0
+
+        def get(self, url: str, **_: object) -> object:
+            urls.append(url)
+            raise requests.exceptions.ConnectTimeout("no answer")
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(detection, "create_session", Silent)
+
+    assert detect(_summaries("192.0.2.1"), timeout=TIMEOUT) == []
+    assert urls == ["https://192.0.2.1/", "http://192.0.2.1/"]

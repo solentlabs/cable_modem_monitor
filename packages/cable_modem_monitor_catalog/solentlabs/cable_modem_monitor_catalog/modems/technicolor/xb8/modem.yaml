@@ -50,6 +50,10 @@ hardware:
   docsis_version: "3.1"
   release_date: "2022"
 
+detection:
+  http_headers:
+    - "Xfinity Broadband Router Server"
+
 status: confirmed
 
 sources:
