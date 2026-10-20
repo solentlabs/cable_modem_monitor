@@ -47,6 +47,8 @@ sources:
   auth_config:
     "[#92 Sercomm DM1000](https://github.com/solentlabs/cable_modem_monitor/issues/92)
     — form POST with base64-encoded password"
+  chipset: "No source found; 'Broadcom' is left from the original entry (ee775b29). The fixture HAR does not mention the chipset, an FCC database search for DM1000 finds no matching modem (the one DM1000CE result is a 2010 cordless phone), and TechInfoDepot has no DM1000 page (all read 2026-10-20)."
+  isps: "[#92](https://github.com/solentlabs/cable_modem_monitor/issues/92) reporter's ISP is Koodo (issue body, diagnostics form)."
 
 attribution:
   contributors:

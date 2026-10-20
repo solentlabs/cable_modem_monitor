@@ -36,11 +36,13 @@ sources:
   auth_config: "Synthetic HAR — no authentication required"
   action_config: "[Issue #82 comment by @edent](https://github.com/solentlabs/cable_modem_monitor/issues/82) — login endpoint, token shape, reboot body confirmed via curl"
 
-  manufacturer: "[ISPreview — Hub 5 launch](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html) identifies the Hub 5 as the Sagemcom F3896LG-VMB"
+  manufacturer: "[Virgin Media device information](https://www.virginmedia.com/help/how-to/broadband/device-security-information) (read 2026-10-20) lists the Hub 5 as Sagemcom FAST 3896 LG-VMB. The ISPreview launch article does not name Sagemcom or the model."
   brands: "[ISPreview — Hub 5 launch](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html) — sold by Virgin Media as the Hub 5"
-  chipset: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
+  chipset: "[ISPreview, Hub 5 launch](https://web.archive.org/web/20240101000000/https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html) (Wayback capture 2024-01, read 2026-10-20): the article's later update lists Broadband DOCSIS3.1/3.0 Broadcom 3390S. The capture of 2021-10-20 predates that update."
   detection_hints: "[Issue #82](https://github.com/solentlabs/cable_modem_monitor/issues/82)"
   hardware: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
+  release_date: "[ISPreview, 2021-10-20](https://web.archive.org/web/20211020082717/https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html) (Wayback capture of the same day): Virgin Media O2 'officially unveiling' the Hub 5, with a phased roll-out to existing customers."
+  isps: "Virgin Media: the ISPreview article above and Virgin Media's [device information page](https://www.virginmedia.com/help/how-to/broadband/device-security-information) (read 2026-10-20), which lists the Hub 5 as Sagemcom FAST 3896 LG-VMB."
 
 attribution:
   contributors:

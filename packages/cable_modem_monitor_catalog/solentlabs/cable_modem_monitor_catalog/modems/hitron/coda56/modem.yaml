@@ -38,6 +38,7 @@ sources:
     "[iFixit — Hitron CODA Teardown](https://www.ifixit.com/Teardown/Hitron+CODA+Teardown/169712)
     — main SoC Intel FHCE2703 SR3SA (Puma 7); CODA family teardown,
     CODA56 not individually torn down but assumed to share the SoC"
+  isps: "[#89](https://github.com/solentlabs/cable_modem_monitor/issues/89) reporter's ISP is Comcast/Xfinity (issue body, diagnostics form)."
 
 attribution:
   contributors:

@@ -14,6 +14,8 @@ sources:
     "[#79 — Compal CH8978E](https://github.com/solentlabs/cable_modem_monitor/issues/79)
     — auth required but mechanism unknown"
   detection_hints: "[Pyür forum — hidden signal pages](https://www.pyforum.de/viewtopic.php?t=1345)"
+  release_date: "No source found; 2023 is left from the original entry. A search for CH8978E in a public FCC ID database returned no record (read 2026-10-20)."
+  isps: "[#79](https://github.com/solentlabs/cable_modem_monitor/issues/79) reporter's ISP is Pyür (issue body, diagnostics form)."
 
 attribution:
   contributors:
