@@ -12,7 +12,6 @@ auth:
 
 hardware:
   docsis_version: "3.1"
-  chipset: unknown
   release_date: "2016"
 
 status: confirmed
@@ -21,6 +20,7 @@ sources:
   auth_config: "[#73 CM3500B HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/73)"
 
   release_date: "[ARRIS CM3500 Datasheet](https://vectortechsolutions.com/wp-content/uploads/import/files/1314/231004_cm3500_datasheet.pdf)"
+  isps: "[#73 modem request](https://github.com/solentlabs/cable_modem_monitor/issues/73), 2025-12-19: the owner writes 'ISP is Vodafone Germany on its past Unitymedia network'. 'Vodafone' is the short form of the same ISP."
 
 attribution:
   contributors:

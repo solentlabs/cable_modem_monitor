@@ -24,6 +24,7 @@ sources:
 
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_CM820A"
   detection_hints: "[PR #57 CM820B parser](https://github.com/solentlabs/cable_modem_monitor/pull/57)"
+  isps: "Contributor-declared: [PR #57](https://github.com/solentlabs/cable_modem_monitor/pull/57), submitted 2025-12-08, lists 'Volya' as the ISP in its fixture metadata (tests/parsers/arris/fixtures/cm820b/metadata.yaml and README.md). No second source found."
 
 attribution:
   contributors:
@@ -34,7 +35,6 @@ attribution:
 
 isps:
   - Volya
-  - Various
 
 notes: |
   EuroDOCSIS 3.0 cable modem (released 2011). Intel Puma 5 chipset.

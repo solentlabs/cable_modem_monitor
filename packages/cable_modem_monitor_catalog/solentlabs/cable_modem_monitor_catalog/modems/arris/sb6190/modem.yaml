@@ -12,7 +12,6 @@ hardware:
   docsis_version: "3.0"
   chipset: "Intel Puma 6"
   end_of_life: "2023"
-
   release_date: "2016"
 
 detection:
@@ -29,6 +28,8 @@ sources:
 
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6190"
   detection_hints: "[PR #22 SB6190 parser](https://github.com/solentlabs/cable_modem_monitor/pull/22)"
+  release_date: "[CableLabs certified products list](https://web.archive.org/web/20260216183300/https://www.cablelabs.com/wp-content/uploads/2013/10/Certified_Products.pdf) (Wayback capture 2026-02-16): Arris SB6190, certification wave 114, CQ Date 2015. [SB6190 datasheet](http://speedguide.net/images/hardware/arris/sb6190_ds.pdf), © ARRIS Enterprises 2015. Retail availability in 2016: SpeedGuide added its listing 2016-05-08, and the Wayback Machine's first live capture of the manufacturer's shop page is 2016-07-28 (404 on 2016-04-30). The year is when it reached retail; certification was 2015."
+  isps: "[SURFboard SB6190 product page, Wayback capture 2021-06-16](https://web.archive.org/web/20210616175418/https://www.surfboard.com/products/cable-modems/sb6190/): 'Compatible with Cox, Spectrum, Xfinity and other major U.S. cable internet providers'. [Capture 2026-04-24](https://web.archive.org/web/20260424015655/https://www.surfboard.com/products/cable-modems/sb6190/): 'Compatible with Cox, Xfinity', footer 'tested and qualified by Cox, Comcast Xfinity, and Charter Spectrum'. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) names the SB6190 (read 2026-10-20). Spectrum's [authorized modem list](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) does not (read 2026-10-20); a SURFboard moderator wrote on [2025-05-05](https://web.archive.org/web/20251224053026/https://community.surfboard.com/sb6183-sb6190-58/sb-6190-not-approved-by-spectrum-5006) that Spectrum 'has previously approved this modem' but 'will no longer facilitate new activations'. Spectrum is kept for existing users."
 
 attribution:
   contributors:

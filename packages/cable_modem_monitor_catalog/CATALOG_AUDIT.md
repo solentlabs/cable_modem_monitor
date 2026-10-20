@@ -89,7 +89,7 @@ Entries with an open capability gap are listed above, not here.
 | Modem | Transport | ISPs | Capture | Restart |
 |-------|-----------|------|---------|---------|
 | CM3500B | HTML | Vodafone Germany, Vodafone | generated | n/a |
-| CM820B | HTML | Volya, Various | synthetic | n/a |
+| CM820B | HTML | Volya | synthetic | n/a |
 | S33 | HNAP | Comcast, Cox, Spectrum, Xfinity | — | captured |
 | S33 (v2) | HNAP | Comcast, Cox, Spectrum, Xfinity | — | not captured |
 | S33 (v3) | HNAP | Comcast, Cox, Spectrum, Xfinity | — | not captured |
