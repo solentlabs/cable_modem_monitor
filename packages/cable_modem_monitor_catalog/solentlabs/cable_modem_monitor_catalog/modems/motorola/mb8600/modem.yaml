@@ -36,6 +36,8 @@ sources:
   chipset: "[AfrozAhmad MB8611 review](https://afrozahmad.com/blog/motorola-mb8611-cable-modem-review/) — same BCM3390 platform as MB8611"
   hardware: "[Motorola MB8600 page](https://www.motorola.com/us/mb8600)"
   verification: "User diagnostics capture on v3.14.0-alpha.11 (2026-04-07, Issue #40)"
+  release_date: "[Stop the Cap, 2017-05-16](https://stopthecap.com/2017/05/16/zooms-motorola-mb8600-docsis-3-1-modem-arrives-month-159-99) (read 2026-10-20): Zoom 'will introduce' the MB8600 'later this month' at $159.99. SpeedGuide added its listing on 2017-09-07."
+  isps: "[Motorola MB8600 product page, Wayback capture 2021-06-20](https://web.archive.org/web/20210620212057/https://www.motorola.com/us/mb8600/): 'certified for Comcast XFINITY, Comcast Business, and Cox Communications'. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) names the MB8600 (read 2026-10-20). Spectrum: the reporter of [#40](https://github.com/solentlabs/cable_modem_monitor/issues/40) lists Spectrum as their ISP; Spectrum's [authorized modem list](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) does not name the MB8600 (read 2026-10-20)."
 
 attribution:
   contributors:

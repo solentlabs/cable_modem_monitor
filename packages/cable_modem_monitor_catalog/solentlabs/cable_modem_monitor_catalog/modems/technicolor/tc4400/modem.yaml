@@ -23,9 +23,11 @@ status: awaiting_verification
 sources:
   model_aliases: "Unit label TC4400-AM on retail listings (e.g. https://www.ebay.com/itm/406711931022)"
   auth_config: "[#1 TC-4400 Login](https://github.com/solentlabs/cable_modem_monitor/issues/1)"
-  chipset: "[FCC Filing](https://fccid.io/VU4-TC4400)"
+  chipset: "[TechInfoDepot technicolor TC4400](https://techinfodepot.shoutwiki.com/wiki/Technicolor_TC4400) (read 2026-10-20): Broadcom BCM3390. The earlier FCC link (ID VU4-TC4400) is a grantee code that belongs to another company and has no TC4400 record."
 
   detection_hints: "[#1 TC-4400 Login](https://github.com/solentlabs/cable_modem_monitor/issues/1)"
+  release_date: "Left from the original entry; 2017 is not sourced. The [TC4400 datasheet](https://lightspeed.ca/wp-content/uploads/2020/07/TC4400DataSheet.pdf) carries 'Copyright 2016 Technicolor', and the [CableLabs certified products list](https://web.archive.org/web/20260216183300/https://www.cablelabs.com/wp-content/uploads/2013/10/Certified_Products.pdf) (Wayback capture 2026-02-16) has the TC4400-XM6 with CQ Date 2016, so the modem existed in 2016."
+  isps: "Teksavvy: reporter of [#94](https://github.com/solentlabs/cable_modem_monitor/issues/94). Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany and Unitymedia: no source opened names the TC4400 for them, and neither Cox's [certified list](https://www.cox.com/residential/support/certified-cable-modems.html) nor Spectrum's [authorized list](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) names it (both read 2026-10-20). Kept from the original entry."
 
 attribution:
   contributors:

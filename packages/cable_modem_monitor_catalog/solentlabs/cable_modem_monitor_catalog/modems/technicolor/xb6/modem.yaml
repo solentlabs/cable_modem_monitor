@@ -38,6 +38,7 @@ sources:
   auth_config: "[#111 XB6](https://github.com/solentlabs/cable_modem_monitor/issues/111)"
   chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Technicolor_CGM4140COM)"
   error_codewords: "[#111](https://github.com/solentlabs/cable_modem_monitor/issues/111) captures (test_data/modem.har and modem.verified.json); another XB6 in [Xfinity Community, April 2020](https://forums.xfinity.com/conversations/your-home-network/correctable-codewords-50-of-codewords-on-2-channels/602daed0c5375f08cdf6df9e) (index 1 equals index 33) and an XB7 in [DSLReports, November 2021](https://www.dslreports.com/forum/r33254515-Connectivity-Seeing-nearly-as-many-Correctable-as-Unerrored-Codewords-on-Ch1) (index 1 equals index 32); the page pairs Channel IDs with CMErrorCodewords counters by row index in the [RDK-B web UI template](https://github.com/rdkcentral/webui/blob/8ac407e5f75f243a8d01615d664b2e6e61522b8b/source/Styles/xb6/jst/network_setup.jst#L1073-L1107)"
+  isps: "[#111](https://github.com/solentlabs/cable_modem_monitor/issues/111) reporter's ISP is Rogers (Shaw)."
 
 attribution:
   contributors:

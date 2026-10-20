@@ -27,6 +27,7 @@ status: awaiting_verification
 
 sources:
   release_date: "[FCC grants for CGA4236 (G95-CGA4236)](https://fcc.report/FCC-ID/G95-CGA4236) — FCC grant proxy, earliest grant 2020-06-23; no ISP/manufacturer launch announcement found"
+  isps: "'Unknown' is a placeholder, not an ISP: an awaiting_verification entry must list at least one ISP, and [#115](https://github.com/solentlabs/cable_modem_monitor/issues/115) records the ISP as 'Unknown (please confirm)'. Replace it when the contributor names their provider."
   model_aliases: "[device.report — Technicolor CGA4236TCH1](https://device.report/technicolor/cga4236tch1)"
   auth_config:
     "[#115 Technicolor CGA4236](https://github.com/solentlabs/cable_modem_monitor/issues/115)

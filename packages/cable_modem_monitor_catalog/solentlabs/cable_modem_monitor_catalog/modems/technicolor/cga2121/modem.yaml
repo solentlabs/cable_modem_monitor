@@ -18,15 +18,17 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3384ZU"
-  release_date: "2015"
+  release_date: "2017"
 
 status: awaiting_verification
 
 sources:
   auth_config: "[#75 Technicolor CGA2121](https://github.com/solentlabs/cable_modem_monitor/issues/75)"
-  chipset: "[FCC Filing](https://fccid.io/RUI-CGA2121COM)"
+  chipset: "[TechInfoDepot Technicolor CGA2121](https://techinfodepot.shoutwiki.com/wiki/Technicolor_CGA2121) (read 2026-10-20): Broadcom BCM3384ZU, FCC ID N89-CGA2121. The earlier FCC link (ID RUI-CGA2121COM) is a grantee code that belongs to another company and has no CGA2121 record."
 
   detection_hints: "[#75 Technicolor CGA2121](https://github.com/solentlabs/cable_modem_monitor/issues/75)"
+  release_date: "Changed from 2015, which had no source (original entry 6da3d83e), to 2017, the year of the earliest dated evidence; the device was on sale by then and may be older. Read 2026-10-20: the first post in a [Telia community thread about the CGA2121](https://yhteiso.telia.fi/kiinteae-netti-8/technicolor-cga2121-kokemukset-29137) is dated 2017-12-13, and [FCC ID N89-CGA2121](https://fccid.io/N89-CGA2121) shows its first final action on 2018-03-30."
+  isps: "[#75](https://github.com/solentlabs/cable_modem_monitor/issues/75) reporter's ISP is Telia (Finland). Telia Finland publishes a [CGA2121 user guide](https://www.telia.fi/asiakastuki/laitteet/technicolor-cga2121) (read 2026-10-20)."
 
 attribution:
   contributors:

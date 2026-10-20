@@ -86,6 +86,7 @@ sources:
     that path is the first authenticated request and the only one to
     return 401"
   chipset: "[DeviWiki CGA4233](https://deviwiki.com/wiki/Technicolor_CGA4233) — same BCM3390 Technicolor gateway platform"
+  isps: "[#120](https://github.com/solentlabs/cable_modem_monitor/issues/120) reporter's ISP is Vodafone (issue body, diagnostics form)."
 
 attribution:
   contributors:

@@ -42,9 +42,10 @@ sources:
   auth_config: "Maintainer hardware HAR capture"
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Motorola_MB7621"
   detection_hints: "Maintainer verified"
-  isps: "https://www.amazon.com/MOTOROLA-MB7621-Approved-Spectrum-Downloads/dp/B077BL65HS"
+  isps: "[Zoom Telephonics press release, 2017-12-21](https://www.accessnewswire.com/newsroom/en/telecommunications/zoom-begins-shipments-of-24x8-cable-modems-484721): 'certified by CableLabs, Comcast Xfinity, and Charter Spectrum'. [Amazon listing B077BL65HS](https://www.amazon.com/dp/B077BL65HS) (read 2026-10-20): title 'Approved by Comcast Xfinity, Cox, and Spectrum', provider field 'BrightHouse, Charter Spectrum, Comcast Xfinity, Cox, Time Warner Cable'. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) names the MB7621 and Spectrum's [authorized modem list](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) does not (both read 2026-10-20). CableOne, RCN and Suddenlink: no source opened names the MB7621 for them, and Sparklight's [supported modems](https://support.sparklight.com/hc/en-us/articles/115009158227-Supported-Cable-Modems) (read 2026-10-20) requires DOCSIS 3.1. Kept from the original entry."
   restart: "HAR verified — all form fields from MotoSecurity.asp (2026-03-26 capture)"
   field_observations: "Maintainer dual-HA soak (2026-05-14/15): two HA instances at 30s poll intervals drove the web stack to read timeout while ICMP remained sub-5ms"
+  release_date: "[Zoom Telephonics press release, 2017-12-21](https://www.accessnewswire.com/newsroom/en/telecommunications/zoom-begins-shipments-of-24x8-cable-modems-484721) (read 2026-10-20): Zoom 'has begun shipments of the Motorola MB7621' and it is 'available from Amazon now'. TechInfoDepot's estimated release date, December 2017, agrees."
 
 attribution:
   contributors:
