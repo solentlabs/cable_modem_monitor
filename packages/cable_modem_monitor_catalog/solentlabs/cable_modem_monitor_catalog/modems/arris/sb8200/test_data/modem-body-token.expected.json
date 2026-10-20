@@ -412,6 +412,7 @@
     "docsis_status": "Operational",
     "downstream_channel_count": 34,
     "hardware_version": "6",
+    "model_name": "SB8200",
     "rate_corrected": 0.0,
     "rate_uncorrected": 0.0,
     "software_version": "AB01.01.009.51_080720_183.0A.NSH",

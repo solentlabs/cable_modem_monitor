@@ -412,6 +412,7 @@
     "docsis_status": "Operational",
     "downstream_channel_count": 34,
     "hardware_version": "7",
+    "model_name": "SB8200",
     "software_version": "AB01.02.053.05_051921_193.0A.NSH",
     "system_uptime": "50 days 11h:15m:21s",
     "total_corrected": 1392710,

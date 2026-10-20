@@ -62,6 +62,11 @@ notes: |
   hundreds. Two channels dominate any aggregate, making totals
   misleading. Aggregate intentionally omitted; per-channel data is
   available. Well-documented chipset issue across the industry.
+  Not mapped — hardware_version, software_version, system_uptime: they
+  are on /cgi-bin/swinfo, which only the no-login capture requests. No
+  login-firmware capture requests it; a mapping would 404 the poll if
+  that firmware lacks the page. Needs a login-firmware capture that
+  opens Product Information.
 
 references:
   issues:

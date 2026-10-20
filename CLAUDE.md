@@ -192,12 +192,12 @@ visible without re-running the work.
 - **After a hand-off, audit the full diff before touching anything**
   (`git diff HEAD --stat`): the gitStatus snapshot can be stale, and
   another session may have regressed earlier work.
-- **Never spawn a sub-agent to implement a feature that touches existing
-  code, specs or tests.** Sub-agents lack project history and make
-  unsolicited cleanup decisions (removing fields, dropping coverage,
-  stripping docs). Only bounded read-only research is safe; if context
-  pressure makes direct implementation tempting, split the task into
-  smaller sessions.
+- **The primary agent plans, edits and verifies; sub-agents are
+  read-only.** They lack project history and make unsolicited cleanup
+  decisions (removing fields, dropping coverage, stripping docs), so they
+  fan out searches and review a diff briefed without the primary's
+  conclusion. Treat every report as a lead to verify before it reaches a
+  reply, spec or draft.
 - **Recurring problem = root cause unfixed.** If a fix has to be
   re-applied within a session, find what is recreating the failure.
 - **Never dismiss test failures as "pre-existing".** If tests pass on

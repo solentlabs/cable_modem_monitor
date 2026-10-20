@@ -89,6 +89,9 @@ system_info:
     - format: html_fields
       resource: "/cmswinfo.html"
       fields:
+        - id: "thisModelNumberIs"
+          field: model_name
+          type: string
         - css: "table.simpleTable:nth-of-type(1) tr:nth-of-type(3) td:nth-of-type(2)"
           field: hardware_version
           type: string
