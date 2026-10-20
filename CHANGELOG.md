@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   status on the SB6141. The SB6190's downstream channels gain modulation, and
   the SB6183 gains hardware version. Channel width is read on the Hitron
   CODA56 and the Technicolor CGA4236 and CGA6444VF.
+- **The SB8200 family reports its model name.** Read from a page the
+  integration already polls, so there is no extra request.
+- **An HTTP action can carry URL query parameters.** A new `query` map in
+  `modem.yaml` sits beside `params`, which stays a form body on every method.
+  A restart that a browser sends as `GET /reset.htm?reset_modem=...` can now
+  be declared field by field. No catalog modem uses it yet.
 
 ### Fixed
 

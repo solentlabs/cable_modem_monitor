@@ -91,9 +91,11 @@ def execute_http_action(
     if "{auth:" in endpoint:
         endpoint = _interpolate_auth_endpoint(endpoint, auth_context)
     url = f"{stripped_base}{endpoint}"
-    if query_params:
+    # Session query first, then the action's own; values go out as written.
+    url_query = {**(query_params or {}), **action.query}
+    if url_query:
         sep = "&" if "?" in url else "?"
-        qs = "&".join(f"{k}={v}" for k, v in query_params.items())
+        qs = "&".join(f"{k}={v}" for k, v in url_query.items())
         url = f"{url}{sep}{qs}"
     headers = dict(action.headers) if action.headers else None
 

@@ -1332,14 +1332,17 @@ actions:
 ```
 
 A GET whose fields ride in the URL, as a browser form with
-`method="get"` sends them, declares the query in `endpoint`:
+`method="get"` sends them, declares them in `query` (a query written
+into `endpoint` is sent too):
 
 ```yaml
 actions:
   restart:
     type: http
     method: GET
-    endpoint: "/reset.htm?reset_modem=Restart+Cable+Modem"
+    endpoint: "/reset.htm"
+    query:
+      reset_modem: "Restart+Cable+Modem"
 ```
 
 | Field | Type | Required | Description |
@@ -1348,7 +1351,8 @@ actions:
 | `method` | string | yes | HTTP method (`GET`, `POST`, etc.). No default — must be explicit. |
 | `endpoint` | string | yes | URL path to send the request to, sent as written: a query string in it (`/reset.htm?reset_modem=Restart+Cable+Modem`) goes out as the URL query. May contain `{auth:token}` / `{auth:user_id}` placeholders — see [Auth-value placeholders](#auth-value-placeholders). |
 | `requires_session` | bool | `false` | *Logout only.* `false` = endpoint is unauthenticated and can clear any active server-side session without credentials. `true` = endpoint needs a live session; Core skips the pre-retry logout call when the session is not valid. |
-| `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`, on every method including `GET`; `params` never reach the URL query. A form that submits with `method="get"` carries its fields in the query, so declare them in `endpoint`. Mutually exclusive with `json_body`. |
+| `query` | map | no | URL query parameters, appended after the `endpoint`'s own query and the session `query_params`; a key in both `query` and the session `query_params` is sent once, with the action's value. Values go out as written (no URL-encoding), so write `Restart+Cable+Modem` as the browser sent it. Combines with `params` or `json_body`. No placeholder resolves in `query`. |
+| `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`, on every method including `GET`; `params` never reach the URL query. A form that submits with `method="get"` carries its fields in the query: declare them in `query` (or in `endpoint`). Mutually exclusive with `json_body`. |
 | `json_body` | map | no | JSON request body. If present, body is `application/json`. Mutually exclusive with `params`. Use for REST APIs that accept JSON. |
 | `body_encoding` | enum | `plain` | `session`: send `json_body` wrapped the way the session's auth strategy encodes request bodies (e.g. [`json_sjcl`](#json_sjcl)'s SJCL envelope). Requires `json_body`, and an auth strategy that encodes action bodies (the one in `action_auth` when set). |
 | `headers` | map | no | Per-action headers. Merged with session-level `headers` (action wins on conflict). |

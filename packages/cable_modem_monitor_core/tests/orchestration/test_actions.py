@@ -1026,6 +1026,79 @@ class TestHttpActionJsonBody:
             )
 
 
+class TestHttpActionQuery:
+    """``query`` rides in the URL query, beside any form body ``params``."""
+
+    @pytest.mark.parametrize(
+        "endpoint,query,session_query,expected_url",
+        [
+            ("/reset.htm", {"reset_modem": "Restart+Cable+Modem"}, None, "/reset.htm?reset_modem=Restart+Cable+Modem"),
+            ("/reset.htm", {"a": "1", "b": "2"}, None, "/reset.htm?a=1&b=2"),
+            ("/reset.htm?x=1", {"a": "1"}, None, "/reset.htm?x=1&a=1"),
+            ("/reset.htm", {"a": "1"}, {"_n": "9"}, "/reset.htm?_n=9&a=1"),
+            ("/reset.htm", {"a": "1"}, {"a": "0"}, "/reset.htm?a=1"),
+            ("/reset.htm", {}, {"_n": "9"}, "/reset.htm?_n=9"),
+            ("/reset.htm", {}, None, "/reset.htm"),
+        ],
+        ids=[
+            "single",
+            "several-in-order",
+            "after-endpoint-query",
+            "after-session-query",
+            "action-wins-duplicate-key",
+            "session-only",
+            "none",
+        ],
+    )
+    def test_query_url(
+        self, endpoint: str, query: dict[str, str], session_query: dict[str, str] | None, expected_url: str
+    ) -> None:
+        """Query values go out as written, after the endpoint's and the session's own query."""
+        session = MagicMock(spec=requests.Session)
+        session.request.return_value = MagicMock(status_code=200)
+        action = HttpAction(type="http", method="GET", endpoint=endpoint, query=query)
+
+        execute_http_action(session, "http://192.168.100.1", action, query_params=session_query)
+
+        assert session.request.call_args[0][1] == f"http://192.168.100.1{expected_url}"
+
+    def test_query_and_params_both_sent(self) -> None:
+        """A request can carry a URL query and a form body together."""
+        session = MagicMock(spec=requests.Session)
+        session.request.return_value = MagicMock(status_code=200)
+        action = HttpAction(
+            type="http", method="POST", endpoint="/goform/restart", query={"id": "7"}, params={"restart": "1"}
+        )
+
+        execute_http_action(session, "http://192.168.100.1", action)
+
+        session.request.assert_called_once_with(
+            "POST",
+            "http://192.168.100.1/goform/restart?id=7",
+            data={"restart": "1"},
+            headers=None,
+            timeout=10,
+        )
+
+    def test_query_and_json_body_both_sent(self) -> None:
+        """``query`` is not part of the params/json_body exclusion."""
+        session = MagicMock(spec=requests.Session)
+        session.request.return_value = MagicMock(status_code=200)
+        action = HttpAction(
+            type="http", method="POST", endpoint="/rest/reboot", query={"id": "7"}, json_body={"reboot": True}
+        )
+
+        execute_http_action(session, "http://192.168.100.1", action)
+
+        session.request.assert_called_once_with(
+            "POST",
+            "http://192.168.100.1/rest/reboot?id=7",
+            json={"reboot": True},
+            headers=None,
+            timeout=10,
+        )
+
+
 # ------------------------------------------------------------------
 # Tests — execute_action with action_auth (per-action auth)
 # ------------------------------------------------------------------

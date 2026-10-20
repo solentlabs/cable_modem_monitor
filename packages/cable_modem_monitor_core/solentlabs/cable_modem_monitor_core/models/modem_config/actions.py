@@ -20,6 +20,7 @@ class HttpAction(BaseModel):
     method: str
     endpoint: str
     requires_session: bool = False
+    query: dict[str, str] = Field(default_factory=dict)
     params: dict[str, str] = Field(default_factory=dict)
     json_body: dict[str, Any] | None = None
     body_encoding: Literal["plain", "session"] = "plain"
