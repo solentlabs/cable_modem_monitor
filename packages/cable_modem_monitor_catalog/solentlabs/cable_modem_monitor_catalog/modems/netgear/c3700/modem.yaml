@@ -28,6 +28,8 @@ sources:
 
   chipset: "[BCM3383 Datasheet](https://www.prnewswire.com/news-releases/broadcom-launches-gigabit-docsis-cable-gateway-family-186004842.html)"
   detection_hints: "Maintainer verified"
+  release_date: "[NETGEAR C3700 product page, Wayback first capture 2014-03-19](https://web.archive.org/web/20140319021052/http://www.netgear.com/home/products/networking/cable-modems-routers/C3700.aspx) (page footer © 1996-2014). CableLabs lists a C3700_3000 certification in 2013 (wave 99, [CableLabs list](https://web.archive.org/web/20260216183300/https://www.cablelabs.com/wp-content/uploads/2013/10/Certified_Products.pdf)); 2014 is the year the retail page first appears."
+  isps: "[NETGEAR C3700 product page, Wayback capture 2018-01-04](https://web.archive.org/web/20180104010004/http://www.netgear.com/home/products/networking/cable-modems-routers/C3700.aspx): 'Certified to work with U.S. cable Internet providers like XFINITY from Comcast, Spectrum, Cox, Cablevision & more'. The 2014-03-19 capture lists 'Cox, Time Warner Cable, XFINITY'. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) names the C3700 (read 2026-10-20); Spectrum's [authorized list](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) does not (read 2026-10-20), so Spectrum is kept for existing users."
 
 attribution:
   contributors:

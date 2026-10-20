@@ -19,7 +19,7 @@ hardware:
   chipset: "Broadcom BCM3384"
   end_of_life: "2023"
 
-  release_date: "2016-03"
+  release_date: "2015"
 
 status: awaiting_verification
 
@@ -29,6 +29,8 @@ sources:
   chipset: "[CM600 Datasheet](https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf)"
   detection_hints: "[#3 Netgear CM600](https://github.com/solentlabs/cable_modem_monitor/issues/3)"
   hardware: "[CM600 Datasheet](https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf)"
+  isps: "[NETGEAR CM600 product page, Wayback capture 2021-01-17](https://web.archive.org/web/20210117065152/https://www.netgear.com/home/wifi/modems/cm600/): 'Works with all major US cable Internet providers* such as XFINITY from Comcast, Spectrum, Cox'. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) names the CM600; [Spectrum authorized modems](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) lists it under the up-to-500Mbps tiers (read 2026-10-20). TWC has no source of its own: it is the former name of Spectrum."
+  release_date: "[NETGEAR CM600 product page, Wayback first capture 2015-10-22](https://web.archive.org/web/20151022223935/http://www.netgear.com/home/products/networking/cable-modems-routers/CM600.aspx) (page footer © 1996-2015, 'Certified for XFINITY Internet plans'). [CableLabs certified products list](https://web.archive.org/web/20260216183300/https://www.cablelabs.com/wp-content/uploads/2013/10/Certified_Products.pdf): Netgear CM600, wave 114, CQ Date 2015. The catalog previously said 2016-03; neither source supports a 2016 launch."
 
 attribution:
   contributors:

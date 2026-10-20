@@ -18,6 +18,8 @@ sources:
   auth_config: "[#63 CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
   chipset: "[PC Perspective CM1200 announcement](https://pcper.com/2019/05/netgear-readies-nighthawk-cm1200-multi-gigabit-docsis-31-cable-modem/)"
   detection_hints: "[#63 CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
+  release_date: "[NETGEAR press release, 2019-04-29](https://www.netgear.com/about/press-releases/2019/netgear-maximizes-your-internet-speeds/): introduces the Nighthawk Multi-Gig Speed Cable Modem (CM1200) as available now (Wayback copy, read 2026-10-20)."
+  isps: "[NETGEAR CM1200 product page, Wayback capture 2021-01-18](https://web.archive.org/web/20210118112945/https://www.netgear.com/home/wifi/modems/cm1200/): 'Works with all major US cable Internet providers* such as XFINITY from Comcast, Spectrum, Cox'. The 2019-04-29 press release names Comcast, Spectrum and Cox. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) and [Spectrum authorized modems](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) name the CM1200 (read 2026-10-20)."
 
 attribution:
   contributors:

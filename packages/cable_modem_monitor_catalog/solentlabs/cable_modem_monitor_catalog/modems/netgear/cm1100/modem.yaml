@@ -26,6 +26,7 @@ sources:
   auth_config: "[#104 CM1100 HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/104)"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Netgear_CM1100)"
   release_date: "[Netgear CM1100 user manual, August 2018](https://www.downloads.netgear.com/files/GDC/CM1100/CM1100_UM_EN.pdf); Q4 2018 retail availability per AnandTech CES 2019 coverage and DSLReports threads"
+  isps: "[NETGEAR CM1100 product page, Wayback capture 2021-01-17](https://web.archive.org/web/20210117054449/https://www.netgear.com/home/wifi/modems/cm1100/): 'Works with all major US cable Internet providers* such as XFINITY from Comcast, Spectrum, Cox'. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) and [Spectrum authorized modems](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) both name the CM1100 (read 2026-10-20)."
 
 attribution:
   contributors:

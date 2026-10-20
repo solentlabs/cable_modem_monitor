@@ -36,6 +36,8 @@ sources:
   auth_config: "[#38 Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
   chipset: "[Homeowner.com Review](https://www.homeowner.com/connectivity/netgear/netgear-cm2000-review)"
   detection_hints: "[#38 Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
+  release_date: "[Dong Knows, 2020-09-22](https://dongknows.com/netgear-2-5-gbps-cable-modems-now-shipping): 'the CM2000 and CM2050V are both available now'. [SpeedGuide](https://www.speedguide.net/routers/netgear-cm2000-nighthawk-25gbps-cable-modem-4652) added its listing 2020-08-30. A NETGEAR community post says ISP release was about 2020-01-23; the August month is the earliest retail-side evidence, not a launch notice."
+  isps: "[NETGEAR CM2000 product page, Wayback capture 2021-01-18](https://web.archive.org/web/20210118104342/https://www.netgear.com/home/wifi/modems/cm2000/): 'works right out of the box with major internet service providers, including XFINITY from Comcast, Spectrum, Cox, and more'. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) and [Spectrum authorized modems](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) name the CM2000 (read 2026-10-20). Xfinity is Comcast's brand."
 
 attribution:
   contributors:

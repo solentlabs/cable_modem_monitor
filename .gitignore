@@ -123,6 +123,9 @@ RAW_DATA/
 # Claude Code temporary files
 tmpclaude-*
 
+# Playwright MCP page snapshots and console logs
+.playwright-mcp/
+
 # curl/libcurl cookie jars
 *.cookies
 cookies.txt

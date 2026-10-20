@@ -46,6 +46,7 @@ sources:
     modem-https.har shows that page posting /goform/logout?id=N with a
     hidden nowTime field"
   release_date: "[Netgear press release, March 12, 2024](https://www.businesswire.com/news/home/20240312800246/en/NETGEAR-Unveils-Next-Generation-of-Connectivity-with-the-Nighthawk-DOCSIS-3.1-High-Speed-Internet-Cable-Modem) announcing Nighthawk CM3000 U.S. availability"
+  isps: "[NETGEAR CM3000 product page, Wayback capture 2025-01-18](https://web.archive.org/web/20250118120741/https://www.netgear.com/home/wifi/modems/cm3000/): 'such as Xfinity's 2Gbps download speeds', with speed tables for Xfinity, Spectrum and Cox. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) and [Spectrum authorized modems](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) name the CM3000 (read 2026-10-20). Xfinity is Comcast's brand."
 
 attribution:
   contributors:

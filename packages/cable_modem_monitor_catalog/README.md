@@ -115,8 +115,8 @@ DOCSIS 3.0
 ├── 2014  ARRIS       TM1602A    ░░░░░███████████████  12yr  Current
 ├── 2015  Technicolor CGA2121    ░░░░░░██████████████  11yr  Current
 ├── 2015  Compal      CH7465MT   ░░░░░░██████████████  11yr  Current
+├── 2015  Netgear     CM600      ░░░░░░██████████░░░░   8yr  EOL 2023
 ├── 2016  Netgear     C7000v2    ░░░░░░░█████████████  10yr  Current
-├── 2016  Netgear     CM600      ░░░░░░░█████████░░░░   7yr  EOL 2023
 ├── 2016  Ubee        EVW32C-0N  ░░░░░░░█████████████  10yr  Current
 ├── 2016  ARRIS       SB6190     ░░░░░░░█████████░░░░   7yr  EOL 2023
 └── 2017  Motorola    MB7621     ░░░░░░░░████████████   9yr  Current
