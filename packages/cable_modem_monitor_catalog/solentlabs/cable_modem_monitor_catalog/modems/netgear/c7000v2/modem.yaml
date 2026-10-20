@@ -23,7 +23,7 @@ actions:
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3384"
-  release_date: "2016"
+  release_date: "2017"
 
 status: confirmed
 
@@ -32,6 +32,8 @@ sources:
   auth_config: "[#163 C7000v2 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/163)"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Netgear_C7000_v2)"
   detection_hints: "[#163 C7000v2 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/163)"
+  release_date: "Changed from 2016, which had no source (original entry 582a5b67), to 2017, the date of Netgear's earliest documents for the product, read from Wayback copies: the [quick start guide](https://web.archive.org/web/20190214164200/http://www.downloads.netgear.com:80/files/GDC/C7000v2/C7000v2_QSG_EN.pdf) is dated March 2017 and the [user manual](https://web.archive.org/web/20180921023428/http://www.downloads.netgear.com:80/files/GDC/C7000v2/C7000v2_UM_EN.pdf) April 2017. The product may predate its documents."
+  isps: "Reporters of [#163](https://github.com/solentlabs/cable_modem_monitor/issues/163) and [#61](https://github.com/solentlabs/cable_modem_monitor/issues/61) list Comcast/Xfinity as their ISP (issue bodies)."
 
 attribution:
   contributors:

@@ -11,7 +11,7 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: "Intel Puma 5"
-  release_date: "2011"
+  release_date: "2012"
 
 health:
   supports_head: false
@@ -25,6 +25,7 @@ sources:
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_CM820A"
   detection_hints: "[PR #57 CM820B parser](https://github.com/solentlabs/cable_modem_monitor/pull/57)"
   isps: "Contributor-declared: [PR #57](https://github.com/solentlabs/cable_modem_monitor/pull/57), submitted 2025-12-08, lists 'Volya' as the ISP in its fixture metadata (tests/parsers/arris/fixtures/cm820b/metadata.yaml and README.md). No second source found."
+  release_date: "Changed from 2011, which had no source (original entry 6da3d83e), to 2012, the year of the CM820 family's earliest evidence; no CM820B-specific date was found. [SpeedGuide's Touchstone CM820 entry](https://www.speedguide.net/broadband-view.php?hw=2487) (read 2026-10-20) was added 2012-07-29, and the [CableLabs certified products list](https://web.archive.org/web/20260216183300/https://www.cablelabs.com/wp-content/uploads/2013/10/Certified_Products.pdf) (Wayback capture 2026-02-16) has the Arris CM820A in certification wave 89, CQ Date 2012. The CM820 datasheet carries a 2014 ARRIS copyright."
 
 attribution:
   contributors:
@@ -37,7 +38,7 @@ isps:
   - Volya
 
 notes: |
-  EuroDOCSIS 3.0 cable modem (released 2011). Intel Puma 5 chipset.
+  EuroDOCSIS 3.0 cable modem (released 2012). Intel Puma 5 chipset.
   No authentication required — CGI endpoints are publicly accessible.
   Two resources: /cgi-bin/status_cgi (channels + uptime) and
   /cgi-bin/vers_cgi (firmware/hardware version). Version info requires

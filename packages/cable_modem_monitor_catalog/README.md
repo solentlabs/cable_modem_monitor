@@ -108,16 +108,16 @@ Modems we're aware of but cannot currently support (ISP lockdown, missing data, 
 
 ```text
 DOCSIS 3.0
-├── 2011  ARRIS       CM820B     ░███████████████████  15yr  Current
 ├── 2011  ARRIS       SB6141     ░██████████████░░░░░  11yr  EOL 2022
-├── 2014  Netgear     C3700      ░░░░░██████████░░░░░   8yr  EOL 2022
+├── 2012  ARRIS       CM820B     ░░██████████████████  14yr  Current
+├── 2014  Netgear     C3700      ░░░░░███████████████  12yr  Current
 ├── 2014  Arris       SB6183     ░░░░░███████████████  12yr  Current
 ├── 2014  ARRIS       TM1602A    ░░░░░███████████████  12yr  Current
 ├── 2015  Compal      CH7465MT   ░░░░░░██████████████  11yr  Current
-├── 2015  Netgear     CM600      ░░░░░░██████████░░░░   8yr  EOL 2023
-├── 2016  Netgear     C7000v2    ░░░░░░░█████████████  10yr  Current
+├── 2015  Netgear     CM600      ░░░░░░██████████████  11yr  Current
 ├── 2016  Ubee        EVW32C-0N  ░░░░░░░█████████████  10yr  Current
-├── 2016  ARRIS       SB6190     ░░░░░░░█████████░░░░   7yr  EOL 2023
+├── 2016  ARRIS       SB6190     ░░░░░░░█████████████  10yr  Current
+├── 2017  Netgear     C7000v2    ░░░░░░░░████████████   9yr  Current
 ├── 2017  Technicolor CGA2121    ░░░░░░░░████████████   9yr  Current
 └── 2017  Motorola    MB7621     ░░░░░░░░████████████   9yr  Current
 

@@ -17,7 +17,6 @@ actions:
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3383"
-  end_of_life: "2022"
 
   release_date: "2014"
 
