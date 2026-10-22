@@ -360,7 +360,8 @@ auth:
 | `method` | string | `POST` | HTTP method |
 | `username_field` | string | `"username"` | Form field name for username |
 | `password_field` | string or list | `"password"` | Form field name(s) for password. All fields receive the same encoded password. Use a list when the modem POSTs the password to multiple form fields. |
-| `encoding` | enum | `plain` | `plain` or `base64` — how the password is encoded before POST |
+| `encoding` | enum | `plain` | `plain`, `base64` or `packed_base64`. `plain` and `base64` encode the password before POST. `packed_base64` posts both credentials as one field; see Form POST body. |
+| `credential_field` | string | `""` | Form field that carries the packed credentials. Required with `packed_base64` and rejected with any other encoding. |
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `hidden_fields` | map | `{}` | Static overrides or supplements for form hidden fields. Values here take precedence over fields discovered from the `login_page` form. Use when the form's default value isn't what the modem expects, or to add fields not present in the HTML. |
 | `login_page` | string | `""` | Page to fetch before login. Establishes session cookies and reads `<input type="hidden">` fields from the login form. Discovered hidden fields are included in the POST automatically. If empty, POST directly without pre-fetch. |
@@ -376,6 +377,19 @@ modems with dynamic CSRF tokens (e.g., server-generated `webToken`).
 When `login_page` is empty, the POST body is built entirely from
 config: `username_field`, `password_field` entries, and
 `hidden_fields`.
+
+**Packed credentials:** with `encoding: packed_base64` the credentials
+travel in the single field `credential_field` as
+`base64(encodeURIComponent(username) + ":" + encodeURIComponent(password))`,
+the value the login page's own script builds. No username or password
+field is posted, so setting `username_field` or `password_field`
+alongside it is a schema error. The packed field takes the credentials'
+place at the end of the merge order. `form_nonce`'s `b64_packed`
+encoding differs: it prefixes each part with its field name
+(`username=…:password=…`).
+
+Evidence: Arris SBG7400AC2 (firmware 9.1.103AA85) `basic_pwd_cgi`
+login, which rejects both the prefixed form and plain fields.
 
 **Dynamic POST URLs:** some firmware publishes a per-page-load value in
 the login form's action (`<form action="/goform/Login?id=1740525841">`)
@@ -492,8 +506,9 @@ Two properties distinguish `form_nonce` from `form`:
    which belong to the `form` strategy with `login_page` pre-fetch.
 2. **Text-prefix response** — the server returns a plain-text body
    starting with `Url:` (success, followed by redirect path) or
-   `Error:` (failure, followed by message). No HTTP redirect, no
-   Set-Cookie on the login response itself.
+   `Error:` (failure, followed by message). No HTTP redirect. The
+   session cookie, when the modem uses one, is set on this response
+   (SB6190: `credential`).
 
 These two properties are the **invariants** of the strategy. The
 variable parts (field names, nonce length, credential encoding)

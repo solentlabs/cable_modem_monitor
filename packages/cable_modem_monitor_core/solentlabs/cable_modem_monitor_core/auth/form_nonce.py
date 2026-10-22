@@ -9,7 +9,6 @@ import base64
 import logging
 import secrets
 import string
-import urllib.parse
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -20,11 +19,9 @@ from bs4 import BeautifulSoup, Tag
 from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormNonceAuth
 from .base import AuthResult, BaseAuthManager
+from .js_uri import encode_uri_component
 
 _logger = logging.getLogger(__name__)
-
-# Characters that JavaScript's encodeURIComponent does NOT encode.
-_JS_URI_SAFE = "-_.!~*'()"
 
 
 _CredentialEncoding = Literal["plain", "b64_packed"]
@@ -284,8 +281,8 @@ def _pack_b64_credentials(
     Returns:
         Base64-encoded string for the packed form field.
     """
-    part1 = urllib.parse.quote(f"{username_field}={username}", safe=_JS_URI_SAFE)
-    part2 = urllib.parse.quote(f"{password_field}={password}", safe=_JS_URI_SAFE)
+    part1 = encode_uri_component(f"{username_field}={username}")
+    part2 = encode_uri_component(f"{password_field}={password}")
     return base64.b64encode(f"{part1}:{part2}".encode()).decode("ascii")
 
 

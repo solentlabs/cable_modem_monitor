@@ -115,7 +115,8 @@ class FormAuth(AuthStrategyBase):
     method: str = "POST"
     username_field: str = "username"
     password_field: list[str] = Field(default=["password"])
-    encoding: Literal["plain", "base64"] = "plain"
+    encoding: Literal["plain", "base64", "packed_base64"] = "plain"
+    credential_field: str = ""
     cookie_name: str = ""
     hidden_fields: dict[str, str] = Field(default_factory=dict)
     login_page: str = ""
@@ -144,6 +145,18 @@ class FormAuth(AuthStrategyBase):
         # nothing to read and every login would take the fallback.
         if self.action_source == "login_page" and not self.login_page:
             raise ValueError("action_source: login_page requires login_page")
+        return self
+
+    @model_validator(mode="after")
+    def _packed_credentials_are_one_field(self) -> FormAuth:
+        # Each rule rejects a field that would otherwise be silently ignored.
+        packed = self.encoding == "packed_base64"
+        if packed and not self.credential_field:
+            raise ValueError("encoding: packed_base64 requires credential_field")
+        if self.credential_field and not packed:
+            raise ValueError("credential_field requires encoding: packed_base64")
+        if packed and self.model_fields_set & {"username_field", "password_field"}:
+            raise ValueError("encoding: packed_base64 posts no username_field or password_field")
         return self
 
 

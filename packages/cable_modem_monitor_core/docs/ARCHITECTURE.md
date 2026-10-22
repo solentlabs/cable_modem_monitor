@@ -788,7 +788,8 @@ class FormAuth(AuthStrategyBase):
     action_source: Literal["config", "login_page"] = "config"
     username_field: str = "username"
     password_field: list[str] = Field(default=["password"])
-    encoding: Literal["plain", "base64"] = "plain"
+    encoding: Literal["plain", "base64", "packed_base64"] = "plain"
+    credential_field: str = ""
     hidden_fields: dict[str, str] = Field(default_factory=dict)
     login_page: str = ""
     form_selector: str = ""

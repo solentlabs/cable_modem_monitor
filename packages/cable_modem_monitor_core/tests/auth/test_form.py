@@ -566,6 +566,76 @@ def test_hidden_field_merge_order(
         assert post_data.get("password") == "password"
 
 
+# Expected values computed with JavaScript's own encodeURIComponent and
+# Buffer base64, the operations the login page script performs.
+PACKED_BASE64_CASES = [
+    pytest.param("admin", "Password!23", {}, {"arguments": "YWRtaW46UGFzc3dvcmQhMjM="}, id="js_safe_chars_unescaped"),
+    pytest.param("a b", "p@ss:w/rd", {}, {"arguments": "YSUyMGI6cCU0MHNzJTNBdyUyRnJk"}, id="reserved_chars_escaped"),
+    pytest.param("admin", "", {}, {"arguments": "YWRtaW46"}, id="empty_password"),
+    pytest.param(
+        "admin",
+        "Password!23",
+        {"arguments": "decoy", "ar_nonce": "1"},
+        {"arguments": "YWRtaW46UGFzc3dvcmQhMjM=", "ar_nonce": "1"},
+        id="credentials_override_static",
+    ),
+]
+
+
+@pytest.mark.parametrize("username,password,hidden_fields,expected_body", PACKED_BASE64_CASES)
+def test_packed_base64_post_body(
+    username: str,
+    password: str,
+    hidden_fields: dict[str, str],
+    expected_body: dict[str, str],
+    session: requests.Session,
+) -> None:
+    """packed_base64 posts the credentials as one field and nothing else."""
+    entries, modem_config = load_auth_fixture("har_form_login.json")
+
+    with HARMockServer(entries, modem_config=modem_config) as server:
+        config = FormAuth(
+            strategy="form",
+            action="/goform/login",
+            encoding="packed_base64",
+            credential_field="arguments",
+            hidden_fields=hidden_fields,
+        )
+        manager = FormAuthManager(config)
+        manager.configure_session(session, {})
+
+        with patch.object(session, "request", wraps=session.request) as mock_req:
+            result = manager.authenticate(session, server.base_url, username, password)
+
+        assert result.success is True
+        assert mock_req.call_args.kwargs.get("data") == expected_body
+
+
+def test_packed_base64_overrides_discovered_credential_field(session: requests.Session) -> None:
+    """A login page's empty credential field is replaced by the packed credentials."""
+    entries, modem_config = load_auth_fixture("har_form_login_with_hidden_fields.json")
+
+    with HARMockServer(entries, modem_config=modem_config) as server:
+        config = FormAuth(
+            strategy="form",
+            action="/goform/login",
+            login_page="/login.html",
+            encoding="packed_base64",
+            credential_field="arguments",
+        )
+        manager = FormAuthManager(config)
+        manager.configure_session(session, {})
+
+        with (
+            patch(_DISCOVER_PATCH, return_value={"arguments": "", "ar_nonce": ""}),
+            patch.object(session, "request", wraps=session.request) as mock_req,
+        ):
+            result = manager.authenticate(session, server.base_url, "admin", "Password!23")
+
+        assert result.success is True
+        assert mock_req.call_args.kwargs.get("data") == {"arguments": "YWRtaW46UGFzc3dvcmQhMjM=", "ar_nonce": ""}
+
+
 def test_no_login_page_skips_discovery(session: requests.Session) -> None:
     """Without login_page, no pre-fetch or field discovery occurs."""
     entries, modem_config = load_auth_fixture("har_form_login.json")
