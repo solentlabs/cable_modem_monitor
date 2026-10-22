@@ -1,0 +1,111 @@
+{
+  "_description": "form_nonce login with packed credentials posted by script (Arris SB6190 b64 shape): the form action is ##, so the page at the POST's own URL identifies the packed field",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/cgi-bin/adv_pwd_cgi",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ],
+            "cookies": [],
+            "content": {
+              "size": 286,
+              "mimeType": "text/html",
+              "text": "<html><body><form method=\"post\" action=\"##\"><input id=\"user\" type=\"username\"><input id=\"pwd\" type=\"password\"><input name=\"arguments\" id=\"arguments\" value=\"\" type=\"hidden\"><input name=\"ar_nonce\" id=\"ar_nonce\" value=\"\" type=\"hidden\"><input value=\"Send\" type=\"submit\"></form></body></html>"
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/cgi-bin/adv_pwd_cgi",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {
+                  "name": "arguments",
+                  "value": "AUTH_9590863a"
+                },
+                {
+                  "name": "ar_nonce",
+                  "value": "48211937"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/plain"
+              },
+              {
+                "name": "Set-Cookie",
+                "value": "credential=COOKIE_1;"
+              }
+            ],
+            "cookies": [],
+            "content": {
+              "size": 19,
+              "mimeType": "text/plain",
+              "text": "Url:/cgi-bin/status"
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/cgi-bin/status",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ],
+            "cookies": [],
+            "content": {
+              "size": 19,
+              "mimeType": "text/html",
+              "text": "<html>Status</html>"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "http",
+  "_expected_auth_strategy": "form_nonce",
+  "_expected_auth_fields": {
+    "action": "/cgi-bin/adv_pwd_cgi",
+    "nonce_field": "ar_nonce",
+    "success_prefix": "Url:",
+    "error_prefix": "Error:"
+  },
+  "_expected_session_cookie": "credential",
+  "_expected_logout": null,
+  "_expected_restart": null
+}

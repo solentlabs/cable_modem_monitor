@@ -397,6 +397,25 @@ Password-shaped means either of:
   name with no separate pattern-maintenance step. Exact names never
   generalize; only curated substrings do.
 
+**Packed credentials.** Some login pages pack both credentials into
+one hidden field by script, so no posted name is password-shaped. Such
+a POST is still the login when the page served at the POST's own URL
+holds a packed login form by Core's definition
+(`auth.packed_credentials.packed_credential_fields`, the rule
+`form_nonce` applies at setup): no input named `username`, and exactly
+one empty hidden field that is not the nonce. The POST must carry that
+field. The nonce is the posted field whose captured value is all
+digits. The page at the POST's URL decides, not a form action: the
+SB6190 form posts by script (`action="##"`), and the SBG7400AC2 serves
+a second packed form on its change-password page. More than one
+candidate field is not guessed at; the POST stays unrecognized and the
+hard stop below names it.
+
+**An unrecognized login is never `none`.** A form POST to a login URL
+that sets a cookie but carries no recognizable credential field is an
+auth signal: detection ends in the hard stop with an `auth_unknown`
+gap, never in `strategy: none`.
+
 The catalog-derived names come from the fleet an analysis runs with.
 `analyze_har(fleet=...)` and `validate_har(fleet=...)` use the scanned
 fleet's names; without a fleet, the whole catalog's. The intake
@@ -472,7 +491,8 @@ Check HAR entries for login flow:
   ├── No login flow, all 200s, no session artifacts
   │   └── strategy: none
   │
-  ├── POST to /goform/*, /cgi-bin/*, or similar with credential-shaped form fields
+  ├── POST to /goform/*, /cgi-bin/*, or similar with credential-shaped
+  │   form fields or a packed credential field
   │   ├── Response is text with "Url:" / "Error:" prefixes?
   │   │   └── strategy: form_nonce
   │   │       Extract: action, username_field, password_field,
@@ -484,6 +504,10 @@ Check HAR entries for login flow:
   │   │       Extract: action, username_field, password_field,
   │   │                encoding (check for base64), hidden_fields,
   │   │                success.redirect or success.indicator
+  │   │       Packed credentials: encoding packed_base64 and
+  │   │                credential_field instead of the username and
+  │   │                password fields; the nonce is left to
+  │   │                login_page discovery, never a hidden_fields value
   │   │
   │   └── Ambiguous response format → flag for human review
   │

@@ -351,7 +351,7 @@ HAR before proceeding. Pull
 
 | Strategy | Key signal in the HAR |
 |----------|-----------------------|
-| `form` | Login is a POST with plain form fields. If `login_page` is set, a pre-fetch GET precedes the POST and hidden fields appear in the POST body. Check `encoding` — `base64` if the password is base64-encoded in the POST body, `plain` if it appears verbatim. |
+| `form` | Login is a POST with plain form fields. If `login_page` is set, a pre-fetch GET precedes the POST and hidden fields appear in the POST body. Check `encoding` — `base64` if the password is base64-encoded in the POST body, `plain` if it appears verbatim, `packed_base64` when the POST carries one hidden field (`credential_field`) that the login page's script fills with both credentials. |
 | `form_nonce` | Auth response body starts with `Url:` (success) or `Error:` (failure) — no HTTP redirect. The POST body contains a short random numeric value alongside credentials; `nonce_field` should match its field name. |
 | `form_pbkdf2` | A preliminary request fires before credentials are submitted and the response contains a salt value. `pbkdf2_iterations` and `pbkdf2_key_length` should match values visible in that exchange. |
 | `form_sjcl` | The credential POST body is an encrypted SJCL JSON blob, not plain form fields. `encrypt_aad` and `decrypt_aad` should match the AAD strings in the login JS. |

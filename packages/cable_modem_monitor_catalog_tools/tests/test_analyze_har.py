@@ -147,6 +147,17 @@ def test_valid_analysis_auth_fields(fixture_path: Path, tmp_path: Path) -> None:
         ), f"Auth field {key}: expected {value!r}, got {result.auth.fields[key]!r}"
 
 
+def test_packed_form_posts_only_the_packed_field(tmp_path: Path) -> None:
+    """A packed login emits no username or password field, and leaves the nonce to discovery."""
+    data = load_fixture(VALID_DIR / "auth_form_packed_base64.json")
+    result = analyze_har(write_har(tmp_path, data["_har"]))
+
+    fields = result.auth.fields
+    assert "username_field" not in fields
+    assert "password_field" not in fields
+    assert "ar_nonce" not in fields.get("hidden_fields", {})
+
+
 # =====================================================================
 # Invalid fixture tests — hard stop detection
 # =====================================================================
