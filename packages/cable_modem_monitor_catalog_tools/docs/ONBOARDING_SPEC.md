@@ -746,7 +746,9 @@ response bodies instead. Three passes, in order:
 3. **Bare quoted strings** — the legacy scan; yields endpoint only, with
    the method guessed from the action name (GET for logout, POST for
    restart). Only strings that read as request paths qualify: a bare
-   word (`"Reboot"`) is a UI label, and `..` segments or static assets
+   word (`"Reboot"`) is a UI label, a string without `/` qualifies only
+   as a file name ending in an extension (`"reboot.cgi"`, never
+   `"Rebooting..."`), and `..` segments or static assets
    (`"../i/Logout_Normal.png"`) are page furniture — matching them
    would fabricate endpoints the firmware never exposes. The same
    action-name prior applies in pass 1 when a call site has no

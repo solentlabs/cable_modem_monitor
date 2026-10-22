@@ -1,0 +1,20 @@
+{
+  "_description": "A translated status message passed to the reboot call ('Rebooting...', Arris SBG7400AC2 base.js) is a UI label, not a file name: trailing dots are not an extension, so no restart endpoint is inferred",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1:8080/base.js",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "content": {
+          "text": "function reboot() {\n    if (isMG() || is95x())\n        refresh(\"reboot?\"+xlate(\"Rebooting...\"));\n    else arReboot.set(1,\"\", true);\n}"
+        }
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": null
+}
