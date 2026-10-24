@@ -1,0 +1,40 @@
+{
+  "_description": "Router GUI on a second port carries _n on its data pages; the first origin's data pages carry no query string, so no session parameter is detected (SBG7400AC2)",
+  "_transport": "http",
+  "_auth_strategy": "form",
+  "_expected_query_params": {},
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/cgi-bin/status_cgi", "headers": []},
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "content": {"size": 5000, "mimeType": "text/html", "text": "<script>var json_dsData=[{\"Frequency\":570}];</script>"}
+      }
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/cgi-bin/vers_cgi", "headers": []},
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "content": {"size": 2000, "mimeType": "text/html", "text": "<script>var json_overview=[{\"Model\":\"SBG7400AC2\"}];</script>"}
+      }
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1:8080/getConnType?_n=32953994", "headers": []},
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "content": {"size": 3000, "mimeType": "application/json", "text": "{\"connType\": \"DHCP\"}"}
+      }
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1:8080/checkMSOTakeCtrl?_n=32953994", "headers": []},
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "content": {"size": 2500, "mimeType": "application/json", "text": "{\"takeCtrl\": \"0\"}"}
+      }
+    }
+  ]
+}

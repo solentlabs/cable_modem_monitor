@@ -1404,7 +1404,9 @@ iterations (issue #86) because the pipeline only analyzed responses.
 
 1. Identify data-fetch entries using `identify_data_pages()` (same
    filter as Phase 5: status 200, non-static, has content, data
-   Content-Type).
+   Content-Type) among the entries on the capture's first origin
+   (Phase 3, "One origin"): a second web server's parameters do not
+   describe the data pages.
 2. Require at least 2 data-fetch entries — with a single entry,
    session-level cannot be distinguished from endpoint-specific.
 3. Extract query parameters from each entry's request URL.

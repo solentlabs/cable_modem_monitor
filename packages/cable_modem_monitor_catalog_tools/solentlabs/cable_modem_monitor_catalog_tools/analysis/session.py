@@ -78,7 +78,7 @@ class SessionDetail:
         if transport == "hnap":
             return cls()
 
-        entries = _first_origin(entries)
+        entries = first_origin(entries)
 
         if transport == "json_rpc":
             calls = [
@@ -104,7 +104,7 @@ class SessionDetail:
         return _scan_session_artifacts(entries)
 
 
-def _first_origin(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def first_origin(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Entries on the first entry's host and port; a second web server's traffic is not this session's."""
     if not entries:
         return entries

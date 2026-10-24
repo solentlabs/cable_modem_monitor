@@ -1,8 +1,8 @@
 """Post-analysis -- request requirements detection.
 
-Scans data-fetch entries for query parameters that appear on every
-request, indicating a session-level requirement the modem firmware
-imposes on all AJAX calls.
+Scans data-fetch entries on the capture's first origin for query
+parameters that appear on every request, indicating a session-level
+requirement the modem firmware imposes on all AJAX calls.
 
 **Detection rule:** A query parameter present on every data-fetch
 entry that carries a query string is a session requirement.
@@ -23,7 +23,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from ..analysis.format.http import identify_data_pages
-from ..analysis.session import SessionDetail
+from ..analysis.session import SessionDetail, first_origin
 
 # jQuery's ``cache: false`` adds ``_=<timestamp>`` to every AJAX
 # request.  This is not a session requirement -- filter by name.
@@ -49,7 +49,7 @@ def detect_request_requirements(
     if transport == "hnap":
         return
 
-    data_pages = identify_data_pages(entries)
+    data_pages = identify_data_pages(first_origin(entries))
     if len(data_pages) < 2:
         return
 
