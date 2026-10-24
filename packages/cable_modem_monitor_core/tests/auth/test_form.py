@@ -1124,3 +1124,50 @@ def test_drift_rides_on_a_failed_login(session: requests.Session) -> None:
 
     assert result.success is False
     assert result.login_page_drift == (LoginPageDrift("multiple_forms", "", _TWO),)
+
+
+# ┌───────────────────────────────────────────┬─────────────────┬───────┬─────────┬─────────────────────┐
+# │ login response body                       │ busy_indicator  │ busy  │ success │ case                │
+# ├───────────────────────────────────────────┼─────────────────┼───────┼─────────┼─────────────────────┤
+# │ <meta http-equiv="refresh">               │ already login   │ no    │ yes     │ accepted            │
+# │ Other local user already login, wait...   │ already login   │ yes   │ no      │ busy                │
+# │ Invalid user name or password             │ already login   │ no    │ no      │ wrong password      │
+# │ Other local user already login, wait...   │ (unset)         │ no    │ no      │ rule not declared   │
+# └───────────────────────────────────────────┴─────────────────┴───────┴─────────┴─────────────────────┘
+# fmt: off
+BUSY_INDICATOR_CASES = [
+    # (response body,                                  busy_indicator,   busy,  ok,    id)
+    ('<meta http-equiv="refresh">',                    "already login",  False, True,  "accepted"),
+    ("Other local user already login, wait...",        "already login",  True,  False, "busy"),
+    ("Invalid user name or password",                  "already login",  False, False, "wrong_password"),
+    ("Other local user already login, wait...",        "",               False, False, "rule_not_declared"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "body,busy_indicator,busy,ok",
+    [c[:4] for c in BUSY_INDICATOR_CASES],
+    ids=[c[4] for c in BUSY_INDICATOR_CASES],
+)
+def test_busy_indicator(session: requests.Session, body: str, busy_indicator: str, busy: bool, ok: bool) -> None:
+    """A login page carrying busy_indicator is busy, not a failed credential; other bodies keep their verdict."""
+    from unittest.mock import MagicMock
+
+    config = FormAuth(
+        strategy="form",
+        action="/cgi-bin/login",
+        success=FormSuccess(indicator="http-equiv"),
+        busy_indicator=busy_indicator,
+    )
+    manager = FormAuthManager(config)
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.text = body
+    resp.url = "http://192.168.100.1/cgi-bin/login"
+
+    with patch.object(session, "request", return_value=resp):
+        result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+    assert result.busy is busy
+    assert result.success is ok

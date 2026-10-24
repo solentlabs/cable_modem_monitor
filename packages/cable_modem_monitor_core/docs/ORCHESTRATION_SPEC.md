@@ -2130,7 +2130,13 @@ captured restart of `netgear/cm2500` answers 302.
 fresh `requests.Session`, authenticates using the configured strategy,
 and executes the action on that temporary session. The collector's
 monitoring session is not needed and `collector.authenticate()` (step
-2) is skipped. Any auth strategy is valid in `action_auth`.
+2) is skipped. Any auth strategy is valid in `action_auth`. With `port`
+or `scheme` set on the action, the per-action login and the action request
+both use them. A login the modem reports busy (`AuthResult.busy`) fails the
+action before any request is sent, with the busy message. The login carries
+the main credentials; a second account with a different password is not
+supported
+([ARCHITECTURE_DECISIONS.md § A restart may live on a second port](ARCHITECTURE_DECISIONS.md#a-restart-may-live-on-a-second-port)).
 
 Typical call duration: 2–5 seconds (auth + POST + session clear).
 The caller does not block on the reboot itself.

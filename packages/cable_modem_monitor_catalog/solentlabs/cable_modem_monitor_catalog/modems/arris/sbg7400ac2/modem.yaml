@@ -1,0 +1,130 @@
+manufacturer: ARRIS
+model: SBG7400AC2
+brands:
+  - SURFboard
+transport: http
+default_host: 192.168.100.1
+
+auth:
+  strategy: form
+  action: /cgi-bin/basic_pwd_cgi
+  login_page: /cgi-bin/basic_pwd_cgi
+  cookie_name: credential
+  credential_field: arguments
+  encoding: packed_base64
+  success:
+    indicator: http-equiv="refresh"
+  busy_indicator: already login
+
+actions:
+  logout:
+    type: http
+    method: GET
+    endpoint: /cgi-bin/logout_cgi
+  restart:
+    type: http
+    method: GET
+    port: 8080
+    scheme: http
+    endpoint: "/snmpSet?oid=1.3.6.1.2.1.69.1.1.3.0=1;2;"
+    query:
+      _n: "0"
+    headers:
+      X-Requested-With: "XMLHttpRequest"
+    action_auth:
+      strategy: url_token
+      login_page: "/login"
+      login_prefix: "_n=0&arg="
+      ajax_login: true
+      cookie_name: "credential"
+      inject_credential_cookie: true
+      busy_key: "muti"
+
+hardware:
+  docsis_version: "3.0"
+
+detection:
+  http_headers:
+    - "lighttpd"
+
+status: awaiting_verification
+
+sources:
+  auth_config:
+    "test_data/modem.har — basic_pwd_cgi [2] login form; its beforeSubmit()
+    packs Base64(encodeURIComponent(user) + ':' + encodeURIComponent(password)) into
+    the hidden `arguments` field; [12] POST arguments + ar_nonce, 200, 72-byte
+    meta-refresh page, Set-Cookie credential; [405] rejected login, 200, the login
+    page again with 'Invalid user name or password', no cookie"
+  busy_indicator:
+    "Capture of 2026-10-23 (v6, kept in the maintainer's RAW_DATA, not shipped) —
+    the POST to basic_pwd_cgi right after a reset, while another local session was
+    signed in: 200, the login page again with 'Other local user already login,
+    please wait...', no cookie. Neither the shipped test_data/modem.har [405]
+    wrong-password page nor its login page [2] contains 'already login'"
+  logout_action: "test_data/modem.har — [38] GET /cgi-bin/logout_cgi with the credential cookie, 200"
+  restart_action: 'test_data/modem.har — mib.js [52] defines docsDev.ResetNow as
+    1.3.6.1.2.1.69.1.1.3, and the router GUI sends every set as
+    GET :8080/snmpSet?oid=<oid>.0=1;2; ([378], the request this action sends: 200
+    {"1.3.6.1.2.1.69.1.1.3.0":"1"}, then [379] connection refused while the modem
+    restarts). The router GUI login is [90] GET :8080/login?arg=<base64
+    user:password>, whose body base_95x.js login() [53] stores as the credential
+    cookie. The login needs a _n query parameter (any value; live test 2026-10-23:
+    absent gives 500, _n=0 and _n=123 give 200), and the set must carry the same
+    _n the login used. The vendor GUI never sends docsDevResetNow (its only restart
+    is Restart Router, 1.3.6.1.4.1.4115.1.20.1.1.5.4.0, which restarts the router
+    side and leaves the cable modem uptime counting), so this request was sent by
+    the capture script from the logged-in GUI page, not by the vendor page'
+  restart_busy:
+    "test_data/modem.har — base_95x.js [53] isLoggedIn() reads `muti` in the
+    login body and answers 'Other local user already login'; live test 2026-10-23:
+    a busy login returns 200 with `muti` set and every protected request on it
+    answers 401"
+  brands: "test_data/modem.har [62] base_retail.js — 'Thank you for purchasing an ARRIS SURFboard'"
+  docsis_version: "[SpeedGuide, SBG7400AC2 is a DOCSIS 3.0 modem](https://speedguide.net/broadband-view.php?hw=4438)"
+  isps: "[Cox, SBG7400AC2 data sheet](https://www.cox.com/content/dam/cox/residential/support/internet/print_media/Arris_Surfboard_SBG7400AC2_Data_Sheet.pdf)"
+
+attribution:
+  contributors:
+    - github: https://github.com/kwschulz
+      contribution: Bench HAR captures
+
+isps:
+  - Cox
+
+notes: |
+  ARRIS SURFboard SBG7400AC2 gateway, firmware 9.1.103AA85. Two web servers on
+  one address: the cable modem pages on port 80 (and 443) and the router GUI on
+  port 8080 (plain HTTP only), each with its own login and its own `credential`
+  cookie.
+  Restart sends the DOCSIS reset object (docsDevResetNow) through the router
+  GUI's snmpSet gateway. Live test on 2026-10-23: HTTP 200, the modem unreachable
+  from 16:18:19 to 16:21:02 (about 2 min 43 s) and back OPERATIONAL with 24
+  downstream and 4 upstream channels, system uptime reset to 2 min. Pressing
+  Restart in Home Assistant the same way (diagnostics 17:22 on 2026-10-23): the
+  modem unreachable for about three minutes, then online with uptime 3 min and
+  "Counter reset detected". The vendor
+  GUI offers only "Restart Router" (1.3.6.1.4.1.4115.1.20.1.1.5.4.0), which
+  restarts the router side: both web servers are unreachable for about two
+  minutes (Home Assistant press on 2026-10-23: 15:58:38 to 16:00:25) while the
+  cable modem uptime keeps counting.
+  The restart logs in on port 8080 with the same username and password as the
+  cable modem pages, so both logins must use the same password or Restart
+  fails with "Per-action auth failed" and nothing is sent. The router GUI login
+  can also answer HTTP 500 transiently, which fails the same way. Its logout
+  answers 401 or 500, so a session ends only by timing out.
+  Both logins can refuse a session. The cable modem page answered 200 with
+  "Other local user already login, please wait..." once, right after a reset
+  (declared as `busy_indicator`; Home Assistant was probably polling at that
+  moment). The router GUI login body gained a `muti` field in the v3 capture and
+  in scripted logins on 2026-10-23, and protected requests on such a token
+  answered 401 (declared as `busy_key`, so Restart fails with "Login busy" and
+  sends nothing). Home Assistant presses at 17:45:45 and 17:45:59 on
+  2026-10-23, made right after a browser login to the router GUI, both failed
+  that way with the modem staying up (login bodies of 284 and 288 characters
+  against 244 to 256 without `muti`). A press at 17:37 with an older browser
+  session, and three back-to-back scripted logins, produced no `muti`. A busy
+  login is retried, not counted as a wrong password.
+  The generated session block (`_n` query parameter, XMLHttpRequest header,
+  `ver_` token prefix) came from the router GUI's traffic and is omitted; the
+  cable modem pages need none of it (live test 2026-10-23).

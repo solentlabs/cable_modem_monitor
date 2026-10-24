@@ -19,6 +19,8 @@ class HttpAction(BaseModel):
     type: Literal["http"]
     method: str
     endpoint: str
+    port: int | None = Field(default=None, ge=1, le=65535)
+    scheme: Literal["http", "https"] | None = None
     requires_session: bool = False
     query: dict[str, str] = Field(default_factory=dict)
     params: dict[str, str] = Field(default_factory=dict)

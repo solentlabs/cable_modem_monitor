@@ -33,6 +33,7 @@ def build_routes(
     har_entries: list[dict[str, Any]],
     *,
     login_path: str = "",
+    login_success: str = "",
 ) -> dict[tuple[str, str], RouteEntry]:
     """Build route table from HAR entries.
 
@@ -51,15 +52,21 @@ def build_routes(
     Callers that leave ``login_path`` empty get the status rule on
     every key, as before.
 
+    With ``login_success`` set, the login POST keeps the exchange whose
+    body contains it over one that lacks it, so a capture that ends with
+    its wrong-password login still replays the accepted one.
+
     Args:
         har_entries: List of HAR ``log.entries`` dicts.
         login_path: Auth POST endpoint from ``auth.action``, when known.
+        login_success: ``auth.success.indicator``, when declared.
 
     Returns:
         Route table mapping ``(method, path)`` to response.
     """
     routes: dict[tuple[str, str], RouteEntry] = {}
     login_key = ("POST", normalize_path(login_path)) if login_path else None
+    login_accepted = False
 
     for entry in har_entries:
         request = entry.get("request", {})
@@ -94,6 +101,12 @@ def build_routes(
 
         key = (method, route_path)
         existing = routes.get(key)
+
+        if key == login_key and login_success:
+            accepted = login_success in body
+            if login_accepted and not accepted:
+                continue
+            login_accepted = login_accepted or accepted
 
         # A 200 is never displaced by a later failure; otherwise later
         # wins. On the login POST the status says nothing about

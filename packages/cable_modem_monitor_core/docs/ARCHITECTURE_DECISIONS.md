@@ -1462,6 +1462,26 @@ are supported.
 **Constrains:** Cannot add modem commands beyond restart without
 expanding the action model. This is intentional.
 
+### A restart may live on a second port
+
+**Decision:** `HttpAction.port` and `scheme` move the action's request and
+its `action_auth` login to another port of the configured host, and to
+http or https there. The per-action login uses the main credentials.
+
+**Rationale:** Some firmware serves the restart from a separate admin
+server with its own login (Arris SBG7400AC2: status on :80 and :443,
+restart on :8080, plain HTTP only). `action_auth` already isolates the
+second login's session and cookies; only the port and scheme were
+unexpressible. Setup picks one scheme for the modem, and an HTTPS pick
+sends the restart to a port that never answers TLS. A second credential would
+need a config-flow field and credential storage, which one observed
+modem does not justify.
+
+**Constrains:** A user whose second-server password differs from the
+main one gets `Per-action auth failed` and no reboot is sent. The
+modem's `notes:` tell users to keep both passwords the same. Fleet
+evidence of differing passwords reopens a second credential.
+
 ---
 
 ### Health probes are independent layers, not an escalation chain

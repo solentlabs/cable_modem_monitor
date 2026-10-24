@@ -9,6 +9,7 @@ the same way it will against real hardware.
 
 from __future__ import annotations
 
+import posixpath
 from typing import Any
 
 
@@ -60,7 +61,9 @@ def check_login_page_in_har(
                 "(e.g. CSRF tokens) can be discovered at runtime"
             )
         action_rel = action.lstrip("/")
-        if action not in text and action_rel not in text:
+        # A form action is resolved against the login page's directory.
+        action_from_page = posixpath.relpath(action, posixpath.dirname(norm))
+        if not any(form in text for form in (action, action_rel, action_from_page)):
             return (
                 f"login_page '{login_page}' HTML does not reference form action '{action}' — "
                 "this entry may not be the login form; check that login_page is correct"

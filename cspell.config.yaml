@@ -41,6 +41,7 @@ ignoreWords:
   - klmnopqrst
   - kwschulz
   - ludeeus
+  - muti # ARRIS SBG7400AC2 router GUI login body key (busy session flag)
   - Nlcjpw
   - philfry
   - qwertyuiop

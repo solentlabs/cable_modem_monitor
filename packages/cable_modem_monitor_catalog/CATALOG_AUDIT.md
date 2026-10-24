@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**50 configurations supported** — 32 confirmed on real hardware, 18 awaiting verification.
+**51 configurations supported** — 32 confirmed on real hardware, 19 awaiting verification.
 
 ---
 
@@ -56,6 +56,7 @@ and share a diagnostics snapshot.
 |-------|-----------|------|---------|---------|
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
 | SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
+| SBG7400AC2 | HTML | Cox | — | captured |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated | n/a |
 | C3700 | HTML | Comcast, Cox, Spectrum | synthetic | not captured |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |

@@ -1,0 +1,42 @@
+{
+  "_expected_error": "less than or equal to 65535",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.0.1",
+    "auth": {
+      "strategy": "none"
+    },
+    "hardware": {
+      "docsis_version": "3.0"
+    },
+    "status": "awaiting_verification",
+    "attribution": {
+      "contributors": [
+        {
+          "github": "test-user",
+          "contribution": "HAR capture"
+        }
+      ]
+    },
+    "isps": [
+      "Various"
+    ],
+    "actions": {
+      "restart": {
+        "type": "http",
+        "method": "GET",
+        "port": 70000,
+        "endpoint": "/reboot?now=1",
+        "action_auth": {
+          "strategy": "url_token",
+          "login_page": "/login",
+          "login_prefix": "_n=0&arg=",
+          "cookie_name": "credential",
+          "inject_credential_cookie": true
+        }
+      }
+    }
+  }
+}

@@ -32,9 +32,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `modem.yaml` sits beside `params`, which stays a form body on every method.
   A restart that a browser sends as `GET /reset.htm?reset_modem=...` can now
   be declared field by field. No catalog modem uses it yet.
+- **The ARRIS SBG7400AC2 joins the catalog, awaiting verification.** Status
+  and channel data come from the cable modem pages on port 80. Restart sends
+  the standard DOCSIS reset through the router GUI on port 8080, behind its
+  own login: the modem is unreachable for about three minutes and its uptime
+  restarts. Both logins must use the same password, or Restart fails with
+  "Per-action auth failed" and sends nothing.
+- **A busy login is retried, not counted as a wrong password.** A `form`
+  login can declare a `busy_indicator`, a string in the response page that
+  means another session holds the modem's web interface. Core reports the
+  attempt busy, so polling retries instead of opening the auth circuit
+  breaker. A `url_token` login with `inject_credential_cookie` can declare a
+  `busy_key` for a token that comes with a busy flag; Restart then fails with
+  "Login busy" and sends nothing. The SBG7400AC2 declares both.
+- **Form login can post both credentials packed into one field.** A new
+  `encoding: packed_base64` with `credential_field` covers firmware whose
+  login script builds `base64(user:password)` into a single hidden field and
+  rejects separate username and password fields. Intake now recognises that
+  login instead of reporting auth none.
+- **An HTTP action can run on a second port.** A new `port`, and an optional
+  `scheme`, on an action move its request, and its `action_auth` login, to
+  that port of the same host. The SBG7400AC2 restart uses both: its router
+  GUI speaks plain HTTP on 8080 even when setup chose HTTPS for the modem.
 
 ### Fixed
 
+- **A failed `url_token` login no longer prints the password.** The login URL
+  carries the credential as base64, and the connection error text repeated
+  that URL, so a Restart pressed while the modem was down put it in the log
+  and in the diagnostics download. The credential is now replaced by `***` in
+  every failure text of that login, for every modem that logs in this way.
+- **The test harness replays the accepted login when a capture ends with the
+  wrong password.** The capture steps now put one wrong-password login last,
+  so a lockout cannot cost the rest of the capture. The mock server used to
+  replay the last login POST, which would have been the refusal. It now keeps
+  the exchange whose body contains the declared `success.indicator`.
+- **Intake accepts a login form whose action is relative.** A page that posts
+  to `basic_pwd_cgi` is now matched to `auth.action: /cgi-bin/basic_pwd_cgi`
+  instead of being refused as not the login form.
 - **Intake reads symbol rates printed in Msym/sec.** A cell such as
   `5.120 Msym/sec` was read as ksym/s with no unit to strip, so the generated
   config dropped the value. It is now scaled from Msym/s to Sym/s and kept

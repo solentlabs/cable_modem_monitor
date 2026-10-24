@@ -122,6 +122,7 @@ class FormAuth(AuthStrategyBase):
     login_page: str = ""
     form_selector: str = ""
     success: FormSuccess | None = None
+    busy_indicator: str = ""
 
     display_name: ClassVar[str] = "Form Login"
     transport: ClassVar[str] = "http"
@@ -198,10 +199,19 @@ class UrlTokenAuth(AuthStrategyBase):
     cookie_name: str = ""
     token_prefix: str = ""
     inject_credential_cookie: bool = False
+    busy_key: str = ""
 
     display_name: ClassVar[str] = "URL Token"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
+
+    @model_validator(mode="after")
+    def _busy_key_needs_injection(self) -> UrlTokenAuth:
+        # The key is read from the body that becomes the credential cookie;
+        # without injection there is no such body to read.
+        if self.busy_key and not self.inject_credential_cookie:
+            raise ValueError("busy_key requires inject_credential_cookie")
+        return self
 
     def landing_signals(self) -> LandingSignals:
         """The paths and cookies this strategy's config declares."""

@@ -159,7 +159,18 @@ class FormAuthManager(BaseAuthManager):
                 login_page_drift=drift,
             )
 
-        # Step 4: Evaluate success
+        # Step 4: Evaluate the response. A busy page is not a verdict on the
+        # credential: report it before success is judged, so it is retried
+        # and never counted as a wrong password.
+        if config.busy_indicator and config.busy_indicator in response.text:
+            return AuthResult(
+                success=False,
+                busy=True,
+                error=f"Login busy: another session holds the modem's web interface ({config.busy_indicator})",
+                response=response,
+                login_page_drift=drift,
+            )
+
         error = _check_success(config, response)
         if error:
             return AuthResult(success=False, error=error, response=response, login_page_drift=drift)

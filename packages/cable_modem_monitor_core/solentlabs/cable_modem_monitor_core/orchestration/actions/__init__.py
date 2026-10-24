@@ -23,6 +23,7 @@ from .cbn_action import execute_cbn_action
 from .hnap_action import execute_hnap_action
 from .http_action import execute_http_action
 from .json_rpc_action import execute_json_rpc_action
+from .port import with_port
 
 if TYPE_CHECKING:
     from ...auth.base import AuthContext
@@ -65,6 +66,9 @@ def execute_action(
         if modem_config.session and modem_config.session.query_params:
             query_params = dict(modem_config.session.query_params)
         session = collector._session
+        # A second web server (HttpAction.port, scheme) takes both the
+        # per-action login and the request.
+        base_url = with_port(collector._base_url, action.port, action.scheme)
         # {auth:...} placeholders resolve from the session that sends the
         # request, so a per-action session brings its own context.
         auth_context: AuthContext | None = collector._auth_context
@@ -81,7 +85,7 @@ def execute_action(
             manager = create_auth_manager_for_action(action.action_auth)
             auth_result = manager.authenticate(
                 fresh,
-                collector._base_url,
+                base_url,
                 collector._username,
                 collector._password,
                 timeout=modem_config.timeout,
@@ -97,7 +101,7 @@ def execute_action(
             encode_body = manager.encode_action_body
         return execute_http_action(
             session,
-            collector._base_url,
+            base_url,
             action,
             timeout=modem_config.timeout,
             log_level=log_level,

@@ -277,6 +277,84 @@ class TestUrlTokenAuthManager:
             assert result.response is None
             assert result.response_url == ""
 
+    # ┌───────────────────────────────────┬──────────────┬───────┬────────────────────┐
+    # │ decoded login body                │ busy_key     │ busy  │ case               │
+    # ├───────────────────────────────────┼──────────────┼───────┼────────────────────┤
+    # │ {"unique": "t", "conType": "LAN"} │ "muti"       │ no    │ key absent         │
+    # │ {"unique": "t", "muti": "LAN"}    │ "muti"       │ yes   │ key present        │
+    # │ {"unique": "t", "muti": ""}       │ "muti"       │ yes   │ presence, not value│
+    # │ {"unique": "t", "muti": "LAN"}    │ (unset)      │ no    │ rule not declared  │
+    # │ not base64 json                   │ "muti"       │ no    │ undecodable body   │
+    # └───────────────────────────────────┴──────────────┴───────┴────────────────────┘
+    # fmt: off
+    BUSY_KEY_CASES = [
+        # (body json or raw,                    busy_key,  busy,  id)
+        ({"unique": "t", "conType": "LAN"},     "muti",    False, "key_absent"),
+        ({"unique": "t", "muti": "LAN"},        "muti",    True,  "key_present"),
+        ({"unique": "t", "muti": ""},           "muti",    True,  "presence_not_value"),
+        ({"unique": "t", "muti": "LAN"},        "",        False, "rule_not_declared"),
+        ("opaque-token-value",                  "muti",    False, "undecodable_body"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "body,busy_key,busy",
+        [c[:3] for c in BUSY_KEY_CASES],
+        ids=[c[3] for c in BUSY_KEY_CASES],
+    )
+    def test_busy_key(self, session: requests.Session, body: object, busy_key: str, busy: bool) -> None:
+        """A login body carrying busy_key is reported busy and sets no cookie; any other body logs in."""
+        import base64
+        import json
+
+        text = body if isinstance(body, str) else base64.b64encode(json.dumps(body).encode()).decode()
+        config = UrlTokenAuth(
+            strategy="url_token",
+            login_page="/login",
+            inject_credential_cookie=True,
+            cookie_name="credential",
+            busy_key=busy_key,
+        )
+        manager = UrlTokenAuthManager(config)
+        manager.configure_session(session, {})
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.text = text
+        resp.url = "http://192.168.100.1:8080/login"
+
+        with patch.object(session, "get", return_value=resp):
+            result = manager.authenticate(session, "http://192.168.100.1:8080", _USERNAME, _PASSWORD)
+
+        assert result.busy is busy
+        assert result.success is not busy
+        assert (session.cookies.get("credential") is None) is busy
+
+    @pytest.mark.parametrize(
+        "exc_type",
+        [requests.ConnectionError, requests.ConnectTimeout, requests.exceptions.InvalidURL],
+        ids=["connection_error", "connect_timeout", "invalid_url"],
+    )
+    def test_login_failure_never_carries_the_credential(self, session: requests.Session, exc_type: type) -> None:
+        """The credential rides in the login URL; no failure text, raised or returned, may repeat it."""
+        import base64
+
+        credential = base64.b64encode(f"{_USERNAME}:{_PASSWORD}".encode()).decode()
+        config = UrlTokenAuth(strategy="url_token", login_page="/login", login_prefix="arg=")
+        manager = UrlTokenAuthManager(config)
+        manager.configure_session(session, {})
+        failure = exc_type(f"Max retries exceeded with url: /login?arg={credential} (Caused by Boom)")
+
+        with patch.object(session, "get", side_effect=failure):
+            try:
+                result = manager.authenticate(session, "http://192.168.100.1:8080", _USERNAME, _PASSWORD)
+            except requests.RequestException as raised:
+                assert isinstance(raised, exc_type)
+                assert credential not in str(raised)
+                assert "/login?arg=" in str(raised)
+            else:
+                assert credential not in result.error
+                assert result.error
+
     def test_login_non_200(self, session: requests.Session) -> None:
         """Reports error when login GET returns non-200, attaches response."""
         config = UrlTokenAuth(strategy="url_token", login_page="/login.html")

@@ -29,6 +29,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.actions import (
     execute_hnap_action,
     execute_http_action,
 )
+from solentlabs.cable_modem_monitor_core.orchestration.actions.port import with_port
 from solentlabs.cable_modem_monitor_core.protocol import sjcl
 from solentlabs.cable_modem_monitor_core.protocol.sjcl import SjclSession
 
@@ -1097,6 +1098,104 @@ class TestHttpActionQuery:
             headers=None,
             timeout=10,
         )
+
+
+# ------------------------------------------------------------------
+# Tests — HttpAction.port (second web server)
+# ------------------------------------------------------------------
+
+# ┌──────────────────────────────┬──────┬────────┬──────────────────────────────┬────────────────────┐
+# │ configured base URL          │ port │ scheme │ expected base URL            │ case               │
+# ├──────────────────────────────┼──────┼────────┼──────────────────────────────┼────────────────────┤
+# │ http://192.168.100.1         │ None │ None   │ http://192.168.100.1         │ nothing set        │
+# │ http://192.168.100.1         │ 8080 │ None   │ http://192.168.100.1:8080    │ port added         │
+# │ http://192.168.100.1:80      │ 8080 │ None   │ http://192.168.100.1:8080    │ port replaced      │
+# │ https://192.168.100.1        │ 8443 │ None   │ https://192.168.100.1:8443   │ scheme kept        │
+# │ http://[2001:db8::1]:80      │ 8080 │ None   │ http://[2001:db8::1]:8080    │ IPv6 host kept     │
+# │ https://192.168.100.1        │ 8080 │ http   │ http://192.168.100.1:8080    │ scheme overridden  │
+# │ https://192.168.100.1:443    │ None │ http   │ http://192.168.100.1:443     │ scheme only        │
+# └──────────────────────────────┴──────┴────────┴──────────────────────────────┴────────────────────┘
+# fmt: off
+WITH_PORT_CASES = [
+    # (base_url,                  port,  scheme,  expected,                     id)
+    ("http://192.168.100.1",      None,  None,    "http://192.168.100.1",       "nothing_set"),
+    ("http://192.168.100.1",      8080,  None,    "http://192.168.100.1:8080",  "port_added"),
+    ("http://192.168.100.1:80",   8080,  None,    "http://192.168.100.1:8080",  "port_replaced"),
+    ("https://192.168.100.1",     8443,  None,    "https://192.168.100.1:8443", "scheme_kept"),
+    ("http://[2001:db8::1]:80",   8080,  None,    "http://[2001:db8::1]:8080",  "ipv6_host_kept"),
+    ("https://192.168.100.1",     8080,  "http",  "http://192.168.100.1:8080",  "scheme_overridden"),
+    ("https://192.168.100.1:443", None,  "http",  "http://192.168.100.1:443",   "scheme_only"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "base_url,port,scheme,expected",
+    [c[:4] for c in WITH_PORT_CASES],
+    ids=[c[4] for c in WITH_PORT_CASES],
+)
+def test_with_port(base_url: str, port: int | None, scheme: str | None, expected: str) -> None:
+    """with_port swaps the port and scheme the action names, and nothing else of the configured URL."""
+    assert with_port(base_url, port, scheme) == expected
+
+
+class TestHttpActionPort:
+    """HttpAction.port moves the per-action login and the request to that port."""
+
+    def test_login_and_request_use_the_action_port(self) -> None:
+        """Both the action_auth login and the action request target the port."""
+        original_session = MagicMock(spec=requests.Session)
+        fresh_session = MagicMock(spec=requests.Session)
+        manager = MagicMock()
+        manager.authenticate.return_value = AuthResult(success=True)
+        action = HttpAction(
+            type="http",
+            method="GET",
+            port=8080,
+            scheme="http",
+            endpoint="/reboot?now=1",
+            action_auth=NoneAuth(strategy="none"),
+        )
+        collector = MagicMock()
+        collector._session = original_session
+        collector._base_url = "https://192.168.100.1"
+        collector._username = "admin"
+        collector._password = "secret"
+        config = MagicMock()
+        config.timeout = 10
+        config.model = "T800"
+        config.session = None
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.ok = True
+        fresh_session.request.return_value = resp
+        patch_session = "solentlabs.cable_modem_monitor_core.orchestration.actions.create_session"
+        patch_manager = "solentlabs.cable_modem_monitor_core.auth.factory.create_auth_manager_for_action"
+
+        with patch(patch_session, return_value=fresh_session), patch(patch_manager, return_value=manager):
+            result = execute_action(collector, config, action)
+
+        assert result.success is True
+        assert manager.authenticate.call_args.args[1] == "http://192.168.100.1:8080"
+        assert fresh_session.request.call_args.args[1] == "http://192.168.100.1:8080/reboot?now=1"
+
+    def test_no_port_leaves_the_configured_url(self) -> None:
+        """Without port, the request goes to the configured base URL."""
+        original_session = MagicMock(spec=requests.Session)
+        resp = MagicMock()
+        resp.status_code = 200
+        original_session.request.return_value = resp
+        collector = MagicMock()
+        collector._session = original_session
+        collector._base_url = "http://192.168.100.1"
+        config = MagicMock()
+        config.timeout = 10
+        config.model = "T800"
+        config.session = None
+
+        execute_action(collector, config, HttpAction(type="http", method="GET", endpoint="/reboot"))
+
+        assert original_session.request.call_args.args[1] == "http://192.168.100.1/reboot"
 
 
 # ------------------------------------------------------------------
