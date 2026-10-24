@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answer, so its test proves only that Core sends the declared request. Read
   the column with Capture: a restart inside a synthetic fixture was written
   to match Core, not observed.
+- **Intake offers the login success indicator as a candidate.** A form login
+  that answers 200 with no redirect, in a capture that also holds a rejected
+  attempt, lists the tokens only the accepted response has as
+  `auth.success.indicator` candidates for the LLM to resolve.
 - **Intake refuses auth URLs the capture never requests.** A login, CSRF init
   or post-login URL written into a new `modem.yaml` must match a request in
   that modem's own HAR, or the package is not written. A restart or logout
@@ -57,10 +61,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Intake finds the accepted login whatever the order of the attempts.** It
+  kept the latest login POST, so a capture that ends with the wrong password,
+  as the capture guide asks, lost `success.redirect`. The accepted attempt is
+  now chosen by its response: a redirect to another path, then a cookie, then
+  the latest.
 - **Intake no longer reads a second web server into the session.** A modem
   whose router GUI runs on another port put that GUI's `X-Requested-With`
-  header and `ver_` cache-buster into the generated `session` block. Session
-  detection now reads only the capture's first origin.
+  header, `_n` query parameter and `ver_` cache-buster into the generated
+  `session` block. Session and request-requirement detection now read only
+  the capture's first origin.
 - **Intake counts an empty `<tr>` toward `row_start`.** Core's parser counts a
   `<tr>` with no cells, so a table with one between the labels and the data
   needs `row_start: 2` where intake proposed 1.

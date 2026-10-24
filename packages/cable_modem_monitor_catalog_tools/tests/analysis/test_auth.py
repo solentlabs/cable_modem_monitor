@@ -1141,3 +1141,20 @@ class TestFleetPasswordNames:
         with fleet_password_names(frozenset()):
             assert not is_password_field_name("zzsecret")
         assert not is_password_field_name("zzsecret")
+
+
+# =====================================================================
+# Login attempt selection and the success indicator - fixture-driven
+# =====================================================================
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["form_post_302", "form_post_with_login_page", "form_rejected_last_302", "form_rejected_first_302"],
+)
+def test_no_success_indicator_ambiguity_without_a_separable_rejected_response(fixture_name: str) -> None:
+    """One attempt, or a redirect that already names success, offers no indicator ambiguity."""
+    data = load_fixture(VALID_DIR / f"{fixture_name}.json")
+    ambiguities: list[Ambiguity] = []
+    detect_auth(data["_entries"], data["_transport"], [], [], ambiguities=ambiguities)
+    assert [a.field for a in ambiguities if a.field == "auth.success.indicator"] == []

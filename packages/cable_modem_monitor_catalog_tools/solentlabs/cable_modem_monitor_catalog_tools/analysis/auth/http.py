@@ -30,6 +30,7 @@ from ...validation.har_utils import (
 from ..ambiguity import Ambiguity
 from ..types import CoreGap
 from .json_login import is_json_login, json_login_ambiguity
+from .login_attempts import attempt_rank, redirect_conflict_warning, success_indicator_ambiguity
 from .patterns import (
     get_login_url_patterns,
     get_nonce_error_prefix,
@@ -138,7 +139,7 @@ def detect_http_auth(
         return detail
 
     # Form POST to login endpoint
-    detail = _extract_form_login(entries, signals, warnings)
+    detail = _extract_form_login(entries, signals, warnings, ambiguities)
     if detail is not None:
         return detail
 
@@ -183,6 +184,8 @@ class _HttpAuthSignals:
     url_token_login_prefix: str = ""
     url_token_login_page: str = ""
     form_post_entry: dict[str, Any] | None = None
+    # Every credential POST to the login endpoint, in capture order; form_post_entry is the accepted one
+    form_login_attempts: list[dict[str, Any]] = field(default_factory=list)
     # Set when form_post_entry packs its credentials into one field
     form_post_packed: _PackedLogin | None = None
     form_nonce_entry: dict[str, Any] | None = None
@@ -406,8 +409,13 @@ def _check_form_login_post(
             signals.has_any_auth_signal = True
         return
 
-    signals.form_post_entry = entry
-    signals.form_post_packed = packed
+    signals.form_login_attempts.append(entry)
+    # The accepted attempt, not the latest: the capture guide ends with a wrong password.
+    # Among equals the latest wins, so a retried login yields the successful attempt.
+    current = signals.form_post_entry
+    if current is None or attempt_rank(entry) >= attempt_rank(current):
+        signals.form_post_entry = entry
+        signals.form_post_packed = packed
     signals.has_any_auth_signal = True
 
     # Check response for nonce-style text prefixes
@@ -431,6 +439,7 @@ def _extract_form_login(
     entries: list[dict[str, Any]],
     signals: _HttpAuthSignals,
     warnings: list[str],
+    ambiguities: list[Ambiguity] | None = None,
 ) -> AuthDetail | None:
     """form_nonce or form for a form login, or None without one."""
     if signals.form_post_entry is None:
@@ -442,6 +451,15 @@ def _extract_form_login(
     detail = _extract_form(entries, signals, warnings)
     if signals.form_post_packed is not None:
         _apply_packed_credentials(detail.fields, signals.form_post_packed)
+    accepted = signals.form_post_entry
+    if accepted is not None:
+        conflict = redirect_conflict_warning(accepted, signals.form_login_attempts)
+        if conflict:
+            warnings.append(conflict)
+        if not detail.fields.get("success") and ambiguities is not None:
+            ambiguity = success_indicator_ambiguity(accepted, signals.form_login_attempts)
+            if ambiguity is not None:
+                ambiguities.append(ambiguity)
     return detail
 
 

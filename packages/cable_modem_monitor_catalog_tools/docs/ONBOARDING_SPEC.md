@@ -381,7 +381,11 @@ Logins arrive by POST, PUT or PATCH; "POST" below means any of them.
 recency alone.** A form POST to an auth-pattern URL counts as a login
 only when its body carries a password-shaped field name — names, not
 values, because the sanitizer redacts values. Among credential POSTs
-the latest wins, so a retried login yields the successful attempt. An
+the accepted attempt is selected by its response, never by position, so
+the wrong password may come first or last: a response that redirects to
+another path ranks above one that sets a cookie, which ranks above one
+that does neither, and among equals the latest wins. When equal-ranked
+attempts redirect to different paths, a warning names them. An
 action POST sharing the login endpoint (Sercomm DM1000: `/setup.cgi`
 serves both login and reboot) is never picked, and a HAR with no
 credential POST reports no auth flow.
@@ -503,7 +507,8 @@ Check HAR entries for login flow:
   │   │   └── strategy: form
   │   │       Extract: action, username_field, password_field,
   │   │                encoding (check for base64), hidden_fields,
-  │   │                success.redirect or success.indicator
+  │   │                success.redirect, or the success.indicator
+  │   │                ambiguity (see Ambiguities)
   │   │       Packed credentials: encoding packed_base64 and
   │   │                credential_field instead of the username and
   │   │                password fields; the nonce is left to
@@ -1793,6 +1798,20 @@ reviewed, except at an action endpoint: one endpoint can serve several
 operations, so the body, not the path, names the action. Entries awaiting verification never corroborate, so an
 unconfirmed intake teaches nothing: patterns come from confirmed
 modems only ([MODEM_INTAKE_WORKFLOW.md § Step 4](MODEM_INTAKE_WORKFLOW.md#step-4-analyze-har)).
+
+**Login success indicator.** A form login whose accepted response is
+not a redirect, in a capture that also holds a rejected attempt with a
+different response, is a non-blocking ambiguity at
+`auth.success.indicator`. Candidates are the accepted response's tokens
+(quoted attributes such as `http-equiv="refresh"`, and
+whitespace-delimited words) that the rejected response does not
+contain, in order of appearance, at most six. Each cites the accepted
+response around the token and the start of the rejected response. The
+resolution is a string present in the accepted response and absent from
+the rejected one; an explicit none leaves `success` empty. A capture
+with one attempt, or with a redirect, offers nothing: there is no
+rejected response to separate it from, or `success.redirect` already
+names it.
 
 **Channel key meanings.** A JSON channel key the baseline registry does
 not map, and that committed `parser.yaml` files map to different

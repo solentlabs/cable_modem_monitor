@@ -306,6 +306,37 @@ class TestActionsBehavior:
 
 
 # ---------------------------------------------------------------------------
+# Spot-check: auth.success.indicator resolution reaches modem.yaml
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("resolution", "expected"),
+    [
+        ({"value": 'http-equiv="refresh"'}, {"indicator": 'http-equiv="refresh"'}),
+        (None, None),
+    ],
+    ids=["resolved", "unresolved"],
+)
+def test_success_indicator_resolution(resolution: dict[str, Any] | None, expected: dict[str, str] | None) -> None:
+    """A resolved indicator is written under auth.success; an unresolved one leaves it out."""
+    fixture = load_fixture(VALID_DIR / "table_form_auth.json")
+    analysis = fixture["_analysis"]
+    analysis["auth"]["fields"]["success"] = {}
+    analysis["ambiguities"] = [
+        {
+            "field": "auth.success.indicator",
+            "blocking": False,
+            "candidates": [{"value": 'http-equiv="refresh"', "evidence": [], "corroborated_by": []}],
+            "resolution": resolution,
+        }
+    ]
+    result = generate_config(analysis, fixture["_metadata"])
+    assert result.validation.valid, result.validation.errors
+    assert (yaml.safe_load(result.modem_yaml)["auth"].get("success") or None) == expected
+
+
+# ---------------------------------------------------------------------------
 # Spot-check: auth.strategy resolution picks a candidate's fields
 # ---------------------------------------------------------------------------
 
