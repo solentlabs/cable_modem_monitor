@@ -6,7 +6,9 @@ These tests run against the real catalog to verify extraction correctness.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
@@ -17,6 +19,7 @@ from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import (
     audit_fleet_endpoints,
     scan_fleet,
 )
+from solentlabs.cable_modem_monitor_core.har import LfsPointerError
 
 
 @pytest.fixture(scope="module")
@@ -543,3 +546,25 @@ class TestAuditFleetEndpoints:
         self._entry(tmp_path, "auth:\n  strategy: none\nactions:\n  restart:\n    endpoint: /reboot\n", ["/status.htm"])
 
         assert audit_fleet_endpoints(tmp_path) == []
+
+
+class TestAuditFleetLfsPointers:
+    """An unresolved Git LFS fixture stops the audits instead of reading as an empty capture."""
+
+    @pytest.mark.parametrize("audit", [audit_fleet_auth, audit_fleet_endpoints], ids=["auth", "endpoints"])
+    def test_unresolved_pointer_stops_the_audit(self, tmp_path: Path, audit: Callable[[Path], object]) -> None:
+        modem_dir = tmp_path / "vendor" / "m1"
+        (modem_dir / "test_data").mkdir(parents=True)
+        (modem_dir / "modem.yaml").write_text(
+            "auth:\n  strategy: form\n  action: /goform/Login\n  login_page: /Login.asp\n", encoding="utf-8"
+        )
+        (modem_dir / "test_data" / "modem.har").write_text(
+            "version https://git-lfs.github.com/spec/v1\noid sha256:4d7a\nsize 12345\n", encoding="utf-8"
+        )
+
+        # Mock subprocess so the test never runs `git lfs pull` against the surrounding repository.
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError),
+            pytest.raises(LfsPointerError, match="LFS pointer"),
+        ):
+            audit(tmp_path)

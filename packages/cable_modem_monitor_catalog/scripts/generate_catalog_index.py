@@ -13,7 +13,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
@@ -35,6 +34,7 @@ from catalog_reference import (  # noqa: E402  # pyright: ignore[reportMissingIm
     isp_to_badge,
     protocol_to_badge,
 )
+from solentlabs.cable_modem_monitor_core.har import load_har_json  # noqa: E402
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (  # noqa: E402
     get_strategy_display_labels,
 )
@@ -514,7 +514,7 @@ def restart_note(m: dict, catalog_dir: Path = CATALOG_DIR) -> str:
     for har in sorted((modem_dir / "test_data").glob("*.har")):
         if resolve_modem_config(har.stem, modem_dir) != config_path:
             continue
-        entries = json.loads(har.read_text(encoding="utf-8")).get("log", {}).get("entries", [])
+        entries = load_har_json(har).get("log", {}).get("entries", [])
         if restart_evidence(config, entries) == "captured":
             return "captured"
     return restart_evidence(config, [])

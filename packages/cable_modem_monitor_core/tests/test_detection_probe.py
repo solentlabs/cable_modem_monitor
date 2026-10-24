@@ -18,6 +18,7 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 
 import pytest
 from cryptography import x509
@@ -587,3 +588,41 @@ def test_schemes_are_tried_https_first_then_http(monkeypatch: pytest.MonkeyPatch
 
     assert detect(_summaries("192.0.2.1"), timeout=TIMEOUT) == []
     assert urls == ["https://192.0.2.1/", "http://192.0.2.1/"]
+
+
+def test_a_host_that_breaks_the_probe_does_not_hide_an_answering_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unexpected error from one device costs only that host's answer, and is logged as its reason."""
+    from solentlabs.cable_modem_monitor_core import detection
+
+    broken = "192.0.2.1"
+    real_session = detection.create_session
+
+    class Session:
+        """A real session, except that probing the broken host raises a non-requests error."""
+
+        _real: Any
+
+        def __init__(self) -> None:
+            object.__setattr__(self, "_real", real_session())
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(self._real, name)
+
+        def __setattr__(self, name: str, value: object) -> None:
+            setattr(self._real, name, value)
+
+        def get(self, url: str, **kwargs: Any) -> Any:
+            if broken in url:
+                raise ValueError("malformed Location header")
+            return self._real.get(url, **kwargs)
+
+    monkeypatch.setattr(detection, "create_session", Session)
+
+    with serve() as site:
+        site.routes["/"] = _page()
+
+        with capture_events() as events:
+            result = detect(_summaries(broken, site.host), timeout=TIMEOUT)
+
+    assert [d.host for d in result] == [site.host]
+    assert_event_emitted(events, DetectionProbeResult, host=broken, observation=None, reason="ValueError")

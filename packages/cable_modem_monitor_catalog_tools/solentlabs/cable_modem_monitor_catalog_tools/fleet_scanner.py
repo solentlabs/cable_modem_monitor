@@ -32,6 +32,7 @@ from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.patterns import 
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
 from solentlabs.cable_modem_monitor_catalog_tools.validation.endpoint_grounding import check_endpoints_in_har
 from solentlabs.cable_modem_monitor_catalog_tools.validation.fixture_integrity import check_login_page_in_har
+from solentlabs.cable_modem_monitor_core.har import load_har_json
 from solentlabs.cable_modem_monitor_core.test_harness import resolve_modem_config
 
 
@@ -208,9 +209,7 @@ def audit_fleet_auth(catalog_path: Path) -> list[AuthAuditIssue]:
         modem_rel = str(modem_dir.relative_to(catalog_path))
 
         try:
-            with open(har_path, encoding="utf-8") as f:
-                har_data: Any = json.load(f)
-            entries: list[Any] = har_data.get("log", {}).get("entries", [])
+            entries: list[Any] = load_har_json(har_path).get("log", {}).get("entries", [])
         except (OSError, json.JSONDecodeError):
             continue
 
@@ -240,8 +239,7 @@ def audit_fleet_endpoints(catalog_path: Path) -> list[AuthAuditIssue]:
             continue
         try:
             config: Any = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-            with open(har_path, encoding="utf-8") as f:
-                entries: list[Any] = json.load(f).get("log", {}).get("entries", [])
+            entries: list[Any] = load_har_json(har_path).get("log", {}).get("entries", [])
         except (yaml.YAMLError, OSError, json.JSONDecodeError):
             continue
         if not isinstance(config, dict):

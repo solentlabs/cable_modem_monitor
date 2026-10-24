@@ -91,13 +91,14 @@ _CONFIRM_MANUAL = "manual"
 # HA's SelectSelector rejects empty-string option values.
 _DEFAULT_VARIANT = "__default__"
 
-# Supported-modem list linked from the model step. A placeholder, not
-# strings.json text, so translators never touch the URL.
+# Supported-modem list linked from the model step. Passed as the {catalog_url}
+# description placeholder, not written into strings.json, so translators never touch the URL.
 _CATALOG_MODEM_LIST_URL = (
     "https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/README.md"
 )
 
-# Linked from the no-match page; a placeholder, like the catalog list URL.
+# Modem-request guide linked from the no-match page, passed as the {request_url}
+# description placeholder like the catalog list URL.
 _MODEM_REQUEST_URL = "https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md"
 
 # Cooloff window before options-flow validation re-auths the modem.

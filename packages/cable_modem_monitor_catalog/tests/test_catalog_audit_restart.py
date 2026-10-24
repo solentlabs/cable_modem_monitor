@@ -11,8 +11,10 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
+from solentlabs.cable_modem_monitor_core.har import LfsPointerError
 
 _GENERATOR = Path(__file__).resolve().parents[1] / "scripts" / "generate_catalog_index.py"
 _spec = importlib.util.spec_from_file_location("generate_catalog_index", _GENERATOR)
@@ -48,6 +50,23 @@ def test_restart_note(tmp_path: Path, config: str, fixtures: dict, expected: str
         (modem_dir / "test_data" / name).write_text(json.dumps({"log": {"entries": entries}}), encoding="utf-8")
     row = {"path": "acme/x1", "yaml_file": "modem.yaml"}
     assert restart_note(row, tmp_path) == expected
+
+
+def test_unresolved_lfs_pointer_stops_the_audit_with_guidance(tmp_path: Path) -> None:
+    """A fixture that is still a Git LFS pointer fails with install steps, not a JSON error."""
+    modem_dir = tmp_path / "acme" / "x1"
+    (modem_dir / "test_data").mkdir(parents=True)
+    (modem_dir / "modem.yaml").write_text(WITH_RESTART, encoding="utf-8")
+    (modem_dir / "test_data" / "modem.har").write_text(
+        "version https://git-lfs.github.com/spec/v1\noid sha256:4d7a\nsize 12345\n", encoding="utf-8"
+    )
+    row = {"path": "acme/x1", "yaml_file": "modem.yaml"}
+    # Mock subprocess so the test never runs `git lfs pull` against the surrounding repository.
+    with (
+        patch("subprocess.run", side_effect=FileNotFoundError),
+        pytest.raises(LfsPointerError, match="Git LFS pointer"),
+    ):
+        restart_note(row, tmp_path)
 
 
 def test_fixture_of_another_variant_is_not_this_configs_evidence(tmp_path: Path) -> None:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .auth.base import _segments, _template_match
+from .auth.base import segments, template_match
 
 
 def url_matches_endpoint(endpoint: str, url: str) -> bool:
@@ -10,4 +10,4 @@ def url_matches_endpoint(endpoint: str, url: str) -> bool:
     declared = endpoint.split("?", 1)[0]
     sent = url.split("://", 1)[-1]
     sent_path = "/" + sent.split("/", 1)[1] if "/" in sent else "/"
-    return _template_match(_segments(declared), _segments(sent_path.split("?", 1)[0]))
+    return template_match(segments(declared), segments(sent_path.split("?", 1)[0]))

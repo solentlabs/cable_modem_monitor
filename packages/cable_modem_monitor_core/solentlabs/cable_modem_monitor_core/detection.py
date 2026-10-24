@@ -317,6 +317,9 @@ def _probe(host: str, timeout: float) -> _Probe:
                 if scheme == "https" and is_connectivity_error(exc):
                     continue
                 return _Probe(host, reason=type(exc).__name__)
+            except Exception as exc:
+                # The sweep reaches unrelated LAN devices; a malformed answer from one costs only that host.
+                return _Probe(host, reason=type(exc).__name__)
         return _Probe(host, reason="unreachable")  # pragma: no cover - the loop always returns
     finally:
         session.close()
