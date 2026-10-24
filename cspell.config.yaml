@@ -49,6 +49,7 @@ ignoreWords:
   - Rpem
   - SNTLABS
   - totev
+  - UIDSBG # FCC ID UIDSBG7400 (ARRIS SBG7400AC2), cited in the catalog entry
   - Vonk
   - Fzcw
   - didnt

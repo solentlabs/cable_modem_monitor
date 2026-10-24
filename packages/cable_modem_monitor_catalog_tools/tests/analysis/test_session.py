@@ -67,6 +67,19 @@ def test_session_token_prefix(fixture_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "fixture_path",
+    [f for f in VALID_FIXTURES if "_expected_session" in load_fixture(f)],
+    ids=[f.stem for f in VALID_FIXTURES if "_expected_session" in load_fixture(f)],
+)
+def test_session_exact(fixture_path: Path) -> None:
+    """Fixtures with _expected_session produce exactly that session, nothing more."""
+    data = load_fixture(fixture_path)
+    warnings: list[str] = []
+    result = SessionDetail.detect(data["_entries"], data["_transport"], data["_auth_strategy"], warnings)
+    assert result.to_dict() == data["_expected_session"]
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
     [f for f in VALID_FIXTURES if "_expected_warning" in load_fixture(f)],
     ids=[f.stem for f in VALID_FIXTURES if "_expected_warning" in load_fixture(f)],
 )

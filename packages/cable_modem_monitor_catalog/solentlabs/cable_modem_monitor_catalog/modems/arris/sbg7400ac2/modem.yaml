@@ -42,12 +42,14 @@ actions:
 
 hardware:
   docsis_version: "3.0"
+  chipset: "Intel Puma 6 (DHCE2652)"
+  release_date: "2017"
 
 detection:
   http_headers:
     - "lighttpd"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config:
@@ -82,6 +84,8 @@ sources:
     answers 401"
   brands: "test_data/modem.har [62] base_retail.js — 'Thank you for purchasing an ARRIS SURFboard'"
   docsis_version: "[SpeedGuide, SBG7400AC2 is a DOCSIS 3.0 modem](https://speedguide.net/broadband-view.php?hw=4438)"
+  chipset: "Main chip marked DHCE2652 / SR278 on the opened board (bench photo, 2026-10-23); [TechInfoDepot, Intel Puma](https://techinfodepot.shoutwiki.com/wiki/TechInfoDepot:Intel/Intel_Puma) lists DHCE2652 as a Puma 6 family SoC (SR278/SR279)"
+  release_date: "[FCC ID UIDSBG7400](https://fccid.io/UIDSBG7400) (read 2026-10-23) — FCC grant proxy: original equipment grant 2017-03-24, Class II change 2017-07-12; the device label on the bench unit carries this FCC ID; no launch announcement found"
   isps: "[Cox, SBG7400AC2 data sheet](https://www.cox.com/content/dam/cox/residential/support/internet/print_media/Arris_Surfboard_SBG7400AC2_Data_Sheet.pdf)"
 
 attribution:

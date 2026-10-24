@@ -858,10 +858,22 @@ _WELL_FORMED = (
 )
 
 
+# An empty <tr> between the labels and the data has no cells to read, but
+# Core's parser counts it (SBG7400AC2 upstream).
+_EMPTY_ROW_UNCLOSED = (
+    "<table><tr><td>Channel ID</td><td>Frequency</td></tr>"
+    "<tr><tr><td>32</td><td>495000000</td><tr><td>1</td><td>297000000</td></table>"
+)
+_EMPTY_ROW_CLOSED = (
+    "<table><tr><td>Channel ID</td><td>Frequency</td></tr><tr></tr>"
+    "<tr><td>32</td><td>495000000</td></tr><tr><td>1</td><td>297000000</td></tr></table>"
+)
+
+
 @pytest.mark.parametrize(
     "html,expected",
-    [(_ORPHANED_LABELS, 1), (_WELL_FORMED, 2)],
-    ids=["repaired-label-row-not-counted", "real-label-row-counted"],
+    [(_ORPHANED_LABELS, 1), (_WELL_FORMED, 2), (_EMPTY_ROW_UNCLOSED, 2), (_EMPTY_ROW_CLOSED, 2)],
+    ids=["repaired-label-row-not-counted", "real-label-row-counted", "empty-row-unclosed", "empty-row-closed"],
 )
 def test_row_start_in_core_rows(html: str, expected: int) -> None:
     """The label row the analyzer repaired in is not a row Core counts; a real one is."""

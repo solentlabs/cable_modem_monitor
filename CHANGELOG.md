@@ -57,6 +57,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Intake no longer reads a second web server into the session.** A modem
+  whose router GUI runs on another port put that GUI's `X-Requested-With`
+  header and `ver_` cache-buster into the generated `session` block. Session
+  detection now reads only the capture's first origin.
+- **Intake counts an empty `<tr>` toward `row_start`.** Core's parser counts a
+  `<tr>` with no cells, so a table with one between the labels and the data
+  needs `row_start: 2` where intake proposed 1.
 - **A failed `url_token` login no longer prints the password.** The login URL
   carries the credential as base64, and the connection error text repeated
   that URL, so a Restart pressed while the modem was down put it in the log

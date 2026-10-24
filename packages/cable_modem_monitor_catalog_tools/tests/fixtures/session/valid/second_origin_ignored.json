@@ -1,0 +1,25 @@
+{
+  "_description": "Router GUI on a second port: its XHR header, cache-busting parameter and cookie are not the data pages' session (SBG7400AC2)",
+  "_entries": [
+    {
+      "request": {"method": "POST", "url": "http://192.168.100.1/cgi-bin/login", "headers": [], "cookies": []},
+      "response": {"status": 200, "headers": [{"name": "Set-Cookie", "value": "credential=abc; path=/"}], "cookies": [], "content": {"size": 10, "text": "ok"}}
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "headers": [], "cookies": []},
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "data"}}
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1:8080/home?ver_=12345678", "headers": [{"name": "X-Requested-With", "value": "XMLHttpRequest"}], "cookies": []},
+      "response": {"status": 200, "headers": [{"name": "Set-Cookie", "value": "sessionid=zzz; path=/"}], "cookies": [], "content": {"size": 100, "text": "gui"}}
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1:8080/menu?ver_=12345678", "headers": [{"name": "X-Requested-With", "value": "XMLHttpRequest"}], "cookies": []},
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "gui"}}
+    }
+  ],
+  "_transport": "http",
+  "_auth_strategy": "form",
+  "_expected_cookie": "credential",
+  "_expected_session": {"cookie_name": "credential", "headers": {}, "query_params": {}, "token_prefix": ""}
+}

@@ -37,6 +37,8 @@ class DetectedTable:
     i18n_header_map: dict[str, str] = field(default_factory=dict)
     # 1 when the label row was inserted to read malformed markup; Core never sees it.
     repaired_rows: int = 0
+    # Rows extracted before each <tr> with no text; Core's parser counts them.
+    unread_rows: list[int] = field(default_factory=list)
 
 
 @dataclass

@@ -654,6 +654,12 @@ Examine post-login requests for session artifacts:
 | Token in URL query string on data requests | `auth.token_prefix: "<prefix>"` (url_token strategy only) |
 | CSRF token header on POST requests | Belongs to auth strategy config, not session |
 
+**One origin.** Only entries on the capture's first origin (host and
+port of the first entry) are examined. A second web server on the same
+host, such as a router GUI on another port, carries its own cookies,
+headers and cache-busting parameters; none of them describe the data
+pages' session (SBG7400AC2).
+
 **Single-session detection:** Cannot be determined from HAR alone. If
 the modem rejects concurrent sessions, the HAR won't show it (only one
 session was active). If a logout flow is visible in the HAR, emit
@@ -1240,7 +1246,10 @@ labels) are counted as non-data rows.
 ([FORMAT_TABLE_SPEC.md](../../cable_modem_monitor_core/docs/FORMAT_TABLE_SPEC.md)).
 Where firmware writes the label cells with no opening `<tr>`, analysis
 repairs the row to read the labels, but Core's parser drops those cells,
-so the repaired label row is not counted.
+so the repaired label row is not counted. A `<tr>` with no text to read
+(an empty `<tr>` between the labels and the data) is a row to Core's
+parser, so one ahead of the first data row is counted (SBG7400AC2
+upstream: `row_start: 2`).
 
 #### Table selector detection
 

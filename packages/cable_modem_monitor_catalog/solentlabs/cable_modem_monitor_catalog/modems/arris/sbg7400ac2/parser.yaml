@@ -96,6 +96,14 @@ system_info:
         - field: firmware_name
           label: Firmware Name
           type: string
+        - field: hardware_version
+          label: System
+          pattern: "HW_REV:\\s*(.+)"
+          type: string
+        - field: software_version
+          label: System
+          pattern: "SW_REV:\\s*(.+)"
+          type: string
 
 aggregate:
   total_corrected:
