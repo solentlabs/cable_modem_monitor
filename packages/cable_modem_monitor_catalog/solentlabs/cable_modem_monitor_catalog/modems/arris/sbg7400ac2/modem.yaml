@@ -129,6 +129,16 @@ notes: |
   against 244 to 256 without `muti`). A press at 17:37 with an older browser
   session, and three back-to-back scripted logins, produced no `muti`. A busy
   login is retried, not counted as a wrong password.
+  Bench test on 2026-10-24, every session from one client address, nothing
+  else connected: two cable modem logins held open at once were both accepted
+  and both kept working, in two runs, so that page does not behave as
+  single-session; a login while a router GUI session was open was accepted too.
+  Two router GUI logins at once both returned a token without `muti` and both
+  worked, but one session's logout (it answers 500) made the other's next
+  request answer 401. No busy page and no `muti` appeared in 17 logins, so
+  what triggers them is still unknown; one possibility is a second client
+  address, which one machine cannot test. The outcomes are in the
+  maintainer's bench results, not shipped.
   The generated session block (`_n` query parameter, XMLHttpRequest header,
   `ver_` token prefix) came from the router GUI's traffic and is omitted; the
   cable modem pages need none of it (live test 2026-10-23).
