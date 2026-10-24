@@ -92,6 +92,9 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
     The consumer owns the UI pattern — dropdowns, typeahead, flat list.
     This API returns everything; the consumer filters client-side.
 
+    Each variant file is parsed once per call, however many summary
+    fields it supplies.
+
     Skips and logs modems with invalid YAML to prevent a single bad
     file from breaking the entire config flow.
 
@@ -103,6 +106,7 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
         List of ModemSummary, one per unique (manufacturer, model) pair.
     """
     raw_results: list[ModemSummary] = []
+    reads: dict[Path, Any] = {}
 
     if not catalog_path.is_dir():
         _logger.warning("Catalog path does not exist: %s", catalog_path)
@@ -117,7 +121,7 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
         if modem_yaml is None:
             continue
         try:
-            summary = _load_summary(modem_yaml)
+            summary = _load_summary(modem_yaml, reads)
             if summary is not None:
                 raw_results.append(summary)
         except Exception:
@@ -142,9 +146,9 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
     # from modem.yaml is preserved.
     for summary in grouped:
         all_dirs = [summary.path] + summary.sibling_dirs
-        if _any_variant_confirmed(all_dirs):
+        if _any_variant_confirmed(all_dirs, reads):
             summary.status = "confirmed"
-        summary.auth_strategies, summary.landing_signals, summary.server_headers = _detection_fields(all_dirs)
+        summary.auth_strategies, summary.landing_signals, summary.server_headers = _detection_fields(all_dirs, reads)
 
     _logger.info(
         "Catalog discovery: %d modems found (%d directories)",
@@ -167,7 +171,20 @@ def _variant_files(directory: Path) -> list[Path]:
     return sorted(directory.glob("modem*.yaml"), key=lambda p: (p.stem != "modem", p.name))
 
 
-def _detection_fields(dirs: list[Path]) -> tuple[list[str], LandingSignals, list[str]]:
+def _read_yaml(path: Path, reads: dict[Path, Any]) -> Any:
+    """Parse a variant file once per ``list_modems()`` call; a parse failure is kept and re-raised."""
+    if path not in reads:
+        try:
+            reads[path] = yaml.safe_load(path.read_text())
+        except Exception as exc:
+            reads[path] = exc
+    value = reads[path]
+    if isinstance(value, Exception):
+        raise value
+    return value
+
+
+def _detection_fields(dirs: list[Path], reads: dict[Path, Any]) -> tuple[list[str], LandingSignals, list[str]]:
     """Auth strategies, landing signals and ``Server`` products for one entry's directories."""
     strategies: list[str] = []
     paths: list[str] = []
@@ -176,7 +193,7 @@ def _detection_fields(dirs: list[Path]) -> tuple[list[str], LandingSignals, list
     for directory in dirs:
         for yaml_path in _variant_files(directory):
             try:
-                raw = yaml.safe_load(yaml_path.read_text())
+                raw = _read_yaml(yaml_path, reads)
             except Exception:
                 _logger.debug("Unreadable variant file: %s", yaml_path, exc_info=True)
                 continue
@@ -213,12 +230,12 @@ def _parser_paths(directory: Path) -> list[str]:
         return []
 
 
-def _any_variant_confirmed(dirs: list[Path]) -> bool:
+def _any_variant_confirmed(dirs: list[Path], reads: dict[Path, Any]) -> bool:
     """Return True if any modem*.yaml file in the given directories has status: confirmed."""
     for d in dirs:
         for yaml_path in d.glob("modem*.yaml"):
             try:
-                raw: dict[str, Any] = yaml.safe_load(yaml_path.read_text())
+                raw: dict[str, Any] = _read_yaml(yaml_path, reads)
                 if isinstance(raw, dict) and raw.get("status") == "confirmed":
                     return True
             except Exception:
@@ -338,13 +355,13 @@ def _load_variant(yaml_path: Path, name: str | None) -> VariantInfo | None:
     )
 
 
-def _load_summary(modem_yaml: Path) -> ModemSummary | None:
+def _load_summary(modem_yaml: Path, reads: dict[Path, Any]) -> ModemSummary | None:
     """Load a single modem.yaml and extract a summary.
 
     Returns None if the file cannot be parsed or is missing required
     fields. Logs warnings for skipped files.
     """
-    raw: dict[str, Any] = yaml.safe_load(modem_yaml.read_text())
+    raw: dict[str, Any] = _read_yaml(modem_yaml, reads)
     if not isinstance(raw, dict):
         _logger.warning("Unexpected YAML content in %s", modem_yaml)
         return None

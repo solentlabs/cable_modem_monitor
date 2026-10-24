@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml
 from solentlabs.cable_modem_monitor_core.catalog_manager import (
     ModemSummary,
@@ -327,6 +329,30 @@ class TestListModems:
 
         assert len(results) == 1
         assert results[0].auth_strategy == "none"
+
+    def test_each_variant_file_is_read_once(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """One call reads every modem*.yaml once, however many fields come from it."""
+        identity = {"manufacturer": "Solent Labs", "model": "T100", "auth": {"strategy": "none"}}
+        modem_dir = tmp_path / "solent" / "t100"
+        _write_modem_yaml(modem_dir, identity)
+        _write_variant_yaml(modem_dir / "modem-basic.yaml", identity)
+        _write_variant_yaml(tmp_path / "solent" / "t100-php" / "modem-php.yaml", identity)
+        reads: Counter[str] = Counter()
+        original = Path.read_text
+
+        def counting(self: Path, *args: Any, **kwargs: Any) -> str:
+            reads[self.name] += 1
+            return original(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "read_text", counting)
+
+        list_modems(tmp_path)
+
+        assert {name: count for name, count in reads.items() if name.startswith("modem")} == {
+            "modem.yaml": 1,
+            "modem-basic.yaml": 1,
+            "modem-php.yaml": 1,
+        }
 
 
 class TestModemSummary:

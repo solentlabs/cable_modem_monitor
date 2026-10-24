@@ -795,7 +795,8 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
     (manufacturer, model) identity, case-insensitive, collapse into one
     summary; the first by path is primary and the rest are its
     sibling_dirs. Status is the aggregate across them: confirmed when any
-    variant is.
+    variant is. Each variant file is parsed once per call, however many
+    summary fields it supplies.
 
     The consumer owns the UI pattern — dropdowns, typeahead, flat list.
     This API returns everything; the consumer filters client-side.
