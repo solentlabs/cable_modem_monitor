@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.5] - 2026-10-25
+
 ### Added
 
 - **The catalog audit shows whether each entry's capture holds its restart.**
