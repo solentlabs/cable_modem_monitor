@@ -58,9 +58,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `scheme`, on an action move its request, and its `action_auth` login, to
   that port of the same host. The SBG7400AC2 restart uses both: its router
   GUI speaks plain HTTP on 8080 even when setup chose HTTPS for the modem.
+- **Setup can identify the modem for you.** A new first step sends one GET to
+  `/` at each catalog address, HTTPS first, with no login, and narrows the
+  catalog by the landing page's paths, cookies and `Server` header. You
+  confirm the match, pick from other likely models, or choose manually. It
+  never logs in and never retries. 14 catalog entries gain
+  `detection.http_headers` for this.
 
 ### Fixed
 
+- **Starting setup is about ten times faster.** Listing the catalog read each
+  modem file up to three times, about 5.1 s on the 42-entry catalog, and every
+  config flow start and migration paid it. Each file is now read once, about
+  0.5 s.
+- **One odd device no longer fails detection.** An unexpected error from one
+  probed address, such as an unrelated device on the LAN, discarded the real
+  modem's answer. The error is now recorded for that address only.
 - **Intake finds the accepted login whatever the order of the attempts.** It
   kept the latest login POST, so a capture that ends with the wrong password,
   as the capture guide asks, lost `success.redirect`. The accepted attempt is
