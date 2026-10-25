@@ -10,11 +10,11 @@ from typing import Any
 import pytest
 from pydantic import TypeAdapter
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
+    HNAP_CLIENT_SCRIPT,
     AuthConfig,
     AuthStrategyBase,
     LandingSignals,
 )
-from solentlabs.cable_modem_monitor_core.protocol.hnap import HNAP_CLIENT_SCRIPT
 
 _AUTH: TypeAdapter[AuthStrategyBase] = TypeAdapter(AuthConfig)
 

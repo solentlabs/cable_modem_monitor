@@ -15,7 +15,6 @@ from .signals import CollectorSignal
 
 if TYPE_CHECKING:
     from ..auth.base import LoginPageDriftCondition
-    from ..detection import Observation
 
 
 class EventLevel(IntEnum):
@@ -640,6 +639,21 @@ class ResourceDecodeError:
 # ---------------------------------------------------------------------------
 # Phase: detection (before any modem is chosen, so events carry a host)
 # ---------------------------------------------------------------------------
+
+
+# Defined here, not in detection.py: detection imports this module, so the
+# event cannot import it back (DETECTION_SPEC.md § API).
+@dataclass(frozen=True)
+class Observation:
+    """What a host's landing response looked like; evidence for the user, never read by the matcher."""
+
+    scheme: str
+    status: int
+    final_path: str
+    server: str | None
+    title: str | None
+    www_authenticate: str | None
+    password_field: bool
 
 
 @dataclass

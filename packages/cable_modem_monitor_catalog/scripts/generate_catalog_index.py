@@ -599,7 +599,7 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         "| Value | Meaning |",
         "|-------|---------|",
         "| `captured` | A captured request is the declared restart "
-        "(`http`: method and path; `hnap`: action name; `cbn`: `fun` code; `json_rpc`: method) |",
+        + "(`http`: method and path; `hnap`: action name; `cbn`: `fun` code; `json_rpc`: method) |",
         "| `not captured` | A restart is declared and no captured request matches |",
         "| `n/a` | No restart declared |",
         "",

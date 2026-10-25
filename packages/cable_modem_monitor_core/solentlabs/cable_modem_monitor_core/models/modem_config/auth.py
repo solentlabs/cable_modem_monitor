@@ -17,6 +17,11 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, field_validator, model_validator
 
+# The client script every captured HNAP login page loads (S33 and SB8200 landing
+# replies); Auto-detect reads it as the transport's signal (DETECTION_SPEC.md § Signals).
+# Lives here, not in protocol.hnap, which imports this module.
+HNAP_CLIENT_SCRIPT = "/js/SOAP/SOAPAction.js"
+
 
 class LandingSignals(NamedTuple):
     """Paths and cookie names a strategy's login surface carries (DETECTION_SPEC.md § Signals)."""
@@ -231,9 +236,6 @@ class HnapAuth(AuthStrategyBase):
 
     def landing_signals(self) -> LandingSignals:
         """The paths and cookies this strategy's config declares."""
-        # Lazy: protocol.hnap imports this module.
-        from ...protocol.hnap import HNAP_CLIENT_SCRIPT
-
         return build_landing_signals((HNAP_CLIENT_SCRIPT,))
 
 

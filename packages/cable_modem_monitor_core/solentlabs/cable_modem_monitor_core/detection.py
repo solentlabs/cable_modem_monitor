@@ -27,7 +27,7 @@ import requests
 
 from .catalog_manager import ModemSummary
 from .connectivity import create_session, is_connectivity_error
-from .orchestration.events import DetectionMatched, DetectionProbeResult
+from .orchestration.events import DetectionMatched, DetectionProbeResult, Observation
 from .orchestration.logging import log_event
 
 _logger = logging.getLogger(__name__)
@@ -48,19 +48,6 @@ _POINTER = re.compile(r"""\b(?:src|href|action|data)\s*=\s*(?:"([^"]*)"|'([^']*)
 _META = re.compile(r"<meta\b[^>]*>", re.IGNORECASE)
 _META_REFRESH = re.compile(r"http-equiv\s*=\s*[\"']?refresh\b", re.IGNORECASE)
 _META_TARGET = re.compile(r"\burl\s*=\s*([^\s\"'>;]+)", re.IGNORECASE)
-
-
-@dataclass(frozen=True)
-class Observation:
-    """What a host's landing response looked like; evidence for the user, never read by the matcher."""
-
-    scheme: str
-    status: int
-    final_path: str
-    server: str | None
-    title: str | None
-    www_authenticate: str | None
-    password_field: bool
 
 
 @dataclass(frozen=True)

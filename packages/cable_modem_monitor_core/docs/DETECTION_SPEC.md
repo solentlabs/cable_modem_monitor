@@ -25,6 +25,8 @@ Module `solentlabs.cable_modem_monitor_core.detection`. Synchronous and
 blocking; async consumers call it in an executor.
 
 ```python
+# Defined in orchestration/events.py beside DetectionProbeResult, which carries
+# it, so events never import this module; importable from here.
 @dataclass(frozen=True)
 class Observation:
     scheme: str                    # "http" or "https" of the final response
