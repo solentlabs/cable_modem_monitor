@@ -122,6 +122,7 @@ def run_modem_restart_test(test_case: RestartTestCase) -> ActionTestResult:
         return ActionTestResult(test_name=test_case.name, passed=False, error=f"Failed to load HAR: {e}")
 
     try:
+        from ..models.modem_config.actions import HttpAction
         from ..orchestration.actions import execute_action
         from ..orchestration.collector import ModemDataCollector
 
@@ -141,7 +142,11 @@ def run_modem_restart_test(test_case: RestartTestCase) -> ActionTestResult:
                     passed=False,
                     error=f"Auth failed: {auth_result.error}",
                 )
-            result = execute_action(collector, modem_config, modem_config.actions.restart)
+            restart = modem_config.actions.restart
+            # The mock answers every captured origin from one port, over http.
+            if isinstance(restart, HttpAction) and (restart.port is not None or restart.scheme is not None):
+                restart = restart.model_copy(update={"port": None, "scheme": None})
+            result = execute_action(collector, modem_config, restart)
     except Exception as e:
         return ActionTestResult(test_name=test_case.name, passed=False, error=f"Action execution error: {e}")
 

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Kabelmodem Monitor",
-        "description": "Selecteer een fabrikant of kies 'Alle'.",
+        "description": "Selecteer een fabrikant, kies 'Alle' of kies 'Auto-detect' om je modem op het netwerk te zoeken.",
         "data": {
           "manufacturer": "Fabrikant"
         }
@@ -56,6 +56,38 @@
           "username": "Gebruikersnaam",
           "password": "Wachtwoord"
         }
+      },
+      "detect_confirm": {
+        "title": "Modem gevonden",
+        "description": "Auto-detect heeft **{model}** gevonden op {host}.\n\nAuto-detect beperkt alleen de keuze. Bevestig dat dit je modem is.",
+        "data": {
+          "choice": "Is dit je modem?",
+          "entity_prefix": "Entity ID-voorvoegsel",
+          "channel_identity": "Kanaalbenaming"
+        },
+        "data_description": {
+          "choice": "Kies de eerste optie om door te gaan. De tweede toont andere waarschijnlijke resultaten van de zoekopdracht en de derde opent de volledige lijst met fabrikanten.",
+          "entity_prefix": "Voegt modelnaam of IP toe aan Entity ID's. Vereist bij het monitoren van meerdere modems.",
+          "channel_identity": "Kanaalnummer benoemt entiteiten op basis van de rijpositie in de modem (blijft stabiel na herstarts). Kanaal-ID gebruikt de DOCSIS-kanaal-ID (komt overeen met de diagnostiek van de provider, maar kan na een herstart veranderen)."
+        }
+      },
+      "detect_pick": {
+        "title": "Modems gevonden",
+        "description": "De pagina die antwoordde noemt meer dan één model. Kies het jouwe. Modellen gemarkeerd met * zijn niet geverifieerd.",
+        "data": {
+          "model": "Modemmodel",
+          "entity_prefix": "Entity ID-voorvoegsel",
+          "channel_identity": "Kanaalbenaming"
+        },
+        "data_description": {
+          "model": "Selecteer uw modemmodel uit de lijst.",
+          "entity_prefix": "Voegt modelnaam of IP toe aan Entity ID's. Vereist bij het monitoren van meerdere modems.",
+          "channel_identity": "Kanaalnummer benoemt entiteiten op basis van de rijpositie in de modem (blijft stabiel na herstarts). Kanaal-ID gebruikt de DOCSIS-kanaal-ID (komt overeen met de diagnostiek van de provider, maar kan na een herstart veranderen)."
+        }
+      },
+      "no_match": {
+        "title": "Modem niet herkend",
+        "description": "Auto-detect heeft je modem niet herkend. Dat kan betekenen dat het nog niet wordt ondersteund.\n\nWat er antwoordde:\n\n{observed}\n\nKies hierna zelf je modem. Bekijk de [lijst met ondersteunde modems]({catalog_url}) of [vraag ondersteuning aan voor je modem]({request_url})."
       }
     },
     "error": {

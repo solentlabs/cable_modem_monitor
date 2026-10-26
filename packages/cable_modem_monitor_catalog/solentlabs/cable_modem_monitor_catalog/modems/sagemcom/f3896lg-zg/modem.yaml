@@ -31,6 +31,10 @@ hardware:
   chipset: "Broadcom BCM3390"
   release_date: "2022-10"
 
+detection:
+  http_headers:
+    - "lighttpd"
+
 status: confirmed
 
 sources:
@@ -41,6 +45,7 @@ sources:
   chipset: "[ISPreview — Hub 5 launch](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html) identifies the F3896LG platform as Broadcom BCM3390"
   hardware: "[Issue #185 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/185) — /rest/v1/cablemodem/state_ reports docsisVersion 3.1"
   release_date: "[Telecompaper, 2022-10-06](https://www.telecompaper.com/nieuws/ziggo-levert-nieuw-model-docsis-31-modem--1439683) — Ziggo began supplying the 'SmartWifi modem (zwart)' that month; [Ziggo's product page](https://www.ziggo.nl/klantenservice/apparaten/wifi-modems/smartwifi-modem-zwart) identifies that modem as the Sagemcom F3896LG. ISP rollout date, not a manufacturer launch date"
+  isps: "[#185](https://github.com/solentlabs/cable_modem_monitor/issues/185) filer's ISP is Ziggo (issue body, diagnostics form)."
 
 attribution:
   contributors:

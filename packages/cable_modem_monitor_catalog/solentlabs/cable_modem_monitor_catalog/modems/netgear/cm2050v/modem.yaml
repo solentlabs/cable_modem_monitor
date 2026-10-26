@@ -46,6 +46,7 @@ sources:
     on file (the captured page read unAuth='1' and closed without posting)"
   release_date: "[Netgear press release, September 22, 2020](https://www.businesswire.com/news/home/20200922005367/en/Netgear-Introduces-Industry-first-2.5Gbps-DOCSIS-3.1-Cable-Modems-to-Deliver-Top-Internet-Speeds-to-the-Home) announcing CM2050V availability"
   chipset: "[DSLReports community post](https://www.dslreports.com/forum/r33000298-Netgear-CM2000-vs-Arris-S33-vs-Motorola-MB8611) — same BCM3390 platform as CM2000/CM1200 family"
+  isps: "[NETGEAR CM2050V product page, Wayback capture 2021-01-18](https://web.archive.org/web/20210118104654/https://www.netgear.com/home/wifi/modems/cm2050v/): 'Works with Your XFINITY Voice Service', 'Supports XFINITY from Comcast double and triple plan with voice service', 'Will not work with any other voice service except XFINITY Voice'. Xfinity is Comcast's brand."
 
 attribution:
   contributors:

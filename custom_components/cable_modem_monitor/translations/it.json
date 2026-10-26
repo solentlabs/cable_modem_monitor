@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Monitor Modem Via Cavo",
-        "description": "Seleziona un produttore o scegli 'Tutti'.",
+        "description": "Seleziona un produttore, scegli 'Tutti' oppure scegli 'Auto-detect' per cercare il modem nella rete.",
         "data": {
           "manufacturer": "Produttore"
         }
@@ -56,6 +56,38 @@
           "username": "Nome utente",
           "password": "Password"
         }
+      },
+      "detect_confirm": {
+        "title": "Modem trovato",
+        "description": "Auto-detect ha trovato **{model}** all'indirizzo {host}.\n\nAuto-detect restringe soltanto la scelta. Conferma che questo è il tuo modem.",
+        "data": {
+          "choice": "È questo il tuo modem?",
+          "entity_prefix": "Prefisso Entity ID",
+          "channel_identity": "Denominazione dei canali"
+        },
+        "data_description": {
+          "choice": "Scegli la prima opzione per continuare. La seconda mostra le altre corrispondenze probabili della ricerca e la terza apre l'elenco completo dei produttori.",
+          "entity_prefix": "Aggiunge il nome del modello o l'IP agli Entity ID. Necessario quando si monitorano più modem.",
+          "channel_identity": "Numero canale assegna alle entità un nome in base alla posizione di riga del modem (stabile tra i riavvii). ID canale utilizza l'ID canale DOCSIS (corrisponde alla diagnostica dell'ISP, ma può cambiare al riavvio)."
+        }
+      },
+      "detect_pick": {
+        "title": "Modem trovati",
+        "description": "La pagina che ha risposto menziona più di un modello. Scegli il tuo. I modelli contrassegnati con * non sono verificati.",
+        "data": {
+          "model": "Modello di Modem",
+          "entity_prefix": "Prefisso Entity ID",
+          "channel_identity": "Denominazione dei canali"
+        },
+        "data_description": {
+          "model": "Seleziona il tuo modello di modem dalla lista.",
+          "entity_prefix": "Aggiunge il nome del modello o l'IP agli Entity ID. Necessario quando si monitorano più modem.",
+          "channel_identity": "Numero canale assegna alle entità un nome in base alla posizione di riga del modem (stabile tra i riavvii). ID canale utilizza l'ID canale DOCSIS (corrisponde alla diagnostica dell'ISP, ma può cambiare al riavvio)."
+        }
+      },
+      "no_match": {
+        "title": "Modem non identificato",
+        "description": "Auto-detect non ha identificato il modem. Può significare che non è ancora supportato.\n\nCosa ha risposto:\n\n{observed}\n\nScegli poi il modem manualmente. Consulta l'[elenco dei modem supportati]({catalog_url}) oppure [richiedi il supporto per il tuo modem]({request_url})."
       }
     },
     "error": {

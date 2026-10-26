@@ -566,6 +566,76 @@ def test_hidden_field_merge_order(
         assert post_data.get("password") == "password"
 
 
+# Expected values computed with JavaScript's own encodeURIComponent and
+# Buffer base64, the operations the login page script performs.
+PACKED_BASE64_CASES = [
+    pytest.param("admin", "Password!23", {}, {"arguments": "YWRtaW46UGFzc3dvcmQhMjM="}, id="js_safe_chars_unescaped"),
+    pytest.param("a b", "p@ss:w/rd", {}, {"arguments": "YSUyMGI6cCU0MHNzJTNBdyUyRnJk"}, id="reserved_chars_escaped"),
+    pytest.param("admin", "", {}, {"arguments": "YWRtaW46"}, id="empty_password"),
+    pytest.param(
+        "admin",
+        "Password!23",
+        {"arguments": "decoy", "ar_nonce": "1"},
+        {"arguments": "YWRtaW46UGFzc3dvcmQhMjM=", "ar_nonce": "1"},
+        id="credentials_override_static",
+    ),
+]
+
+
+@pytest.mark.parametrize("username,password,hidden_fields,expected_body", PACKED_BASE64_CASES)
+def test_packed_base64_post_body(
+    username: str,
+    password: str,
+    hidden_fields: dict[str, str],
+    expected_body: dict[str, str],
+    session: requests.Session,
+) -> None:
+    """packed_base64 posts the credentials as one field and nothing else."""
+    entries, modem_config = load_auth_fixture("har_form_login.json")
+
+    with HARMockServer(entries, modem_config=modem_config) as server:
+        config = FormAuth(
+            strategy="form",
+            action="/goform/login",
+            encoding="packed_base64",
+            credential_field="arguments",
+            hidden_fields=hidden_fields,
+        )
+        manager = FormAuthManager(config)
+        manager.configure_session(session, {})
+
+        with patch.object(session, "request", wraps=session.request) as mock_req:
+            result = manager.authenticate(session, server.base_url, username, password)
+
+        assert result.success is True
+        assert mock_req.call_args.kwargs.get("data") == expected_body
+
+
+def test_packed_base64_overrides_discovered_credential_field(session: requests.Session) -> None:
+    """A login page's empty credential field is replaced by the packed credentials."""
+    entries, modem_config = load_auth_fixture("har_form_login_with_hidden_fields.json")
+
+    with HARMockServer(entries, modem_config=modem_config) as server:
+        config = FormAuth(
+            strategy="form",
+            action="/goform/login",
+            login_page="/login.html",
+            encoding="packed_base64",
+            credential_field="arguments",
+        )
+        manager = FormAuthManager(config)
+        manager.configure_session(session, {})
+
+        with (
+            patch(_DISCOVER_PATCH, return_value={"arguments": "", "ar_nonce": ""}),
+            patch.object(session, "request", wraps=session.request) as mock_req,
+        ):
+            result = manager.authenticate(session, server.base_url, "admin", "Password!23")
+
+        assert result.success is True
+        assert mock_req.call_args.kwargs.get("data") == {"arguments": "YWRtaW46UGFzc3dvcmQhMjM=", "ar_nonce": ""}
+
+
 def test_no_login_page_skips_discovery(session: requests.Session) -> None:
     """Without login_page, no pre-fetch or field discovery occurs."""
     entries, modem_config = load_auth_fixture("har_form_login.json")
@@ -1054,3 +1124,50 @@ def test_drift_rides_on_a_failed_login(session: requests.Session) -> None:
 
     assert result.success is False
     assert result.login_page_drift == (LoginPageDrift("multiple_forms", "", _TWO),)
+
+
+# ┌───────────────────────────────────────────┬─────────────────┬───────┬─────────┬─────────────────────┐
+# │ login response body                       │ busy_indicator  │ busy  │ success │ case                │
+# ├───────────────────────────────────────────┼─────────────────┼───────┼─────────┼─────────────────────┤
+# │ <meta http-equiv="refresh">               │ already login   │ no    │ yes     │ accepted            │
+# │ Other local user already login, wait...   │ already login   │ yes   │ no      │ busy                │
+# │ Invalid user name or password             │ already login   │ no    │ no      │ wrong password      │
+# │ Other local user already login, wait...   │ (unset)         │ no    │ no      │ rule not declared   │
+# └───────────────────────────────────────────┴─────────────────┴───────┴─────────┴─────────────────────┘
+# fmt: off
+BUSY_INDICATOR_CASES = [
+    # (response body,                                  busy_indicator,   busy,  ok,    id)
+    ('<meta http-equiv="refresh">',                    "already login",  False, True,  "accepted"),
+    ("Other local user already login, wait...",        "already login",  True,  False, "busy"),
+    ("Invalid user name or password",                  "already login",  False, False, "wrong_password"),
+    ("Other local user already login, wait...",        "",               False, False, "rule_not_declared"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "body,busy_indicator,busy,ok",
+    [c[:4] for c in BUSY_INDICATOR_CASES],
+    ids=[c[4] for c in BUSY_INDICATOR_CASES],
+)
+def test_busy_indicator(session: requests.Session, body: str, busy_indicator: str, busy: bool, ok: bool) -> None:
+    """A login page carrying busy_indicator is busy, not a failed credential; other bodies keep their verdict."""
+    from unittest.mock import MagicMock
+
+    config = FormAuth(
+        strategy="form",
+        action="/cgi-bin/login",
+        success=FormSuccess(indicator="http-equiv"),
+        busy_indicator=busy_indicator,
+    )
+    manager = FormAuthManager(config)
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.text = body
+    resp.url = "http://192.168.100.1/cgi-bin/login"
+
+    with patch.object(session, "request", return_value=resp):
+        result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+    assert result.busy is busy
+    assert result.success is ok

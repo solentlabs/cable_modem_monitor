@@ -190,6 +190,45 @@ class TestBuildRoutes:
         routes = build_routes(entries, login_path="/check.jst")
         assert routes[("POST", "/check.jst")].status == 302
 
+    # ┌──────────────────────────┬───────────────────┬──────────────────────┬────────────────┐
+    # │ recorded login POSTs     │ success indicator │ replayed body        │ case           │
+    # ├──────────────────────────┼───────────────────┼──────────────────────┼────────────────┤
+    # │ success, refusal         │ "refresh"         │ success              │ refusal last   │
+    # │ refusal, success         │ "refresh"         │ success              │ success last   │
+    # │ success, refusal         │ none              │ refusal              │ last wins      │
+    # │ refusal, other refusal   │ "refresh"         │ other refusal        │ none matches   │
+    # └──────────────────────────┴───────────────────┴──────────────────────┴────────────────┘
+    _OK = "<meta http-equiv=refresh>"
+    _NO = "Invalid login"
+    # fmt: off
+    LOGIN_INDICATOR_CASES = [
+        # (bodies in capture order,  indicator,  replayed,       id)
+        ([_OK, _NO],                 "refresh",  _OK,            "refusal_last"),
+        ([_NO, _OK],                 "refresh",  _OK,            "success_last"),
+        ([_OK, _NO],                 "",         _NO,            "last_wins_without_indicator"),
+        ([_NO, "Still invalid"],     "refresh",  "Still invalid", "none_matches"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "bodies,indicator,replayed",
+        [c[:3] for c in LOGIN_INDICATOR_CASES],
+        ids=[c[3] for c in LOGIN_INDICATOR_CASES],
+    )
+    def test_login_indicator_picks_the_accepted_exchange(
+        self, bodies: list[str], indicator: str, replayed: str
+    ) -> None:
+        """The declared success indicator keeps the accepted login over a refusal, in either capture order."""
+        entries = [
+            {
+                "request": {"method": "POST", "url": "http://192.168.100.1/cgi-bin/login"},
+                "response": {"status": 200, "headers": [], "content": {"text": body}},
+            }
+            for body in bodies
+        ]
+        routes = build_routes(entries, login_path="/cgi-bin/login", login_success=indicator)
+        assert routes[("POST", "/cgi-bin/login")].body == replayed
+
     def test_login_exemption_does_not_reach_other_paths(self) -> None:
         """Naming a login path leaves the status preference on every other key."""
         entries = [

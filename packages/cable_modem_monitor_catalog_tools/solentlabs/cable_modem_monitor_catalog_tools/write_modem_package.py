@@ -25,6 +25,7 @@ from typing import Any
 import yaml
 from solentlabs.cable_modem_monitor_core.validation.parser_sandbox import validate_parser_sandbox
 
+from .validation.endpoint_grounding import EndpointFindings, check_endpoints_in_har
 from .validation.fixture_integrity import check_login_page_in_har
 
 
@@ -37,12 +38,15 @@ class WriteResult:
         files_written: Files created or updated.
         files_skipped: Files that already existed (not overwritten).
         errors: Error messages (e.g., sandbox violations).
+        warnings: Findings that do not block the write (e.g., an action
+            endpoint the HAR never requests).
     """
 
     modem_dir: str = ""
     files_written: list[str] = field(default_factory=list)
     files_skipped: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
         """Serialize to a plain dict for MCP tool output."""
@@ -51,6 +55,7 @@ class WriteResult:
             "files_written": self.files_written,
             "files_skipped": self.files_skipped,
             "errors": self.errors,
+            "warnings": self.warnings,
         }
 
 
@@ -121,6 +126,13 @@ def write_modem_package(
     if auth_issue:
         result.errors.append(auth_issue)
         return result
+
+    # Endpoint grounding — declared auth URLs must appear in the capture
+    findings = _check_har_endpoints(modem_yaml, har_path)
+    if findings.stops:
+        result.errors.extend(f"HAR fixture: {stop}" for stop in findings.stops)
+        return result
+    result.warnings.extend(findings.warnings)
 
     out = Path(output_dir)
     test_data = out / "test_data"
@@ -198,10 +210,21 @@ def _check_har_login_page(modem_yaml: str, har_path: str) -> str:
     if not login_page or not action:
         return ""
 
-    har_file = Path(har_path)
-    if not har_file.is_file():
+    entries = _har_entries(har_path)
+    if entries is None:
         return ""
 
+    issue = check_login_page_in_har(entries, login_page, action)
+    if issue:
+        return f"HAR fixture: {issue}"
+    return ""
+
+
+def _har_entries(har_path: str) -> list[Any] | None:
+    """The HAR's ``log.entries``, or None when the file is missing or unreadable."""
+    har_file = Path(har_path)
+    if not har_file.is_file():
+        return None
     try:
         import gzip as _gzip
 
@@ -210,9 +233,17 @@ def _check_har_login_page(modem_yaml: str, har_path: str) -> str:
             har_data: Any = json.load(f)
         entries: list[Any] = har_data.get("log", {}).get("entries", [])
     except Exception:
-        return ""
+        return None
+    return entries
 
-    issue = check_login_page_in_har(entries, login_page, action)
-    if issue:
-        return f"HAR fixture: {issue}"
-    return ""
+
+def _check_har_endpoints(modem_yaml: str, har_path: str) -> EndpointFindings:
+    """Declared URLs the HAR never requests; empty when the config or HAR is unreadable."""
+    try:
+        config: Any = yaml.safe_load(modem_yaml)
+    except yaml.YAMLError:
+        return EndpointFindings()
+    entries = _har_entries(har_path)
+    if not isinstance(config, dict) or entries is None:
+        return EndpointFindings()
+    return check_endpoints_in_har(config, entries)

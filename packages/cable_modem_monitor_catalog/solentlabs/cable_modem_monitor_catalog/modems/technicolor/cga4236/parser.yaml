@@ -56,6 +56,10 @@ downstream:
           field: snr
           type: float
           unit: "dB"
+        - key: BandWidth
+          field: channel_width
+          type: frequency
+          unit: "MHz"
         - key: LockStatus
           field: lock_status
           type: lock_status
@@ -110,6 +114,10 @@ upstream:
           field: power
           type: float
           unit: "dBmV"
+        - key: BandWidth
+          field: channel_width
+          type: frequency
+          unit: "MHz"
         - key: LockStatus
           field: lock_status
           type: lock_status

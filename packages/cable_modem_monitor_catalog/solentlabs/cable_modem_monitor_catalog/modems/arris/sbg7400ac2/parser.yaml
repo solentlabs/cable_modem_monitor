@@ -1,0 +1,114 @@
+downstream:
+  format: table
+  resource: /cgi-bin/status_cgi
+  tables:
+    - selector:
+        match: Correcteds
+        type: header_text
+      row_start: 1
+      columns:
+        - index: 1
+          field: channel_id
+          type: integer
+        - index: 2
+          field: frequency
+          type: frequency
+          unit: MHz
+        - index: 3
+          field: power
+          type: float
+          unit: dBmV
+        - index: 4
+          field: snr
+          type: float
+          unit: dB
+        - index: 5
+          field: modulation
+          type: modulation
+        - index: 6
+          field: octets
+          type: integer
+        - index: 7
+          field: corrected
+          type: integer
+        - index: 8
+          field: uncorrected
+          type: integer
+      channel_type:
+        field: modulation
+        map:
+          QAM256: qam
+
+upstream:
+  format: table
+  resource: /cgi-bin/status_cgi
+  tables:
+    - selector:
+        match: Channel Type
+        type: header_text
+      row_start: 2
+      columns:
+        - index: 1
+          field: channel_id
+          type: integer
+        - index: 2
+          field: frequency
+          type: frequency
+          unit: MHz
+        - index: 3
+          field: power
+          type: float
+          unit: dBmV
+        - index: 5
+          field: symbol_rate
+          type: integer
+          scale: 1000
+          unit: kSym/s
+        - index: 6
+          field: modulation
+          type: modulation
+        - index: 4
+          field: channel_type
+          type: string
+          map:
+            DOCSIS2.0 (ATDMA): atdma
+
+system_info:
+  sources:
+    - format: html_fields
+      resource: /cgi-bin/status_cgi
+      fields:
+        - format: "{days} d: {hours} h: {minutes} m"
+          field: system_uptime
+          label: System Uptime
+          type: uptime
+        - field: docsis_status
+          label: CM Status
+          map:
+            OPERATIONAL: Operational
+          type: string
+        - field: current_time
+          label: Time and Date
+          type: string
+    - format: html_fields
+      resource: /cgi-bin/vers_cgi
+      fields:
+        - field: firmware_name
+          label: Firmware Name
+          type: string
+        - field: hardware_version
+          label: System
+          pattern: "HW_REV:\\s*(.+)"
+          type: string
+        - field: software_version
+          label: System
+          pattern: "SW_REV:\\s*(.+)"
+          type: string
+
+aggregate:
+  total_corrected:
+    channels: downstream
+    sum: corrected
+  total_uncorrected:
+    channels: downstream
+    sum: uncorrected

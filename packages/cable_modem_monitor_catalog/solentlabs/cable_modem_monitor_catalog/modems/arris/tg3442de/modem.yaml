@@ -55,6 +55,7 @@ sources:
   release_date: "[tk-world.de, 2018-08-27](https://www.tk-world.de/blog/vodafone-station-neuer-standard-router-fuer-kabeltarife/) — Vodafone Station became Vodafone Germany's standard cable router on 2018-08-28"
   auth_config: "[#86 Arris TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"
   chipset: "[TG3442DE Teardown](https://github.com/nox-x/TG3442DE-Teardown)"
+  isps: "[CommScope press release, 2020-06-11](https://www.vistancenetworks.com/press-releases/2020/vodafone-germany-and-commscope-bring-higher-speeds-into-the-connected-home/): 'more than one million Vodafone Germany subscribers are using CommScope's DOCSIS 3.1 Touchstone TG3442 Gateway in their homes'."
 
 attribution:
   contributors:

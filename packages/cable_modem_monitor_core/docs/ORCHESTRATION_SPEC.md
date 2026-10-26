@@ -763,7 +763,11 @@ class ModemSummary:
         auth_strategy: Auth strategy of the default variant. For
             multi-variant modems, the config flow loads variant-specific
             auth strategy in Step 2.
+        transport: Transport of the primary directory ("http", "hnap",
+            "cbn" or "json_rpc").
         path: Filesystem path to the modem directory in the catalog.
+        sibling_dirs: Other catalog directories sharing this modem's
+            (manufacturer, model) identity under a different transport.
     """
 
     manufacturer: str
@@ -774,7 +778,9 @@ class ModemSummary:
     status: str
     default_host: str
     auth_strategy: str
+    transport: str
     path: Path
+    sibling_dirs: list[Path]
 ```
 
 ### Catalog Manager
@@ -785,16 +791,23 @@ def list_modems(catalog_path: Path) -> list[ModemSummary]:
 
     Reads identity fields from each modem.yaml (and modem-{variant}.yaml)
     in the catalog directory. Returns a flat list suitable for config flow
-    dropdowns, search, or filtering.
+    dropdowns, search, or filtering. Directories sharing a
+    (manufacturer, model) identity, case-insensitive, collapse into one
+    summary; the first by path is primary and the rest are its
+    sibling_dirs. Status is the aggregate across them: confirmed when any
+    variant is. Each variant file is parsed once per call, however many
+    summary fields it supplies.
 
     The consumer owns the UI pattern — dropdowns, typeahead, flat list.
     This API returns everything; the consumer filters client-side.
+    Auto-detect (DETECTION_SPEC.md) reads these summaries to match a
+    device's landing page.
 
     Args:
         catalog_path: Root of the catalog modems directory.
 
     Returns:
-        List of ModemSummary, one per modem (default variant).
+        List of ModemSummary, one per unique (manufacturer, model).
     """
 ```
 
@@ -2118,7 +2131,13 @@ captured restart of `netgear/cm2500` answers 302.
 fresh `requests.Session`, authenticates using the configured strategy,
 and executes the action on that temporary session. The collector's
 monitoring session is not needed and `collector.authenticate()` (step
-2) is skipped. Any auth strategy is valid in `action_auth`.
+2) is skipped. Any auth strategy is valid in `action_auth`. With `port`
+or `scheme` set on the action, the per-action login and the action request
+both use them. A login the modem reports busy (`AuthResult.busy`) fails the
+action before any request is sent, with the busy message. The login carries
+the main credentials; a second account with a different password is not
+supported
+([ARCHITECTURE_DECISIONS.md § A restart may live on a second port](ARCHITECTURE_DECISIONS.md#a-restart-may-live-on-a-second-port)).
 
 Typical call duration: 2–5 seconds (auth + POST + session clear).
 The caller does not block on the reboot itself.

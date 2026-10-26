@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from typing import Any, NamedTuple
 from urllib.parse import urljoin, urlsplit
 
+from solentlabs.cable_modem_monitor_core.auth.packed_credentials import packed_credential_fields
+
 from ...validation.har_utils import (
     HARD_STOP_PREFIX,
     WARNING_PREFIX,
@@ -28,6 +30,7 @@ from ...validation.har_utils import (
 from ..ambiguity import Ambiguity
 from ..types import CoreGap
 from .json_login import is_json_login, json_login_ambiguity
+from .login_attempts import attempt_rank, redirect_conflict_warning, success_indicator_ambiguity
 from .patterns import (
     get_login_url_patterns,
     get_nonce_error_prefix,
@@ -136,7 +139,7 @@ def detect_http_auth(
         return detail
 
     # Form POST to login endpoint
-    detail = _extract_form_login(entries, signals, warnings)
+    detail = _extract_form_login(entries, signals, warnings, ambiguities)
     if detail is not None:
         return detail
 
@@ -181,6 +184,10 @@ class _HttpAuthSignals:
     url_token_login_prefix: str = ""
     url_token_login_page: str = ""
     form_post_entry: dict[str, Any] | None = None
+    # Every credential POST to the login endpoint, in capture order; form_post_entry is the accepted one
+    form_login_attempts: list[dict[str, Any]] = field(default_factory=list)
+    # Set when form_post_entry packs its credentials into one field
+    form_post_packed: _PackedLogin | None = None
     form_nonce_entry: dict[str, Any] | None = None
     sjcl_login_entry: dict[str, Any] | None = None
     sjcl_login_page_html: str = ""
@@ -193,6 +200,8 @@ class _HttpAuthSignals:
     has_authorization_header: bool = False
     has_set_cookie_after_login: bool = False
     unmatched_credential_posts: list[str] = field(default_factory=list)
+    # Form POSTs to a login URL that set a cookie with no recognizable credential field
+    unrecognized_login_posts: list[str] = field(default_factory=list)
 
     def describe(self) -> str:
         """Describe what signals were found, for hard stop messages."""
@@ -211,6 +220,11 @@ class _HttpAuthSignals:
         parts.extend(
             f"JSON POST to {path} with no salt, credential or cipher field (an emptied body needs a recapture)"
             for path in self.unclassified_json_logins
+        )
+        parts.extend(
+            f"form POST to {path} set a cookie but has no credential-shaped field and no single packed "
+            "credential field on a captured login page at that URL"
+            for path in self.unrecognized_login_posts
         )
         return ", ".join(parts) if parts else "ambiguous auth artifacts"
 
@@ -286,7 +300,7 @@ def _check_entry_auth_signals(
 
     # Requests with a body: logins arrive by any write method
     if method.upper() in WRITE_METHODS:
-        _check_post_signals(entry, req, resp, url, status, signals)
+        _check_post_signals(entry, all_entries, url, status, signals)
         if is_json_login(entry):
             signals.json_login_entries.append(entry)
             signals.has_any_auth_signal = True
@@ -348,42 +362,72 @@ def _check_json_post_signals(
 
 def _check_post_signals(
     entry: dict[str, Any],
-    req: dict[str, Any],
-    resp: dict[str, Any],
+    all_entries: list[dict[str, Any]],
     url: str,
     status: int,
     signals: _HttpAuthSignals,
 ) -> None:
     """Check POST request for auth signals (JSON/form)."""
+    req = entry["request"]
+    resp = entry["response"]
     post_data = req.get("postData", {})
     mime = post_data.get("mimeType", "").lower()
 
     if "json" in mime:
         _check_json_post_signals(entry, post_data.get("text", ""), resp, url, signals)
 
-    # Form POST to login-like endpoint. An action POST can share the login
-    # endpoint (DM1000: /setup.cgi serves login and reboot), so only a
-    # credential-shaped body marks the login. Among credential POSTs the
-    # latest wins; a retried login yields the successful attempt.
     if "form" in mime or "x-www-form-urlencoded" in mime:
         if _is_login_url(url):
-            if has_credential_fields(post_data):
-                signals.form_post_entry = entry
-                signals.has_any_auth_signal = True
-
-                # Check response for nonce-style text prefixes
-                resp_text = resp.get("content", {}).get("text", "")
-                if resp_text and (
-                    resp_text.strip().startswith(_NONCE_SUCCESS_PREFIX)
-                    or resp_text.strip().startswith(_NONCE_ERROR_PREFIX)
-                ):
-                    signals.form_nonce_entry = entry
-
-                # 302 redirect after POST
-                if status in (301, 302):
-                    signals.has_302_after_post = True
+            _check_form_login_post(entry, all_entries, url, status, signals)
         elif has_credential_fields(post_data):
             signals.unmatched_credential_posts.append(path_from_url(url))
+
+
+def _check_form_login_post(
+    entry: dict[str, Any],
+    all_entries: list[dict[str, Any]],
+    url: str,
+    status: int,
+    signals: _HttpAuthSignals,
+) -> None:
+    """Record a form POST to a login URL as the login, or as an unreadable one."""
+    post_data = entry["request"].get("postData", {})
+    resp = entry["response"]
+
+    # An action POST can share the login endpoint (DM1000: /setup.cgi
+    # serves login and reboot), so only a credential-shaped body, or the
+    # login page's packed credential field, marks the login. Among
+    # credential POSTs the latest wins; a retried login yields the
+    # successful attempt.
+    credential_shaped = has_credential_fields(post_data)
+    packed = None if credential_shaped else _packed_login(entry, all_entries)
+    if not credential_shaped and packed is None:
+        # A login the detector cannot read ends in the hard stop, never
+        # in auth none (the SB6190 b64 and SBG7400AC2 captures did).
+        if has_set_cookie(resp):
+            signals.unrecognized_login_posts.append(path_from_url(url))
+            signals.has_any_auth_signal = True
+        return
+
+    signals.form_login_attempts.append(entry)
+    # The accepted attempt, not the latest: the capture guide ends with a wrong password.
+    # Among equals the latest wins, so a retried login yields the successful attempt.
+    current = signals.form_post_entry
+    if current is None or attempt_rank(entry) >= attempt_rank(current):
+        signals.form_post_entry = entry
+        signals.form_post_packed = packed
+    signals.has_any_auth_signal = True
+
+    # Check response for nonce-style text prefixes
+    resp_text = resp.get("content", {}).get("text", "")
+    if resp_text and (
+        resp_text.strip().startswith(_NONCE_SUCCESS_PREFIX) or resp_text.strip().startswith(_NONCE_ERROR_PREFIX)
+    ):
+        signals.form_nonce_entry = entry
+
+    # 302 redirect after POST
+    if status in (301, 302):
+        signals.has_302_after_post = True
 
 
 # ---------------------------------------------------------------------------
@@ -395,6 +439,7 @@ def _extract_form_login(
     entries: list[dict[str, Any]],
     signals: _HttpAuthSignals,
     warnings: list[str],
+    ambiguities: list[Ambiguity] | None = None,
 ) -> AuthDetail | None:
     """form_nonce or form for a form login, or None without one."""
     if signals.form_post_entry is None:
@@ -403,7 +448,19 @@ def _extract_form_login(
     if signals.form_nonce_entry is not None:
         return _extract_form_nonce(signals)
     # Standard form auth
-    return _extract_form(entries, signals, warnings)
+    detail = _extract_form(entries, signals, warnings)
+    if signals.form_post_packed is not None:
+        _apply_packed_credentials(detail.fields, signals.form_post_packed)
+    accepted = signals.form_post_entry
+    if accepted is not None:
+        conflict = redirect_conflict_warning(accepted, signals.form_login_attempts)
+        if conflict:
+            warnings.append(conflict)
+        if not detail.fields.get("success") and ambiguities is not None:
+            ambiguity = success_indicator_ambiguity(accepted, signals.form_login_attempts)
+            if ambiguity is not None:
+                ambiguities.append(ambiguity)
+    return detail
 
 
 def _extract_basic(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> AuthDetail:
@@ -725,6 +782,9 @@ def _extract_form_nonce(signals: _HttpAuthSignals) -> AuthDetail:
             password_field = name
         else:
             nonce_field = name
+    if signals.form_post_packed is not None and signals.form_post_packed.nonce_field:
+        # The packed credential field is not the nonce, whatever its order
+        nonce_field = signals.form_post_packed.nonce_field
 
     # Detect success/error prefixes from response
     success_prefix = _NONCE_SUCCESS_PREFIX
@@ -866,6 +926,20 @@ def _extract_form(
 # ---------------------------------------------------------------------------
 
 
+def _apply_packed_credentials(fields: dict[str, Any], packed: _PackedLogin) -> None:
+    """Rewrite form auth fields for a login that packs both credentials into one field."""
+    # The nonce is a per-login value, so it is left to login_page
+    # discovery rather than fixed at its captured value.
+    del fields["username_field"], fields["password_field"]
+    fields["encoding"] = "packed_base64"
+    fields["credential_field"] = packed.credential_field
+    fields["hidden_fields"] = {
+        name: value
+        for name, value in fields["hidden_fields"].items()
+        if name not in (packed.credential_field, packed.nonce_field)
+    }
+
+
 def _core_supports_action_source() -> bool:
     """True when the installed Core's FormAuth accepts action_source (#189)."""
     from solentlabs.cable_modem_monitor_core.models.modem_config.auth import FormAuth
@@ -982,6 +1056,35 @@ def _has_js_base64_encoding(html: str) -> bool:
     if _JS_BASE64_FN_PATTERN.search(html):
         return True
     return bool(_JS_BTOA_PATTERN.search(html))
+
+
+class _PackedLogin(NamedTuple):
+    """The packed credential field of a login POST, and its nonce field if any."""
+
+    credential_field: str
+    nonce_field: str
+
+
+# A client-generated nonce: digits only (SB6190 and SBG7400AC2 send 8)
+_NONCE_VALUE = re.compile(r"^\d{4,16}$")
+
+
+def _packed_login(entry: dict[str, Any], all_entries: list[dict[str, Any]]) -> _PackedLogin | None:
+    """The POST's packed credential field, per Core's rule on the page at the POST's URL."""
+    params = parse_form_params(entry["request"].get("postData", {}))
+    nonces = [name for name, value in params.items() if _NONCE_VALUE.match(value)]
+    nonce_field = nonces[0] if len(nonces) == 1 else ""
+    post_path = path_from_url(entry["request"].get("url", ""))
+    for page in all_entries:
+        req = page["request"]
+        html = page["response"].get("content", {}).get("text") or ""
+        if req.get("method", "").upper() != "GET" or not html or path_from_url(req.get("url", "")) != post_path:
+            continue
+        # One candidate or none: several are never guessed between.
+        posted = [name for name in packed_credential_fields(html, "username", nonce_field) if name in params]
+        if len(posted) == 1:
+            return _PackedLogin(credential_field=posted[0], nonce_field=nonce_field)
+    return None
 
 
 class _LoginPageInfo(NamedTuple):

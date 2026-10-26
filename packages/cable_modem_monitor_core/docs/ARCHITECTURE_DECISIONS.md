@@ -14,7 +14,7 @@ files; this document explains the choices that shaped them.
 | [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging, credential reconfiguration as reconstruction |
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
-| [Recovery Architecture](#recovery-architecture) | Restart vs recovery, generic timing, reboot-signal vote, observer callback, no session preservation |
+| [Recovery Architecture](#recovery-architecture) | Restart vs recovery, restart never state-gated, generic timing, reboot-signal vote, observer callback, no session preservation |
 | [Testing Strategy](#testing-strategy) | HAR replay, conformance gates every modem, greenfield from specs, fresh-context capture, test placement by code under test |
 | [Onboarding](#onboarding) | MCP for deterministic steps, catalog_tools owns the spec, inference vs assembly, no fallback |
 | [Config Flow](#config-flow) | Cross-directory grouping, variant label design |
@@ -1165,6 +1165,12 @@ underlying exchange. Strategies do interact with login pages during
 *execution* (extracting hidden fields, nonces, salts); the ban is on
 using them to choose the strategy.
 
+Matching a device against signals observed in catalog captures is not
+auth discovery. It reads no login mechanics and selects no strategy. It
+can only point at entries that already exist, and the strategy always
+comes from the entry the user confirms. See
+[Detection narrows, never decides](#detection-narrows-never-decides).
+
 ---
 
 ### `AuthResult.auth_context` is typed
@@ -1456,6 +1462,26 @@ are supported.
 **Constrains:** Cannot add modem commands beyond restart without
 expanding the action model. This is intentional.
 
+### A restart may live on a second port
+
+**Decision:** `HttpAction.port` and `scheme` move the action's request and
+its `action_auth` login to another port of the configured host, and to
+http or https there. The per-action login uses the main credentials.
+
+**Rationale:** Some firmware serves the restart from a separate admin
+server with its own login (Arris SBG7400AC2: status on :80 and :443,
+restart on :8080, plain HTTP only). `action_auth` already isolates the
+second login's session and cookies; only the port and scheme were
+unexpressible. Setup picks one scheme for the modem, and an HTTPS pick
+sends the restart to a port that never answers TLS. A second credential would
+need a config-flow field and credential storage, which one observed
+modem does not justify.
+
+**Constrains:** A user whose second-server password differs from the
+main one gets `Per-action auth failed` and no reboot is sent. The
+modem's `notes:` tell users to keep both passwords the same. Fleet
+evidence of differing passwords reopens a second credential.
+
 ---
 
 ### Health probes are independent layers, not an escalation chain
@@ -1527,6 +1553,24 @@ Recovery cannot be triggered by caller request
 other than the three defined paths (command, observed failure,
 reboot-signal check). Consumers cannot observe recovery window
 progress — they see the snapshot stream and react to that.
+
+### Restart is offered whatever the modem's state
+
+**Decision:** A declared restart action is always offered. Core and the
+consumer never gate its availability on modem state (online, offline,
+recovering, provisioned or not).
+
+**Rationale:** Gating needs a per-modem signal for which modems are
+state-bound, and `modem.yaml` carries no behavior flags
+(MODEM_YAML_SPEC § Principles). A generic state rule would disable
+restart on every modem that restarts while online. A modem whose
+restart endpoint answers only in some state needs no special case: an
+HTTP action answered with a non-2xx status is reported as refused with
+that status, so a press in the wrong state says so.
+
+**Constrains:** No state-gated restart, no availability field in
+`actions.restart`. Evidence of a modem whose restart exists only in one
+state does not change this; it is declared as a plain action.
 
 ### One recovery concept, multiple triggers
 
@@ -1876,7 +1920,7 @@ later as a confusing discovery miss.
 
 ---
 
-### No fallback or auto-detection
+### No generic fallback
 
 **Decision:** If no `modem.yaml` matches, the integration cannot help.
 There is no generic scraper fallback.
@@ -1885,6 +1929,43 @@ There is no generic scraper fallback.
 produces plausible-looking wrong data. The answer to an unsupported
 modem is a HAR capture and a catalog entry, which is a path that ends
 in real support rather than a permanent approximation.
+
+---
+
+### Detection narrows, never decides
+
+**Decision:** Auto-detect may narrow the catalog choice to the entries
+a device could be. It sends one credential-free `GET /` to each
+`default_host` address the catalog records and reads that single reply.
+It compares the reply with what each entry's own configuration says its
+login surface looks like: the auth strategy reports the paths and cookie
+names its config declares, `parser.yaml` adds its data-page paths, and
+names on the page (manufacturer, model, aliases, brands) and the `Server`
+product add more. These order the candidates. One contradiction removes
+an entry: a password field on the reply removes an entry whose every
+variant is no-auth. The user confirms the result. Contract:
+[DETECTION_SPEC.md](DETECTION_SPEC.md).
+
+**Rationale:** Landing pages often name nothing, but the reply still
+carries a pattern, and the entry's configuration already describes the
+login surface it belongs to, so almost nothing new is stored: only the
+`Server` product, which the pipeline derives from the entry's HARs
+([INTAKE_PIPELINE.md § Detection Headers](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#detection-headers)).
+A shortlist the user confirms cannot produce the plausible-looking wrong
+data the generic fallback was rejected for.
+
+**Constraints.** A registered modem is always among the candidates.
+A missing name or signal removes nothing: a script-driven login can
+reference none of what its config declares, and the fleet shows it
+(INTAKE_PIPELINE.md § Detection Accuracy lists each such entry). A
+contradiction is added only while the accuracy report shows it removing
+no real modem. A device that matches nothing sends the user to the
+ordinary manufacturer step with the supported-modem list and the
+support-request path (HAR capture) at hand; there is no fallback.
+Detection does not authenticate. A landing-response marker removes
+entries at runtime only as
+[INTAKE_PIPELINE.md § Marker accuracy](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#marker-accuracy)
+permits.
 
 ---
 

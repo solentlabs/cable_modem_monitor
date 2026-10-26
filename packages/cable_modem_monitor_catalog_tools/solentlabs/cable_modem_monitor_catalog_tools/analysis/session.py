@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlsplit
 
 from ..validation.har_utils import is_static_resource, json_rpc_body, lower_headers
 from .auth.json_rpc import json_rpc_login_credentials
@@ -77,6 +78,8 @@ class SessionDetail:
         if transport == "hnap":
             return cls()
 
+        entries = first_origin(entries)
+
         if transport == "json_rpc":
             calls = [
                 entry
@@ -99,6 +102,22 @@ class SessionDetail:
             return session
 
         return _scan_session_artifacts(entries)
+
+
+def first_origin(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Entries on the first entry's host and port; a second web server's traffic is not this session's."""
+    if not entries:
+        return entries
+    origin = _netloc(entries[0])
+    return [entry for entry in entries if _netloc(entry) == origin]
+
+
+def _netloc(entry: dict[str, Any]) -> str:
+    """Host and port of an entry's request URL; empty for a relative or malformed URL."""
+    try:
+        return str(urlsplit(entry["request"].get("url", "")).netloc)
+    except ValueError:
+        return ""
 
 
 def _scan_session_artifacts(entries: list[dict[str, Any]]) -> SessionDetail:

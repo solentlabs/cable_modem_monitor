@@ -13,6 +13,9 @@ downstream:
         - index: 1
           field: lock_status
           type: lock_status
+        - index: 2
+          field: modulation
+          type: modulation
         - index: 3
           field: channel_id
           type: integer
@@ -62,6 +65,11 @@ upstream:
         - index: 3
           field: channel_id
           type: integer
+        - index: 4
+          field: symbol_rate
+          type: integer
+          unit: "kSym/s"
+          scale: 1000 # ksym/s → Sym/s
         - index: 5
           field: frequency
           type: frequency

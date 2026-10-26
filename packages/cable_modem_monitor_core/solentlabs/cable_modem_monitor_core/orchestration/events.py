@@ -637,6 +637,66 @@ class ResourceDecodeError:
 
 
 # ---------------------------------------------------------------------------
+# Phase: detection (before any modem is chosen, so events carry a host)
+# ---------------------------------------------------------------------------
+
+
+# Defined here, not in detection.py: detection imports this module, so the
+# event cannot import it back (DETECTION_SPEC.md § API).
+@dataclass(frozen=True)
+class Observation:
+    """What a host's landing response looked like; evidence for the user, never read by the matcher."""
+
+    scheme: str
+    status: int
+    final_path: str
+    server: str | None
+    title: str | None
+    www_authenticate: str | None
+    password_field: bool
+
+
+@dataclass
+class DetectionProbeResult:
+    """One host's credential-free probe. Level is internally computed.
+
+    INFO when the host answered, DEBUG when it did not: most catalog
+    addresses are silent on any given network.
+    """
+
+    host: str
+    observation: Observation | None
+    reason: str | None
+    level: EventLevel = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.level = EventLevel.INFO if self.observation is not None else EventLevel.DEBUG
+
+
+@dataclass
+class DetectionMatched:
+    """The catalog names an answering host's landing page carries."""
+
+    host: str
+    models: list[str]
+    buckets: list[str]
+    matched: list[str]
+    signals: list[str] = field(default_factory=list)
+    candidates: int = 0
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+@dataclass
+class DetectionChosen:
+    """Where the Auto-detect flow ended; emitted by the HA config flow, not by detect()."""
+
+    outcome: str
+    host: str | None
+    selected: str | None
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
+
+
+# ---------------------------------------------------------------------------
 # Union type — all orchestration events
 # ---------------------------------------------------------------------------
 
@@ -692,4 +752,7 @@ type OrchestratorEvent = (
     | ActionPreFetchFailed
     | ResourceFetched
     | ResourceDecodeError
+    | DetectionProbeResult
+    | DetectionMatched
+    | DetectionChosen
 )

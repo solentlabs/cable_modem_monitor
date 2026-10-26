@@ -71,6 +71,7 @@ for the contract.
 | [Actions](#actions) | Restart and logout — one action type per transport |
 | [Hardware](#hardware) | DOCSIS version, hw_version, firmware, chipset |
 | [Health](#health) | Health probe configuration (fragile modems) |
+| [Detection](#detection) | `Server` products Auto-detect ranks by |
 | [Metadata](#metadata) | Status, attribution, sources, ISPs, notes |
 | [Validation Rules](#validation-rules) | Transport constraints, required fields, consistency checks |
 | [Multi-Variant Modems](#multi-variant-modems) | Naming, shared files, assembly |
@@ -126,6 +127,11 @@ health:
   http_probe: false      # disable TCP/HEAD probes for fragile modems
   supports_head: false   # modem rejects HTTP HEAD (HEAD probe skipped, no fallback)
   supports_icmp: true    # hint; auto-detection overrides at setup
+
+# Detection (written by the intake pipeline)
+detection:
+  http_headers:
+    - "ARRIS Server"
 
 # Metadata
 status: confirmed
@@ -263,6 +269,8 @@ endpoints.
 
 ---
 
+---
+
 ## Auth
 
 Auth declares how the system authenticates with the modem's web
@@ -352,13 +360,15 @@ auth:
 | `method` | string | `POST` | HTTP method |
 | `username_field` | string | `"username"` | Form field name for username |
 | `password_field` | string or list | `"password"` | Form field name(s) for password. All fields receive the same encoded password. Use a list when the modem POSTs the password to multiple form fields. |
-| `encoding` | enum | `plain` | `plain` or `base64` — how the password is encoded before POST |
+| `encoding` | enum | `plain` | `plain`, `base64` or `packed_base64`. `plain` and `base64` encode the password before POST. `packed_base64` posts both credentials as one field; see Form POST body. |
+| `credential_field` | string | `""` | Form field that carries the packed credentials. Required with `packed_base64` and rejected with any other encoding. |
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `hidden_fields` | map | `{}` | Static overrides or supplements for form hidden fields. Values here take precedence over fields discovered from the `login_page` form. Use when the form's default value isn't what the modem expects, or to add fields not present in the HTML. |
 | `login_page` | string | `""` | Page to fetch before login. Establishes session cookies and reads `<input type="hidden">` fields from the login form. Discovered hidden fields are included in the POST automatically. If empty, POST directly without pre-fetch. |
 | `form_selector` | string | `""` | CSS selector to identify the login form on `login_page` for hidden-field discovery. If empty, uses the first `<form>` found. Also used by MCP intake at build time. |
 | `success.redirect` | string | `""` | Expected redirect URL after successful login |
 | `success.indicator` | string | `""` | String to match in response body to confirm success |
+| `busy_indicator` | string | `""` | String in the response body that marks the login busy: another session holds the modem's web interface and the modem turned this login away without judging the credential. Checked before `success`. Core reports the attempt busy and the collector classifies it `AUTH_UNAVAILABLE`, the same as a 5xx (UC-87a), so a busy modem is retried and never trips the auth circuit breaker as a wrong password. Example: the ARRIS SBG7400AC2 login page answers 200 with `Other local user already login, please wait...` (`already login`). |
 
 **Form POST body:** When `login_page` is set, the auth manager
 pre-fetches the page and reads `<input type="hidden">` fields from
@@ -368,6 +378,19 @@ modems with dynamic CSRF tokens (e.g., server-generated `webToken`).
 When `login_page` is empty, the POST body is built entirely from
 config: `username_field`, `password_field` entries, and
 `hidden_fields`.
+
+**Packed credentials:** with `encoding: packed_base64` the credentials
+travel in the single field `credential_field` as
+`base64(encodeURIComponent(username) + ":" + encodeURIComponent(password))`,
+the value the login page's own script builds. No username or password
+field is posted, so setting `username_field` or `password_field`
+alongside it is a schema error. The packed field takes the credentials'
+place at the end of the merge order. `form_nonce`'s `b64_packed`
+encoding differs: it prefixes each part with its field name
+(`username=…:password=…`).
+
+Evidence: Arris SBG7400AC2 (firmware 9.1.103AA85) `basic_pwd_cgi`
+login, which rejects both the prefixed form and plain fields.
 
 **Dynamic POST URLs:** some firmware publishes a per-page-load value in
 the login form's action (`<form action="/goform/Login?id=1740525841">`)
@@ -484,8 +507,9 @@ Two properties distinguish `form_nonce` from `form`:
    which belong to the `form` strategy with `login_page` pre-fetch.
 2. **Text-prefix response** — the server returns a plain-text body
    starting with `Url:` (success, followed by redirect path) or
-   `Error:` (failure, followed by message). No HTTP redirect, no
-   Set-Cookie on the login response itself.
+   `Error:` (failure, followed by message). No HTTP redirect. The
+   session cookie, when the modem uses one, is set on this response
+   (SB6190: `credential`).
 
 These two properties are the **invariants** of the strategy. The
 variable parts (field names, nonce length, credential encoding)
@@ -601,6 +625,7 @@ auth:
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `token_prefix` | string | `""` | URL token prefix for subsequent data page requests (e.g., `ct_`). The token value is extracted by the auth manager from the login response body. |
 | `inject_credential_cookie` | bool | `false` | After auth, set `cookie_name` to the auth response body (a server-issued session token). Use when the server returns a token in the auth response body and the firmware JS sets it as the credential cookie client-side (e.g., `createCookie("credential", result)` where `result` is the response body). Auth fails if the body is empty — this field requires a non-empty server response. |
+| `busy_key` | string | `""` | With `inject_credential_cookie`: a key whose presence in the base64-encoded JSON login body marks the login busy. Another session holds the modem's web interface, the server still answers 200 with a token, and that token is not authorized. Core reports the attempt busy (`AuthResult.busy`) and sets no cookie, instead of sending later requests on a session the modem will answer 401. Requires `inject_credential_cookie`. Example: the ARRIS SBG7400AC2 router GUI adds `muti` to its login body when it reports another session. |
 
 **Success detection and response type discrimination:**
 
@@ -654,6 +679,11 @@ or empty body — as the parsed data page and skip the real fetch.
 See `RESOURCE_LOADING_SPEC.md` § Auth Response Reuse and the
 `AuthResult` docstring in `auth/base.py` for the full contract.
 Regression: SB8200 #81 (v3.14.0-beta.2 dtaubert — 0/0 channels).
+
+**Credential in failure text:** the credential rides in the login URL and
+`requests` repeats the URL in its error text, so a failed login (connection
+error, timeout or invalid URL) is raised or returned with the credential
+replaced by `***`. Logs and diagnostics downloads never carry it.
 
 **Pre-login cookie clearing:** Before the login request, the auth
 manager deletes any existing session cookie (`cookie_name`) from the
@@ -1324,14 +1354,17 @@ actions:
 ```
 
 A GET whose fields ride in the URL, as a browser form with
-`method="get"` sends them, declares the query in `endpoint`:
+`method="get"` sends them, declares them in `query` (a query written
+into `endpoint` is sent too):
 
 ```yaml
 actions:
   restart:
     type: http
     method: GET
-    endpoint: "/reset.htm?reset_modem=Restart+Cable+Modem"
+    endpoint: "/reset.htm"
+    query:
+      reset_modem: "Restart+Cable+Modem"
 ```
 
 | Field | Type | Required | Description |
@@ -1340,13 +1373,37 @@ actions:
 | `method` | string | yes | HTTP method (`GET`, `POST`, etc.). No default — must be explicit. |
 | `endpoint` | string | yes | URL path to send the request to, sent as written: a query string in it (`/reset.htm?reset_modem=Restart+Cable+Modem`) goes out as the URL query. May contain `{auth:token}` / `{auth:user_id}` placeholders — see [Auth-value placeholders](#auth-value-placeholders). |
 | `requires_session` | bool | `false` | *Logout only.* `false` = endpoint is unauthenticated and can clear any active server-side session without credentials. `true` = endpoint needs a live session; Core skips the pre-retry logout call when the session is not valid. |
-| `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`, on every method including `GET`; `params` never reach the URL query. A form that submits with `method="get"` carries its fields in the query, so declare them in `endpoint`. Mutually exclusive with `json_body`. |
+| `query` | map | no | URL query parameters, appended after the `endpoint`'s own query and the session `query_params`; a key in both `query` and the session `query_params` is sent once, with the action's value. Values go out as written (no URL-encoding), so write `Restart+Cable+Modem` as the browser sent it. Combines with `params` or `json_body`. No placeholder resolves in `query`. |
+| `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`, on every method including `GET`; `params` never reach the URL query. A form that submits with `method="get"` carries its fields in the query: declare them in `query` (or in `endpoint`). Mutually exclusive with `json_body`. |
 | `json_body` | map | no | JSON request body. If present, body is `application/json`. Mutually exclusive with `params`. Use for REST APIs that accept JSON. |
 | `body_encoding` | enum | `plain` | `session`: send `json_body` wrapped the way the session's auth strategy encodes request bodies (e.g. [`json_sjcl`](#json_sjcl)'s SJCL envelope). Requires `json_body`, and an auth strategy that encodes action bodies (the one in `action_auth` when set). |
 | `headers` | map | no | Per-action headers. Merged with session-level `headers` (action wins on conflict). |
 | `pre_fetch_url` | string | no | URL to fetch before the action (establish session state or extract dynamic endpoint) |
 | `endpoint_pattern` | string | no | Keyword to match within form action attributes on the pre-fetch page. Core wraps this in a form-action regex — not a raw regex. See Architecture Decision below. |
 | `action_auth` | AuthConfig | no | Per-action auth config. When present, a fresh session is created, authenticated with the given strategy, the action is executed on that temporary session, and the session is discarded. The collector's session is untouched. Any auth strategy is valid. |
+| `port` | int (1–65535) | no | Port for the action's request and its `action_auth` login, in place of the configured modem URL's port; the host is unchanged. For firmware that serves the action from a second web server, such as an admin GUI on its own port with its own login. |
+| `scheme` | `http` \| `https` | no | Scheme for the action's request and its `action_auth` login, in place of the configured modem URL's scheme. For a second web server that speaks plain HTTP while the main one is reached over HTTPS: setup picks one scheme for the modem, and a second port may not serve it. |
+
+A restart served from a second port logs in there with `action_auth`,
+using the same username and password as the main login:
+
+```yaml
+actions:
+  restart:
+    type: http
+    method: GET
+    port: 8080
+    scheme: http
+    endpoint: "/snmpSet?oid=1.3.6.1.4.1.4115.1.20.1.1.5.4.0=1;2;"
+    headers:
+      X-Requested-With: "XMLHttpRequest"
+    action_auth:
+      strategy: url_token
+      login_page: "/login"
+      login_prefix: "_n=0&arg="
+      cookie_name: "credential"
+      inject_credential_cookie: true
+```
 
 ### Action schema — `type: hnap`
 
@@ -1643,6 +1700,32 @@ overrides at setup → user options (highest priority).
 
 Most modems omit this section — defaults are correct. Only declare it
 when a modem is known to be fragile.
+
+---
+
+## Detection
+
+```yaml
+detection:
+  http_headers:
+    - "ARRIS Server"
+    - "micro_httpd"
+```
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `detection.http_headers` | list[string] | no | The `Server` header products (the text before `/`) the entry's landing replies showed. Auto-detect ranks the entry higher when the device's `Server` is listed. It never removes an entry. |
+
+The intake pipeline writes the field from the entry's own HARs
+([INTAKE_PIPELINE.md § Detection Headers](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#detection-headers))
+and CI fails when it is stale; it is never hand-authored. An absent field
+means the entry has no recorded `Server` to rank by.
+
+Auto-detect's other evidence is not stored here. It is read from fields
+this spec already defines: `auth.cookie_name`, `login_page`,
+`login_endpoint`, `action` and the like, plus `parser.yaml` resources
+([DETECTION_SPEC.md § Signals](DETECTION_SPEC.md#signals)). `detection`
+is read from the entry's primary `modem.yaml`, like the identity fields.
 
 ---
 

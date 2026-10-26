@@ -37,6 +37,8 @@ sources:
   chipset: "[ModemGuides](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison)"
   detection_hints: "[#87 S33 data not updating](https://github.com/solentlabs/cable_modem_monitor/issues/87)"
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
+  release_date: "[CommScope press release, 2020-11-19](https://www.vistancenetworks.com/press-releases/2020/commscopes-launches-the-arris-surfboard-s33-cable-modem/): 'CommScope today announced the launch of the ARRIS SURFboard S33 DOCSIS 3.1 multi-Gigabit cable modem ... now available in the United States.' The v2 and v3 hardware revisions share the model's launch year; no revision dates found."
+  isps: "[SURFboard S33 product page](https://www.surfboard.com/products/cable-modems/s33/): 'Compatible with Cox, Spectrum, Xfinity and other major US cable internet providers'; footer: 'tested and qualified by Cox, Comcast Xfinity, and Charter Spectrum' (read 2026-10-20). [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) names the S33, no version given (read 2026-10-20). [Spectrum authorized modems](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) names the S33, S33 v2 and S33 v3 (read 2026-10-20)."
 
 attribution:
   contributors:

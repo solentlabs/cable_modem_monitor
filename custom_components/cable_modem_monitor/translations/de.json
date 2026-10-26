@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Kabelmodem-Monitor",
-        "description": "Hersteller auswählen oder 'Alle' wählen.",
+        "description": "Wähle einen Hersteller, wähle 'Alle' oder wähle 'Auto-detect', um dein Modem im Netzwerk zu suchen.",
         "data": {
           "manufacturer": "Hersteller"
         }
@@ -56,6 +56,38 @@
           "username": "Benutzername",
           "password": "Passwort"
         }
+      },
+      "detect_confirm": {
+        "title": "Modem gefunden",
+        "description": "Auto-detect hat **{model}** unter {host} gefunden.\n\nAuto-detect grenzt die Auswahl nur ein. Bestätige, dass dies dein Modem ist.",
+        "data": {
+          "choice": "Ist das dein Modem?",
+          "entity_prefix": "Entity ID-Präfix",
+          "channel_identity": "Kanalbenennung"
+        },
+        "data_description": {
+          "choice": "Wähle die erste Option, um fortzufahren. Die zweite zeigt weitere wahrscheinliche Treffer der Suche, die dritte öffnet die vollständige Herstellerliste.",
+          "entity_prefix": "Fügt Modellname oder IP zu Entity IDs hinzu. Erforderlich bei Überwachung mehrerer Modems.",
+          "channel_identity": "Kanalnummer benennt Entitäten nach der Zeilenposition im Modem (bleibt über Neustarts hinweg stabil). Kanal-ID verwendet die DOCSIS-Kanal-ID (entspricht der ISP-Diagnose, kann sich bei einem Neustart aber ändern)."
+        }
+      },
+      "detect_pick": {
+        "title": "Modems gefunden",
+        "description": "Die antwortende Seite erwähnt mehrere Modelle. Wähle deins. Mit * markierte Modelle sind nicht verifiziert.",
+        "data": {
+          "model": "Modemmodell",
+          "entity_prefix": "Entity ID-Präfix",
+          "channel_identity": "Kanalbenennung"
+        },
+        "data_description": {
+          "model": "Wähle dein Modemmodell aus der Liste.",
+          "entity_prefix": "Fügt Modellname oder IP zu Entity IDs hinzu. Erforderlich bei Überwachung mehrerer Modems.",
+          "channel_identity": "Kanalnummer benennt Entitäten nach der Zeilenposition im Modem (bleibt über Neustarts hinweg stabil). Kanal-ID verwendet die DOCSIS-Kanal-ID (entspricht der ISP-Diagnose, kann sich bei einem Neustart aber ändern)."
+        }
+      },
+      "no_match": {
+        "title": "Modem nicht erkannt",
+        "description": "Auto-detect hat dein Modem nicht erkannt. Das kann bedeuten, dass es noch nicht unterstützt wird.\n\nWas geantwortet hat:\n\n{observed}\n\nWähle dein Modem als Nächstes selbst aus. Siehe die [Liste der unterstützten Modems]({catalog_url}) oder [fordere Unterstützung für dein Modem an]({request_url})."
       }
     },
     "error": {

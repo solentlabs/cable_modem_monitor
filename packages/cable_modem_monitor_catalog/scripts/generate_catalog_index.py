@@ -34,8 +34,13 @@ from catalog_reference import (  # noqa: E402  # pyright: ignore[reportMissingIm
     isp_to_badge,
     protocol_to_badge,
 )
+from solentlabs.cable_modem_monitor_core.har import load_har_json  # noqa: E402
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (  # noqa: E402
     get_strategy_display_labels,
+)
+from solentlabs.cable_modem_monitor_core.test_harness import (  # noqa: E402
+    resolve_modem_config,
+    restart_evidence,
 )
 
 CATALOG_DIR = catalog_root / "solentlabs" / "cable_modem_monitor_catalog" / "modems"
@@ -499,6 +504,22 @@ def _capture_kind(har_path: Path) -> str:
     return "synthetic"
 
 
+def restart_note(m: dict, catalog_dir: Path = CATALOG_DIR) -> str:
+    """Restart evidence for one config row: captured, not captured, or n/a."""
+    # One config can replay against several fixtures (Core's pairing rule);
+    # a single fixture holding the restart is evidence enough.
+    modem_dir = catalog_dir / m["path"]
+    config_path = modem_dir / m["yaml_file"]
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    for har in sorted((modem_dir / "test_data").glob("*.har")):
+        if resolve_modem_config(har.stem, modem_dir) != config_path:
+            continue
+        entries = load_har_json(har).get("log", {}).get("entries", [])
+        if restart_evidence(config, entries) == "captured":
+            return "captured"
+    return restart_evidence(config, [])
+
+
 def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C901
     """Generate CATALOG_AUDIT.md — plain-language verification status for planning."""
 
@@ -568,19 +589,41 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         "",
         "---",
         "",
+        "## Restart column",
+        "",
+        "Whether the entry's own capture holds the request its declared restart sends.",
+        "A restart the capture lacks replays against a synthesized answer, so a passing",
+        "test proves only that Core sends the declared request, not that the firmware",
+        "accepts it.",
+        "",
+        "| Value | Meaning |",
+        "|-------|---------|",
+        "| `captured` | A captured request is the declared restart "
+        + "(`http`: method and path; `hnap`: action name; `cbn`: `fun` code; `json_rpc`: method) |",
+        "| `not captured` | A restart is declared and no captured request matches |",
+        "| `n/a` | No restart declared |",
+        "",
+        "An entry showing `not captured` would benefit from a capture that includes",
+        "pressing Restart. Read it with the Capture column: a restart inside a",
+        "`synthetic`, `generated` or `reconstructed` fixture was written to match Core,",
+        "not observed. Where a config replays against several fixtures, one holding the",
+        "restart is enough.",
+        "",
+        "---",
+        "",
         "## Needs Testing",
         "",
         "The integration is implemented and CI passes for these modems.",
         "They just need someone with that hardware to confirm it works",
         "and share a diagnostics snapshot.",
         "",
-        "| Modem | Transport | ISPs | Capture |",
-        "|-------|-----------|------|---------|",
+        "| Modem | Transport | ISPs | Capture | Restart |",
+        "|-------|-----------|------|---------|---------|",
     ]
 
     for m in needs_testing:
         isp_str = ", ".join(m["isps"]) if m["isps"] else "—"
-        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {capture_note(m)} |")
+        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {capture_note(m)} | {restart_note(m)} |")
 
     lines += [
         "",
@@ -589,13 +632,13 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         "These have a hardware report on file but haven't been promoted to Confirmed yet.",
         "May have open repair work — review individually.",
         "",
-        "| Modem | Transport | ISPs | Capture |",
-        "|-------|-----------|------|---------|",
+        "| Modem | Transport | ISPs | Capture | Restart |",
+        "|-------|-----------|------|---------|---------|",
     ]
 
     for m in pending_review:
         isp_str = ", ".join(m["isps"]) if m["isps"] else "—"
-        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {capture_note(m)} |")
+        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {capture_note(m)} | {restart_note(m)} |")
 
     with_gaps = [m for m in confirmed if m["gaps"]]
     if with_gaps:
@@ -632,8 +675,8 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         "Working on real hardware with a report on file.",
         "Entries with an open capability gap are listed above, not here.",
         "",
-        "| Modem | Transport | ISPs | Capture |",
-        "|-------|-----------|------|---------|",
+        "| Modem | Transport | ISPs | Capture | Restart |",
+        "|-------|-----------|------|---------|---------|",
     ]
 
     # Gap-bearing modems are rendered in "Confirmed with Gaps" above;
@@ -642,7 +685,7 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         if m["gaps"]:
             continue
         isp_str = ", ".join(m["isps"]) if m["isps"] else "—"
-        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {capture_note(m)} |")
+        lines.append(f"| {display(m)} | {m['protocol']} | {isp_str} | {capture_note(m)} | {restart_note(m)} |")
 
     lines += [
         "",

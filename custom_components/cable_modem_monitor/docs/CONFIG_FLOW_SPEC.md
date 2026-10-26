@@ -19,8 +19,9 @@ with authenticated polling.
 │ Step 1a: Select manufacturer                    │
 │   [Technicolor           ▼]                     │
 │                                                 │
-│   Options: "All", plus one per manufacturer     │
-│   in the catalog. "All" shows every modem.      │
+│   Options: "All", "Auto-detect", plus one per   │
+│   manufacturer in the catalog. "All" shows      │
+│   every modem. See § Auto-detect.               │
 │                                                 │
 │   Source: Core's list_modems(catalog_path)   │
 │   returns all modem summaries. HA filters       │
@@ -134,6 +135,80 @@ CI fails when it is stale.
 **Physical vs logical:** The catalog is organized by manufacturer on disk
 (`modems/{mfr}/{model}/`). The dropdown presents a logical view — users
 see brands and aliases without needing to know the directory structure.
+
+### Auto-detect
+
+"Auto-detect" is the second Step 1a option, below "All". It narrows the
+modem choice; it never makes it. The user confirms every result. It is a
+best attempt: manual selection is unchanged, and a sweep that fails
+outright lands on Step 1a.
+Contract: Core's
+[DETECTION_SPEC.md](../../../packages/cable_modem_monitor_core/docs/DETECTION_SPEC.md).
+
+```mermaid
+flowchart TD
+    A[Auto-detect chosen] --> B[Sweep catalog default_host addresses]
+    B -->|nothing answers| N[No-match page]
+    B -->|one or more answer| C[Candidates, best first]
+    C -->|1 tier-1 entry, or only 1 named| D[Confirm page]
+    C -->|2 to 4 tier-1 entries| E[Pick list]
+    C -->|5+ tier-1 entries| F[Step 1b over the tier-1 entries]
+    C -->|no tier-1 entry| G[Step 1a, every manufacturer]
+    D -->|Yes| V[Step 2 variant, if more than one]
+    D -->|Show other likely matches| F
+    D -->|Choose manually| M
+    E --> V
+    F --> V
+    G --> F2[Step 1b for the chosen manufacturer]
+    F2 --> V
+    N --> M[Manual selection with host prefilled]
+```
+
+Tiers and candidates are defined in
+[DETECTION_SPEC.md § Narrowing](../../../packages/cable_modem_monitor_core/docs/DETECTION_SPEC.md#narrowing).
+
+**Confirm page.** Shown for the one tier-1 entry, or, when several
+tier-1 entries exist, for the one entry the page names when exactly one is
+named. It names the modem and the address that answered. A three-way
+choice, defaulting to the first, sits with the entity prefix and channel
+identity fields:
+
+1. **Yes, this is my modem** continues to Step 2.
+2. **No, show other likely matches** opens Step 1b over the rest of the
+   tier-1 and tier-2 entries, tier 1 first; each carries the address
+   that answered to Step 3. With none left it opens Step 1a.
+3. **No, I'll choose manually** opens Step 1a with the address that
+   answered carried to Step 3.
+
+**Pick list.** The tier-1 entries, named ones first, ending in the
+existing variant question. When more than one address produced tier-1 entries, each row
+names its address; otherwise rows do not.
+
+**Step 1b over the tier-1 entries.** With five or more tier-1 entries,
+Step 1a is skipped and Step 1b lists just those, named ones first.
+
+**No tier-1 entry.** The device answered but nothing identified it. The
+user lands on the ordinary Step 1a, every manufacturer and "All" with
+Auto-detect omitted, and the address that answered carries to Step 3.
+The flow never shows a flat list of the whole catalog here.
+
+**Entity prefix and channel identity.** Asked on the confirm and pick
+pages with the same fields as Step 1b, which asks them itself on the
+filtered route.
+
+**Host.** The address that answered carries to Step 3. The user is not
+asked for a host before detection.
+
+**No-match page.** Shown when nothing answers or the user rejects the
+confirm page. It says the modem was not identified,
+which can mean it is not supported, shows what each device answered
+(`Detection.observation`; `-` when nothing answered), and offers:
+
+- continue to manual selection (Step 1a without Auto-detect), host
+  prefilled with the first address that answered, else the modem default;
+- the supported modem list, linked through the flow's `{catalog_url}`
+  description placeholder;
+- [requesting support for a modem](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md).
 
 ### Step 2: Variant (conditional)
 

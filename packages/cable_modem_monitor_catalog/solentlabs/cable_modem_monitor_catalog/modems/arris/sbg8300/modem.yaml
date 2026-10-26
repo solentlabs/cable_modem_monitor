@@ -38,6 +38,10 @@ hardware:
   docsis_version: "3.1"
   chipset: "Intel Puma 7 (FHCE2752M)"
 
+detection:
+  http_headers:
+    - "ARRIS Server"
+
 status: confirmed
 
 sources:

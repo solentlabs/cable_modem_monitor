@@ -19,6 +19,8 @@ sources:
   brands: "[SURFboard product family](https://www.surfboard.com/products/cable-modems/sb8200/) — manufacturer styles the brand SURFboard"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Motorola_SURFboard_SB6183)"
   hardware: "[SURFboard SB6183 product page](https://www.surfboard.com/products/cable-modems/sb6183/)"
+  release_date: "[CommScope blog, 2014-10-15](https://es.commscope.com/blog/2014/everything-you-wanted-to-know-about-the-worlds-fastest-modem): 'The ARRIS SURFboard SB6183 is here' and 'will be available at the end of October 2014 at Best Buy.'"
+  isps: "[SURFboard SB6183 product page, Wayback capture 2021-07-27](https://web.archive.org/web/20210727152141/https://www.surfboard.com/products/cable-modems/sb6183/): 'Compatible with Cox, Spectrum, Xfinity and other major U.S. cable internet providers' (Xfinity is Comcast's brand). [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) names the SB6183 (read 2026-10-20). Spectrum's [authorized list](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) does not (read 2026-10-20), so Spectrum is kept for existing users. Mediacom has no source yet: its [current compatible retail modems list](https://mediacomcable.com/compatible-retail-modems) (PDF dated 2024-08) requires high-split DOCSIS 3.1 and names only CM3000 and CM2500, and issue #95 never mentions it."
 
 attribution:
   contributors:

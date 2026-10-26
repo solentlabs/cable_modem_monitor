@@ -44,6 +44,10 @@ downstream:
           field: power
           type: float
           unit: "dBmV"
+        - key: bandwidth
+          field: channel_width
+          type: frequency
+          unit: "MHz"
         - key: SNR_ofdm
           field: snr
           type: float
@@ -92,6 +96,10 @@ upstream:
           field: power
           type: float
           unit: "dBmV"
+        - key: bandwidth
+          field: channel_width
+          type: frequency
+          unit: "MHz"
         - key: FFT
           field: modulation
           type: modulation

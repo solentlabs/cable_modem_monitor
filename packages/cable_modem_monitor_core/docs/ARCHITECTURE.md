@@ -788,7 +788,8 @@ class FormAuth(AuthStrategyBase):
     action_source: Literal["config", "login_page"] = "config"
     username_field: str = "username"
     password_field: list[str] = Field(default=["password"])
-    encoding: Literal["plain", "base64"] = "plain"
+    encoding: Literal["plain", "base64", "packed_base64"] = "plain"
+    credential_field: str = ""
     hidden_fields: dict[str, str] = Field(default_factory=dict)
     login_page: str = ""
     form_selector: str = ""
@@ -938,6 +939,11 @@ coordinator, same parsers. The `HARMockServer`:
    for manual use)
 4. The pipeline runs against this server as if it were a real modem
 
+**One origin.** A capture can span several ports of the modem (a
+cable-modem page server and a router GUI). The server answers all of
+them from its one port: routes ignore the port, and the restart replay
+runs the action without its `HttpAction.port` override.
+
 Replay is wire-faithful. A HAR stores the decoded body alongside the
 original headers, so the server re-applies the framing the headers
 declare (chunked transfer, gzip) before sending, recomputes
@@ -950,11 +956,13 @@ connection down mid-request) becomes no route, because there is
 nothing to replay.
 
 **Where a capture answers one request twice, the later exchange wins,
-and a 200 is never displaced by a failure.** The capture steps ask for
-a deliberate wrong-password login before the real one, so a login
-endpoint routinely carries two recorded answers — under one key on a
-static action, under two on a dynamic `?id=` action. Keeping the first
-would replay the refusal as the login.
+and a 200 is never displaced by a failure.** The capture steps end with
+a deliberate wrong-password login, so a login endpoint routinely
+carries two recorded answers, the real login and the refusal, under one
+key on a static action and under two on a dynamic `?id=` action. On the
+login POST the declared `auth.success.indicator` picks between them: an
+exchange whose body contains it is never displaced by one that lacks
+it. With no indicator declared the last exchange wins outright.
 
 **Login, logout and restart are dispatched, not routed.** These three
 carry server-side session state, so the auth handler sees them before
@@ -982,7 +990,8 @@ the capture:
   body where the firmware expects an encrypted one. Logout keeps the
   capture's answer unconditionally. Most captures
   record data collection only, so a synthesized response remains the
-  common case for restart.
+  common case for restart. A synthesized answer proves dispatch only:
+  Core sent the declared request, not that the firmware accepts it.
 - **Action matching is uniform.** Logout and restart are matched from
   the declared `actions:` block for every strategy, not re-implemented
   per handler. When each handler matched for itself, `basic` and

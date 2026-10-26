@@ -485,6 +485,100 @@ pipeline stages, and printing. The shared grade taxonomy is
 
 ---
 
+## Detection Headers
+
+The pipeline writes each entry's `detection.http_headers`
+([MODEM_YAML_SPEC.md § Detection](../../cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md#detection))
+from the entry's own HARs: the `Server` products of the landing replies
+(§ Detection Accuracy) across all its directories and variants. The
+regression recomputes every entry and fails when a committed value
+differs, the same way the catalog README fails when stale.
+`scripts/update_detection_headers.py` writes the blocks, and `--check`
+lists the stale ones.
+
+## Detection Accuracy
+
+`intake_pipeline_regression.py` scores auto-detect
+([DETECTION_SPEC.md](../../cable_modem_monitor_core/docs/DETECTION_SPEC.md))
+against the committed HARs. Each HAR's landing reply, the recorded
+`GET /` followed through recorded redirects, goes through
+`detection.match_page()` and `detection.read_reply()`, and
+`detection.narrow()` runs on both with the summaries `list_modems()`
+returns. The result is graded against the entry the HAR belongs to. The
+names, signals and servers come from catalog configuration, so no HAR
+teaches the matcher about itself, except `detection.http_headers`, which the
+pipeline derives from the entry's other HARs. Redirects are followed up
+to five hops, pairing each target with a recorded `GET` of that exact
+URL; a target the HAR never requested ends the chain at the redirect
+response.
+
+### Entry outcomes
+
+Graded per HAR, for the entry the HAR belongs to:
+
+| Outcome | Meaning |
+|---------|---------|
+| `MATCHED` | The entry is tier 1: the page names it or one of its signals is found |
+| `RANKED` | The entry is tier 2 |
+| `UNRANKED` | The entry is tier 3; nothing in the reply matched what its config declares |
+| `LOST` | The contradiction rule removed the entry |
+| `NOT_TESTABLE` | The HAR holds no `GET /` |
+
+`LOST` breaks the invariant and fails the regression. Each `UNRANKED` is
+listed with the signals its config declares beside what the reply
+carried, so a missing signal can be told from a page that holds none. An
+`UNRANKED` entry is still a candidate. The report prints the mean
+candidate count per HAR, the tier-1 count, and how many HARs were
+captured on a `default_host` address, which is how many the sweep would
+have reached.
+
+A HAR with no `GET /` has no landing reply, so its entry is graded
+`NOT_TESTABLE`; its config still supplies signals at runtime.
+
+### Name outcomes
+
+Graded per HAR, as evidence of what a landing page carries:
+
+| Outcome | Meaning |
+|---------|---------|
+| `EXACT` | The entry is among the page's `models` |
+| `MAKER_ONLY` | The entry is not in `models`, and a `buckets` name is its manufacturer or one of its brands |
+| `NO_HIT` | The page names nothing in the catalog, including a landing response with no page text |
+| `WRONG` | The page names something and none of it is the entry's |
+| `NOT_TESTABLE` | The HAR holds no `GET /` |
+
+Names order candidates and never remove one, so `WRONG` and `NO_HIT`
+do not threaten the invariant. Each `WRONG` is still listed by modem with
+the names it matched, and each `NO_HIT` with its observation.
+
+### Marker accuracy
+
+Beyond page text, a device's landing response shows markers the matcher
+does not read ([DETECTION_SPEC.md § Observation](../../cable_modem_monitor_core/docs/DETECTION_SPEC.md#observation)):
+scheme, `Server` product (the text before `/`), whether `WWW-Authenticate`
+is sent, and whether the page has a password field. A marker may remove an
+entry only when the catalog shows that entry cannot present the observed
+value, so the report scores each marker on its own, per HAR:
+
+- **Known values.** The values the marker takes across every other
+  landing response of the HAR's entry, in all its directories and
+  variants. An entry with no landing capture has none.
+- **Narrowing.** The entries whose known values include the HAR's
+  value, plus every entry with no known values. A modem with no capture
+  is never removed.
+- **Wrongly removed.** The HAR's own entry has known values from other
+  captures and the HAR's value is not among them. An entry with a single
+  landing capture is not scored.
+
+The report prints, for each marker, the HARs scored, the count wrongly
+removed with each one listed, and the narrowing per HAR. The scorecard
+records both numbers per HAR and marker, so the trend shows movement as
+captures are added or restored.
+
+A marker may remove entries at runtime only while the report shows none
+wrongly removed across the fleet. Every other marker may order the
+candidates and removes none. No marker is used at runtime today.
+
 ## Catalog Field Sweep
 
 `scripts/catalog_field_sweep.py` reads every committed entry's HAR for

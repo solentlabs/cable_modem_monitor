@@ -6,6 +6,7 @@ See MODEM_YAML_SPEC.md ``url_token`` strategy.
 from __future__ import annotations
 
 import base64
+import json
 import logging
 from urllib.parse import urlparse
 
@@ -160,11 +161,19 @@ class UrlTokenAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
+            # The credential rides in the URL, and requests repeats the URL in
+            # its error text: scrub it before the text reaches a log line or a
+            # diagnostics download.
+            message = str(e).replace(credential, "***")
             if is_connectivity_error(e):
-                raise
+                try:
+                    scrubbed: requests.RequestException = type(e)(message)
+                except TypeError:
+                    scrubbed = requests.ConnectionError(message)
+                raise scrubbed from None
             return AuthResult(
                 success=False,
-                error=f"URL token login failed: {type(e).__name__}: {e}",
+                error=f"URL token login failed: {type(e).__name__}: {message}",
             )
 
         if response.status_code != 200:
@@ -206,6 +215,15 @@ class UrlTokenAuthManager(BaseAuthManager):
 
         # Token extraction: body without indicator = token string
         url_token = self._extract_token(session, body, log_level)
+
+        # A busy login still answers 200 with a token, but the modem will
+        # refuse every later request on it. Report it before the cookie is set.
+        if config.busy_key and _carries_key(body, config.busy_key):
+            return AuthResult(
+                success=False,
+                busy=True,
+                error=f"Login busy: another session holds the modem's web interface ({config.busy_key})",
+            )
 
         # Credential cookie injection: replicate browser JS createCookie(name, result)
         # where result is the auth response body (server-issued session token).
@@ -295,6 +313,15 @@ class UrlTokenAuthManager(BaseAuthManager):
                 return cookie_val
 
         return ""
+
+
+def _carries_key(body: str, key: str) -> bool:
+    """True when the body is base64-encoded JSON whose top level has ``key``."""
+    try:
+        decoded = json.loads(base64.b64decode(body, validate=True))
+    except ValueError:
+        return False
+    return isinstance(decoded, dict) and key in decoded
 
 
 def create_manager(config: UrlTokenAuth) -> UrlTokenAuthManager:

@@ -1,0 +1,30 @@
+{
+  "_expected_error": "busy_key requires inject_credential_cookie",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.0.1",
+    "auth": {
+      "strategy": "url_token",
+      "login_page": "/login",
+      "cookie_name": "credential",
+      "busy_key": "muti"
+    },
+    "hardware": {
+      "docsis_version": "3.0"
+    },
+    "status": "awaiting_verification",
+    "attribution": {
+      "contributors": [
+        {
+          "github": "test-user",
+          "contribution": "HAR capture"
+        }
+      ]
+    },
+    "isps": [
+      "Various"
+    ]
+  }
+}

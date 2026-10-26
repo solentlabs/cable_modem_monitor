@@ -270,6 +270,15 @@ Check five outputs:
    capture shows a polled response too slow for the default; `enrich_metadata`
    sets `timeout` from it. Confirm the value fits the modem before Step 7
 
+**Stacked info cells.** Some pages list `Label: value` lines in one cell,
+each ending in `<BR>`. Analysis reads each line as a pair, and a line
+whose label the vocabulary does not know is dropped without a warning.
+Open the info page, compare its lines with the generated `system_info`,
+and add a missing field as `css: td` with a `pattern` like
+`Hardware Version:\s*([^<\n]+)`; the SB6141, CM820B and TM1602A entries
+are examples. Check what a label holds, not what it is called: the
+SB6141 `Firmware Name` line carries the software version.
+
 Resolve every unregistered-field warning before Step 7: keep the field
 as modem-specific (the Tier 3 graduation path in FIELD_REGISTRY), or
 map its source to a known field.
@@ -342,7 +351,7 @@ HAR before proceeding. Pull
 
 | Strategy | Key signal in the HAR |
 |----------|-----------------------|
-| `form` | Login is a POST with plain form fields. If `login_page` is set, a pre-fetch GET precedes the POST and hidden fields appear in the POST body. Check `encoding` — `base64` if the password is base64-encoded in the POST body, `plain` if it appears verbatim. |
+| `form` | Login is a POST with plain form fields. If `login_page` is set, a pre-fetch GET precedes the POST and hidden fields appear in the POST body. Check `encoding` — `base64` if the password is base64-encoded in the POST body, `plain` if it appears verbatim, `packed_base64` when the POST carries one hidden field (`credential_field`) that the login page's script fills with both credentials. |
 | `form_nonce` | Auth response body starts with `Url:` (success) or `Error:` (failure) — no HTTP redirect. The POST body contains a short random numeric value alongside credentials; `nonce_field` should match its field name. |
 | `form_pbkdf2` | A preliminary request fires before credentials are submitted and the response contains a salt value. `pbkdf2_iterations` and `pbkdf2_key_length` should match values visible in that exchange. |
 | `form_sjcl` | The credential POST body is an encrypted SJCL JSON blob, not plain form fields. `encrypt_aad` and `decrypt_aad` should match the AAD strings in the login JS. |
@@ -405,7 +414,8 @@ For each item in `enrich_result.missing`:
   in `sources.release_date`. Feeds the catalog README timeline;
   entries without it are silently omitted from that rendering.
 - **isps**: web search `"{model} compatible ISPs"`
-- **default_host**: usually 192.168.100.1 for DOCSIS modems
+- **default_host**: taken from the HAR (the host most requests went to);
+  confirm it is the modem's own address
 - **brands**: user-visible box branding. Check firmware brand fields in
   the HAR (e.g. `customer`) and retail listings. Entries become
   manufacturer-dropdown buckets and must carry a source.
@@ -482,7 +492,9 @@ write_result = write_modem_package(output_dir, ...)
 ```
 
 See [ONBOARDING_SPEC.md](ONBOARDING_SPEC.md) for the full
-`write_modem_package` signature.
+`write_modem_package` signature. A non-empty `errors` means nothing was
+written: read it, fix the config or recapture. `warnings` list declared
+action URLs the capture never requests; note them in the PR.
 
 The generator quotes strings with single quotes where prettier writes
 double quotes, and prettier keeps single quotes around strings that

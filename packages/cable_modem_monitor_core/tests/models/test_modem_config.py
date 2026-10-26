@@ -198,6 +198,28 @@ class TestRelationships:
         assert config.auth is None
         assert config.hardware is None
 
+    def test_detection_headers_accepted_and_defaults_empty(self):
+        """detection.http_headers parses; omitting the block leaves it None."""
+        data = _load("auth_none.json").model_dump()
+        assert ModemConfig.model_validate(data).detection is None
+
+        data["detection"] = {"http_headers": ["micro_httpd"]}
+        detection = ModemConfig.model_validate(data).detection
+        assert detection is not None
+        assert detection.http_headers == ["micro_httpd"]
+
+    def test_detection_rejects_unknown_keys(self):
+        """The block is the pipeline's; a hand-added path list is not in the schema."""
+        data = _load("auth_none.json").model_dump()
+        data["detection"] = {"paths": ["/a"]}
+        with pytest.raises(ValidationError):
+            ModemConfig.model_validate(data)
+
+    def test_detection_sits_after_health_in_key_order(self):
+        """Layout: detection is a section of its own, after the identity block and health."""
+        order = list(ModemConfig.model_fields)
+        assert order.index("health") < order.index("detection") < order.index("status")
+
     def test_health_defaults_when_omitted(self):
         """Health section omitted defaults all probes to True."""
         config = _load("auth_none.json")

@@ -71,7 +71,7 @@ _UNCLOSED_TH_RE = re.compile(
 # Inline "Label: Value<BR>" pattern — some modems embed system info
 # as BR-delimited text inside a single <TD> cell (e.g., SB6141 cmHelpData.htm).
 _BR_LABEL_VALUE_PATTERN = re.compile(
-    r"([A-Z][A-Za-z ]+?)\s*:\s*([^\n<]+?)\s*<[Bb][Rr]\s*/?>",
+    r"([A-Z][A-Za-z0-9_ ]+?)\s*:\s*([^\n<]+?)\s*<[Bb][Rr]\s*/?>",
 )
 
 _ID_VALUE_PATTERN = re.compile(
@@ -161,18 +161,21 @@ def _own_text(cell: Tag) -> str:
     return "".join(str(s) for s in cell.find_all(string=True, recursive=False)).strip()
 
 
-def _extract_rows(table: Tag) -> list[list[str]]:
+def _extract_rows(table: Tag) -> tuple[list[list[str]], list[int]]:
     """Extract text content from direct table rows.
 
     Only processes direct child rows (not rows from nested tables)
     and leaf cells (cells without nested tables).
-    Returns a list of rows, each row a list of cell text strings.
+    Returns the rows, each a list of cell text strings, and for every
+    ``<tr>`` with no text to read the number of rows extracted before it.
     """
     all_rows: list[list[str]] = []
+    unread: list[int] = []
 
     for row in _get_direct_rows(table):
         cells = row.find_all(["td", "th"], recursive=False)
         if not cells:
+            unread.append(len(all_rows))
             continue
 
         leaf_texts: list[str] = []
@@ -189,8 +192,10 @@ def _extract_rows(table: Tag) -> list[list[str]]:
 
         if any(t for t in leaf_texts):
             all_rows.append(leaf_texts)
+        else:
+            unread.append(len(all_rows))
 
-    return all_rows
+    return all_rows, unread
 
 
 def _repaired_label_rows(table: Tag, headers: list[str]) -> int:
@@ -367,7 +372,7 @@ def detect_tables(body: str) -> list[DetectedTable]:
         if not _is_data_table(table_el):
             continue
 
-        all_rows = _extract_rows(table_el)
+        all_rows, unread_rows = _extract_rows(table_el)
         if not all_rows:
             continue
 
@@ -391,6 +396,7 @@ def detect_tables(body: str) -> list[DetectedTable]:
                 title_row_text=title_row_text,
                 table_index=idx,
                 repaired_rows=_repaired_label_rows(table_el, headers),
+                unread_rows=unread_rows,
                 i18n_header_map=_extract_i18n_header_map(table_el),
             )
         )

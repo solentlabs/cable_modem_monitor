@@ -1,0 +1,90 @@
+{
+  "_description": "Form auth: two attempts both redirect, to different paths; the latest is kept and a warning names both so the maintainer verifies success.redirect",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "YWRtaW4="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {
+            "name": "Location",
+            "value": "/home.asp"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "d3Jvbmc="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {
+            "name": "Location",
+            "value": "/login.asp?error=1"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form",
+  "_expected_warning": "redirect to different paths"
+}

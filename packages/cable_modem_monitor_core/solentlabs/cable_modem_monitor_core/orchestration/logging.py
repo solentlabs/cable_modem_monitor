@@ -19,6 +19,9 @@ if TYPE_CHECKING:
 # Maximum body length included in AuthFailed log lines.
 _AUTH_BODY_MAX = 500
 
+# Longest page title quoted in a Detection probe line.
+_DETECTION_TITLE_MAX = 100
+
 # Set by capture_events() in tests to collect events instead of logging them.
 # None means no capture is active.
 _capture_list: contextvars.ContextVar[list | None] = contextvars.ContextVar("_capture_list", default=None)
@@ -55,6 +58,9 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
         ConnectivityBackoffReset,
         ConnectivityFailureDetected,
         CounterReset,
+        DetectionChosen,
+        DetectionMatched,
+        DetectionProbeResult,
         HealthBackoffCleared,
         HealthRecoveryDetected,
         HealthStatusReport,
@@ -374,6 +380,35 @@ def _format(event: OrchestratorEvent) -> str:  # noqa: PLR0911, C901
 
     if isinstance(event, ResourceDecodeError):
         return f"Resource decode error [{event.model}] — {event.path}: {event.fmt}: {event.reason}"
+
+    # --- detection ---
+
+    if isinstance(event, DetectionProbeResult):
+        obs = event.observation
+        if obs is None:
+            return f"Detection probe [{event.host}] — no answer ({event.reason})"
+        details = [f"{obs.scheme} {obs.status}", f"landed: {obs.final_path}"]
+        if obs.server:
+            details.append(f"server: {obs.server}")
+        if obs.title:
+            details.append(f"title: {obs.title[:_DETECTION_TITLE_MAX]}")
+        if obs.www_authenticate:
+            details.append(f"www-authenticate: {obs.www_authenticate}")
+        if obs.password_field:
+            details.append("password field")
+        return f"Detection probe [{event.host}] — " + ", ".join(details)
+
+    if isinstance(event, DetectionMatched):
+        named = ", ".join(event.matched) if event.matched else "nothing in the catalog"
+        return (
+            f"Detection match [{event.host}] — page names: {named}"
+            f" (models: {', '.join(event.models) or 'none'};"
+            f" makers and brands: {', '.join(event.buckets) or 'none'};"
+            f" signals: {', '.join(event.signals) or 'none'}; candidates: {event.candidates})"
+        )
+
+    if isinstance(event, DetectionChosen):
+        return f"Detection chosen — {event.outcome}, host: {event.host or 'none'}, selected: {event.selected or 'none'}"
 
     # Defensive — all event types must be handled above.
     return repr(event)

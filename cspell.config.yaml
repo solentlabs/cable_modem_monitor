@@ -41,6 +41,7 @@ ignoreWords:
   - klmnopqrst
   - kwschulz
   - ludeeus
+  - muti # ARRIS SBG7400AC2 router GUI login body key (busy session flag)
   - Nlcjpw
   - philfry
   - qwertyuiop
@@ -48,6 +49,7 @@ ignoreWords:
   - Rpem
   - SNTLABS
   - totev
+  - UIDSBG # FCC ID UIDSBG7400 (ARRIS SBG7400AC2), cited in the catalog entry
   - Vonk
   - Fzcw
   - didnt
@@ -219,6 +221,7 @@ words:
   - Telephonics
   - Touchstone
   - Ubee
+  - Vantiva
 
   # ISPs / providers
   - Altice

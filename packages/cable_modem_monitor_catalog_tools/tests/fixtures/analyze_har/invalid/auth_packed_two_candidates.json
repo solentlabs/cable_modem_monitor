@@ -1,0 +1,105 @@
+{
+  "_description": "Login page has two empty hidden fields besides the nonce, both posted: the packed field is not guessed, the run stops",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/cgi-bin/basic_pwd_cgi",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ],
+            "cookies": [],
+            "content": {
+              "size": 351,
+              "mimeType": "text/html",
+              "text": "<html><body><form method=\"post\" action=\"basic_pwd_cgi\"><input id=\"user\" type=\"username\"><input id=\"pwd\" type=\"password\"><input name=\"arguments\" id=\"arguments\" value=\"\" type=\"hidden\"><input name=\"token\" id=\"token\" value=\"\" type=\"hidden\"><input name=\"ar_nonce\" id=\"ar_nonce\" value=\"\" type=\"hidden\"><input value=\"Send\" type=\"submit\"></form></body></html>"
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/cgi-bin/basic_pwd_cgi",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {
+                  "name": "arguments",
+                  "value": "AUTH_3392e65f"
+                },
+                {
+                  "name": "token",
+                  "value": "AUTH_1f2e3d4c"
+                },
+                {
+                  "name": "ar_nonce",
+                  "value": "99651508"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              },
+              {
+                "name": "Set-Cookie",
+                "value": "credential=COOKIE_1;"
+              }
+            ],
+            "cookies": [],
+            "content": {
+              "size": 72,
+              "mimeType": "text/html",
+              "text": "<html><head><meta http-equiv=\"refresh\" content=\"0;url=status_cgi\"</head>"
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/cgi-bin/status_cgi",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ],
+            "cookies": [],
+            "content": {
+              "size": 26,
+              "mimeType": "text/html",
+              "text": "<html>RF Parameters</html>"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "_expected_hard_stop": "Cannot determine auth mechanism"
+}

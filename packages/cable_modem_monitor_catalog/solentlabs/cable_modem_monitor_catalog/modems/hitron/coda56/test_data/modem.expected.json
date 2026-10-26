@@ -357,6 +357,7 @@
       "channel_id": 2,
       "channel_number": 1,
       "channel_type": "atdma",
+      "channel_width": 6400000,
       "frequency": 16400000,
       "modulation": "QAM64",
       "power": 37.521
@@ -365,6 +366,7 @@
       "channel_id": 6,
       "channel_number": 2,
       "channel_type": "atdma",
+      "channel_width": 3200000,
       "frequency": 40400000,
       "modulation": "QAM64",
       "power": 38.76
@@ -373,6 +375,7 @@
       "channel_id": 5,
       "channel_number": 3,
       "channel_type": "atdma",
+      "channel_width": 6400000,
       "frequency": 35600000,
       "modulation": "QAM64",
       "power": 38.271
@@ -381,6 +384,7 @@
       "channel_id": 4,
       "channel_number": 4,
       "channel_type": "atdma",
+      "channel_width": 6400000,
       "frequency": 29200000,
       "modulation": "QAM64",
       "power": 38.271
@@ -389,6 +393,7 @@
       "channel_id": 3,
       "channel_number": 5,
       "channel_type": "atdma",
+      "channel_width": 6400000,
       "frequency": 22800000,
       "modulation": "QAM64",
       "power": 39.521
@@ -397,6 +402,7 @@
       "channel_id": 1,
       "channel_number": 6,
       "channel_type": "atdma",
+      "channel_width": 3200000,
       "frequency": 10400000,
       "modulation": "QAM16",
       "power": 38.51

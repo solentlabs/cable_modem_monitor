@@ -13,8 +13,31 @@ constraint model.
 from __future__ import annotations
 
 from typing import Annotated, Any, ClassVar, Literal, NamedTuple, get_args
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, field_validator, model_validator
+
+# The client script every captured HNAP login page loads (S33 and SB8200 landing
+# replies); Auto-detect reads it as the transport's signal (DETECTION_SPEC.md § Signals).
+# Lives here, not in protocol.hnap, which imports this module.
+HNAP_CLIENT_SCRIPT = "/js/SOAP/SOAPAction.js"
+
+
+class LandingSignals(NamedTuple):
+    """Paths and cookie names a strategy's login surface carries (DETECTION_SPEC.md § Signals)."""
+
+    paths: tuple[str, ...] = ()
+    cookies: tuple[str, ...] = ()
+
+
+def build_landing_signals(paths: tuple[str, ...] = (), cookies: tuple[str, ...] = ()) -> LandingSignals:
+    """Build signals from config values, dropping empties, queries and the bare root."""
+    cleaned: list[str] = []
+    for value in paths:
+        path = urlparse(value).path
+        if path.startswith("/") and path != "/" and path not in cleaned:
+            cleaned.append(path)
+    return LandingSignals(tuple(cleaned), tuple(dict.fromkeys(c for c in cookies if c)))
 
 
 class AuthStrategyBase(BaseModel):
@@ -34,6 +57,10 @@ class AuthStrategyBase(BaseModel):
     # action may declare body_encoding: session. Validation reads this, never
     # a strategy name.
     encodes_action_bodies: ClassVar[bool] = False
+
+    def landing_signals(self) -> LandingSignals:
+        """What this strategy's login surface looks like in a landing reply; none by default."""
+        return LandingSignals()
 
 
 class NoneAuth(AuthStrategyBase):
@@ -58,6 +85,10 @@ class BasicAuth(AuthStrategyBase):
     display_name: ClassVar[str] = "Basic Authentication"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = True
+
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals(cookies=(self.cookie_name,))
 
 
 class FormSuccess(BaseModel):
@@ -89,16 +120,22 @@ class FormAuth(AuthStrategyBase):
     method: str = "POST"
     username_field: str = "username"
     password_field: list[str] = Field(default=["password"])
-    encoding: Literal["plain", "base64"] = "plain"
+    encoding: Literal["plain", "base64", "packed_base64"] = "plain"
+    credential_field: str = ""
     cookie_name: str = ""
     hidden_fields: dict[str, str] = Field(default_factory=dict)
     login_page: str = ""
     form_selector: str = ""
     success: FormSuccess | None = None
+    busy_indicator: str = ""
 
     display_name: ClassVar[str] = "Form Login"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
+
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((self.action, self.login_page), (self.cookie_name,))
 
     @field_validator("password_field", mode="before")
     @classmethod
@@ -114,6 +151,18 @@ class FormAuth(AuthStrategyBase):
         # nothing to read and every login would take the fallback.
         if self.action_source == "login_page" and not self.login_page:
             raise ValueError("action_source: login_page requires login_page")
+        return self
+
+    @model_validator(mode="after")
+    def _packed_credentials_are_one_field(self) -> FormAuth:
+        # Each rule rejects a field that would otherwise be silently ignored.
+        packed = self.encoding == "packed_base64"
+        if packed and not self.credential_field:
+            raise ValueError("encoding: packed_base64 requires credential_field")
+        if self.credential_field and not packed:
+            raise ValueError("credential_field requires encoding: packed_base64")
+        if packed and self.model_fields_set & {"username_field", "password_field"}:
+            raise ValueError("encoding: packed_base64 posts no username_field or password_field")
         return self
 
 
@@ -137,6 +186,10 @@ class FormNonceAuth(AuthStrategyBase):
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
 
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((self.action,), (self.cookie_name,))
+
 
 class UrlTokenAuth(AuthStrategyBase):
     """Credentials encoded in URL query string."""
@@ -151,10 +204,23 @@ class UrlTokenAuth(AuthStrategyBase):
     cookie_name: str = ""
     token_prefix: str = ""
     inject_credential_cookie: bool = False
+    busy_key: str = ""
 
     display_name: ClassVar[str] = "URL Token"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
+
+    @model_validator(mode="after")
+    def _busy_key_needs_injection(self) -> UrlTokenAuth:
+        # The key is read from the body that becomes the credential cookie;
+        # without injection there is no such body to read.
+        if self.busy_key and not self.inject_credential_cookie:
+            raise ValueError("busy_key requires inject_credential_cookie")
+        return self
+
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((self.login_page,), (self.cookie_name,))
 
 
 class HnapAuth(AuthStrategyBase):
@@ -167,6 +233,10 @@ class HnapAuth(AuthStrategyBase):
     display_name: ClassVar[str] = "HNAP"
     transport: ClassVar[str] = "hnap"
     stateless: ClassVar[bool] = False
+
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((HNAP_CLIENT_SCRIPT,))
 
 
 class FormPbkdf2Auth(AuthStrategyBase):
@@ -188,6 +258,10 @@ class FormPbkdf2Auth(AuthStrategyBase):
     display_name: ClassVar[str] = "Form Login (PBKDF2)"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
+
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((self.login_endpoint,), (self.cookie_name,))
 
 
 class FormSjclAuth(AuthStrategyBase):
@@ -220,6 +294,10 @@ class FormSjclAuth(AuthStrategyBase):
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
 
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((self.login_page, self.login_endpoint), (self.cookie_name,))
+
 
 class FormCbnAuth(AuthStrategyBase):
     """CBN (Compal Broadband Networks) AES-256-CBC encrypted form auth.
@@ -248,6 +326,10 @@ class FormCbnAuth(AuthStrategyBase):
     transport: ClassVar[str] = "cbn"
     stateless: ClassVar[bool] = False
 
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((self.login_page,), (self.session_cookie_name,))
+
 
 class BearerAuth(AuthStrategyBase):
     """JSON login returning a session token. See MODEM_YAML_SPEC.md § bearer."""
@@ -270,6 +352,10 @@ class BearerAuth(AuthStrategyBase):
     display_name: ClassVar[str] = "JSON Login"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
+
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((self.login_endpoint,), (self.cookie_name,))
 
     @model_validator(mode="after")
     def _token_fields_agree(self) -> BearerAuth:
@@ -320,6 +406,11 @@ class JsonSjclAuth(AuthStrategyBase):
     display_name: ClassVar[str] = "JSON Login (SJCL)"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
+
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((self.login_page, self.login_endpoint), (self.cookie_name,))
+
     encodes_action_bodies: ClassVar[bool] = True
 
 
@@ -342,6 +433,10 @@ class JsonRpcAuth(AuthStrategyBase):
     display_name: ClassVar[str] = "JSON-RPC"
     transport: ClassVar[str] = "json_rpc"
     stateless: ClassVar[bool] = False
+
+    def landing_signals(self) -> LandingSignals:
+        """The paths and cookies this strategy's config declares."""
+        return build_landing_signals((self.endpoint,))
 
 
 AuthConfig = Annotated[

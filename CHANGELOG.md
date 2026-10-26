@@ -7,6 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.5] - 2026-10-25
+
+### Added
+
+- **The catalog audit shows whether each entry's capture holds its restart.**
+  A new Restart column reads `captured`, `not captured` or `n/a` (no restart
+  declared). A restart the capture lacks replays against a synthesized
+  answer, so its test proves only that Core sends the declared request. Read
+  the column with Capture: a restart inside a synthetic fixture was written
+  to match Core, not observed.
+- **Intake offers the login success indicator as a candidate.** A form login
+  that answers 200 with no redirect, in a capture that also holds a rejected
+  attempt, lists the tokens only the accepted response has as
+  `auth.success.indicator` candidates for the LLM to resolve.
+- **Intake refuses auth URLs the capture never requests.** A login, CSRF init
+  or post-login URL written into a new `modem.yaml` must match a request in
+  that modem's own HAR, or the package is not written. A restart or logout
+  URL the capture lacks is a warning, since nobody presses Restart during a
+  capture. `make intake-regression` reports the same gap in committed entries
+  under `AUTH FIXTURE ISSUES`; none are edited or failed.
+- **Seven modems report fields their status pages already showed.** Upstream
+  channels gain symbol rate on the SB6141, SB6190 and MB7621, and ranging
+  status on the SB6141. The SB6190's downstream channels gain modulation, and
+  the SB6183 gains hardware version. Channel width is read on the Hitron
+  CODA56 and the Technicolor CGA4236 and CGA6444VF.
+- **The SB8200 family reports its model name.** Read from a page the
+  integration already polls, so there is no extra request.
+- **An HTTP action can carry URL query parameters.** A new `query` map in
+  `modem.yaml` sits beside `params`, which stays a form body on every method.
+  A restart that a browser sends as `GET /reset.htm?reset_modem=...` can now
+  be declared field by field. No catalog modem uses it yet.
+- **The ARRIS SBG7400AC2 joins the catalog, awaiting verification.** Status
+  and channel data come from the cable modem pages on port 80. Restart sends
+  the standard DOCSIS reset through the router GUI on port 8080, behind its
+  own login: the modem is unreachable for about three minutes and its uptime
+  restarts. Both logins must use the same password, or Restart fails with
+  "Per-action auth failed" and sends nothing.
+- **A busy login is retried, not counted as a wrong password.** A `form`
+  login can declare a `busy_indicator`, a string in the response page that
+  means another session holds the modem's web interface. Core reports the
+  attempt busy, so polling retries instead of opening the auth circuit
+  breaker. A `url_token` login with `inject_credential_cookie` can declare a
+  `busy_key` for a token that comes with a busy flag; Restart then fails with
+  "Login busy" and sends nothing. The SBG7400AC2 declares both.
+- **Form login can post both credentials packed into one field.** A new
+  `encoding: packed_base64` with `credential_field` covers firmware whose
+  login script builds `base64(user:password)` into a single hidden field and
+  rejects separate username and password fields. Intake now recognises that
+  login instead of reporting auth none.
+- **An HTTP action can run on a second port.** A new `port`, and an optional
+  `scheme`, on an action move its request, and its `action_auth` login, to
+  that port of the same host. The SBG7400AC2 restart uses both: its router
+  GUI speaks plain HTTP on 8080 even when setup chose HTTPS for the modem.
+- **Setup can identify the modem for you.** A new first step sends one GET to
+  `/` at each catalog address, HTTPS first, with no login, and narrows the
+  catalog by the landing page's paths, cookies and `Server` header. You
+  confirm the match, pick from other likely models, or choose manually. It
+  never logs in and never retries. 14 catalog entries gain
+  `detection.http_headers` for this.
+
+### Fixed
+
+- **Starting setup is about ten times faster.** Listing the catalog read each
+  modem file up to three times, about 5.1 s on the 42-entry catalog, and every
+  config flow start and migration paid it. Each file is now read once, about
+  0.5 s.
+- **One odd device no longer fails detection.** An unexpected error from one
+  probed address, such as an unrelated device on the LAN, discarded the real
+  modem's answer. The error is now recorded for that address only.
+- **Intake finds the accepted login whatever the order of the attempts.** It
+  kept the latest login POST, so a capture that ends with the wrong password,
+  as the capture guide asks, lost `success.redirect`. The accepted attempt is
+  now chosen by its response: a redirect to another path, then a cookie, then
+  the latest.
+- **Intake no longer reads a second web server into the session.** A modem
+  whose router GUI runs on another port put that GUI's `X-Requested-With`
+  header, `_n` query parameter and `ver_` cache-buster into the generated
+  `session` block. Session and request-requirement detection now read only
+  the capture's first origin.
+- **Intake counts an empty `<tr>` toward `row_start`.** Core's parser counts a
+  `<tr>` with no cells, so a table with one between the labels and the data
+  needs `row_start: 2` where intake proposed 1.
+- **A failed `url_token` login no longer prints the password.** The login URL
+  carries the credential as base64, and the connection error text repeated
+  that URL, so a Restart pressed while the modem was down put it in the log
+  and in the diagnostics download. The credential is now replaced by `***` in
+  every failure text of that login, for every modem that logs in this way.
+- **The test harness replays the accepted login when a capture ends with the
+  wrong password.** The capture steps now put one wrong-password login last,
+  so a lockout cannot cost the rest of the capture. The mock server used to
+  replay the last login POST, which would have been the refusal. It now keeps
+  the exchange whose body contains the declared `success.indicator`.
+- **Intake accepts a login form whose action is relative.** A page that posts
+  to `basic_pwd_cgi` is now matched to `auth.action: /cgi-bin/basic_pwd_cgi`
+  instead of being refused as not the login form.
+- **Intake reads symbol rates printed in Msym/sec.** A cell such as
+  `5.120 Msym/sec` was read as ksym/s with no unit to strip, so the generated
+  config dropped the value. It is now scaled from Msym/s to Sym/s and kept
+  fractional, so the SB6141 capture reproduces its committed entry.
+- **Intake reads labels stacked in a shared info cell.** A line such as
+  `Hardware Version: 7.0<BR>` was detected but written as a selector no page
+  matches, so the generated config read nothing. It is now a `td` pattern, as
+  the committed entries write it. Labels with an underscore or a digit
+  (`HW_REV`, `SW_REV`) were also cut short and the second was dropped; both
+  now keep their full names.
+
 ## [3.14.15-beta.4] - 2026-10-15
 
 ### Added

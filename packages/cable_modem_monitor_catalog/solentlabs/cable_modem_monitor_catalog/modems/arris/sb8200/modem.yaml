@@ -15,6 +15,11 @@ hardware:
   chipset: "Broadcom BCM3390"
   release_date: "2017"
 
+detection:
+  http_headers:
+    - "micro_httpd"
+    - "ARRIS Server"
+
 status: awaiting_verification
 
 sources:
@@ -22,6 +27,8 @@ sources:
   brands: "[SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/) — SURFboard styling"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
   hardware: "[ARRIS SB8200 page](https://www.arris.com/surfboard/products/cable-modems/sb8200/)"
+  release_date: "[ARRIS press release, 2015-10-12](https://www.vistancenetworks.com/press-releases/2015/arris-unveils-next-generation-docsis-3.1-modems) announces the SB8200 for retail, 'available in 2016'. [404 Tech Support](https://www.404techsupport.com/2017/03/01/arris-surfboard-sb8200/amp/), dated 2017-03-01 by its URL (the page shows no date), reports it 'available for retail sale from their website and Amazon.com'. The announcement year differs; 2017 is the first retail evidence found."
+  isps: "[#126 verification report](https://github.com/solentlabs/cable_modem_monitor/issues/126), 2026-03-09: the owner lists 'Service Electric Cablevision' as the ISP and reports the SB8200 parsing 25 downstream and 5 upstream channels on it."
 
 attribution:
   contributors:

@@ -6,12 +6,20 @@ These tests run against the real catalog to verify extraction correctness.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
-from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import AuthAuditIssue, audit_fleet_auth, scan_fleet
+from solentlabs.cable_modem_monitor_catalog_tools.fleet_scanner import (
+    AuthAuditIssue,
+    audit_fleet_auth,
+    audit_fleet_endpoints,
+    scan_fleet,
+)
+from solentlabs.cable_modem_monitor_core.har import LfsPointerError
 
 
 @pytest.fixture(scope="module")
@@ -510,3 +518,53 @@ class TestXmlVocabulary:
         assert fleet.channel_keys == {"pow": {"power": ["vendor/m1"]}}
         assert fleet.system_info_json_keys["swversion"] == ("software_version", 1)
         assert fleet.system_info_json_key_types["swversion"] == {"string": ["vendor/m1"]}
+
+
+class TestAuditFleetEndpoints:
+    """audit_fleet_endpoints reports auth URLs the entry's own capture lacks."""
+
+    def _entry(self, tmp_path: Path, yaml_text: str, paths: list[str]) -> None:
+        import json
+
+        modem_dir = tmp_path / "modems" / "acme" / "m1"
+        (modem_dir / "test_data").mkdir(parents=True)
+        (modem_dir / "modem.yaml").write_text(yaml_text, encoding="utf-8")
+        entries = [{"request": {"method": "GET", "url": f"http://192.168.0.1{p}"}} for p in paths]
+        (modem_dir / "test_data" / "modem.har").write_text(json.dumps({"log": {"entries": entries}}), encoding="utf-8")
+
+    def test_ungrounded_auth_url_reported(self, tmp_path: Path) -> None:
+        """A declared csrf_init_endpoint absent from the HAR is one issue."""
+        self._entry(tmp_path, "auth:\n  strategy: form\n  csrf_init_endpoint: /api/language\n", ["/status.htm"])
+
+        issues = audit_fleet_endpoints(tmp_path)
+
+        assert [(i.modem, i.har) for i in issues] == [("modems/acme/m1", "modem.har")]
+        assert "auth.csrf_init_endpoint" in issues[0].issue
+
+    def test_ungrounded_action_url_not_reported(self, tmp_path: Path) -> None:
+        """Action endpoints are expected to be absent from a capture: no report line."""
+        self._entry(tmp_path, "auth:\n  strategy: none\nactions:\n  restart:\n    endpoint: /reboot\n", ["/status.htm"])
+
+        assert audit_fleet_endpoints(tmp_path) == []
+
+
+class TestAuditFleetLfsPointers:
+    """An unresolved Git LFS fixture stops the audits instead of reading as an empty capture."""
+
+    @pytest.mark.parametrize("audit", [audit_fleet_auth, audit_fleet_endpoints], ids=["auth", "endpoints"])
+    def test_unresolved_pointer_stops_the_audit(self, tmp_path: Path, audit: Callable[[Path], object]) -> None:
+        modem_dir = tmp_path / "vendor" / "m1"
+        (modem_dir / "test_data").mkdir(parents=True)
+        (modem_dir / "modem.yaml").write_text(
+            "auth:\n  strategy: form\n  action: /goform/Login\n  login_page: /Login.asp\n", encoding="utf-8"
+        )
+        (modem_dir / "test_data" / "modem.har").write_text(
+            "version https://git-lfs.github.com/spec/v1\noid sha256:4d7a\nsize 12345\n", encoding="utf-8"
+        )
+
+        # Mock subprocess so the test never runs `git lfs pull` against the surrounding repository.
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError),
+            pytest.raises(LfsPointerError, match="LFS pointer"),
+        ):
+            audit(tmp_path)

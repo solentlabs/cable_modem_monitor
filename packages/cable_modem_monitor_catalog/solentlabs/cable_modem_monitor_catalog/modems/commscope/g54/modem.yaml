@@ -27,6 +27,8 @@ sources:
   brands: 'Firmware `customer` field in test_data/modem.har ("ARRIS Group, Inc.") — box branding'
   detection_hints: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
   hardware: "[#72 Arris G54](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
+  release_date: "[CommScope press release, 2023-10-12](https://www.nasdaq.com/press-release/commscope-launches-arris-surfboard-g54-docsis-3.1-quad-band-wi-fi-7-cable-modem-into) (read 2026-10-20): the ARRIS SURFboard G54 'will be available to consumers starting on October 15' (2023)."
+  isps: "[SURFboard G54 product page](https://www.surfboard.com/products/cable-modems/g54/) (read 2026-10-20): 'Compatible with Cox, Spectrum, Xfinity and other major U.S. cable internet providers'; footer 'Cox, Comcast Xfinity, and Charter Spectrum'. Cox's [certified list](https://www.cox.com/residential/support/certified-cable-modems.html) and Spectrum's [authorized list](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) name the G54 (both read 2026-10-20)."
 
 attribution:
   contributors:

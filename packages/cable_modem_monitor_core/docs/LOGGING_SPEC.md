@@ -338,6 +338,43 @@ and the unknown-format fallback warning in `_decode_response` (the loader
 returns BeautifulSoup rather than failing, so no `ResourceDecodeError` is
 appropriate).
 
+### Phase: detection
+
+Auto-detect ([DETECTION_SPEC.md](DETECTION_SPEC.md)) runs before a modem
+is chosen, so these events carry `host` (the catalog address probed)
+instead of `model`.
+
+| Event | Level | When |
+|---|---|---|
+| `DetectionProbeResult` | internally-determined¹ | A probed host answered, or did not |
+| `DetectionMatched` | INFO | An answering host's reply was matched against the catalog |
+| `DetectionChosen` | INFO | The user's final choice at the end of the Auto-detect flow |
+
+¹ INFO when the host answered, DEBUG when it did not: most catalog
+addresses are silent on any given network.
+
+Fields — `DetectionProbeResult`: `host`, `observation: Observation | None`
+(None when the host did not answer), `reason: str | None` — the exception
+class name when there was no answer, else None. The line quotes `Server`,
+the page `<title>` (cut at 100 characters), `WWW-Authenticate` and whether
+a password field is present.
+Fields — `DetectionMatched`: `host`, `models: list[str]` (manufacturer and
+model of each entry named), `buckets: list[str]`, `matched: list[str]`
+(`PageMatch.matched`, the page's own spelling), `signals: list[str]`
+(the signals found for tier-1 entries) and `candidates: int`. Emitted for every answering
+host, including one that names nothing, so the log shows what the device
+showed when the user lands on the no-match page.
+Fields — `DetectionChosen`: `outcome: str` (`confirmed`, `picked`,
+`filtered`, `rejected` or `no_match`), `host: str | None` (the address
+carried to Step 3), `selected: str | None` (manufacturer and model the
+user ended on; None before one is chosen). Emitted by the HA config flow,
+not by Core's `detect()`; it is defined here so the three lines of one run
+read as a set.
+
+`detect()` logs from the calling thread after the sweep finishes, in sweep
+order, so a probe line never interleaves with another and a test's
+`capture_events()` sees all of them.
+
 ## Intentional exceptions — direct `_logger` calls
 
 The following calls bypass `log_event()` by design. Each has a documented

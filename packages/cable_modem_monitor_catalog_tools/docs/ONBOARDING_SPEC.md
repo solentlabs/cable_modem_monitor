@@ -381,7 +381,11 @@ Logins arrive by POST, PUT or PATCH; "POST" below means any of them.
 recency alone.** A form POST to an auth-pattern URL counts as a login
 only when its body carries a password-shaped field name — names, not
 values, because the sanitizer redacts values. Among credential POSTs
-the latest wins, so a retried login yields the successful attempt. An
+the accepted attempt is selected by its response, never by position, so
+the wrong password may come first or last: a response that redirects to
+another path ranks above one that sets a cookie, which ranks above one
+that does neither, and among equals the latest wins. When equal-ranked
+attempts redirect to different paths, a warning names them. An
 action POST sharing the login endpoint (Sercomm DM1000: `/setup.cgi`
 serves both login and reboot) is never picked, and a HAR with no
 credential POST reports no auth flow.
@@ -396,6 +400,25 @@ Password-shaped means either of:
   the detector its field
   name with no separate pattern-maintenance step. Exact names never
   generalize; only curated substrings do.
+
+**Packed credentials.** Some login pages pack both credentials into
+one hidden field by script, so no posted name is password-shaped. Such
+a POST is still the login when the page served at the POST's own URL
+holds a packed login form by Core's definition
+(`auth.packed_credentials.packed_credential_fields`, the rule
+`form_nonce` applies at setup): no input named `username`, and exactly
+one empty hidden field that is not the nonce. The POST must carry that
+field. The nonce is the posted field whose captured value is all
+digits. The page at the POST's URL decides, not a form action: the
+SB6190 form posts by script (`action="##"`), and the SBG7400AC2 serves
+a second packed form on its change-password page. More than one
+candidate field is not guessed at; the POST stays unrecognized and the
+hard stop below names it.
+
+**An unrecognized login is never `none`.** A form POST to a login URL
+that sets a cookie but carries no recognizable credential field is an
+auth signal: detection ends in the hard stop with an `auth_unknown`
+gap, never in `strategy: none`.
 
 The catalog-derived names come from the fleet an analysis runs with.
 `analyze_har(fleet=...)` and `validate_har(fleet=...)` use the scanned
@@ -472,7 +495,8 @@ Check HAR entries for login flow:
   ├── No login flow, all 200s, no session artifacts
   │   └── strategy: none
   │
-  ├── POST to /goform/*, /cgi-bin/*, or similar with credential-shaped form fields
+  ├── POST to /goform/*, /cgi-bin/*, or similar with credential-shaped
+  │   form fields or a packed credential field
   │   ├── Response is text with "Url:" / "Error:" prefixes?
   │   │   └── strategy: form_nonce
   │   │       Extract: action, username_field, password_field,
@@ -483,7 +507,12 @@ Check HAR entries for login flow:
   │   │   └── strategy: form
   │   │       Extract: action, username_field, password_field,
   │   │                encoding (check for base64), hidden_fields,
-  │   │                success.redirect or success.indicator
+  │   │                success.redirect, or the success.indicator
+  │   │                ambiguity (see Ambiguities)
+  │   │       Packed credentials: encoding packed_base64 and
+  │   │                credential_field instead of the username and
+  │   │                password fields; the nonce is left to
+  │   │                login_page discovery, never a hidden_fields value
   │   │
   │   └── Ambiguous response format → flag for human review
   │
@@ -630,6 +659,12 @@ Examine post-login requests for session artifacts:
 | Token in URL query string on data requests | `auth.token_prefix: "<prefix>"` (url_token strategy only) |
 | CSRF token header on POST requests | Belongs to auth strategy config, not session |
 
+**One origin.** Only entries on the capture's first origin (host and
+port of the first entry) are examined. A second web server on the same
+host, such as a router GUI on another port, carries its own cookies,
+headers and cache-busting parameters; none of them describe the data
+pages' session (SBG7400AC2).
+
 **Single-session detection:** Cannot be determined from HAR alone. If
 the modem rejects concurrent sessions, the HAR won't show it (only one
 session was active). If a logout flow is visible in the HAR, emit
@@ -722,7 +757,9 @@ response bodies instead. Three passes, in order:
 3. **Bare quoted strings** — the legacy scan; yields endpoint only, with
    the method guessed from the action name (GET for logout, POST for
    restart). Only strings that read as request paths qualify: a bare
-   word (`"Reboot"`) is a UI label, and `..` segments or static assets
+   word (`"Reboot"`) is a UI label, a string without `/` qualifies only
+   as a file name ending in an extension (`"reboot.cgi"`, never
+   `"Rebooting..."`), and `..` segments or static assets
    (`"../i/Logout_Normal.png"`) are page furniture — matching them
    would fabricate endpoints the firmware never exposes. The same
    action-name prior applies in pass 1 when a call site has no
@@ -1214,7 +1251,10 @@ labels) are counted as non-data rows.
 ([FORMAT_TABLE_SPEC.md](../../cable_modem_monitor_core/docs/FORMAT_TABLE_SPEC.md)).
 Where firmware writes the label cells with no opening `<tr>`, analysis
 repairs the row to read the labels, but Core's parser drops those cells,
-so the repaired label row is not counted.
+so the repaired label row is not counted. A `<tr>` with no text to read
+(an empty `<tr>` between the labels and the data) is a row to Core's
+parser, so one ahead of the first data row is counted (SBG7400AC2
+upstream: `row_start: 2`).
 
 #### Table selector detection
 
@@ -1369,7 +1409,9 @@ iterations (issue #86) because the pipeline only analyzed responses.
 
 1. Identify data-fetch entries using `identify_data_pages()` (same
    filter as Phase 5: status 200, non-static, has content, data
-   Content-Type).
+   Content-Type) among the entries on the capture's first origin
+   (Phase 3, "One origin"): a second web server's parameters do not
+   describe the data pages.
 2. Require at least 2 data-fetch entries — with a single entry,
    session-level cannot be distinguished from endpoint-specific.
 3. Extract query parameters from each entry's request URL.
@@ -1518,7 +1560,8 @@ can never call an endpoint unread that the config in fact reads.
 
 Hardware metadata, branding, and ISP information are not present in the
 HAR. The `enrich_metadata` MCP tool handles the inferrable subset:
-`default_host` from HAR request URLs, `hardware.docsis_version` from
+`default_host` from HAR request URLs (the host most requests went to, as
+`analyze_har` reports it), `hardware.docsis_version` from
 OFDM/OFDMA channel presence. It reports what was inferred, what's still
 missing, and any conflicts with existing config. The LLM fills remaining
 gaps by searching the web using the manufacturer and model as search terms.
@@ -1533,7 +1576,7 @@ gaps by searching the web using the manufacturer and model as search terms.
 | `brands` | User-visible brand names from the box or retail listings (e.g., SB8200 → "Surfboard", the CommScope-made G54 → "Arris"). Also check firmware brand fields in the HAR (e.g., `customer`). Brands become manufacturer-dropdown choices and appear in the model line's parenthetical, so entries must be names users actually see, and must be sourced. | Omit if no branding found |
 | `model_aliases` | Alternate user-facing model names only — rebadges, regional variants, and sticker codes users encounter. Shown in the model line's parenthetical. Firmware-internal `product`/platform codes do NOT belong here — they stay in the HAR as evidence. If the name is a different product users would purchase and search for, create a separate catalog entry instead. See `MODEM_YAML_SPEC.md` § Aliases vs Separate Entries. | Omit if no aliases found |
 | `isps` | Search "{model} ISP" or "{model} compatible". Also check the GitHub issue — contributors often mention their ISP. | `["Various"]` if unknown |
-| `default_host` | Most cable modems use `192.168.100.1`. Some (Compal, some gateways) use `10.0.0.1` or `192.168.0.1`. Check modem documentation if contributor didn't provide it. | `"192.168.100.1"` |
+| `default_host` | Taken from the HAR: the host most requests went to. Confirm it is the modem's own address, since a capture made through a forward or proxy names another. Some modems (Compal, some gateways) use `10.0.0.1` or `192.168.0.1`; check modem documentation if the HAR is unclear. | `"192.168.100.1"`, only when the HAR names no host |
 
 #### Evidence sources (ranked by reliability)
 
@@ -1756,6 +1799,20 @@ operations, so the body, not the path, names the action. Entries awaiting verifi
 unconfirmed intake teaches nothing: patterns come from confirmed
 modems only ([MODEM_INTAKE_WORKFLOW.md § Step 4](MODEM_INTAKE_WORKFLOW.md#step-4-analyze-har)).
 
+**Login success indicator.** A form login whose accepted response is
+not a redirect, in a capture that also holds a rejected attempt with a
+different response, is a non-blocking ambiguity at
+`auth.success.indicator`. Candidates are the accepted response's tokens
+(quoted attributes such as `http-equiv="refresh"`, and
+whitespace-delimited words) that the rejected response does not
+contain, in order of appearance, at most six. Each cites the accepted
+response around the token and the start of the rejected response. The
+resolution is a string present in the accepted response and absent from
+the rejected one; an explicit none leaves `success` empty. A capture
+with one attempt, or with a redirect, offers nothing: there is no
+rejected response to separate it from, or `success.redirect` already
+names it.
+
 **Channel key meanings.** A JSON channel key the baseline registry does
 not map, and that committed `parser.yaml` files map to different
 fields, is a non-blocking ambiguity at `parser.<section>.<key>` (for
@@ -1815,6 +1872,7 @@ detection, format detection, and field mapping extraction.
 {
   "transport": "http",
   "confidence": "high",
+  "default_host": "192.168.100.1",
   "auth": {
     "strategy": "form",
     "fields": { "action": "/goform/login", "...": "..." }
@@ -2044,7 +2102,8 @@ golden file dict, HAR file path, optional parser.py string
   "modem_dir": "modems/motorola/mb7621",
   "files_written": ["modem.yaml", "parser.yaml", "test_data/modem.har", "test_data/modem.expected.json"],
   "files_skipped": [],
-  "errors": []
+  "errors": [],
+  "warnings": []
 }
 ```
 
@@ -2063,6 +2122,22 @@ This prevents a class of silent failures where the mock server test passes
 because `_discover_hidden_fields()` returned empty. The check only applies
 to `strategy: form` with a non-empty `login_page` — all other strategies
 are unaffected.
+
+**Validation gate — declared URLs appear in the capture:** Every URL the
+modem.yaml declares must match a request in its own HAR (path segments
+compare exactly, queries are ignored, `{...}` segments are wild). An
+absent `auth.action`, `auth.endpoint`, `auth.login_endpoint`,
+`auth.csrf_init_endpoint`, `auth.session_validation_endpoint` or
+`session.post_login_endpoints` entry is an error and nothing is written:
+the capture had to exercise it, and a hand-written value it never shows
+has nothing to contradict it. An absent `actions.restart` or
+`actions.logout` URL (`endpoint`, `pre_fetch_url`,
+`action_auth.login_endpoint`) is a `warnings` entry, since nobody presses
+Restart during a capture. `auth.login_page` has its own gate above.
+`audit_fleet_endpoints` runs the same check over committed entries and
+reports the error cases; `make intake-regression` prints them under
+`AUTH FIXTURE ISSUES`. Committed entries are never failed or edited to
+satisfy it.
 
 **Creates standard catalog structure:**
 

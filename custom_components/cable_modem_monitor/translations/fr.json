@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Moniteur de Modem Câble",
-        "description": "Sélectionnez un fabricant ou choisissez 'Tous'.",
+        "description": "Sélectionnez un fabricant, choisissez 'Tous' ou choisissez 'Auto-detect' pour rechercher votre modem sur le réseau.",
         "data": {
           "manufacturer": "Fabricant"
         }
@@ -56,6 +56,38 @@
           "username": "Nom d'utilisateur",
           "password": "Mot de passe"
         }
+      },
+      "detect_confirm": {
+        "title": "Modem trouvé",
+        "description": "Auto-detect a trouvé **{model}** à l'adresse {host}.\n\nAuto-detect ne fait que réduire le choix. Confirmez qu'il s'agit bien de votre modem.",
+        "data": {
+          "choice": "Est-ce votre modem ?",
+          "entity_prefix": "Préfixe d'Entity ID",
+          "channel_identity": "Nommage des canaux"
+        },
+        "data_description": {
+          "choice": "Choisissez la première option pour continuer. La deuxième affiche les autres correspondances probables de la recherche, et la troisième ouvre la liste complète des fabricants.",
+          "entity_prefix": "Ajoute le nom du modèle ou l'IP aux Entity ID. Requis pour surveiller plusieurs modems.",
+          "channel_identity": "Numéro de canal nomme les entités d'après la position de ligne du modem (stable après un redémarrage). ID de canal utilise l'ID de canal DOCSIS (correspond aux diagnostics du FAI, mais peut changer au redémarrage)."
+        }
+      },
+      "detect_pick": {
+        "title": "Modems trouvés",
+        "description": "La page qui a répondu mentionne plusieurs modèles. Choisissez le vôtre. Les modèles marqués d'un * ne sont pas vérifiés.",
+        "data": {
+          "model": "Modèle de Modem",
+          "entity_prefix": "Préfixe d'Entity ID",
+          "channel_identity": "Nommage des canaux"
+        },
+        "data_description": {
+          "model": "Sélectionnez votre modèle de modem dans la liste.",
+          "entity_prefix": "Ajoute le nom du modèle ou l'IP aux Entity ID. Requis pour surveiller plusieurs modems.",
+          "channel_identity": "Numéro de canal nomme les entités d'après la position de ligne du modem (stable après un redémarrage). ID de canal utilise l'ID de canal DOCSIS (correspond aux diagnostics du FAI, mais peut changer au redémarrage)."
+        }
+      },
+      "no_match": {
+        "title": "Modem non identifié",
+        "description": "Auto-detect n'a pas identifié votre modem. Cela peut signifier qu'il n'est pas encore pris en charge.\n\nCe qui a répondu :\n\n{observed}\n\nChoisissez ensuite votre modem vous-même. Consultez la [liste des modems pris en charge]({catalog_url}) ou [demandez la prise en charge de votre modem]({request_url})."
       }
     },
     "error": {

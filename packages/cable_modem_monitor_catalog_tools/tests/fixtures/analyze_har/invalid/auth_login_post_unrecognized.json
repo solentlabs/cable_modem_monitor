@@ -1,0 +1,78 @@
+{
+  "_description": "Login POST sets a cookie but carries no recognizable credential field, and the login page was not captured: a hard stop, never auth none",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/cgi-bin/basic_pwd_cgi",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {
+                  "name": "arguments",
+                  "value": "AUTH_3392e65f"
+                },
+                {
+                  "name": "ar_nonce",
+                  "value": "99651508"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              },
+              {
+                "name": "Set-Cookie",
+                "value": "credential=COOKIE_1;"
+              }
+            ],
+            "cookies": [],
+            "content": {
+              "size": 72,
+              "mimeType": "text/html",
+              "text": "<html><head><meta http-equiv=\"refresh\" content=\"0;url=status_cgi\"</head>"
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/cgi-bin/status_cgi",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ],
+            "cookies": [],
+            "content": {
+              "size": 26,
+              "mimeType": "text/html",
+              "text": "<html>RF Parameters</html>"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "_expected_hard_stop": "Cannot determine auth mechanism"
+}

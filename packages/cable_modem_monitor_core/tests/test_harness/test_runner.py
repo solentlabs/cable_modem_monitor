@@ -15,6 +15,7 @@ import json
 import textwrap
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from solentlabs.cable_modem_monitor_core.test_harness.discovery import (
@@ -561,6 +562,27 @@ class TestRestartAction:
         assert result.passed is True
         assert result.error == ""
         assert result.test_name == case.name
+
+    def test_port_override_is_not_replayed(self, tmp_path: Path) -> None:
+        """The mock serves every captured origin from one port, so the action runs without `port` and `scheme`."""
+        yaml_with_port = _MODEM_WITH_RESTART_YAML.replace(
+            "    endpoint: /restart", "    port: 8080\n    scheme: http\n    endpoint: /restart"
+        )
+        assert "scheme: http" in yaml_with_port
+        case = _build_restart_case(tmp_path, modem_yaml=yaml_with_port)
+        sent: list[Any] = []
+
+        def record(collector: Any, modem_config: Any, action: Any, **kwargs: Any) -> Any:
+            from solentlabs.cable_modem_monitor_core.orchestration.actions import ActionResult
+
+            sent.append(action)
+            return ActionResult(success=True)
+
+        with patch("solentlabs.cable_modem_monitor_core.orchestration.actions.execute_action", record):
+            result = run_modem_restart_test(case)
+
+        assert result.passed is True
+        assert [(action.port, action.scheme) for action in sent] == [(None, None)]
 
     def test_auth_failure(self, tmp_path: Path) -> None:
         """Form auth failure before action dispatch returns structured error."""

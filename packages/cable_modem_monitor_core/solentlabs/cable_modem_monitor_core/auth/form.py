@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup, Tag
 from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormAuth
 from .base import AuthFailureMode, AuthResult, BaseAuthManager, LoginPageDrift
+from .js_uri import encode_uri_component
 
 _logger = logging.getLogger(__name__)
 
@@ -23,7 +24,8 @@ class FormAuthManager(BaseAuthManager):
     """HTML form POST login.
 
     POSTs credentials to a configured endpoint and evaluates the
-    response for success. Supports password encoding (plain or base64),
+    response for success. Supports password encoding (plain or base64)
+    or both credentials packed into one field (packed_base64),
     hidden form fields, login page pre-fetch, a POST URL read off the
     pre-fetched form (``action_source: login_page``), and success
     detection via redirect URL or response body indicator.
@@ -133,14 +135,7 @@ class FormAuthManager(BaseAuthManager):
                     )
 
         # Step 2: Build form data
-        # Merge order: discovered fields <- hidden_fields <- credentials
-        encoded_password = _encode_password(password, config.encoding)
-        form_data: dict[str, str] = {}
-        form_data.update(discovered_fields)
-        form_data.update(config.hidden_fields)
-        form_data[config.username_field] = username
-        for field_name in config.password_field:
-            form_data[field_name] = encoded_password
+        form_data = _build_form_data(config, discovered_fields, username, password)
 
         # Step 3: POST to login endpoint with Referer header.
         # Some modem firmware rejects login POSTs without a matching
@@ -164,7 +159,18 @@ class FormAuthManager(BaseAuthManager):
                 login_page_drift=drift,
             )
 
-        # Step 4: Evaluate success
+        # Step 4: Evaluate the response. A busy page is not a verdict on the
+        # credential: report it before success is judged, so it is retried
+        # and never counted as a wrong password.
+        if config.busy_indicator and config.busy_indicator in response.text:
+            return AuthResult(
+                success=False,
+                busy=True,
+                error=f"Login busy: another session holds the modem's web interface ({config.busy_indicator})",
+                response=response,
+                login_page_drift=drift,
+            )
+
         error = _check_success(config, response)
         if error:
             return AuthResult(success=False, error=error, response=response, login_page_drift=drift)
@@ -179,11 +185,38 @@ class FormAuthManager(BaseAuthManager):
         )
 
 
+def _build_form_data(
+    config: FormAuth,
+    discovered_fields: dict[str, str],
+    username: str,
+    password: str,
+) -> dict[str, str]:
+    """The login POST body."""
+    # Merge order: discovered fields <- hidden_fields <- credentials
+    form_data: dict[str, str] = {}
+    form_data.update(discovered_fields)
+    form_data.update(config.hidden_fields)
+    if config.encoding == "packed_base64":
+        form_data[config.credential_field] = _pack_credentials(username, password)
+        return form_data
+    encoded_password = _encode_password(password, config.encoding)
+    form_data[config.username_field] = username
+    for field_name in config.password_field:
+        form_data[field_name] = encoded_password
+    return form_data
+
+
 def _encode_password(password: str, encoding: str) -> str:
     """Encode the password per the configured encoding."""
     if encoding == "base64":
         return base64.b64encode(password.encode("utf-8")).decode("ascii")
     return password
+
+
+def _pack_credentials(username: str, password: str) -> str:
+    """``base64(encodeURIComponent(username) + ":" + encodeURIComponent(password))``."""
+    packed = f"{encode_uri_component(username)}:{encode_uri_component(password)}"
+    return base64.b64encode(packed.encode("utf-8")).decode("ascii")
 
 
 def _check_success(config: FormAuth, response: requests.Response) -> str:

@@ -32,6 +32,9 @@ _ACTION_PARAM_INDICATORS = frozenset({"reboot", "restart", "reset", "logout", "l
 # Intentionally broad — patterns filter for meaningful matches.
 _SOURCE_CANDIDATE_PATTERN = re.compile(r'["\']([^\'"<>\s]{3,200})["\']')
 
+# A file name ends in an extension: reboot.cgi, Logout.htm
+_FILE_NAME = re.compile(r"^.*\w\.[A-Za-z0-9]+$")
+
 # Attribute values may be quoted or bare (mb7621: action=/goform/MotoSecurity)
 _FORM_ACTION_PATTERN = re.compile(
     r"<form[^>]*\saction=(?:[\"']([^\"']+)[\"']|([^\s>\"']+))[^>]*>",
@@ -327,7 +330,9 @@ def _looks_like_endpoint(raw: str) -> bool:
     if is_static_resource(raw):
         return False
     last_segment = raw.rstrip("/").rsplit("/", 1)[-1].split("?", 1)[0]
-    return "/" in raw or "." in last_segment
+    # A slashless string counts only as a file name: "Rebooting..." is a
+    # status message whose trailing dots are no extension.
+    return "/" in raw or _FILE_NAME.match(last_segment) is not None
 
 
 def _find_action_in_quoted_strings(

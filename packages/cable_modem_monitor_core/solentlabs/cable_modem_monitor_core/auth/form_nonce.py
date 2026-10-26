@@ -9,22 +9,19 @@ import base64
 import logging
 import secrets
 import string
-import urllib.parse
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 
 import requests
-from bs4 import BeautifulSoup, Tag
 
 from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormNonceAuth
 from .base import AuthResult, BaseAuthManager
+from .js_uri import encode_uri_component
+from .packed_credentials import packed_credential_fields
 
 _logger = logging.getLogger(__name__)
-
-# Characters that JavaScript's encodeURIComponent does NOT encode.
-_JS_URI_SAFE = "-_.!~*'()"
 
 
 _CredentialEncoding = Literal["plain", "b64_packed"]
@@ -211,50 +208,20 @@ def _analyze_login_form(
         return _plain
 
     try:
-        soup = BeautifulSoup(html, "html.parser")
+        candidates = packed_credential_fields(html, username_field, nonce_field)
     except Exception:
         _logger.debug("Failed to parse login page HTML", exc_info=True)
         return _plain
 
-    # Find the login form (first <form> on the page).
-    form_tag = soup.find("form")
-    if not isinstance(form_tag, Tag):
-        _logger.debug("No <form> found in login page, using plain encoding")
-        return _plain
-
-    # Check: does the form have a named credential input?
-    has_named_credential = form_tag.find("input", attrs={"name": username_field}) is not None
-    if has_named_credential:
-        _logger.log(
-            log_level,
-            "Login form has name=%r input — using plain credential encoding",
-            username_field,
-        )
-        return _plain
-
-    # No named credential input — look for a packed credential hidden
-    # field: a hidden input with an empty value that isn't the nonce.
-    credential_field = ""
-    for inp in form_tag.find_all("input", attrs={"type": "hidden"}):
-        name = inp.get("name")
-        if not isinstance(name, str) or not name:
-            continue
-        if name == nonce_field:
-            continue
-        value = inp.get("value", "")
-        if not value:
-            credential_field = name
-            break
-
-    if credential_field:
+    if candidates:
         _logger.log(
             log_level,
             "Login form has packed credential field %r — using b64 encoding",
-            credential_field,
+            candidates[0],
         )
-        return _FormDetection(encoding="b64_packed", credential_field=credential_field)
+        return _FormDetection(encoding="b64_packed", credential_field=candidates[0])
 
-    _logger.debug("No packed credential field found in login form, using plain encoding")
+    _logger.log(log_level, "No packed credential field in login form — using plain credential encoding")
     return _plain
 
 
@@ -284,8 +251,8 @@ def _pack_b64_credentials(
     Returns:
         Base64-encoded string for the packed form field.
     """
-    part1 = urllib.parse.quote(f"{username_field}={username}", safe=_JS_URI_SAFE)
-    part2 = urllib.parse.quote(f"{password_field}={password}", safe=_JS_URI_SAFE)
+    part1 = encode_uri_component(f"{username_field}={username}")
+    part2 = encode_uri_component(f"{password_field}={password}")
     return base64.b64encode(f"{part1}:{part2}".encode()).decode("ascii")
 
 

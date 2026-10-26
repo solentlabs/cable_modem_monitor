@@ -32,33 +32,34 @@ when a session has expired.*
 
 ### Logging in
 
-**Step 2. Log in with a wrong password.**
-*On some modems a rejected login looks just like a success, and this
-can't be recorded later. The wrong guess is redacted.*
-
-**Step 3. Log in with the real password, and wait for the next page
+**Step 2. Log in with the real password, and wait for the next page
 to finish loading.**
 *That page is how the integration confirms a login worked.*
 
 ### Collecting data
 
-**Step 4. Visit every status page, waiting 3–5 seconds on each.**
+**Step 3. Visit every status page, waiting 3–5 seconds on each.**
 *Some data loads after the page appears.*
 
-**Step 5. If a page has a button that loads or shows more data
+**Step 4. If a page has a button that loads or shows more data
 (Refresh, More, Show channels), click it once.**
 *On some modems that button fetches data the page load does not.*
 
 ### Finishing
 
-**Step 6. Log out.**
+**Step 5. Log out.**
 *Modems that allow one login at a time need this to release the
 session.*
 
-**Step 7 (optional). Capture a restart.** Log back in, click Reboot or
+**Step 6 (optional). Capture a restart.** Log back in, click Reboot or
 Restart, and close the browser once the click is sent.
 *Needed for the integration's Restart button. Your internet drops for
 a few minutes.*
+
+**Step 7. Last, log in with a wrong password once.**
+*Some modems lock the account after a failed login, so this comes after
+everything else. On some a rejected login looks just like a success,
+and this can't be recorded later. The wrong guess is redacted.*
 
 The result is a `.sanitized.har.gz` file.
 

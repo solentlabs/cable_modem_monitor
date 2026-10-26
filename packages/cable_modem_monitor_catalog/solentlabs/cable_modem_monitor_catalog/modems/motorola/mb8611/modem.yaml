@@ -36,6 +36,8 @@ sources:
   detection_hints: "[#6 MB8611 fails to connect](https://github.com/solentlabs/cable_modem_monitor/issues/6)"
   hardware: "[Motorola MB8611 page](https://www.motorola.com/us/mb8611)"
   restart: "[#60 MB8611 restart button not working](https://github.com/solentlabs/cable_modem_monitor/issues/60)"
+  release_date: "[Light Reading, 2019-12-10](https://www.lightreading.com/cable-technology/zoom-gets-cablelabs-stamp-for-d3-1-modem-with-2-5-gig-lan-port) (read 2026-10-20): Zoom reports the MB8611 earned CableLabs certification; samples for provider testing in January 2020, mass production 'as soon as March 2020', retailer sales after provider tests. These are planned dates; the actual retail start was not found."
+  isps: "[Motorola MB8611 product page, Wayback capture 2021-06-20](https://web.archive.org/web/20210620221536/https://www.motorola.com/us/mb8611/): 'approved for all multi-Gigabit speed tiers by Comcast Xfinity, Charter Spectrum, and Cox'. [Cox certified cable modems](https://www.cox.com/residential/support/certified-cable-modems.html) names the MB8611 (read 2026-10-20). Spectrum's [authorized modem list](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) does not (read 2026-10-20)."
 
 attribution:
   contributors:

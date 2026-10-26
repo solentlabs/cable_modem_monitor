@@ -196,6 +196,7 @@
       "channel_id": 159,
       "channel_number": 17,
       "channel_type": "ofdm",
+      "channel_width": 48000000,
       "frequency": 272000000,
       "lock_status": "locked",
       "power": 11.2,
@@ -261,6 +262,7 @@
       "channel_id": 7,
       "channel_number": 5,
       "channel_type": "ofdma",
+      "channel_width": 14000000,
       "frequency": 56000000,
       "lock_status": "locked",
       "power": 37.2

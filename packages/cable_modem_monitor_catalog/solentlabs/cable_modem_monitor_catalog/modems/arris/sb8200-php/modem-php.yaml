@@ -38,7 +38,7 @@ hardware:
   chipset: "Broadcom BCM3390"
   release_date: "2017"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config:

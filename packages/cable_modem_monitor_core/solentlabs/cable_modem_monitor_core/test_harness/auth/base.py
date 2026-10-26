@@ -65,12 +65,12 @@ def extract_action_config(modem_config: ModemConfig) -> ActionConfig:
     )
 
 
-def _segments(path: str) -> tuple[str, ...]:
+def segments(path: str) -> tuple[str, ...]:
     """Split a normalized path into comparable segments."""
     return tuple(s for s in normalize_path(path).split("/") if s)
 
 
-def _template_match(template: tuple[str, ...], actual: tuple[str, ...]) -> bool:
+def template_match(template: tuple[str, ...], actual: tuple[str, ...]) -> bool:
     """Match a declared endpoint against a request path, ``{auth:…}`` segments wild.
 
     An endpoint may address the session in the URL
@@ -156,7 +156,7 @@ class AuthHandler:
         """Check if this request targets the declared logout endpoint."""
         if not self._actions.logout_path or method != self._actions.logout_method.upper():
             return False
-        return _template_match(_segments(self._actions.logout_path), _segments(path))
+        return template_match(segments(self._actions.logout_path), segments(path))
 
     def handle_logout(self) -> RouteEntry:
         """Handle a logout request. Clears session state."""
@@ -166,7 +166,7 @@ class AuthHandler:
         """Check if this request targets the declared restart endpoint."""
         if not self._actions.restart_path or method != self._actions.restart_method.upper():
             return False
-        return _template_match(_segments(self._actions.restart_path), _segments(path))
+        return template_match(segments(self._actions.restart_path), segments(path))
 
     def handle_restart(self, *, body: bytes = b"") -> RouteEntry:
         """Handle a restart request. Returns 200 and clears session."""

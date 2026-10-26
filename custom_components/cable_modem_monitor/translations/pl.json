@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Monitor modemu kablowego",
-        "description": "Wybierz producenta lub wybierz 'Wszystkie'.",
+        "description": "Wybierz producenta, wybierz 'Wszystkie' albo wybierz 'Auto-detect', aby wyszukać modem w sieci.",
         "data": {
           "manufacturer": "Producent"
         }
@@ -56,6 +56,38 @@
           "username": "Nazwa użytkownika",
           "password": "Hasło"
         }
+      },
+      "detect_confirm": {
+        "title": "Znaleziono modem",
+        "description": "Auto-detect znalazł **{model}** pod adresem {host}.\n\nAuto-detect tylko zawęża wybór. Potwierdź, że to Twój modem.",
+        "data": {
+          "choice": "Czy to Twój modem?",
+          "entity_prefix": "Prefiks Entity ID",
+          "channel_identity": "Nazewnictwo kanałów"
+        },
+        "data_description": {
+          "choice": "Wybierz pierwszą opcję, aby kontynuować. Druga pokazuje inne prawdopodobne wyniki wyszukiwania, a trzecia otwiera pełną listę producentów.",
+          "entity_prefix": "Dodaje nazwę modelu lub IP do Entity ID. Wymagane przy monitorowaniu wielu modemów.",
+          "channel_identity": "Numer kanału nazywa encje według pozycji wiersza w modemie (stabilne po ponownym uruchomieniu). Identyfikator kanału używa identyfikatora kanału DOCSIS (zgodny z diagnostyką dostawcy, ale może się zmienić po ponownym uruchomieniu)."
+        }
+      },
+      "detect_pick": {
+        "title": "Znalezione modemy",
+        "description": "Strona, która odpowiedziała, wspomina więcej niż jeden model. Wybierz swój. Modele oznaczone * są niezweryfikowane.",
+        "data": {
+          "model": "Model modemu",
+          "entity_prefix": "Prefiks Entity ID",
+          "channel_identity": "Nazewnictwo kanałów"
+        },
+        "data_description": {
+          "model": "Wybierz model modemu z listy.",
+          "entity_prefix": "Dodaje nazwę modelu lub IP do Entity ID. Wymagane przy monitorowaniu wielu modemów.",
+          "channel_identity": "Numer kanału nazywa encje według pozycji wiersza w modemie (stabilne po ponownym uruchomieniu). Identyfikator kanału używa identyfikatora kanału DOCSIS (zgodny z diagnostyką dostawcy, ale może się zmienić po ponownym uruchomieniu)."
+        }
+      },
+      "no_match": {
+        "title": "Nie rozpoznano modemu",
+        "description": "Auto-detect nie rozpoznał modemu. Może to oznaczać, że nie jest jeszcze obsługiwany.\n\nCo odpowiedziało:\n\n{observed}\n\nWybierz następnie modem samodzielnie. Zobacz [listę obsługiwanych modemów]({catalog_url}) lub [zgłoś prośbę o obsługę swojego modemu]({request_url})."
       }
     },
     "error": {

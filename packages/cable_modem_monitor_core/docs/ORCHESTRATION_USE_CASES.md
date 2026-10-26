@@ -1147,7 +1147,8 @@ dispatcher signal. Listeners respond:
    recovery cadence on entry, restores on exit. On entry, HA calls
    `async_request_refresh()` so the first fast-cadence poll happens
    immediately.
-2. The restart button's enabled state re-evaluates.
+2. The restart button is unaffected: it never greys out and is not
+   gated on `recovery_active` (UC-42).
 
 **Status sensor is not special-cased.** It renders the snapshot's
 actual status throughout — Operational / Denied / Not Locked /

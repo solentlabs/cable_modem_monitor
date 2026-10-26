@@ -1,0 +1,95 @@
+{
+  "_description": "Form auth: the accepted login (302) comes first and the wrong password last, as the capture guide asks; the accepted attempt is selected by its response, not by position",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "YWRtaW4="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {
+            "name": "Location",
+            "value": "/home.asp"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "d3Jvbmc="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {
+          "size": 167,
+          "mimeType": "text/html",
+          "text": "<html><head><title>Login</title><meta charset=\"utf-8\"></head><body><form action=\"/goform/login\"><p class=\"error\">Invalid user name or password</p></form></body></html>"
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form",
+  "_expected_fields": {
+    "action": "/goform/login",
+    "username_field": "loginUsername",
+    "password_field": "loginPassword",
+    "encoding": "base64",
+    "login_page": "",
+    "form_selector": "",
+    "success": {
+      "redirect": "/home.asp"
+    }
+  }
+}

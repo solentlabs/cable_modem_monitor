@@ -198,6 +198,7 @@
     "connectivity_state": "OK",
     "docsis_status": "Operational",
     "downstream_channel_count": 16,
+    "hardware_version": "1",
     "security": "Enabled",
     "software_version": "D30CM-OSPREY-2.4.0.3-GA-00-NOSH",
     "system_uptime": "98 days 14h:53m:26s",

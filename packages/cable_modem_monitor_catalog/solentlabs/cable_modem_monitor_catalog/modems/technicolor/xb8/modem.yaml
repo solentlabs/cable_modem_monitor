@@ -50,6 +50,10 @@ hardware:
   docsis_version: "3.1"
   release_date: "2022"
 
+detection:
+  http_headers:
+    - "Xfinity Broadband Router Server"
+
 status: confirmed
 
 sources:
@@ -59,6 +63,7 @@ sources:
   restart: '[#194 XB8 error graphs](https://github.com/solentlabs/cable_modem_monitor/issues/194) fixture HAR (GET /restore_reboot.jst, then POST /actionHandler/ajaxSet_Reset_Restore.jst carrying resetInfo and the csrfp_token cookie echoed in the body; modem answered {"reboot":true})'
   release_date: "Xfinity rollout began 2022: [DSLReports — Next Gateway XB8](https://www.dslreports.com/forum/r33227126-Next-Gateway-XB8-Technicolor-CGM4981COM-Wi-Fi-6E); [Xfinity Community Forum — NEW xFi Gateway XB8](https://forums.xfinity.com/conversations/your-home-network/new-xfi-gateway-xb8/6216d91580db9c3cdd5e96fc)"
   error_codewords: "[#194](https://github.com/solentlabs/cable_modem_monitor/issues/194) captures (test_data/modem.har and modem.verified.json, ten days apart); the same first-column duplication on the XB6 in [Xfinity Community, April 2020](https://forums.xfinity.com/conversations/your-home-network/correctable-codewords-50-of-codewords-on-2-channels/602daed0c5375f08cdf6df9e) (index 1 equals index 33) and the XB7 in [DSLReports, November 2021](https://www.dslreports.com/forum/r33254515-Connectivity-Seeing-nearly-as-many-Correctable-as-Unerrored-Codewords-on-Ch1) (index 1 equals index 32); the page pairs Channel IDs with CMErrorCodewords counters by row index in the [RDK-B web UI template](https://github.com/rdkcentral/webui/blob/8ac407e5f75f243a8d01615d664b2e6e61522b8b/source/Styles/xb6/jst/network_setup.jst#L1073-L1107)"
+  isps: "Rogers: reporters of [#101](https://github.com/solentlabs/cable_modem_monitor/issues/101) and [#194](https://github.com/solentlabs/cable_modem_monitor/issues/194) list Rogers. Comcast and Xfinity: [Xfinity Community Forum thread, 2022-02-23](https://forums.xfinity.com/conversations/your-home-network/new-xfi-gateway-xb8/6216d91580db9c3cdd5e96fc) (read 2026-10-20), where Xfinity staff call the XB8 'our newest modem' and users report receiving one on 2022-03-11. Cox: [Cox Technicolor CGM4981 support page](https://www.cox.com/residential/support/technicolor-cgm4981.html) (read 2026-10-20)."
 
 attribution:
   contributors:

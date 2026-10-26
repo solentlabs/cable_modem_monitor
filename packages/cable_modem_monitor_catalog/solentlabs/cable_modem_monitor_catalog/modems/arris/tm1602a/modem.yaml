@@ -13,6 +13,10 @@ hardware:
   chipset: Intel Puma 6
   release_date: "2014"
 
+detection:
+  http_headers:
+    - "lighttpd"
+
 status: confirmed
 
 sources:
@@ -21,6 +25,7 @@ sources:
   auth_config: "HAR capture (#112) — no login required"
   chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Arris_TM1602A)"
   verification: "User diagnostics capture on v3.14.0-alpha.14 (2026-04-13, Issue #112)"
+  isps: "[#112 modem request](https://github.com/solentlabs/cable_modem_monitor/issues/112), 2026-01-31: the owner writes 'ISP: Spectrum' with a TM1602A (vers_cgi MODEL: TM1602A). This is an eMTA; Spectrum's [own page](https://www.spectrum.net/support/internet/compliant-modems-spectrum-network) says customer-owned modems do not support Spectrum Home Phone, so these units come from Spectrum."
 
 attribution:
   contributors:

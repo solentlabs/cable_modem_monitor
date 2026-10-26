@@ -6,6 +6,7 @@ system info extraction.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -679,3 +680,39 @@ def test_baseline_key_is_not_shape_checked() -> None:
     result = detect_system_info([page], [], fleet=fleet)
     assert result is not None
     assert [f.field for f in result.sources[0].fields] == ["system_uptime"]
+
+
+# fmt: off
+STACKED_LABEL_CASES = [
+    # (label,              value,    expected field,       cell text the pattern must read,      desc)
+    ("Hardware Version",   "7.0",    "hardware_version",   "Hardware Version: 7.0<BR>",          "plain label"),
+    ("Software Version",   "9.1.103S", "software_version", "Software Version: 9.1.103S<BR>",    "second label"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "label,value,field,cell,desc",
+    STACKED_LABEL_CASES,
+    ids=[c[4] for c in STACKED_LABEL_CASES],
+)
+def test_stacked_cell_pair_reads_back_through_td_pattern(
+    label: str, value: str, field: str, cell: str, desc: str
+) -> None:
+    """A label stacked in a shared cell is read by a td pattern, not a label used as a selector."""
+    page = PageAnalysis(
+        resource="/help.htm",
+        content_type="text/html",
+        label_pairs=[
+            DetectedLabelPair(
+                label=label, value=value, selector_type="css_pattern", selector_value=label, element_id=""
+            )
+        ],
+    )
+    result = detect_system_info([page], [])
+    assert result is not None, desc
+    detail = result.sources[0].fields[0].to_dict()
+    assert detail["field"] == field, desc
+    assert detail["css"] == "td", desc
+    match = re.search(detail["pattern"], cell)
+    assert match is not None and match.group(1) == value, desc

@@ -51,12 +51,14 @@ def _login_result_tokens(modem_dir: Path) -> set[str]:
     return tokens
 
 
+def applies_to_entry(modem_yaml_path: Path) -> bool:
+    """Whether the entry authenticates with the hnap strategy."""
+    config = load_modem_config(modem_yaml_path)
+    return config.auth is not None and config.auth.strategy == "hnap"
+
+
 def test_login_results_are_handled(modem_yaml_path: Path) -> None:
     """No HNAP entry's firmware emits a LoginResult the auth manager ignores."""
-    config = load_modem_config(modem_yaml_path)
-    if config.auth is None or config.auth.strategy != "hnap":
-        pytest.skip("not an hnap entry")
-
     tokens = _login_result_tokens(modem_yaml_path.parent)
     if not tokens:
         pytest.skip("no Login.js in this entry's captures")

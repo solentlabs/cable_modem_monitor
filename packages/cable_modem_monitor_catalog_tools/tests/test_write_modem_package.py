@@ -499,7 +499,7 @@ class TestLoginPageValidation:
 
     def test_form_auth_no_login_page_skips_check(self, tmp_path: Path) -> None:
         """Form auth without login_page set skips the check."""
-        har_path = _create_har(tmp_path)
+        har_path = _har_with_requests(tmp_path, ["/login"])
         out_dir = tmp_path / "out"
         no_prefetch_yaml = (
             "manufacturer: T\nmodel: T\nauth:\n"
@@ -516,3 +516,55 @@ class TestLoginPageValidation:
         )
 
         assert result.errors == []
+
+
+# ---------------------------------------------------------------------------
+# Endpoint grounding — declared URLs must appear in the capture
+# ---------------------------------------------------------------------------
+
+
+def _har_with_requests(tmp_path: Path, paths: list[str]) -> Path:
+    """A HAR whose entries request the given paths."""
+    har = tmp_path / "grounded.har"
+    entries = [{"request": {"method": "GET", "url": f"http://192.168.100.1{p}"}, "response": {}} for p in paths]
+    har.write_text(json.dumps({"log": {"entries": entries}}), encoding="utf-8")
+    return har
+
+
+class TestEndpointGrounding:
+    """A declared auth URL the capture lacks refuses the write; an action URL warns."""
+
+    def test_ungrounded_auth_endpoint_refused_before_writing(self, tmp_path: Path) -> None:
+        """auth.login_endpoint absent from the HAR: error, nothing written."""
+        har_path = _har_with_requests(tmp_path, ["/status.htm"])
+        out_dir = tmp_path / "out"
+        modem_yaml = "manufacturer: T\nmodel: T\nauth:\n  strategy: none\n  login_endpoint: /api/login\n"
+
+        result = write_modem_package(
+            output_dir=str(out_dir),
+            modem_yaml=modem_yaml,
+            parser_yaml=_PARSER_YAML,
+            golden_file=_GOLDEN,
+            har_path=str(har_path),
+        )
+
+        assert any("auth.login_endpoint" in e and "/api/login" in e for e in result.errors)
+        assert not out_dir.exists()
+
+    def test_ungrounded_action_endpoint_warns_and_writes(self, tmp_path: Path) -> None:
+        """actions.restart.endpoint absent from the HAR: package written, warning returned."""
+        har_path = _har_with_requests(tmp_path, ["/status.htm"])
+        out_dir = tmp_path / "out"
+        modem_yaml = "manufacturer: T\nmodel: T\nauth:\n  strategy: none\nactions:\n  restart:\n    endpoint: /reboot\n"
+
+        result = write_modem_package(
+            output_dir=str(out_dir),
+            modem_yaml=modem_yaml,
+            parser_yaml=_PARSER_YAML,
+            golden_file=_GOLDEN,
+            har_path=str(har_path),
+        )
+
+        assert result.errors == []
+        assert any("actions.restart.endpoint" in w for w in result.warnings)
+        assert (out_dir / "modem.yaml").is_file()

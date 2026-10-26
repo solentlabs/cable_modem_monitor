@@ -1,0 +1,108 @@
+{
+  "_description": "Form auth with no redirect (SBG7400AC2 shape): the accepted login sets a cookie and answers a meta-refresh page, the wrong password last answers the login page; tokens only the accepted response has are offered as auth.success.indicator candidates",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "YWRtaW4="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Set-Cookie",
+            "value": "credential=abc; path=/"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 72,
+          "mimeType": "text/html",
+          "text": "<html><head><meta http-equiv=\"refresh\" content=\"0;url=status_cgi\"</head>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "d3Jvbmc="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {
+          "size": 167,
+          "mimeType": "text/html",
+          "text": "<html><head><title>Login</title><meta charset=\"utf-8\"></head><body><form action=\"/goform/login\"><p class=\"error\">Invalid user name or password</p></form></body></html>"
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form",
+  "_expected_fields": {
+    "action": "/goform/login",
+    "username_field": "loginUsername",
+    "password_field": "loginPassword",
+    "encoding": "base64",
+    "login_page": "",
+    "form_selector": "",
+    "success": {}
+  },
+  "_expected_ambiguities": {
+    "auth.success.indicator": {
+      "blocking": false,
+      "candidates": {
+        "http-equiv=\"refresh\"": [
+          "/goform/login",
+          "/goform/login (rejected attempt)"
+        ],
+        "content=\"0;url=status_cgi\"": [
+          "/goform/login",
+          "/goform/login (rejected attempt)"
+        ]
+      }
+    }
+  }
+}

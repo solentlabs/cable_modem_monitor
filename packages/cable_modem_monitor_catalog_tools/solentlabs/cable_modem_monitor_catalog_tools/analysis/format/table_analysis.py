@@ -361,8 +361,11 @@ def detect_row_start(table: DetectedTable) -> int:
             break
         skip += 1
 
+    # A <tr> with no text is a row to Core's parser; one before the first data row shifts it.
+    unread = sum(1 for before in table.unread_rows if before <= skip)
+
     # A label row the analyzer repaired in is not a <tr> at runtime.
-    return skip - table.repaired_rows
+    return skip + unread - table.repaired_rows
 
 
 _FOOTER_KEYWORDS: frozenset[str] = frozenset({"total", "sum", "summary", "subtotal", "average", "avg"})
