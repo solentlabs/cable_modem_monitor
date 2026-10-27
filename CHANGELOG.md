@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   restart, or whose restart appears only in page source, now says so and asks
   for the restart step. The restart action is still never invented.
 
+### Changed
+
+- **Intake warns, not stops, on a login page with no password input.** A
+  lapsed session on such a modem reaches Core as a data body with none of the
+  parser's anchors, so it surfaces as `LOAD_INTEGRITY` instead of `LOAD_AUTH`
+  and recovers the same way. A data page that holds a password input still
+  stops analysis. The TG3442DE capture now scores 82.4% (fleet 88.6% to
+  90.2%).
+
 ### Fixed
 
 - **Intake reads a modem that selects each document by query string.** The

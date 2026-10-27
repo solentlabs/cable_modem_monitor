@@ -1,15 +1,18 @@
-"""Post-analysis hard stops that guard Core's login-page detection.
+"""Post-analysis checks that guard Core's login-page detection.
 
 Core decides that a fetched page is a login page by one signal: a
 ``type="password"`` substring (``loaders/http.py::_is_login_page``). Two
-captures defeat it, and each is a hard stop that needs human review:
+captures defeat it:
 
 1. The login page auth analysis identified carries no password input
-   (a script renders it), so an expired session goes unrecognized.
+   (a script renders it). A warning: Core cannot recognize the page, so
+   a lapsed session surfaces as LOAD_INTEGRITY (a data body with none of
+   the parser's anchors, UC-19a) instead of LOAD_AUTH, and recovery is
+   the same.
 2. A data page the config will fetch carries a password input outside a
    login form (analysis leaves login forms out of the data pages), so
    every poll reads as an expired session and the auth circuit breaker
-   opens.
+   opens. A hard stop that needs human review.
 
 Scope mirrors runtime: HTTP transport, a strategy that holds a session,
 and HTML responses. The data pages are the sections' ``resource`` values,
@@ -43,24 +46,38 @@ def detect_login_page_hard_stops(
     auth: AuthDetail,
     transport: str,
 ) -> list[str]:
-    """Return the login-page hard stops for a capture, empty when out of scope."""
+    """Return the data-page hard stops for a capture, empty when out of scope."""
     if not _detection_applies(auth.strategy, transport):
         return []
-
-    data_paths = list(dict.fromkeys(normalize_endpoint(resource) for resource in collect_resources(sections)))
-
     issues: list[str] = []
-    login_page = auth.fields.get("login_page")
-    if isinstance(login_page, str) and login_page:
-        login_path = normalize_endpoint(login_page)
-        # url_token names the status page as login_page; a page the config reads
-        # as data is not a login page, and the data-page check covers it.
-        if login_path not in data_paths:
-            issues.extend(_login_page_without_password(entries, login_path))
-
-    for path in data_paths:
+    for path in _data_paths(sections):
         issues.extend(_data_page_with_password(entries, path))
     return issues
+
+
+def detect_login_page_warnings(
+    entries: list[dict[str, Any]],
+    sections: dict[str, Any] | None,
+    auth: AuthDetail,
+    transport: str,
+) -> list[str]:
+    """Return the login-page warnings for a capture, empty when out of scope."""
+    if not _detection_applies(auth.strategy, transport):
+        return []
+    login_page = auth.fields.get("login_page")
+    if not isinstance(login_page, str) or not login_page:
+        return []
+    login_path = normalize_endpoint(login_page)
+    # url_token names the status page as login_page; a page the config reads
+    # as data is not a login page, and the data-page check covers it.
+    if login_path in _data_paths(sections):
+        return []
+    return _login_page_without_password(entries, login_path)
+
+
+def _data_paths(sections: dict[str, Any] | None) -> list[str]:
+    """The sections' mapped resources, the fetch list parser.yaml carries."""
+    return list(dict.fromkeys(normalize_endpoint(resource) for resource in collect_resources(sections)))
 
 
 def _detection_applies(strategy: str, transport: str) -> bool:
@@ -87,17 +104,16 @@ def _html_pages(entries: list[dict[str, Any]], path: str) -> list[tuple[int, str
 
 
 def _login_page_without_password(entries: list[dict[str, Any]], path: str) -> list[str]:
-    """Flag 1: the login page is captured and none of its responses has a password input."""
+    """The login page is captured and none of its responses has a password input."""
     pages = _html_pages(entries, path)
     if not pages or any(has_password_input(body) for _, body in pages):
         return []
     index, body = pages[-1]
     return [
-        f"{HARD_STOP_PREFIX} Login page {path} (entry [{index}], {len(body)} bytes) has no "
-        '<input type="password">, and Core recognizes a login page by that input alone, so an '
-        "expired session on this modem would go unnoticed. Either the capture holds the page "
-        "before its script ran (recapture after the page finishes loading), or the input is "
-        "rendered by script and Core needs another login-page signal."
+        f'Login page {path} (entry [{index}], {len(body)} bytes) has no <input type="password">, so '
+        "Core cannot recognize it as a login page. A lapsed session on this modem surfaces as "
+        "LOAD_INTEGRITY (a data body with none of the parser's anchors) rather than LOAD_AUTH; "
+        "recovery is the same."
     ]
 
 

@@ -1,8 +1,8 @@
-"""Tests for the MCP onboarding login-page hard stops.
+"""Tests for the MCP onboarding login-page checks.
 
 RESOURCE_LOADING_SPEC § MCP onboarding validation: a login page with no
-password input, and a data page with one, each defeat Core's runtime
-login-page detection. The checks guard the one signal it keys on.
+password input warns (a lapsed session surfaces as LOAD_INTEGRITY), and a
+data page with one is a hard stop (every poll reads as a lapsed session).
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import pytest
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.auth.types import AuthDetail
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.login_page_detection import (
     detect_login_page_hard_stops,
+    detect_login_page_warnings,
     has_password_input,
 )
 from solentlabs.cable_modem_monitor_catalog_tools.validation.har_utils import HARD_STOP_PREFIX
@@ -44,9 +45,27 @@ def _run(
     resource: str = "/status.htm",
     transport: str = "http",
 ) -> list[str]:
-    """Run both checks over ``entries`` with one downstream section."""
+    """Run the hard-stop check over ``entries`` with one downstream section."""
     fields = {"login_page": login_page} if login_page else {}
     return detect_login_page_hard_stops(
+        entries,
+        {"downstream": {"resource": resource}},
+        AuthDetail(strategy=strategy, fields=fields),
+        transport,
+    )
+
+
+def _warn(
+    entries: list[dict[str, Any]],
+    *,
+    strategy: str = "form",
+    login_page: str | None = "/login.htm",
+    resource: str = "/status.htm",
+    transport: str = "http",
+) -> list[str]:
+    """Run the warning check over ``entries`` with one downstream section."""
+    fields = {"login_page": login_page} if login_page else {}
+    return detect_login_page_warnings(
         entries,
         {"downstream": {"resource": resource}},
         AuthDetail(strategy=strategy, fields=fields),
@@ -78,24 +97,26 @@ def test_predicate_matches_core(text: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Flag 1: login page without a password input
+# Warning: login page without a password input
 # ---------------------------------------------------------------------------
 
 
-def test_login_page_without_password_input_hard_stops() -> None:
-    """The login page identified by auth analysis has no password input."""
+def test_login_page_without_password_input_warns() -> None:
+    """The login page identified by auth analysis has no password input: a warning, not a stop."""
     entries = [_entry("/login.htm", _PLAIN_PAGE), _entry("/status.htm", _PLAIN_PAGE)]
-    issues = _run(entries)
+    assert _run(entries) == []
+    issues = _warn(entries)
     assert len(issues) == 1
-    assert issues[0].startswith(HARD_STOP_PREFIX)
+    assert not issues[0].startswith(HARD_STOP_PREFIX)
     assert "/login.htm" in issues[0]
     assert "entry [0]" in issues[0]
+    assert "LOAD_INTEGRITY" in issues[0]
 
 
 def test_login_page_with_password_input_passes() -> None:
     """A login page carrying the signal is the normal case."""
     entries = [_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _PLAIN_PAGE)]
-    assert _run(entries) == []
+    assert _warn(entries) == []
 
 
 def test_login_page_any_captured_response_with_password_passes() -> None:
@@ -105,24 +126,24 @@ def test_login_page_any_captured_response_with_password_passes() -> None:
         _entry("/login.htm", _PASSWORD_PAGE),
         _entry("/status.htm", _PLAIN_PAGE),
     ]
-    assert _run(entries) == []
+    assert _warn(entries) == []
 
 
 def test_login_page_not_captured_is_silent() -> None:
     """Fixture integrity owns a missing login page, not this check."""
-    assert _run([_entry("/status.htm", _PLAIN_PAGE)]) == []
+    assert _warn([_entry("/status.htm", _PLAIN_PAGE)]) == []
 
 
 def test_no_login_page_identified_is_silent() -> None:
     """Without a login page from auth analysis, flag 1 invents none."""
     entries = [_entry("/login.htm", _PLAIN_PAGE), _entry("/status.htm", _PLAIN_PAGE)]
-    assert _run(entries, login_page=None) == []
+    assert _warn(entries, login_page=None) == []
 
 
 def test_non_200_login_page_is_not_a_login_page_response() -> None:
     """A 302 or 401 on the path says nothing about the page body."""
     entries = [_entry("/login.htm", "", status=302), _entry("/status.htm", _PLAIN_PAGE)]
-    assert _run(entries) == []
+    assert _warn(entries) == []
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +189,7 @@ def test_login_page_that_is_a_data_page_without_password_is_silent() -> None:
     """url_token names the status page as login_page; a page read as data is not a login page."""
     entries = [_entry("/status.htm", _PLAIN_PAGE)]
     assert _run(entries, strategy="url_token", login_page="/status.htm") == []
+    assert _warn(entries, strategy="url_token", login_page="/status.htm") == []
 
 
 def test_json_data_page_is_not_scanned() -> None:
@@ -214,6 +236,7 @@ def test_out_of_scope_is_silent(strategy: str, transport: str) -> None:
     """Stateless strategies, non-HTTP transports and unresolved auth are not checked."""
     entries = [_entry("/login.htm", _PLAIN_PAGE), _entry("/status.htm", _WIDGET_PAGE)]
     assert _run(entries, strategy=strategy, transport=transport) == []
+    assert _warn(entries, strategy=strategy, transport=transport) == []
 
 
 @pytest.mark.parametrize(
@@ -225,10 +248,10 @@ def test_session_strategies_over_http_are_checked(strategy: str) -> None:
     assert len(_run(entries, strategy=strategy)) == 1
 
 
-def test_evidence_names_the_exits() -> None:
-    """Each message names what to do next, not only what was seen."""
-    flag_one = _run([_entry("/login.htm", _PLAIN_PAGE), _entry("/status.htm", _PLAIN_PAGE)])[0]
-    flag_two = _run([_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _WIDGET_PAGE)])[0]
-    assert "recapture" in flag_one
-    assert "Core" in flag_one
-    assert "Core" in flag_two
+def test_evidence_names_the_outcome() -> None:
+    """The warning names what the runtime does; the stop names what to do next."""
+    warning = _warn([_entry("/login.htm", _PLAIN_PAGE), _entry("/status.htm", _PLAIN_PAGE)])[0]
+    stop = _run([_entry("/login.htm", _PASSWORD_PAGE), _entry("/status.htm", _WIDGET_PAGE)])[0]
+    assert "LOAD_INTEGRITY" in warning
+    assert "LOAD_AUTH" in warning
+    assert "Core" in stop

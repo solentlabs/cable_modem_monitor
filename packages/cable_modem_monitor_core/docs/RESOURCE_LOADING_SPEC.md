@@ -572,18 +572,19 @@ schema change if the need arises.
 During HAR analysis, the MCP pipeline flags potential detection issues
 (scope and wording: ONBOARDING_SPEC § Error Handling):
 
-1. **Login page without password input** — If the HAR shows a login
-   page that has no `<input type="password">` in the initial HTML
-   (e.g., JS-rendered SPA login), flag it: "Login page detection may
-   not work for this modem — password field is dynamically rendered."
+1. **Login page without password input** (warning) — If the HAR shows a
+   login page that has no `<input type="password">` in the initial HTML
+   (e.g., JS-rendered login), warn: Core cannot recognize that page, so
+   a lapsed session on this modem surfaces as `LOAD_INTEGRITY` (a data
+   body with none of the parser's anchors, UC-19a) rather than
+   `LOAD_AUTH`. Recovery, streak and breaker are the same for both
+   signals, so the modem can ship.
 
-2. **Data page with password input** — If any data page response in
-   the HAR contains `<input type="password">`, flag it: "Data page
-   {path} contains a password field — login page detection will
-   produce false positives."
-
-Both are HARD STOP flags during onboarding — they require human
-review before the modem can ship.
+2. **Data page with password input** (hard stop) — If any data page
+   response in the HAR contains `<input type="password">`, flag it:
+   "Data page {path} contains a password field — login page detection
+   will produce false positives." It requires human review before the
+   modem can ship: every poll would read as an expired session.
 
 ---
 
