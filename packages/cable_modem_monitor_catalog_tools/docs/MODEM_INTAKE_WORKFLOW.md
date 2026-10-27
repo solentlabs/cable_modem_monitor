@@ -189,6 +189,20 @@ with the login, version and CM status pages from the 2026-01-05
 capture); Ubee EVW32C-0N, issue #221 (the 2026-10-01 session, with the
 reboot request from the 2026-10-02 capture).
 
+**Sibling transplant (action the target's capture lacks).** When a
+real full-session capture of the target never sent an action (usually
+restart) and a same-family sibling's real capture did, the sibling's
+request entries may be transplanted whole into the target's capture,
+with no value edits beyond the sanctioned PII redaction. The target's
+own captured page source must carry the same form (action path, field
+names, default values); without that match, leave the action out.
+`log.comment` lists every transplanted entry, names the sibling and
+its evidence issue, states that the entries were not observed on the
+target, and cites the matching form. The `modem.yaml` `notes:` block
+repeats this and says a capture of the action on the target replaces
+the transplant. The entry stays `awaiting_verification`: the transplant
+certifies the request shape, not that the action works on the target.
+
 ## Inputs
 
 You provide one of:

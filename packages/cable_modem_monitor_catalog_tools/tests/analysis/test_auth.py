@@ -1150,6 +1150,23 @@ class TestFleetPasswordNames:
 
 @pytest.mark.parametrize(
     "fixture_name",
+    [
+        "form_redirect_refusal_first",
+        "form_redirect_refusal_last",
+        "form_redirect_refusal_between",
+        "form_redirect_refusal_broken_markup",
+    ],
+)
+def test_refusal_landing_on_a_login_form_is_not_a_redirect_conflict(fixture_name: str) -> None:
+    """A redirect to a page holding the login form is a refusal: it neither wins nor raises the warning."""
+    data = load_fixture(VALID_DIR / f"{fixture_name}.json")
+    warnings: list[str] = []
+    detect_auth(data["_entries"], data["_transport"], warnings, [])
+    assert [w for w in warnings if "redirect to different paths" in w] == []
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
     ["form_post_302", "form_post_with_login_page", "form_rejected_last_302", "form_rejected_first_302"],
 )
 def test_no_success_indicator_ambiguity_without_a_separable_rejected_response(fixture_name: str) -> None:

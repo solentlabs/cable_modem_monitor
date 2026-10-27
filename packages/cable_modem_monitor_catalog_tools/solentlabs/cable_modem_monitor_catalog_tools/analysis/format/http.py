@@ -19,7 +19,8 @@ from ...validation.har_utils import (
     is_static_resource,
     path_from_url,
 )
-from .html_parsing import detect_label_pairs, detect_tables, has_login_form
+from ..login_form import has_login_form
+from .html_parsing import detect_label_pairs, detect_tables
 from .table_analysis import is_channel_table, is_transposed
 from .types import (
     DetectedJsFunction,

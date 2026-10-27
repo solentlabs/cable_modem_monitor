@@ -382,7 +382,11 @@ recency alone.** A form POST to an auth-pattern URL counts as a login
 only when its body carries a password-shaped field name — names, not
 values, because the sanitizer redacts values. Among credential POSTs
 the accepted attempt is selected by its response, never by position, so
-the wrong password may come first or last: a response that redirects to
+the wrong password may come first, last or between real logins. An
+attempt is a refusal when its redirect lands on the login page, or its
+own body is that page (a 200 re-render): a password input, Core's own
+login-page test, on a page that names the endpoint the attempt posted
+to. A refusal ranks below every other attempt. Among the rest, a response that redirects to
 another path ranks above one that sets a cookie, which ranks above one
 that does neither, and among equals the latest wins. When equal-ranked
 attempts redirect to different paths, a warning names them. An

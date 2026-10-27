@@ -33,13 +33,8 @@ from ..validation.har_utils import (
 )
 from .auth.types import AuthDetail
 from .format.http import identify_data_pages
+from .login_form import has_password_input
 from .unread_resources import collect_resources, normalize_endpoint
-
-
-def has_password_input(text: str) -> bool:
-    """Match Core's login-page test, so intake and runtime agree."""
-    lower = text.lower()
-    return 'type="password"' in lower or "type='password'" in lower
 
 
 def detect_login_page_hard_stops(

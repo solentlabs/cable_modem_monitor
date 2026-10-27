@@ -1,0 +1,131 @@
+{
+  "_description": "Form auth, both attempts redirect: the wrong password comes first; its redirect lands on a page holding the login form; the accepted attempt is selected by where it lands, not by position, and no redirect conflict is reported",
+  "_transport": "http",
+  "_expected_strategy": "form",
+  "_expected_fields": {
+    "action": "/goform/login",
+    "success": {
+      "redirect": "/index.htm"
+    }
+  },
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "YWRtaW4="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {
+            "name": "Location",
+            "value": "/Login.htm"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://host/Login.htm",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {
+          "size": 160,
+          "mimeType": "text/html",
+          "text": "<html><body><form action=\"/goform/login\" method=\"POST\"><input name=\"loginUsername\" type=\"text\"><input name=\"loginPassword\" type=\"password\"></form></body></html>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "YWRtaW4="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {
+            "name": "Location",
+            "value": "/index.htm"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://host/index.htm",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {
+          "size": 41,
+          "mimeType": "text/html",
+          "text": "<html><body><h1>Status</h1></body></html>"
+        }
+      }
+    }
+  ]
+}

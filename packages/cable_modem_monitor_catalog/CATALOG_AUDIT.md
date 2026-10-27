@@ -58,7 +58,7 @@ and share a diagnostics snapshot.
 | SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated | n/a |
 | C3700 | HTML | Comcast, Cox, Spectrum | synthetic | not captured |
-| CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
+| CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | hybrid | captured |
 | CM2500 | HTML | Comcast, Cox, Spectrum | reconstructed | captured |
 | CM600 | HTML | Comcast, Cox, Spectrum, TWC | synthetic | not captured |
 | NE6037 | JSON-RPC | Play | — | captured |

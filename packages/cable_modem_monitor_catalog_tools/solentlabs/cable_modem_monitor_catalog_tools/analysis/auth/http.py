@@ -410,10 +410,10 @@ def _check_form_login_post(
         return
 
     signals.form_login_attempts.append(entry)
-    # The accepted attempt, not the latest: the capture guide ends with a wrong password.
+    # The accepted attempt, not the latest: a wrong password can sit anywhere in the capture.
     # Among equals the latest wins, so a retried login yields the successful attempt.
     current = signals.form_post_entry
-    if current is None or attempt_rank(entry) >= attempt_rank(current):
+    if current is None or attempt_rank(entry, all_entries) >= attempt_rank(current, all_entries):
         signals.form_post_entry = entry
         signals.form_post_packed = packed
     signals.has_any_auth_signal = True
@@ -453,7 +453,7 @@ def _extract_form_login(
         _apply_packed_credentials(detail.fields, signals.form_post_packed)
     accepted = signals.form_post_entry
     if accepted is not None:
-        conflict = redirect_conflict_warning(accepted, signals.form_login_attempts)
+        conflict = redirect_conflict_warning(accepted, signals.form_login_attempts, entries)
         if conflict:
             warnings.append(conflict)
         if not detail.fields.get("success") and ambiguities is not None:

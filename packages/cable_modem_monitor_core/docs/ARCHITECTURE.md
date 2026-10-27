@@ -956,13 +956,18 @@ connection down mid-request) becomes no route, because there is
 nothing to replay.
 
 **Where a capture answers one request twice, the later exchange wins,
-and a 200 is never displaced by a failure.** The capture steps end with
-a deliberate wrong-password login, so a login endpoint routinely
-carries two recorded answers, the real login and the refusal, under one
-key on a static action and under two on a dynamic `?id=` action. On the
-login POST the declared `auth.success.indicator` picks between them: an
-exchange whose body contains it is never displaced by one that lacks
-it. With no indicator declared the last exchange wins outright.
+and a 200 is never displaced by a failure.** The login POST is the
+exception. A capture holds a deliberate wrong-password login before,
+after or between the real ones, so the declared `auth.success` picks the
+answer, never position: an exchange meeting every declared criterion is
+never displaced by one that does not. `indicator` is matched in the
+body. `redirect` is matched in the path of the `Location`, resolved
+against the request URL; Core checks the final URL, so this is the
+first hop of that check and a longer redirect chain is not modeled.
+With no criterion declared, or none met, the last exchange wins
+outright. Under `action_source: login_page` the `?id=` belongs to the
+served page, not the route, so every login exchange shares one route
+and the request's id is never compared.
 
 **Login, logout and restart are dispatched, not routed.** These three
 carry server-side session state, so the auth handler sees them before

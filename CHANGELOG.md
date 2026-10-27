@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Netgear CM2000 login should work again (#226).** v3.14 posted to
+  `/goform/Login` without the `?id=` the modem requires, so every login was
+  refused. The entry now reads the form action off the login page, as the
+  CM2050V, CM2500 and CM3000 do, and expects `/index.htm` after an accepted
+  login. The catalog capture is now a real session from the reporter's unit.
+  Awaiting a test on hardware.
+- **Intake picks the accepted login when every attempt redirects.** A wrong
+  password that redirects to the login page tied with the accepted login and
+  the later one won, so a capture ending with the wrong password produced
+  `success.redirect: /Login.htm`. An attempt whose redirect lands on a page with
+  a password input is now a refusal, wherever it sits in the capture.
+- **The test harness replays the accepted login whatever its position and
+  `?id=`.** A dynamic form action recorded each attempt under its own `?id=`,
+  and the `?id=` of the served login page chose which one to replay, so a
+  capture that began with the wrong password replayed the refusal. A login now
+  matches on the declared `success.redirect` and `success.indicator`, and the
+  `?id=` value is not compared.
+
 ## [3.14.15-beta.5] - 2026-10-25
 
 ### Added
