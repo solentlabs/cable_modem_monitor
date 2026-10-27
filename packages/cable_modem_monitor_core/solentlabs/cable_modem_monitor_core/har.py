@@ -21,7 +21,7 @@ import base64
 import json
 import logging
 import subprocess
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qsl, urlparse
@@ -120,6 +120,7 @@ def build_resource_dict(
     transport: str | None = None,
     getter_endpoint: str = "/xml/getter.xml",
     requests: Mapping[str, ResourceRequest] | None = None,
+    selected: Collection[str] = (),
 ) -> dict[str, Any]:
     """Build a resource dict from HAR response bodies.
 
@@ -135,6 +136,9 @@ def build_resource_dict(
         getter_endpoint: The CBN getter path (``form_cbn`` auth's field).
         requests: parser.yaml's ``requests:`` map; a path it declares takes
             only a response to that request.
+        selected: Fetch-list paths that carry a query (``/setup.cgi?todo=A``);
+            each is keyed by the declared string and takes the last 200
+            response whose query holds every declared parameter.
 
     Returns:
         Resource dict for the ``ModemParserCoordinator``.
@@ -154,7 +158,7 @@ def build_resource_dict(
     if hnap_resources:
         return hnap_resources
 
-    return _build_http_resources(entries, requests or {})
+    return _build_http_resources(entries, requests or {}, selected)
 
 
 def json_rpc_har_results(entries: list[dict[str, Any]]) -> dict[str, Any]:
@@ -293,6 +297,7 @@ def _build_hnap_resources(
 def _build_http_resources(
     entries: list[dict[str, Any]],
     requests: Mapping[str, ResourceRequest],
+    selected: Collection[str] = (),
 ) -> dict[str, Any]:
     """Build HTTP resource dict from HAR entries.
 
@@ -327,8 +332,21 @@ def _build_http_resources(
         decoded = _decode_har_entry(text, content.get("mimeType", ""), url_path)
         if decoded is not None:
             resources[url_path] = decoded
+            for declared in selected:
+                if _answers_query(url, declared):
+                    resources[declared] = decoded
 
     return resources
+
+
+def _answers_query(url: str, declared: str) -> bool:
+    """Whether a captured URL is the declared ``path?query``: same path, every declared parameter present."""
+    wanted = urlparse(declared)
+    got = urlparse(url)
+    if got.path != wanted.path:
+        return False
+    sent = set(parse_qsl(got.query, keep_blank_values=True))
+    return bool(wanted.query) and set(parse_qsl(wanted.query, keep_blank_values=True)) <= sent
 
 
 def _answers_request(request: dict[str, Any], spec: ResourceRequest) -> bool:

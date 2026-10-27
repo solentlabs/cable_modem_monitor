@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Intake reads a modem that selects each document by query string.** The
+  DM1000 produced no parser from its capture, for four reasons. The data
+  page filter dropped JSON typed `applation/json`. Every `/setup.cgi?todo=`
+  endpoint collapsed into one page. The direction in `RF_DS_param` was
+  never read from the query. The replay instrument keyed responses by path
+  alone, so a declared `?todo=` resource was never found. A path answering
+  with several JSON documents is now one resource per document, and a
+  query parameter that selects the document is no longer reported as a
+  session parameter. The DM1000 scores 3.4% where it scored 0%: its
+  downstream key names are withheld from its own score, as for any new
+  modem.
 - **An action's scheme override no longer keeps the old scheme's default
   port.** An action that names only a scheme sent `https://host:80` when the
   modem URL carried `:80`, and `http://host:443` the other way round. The

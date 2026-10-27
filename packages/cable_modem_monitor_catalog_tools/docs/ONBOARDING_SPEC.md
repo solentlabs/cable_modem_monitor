@@ -864,6 +864,27 @@ or "DSChannel" → downstream. "Upstream" or "USChannel" → upstream.
 See [HNAPParser](../../cable_modem_monitor_core/docs/FORMAT_HNAP_SPEC.md#hnapparser) for the validated
 record layout and parser.yaml example.
 
+#### Data page identity
+
+A data page is one resource: a path, plus a query when the query selects
+the document. Core fetches the resource string verbatim, so it carries
+whatever the modem needs to answer.
+
+- Responses at one path are grouped by document. Two JSON responses are
+  the same document when they share a key structure (the key paths,
+  ignoring values and array lengths).
+- A path that answers with one JSON document, or with no JSON, is the
+  resource `path`. The largest body wins, which handles an
+  authentication acknowledgement that shares the path.
+- A path that answers with two or more JSON documents gives each its own
+  resource, `path?query`. A parameter whose value differs between the
+  requests that returned one document does not select it and is left out
+  (a cache buster, a rotating nonce).
+- A document requested once cannot show which of its parameters select it,
+  so all of them stay and the warning below names them.
+
+Ambiguity here is reported, not guessed: no parameter name is special.
+
 #### HTTP format detection
 
 For each data page in the HAR, examine the response body:
@@ -879,7 +900,9 @@ For each data page in the HAR, examine the response body:
 2. **Content-Type sniffing.** Some modems serve JSON with
    `Content-Type: text/html` (e.g., coda56) or misspelled headers
    (e.g., `applation/json`). Before the Content-Type dispatch:
-   - If the header contains `json` (any spelling), treat as JSON.
+   - If the header contains `json` (any spelling), treat as JSON. Data
+     page identification applies the same test, so a misspelled header
+     does not drop the response before it is read.
    - Otherwise, if the body starts with `{` or `[`, attempt JSON
      parse. If valid, treat as JSON. If invalid, fall through to the
      Content-Type-based branch (HTML parsing still runs).
@@ -939,7 +962,9 @@ matches either way. Every other cell is read verbatim, as Core reads it.
 **JSON direction inference.** After format classification, JSON pages
 need direction assignment (downstream vs upstream). The pipeline scans:
 
-1. Resource path (e.g., `/dsinfo.asp` → downstream)
+1. Resource path (e.g., `/dsinfo.asp` → downstream), then the words of its
+   query: `/setup.cgi?todo=RF_DS_param` is downstream. A `ds` or `us`
+   word names the direction; both together name neither.
 2. Top-level JSON keys (e.g., `{"downstream": [...]}`)
 3. Nested keys up to 3 levels deep (e.g., `{"docsis": {"dschannel": [...]}}`)
 
@@ -1424,7 +1449,9 @@ iterations (issue #86) because the pipeline only analyzed responses.
    parameters.
 5. A parameter present on **every** data-fetch entry that carries
    a query string is a session requirement. Parameters appearing
-   on fewer entries are endpoint-specific and ignored.
+   on fewer entries are endpoint-specific and ignored. So is a
+   parameter that is part of a resource's query (see Data page
+   identity): it selects the document.
 6. Filter known non-session parameters: jQuery's `cache: false`
    adds `_=<timestamp>` to every AJAX request. The bare `_` key
    is always excluded.
@@ -1728,6 +1755,7 @@ coordinator skips missing hooks.
 | Login page has no `<input type="password">` | "Login page {path} (entry [{n}], {size} bytes) has no `<input type="password">`, and Core recognizes a login page by that input alone ..." Recapture after the page finishes loading, or Core needs another login-page signal. |
 | Data page has `<input type="password">` outside a login form | "Data page {path} (entry [{n}]) contains a password field, so Core would read it as a login page on every poll ..." Confirm the page is a data page; if so, Core needs a way to exempt it. |
 | Only login-form pages remain as data pages | "No data page remains: {paths} hold a login form." If one carries the modem's data, Core needs a way to exempt a data page from login-page detection; otherwise recapture with the data pages open. |
+| Resource selected by several query parameters | "Resource {path?query} is selected by {n} query parameters; confirm each selects the document." Written when a split resource keeps more than one parameter, since one request cannot show which are cache busters. |
 
 Analysis does not read a response holding a login form (a `<form>`
 containing a password input) as a data page. A modem answers the pre-login

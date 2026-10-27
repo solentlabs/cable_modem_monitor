@@ -37,11 +37,13 @@ Keys are the URL paths on the fetch list. Values are parsed HTML.
 }
 ```
 
-- Keys are the path component only (no host, no query string).
-  This is load-bearing: auth strategies that modify the URL (e.g.,
-  `url_token` appending `?ct_<token>`) produce the same resource
-  dict keys as unauthenticated variants. This enables multi-variant
-  modems to share a single parser.yaml.
+- Keys are the fetch-list path: no host, and no query string unless
+  parser.yaml declares one in `resource` (the DM1000 selects each
+  document with `?todo=<name>`). A query the loader adds, such as a
+  `url_token` `?ct_<token>`, is never part of the key. This is
+  load-bearing: auth strategies that modify the URL produce the same
+  resource dict keys as unauthenticated variants. This enables
+  multi-variant modems to share a single parser.yaml.
 - Values are `BeautifulSoup` objects parsed from the response body
 - One entry per unique path (see deduplication below)
 - A capture read offline (`build_resource_dict(har, requests=...)`)
@@ -50,6 +52,9 @@ Keys are the URL paths on the fetch list. Values are parsed HTML.
   every declared form field), as the loader fetches it, and is absent
   when the capture holds none: a GET of the same URL can serve empty
   tables ([PARSING_SPEC.md § Fetch List Derivation](PARSING_SPEC.md#fetch-list-derivation)).
+  A fetch-list path that carries a query (`build_resource_dict(...,
+  selected=...)`) takes the last 200 response to that path whose query
+  holds every declared parameter, and is keyed by the declared string.
 
 ### HTTP Transport — Structured Formats
 

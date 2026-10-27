@@ -106,6 +106,12 @@ RESOURCE_DIRECTION_CASES = [
     ("/api/downstream",     "downstream",  "downstream in path"),
     ("/api/upstream",       "upstream",    "upstream in path"),
     ("/api/data",           "unknown",     "no direction in path"),
+    ("/setup.cgi?todo=RF_DS_param",    "downstream",  "ds word in query"),
+    ("/setup.cgi?todo=RF_US_31_param", "upstream",    "us word in query"),
+    ("/setup.cgi?todo=Cm_Status",      "unknown",     "no direction word in query"),
+    ("/api/data?ds=1&us=1",            "unknown",     "both words in query"),
+    ("/api/data?user=1",               "unknown",     "ds and us only as whole words"),
+    ("/dsinfo.asp?us=1",               "downstream",  "path wins over query"),
 ]
 # fmt: on
 

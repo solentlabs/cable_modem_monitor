@@ -10,6 +10,7 @@ Per docs/ONBOARDING_SPEC.md Phases 5-6.
 from __future__ import annotations
 
 import posixpath
+import re
 from typing import Any
 
 from ...validation.har_utils import HARD_STOP_PREFIX, WARNING_PREFIX
@@ -24,7 +25,7 @@ from .hnap import detect_hnap_sections
 from .http import (
     analyze_page,
     classify_page_format,
-    identify_data_pages,
+    identify_resources,
     login_pages_left_out,
 )
 from .json_rpc import json_rpc_pages
@@ -96,7 +97,8 @@ def _detect_http_sections(
     Identifies data pages, classifies format per page, extracts field
     mappings for channel sections, and detects system_info sources.
     """
-    data_pages = identify_data_pages(entries)
+    resources = identify_resources(entries)
+    data_pages = [entry for entry, _ in resources]
     # A login page is expected to be left out; a data page that embeds its own login
     # form would be too, so each path is named for the reader to confirm.
     left_out = login_pages_left_out(entries, data_pages)
@@ -118,10 +120,18 @@ def _detect_http_sections(
             )
         return {}
 
+    for _, resource in resources:
+        selectors = resource.partition("?")[2].count("&") + 1 if "?" in resource else 0
+        if selectors > 1:
+            warnings.append(
+                f"{WARNING_PREFIX} Resource {resource} is selected by {selectors} query parameters; "
+                "confirm each selects the document."
+            )
+
     # Phase 5: Analyze each data page
     page_analyses: list[PageAnalysis] = []
-    for entry in data_pages:
-        page = analyze_page(entry)
+    for entry, resource in resources:
+        page = analyze_page(entry, resource)
         page_analyses.append(page)
 
     return _sections_from_pages(page_analyses, warnings, fleet=fleet, ambiguities=ambiguities)
@@ -519,7 +529,8 @@ def _direction_from_resource(resource: str) -> str:
 
     Checks full keywords first, then DOCSIS abbreviation prefixes
     (``ds``/``us``) in path segments and filenames — handles URLs like
-    ``/data/dsinfo.asp`` or ``/data/usinfo.asp`` that omit the full word.
+    ``/data/dsinfo.asp`` or ``/data/usinfo.asp`` that omit the full word —
+    then ``ds``/``us`` as a word of the query.
     """
     lower = resource.lower()
     if "downstream" in lower:
@@ -534,6 +545,11 @@ def _direction_from_resource(resource: str) -> str:
             return "downstream"
         if _has_direction_prefix(seg, ("us",)):
             return "upstream"
+
+    # A query that selects the document can name it, as in ?todo=RF_DS_param.
+    words = set(re.split(r"[^a-z0-9]+", lower.partition("?")[2]))
+    if ("ds" in words) != ("us" in words):
+        return "downstream" if "ds" in words else "upstream"
 
     return "unknown"
 

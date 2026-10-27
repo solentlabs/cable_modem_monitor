@@ -104,6 +104,22 @@ class TestIdentifyDataPages:
         result = identify_data_pages(entries)
         assert len(result) == 1
 
+    @pytest.mark.parametrize(
+        ("content_type", "kept"),
+        [
+            ("application/json", True),
+            ("applation/json", True),
+            ("application/vnd.api+json", True),
+            ("text/html", True),
+            ("application/octet-stream", False),
+        ],
+        ids=["json", "misspelled_json", "json_suffix", "html", "binary"],
+    )
+    def test_content_type_gate(self, content_type: str, kept: bool) -> None:
+        """A header containing json passes whatever its spelling; other non-data types do not."""
+        entries = [_make_entry("/setup.cgi", 200, content_type, '{"data": 1}')]
+        assert bool(identify_data_pages(entries)) is kept
+
     def test_deduplicates_by_path(self) -> None:
         """Same path is only included once."""
         entries = [
