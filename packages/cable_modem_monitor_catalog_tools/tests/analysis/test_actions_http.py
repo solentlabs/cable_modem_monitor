@@ -106,6 +106,36 @@ def test_logout_not_in_capture_is_warned(fixture_name: str, expected: str) -> No
         assert logout_warnings == []
 
 
+# Restart warnings: same contract as logout, so the contributor records the restart.
+_NO_RESTART = "No restart request observed in HAR"
+_INFERRED_RESTART = "restart action"
+RESTART_WARNING_CASES = [
+    # (fixture, warning expected, id)
+    ("no_actions", _NO_RESTART, "none_found"),
+    ("source_inferred_ajax_restart", f"(source_inferred): {_NO_REQUEST}", "inferred_post"),
+    ("source_inferred_jst", f"(source_inferred): {_NO_REQUEST}", "inferred_get"),
+    ("restart_json_body", "", "observed_post"),
+    ("restart_json_body_put", "", "observed_put"),
+]
+
+
+@pytest.mark.parametrize(
+    "fixture_name,expected",
+    [c[:2] for c in RESTART_WARNING_CASES],
+    ids=[c[2] for c in RESTART_WARNING_CASES],
+)
+def test_restart_not_in_capture_is_warned(fixture_name: str, expected: str) -> None:
+    """No restart, or one found only in page source, warns; an observed restart stays quiet."""
+    data = load_fixture(FIXTURES_DIR / f"{fixture_name}.json")
+    warnings: list[str] = []
+    detect_actions(data["_entries"], "http", warnings)
+    restart_warnings = [w for w in warnings if w.startswith((_NO_RESTART, _INFERRED_RESTART))]
+    if expected:
+        assert any(expected in w for w in restart_warnings), restart_warnings
+    else:
+        assert restart_warnings == []
+
+
 @pytest.mark.parametrize(
     "fixture_path",
     [f for f in HTTP_FIXTURES if load_fixture(f)["_expected_restart"] is not None],

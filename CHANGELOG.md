@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Intake warns when a capture has no logout request.** A capture that never
   logged out, or whose logout appears only in page source, produced no
   warning. Intake now says so and asks for the logout step.
+- **Intake warns when a capture has no restart request.** A capture without a
+  restart, or whose restart appears only in page source, now says so and asks
+  for the restart step. The restart action is still never invented.
 
 ### Fixed
 
