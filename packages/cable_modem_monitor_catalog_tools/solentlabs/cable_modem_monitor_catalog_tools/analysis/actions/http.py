@@ -73,6 +73,7 @@ def detect_http_actions(
     if restart is None:
         restart = _find_http_action_in_source(entries, _RESTART_PATTERNS, "restart", cookie_names, warnings)
 
+    _report_unobserved_logout(logout, warnings)
     for action_name, action in (("logout", logout), ("restart", restart)):
         _report_unobserved_body(action_name, action, warnings)
 
@@ -179,6 +180,21 @@ def _observed_body(post_data: dict[str, Any]) -> tuple[dict[str, str], dict[str,
         if isinstance(body, dict):
             return {}, body
     return parse_form_params(post_data), None
+
+
+def _report_unobserved_logout(logout: ActionDetail | None, warnings: list[str]) -> None:
+    """Warn when the capture holds no logout request, so the contributor records one."""
+    if logout is None:
+        warnings.append(
+            "No logout endpoint observed in HAR. If this modem has single-session limits, "
+            "a logout action will be needed."
+        )
+    elif logout.source == "source_inferred":
+        warnings.append(
+            f"logout action {logout.method} {logout.endpoint} (source_inferred): the capture holds no "
+            f"request to this endpoint. Capture the logout (log in, click Log out, then log in again) "
+            f"to confirm its request."
+        )
 
 
 def _report_unobserved_body(action_name: str, action: ActionDetail | None, warnings: list[str]) -> None:

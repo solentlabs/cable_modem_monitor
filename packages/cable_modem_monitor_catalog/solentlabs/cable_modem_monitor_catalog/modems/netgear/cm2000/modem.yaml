@@ -89,6 +89,10 @@ notes: |
   (POST /goform/RouterStatus and GET /Reboot.htm) come from the CM2500
   capture (#189) and were not observed on a CM2000. A capture of the restart
   on this model replaces them.
+  Logout: not declared. The capture never exercised it. index.htm's
+  gui_logout() opens Logout.htm, and the page's own script submits a form to
+  /goform/logout?id=N (the v3.13.1 fixture), so a plain GET may not end the
+  session. A capture that logs in, logs out and logs in again decides it.
   Hand redaction: the TLS certificate subject in modem.har carried the unit's
   MAC (har-capture's pseudonym for it) and now reads XX:XX:XX:XX:XX:XX;
   har-capture masks headers and cookies but not _securityDetails.

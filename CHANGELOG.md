@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Intake warns when a capture has no logout request.** A capture that never
+  logged out, or whose logout appears only in page source, produced no
+  warning. Intake now says so and asks for the logout step.
+
 ### Fixed
 
 - **Netgear CM2000 login should work again (#226).** v3.14 posted to

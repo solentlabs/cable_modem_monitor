@@ -1754,6 +1754,7 @@ parses, not the pre-login visit. See
 | Condition | Message |
 |-----------|---------|
 | No logout flow in HAR | "No logout endpoint observed in HAR. If this modem has single-session limits, a logout action will be needed." |
+| Logout only in page source | "logout action GET /Logout.htm (source_inferred): the capture holds no request to this endpoint. Capture the logout (log in, click Log out, then log in again) to confirm its request." The endpoint is in page source and the capture holds no request to it, so its method and body are unconfirmed. |
 | No parseable data sections | "no parseable data sections detected" — auth and actions still analyzed; no parser can be generated (common on unprovisioned modems serving placeholder pages). |
 | Dynamic login action, no Core support | "login POST ... carries a query string" — per-session token; without `action_source` support (#189) the bare-action config may be rejected. |
 | Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |

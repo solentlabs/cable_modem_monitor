@@ -73,6 +73,39 @@ def test_http_action_warnings(fixture_path: Path) -> None:
         assert any(needle in w for w in warnings), f"no warning mentions {needle!r}: {warnings}"
 
 
+# Logout warnings: a capture that never exercised the logout says so, so the
+# contributor records one (ONBOARDING_SPEC.md § Warnings).
+_NO_LOGOUT = "No logout endpoint observed in HAR"
+_INFERRED_LOGOUT = "logout action"
+_NO_REQUEST = "the capture holds no request"
+LOGOUT_WARNING_CASES = [
+    # (fixture, warning expected, id)
+    ("no_actions", _NO_LOGOUT, "none_found"),
+    ("source_inferred_jst", f"GET /home_loggedout.jst (source_inferred): {_NO_REQUEST}", "inferred_get"),
+    ("source_inferred_ajax_logout", f"POST /cgi-bin/logout (source_inferred): {_NO_REQUEST}", "inferred_post"),
+    ("get_logout", "", "observed_get"),
+    ("post_logout", "", "observed_post"),
+    ("observed_logout_page_then_post", "", "observed_page_then_post"),
+]
+
+
+@pytest.mark.parametrize(
+    "fixture_name,expected",
+    [c[:2] for c in LOGOUT_WARNING_CASES],
+    ids=[c[2] for c in LOGOUT_WARNING_CASES],
+)
+def test_logout_not_in_capture_is_warned(fixture_name: str, expected: str) -> None:
+    """No logout, or one found only in page source, warns; an observed logout stays quiet."""
+    data = load_fixture(FIXTURES_DIR / f"{fixture_name}.json")
+    warnings: list[str] = []
+    detect_actions(data["_entries"], "http", warnings)
+    logout_warnings = [w for w in warnings if w.startswith((_NO_LOGOUT, _INFERRED_LOGOUT))]
+    if expected:
+        assert any(expected in w for w in logout_warnings), logout_warnings
+    else:
+        assert logout_warnings == []
+
+
 @pytest.mark.parametrize(
     "fixture_path",
     [f for f in HTTP_FIXTURES if load_fixture(f)["_expected_restart"] is not None],
