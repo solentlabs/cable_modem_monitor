@@ -1191,7 +1191,7 @@ For HNAP, session is implicit (always `uid` + `PrivateKey` cookies,
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `headers` | map | `{}` | Static headers added to all requests for this session (e.g., `X-Requested-With: XMLHttpRequest` for SPA-style modems). Header values support the `{base_url}` placeholder, which resolves to the modem's URL at session-build time — used for `Referer`/`Origin` headers that some modems validate against their own origin. Dynamic headers (CSRF tokens, HNAP signatures, auth tokens) are managed by auth strategies — each strategy defines its own fields for token acquisition and header injection. |
-| `query_params` | map | `{}` | Static query parameters appended to every URL Core fetches for this session — data resources, `post_login_endpoints`, and actions alike (e.g., `_n: "12345"` for Arris firmware that requires a cache-buster nonce on AJAX requests). Not used for auth-managed tokens — those go through `auth.token_prefix`. |
+| `query_params` | map | `{}` | Static query parameters appended to every URL Core fetches for this session — data resources, `post_login_endpoints`, and actions alike, but not an auth strategy's login POST ([ARCHITECTURE_DECISIONS.md § Auth login POSTs do not carry `session.query_params`](ARCHITECTURE_DECISIONS.md#auth-login-posts-do-not-carry-sessionquery_params)) (e.g., `_n: "12345"` for Arris firmware that requires a cache-buster nonce on AJAX requests). Not used for auth-managed tokens — those go through `auth.token_prefix`. |
 | `post_login_endpoints` | list | `[]` | Paths to GET, in order, on every fresh login, ahead of any data request. See [Post-login endpoints](#post-login-endpoints). |
 
 ### Post-login endpoints

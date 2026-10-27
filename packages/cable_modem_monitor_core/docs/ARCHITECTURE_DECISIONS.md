@@ -905,6 +905,30 @@ same GET, which a CLI has no UI reason to make.
 `session.query_params` like every other fetch. No response parsing, no
 conditional or templated paths, no per-modem retry policy.
 
+### Auth login POSTs do not carry `session.query_params`
+
+**Decision:** `session.query_params` is appended to data resources,
+`post_login_endpoints` and actions. No auth strategy appends it to its
+login POST.
+
+**Rationale:** This is an omission the evidence has not overturned, not a
+design preference. The Arris firmware's ajax prefilter adds `_n` to every
+request, login included, and real captures of the TG3442DE show it on the
+login POST. The TG3442DE is confirmed working without it (#86). Sending it
+changes the request on the one path where a wrong request can trip the
+firmware's lockout, and no live test of the change exists on a TG3442DE.
+
+**Evidence:** The TG3442DE is the only catalog entry that declares
+`query_params`. The SBG7400AC2, a different firmware in the same family,
+answers its login with 500 when `_n` is absent (live test 2026-10-23, in
+its `modem.yaml` notes); it carries `_n` through its own `action_auth`.
+
+**Constrains:** The replay harness refuses a login POST whose query names
+the capture never recorded (#189), so a real TG3442DE capture cannot
+replace its synthetic fixture until login sends the parameter. A modem
+whose login needs `session.query_params` is a Core change verified on
+hardware, not a `modem.yaml` field.
+
 ### Auth-failure detail via single WARNING log
 
 **Decision:** When the collector's auth phase fails, it emits one
