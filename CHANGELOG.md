@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An action's scheme override no longer keeps the old scheme's default
+  port.** An action that names only a scheme sent `https://host:80` when the
+  modem URL carried `:80`, and `http://host:443` the other way round. The
+  default port now leaves with the scheme it belongs to. No catalog entry
+  declares a scheme without a port, so no current modem is affected.
 - **Netgear CM2000 login should work again (#226).** v3.14 posted to
   `/goform/Login` without the `?id=` the modem requires, so every login was
   refused. The entry now reads the form action off the login page, as the

@@ -1382,7 +1382,7 @@ actions:
 | `endpoint_pattern` | string | no | Keyword to match within form action attributes on the pre-fetch page. Core wraps this in a form-action regex — not a raw regex. See Architecture Decision below. |
 | `action_auth` | AuthConfig | no | Per-action auth config. When present, a fresh session is created, authenticated with the given strategy, the action is executed on that temporary session, and the session is discarded. The collector's session is untouched. Any auth strategy is valid. |
 | `port` | int (1–65535) | no | Port for the action's request and its `action_auth` login, in place of the configured modem URL's port; the host is unchanged. For firmware that serves the action from a second web server, such as an admin GUI on its own port with its own login. |
-| `scheme` | `http` \| `https` | no | Scheme for the action's request and its `action_auth` login, in place of the configured modem URL's scheme. For a second web server that speaks plain HTTP while the main one is reached over HTTPS: setup picks one scheme for the modem, and a second port may not serve it. |
+| `scheme` | `http` \| `https` | no | Scheme for the action's request and its `action_auth` login, in place of the configured modem URL's scheme. For a second web server that speaks plain HTTP while the main one is reached over HTTPS: setup picks one scheme for the modem, and a second port may not serve it. A port written in the configured URL stays, except the default of the scheme being replaced (80 for `http`, 443 for `https`), which goes with it. |
 
 A restart served from a second port logs in there with `action_auth`,
 using the same username and password as the main login:
