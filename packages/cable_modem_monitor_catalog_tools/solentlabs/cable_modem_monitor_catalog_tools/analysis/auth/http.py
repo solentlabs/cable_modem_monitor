@@ -84,8 +84,8 @@ def detect_http_auth(
 ) -> AuthDetail:
     """Walk the HTTP auth decision tree.
 
-    Order: none -> basic -> url_token -> form_sjcl -> form_pbkdf2 ->
-    JSON login -> form_nonce -> form -> hard stop.
+    Order: none -> basic (challenge) -> url_token -> form_sjcl -> form_pbkdf2 ->
+    JSON login -> form_nonce -> form -> basic (header, no challenge) -> hard stop.
 
     Args:
         entries: HAR ``log.entries`` list.
@@ -138,8 +138,8 @@ def detect_http_auth(
     if detail is not None:
         return detail
 
-    # Form POST to login endpoint
-    detail = _extract_form_login(entries, signals, warnings, ambiguities)
+    # Form POST to login endpoint, else a Basic header with no challenge
+    detail = _extract_form_login_or_basic_header(entries, signals, warnings, ambiguities)
     if detail is not None:
         return detail
 
@@ -198,6 +198,7 @@ class _HttpAuthSignals:
     has_401: bool = False
     has_302_after_post: bool = False
     has_authorization_header: bool = False
+    basic_authorization: bool = False
     has_set_cookie_after_login: bool = False
     unmatched_credential_posts: list[str] = field(default_factory=list)
     # Form POSTs to a login URL that set a cookie with no recognizable credential field
@@ -281,6 +282,8 @@ def _check_entry_auth_signals(
     if "authorization" in req_hdrs:
         signals.has_authorization_header = True
         signals.has_any_auth_signal = True
+        if _parse_auth_scheme(req_hdrs["authorization"]) == "basic":
+            signals.basic_authorization = True
 
     # 401 + WWW-Authenticate
     if status == 401:
@@ -433,6 +436,29 @@ def _check_form_login_post(
 # ---------------------------------------------------------------------------
 # Strategy extraction helpers
 # ---------------------------------------------------------------------------
+
+
+def _extract_form_login_or_basic_header(
+    entries: list[dict[str, Any]],
+    signals: _HttpAuthSignals,
+    warnings: list[str],
+    ambiguities: list[Ambiguity] | None = None,
+) -> AuthDetail | None:
+    """A form login, else Basic read from the Authorization header, else None."""
+    detail = _extract_form_login(entries, signals, warnings, ambiguities)
+    if detail is not None:
+        return detail
+    # har-capture supplies the credentials to the browser, which suppresses the 401, so
+    # a Basic capture can hold no challenge. Last, so a login or token flow outranks a
+    # Basic header on one request.
+    if not signals.basic_authorization:
+        return None
+    warnings.append(
+        "basic auth read from the Authorization header: the capture holds no 401, so "
+        "challenge_cookie cannot be observed and is written false. Declare "
+        "challenge_cookie: true if the modem's 401 sets a cookie that the retry must send."
+    )
+    return _extract_basic(entries, signals)
 
 
 def _extract_form_login(
@@ -948,7 +974,7 @@ def _core_supports_action_source() -> bool:
 
 
 def _parse_auth_scheme(www_authenticate: str) -> str:
-    """Extract the auth scheme token from a WWW-Authenticate header.
+    """Extract the auth scheme token from a WWW-Authenticate or Authorization header value.
 
     Per RFC 7235, the scheme is the first whitespace-delimited token.
     Returns the lowercase scheme string, or empty string if absent.

@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Intake reads Basic auth from a capture with no 401.** `har-capture
+  --username` hands the credentials to the browser, which hides the device's
+  401, so a Basic capture made that way passed validation and then stopped
+  with "Cannot determine auth mechanism". An `Authorization: Basic` header
+  now reads as `basic` when no other strategy matches, with a warning that
+  `challenge_cookie` cannot be observed. The Netgear CM600 capture scores
+  96.6% where it scored 0.0% (fleet 90.2% to 92.1%).
 - **Intake reads a modem that selects each document by query string.** The
   DM1000 produced no parser from its capture, for four reasons. The data
   page filter dropped JSON typed `applation/json`. Every `/setup.cgi?todo=`

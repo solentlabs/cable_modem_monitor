@@ -1,0 +1,55 @@
+{
+  "_description": "Basic auth captured with browser-supplied credentials: Authorization: Basic on every request, no 401 in the capture (har-capture --username suppresses it)",
+  "_entries": [
+    {
+      "request": {
+        "cookies": [],
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Basic dXNlcjpwYXNz"
+          }
+        ],
+        "method": "GET",
+        "url": "/DashBoard.asp"
+      },
+      "response": {
+        "content": {
+          "size": 4,
+          "text": "data"
+        },
+        "cookies": [],
+        "headers": [],
+        "status": 200
+      }
+    },
+    {
+      "request": {
+        "cookies": [],
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Basic dXNlcjpwYXNz"
+          }
+        ],
+        "method": "GET",
+        "url": "/DocsisStatus.asp"
+      },
+      "response": {
+        "content": {
+          "size": 4,
+          "text": "data"
+        },
+        "cookies": [],
+        "headers": [],
+        "status": 200
+      }
+    }
+  ],
+  "_expected_fields": {
+    "challenge_cookie": false
+  },
+  "_expected_strategy": "basic",
+  "_expected_warning": "holds no 401",
+  "_transport": "http"
+}

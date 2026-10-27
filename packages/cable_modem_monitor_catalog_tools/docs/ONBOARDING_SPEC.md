@@ -247,6 +247,7 @@ under AUTH FIXTURE ISSUES in the intake pipeline regression.
 |--------------|----------------|
 | `WWW-Authenticate: Basic` response header | `basic` auth |
 | `WWW-Authenticate: Digest` response header | Digest auth — **unsupported, flag** |
+| `Authorization: Basic` on requests, no challenge in the capture, and no other row matches | `basic` auth. `har-capture --username` supplies the credentials to the browser, which suppresses the 401 in the HAR, so a Basic capture made that way holds no challenge. Any other scheme, or a Basic header beside a matching login, does not make this row apply |
 | POST, PUT or PATCH to login endpoint with credential-shaped form body | `form` (or variant — continue analysis) |
 | `HNAP_AUTH` header on any request | `hnap` auth |
 | URL contains base64-encoded credentials | `url_token` auth |
@@ -550,6 +551,11 @@ Check HAR entries for login flow:
   ├── 401 response with WWW-Authenticate: Basic
   │   └── strategy: basic
   │       Extract: challenge_cookie (retry with Set-Cookie?)
+  │
+  ├── Authorization: Basic on requests, no challenge captured,
+  │   and no branch above matched
+  │   └── strategy: basic
+  │       Extract: challenge_cookie (false: no challenge to retry)
   │
   └── Cannot determine → HARD STOP
 ```
@@ -1788,6 +1794,7 @@ parses, not the pre-login visit. See
 | Restart only in page source | "restart action POST /rest/v1/system/reboot (source_inferred): the capture holds no request to this endpoint. Capture the restart (log in, restart the modem, then log in again) to confirm its request." HTTP transport only. |
 | Action body encoded | "restart action PUT /actionHandler/ajaxSet_Reset_Restore.php: the observed JSON body holds sanitized or encoded values ['user'] and was not copied to json_body." The action carries `body: encoded`. |
 | Action body unobserved | "restart action POST /rest/v1/system/reboot (source_inferred): request body unobserved." The endpoint is in page source but the capture holds no request to it, so neither `params` nor `json_body` is generated. The action carries `body: unobserved`. |
+| Basic read from the header | "basic auth read from the Authorization header: the capture holds no 401, so challenge_cookie cannot be observed and is written false. Declare challenge_cookie: true if the modem's 401 sets a cookie that the retry must send." |
 | parser.py generated | "parser.py was generated for: [reasons]. Review the post-processing logic for correctness." |
 | Login page has no `<input type="password">` | "Login page {path} (entry [{n}], {size} bytes) has no `<input type=\"password\">`, so Core cannot recognize it as a login page. A lapsed session on this modem surfaces as LOAD_INTEGRITY (a data body with none of the parser's anchors) rather than LOAD_AUTH; recovery is the same." |
 
