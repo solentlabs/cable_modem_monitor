@@ -186,16 +186,6 @@ def _detect_page_system_info(
         header_fields = _match_js_header(js_func, label_map, id_map, vocabulary)
         if header_fields:
             header_functions.append(JsFunctionDetail(js_func.name, js_func.delimiter, header_fields))
-            continue
-        fields = _match_js_system_info(js_func.values)
-        if fields:
-            sources.append(
-                SystemInfoSourceDetail(
-                    format="javascript",
-                    resource=page.resource,
-                    fields=fields,
-                )
-            )
 
     if header_functions:
         sources.append(
@@ -377,37 +367,6 @@ def _match_js_header(
         fields.append(
             SystemInfoFieldDetail(field=field_name, type=field_type, format=field_format, map=field_map, offset=offset)
         )
-    return fields
-
-
-def _match_js_system_info(
-    values: list[str],
-) -> list[SystemInfoFieldDetail]:
-    """Match JS delimited values to system info fields.
-
-    JS system info functions typically have key-value pairs or
-    positional fields. This is a best-effort heuristic.
-    """
-    fields: list[SystemInfoFieldDetail] = []
-    seen: set[str] = set()
-
-    for value in values:
-        stripped = value.strip()
-        if not stripped:
-            continue
-
-        # Check if value looks like a system info label
-        field_name, _tier = _match_label(stripped, "label")
-        if field_name and field_name not in seen:
-            seen.add(field_name)
-            fields.append(
-                SystemInfoFieldDetail(
-                    field=field_name,
-                    type="string",
-                    source=stripped,
-                )
-            )
-
     return fields
 
 

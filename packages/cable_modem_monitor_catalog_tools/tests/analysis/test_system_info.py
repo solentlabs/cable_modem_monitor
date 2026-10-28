@@ -369,52 +369,6 @@ class TestSystemInfoSerialization:
 class TestJsSystemInfoDetection:
     """Tests for JavaScript-embedded system info detection."""
 
-    def test_js_function_with_system_info_labels(self) -> None:
-        """JS function named InitSystemInfo with label values detected."""
-        page = PageAnalysis(
-            resource="/info.html",
-            content_type="text/html",
-            js_functions=[
-                DetectedJsFunction(
-                    name="InitSystemInfoTagValue",
-                    body="var tagValueList = '...';",
-                    delimiter="|",
-                    values=["", "System Up Time", "3 days 5 hours", "Software Version", "1.0.4"],
-                ),
-            ],
-        )
-        result = detect_system_info([page], [])
-        assert result is not None
-
-        detected_fields = set()
-        for source in result.sources:
-            for f in source.fields:
-                detected_fields.add(f.field)
-
-        assert "system_uptime" in detected_fields
-        assert "software_version" in detected_fields
-
-    def test_js_model_label_maps_to_model_name(self) -> None:
-        """A Model value in a JS function maps to model_name, not hardware_version."""
-        page = PageAnalysis(
-            resource="/info.html",
-            content_type="text/html",
-            js_functions=[
-                DetectedJsFunction(
-                    name="InitTagValue",
-                    body="",
-                    delimiter="|",
-                    values=["Model", "M-100", "Hardware Version", "1.0"],
-                ),
-            ],
-        )
-        result = detect_system_info([page], [])
-        assert result is not None
-        assert {f.field: f.source for src in result.sources for f in src.fields} == {
-            "model_name": "Model",
-            "hardware_version": "Hardware Version",
-        }
-
     def test_directional_js_function_skipped(self) -> None:
         """Directional JS functions (ds/us) are skipped for system_info."""
         page = PageAnalysis(
@@ -432,26 +386,6 @@ class TestJsSystemInfoDetection:
         result = detect_system_info([page], [])
         # Directional function skipped — no JS system_info sources
         assert result is None
-
-    def test_non_directional_js_function_checked(self) -> None:
-        """Non-directional JS functions are checked for system_info labels."""
-        page = PageAnalysis(
-            resource="/status.htm",
-            content_type="text/html",
-            js_functions=[
-                DetectedJsFunction(
-                    name="InitTagValue",
-                    body="var tagValueList = '...';",
-                    delimiter="|",
-                    values=["", "System Up Time", "5 days 2 hours"],
-                ),
-            ],
-        )
-        result = detect_system_info([page], [])
-        assert result is not None
-
-        detected_fields = {f.field for src in result.sources for f in src.fields}
-        assert "system_uptime" in detected_fields
 
     def test_non_directional_js_no_matching_values(self) -> None:
         """Non-directional JS function with no system_info labels yields nothing."""
