@@ -153,7 +153,8 @@ system_info:
         #   6: Config File  7: Config Comment  8: Security
         #   9: Security Comment  10: Current System Time
         #
-        # Only 11 fields (not 17 like CM1200), so no system_uptime.
+        # Only 11 fields (not 17 like CM1200), so uptime is not in the
+        # function; it is the SystemUpTime element below.
         # Two var tagValueList assignments in the function body;
         # the JS parser takes the last match (real state).
         - name: "InitTagValue"
@@ -162,6 +163,14 @@ system_info:
             - offset: 3
               field: docsis_status
               type: string
+    - format: html_fields
+      resource: "/DocsisStatus.asp"
+      fields:
+        - field: system_uptime
+          id: "SystemUpTime"
+          pattern: "System Up Time:\\s*(.*)"
+          type: uptime
+          format: "{hours}:{minutes}:{seconds}"
 # Aggregate intentionally omitted. One QAM channel reports billions
 # of correctable codewords — likely firmware counter corruption or
 # OFDM misclassification (see modem.yaml quirks). Per-channel data
