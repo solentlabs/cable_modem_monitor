@@ -290,6 +290,7 @@ words:
   - dschannel
   - dsid
   - dsinfo
+  - dsoctets
   - dsofdminfo
   - firmwares
   - firmwareversion

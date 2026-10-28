@@ -41,6 +41,8 @@ notes: |
   extra cells are subcarrier indices not present in the header.
   parser.py combines first/last subcarrier frequencies into the canonical
   pair: `frequency` (lower edge) and `channel_width` (band span).
+  Downstream bytes are not parsed: the DS QAM table has an Octets column
+  but the DS OFDM table does not, so a total would count QAM channels only.
 
 references:
   issues:
