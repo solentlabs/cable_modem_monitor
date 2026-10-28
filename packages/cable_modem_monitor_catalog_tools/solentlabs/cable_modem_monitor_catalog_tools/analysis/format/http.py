@@ -49,6 +49,9 @@ _JS_TAG_VALUE_PATTERN = re.compile(
 # JS block comment pattern (strip before tagValueList search)
 _JS_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 
+# JS line comment on a line of its own (a commented-out sample assignment)
+_JS_LINE_COMMENT = re.compile(r"^[ \t]*//.*$", re.MULTILINE)
+
 # Common JS delimiters
 _JS_DELIMITERS: tuple[str, ...] = ("|", ",", ";", "^")
 
@@ -204,9 +207,9 @@ def _detect_js_functions(body: str) -> list[DetectedJsFunction]:
         name = match.group(1)
         func_body = match.group(2)
 
-        # Strip block comments — some modems have a commented-out
+        # Strip block and line comments — some modems have a commented-out
         # tagValueList example before the real assignment
-        clean_body = _JS_BLOCK_COMMENT.sub("", func_body)
+        clean_body = _JS_LINE_COMMENT.sub("", _JS_BLOCK_COMMENT.sub("", func_body))
 
         # Look for tagValueList assignment
         tag_match = _JS_TAG_VALUE_PATTERN.search(clean_body)

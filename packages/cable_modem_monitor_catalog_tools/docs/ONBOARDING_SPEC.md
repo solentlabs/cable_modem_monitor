@@ -1055,10 +1055,26 @@ no candidate parses, since a format that matches nothing yields no value
 and no error.
 
 Both rules apply wherever the detector can see the field's value, which
-is the `html_fields`, `json`, and `hnap` sources. `javascript` sources
-are the exception: their values are positional, with no value bound to a
-field at detection time, so they still emit `type: string` and need the
-type and map filled in by hand.
+is the `html_fields`, `json`, and `hnap` sources, and `javascript`
+functions read through their header comment (below). Other `javascript`
+sources are the exception: their values are positional, with no value
+bound to a field at detection time, so they still emit `type: string` and
+need the type and map filled in by hand.
+
+**Header-labelled `javascript` functions.** Netgear's `Init*TagValue`
+functions open with a block comment naming their columns
+(`/* Is Genie (text) | DS Provisioned Rate (text) | US Provisioned Rate (text) */`).
+The detector reads positions from that comment, and only when the label
+count equals the value count, after dropping one trailing empty value left
+by a trailing delimiter. The comment is prose, not a schema: where it
+disagrees with the data, no position is read and the function is left to a
+hand mapping. c7000v2's `RouterStatus.htm` lists 32 labels for 61 values,
+and its System Up Time label is column 30 where the value sits at offset
+33, so reading the comment there would map the wrong cell. Each label
+matches through the same label vocabulary as `html_fields`, and the type
+and format come from the captured value. `DS Provisioned Rate` and
+`US Provisioned Rate` map to `provisioned_speed_down` and `_up`; a rate of
+0 or less is not mapped (FIELD_REGISTRY § Tier 2).
 
 **System info (Tier 2 registered — see FIELD_REGISTRY):**
 

@@ -14,11 +14,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from ...validation.har_utils import WARNING_PREFIX
-from ..format.types import XML_CONTENT_TYPE, DetectedLabelPair, PageAnalysis
+from ..format.types import XML_CONTENT_TYPE, DetectedJsFunction, DetectedLabelPair, PageAnalysis
 from ..types import FleetPatterns
 from .field_shape import FieldShapeVocabulary, field_shape
 from .service_flows import detect_service_flow_aggregates
 from .types import (
+    JsFunctionDetail,
     SystemInfoDetail,
     SystemInfoFieldDetail,
     SystemInfoSourceDetail,
@@ -47,6 +48,8 @@ _LABEL_FIELD_MAP: dict[str, tuple[str, int]] = {
     "docsis version": ("docsis_version", 2),
     "temperature": ("temperature", 2),
     "model": ("model_name", 2),
+    "ds provisioned rate": ("provisioned_speed_down", 2),
+    "us provisioned rate": ("provisioned_speed_up", 2),
     # Identity PII (serial number, MAC) intentionally not mapped — no CMM
     # consumer; see SYSTEM_INFO_SPEC § Tiered Sensor Model.
 }
@@ -176,8 +179,13 @@ def _detect_page_system_info(
     # javascript: non-directional JS functions may contain system
     # info labels. Directional functions (ds/us in name) belong to
     # channel sections and are skipped here.
+    header_functions: list[JsFunctionDetail] = []
     for js_func in page.js_functions:
         if _is_directional_js(js_func.name):
+            continue
+        header_fields = _match_js_header(js_func, label_map, id_map, vocabulary)
+        if header_fields:
+            header_functions.append(JsFunctionDetail(js_func.name, js_func.delimiter, header_fields))
             continue
         fields = _match_js_system_info(js_func.values)
         if fields:
@@ -188,6 +196,11 @@ def _detect_page_system_info(
                     fields=fields,
                 )
             )
+
+    if header_functions:
+        sources.append(
+            SystemInfoSourceDetail(format="javascript", resource=page.resource, fields=[], functions=header_functions)
+        )
 
     # json: JSON data with system info keys. A service flow resource
     # carries no scalar system_info fields, only the per-flow array, so
@@ -317,6 +330,54 @@ def _is_directional_js(name: str) -> bool:
 # -----------------------------------------------------------------------
 # JavaScript system info matching
 # -----------------------------------------------------------------------
+
+# A block comment opening the function body, naming its columns.
+_JS_HEADER_COMMENT = re.compile(r"\s*/\*(.*?)\*/", re.DOTALL)
+_JS_HEADER_TYPE_SUFFIX = re.compile(r"\s*\([a-z]+\)\s*$")
+
+
+def _js_header_labels(js_func: DetectedJsFunction) -> list[str]:
+    """Column labels from the comment that opens the function body, type suffixes removed."""
+    match = _JS_HEADER_COMMENT.match(js_func.body)
+    if not match:
+        return []
+    return [_JS_HEADER_TYPE_SUFFIX.sub("", part.strip()) for part in match.group(1).split(js_func.delimiter)]
+
+
+def _is_positive_rate(value: str) -> bool:
+    """True when a provisioned value is a rate above zero (0 means the modem reports none)."""
+    try:
+        return int(value.strip()) > 0
+    except ValueError:
+        return False
+
+
+def _match_js_header(
+    js_func: DetectedJsFunction,
+    label_map: dict[str, tuple[str, int]],
+    id_map: dict[str, tuple[str, int]],
+    vocabulary: FieldShapeVocabulary,
+) -> list[SystemInfoFieldDetail]:
+    """Map a function's positions through its header comment, only when comment and values line up."""
+    labels = _js_header_labels(js_func)
+    values = js_func.values[:-1] if js_func.values and js_func.values[-1] == "" else js_func.values
+    if not labels or len(labels) != len(values):
+        return []
+
+    fields: list[SystemInfoFieldDetail] = []
+    seen: set[str] = set()
+    for offset, (label, value) in enumerate(zip(labels, values, strict=True)):
+        field_name, _tier = _match_label(label, "label", label_map, id_map)
+        if not field_name or field_name in seen:
+            continue
+        if field_name.startswith("provisioned_") and not _is_positive_rate(value):
+            continue
+        seen.add(field_name)
+        field_type, field_format, field_map = field_shape(field_name, value, vocabulary)
+        fields.append(
+            SystemInfoFieldDetail(field=field_name, type=field_type, format=field_format, map=field_map, offset=offset)
+        )
+    return fields
 
 
 def _match_js_system_info(

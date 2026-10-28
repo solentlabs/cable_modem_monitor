@@ -158,11 +158,11 @@ registered_fields:
     provisioned_speed_down:
       type: integer
       unit: "bit/s"
-      description: "ISP-provisioned downstream speed (max service flow rate)"
+      description: "ISP-provisioned downstream speed (maximum sustained rate)"
     provisioned_speed_up:
       type: integer
       unit: "bit/s"
-      description: "ISP-provisioned upstream speed (max service flow rate)"
+      description: "ISP-provisioned upstream speed (maximum sustained rate)"
     provisioned_burst_down:
       type: integer
       unit: "B"
@@ -172,6 +172,14 @@ registered_fields:
       unit: "B"
       description: "ISP-provisioned upstream max traffic burst"
 ```
+
+The provisioned fields come from one of two sources: a service flow list
+reduced with `child_aggregates` ([SYSTEM_INFO_SPEC](SYSTEM_INFO_SPEC.md#service-flow-units)),
+or a rate the modem reports directly (Netgear's DS/US provisioned rate
+pair). Speed is bit/s; burst is a byte count and is not a speed. A capture
+that reports a rate of 0 is not mapped: the modem has no provisioned rate
+to show (the CM600 reports `0|0|0`; Netgear's own page shows
+"undetermined" for a rate of 0 or less).
 
 ### Graduation Criteria
 

@@ -282,6 +282,26 @@ def test_js_json_variable_detection(script: str, name: str, kind: str) -> None:
     assert found == ([] if kind == "none" else [(name, kind)])
 
 
+JS_TAG_VALUE_CASES = [
+    # (body, desc)
+    ("var tagValueList = '0|520|12|';", "plain assignment"),
+    ("//var tagValueList = \"1|100|0|\";\n    var tagValueList = '0|520|12|';", "line-commented sample skipped"),
+    ("/* var tagValueList = '1|100|0|'; */ var tagValueList = '0|520|12|';", "block-commented sample skipped"),
+]
+
+
+@pytest.mark.parametrize(
+    "body,desc",
+    JS_TAG_VALUE_CASES,
+    ids=[c[1] for c in JS_TAG_VALUE_CASES],
+)
+def test_js_tag_value_reads_the_live_assignment(body: str, desc: str) -> None:
+    """A commented-out sample assignment never supplies the function's values."""
+    script = f"function InitXTagValue() {{\n    {body}\n    return tagValueList.split('|');\n}}"
+    page = analyze_page(_make_entry("/s.htm", 200, "text/html", f"<html><script>{script}</script></html>"))
+    assert [f.values for f in page.js_functions] == [["0", "520", "12", ""]]
+
+
 @pytest.mark.parametrize(
     "fixture_path",
     JS_EDGE_CASE_FIXTURES,

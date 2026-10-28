@@ -34,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were recorded as measurements, so a plan that never changes filled the
   statistics database with a flat line. History already recorded stays;
   statistics stop accruing for the four sensors.
+- **Intake reads provisioned speed from a Netgear status page.** The page's
+  `InitProvRateTableTagValue` function labels its columns in a comment, which
+  intake never read, so the C7000v2 capture produced no provisioned speed. Intake
+  now maps positions from that comment, but only when its label count matches
+  the value count, since the C7000v2 `RouterStatus.htm` comment does not line up
+  with its data. It also read the commented-out sample assignment beside the
+  real one, which gave the C7000v2 a downstream speed of 100000000. A rate of 0
+  is not mapped. The C7000v2 capture scores 96.8% where it scored 96.1%.
 - **Intake reads Basic auth from a capture with no 401.** `har-capture
   --username` hands the credentials to the browser, which hides the device's
   401, so a Basic capture made that way passed validation and then stopped
