@@ -29,6 +29,9 @@ downstream:
         - index: 5
           field: modulation
           type: modulation
+        - index: 6
+          field: bytes
+          type: integer
         - index: 7
           field: corrected
           type: integer
@@ -109,11 +112,14 @@ system_info:
           pattern: "MODEL:\\s*(.+)"
           type: string
 
-# Aggregate downstream error totals across all channels.
+# Aggregate downstream error and byte totals across all channels.
 aggregate:
   total_corrected:
     sum: corrected
     channels: downstream
   total_uncorrected:
     sum: uncorrected
+    channels: downstream
+  total_downstream_bytes:
+    sum: bytes
     channels: downstream

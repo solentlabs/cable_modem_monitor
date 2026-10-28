@@ -83,6 +83,8 @@ HEADER_CASES = [
     ("Transmit Level",                      "power",           1,  "",    "tc4400 upstream power header"),
     ("Modulation/Profile ID",               "modulation",      1,  "",    "tc4400 modulation header"),
     ("Corrected Codewords",                 "corrected",       1,  "",    "tc4400 corrected codewords"),
+    # Per-channel received bytes (the modems label the column "Octets")
+    ("Octets",                              "bytes",           2,  "",    "cm820b octets column"),
 ]
 # fmt: on
 
@@ -119,6 +121,8 @@ JSON_KEY_CASES = [
     ("correctedErrors",    "corrected",         1,            "correctedErrors"),
     ("channelType",        "channel_type",      1,            "channelType"),
     ("symbolRate",         "symbol_rate",        1,            "symbolRate"),
+    ("octets",             "bytes",             2,            "g54 octets"),
+    ("Octets",             "bytes",             2,            "cga4236 Octets"),
     ("customKey",          "custom_key",        3,            "tier 3 fallback"),
 ]
 # fmt: on

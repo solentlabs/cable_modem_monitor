@@ -500,6 +500,45 @@ class TestDerivedFieldEnrichment:
 
         assert result["system_info"]["total_corrected"] == 300
 
+    def test_bytes_aggregate_sums_locked_channels_and_keeps_per_channel_values(self) -> None:
+        """total_downstream_bytes sums locked channels; Core keeps per-channel bytes."""
+        from solentlabs.cable_modem_monitor_core.models.parser_config.config import (
+            AggregateField,
+        )
+
+        config = ParserConfig(
+            downstream=_table_section(
+                "/status.html",
+                columns=[
+                    {"index": 0, "field": "channel_id", "type": "integer"},
+                    {"index": 1, "field": "bytes", "type": "integer"},
+                    {"index": 2, "field": "lock_status", "type": "lock_status"},
+                ],
+            ),
+            aggregate={
+                "total_downstream_bytes": AggregateField(sum="bytes", channels="downstream"),
+            },
+        )
+        resources = _build_resources(
+            {
+                "/status.html": _make_table_html(
+                    "Downstream",
+                    [
+                        ["1", "12038669013", "Locked"],
+                        ["2", "10044551633", "Locked"],
+                        ["3", "999", "Not Locked"],
+                    ],
+                ),
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        result, _ = coordinator.parse(resources)
+
+        # An unlocked channel keeps only channel_number and lock_status, so
+        # its bytes leave the sum (PARSING_SPEC § Aggregate, Byte totals).
+        assert result["system_info"]["total_downstream_bytes"] == 12038669013 + 10044551633
+        assert [ch.get("bytes") for ch in result["downstream"]] == [12038669013, 10044551633, None]
+
     def test_aggregate_missing_field_skipped(self) -> None:
         """Aggregate for a field not present on channels is not added."""
         from solentlabs.cable_modem_monitor_core.models.parser_config.config import (

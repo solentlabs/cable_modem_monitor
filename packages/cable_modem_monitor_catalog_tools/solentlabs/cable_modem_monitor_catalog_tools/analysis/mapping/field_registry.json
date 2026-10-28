@@ -85,6 +85,12 @@
       "headers": ["channel width", "width", "bandwidth"],
       "json_keys": ["channelwidth", "channel_width", "bandwidth"]
     },
+    "bytes": {
+      "tier": 2,
+      "type": "integer",
+      "headers": ["octets"],
+      "json_keys": ["octets"]
+    },
     "active_subcarriers": {
       "tier": 2,
       "type": "integer",

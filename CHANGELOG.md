@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Intake warns when a capture has no restart request.** A capture without a
   restart, or whose restart appears only in page source, now says so and asks
   for the restart step. The restart action is still never invented.
+- **A Total Downstream Bytes sensor for the ARRIS CM820B, TM1602A and
+  SBG7400AC2.** It sums the bytes the modem counts on each downstream channel,
+  in bytes, and keeps out of long-term statistics. The per-channel counts are
+  no longer attributes on the channel sensors (the SBG7400AC2 carried them
+  there). Modems whose OFDM channels report no byte count, or whose counter is
+  an expression, get no total rather than one that undercounts. Intake now
+  recognizes the `Octets` column as `bytes`.
 
 ### Changed
 

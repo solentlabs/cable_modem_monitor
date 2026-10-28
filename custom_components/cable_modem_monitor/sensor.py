@@ -146,6 +146,12 @@ _DRATE = SensorDeviceClass.DATA_RATE
 # Unit of the symbol_rate channel attribute (FIELD_REGISTRY: stored in Sym/s).
 _SYMBOL_RATE_UNIT = "Sym/s"
 
+# Channel fields that never become attributes: a per-poll counter would write
+# a new recorder row per channel per poll (#178). Core keeps them; the
+# integration publishes the aggregate (ENTITY_MODEL_SPEC § Channel Field
+# Pass-Through).
+_NEVER_ATTRIBUTE_FIELDS = frozenset({"bytes"})
+
 # Each tuple: (field, name_suffix, unit, device_class, state_class, icon, value_type)
 # fmt: off
 _DS_METRICS = [
@@ -543,6 +549,30 @@ class ModemErrorTotalSensor(_SystemInfoSensor):
         return int(value) if value is not None else None
 
 
+class ModemDownstreamBytesSensor(_SystemInfoSensor):
+    """Cumulative downstream bytes; no state_class, so no long-term statistics (#178)."""
+
+    _attr_name = "Total Downstream Bytes"
+    _attr_device_class = SensorDeviceClass.DATA_SIZE
+    _attr_native_unit_of_measurement = "B"
+    _attr_icon = "mdi:download-network"
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize the downstream bytes sensor."""
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_total_downstream_bytes"
+
+    @functools.cached_property
+    def native_value(self) -> int | None:
+        """Return the downstream byte total."""
+        value = self._get_system_info().get("total_downstream_bytes")
+        return int(value) if value is not None else None
+
+
 class ModemErrorRateSensor(_SystemInfoSensor):
     """Per-minute corrected or uncorrected error rate sensor (#164)."""
 
@@ -813,7 +843,7 @@ class ChannelSensor(ModemSensorBase):
         ch = self._find_channel()
         if ch is None:
             return {}
-        attrs = {key: value for key, value in ch.items() if key != self._field}
+        attrs = {key: value for key, value in ch.items() if key != self._field and key not in _NEVER_ATTRIBUTE_FIELDS}
         # Core stores symbol_rate in Sym/s; firmware labels vary (ksym/s,
         # Msym/s), so the unit is stated beside the value.
         if "symbol_rate" in attrs:
@@ -1139,6 +1169,11 @@ def _create_data_dependent_entities(
     if "total_uncorrected" in system_info:
         entities.append(ModemErrorTotalSensor(data_coord, entry, error_type="uncorrected"))
         entities.append(ModemErrorRateSensor(data_coord, entry, error_type="uncorrected"))
+
+    # Downstream byte total (gated by field presence; Core declares it only
+    # for modems whose every downstream channel reports bytes).
+    if "total_downstream_bytes" in system_info:
+        entities.append(ModemDownstreamBytesSensor(data_coord, entry))
 
     # Software version (gated by field presence). system_uptime gets no
     # sensor of its own — it feeds Last Boot Time below, and uptime is

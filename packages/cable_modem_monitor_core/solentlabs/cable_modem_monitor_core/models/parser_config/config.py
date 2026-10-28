@@ -88,13 +88,13 @@ class AggregateField(BaseModel):
     """A derived field computed from channel data.
 
     Declares a scoped sum over a channel field. Only ``sum`` is
-    supported — this is purpose-built for error totals, not a general
-    aggregation engine.
+    supported — this totals cumulative counters (error codewords,
+    received bytes), not a general aggregation engine.
 
     See PARSING_SPEC.md § Aggregate (Derived system_info Fields).
 
     Attributes:
-        sum: Channel field to sum (e.g., ``corrected``, ``uncorrected``).
+        sum: Channel field to sum (e.g., ``corrected``, ``bytes``).
         channels: Scope — ``downstream``, ``upstream``, or type-qualified
             (``downstream.qam``, ``downstream.ofdm``, ``upstream.atdma``,
             ``upstream.ofdma``).

@@ -1229,7 +1229,8 @@ precedence (`setdefault` — coordinator does not overwrite).
 Optional section declaring scoped sums from channel data. Each entry
 defines a field name, an aggregation operation, and the channel scope.
 Error totals are context-dependent — QAM and OFDM use different error
-correction mechanisms, so scoping by channel type matters.
+correction mechanisms, so scoping by channel type matters. Byte totals
+are not: bytes sum across channel types.
 
 ```yaml
 aggregate:
@@ -1239,6 +1240,9 @@ aggregate:
   total_uncorrected:
     sum: uncorrected
     channels: downstream.qam
+  total_downstream_bytes:
+    sum: bytes
+    channels: downstream
 ```
 
 | Field | Type | Required | Description |
@@ -1246,8 +1250,9 @@ aggregate:
 | `sum` | string | yes | Channel field to sum (e.g., `corrected`, `uncorrected`) |
 | `channels` | string | yes | Scope: `downstream`, `upstream`, or type-qualified `downstream.qam`, `downstream.ofdm`, `upstream.atdma`, `upstream.ofdma` |
 
-**Operations:** Only `sum` is supported. This section is purpose-built
-for error totals, not a general aggregation engine. Proposals to add
+**Operations:** Only `sum` is supported. This section totals
+fleet-observed cumulative counters (error codewords, received bytes),
+not a general aggregation engine. Proposals to add
 new operations (e.g., `min`/`max`/`spread` for power-delta-style
 aggregates) must clear the schema-boundary test in
 [ARCHITECTURE_DECISIONS.md § Core's schema tracks fleet-observed
@@ -1274,6 +1279,15 @@ fleet is computed.
 **Empty scope:** If the scoped channel set is empty (e.g.,
 `downstream.qam` but the modem has only OFDM channels), the aggregate
 field is omitted from `system_info`. It is not set to zero.
+
+**Byte totals.** `total_downstream_bytes` sums `bytes` over every
+downstream channel, any type, because a byte is one unit on SC-QAM and
+OFDM alike (unlike FEC codewords, below). The total is declared only for
+a modem whose every downstream channel reports `bytes`. A modem that
+omits it on its OFDM channels (G54, CGA4236) or reports an expression
+(CODA56) declares no total. The sum is taken over locked channels'
+reported values; a channel that drops lock leaves the sum, so the total
+can fall without a reboot.
 
 **DOCSIS version scoping.** DOCSIS 3.0 modems use `channels: downstream`
 (all channels are SC-QAM). DOCSIS 3.1 modems use `channels: downstream.qam`

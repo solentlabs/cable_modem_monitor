@@ -80,6 +80,7 @@ output (some gated by config).
 | US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
 | Total Uncorrected | `_total_uncorrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
+| Total Downstream Bytes | `_total_downstream_bytes` | int | DATA_SIZE | — | B | From `system_info`; no `state_class`, so no long-term statistics (#178). No suggested display unit; the user picks one |
 | Rate Corrected | `_rate_corrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
 | Rate Uncorrected | `_rate_uncorrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
 | System Info Field³ | `_{field}` | pass-through⁶ | — | — | — | Dynamic per-field sensor for non-consumed system_info fields |
@@ -409,7 +410,8 @@ different patterns:
   their own sensor entity via `SystemInfoFieldSensor`.
 
 The integration does not decide which fields are "important enough"
-for their own entity. It exposes everything the parser provides. Users
+for their own entity. It exposes everything the parser provides, with
+one exception: per-channel `bytes` (below). Users
 create template sensors/binary_sensors from attributes for their own
 automations.
 
@@ -428,7 +430,10 @@ sections below define how each data section maps to HA entities.
 | Tier 3 unregistered | Attribute on channel sensor | `t3_timeouts`, `security_type` |
 
 All non-metric fields from the channel dict are exposed as
-`extra_state_attributes` on the channel's primary sensor.
+`extra_state_attributes` on the channel's primary sensor, except
+`bytes`. It changes every poll, so as an attribute it would write a new
+recorder row per channel per poll (#178). Core keeps it per channel;
+the integration publishes only `total_downstream_bytes`.
 
 ### System Info Pass-Through
 
@@ -436,7 +441,7 @@ System info fields use a consumed/display-only/dynamic pattern:
 
 | Pattern | HA Entity | Fields |
 |---------|-----------|--------|
-| Consumed (dedicated class or derivation) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected`, `docsis_status` |
+| Consumed (dedicated class or derivation) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected`, `total_downstream_bytes`, `docsis_status` |
 | Display-only (never minted) | None — display surfaces carry the value | `current_time`, `hardware_version`, `model_name` |
 | Dynamic (pass-through) | Generic `SystemInfoFieldSensor(field=key)` | Everything else in `system_info` |
 

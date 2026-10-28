@@ -104,6 +104,7 @@ CONSUMED_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({
     "upstream_channel_count",
     "total_corrected",
     "total_uncorrected",
+    "total_downstream_bytes",
     "rate_corrected",
     "rate_uncorrected",
 })

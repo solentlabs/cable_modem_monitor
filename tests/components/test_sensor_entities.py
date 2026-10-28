@@ -1878,3 +1878,91 @@ async def test_async_setup_entry_defers_when_no_modem_data(
 
     # Deferred registration was set up
     mock_register.assert_called_once_with(mock_runtime_data.data_coordinator, entry, add_entities)
+
+
+# -----------------------------------------------------------------------
+# Downstream bytes — aggregate-only (#178)
+# -----------------------------------------------------------------------
+
+_BYTES_TOTAL = 12038669013 + 10044551633
+
+
+def _modem_data_with_bytes() -> dict[str, Any]:
+    """MOCK_MODEM_DATA with per-channel bytes and the Core-computed total."""
+    downstream = [{**ch, "bytes": b} for ch, b in zip(MOCK_DOWNSTREAM, (12038669013, 10044551633), strict=True)]
+    return {
+        **MOCK_MODEM_DATA,
+        "system_info": {**MOCK_MODEM_DATA["system_info"], "total_downstream_bytes": _BYTES_TOTAL},
+        "downstream": downstream,
+    }
+
+
+def test_channel_sensor_never_exposes_bytes_attribute(mock_runtime_data):
+    """Per-channel bytes stays in Core output and out of channel sensor attributes."""
+    modem_data = _modem_data_with_bytes()
+    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
+    mock_runtime_data.channel_map = build_channel_map(modem_data["downstream"], MOCK_UPSTREAM, ChannelIdentity.ID)
+
+    sensor = ChannelSensor(
+        coord,
+        entry,
+        direction="downstream",
+        slot_key=("qam", 1),
+        identity_mode=ChannelIdentity.ID,
+        field="power",
+        name_suffix="Power",
+        unit="dBmV",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:signal",
+        value_type=float,
+    )
+    attrs = sensor.extra_state_attributes
+    assert "bytes" not in attrs
+    assert attrs["modulation"] == "256QAM"
+
+
+def test_downstream_bytes_sensor_contract(mock_runtime_data):
+    """Total sensor: bytes, DATA_SIZE, no state_class (no long-term statistics)."""
+    from homeassistant.components.sensor import SensorDeviceClass
+    from homeassistant.const import UnitOfInformation
+
+    from custom_components.cable_modem_monitor.sensor import ModemDownstreamBytesSensor
+
+    sensor = _make_sensor(ModemDownstreamBytesSensor, mock_runtime_data, modem_data=_modem_data_with_bytes())
+    assert sensor.native_value == _BYTES_TOTAL
+    assert sensor.name == "Total Downstream Bytes"
+    assert sensor.unique_id == "test_entry_cable_modem_total_downstream_bytes"
+    assert sensor.device_class == SensorDeviceClass.DATA_SIZE
+    assert sensor.native_unit_of_measurement == UnitOfInformation.BYTES
+    assert sensor.state_class is None
+    assert sensor.suggested_unit_of_measurement is None
+
+
+def test_downstream_bytes_sensor_missing(mock_runtime_data):
+    """Total sensor reads None when system_info lacks the field."""
+    from custom_components.cable_modem_monitor.sensor import ModemDownstreamBytesSensor
+
+    sensor = _make_sensor(ModemDownstreamBytesSensor, mock_runtime_data)
+    assert sensor.native_value is None
+
+
+@pytest.mark.parametrize(
+    ("has_total", "expected_count"),
+    [(True, 1), (False, 0)],
+    ids=["total_present_one_dedicated_sensor", "total_absent_no_sensor"],
+)
+def test_downstream_bytes_sensor_created_by_capability(mock_runtime_data, has_total, expected_count):
+    """Created only when Core reports the total; never doubled by the pass-through sensor."""
+    from custom_components.cable_modem_monitor.sensor import (
+        ModemDownstreamBytesSensor,
+        _create_data_dependent_entities,
+    )
+
+    modem_data = _modem_data_with_bytes() if has_total else MOCK_MODEM_DATA
+    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
+    entities = _create_data_dependent_entities(coord, entry, modem_data)
+
+    assert len([e for e in entities if isinstance(e, ModemDownstreamBytesSensor)]) == expected_count
+    passthrough = [e for e in entities if isinstance(e, SystemInfoFieldSensor) and "bytes" in (e.unique_id or "")]
+    assert passthrough == []

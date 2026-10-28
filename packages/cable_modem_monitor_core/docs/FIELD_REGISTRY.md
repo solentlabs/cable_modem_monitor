@@ -34,7 +34,8 @@ depends on it for more than pass-through:
 2. **Health Logic**: Used to determine device health, signal availability,
    or connectivity state.
 3. **Aggregates**: Required to calculate aggregate sensors (e.g., total
-   uncorrected errors).
+   uncorrected errors). A field registered Tier 2 as aggregate-only
+   (`bytes`) stays Tier 2: promotion would give it a sensor per channel.
 
 `channel_number` is always present (1-based, auto-assigned from row
 position when not explicitly mapped). `source_channel_number` is
@@ -105,7 +106,8 @@ dicts and make no order guarantee.
 ## Tier 2 — Registered Fields
 
 Standardized names for pass-through fields that multiple modems expose.
-Core does not use these, but the test harness validates that parsers
+Core does not use these, except the aggregate-only `bytes`, which it
+sums but never publishes per channel. The test harness validates that parsers
 use the registered name when the data is semantically equivalent. This
 prevents the same concept from appearing under different names across
 modems (e.g., `chan_width` vs `channel_width` vs `bandwidth`).
@@ -127,6 +129,10 @@ registered_fields:
     profile_id:
       type: string
       description: "OFDM downstream profile ID"
+    bytes:
+      type: integer
+      unit: "B"
+      description: "Cumulative bytes received on the channel (aggregate-only)"
   upstream:
     channel_width:
       type: integer
@@ -173,6 +179,17 @@ registered_fields:
       description: "ISP-provisioned upstream max traffic burst"
 ```
 
+Downstream `bytes` is the modems' per-channel "octets" counter, stored
+in bytes (a modem that reports another unit declares `scale` in
+parser.yaml). Core sums it into `total_downstream_bytes`
+([PARSING_SPEC.md § Aggregate](PARSING_SPEC.md#aggregate-derived-system_info-fields))
+and keeps the per-channel values in its output; consumers must not
+publish them per channel (see § HA Entity Mapping). A modem is mapped
+only when every downstream channel it has reports `bytes`: a modem
+that omits it on OFDM channels, or reports an expression it cannot
+parse faithfully, is left unmapped rather than given a total that
+undercounts.
+
 The provisioned fields come from one of two sources: a service flow list
 reduced with `child_aggregates` ([SYSTEM_INFO_SPEC](SYSTEM_INFO_SPEC.md#service-flow-units)),
 or a rate the modem reports directly (Netgear's DS/US provisioned rate
@@ -208,7 +225,9 @@ determined by the data section it belongs to, not its tier:
 
 - **Channel fields:** Tier 1 numeric fields (`power`, `snr`, etc.)
   become their own sensor entity. All other channel fields (any tier)
-  become attributes on that channel's sensor.
+  become attributes on that channel's sensor, except `bytes`: a counter
+  that changes every poll would write a new attribute row per channel
+  per poll (#178), so it is never an attribute.
 - **System info fields:** Fields with a dedicated sensor class
   (currently Tier 1 canonical + aggregates) are consumed by that class.
   All remaining fields (any tier) become a dynamic
