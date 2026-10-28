@@ -184,19 +184,20 @@ class _FieldUnitMeta(NamedTuple):
 
     native_unit: str
     device_class: SensorDeviceClass | None
-    state_class: SensorStateClass | None
     suggested_unit: str | None = None
 
 
 # Units and device classes for dynamic system_info fields.
-# Fields not listed here display as unitless strings.
+# Fields not listed here display as unitless strings. None carry a
+# state_class: these are plan configuration, not measurements, so they stay
+# out of long-term statistics.
 _SYSTEM_INFO_FIELD_UNITS: dict[str, _FieldUnitMeta] = {
     # HA applies no default scaling to DATA_RATE, so the raw bit/s these
     # store renders as "110100480 bit/s" without a suggested unit.
-    "provisioned_speed_down": _FieldUnitMeta("bit/s", _DRATE, _M, suggested_unit="Mbit/s"),
-    "provisioned_speed_up": _FieldUnitMeta("bit/s", _DRATE, _M, suggested_unit="Mbit/s"),
-    "provisioned_burst_down": _FieldUnitMeta("B", _DSIZE, _M),
-    "provisioned_burst_up": _FieldUnitMeta("B", _DSIZE, _M),
+    "provisioned_speed_down": _FieldUnitMeta("bit/s", _DRATE, suggested_unit="Mbit/s"),
+    "provisioned_speed_up": _FieldUnitMeta("bit/s", _DRATE, suggested_unit="Mbit/s"),
+    "provisioned_burst_down": _FieldUnitMeta("B", _DSIZE),
+    "provisioned_burst_up": _FieldUnitMeta("B", _DSIZE),
 }
 
 # Abbreviations uppercased in humanized field names.
@@ -703,7 +704,6 @@ class SystemInfoFieldSensor(_HoldsLastValueMixin, _SystemInfoSensor):
         if unit_meta is not None:
             self._attr_native_unit_of_measurement = unit_meta.native_unit
             self._attr_device_class = unit_meta.device_class
-            self._attr_state_class = unit_meta.state_class
             self._attr_suggested_unit_of_measurement = unit_meta.suggested_unit
 
     @property

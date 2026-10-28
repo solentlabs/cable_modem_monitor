@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Netgear CM1100 now reports uptime.** Its status page carries the
+  uptime in a `System Up Time` element that the parser never read, so the
+  modem had no Last Boot Time sensor. It now shows when the unit last booted.
+- **Provisioned speed and burst no longer feed long-term statistics.** They
+  were recorded as measurements, so a plan that never changes filled the
+  statistics database with a flat line. History already recorded stays;
+  statistics stop accruing for the four sensors.
 - **Intake reads Basic auth from a capture with no 401.** `har-capture
   --username` hands the credentials to the browser, which hides the device's
   401, so a Basic capture made that way passed validation and then stopped

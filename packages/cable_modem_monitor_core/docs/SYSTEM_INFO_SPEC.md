@@ -465,6 +465,16 @@ any other spelling — normalizes them in the aggregate's `map`. Cross-file
 validation rejects an aggregate that filters on the wrong direction,
 because a swap produces plausible-looking but inverted speeds.
 
+#### Service flow units
+
+Speed fields are bit/s and burst fields are bytes, as registered in
+[FIELD_REGISTRY.md](FIELD_REGISTRY.md). A modem that emits another unit
+declares a `scale` that converts it, as for every other field. Nothing
+enforces a bound on these values: no service flow spec text was
+available to source one, and the fleet's few values cannot set one. A
+wrong unit is caught when a modem is mapped, by checking its
+`modem.expected.json` against the capture.
+
 ### `html_fields` selector types
 
 | Selector | When to use | Algorithm |

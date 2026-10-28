@@ -1235,8 +1235,9 @@ Three constraints bind what may be emitted:
    `downstream` rule matches no items and yields no value without
    erroring. Any spelling that is not already the canonical word needs a
    `map` entry, capitalization included.
-3. **Provisioned values carry no scale** — raw bit/s and bytes. The
-   display unit is the consumer's choice.
+3. **Emit no `scale` when the capture shows raw bit/s and bytes.** Core
+   stores bit/s and bytes; the display unit is the consumer's choice. A
+   capture that shows another unit needs a `scale` to convert it.
 
 #### Table-to-section association
 

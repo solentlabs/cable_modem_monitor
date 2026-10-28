@@ -804,7 +804,9 @@ def test_humanize_field_name(field, expected, desc):
 # │ burst_down             │ provisioned_burst_down │ 412876    │ 412876   │ B     │ DATA_SIZE  │ None      │
 # └────────────────────────┴────────────────────────┴───────────┴──────────┴───────┴────────────┴───────────┘
 # Native unit stays bit/s: that is what Core stores. The suggested unit is
-# display only, applied by HA at first entity registration.
+# display only, applied by HA at first entity registration. No case carries a
+# state_class: a provisioned rate is plan configuration, not a measurement,
+# so it stays out of long-term statistics.
 
 _DATA_RATE = SensorDeviceClass.DATA_RATE
 _DATA_SIZE = SensorDeviceClass.DATA_SIZE
@@ -865,6 +867,7 @@ def test_system_info_field_sensor(
     assert getattr(sensor, "_attr_native_unit_of_measurement", None) == expected_unit
     assert getattr(sensor, "_attr_device_class", None) == expected_device_class
     assert getattr(sensor, "_attr_suggested_unit_of_measurement", None) == expected_suggested_unit
+    assert sensor.state_class is None
 
 
 # -----------------------------------------------------------------------
@@ -1095,7 +1098,7 @@ def test_system_info_field_noncontinuous_is_sticky(mock_runtime_data):
 
 
 def test_system_info_field_continuous_not_sticky(mock_runtime_data):
-    """A continuous pass-through field (unit/state_class) keeps graph gaps."""
+    """A continuous pass-through field (has a unit) keeps graph gaps."""
     modem_data: dict[str, Any] = {
         "system_info": {"provisioned_speed_down": 110100480},
         "downstream": [],

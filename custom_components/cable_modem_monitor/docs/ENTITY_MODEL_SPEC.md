@@ -517,7 +517,7 @@ creation — no data, no sensor. Straight pass-through — no type
 conversion or boolean mapping.
 
 **Unit metadata.** Fields listed in `_SYSTEM_INFO_FIELD_UNITS` get a
-`device_class`, `state_class`, and unit, and count as continuous for
+`device_class` and unit, and count as continuous for
 [§ Sensor Availability Logic](#sensor-availability-logic). The unit is
 the one Core stores, always base SI
 ([FIELD_REGISTRY.md § Naming Rules](../../../packages/cable_modem_monitor_core/docs/FIELD_REGISTRY.md#naming-rules-all-tiers)).
@@ -527,7 +527,9 @@ is stored in bit/s and shown in Mbit/s. HA stamps a suggested unit into
 the entity registry the first time it sees an entity and never revisits
 it, so changing this table moves only newly created entities. Existing
 ones follow the **Discontinued entities** paths above — the entity's
-own settings, Reset Entities, or remove and re-add.
+own settings, Reset Entities, or remove and re-add. None of these fields
+carries a `state_class`: provisioned speed and burst are plan configuration,
+not measurements, so they stay out of long-term statistics.
 
 **Graduation:** When a dynamic field gets a dedicated sensor class, add
 it to `_CONSUMED_SYSTEM_INFO_FIELDS`. The dynamic sensor for that field
