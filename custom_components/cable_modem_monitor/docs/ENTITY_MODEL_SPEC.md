@@ -131,20 +131,20 @@ where both sources are absent. Stability contract: **the state
 changes only on a real reboot.**
 
 ⁶ **Sticky** (non-continuous data sensors). These fields carry no
-`state_class` or `unit`, so Home Assistant treats them as
+`state_class`, so Home Assistant treats them as
 non-continuous and logs **every** state change to the logbook —
 including a `→ Unavailable` transition when the modem goes
 unreachable. On a transient outage the Status sensor is the sole
 announcer (`→ Unreachable`); Software Version, Last Boot Time, and
-non-continuous pass-through fields therefore stay available and hold
+pass-through fields therefore stay available and hold
 their last value through the data gap, so no second logbook line is
 written (#178). This is the availability axis in action: **a sticky
 sensor's gap carries no information, so it is suppressed; a continuous
-sensor's gap is graph signal, so it is preserved.** Continuous
-pass-through fields (those in `_SYSTEM_INFO_FIELD_UNITS`, which carry
-a unit/`state_class`) opt out and keep the standard data-sensor
-availability. Firmware- and reboot-change logging is unaffected: a
-real change to Software Version or Last Boot Time is still a value
+sensor's gap is graph signal, so it is preserved.** Every
+pass-through field is sticky, including those in
+`_SYSTEM_INFO_FIELD_UNITS` (provisioned speed and burst): they are plan
+configuration, not measurements, so an outage gap carries no signal.
+Firmware- and reboot-change logging is unaffected: a real change to Software Version or Last Boot Time is still a value
 change and still logs one line.
 
 #### Boot-time source normalization
@@ -517,8 +517,8 @@ creation — no data, no sensor. Straight pass-through — no type
 conversion or boolean mapping.
 
 **Unit metadata.** Fields listed in `_SYSTEM_INFO_FIELD_UNITS` get a
-`device_class` and unit, and count as continuous for
-[§ Sensor Availability Logic](#sensor-availability-logic). The unit is
+`device_class` and unit. They stay sticky like every other pass-through
+field ([§ Sensor Availability Logic](#sensor-availability-logic)). The unit is
 the one Core stores, always base SI
 ([FIELD_REGISTRY.md § Naming Rules](../../../packages/cable_modem_monitor_core/docs/FIELD_REGISTRY.md#naming-rules-all-tiers)).
 Where that is not the unit users read, the field also declares a
@@ -629,13 +629,12 @@ two modems, HA auto-suffixes entity_ids (`_2`, `_3`, etc.). Recommend
 | Field not parsed by this modem | never created⁵ | never created⁵ | n/a | n/a | n/a |
 
 ¹ **Continuous data sensors** carry a `state_class` or `unit`
-(channel metrics, error totals/rates, channel counts, and continuous
-pass-through fields). Their unavailable-gaps are meaningful on graphs,
-so they go unavailable when a poll returns no `modem_data`
+(channel metrics, error totals/rates and channel counts). Their
+unavailable-gaps are meaningful on graphs, so they go unavailable when a poll returns no `modem_data`
 (`ModemSensorBase.available`).
 
 ² **Sticky data sensors** (Software Version, Last Boot Time,
-non-continuous pass-through fields) carry no `state_class`/`unit` and
+pass-through fields) carry no `state_class` and
 drive the logbook. They stay available and hold their last value
 through a transient data gap so a modem outage logs no spurious
 `→ Unavailable` line — the Status sensor is the sole announcer (#178).
@@ -695,10 +694,9 @@ non-`None` value across the gap. Two small mixins compose this —
 `_HoldsLastValueMixin` (the value-holding helper). Software Version
 uses both; Last Boot Time uses only the availability mixin (its value
 already holds via `_stable_boot_time`); `SystemInfoFieldSensor` uses
-the value-holding mixin and branches its own `available` (sticky for
-non-continuous fields, standard `modem_data` rule for continuous
-ones). The Status and Info sensors override `available` the same way —
-always available while the coordinator is alive — because Status is
+the value-holding mixin and its own sticky `available`, so every
+pass-through field is sticky. The Status and Info sensors override
+`available` the same way — always available while the coordinator is alive — because Status is
 the single outage announcer.
 
 Health sensors (Ping, HTTP) have independent availability based on

@@ -1079,8 +1079,8 @@ def test_last_boot_time_stays_available_on_outage(mock_runtime_data):
     assert sensor.available is True
 
 
-def test_system_info_field_noncontinuous_is_sticky(mock_runtime_data):
-    """A non-continuous pass-through field holds value and stays available."""
+def test_system_info_field_without_unit_is_sticky(mock_runtime_data):
+    """A pass-through field without a unit holds value and stays available."""
     modem_data: dict[str, Any] = {
         "system_info": {"ds_scanning_status": "success"},
         "downstream": [],
@@ -1097,8 +1097,8 @@ def test_system_info_field_noncontinuous_is_sticky(mock_runtime_data):
     assert sensor.available is True
 
 
-def test_system_info_field_continuous_not_sticky(mock_runtime_data):
-    """A continuous pass-through field (has a unit) keeps graph gaps."""
+def test_system_info_field_with_unit_is_sticky(mock_runtime_data):
+    """A pass-through field with a unit (provisioned speed) holds value on outage."""
     modem_data: dict[str, Any] = {
         "system_info": {"provisioned_speed_down": 110100480},
         "downstream": [],
@@ -1113,8 +1113,8 @@ def test_system_info_field_continuous_not_sticky(mock_runtime_data):
     sensor.coordinator.data = _outage_snapshot()
     vars(sensor).pop("native_value", None)
 
-    assert sensor.native_value is None  # no holding — the gap is graph signal
-    assert sensor.available is False  # continuous → unavailable on outage
+    assert sensor.native_value == 110100480  # held
+    assert sensor.available is True
 
 
 def test_continuous_data_sensor_unavailable_on_outage(mock_runtime_data):

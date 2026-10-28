@@ -180,7 +180,7 @@ _US_ALWAYS_FIELDS = frozenset(("power",))
 
 
 class _FieldUnitMeta(NamedTuple):
-    """HA unit metadata for a continuous system_info field."""
+    """HA unit metadata for a system_info field."""
 
     native_unit: str
     device_class: SensorDeviceClass | None
@@ -680,8 +680,9 @@ class SystemInfoFieldSensor(_HoldsLastValueMixin, _SystemInfoSensor):
     all pass-through fields.  Value is returned as-is with no type
     conversion.
 
-    Sticky for non-continuous fields (#178); continuous fields (those
-    in _SYSTEM_INFO_FIELD_UNITS) keep their graph-meaningful gaps.
+    Sticky (#178): no pass-through field carries a state_class, so none has
+    a graph gap worth preserving. Fields in _SYSTEM_INFO_FIELD_UNITS
+    (provisioned speed and burst) hold their last value too.
 
     See ENTITY_MODEL_SPEC.md § Field Pass-Through.
     """
@@ -700,7 +701,6 @@ class SystemInfoFieldSensor(_HoldsLastValueMixin, _SystemInfoSensor):
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_{field}"
         self._attr_icon = "mdi:information-outline"
         unit_meta = _SYSTEM_INFO_FIELD_UNITS.get(field)
-        self._continuous = unit_meta is not None
         if unit_meta is not None:
             self._attr_native_unit_of_measurement = unit_meta.native_unit
             self._attr_device_class = unit_meta.device_class
@@ -708,16 +708,13 @@ class SystemInfoFieldSensor(_HoldsLastValueMixin, _SystemInfoSensor):
 
     @property
     def available(self) -> bool:
-        """Sticky for non-continuous fields; continuous fields keep graph gaps."""
-        if self._continuous:
-            return super().available  # ModemSensorBase: requires modem_data
+        """Sticky: available while the coordinator is alive."""
         return self.coordinator.last_update_success
 
     @functools.cached_property
     def native_value(self) -> str | int | float | None:
-        """Return the field value as-is; held across gaps when non-continuous."""
-        current = self._get_system_info().get(self._field)
-        return current if self._continuous else self._hold_last(current)
+        """Return the field value as-is, held across gaps."""
+        return self._hold_last(self._get_system_info().get(self._field))
 
 
 # ------------------------------------------------------------------
