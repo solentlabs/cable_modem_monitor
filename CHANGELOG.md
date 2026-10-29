@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Intake splits one channel array that mixes SC-QAM and OFDM.** The OFDM
+  keys (channel width, FFT type, active subcarriers) were missed because the
+  first channel decided the keys for every channel. Each type now gets its
+  own filtered entry, and an OFDM or OFDMA power is flagged for a person to
+  confirm its unit. The F3896LG-ZG capture now scores 98.5% (from 95.8%) and
+  the F3896LG-VMB 96.8% (from 92.7%).
 - **Intake warns, not stops, on a login page with no password input.** A
   lapsed session on such a modem reaches Core as a data body with none of the
   parser's anchors, so it surfaces as `LOAD_INTEGRITY` instead of `LOAD_AUTH`

@@ -1199,6 +1199,15 @@ generation.
 - One channel array per direction is emitted flat; several are emitted
   as `arrays`, one entry per array with its own mappings and channel
   type.
+- One array whose items carry a channel-type key with several canonical
+  types (`qam`, `ofdm`, ...) is read once per type: each entry keeps the
+  array's path, takes its mappings from that type's items and carries
+  `filter: {channel_type: <type>}`. Keys that only one type reports (OFDM
+  `channelWidth`, `fftType`) are then mapped. An OFDM or OFDMA entry that
+  maps `power` is never scaled and is warned, so a person confirms the
+  unit (some firmware reports tenths of dBmV). An array with one type, or
+  an item whose type is unmapped, is not split. A variable that holds
+  the array itself (`javascript_json`) is not split.
 - JSON key names → canonical field names: the baseline registry first,
   then the meaning committed `parser.yaml` files declare for the key.
   When they disagree, the key is an [ambiguity](#ambiguities-resolve-then-proceed);
