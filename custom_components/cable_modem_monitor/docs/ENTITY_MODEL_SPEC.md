@@ -198,7 +198,7 @@ see [Capability Gating](#capability-gating).
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_ds_ch_{n}_power` | dBmV | — | MEASUREMENT | Always |
 | SNR | `_ds_ch_{n}_snr` | dB | — | MEASUREMENT | Always |
-| Frequency | `_ds_ch_{n}_frequency` | Hz | FREQUENCY | MEASUREMENT | If published |
+| Frequency | `_ds_ch_{n}_frequency` | Hz | FREQUENCY | — | If published |
 | Corrected | `_ds_ch_{n}_corrected` | — | — | TOTAL_INCREASING | If published |
 | Uncorrected | `_ds_ch_{n}_uncorrected` | — | — | TOTAL_INCREASING | If published |
 
@@ -208,7 +208,7 @@ see [Capability Gating](#capability-gating).
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_ds_{type}_ch_{id}_power` | dBmV | — | MEASUREMENT | Always |
 | SNR | `_ds_{type}_ch_{id}_snr` | dB | — | MEASUREMENT | Always |
-| Frequency | `_ds_{type}_ch_{id}_frequency` | Hz | FREQUENCY | MEASUREMENT | If published |
+| Frequency | `_ds_{type}_ch_{id}_frequency` | Hz | FREQUENCY | — | If published |
 | Corrected | `_ds_{type}_ch_{id}_corrected` | — | — | TOTAL_INCREASING | If published |
 | Uncorrected | `_ds_{type}_ch_{id}_uncorrected` | — | — | TOTAL_INCREASING | If published |
 
@@ -224,14 +224,14 @@ regardless of mode. Additional Tier 2/3 fields from parser output
 | Entity | unique_id suffix | Unit | device_class | state_class | Condition |
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_us_ch_{n}_power` | dBmV | — | MEASUREMENT | Always |
-| Frequency | `_us_ch_{n}_frequency` | Hz | FREQUENCY | MEASUREMENT | If published |
+| Frequency | `_us_ch_{n}_frequency` | Hz | FREQUENCY | — | If published |
 
 **ID mode** (`channel_identity: "id"`):
 
 | Entity | unique_id suffix | Unit | device_class | state_class | Condition |
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_us_{type}_ch_{id}_power` | dBmV | — | MEASUREMENT | Always |
-| Frequency | `_us_{type}_ch_{id}_frequency` | Hz | FREQUENCY | MEASUREMENT | If published |
+| Frequency | `_us_{type}_ch_{id}_frequency` | Hz | FREQUENCY | — | If published |
 
 **Attributes on every US channel sensor:** `channel_number`,
 `channel_id`, `channel_type`. Both identifiers are always present
@@ -553,13 +553,15 @@ its history is worth that cost; the class follows the shape of the value:
 
 | Value | state_class | Examples |
 |-------|-------------|----------|
-| Continuous measurement | `MEASUREMENT` | Channel power, SNR, frequency; error rates; channel counts; latencies |
+| Continuous measurement | `MEASUREMENT` | Channel power and SNR; error rates; channel counts; latencies |
 | Error counter | `TOTAL_INCREASING` | Per-channel and total corrected and uncorrected |
-| Plan configuration, pass-through field, cumulative traffic bytes | none | Provisioned speed and burst, Software Version, Last Boot Time, Total Downstream Bytes, LAN byte totals |
+| Plan configuration, pass-through field, cumulative traffic bytes | none | Channel frequency, provisioned speed and burst, Software Version, Last Boot Time, Total Downstream Bytes, LAN byte totals |
 
-A sensor with no `state_class` is sticky ([Availability](#availability)
-footnote ²). A new sensor takes its class from this table; a shape the
-table does not cover is decided here first.
+Whether a sensor is sticky does not follow from its `state_class`: the
+class mixin decides it ([Availability](#availability) footnote ²). Channel
+frequency has no `state_class` yet goes unavailable in a gap, because a
+channel sensor carries no sticky mixin. A new sensor takes its class from
+this table; a shape the table does not cover is decided here first.
 
 ---
 
@@ -653,16 +655,16 @@ two modems, HA auto-suffixes entity_ids (`_2`, `_3`, etc.). Recommend
 | Parse error | unavailable | available | available | available³ | available |
 | Field not parsed by this modem | never created⁵ | never created⁵ | n/a | n/a | n/a |
 
-¹ **Continuous data sensors** carry a `state_class` or `unit`
-(channel metrics, error totals/rates and channel counts). Their
-unavailable-gaps are meaningful on graphs, so they go unavailable when a poll returns no `modem_data`
-(`ModemSensorBase.available`).
+¹ **Continuous data sensors** are the channel metrics, error totals/rates
+and channel counts. They use no sticky mixin. Their unavailable-gaps are
+meaningful on graphs, so they go unavailable when a poll returns no
+`modem_data` (`ModemSensorBase.available`).
 
 ² **Sticky data sensors** (Software Version, Last Boot Time,
-pass-through fields) carry no `state_class` and
-drive the logbook. They stay available and hold their last value
-through a transient data gap so a modem outage logs no spurious
-`→ Unavailable` line — the Status sensor is the sole announcer (#178).
+pass-through fields) use the sticky mixins. The logbook records a sensor
+with no unit of measurement, so they stay available and hold their last
+value through a transient data gap: a modem outage logs no spurious
+`→ Unavailable` line, and the Status sensor is the sole announcer (#178).
 See catalog footnote ⁶.
 
 ³ Health sensors remain available when the modem is unreachable or

@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Channel Frequency sensors no longer feed long-term statistics.** A
+  channel's frequency is its slot in the channel plan, so an hourly mean
+  describes no channel. Existing Frequency sensors show a Home Assistant
+  Repairs warning, "state class no longer supported", once each: 32 on a 24x8
+  modem. Fix each under Developer Tools, Statistics, or leave it. Statistics
+  stop accruing; the database does not shrink. The new
+  [troubleshooting entry](docs/TROUBLESHOOTING.md#keeping-channel-sensors-out-of-the-database)
+  shows how to keep channel sensors out of the recorder altogether.
 - **Intake splits one channel array that mixes SC-QAM and OFDM.** The OFDM
   keys (channel width, FFT type, active subcarriers) were missed because the
   first channel decided the keys for every channel. Each type now gets its

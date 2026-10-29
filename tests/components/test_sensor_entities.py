@@ -227,6 +227,29 @@ def test_create_channel_sensors_position_mode(mock_runtime_data):
     assert ds_power[0]._attr_name == "DS Ch 1 Power"
 
 
+CHANNEL_STATE_CLASS_CASES = [
+    ("power", SensorStateClass.MEASUREMENT, "power is a measurement"),
+    ("snr", SensorStateClass.MEASUREMENT, "snr is a measurement"),
+    ("frequency", None, "frequency is the channel plan slot, not a measurement"),
+    ("corrected", SensorStateClass.TOTAL_INCREASING, "corrected is an error counter"),
+    ("uncorrected", SensorStateClass.TOTAL_INCREASING, "uncorrected is an error counter"),
+]
+
+
+@pytest.mark.parametrize(
+    "field,expected,desc",
+    CHANNEL_STATE_CLASS_CASES,
+    ids=[case[2] for case in CHANNEL_STATE_CLASS_CASES],
+)
+def test_channel_sensor_state_class(mock_runtime_data, field, expected, desc):
+    """Every created channel sensor of a field declares that field's state_class."""
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    created = _create_channel_sensors(coord, entry, MOCK_MODEM_DATA)
+    sensors = [s for s in created if isinstance(s, ChannelSensor) and s._field == field]
+    assert sensors
+    assert {s.state_class for s in sensors} == {expected}
+
+
 @pytest.mark.parametrize(
     "channels,identity_mode,slot_key,expected,desc",
     CHANNEL_GATING_CASES,

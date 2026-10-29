@@ -153,18 +153,19 @@ _SYMBOL_RATE_UNIT = "Sym/s"
 _NEVER_ATTRIBUTE_FIELDS = frozenset({"bytes"})
 
 # Each tuple: (field, name_suffix, unit, device_class, state_class, icon, value_type)
+# Frequency has no state_class: it is the channel plan slot, so a long-term mean is meaningless.
 # fmt: off
 _DS_METRICS = [
     ("power",       "Power",       "dBmV", None,  _M,  "mdi:signal",        float),
     ("snr",         "SNR",         "dB",   None,  _M,  "mdi:signal-variant", float),
-    ("frequency",   "Frequency",   "Hz",   _FREQ, _M,  "mdi:sine-wave",     int),
+    ("frequency",   "Frequency",   "Hz",   _FREQ, None, "mdi:sine-wave",    int),
     ("corrected",   "Corrected",   None,   None,  _TI, "mdi:check-circle",  int),
     ("uncorrected", "Uncorrected", None,   None,  _TI, "mdi:alert-circle",  int),
 ]
 
 _US_METRICS = [
     ("power",     "Power",     "dBmV", None,  _M, "mdi:signal",    float),
-    ("frequency", "Frequency", "Hz",   _FREQ, _M, "mdi:sine-wave", int),
+    ("frequency", "Frequency", "Hz",   _FREQ, None, "mdi:sine-wave", int),
 ]
 
 _LAN_METRICS = [
@@ -782,7 +783,7 @@ class ChannelSensor(ModemSensorBase):
         name_suffix: str,
         unit: str | None,
         device_class: SensorDeviceClass | None,
-        state_class: SensorStateClass,
+        state_class: SensorStateClass | None,
         icon: str,
         value_type: type,
     ) -> None:
@@ -808,7 +809,8 @@ class ChannelSensor(ModemSensorBase):
             self._attr_unique_id = f"{entry.entry_id}_cable_modem_{dir_code}_{ch_type}_ch_{ch_id}_{field}"
 
         self._attr_icon = icon
-        self._attr_state_class = state_class
+        if state_class:
+            self._attr_state_class = state_class
         if unit:
             self._attr_native_unit_of_measurement = unit
         if device_class:
