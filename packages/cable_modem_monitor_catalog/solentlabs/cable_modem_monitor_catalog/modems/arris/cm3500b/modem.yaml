@@ -43,6 +43,7 @@ notes: |
   pair: `frequency` (lower edge) and `channel_width` (band span).
   Downstream bytes are not parsed: the DS QAM table has an Octets column
   but the DS OFDM table does not, so a total would count QAM channels only.
+  See ARCHITECTURE_DECISIONS.md § Byte counters are expressible, not mapped.
 
 references:
   issues:

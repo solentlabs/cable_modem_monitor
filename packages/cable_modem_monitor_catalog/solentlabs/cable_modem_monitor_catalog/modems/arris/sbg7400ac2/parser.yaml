@@ -25,9 +25,6 @@ downstream:
         - index: 5
           field: modulation
           type: modulation
-        - index: 6
-          field: bytes
-          type: integer
         - index: 7
           field: corrected
           type: integer
@@ -112,6 +109,3 @@ aggregate:
   total_uncorrected:
     channels: downstream
     sum: uncorrected
-  total_downstream_bytes:
-    channels: downstream
-    sum: bytes

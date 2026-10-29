@@ -1,7 +1,6 @@
 {
   "downstream": [
     {
-      "bytes": 12038669013,
       "channel_id": 73,
       "channel_number": 1,
       "channel_type": "qam",
@@ -13,7 +12,6 @@
       "uncorrected": 445244
     },
     {
-      "bytes": 10044551633,
       "channel_id": 74,
       "channel_number": 2,
       "channel_type": "qam",
@@ -25,7 +23,6 @@
       "uncorrected": 673370
     },
     {
-      "bytes": 10036101398,
       "channel_id": 75,
       "channel_number": 3,
       "channel_type": "qam",
@@ -37,7 +34,6 @@
       "uncorrected": 163191
     },
     {
-      "bytes": 10037564522,
       "channel_id": 76,
       "channel_number": 4,
       "channel_type": "qam",
@@ -49,7 +45,6 @@
       "uncorrected": 359926
     },
     {
-      "bytes": 10010673849,
       "channel_id": 77,
       "channel_number": 5,
       "channel_type": "qam",
@@ -61,7 +56,6 @@
       "uncorrected": 186584
     },
     {
-      "bytes": 10008042568,
       "channel_id": 78,
       "channel_number": 6,
       "channel_type": "qam",
@@ -73,7 +67,6 @@
       "uncorrected": 19645
     },
     {
-      "bytes": 10000911420,
       "channel_id": 79,
       "channel_number": 7,
       "channel_type": "qam",
@@ -85,7 +78,6 @@
       "uncorrected": 14855
     },
     {
-      "bytes": 9998464017,
       "channel_id": 80,
       "channel_number": 8,
       "channel_type": "qam",
@@ -107,7 +99,6 @@
     "software_version": "9.1.103S5R",
     "system_uptime": "6 days 02h:33m:00s",
     "total_corrected": 313999142,
-    "total_downstream_bytes": 82174978420,
     "total_uncorrected": 1958861,
     "upstream_channel_count": 4
   },

@@ -44,6 +44,8 @@ notes: |
   Provisioned speed is not parsed: the CM3500B (same CGI family) exposes
   SfMaxTrafficRate at /cgi-bin/config_params_cgi; no TM1602A capture on
   file visits that endpoint.
+  Downstream bytes are not parsed: the DS table has an Octets column, one count per channel.
+  See ARCHITECTURE_DECISIONS.md § Byte counters are expressible, not mapped.
 
 references:
   issues:

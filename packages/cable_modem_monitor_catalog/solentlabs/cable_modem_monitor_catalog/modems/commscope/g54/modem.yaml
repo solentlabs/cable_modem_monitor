@@ -52,6 +52,7 @@ notes: |
   Downstream bytes are not parsed: dschannel rows carry `octets` but
   ofdmchannel rows carry no byte or codeword counter, so a total would
   count QAM channels only.
+  See ARCHITECTURE_DECISIONS.md § Byte counters are expressible, not mapped.
 
 references:
   issues:

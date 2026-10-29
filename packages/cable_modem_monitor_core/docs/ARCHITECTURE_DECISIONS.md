@@ -385,6 +385,36 @@ seen it" is a conclusion, not a gap to paper over.
 
 ---
 
+### Byte counters are expressible, not mapped
+
+**Decision:** Core totals a per-channel `bytes` field into
+`total_downstream_bytes` and sums a table's interface rows into
+`lan_received_bytes` and `lan_transmitted_bytes`; the HA adapter shows
+them with no `state_class`. No catalog modem maps them, and Core has no
+upstream byte field until a modem reports one.
+
+**Rationale:** What the fleet reports does not answer "how much
+traffic". Byte counts are cumulative since boot, not rates. They appear
+on downstream channels only, and no captured modem reports an upstream
+count. The CM3500B, G54 and CGA4236 omit the counter on OFDM channels,
+so a total would undercount, and the CODA56 reports its QAM count as an
+expression. The TC4400's LAN counters are labelled Received and
+Transmitted, and no capture or source says which way each points
+relative to the cable side. A cumulative figure with a partial scope, a
+single direction or an unconfirmed direction invites readings the data
+does not support.
+
+**Constrains:**
+
+- A catalog modem maps a byte counter only when its capture reports
+  both directions in full, each with an established direction. The
+  upstream field and total are added with the first such modem.
+- Per-channel byte counts are not parsed into channel attributes: a
+  value that changes every poll writes a recorder row per channel
+  per poll (#178). `bytes` is never an attribute.
+
+---
+
 ### Time-anchored derivations belong to the consumer, not Core
 
 **Decision:** Core reports `system_uptime` as the modem gives it and

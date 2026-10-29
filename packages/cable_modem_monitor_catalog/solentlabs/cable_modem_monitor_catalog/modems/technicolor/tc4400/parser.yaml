@@ -134,20 +134,6 @@ system_info:
         - field: board_temperature
           label: "Board Temperature"
           type: string
-    # statsifc.html lists one row per LAN interface. Data cells lack the
-    # header class "hd", and columns 2 and 6 are Received and Transmitted
-    # Bytes; sum totals each across the interfaces.
-    - format: html_fields
-      resource: "/statsifc.html"
-      fields:
-        - field: lan_received_bytes
-          css: "tr > td:nth-child(2):not(.hd)"
-          sum: true
-          type: integer
-        - field: lan_transmitted_bytes
-          css: "tr > td:nth-child(6):not(.hd)"
-          sum: true
-          type: integer
 
 # DOCSIS 3.1: aggregate QAM-only totals. OFDM LDPC codewords operate
 # at a vastly different scale and are not aggregated.

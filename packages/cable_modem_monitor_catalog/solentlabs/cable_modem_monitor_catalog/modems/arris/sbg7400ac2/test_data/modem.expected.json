@@ -1,7 +1,6 @@
 {
   "downstream": [
     {
-      "bytes": 522188,
       "channel_id": 5,
       "channel_number": 1,
       "channel_type": "qam",
@@ -13,7 +12,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 230,
       "channel_id": 1,
       "channel_number": 2,
       "channel_type": "qam",
@@ -25,7 +23,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 564,
       "channel_id": 2,
       "channel_number": 3,
       "channel_type": "qam",
@@ -37,7 +34,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 3,
       "channel_number": 4,
       "channel_type": "qam",
@@ -49,7 +45,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 4,
       "channel_number": 5,
       "channel_type": "qam",
@@ -61,7 +56,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 58459,
       "channel_id": 6,
       "channel_number": 6,
       "channel_type": "qam",
@@ -73,7 +67,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 7,
       "channel_number": 7,
       "channel_type": "qam",
@@ -85,7 +78,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 8,
       "channel_number": 8,
       "channel_type": "qam",
@@ -97,7 +89,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 9,
       "channel_number": 9,
       "channel_type": "qam",
@@ -109,7 +100,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 236,
       "channel_id": 10,
       "channel_number": 10,
       "channel_type": "qam",
@@ -121,7 +111,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 229,
       "channel_id": 11,
       "channel_number": 11,
       "channel_type": "qam",
@@ -133,7 +122,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 149,
       "channel_id": 12,
       "channel_number": 12,
       "channel_type": "qam",
@@ -145,7 +133,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 42940,
       "channel_id": 13,
       "channel_number": 13,
       "channel_type": "qam",
@@ -157,7 +144,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 58459,
       "channel_id": 14,
       "channel_number": 14,
       "channel_type": "qam",
@@ -169,7 +155,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 15,
       "channel_number": 15,
       "channel_type": "qam",
@@ -181,7 +166,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 16,
       "channel_number": 16,
       "channel_type": "qam",
@@ -193,7 +177,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 494,
       "channel_id": 17,
       "channel_number": 17,
       "channel_type": "qam",
@@ -205,7 +188,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 18,
       "channel_number": 18,
       "channel_type": "qam",
@@ -217,7 +199,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 150,
       "channel_id": 19,
       "channel_number": 19,
       "channel_type": "qam",
@@ -229,7 +210,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 20,
       "channel_number": 20,
       "channel_type": "qam",
@@ -241,7 +221,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 42888,
       "channel_id": 21,
       "channel_number": 21,
       "channel_type": "qam",
@@ -253,7 +232,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 22,
       "channel_number": 22,
       "channel_type": "qam",
@@ -265,7 +243,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 149,
       "channel_id": 23,
       "channel_number": 23,
       "channel_type": "qam",
@@ -277,7 +254,6 @@
       "uncorrected": 0
     },
     {
-      "bytes": 68,
       "channel_id": 24,
       "channel_number": 24,
       "channel_type": "qam",
@@ -300,7 +276,6 @@
     "software_version": "9.1.103AA85",
     "system_uptime": "0 days 00h:04m:00s",
     "total_corrected": 0,
-    "total_downstream_bytes": 727883,
     "total_uncorrected": 0,
     "upstream_channel_count": 4
   },
