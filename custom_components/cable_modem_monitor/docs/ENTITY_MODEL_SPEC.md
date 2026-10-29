@@ -31,6 +31,7 @@ the user-analytics distribution path.
 | [Entity Catalog](#entity-catalog) | Every entity the integration creates |
 | [Channel Identity](#channel-identity) | How channels are keyed and indexed |
 | [Field Pass-Through](#field-pass-through) | How parser fields flow to HA |
+| [state_class](#state_class) | Which sensors carry a state class |
 | [Core vs HA Boundary](#core-vs-ha-boundary) | What lives where |
 | [Device Model](#device-model) | HA device registration and naming |
 | [Availability](#availability) | When entities are available/unavailable |
@@ -541,6 +542,24 @@ stay out of long-term statistics (#178).
 it to `_CONSUMED_SYSTEM_INFO_FIELDS`. The dynamic sensor for that field
 stops being created. No entity migration — the dedicated class takes
 over with its own unique_id.
+
+---
+
+## state_class
+
+A `state_class` puts a sensor in Home Assistant's long-term statistics, which
+cost database space on every poll (#178). A sensor carries one only when
+its history is worth that cost; the class follows the shape of the value:
+
+| Value | state_class | Examples |
+|-------|-------------|----------|
+| Continuous measurement | `MEASUREMENT` | Channel power, SNR, frequency; error rates; channel counts; latencies |
+| Error counter | `TOTAL_INCREASING` | Per-channel and total corrected and uncorrected |
+| Plan configuration, pass-through field, cumulative traffic bytes | none | Provisioned speed and burst, Software Version, Last Boot Time, Total Downstream Bytes, LAN byte totals |
+
+A sensor with no `state_class` is sticky ([Availability](#availability)
+footnote ²). A new sensor takes its class from this table; a shape the
+table does not cover is decided here first.
 
 ---
 
