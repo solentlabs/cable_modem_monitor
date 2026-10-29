@@ -497,6 +497,7 @@ All three selector types support these optional fields:
 | `attribute` | string | Extract an HTML attribute value instead of text content. When omitted, `get_text()` is used. |
 | `pattern` | string | Regex applied to the extracted value (text or attribute). A single capture group returns `group(1)`; no capture group returns the full match. No match → field is skipped. |
 | `map` | dict | Value mapping (exact match, applied before type conversion). E.g., `{"Allowed": "Operational"}`. |
+| `sum` | bool | `css` only. Sum every element the selector matches, not just the first (see below). Default `false`. |
 
 **`attribute` and multi-valued HTML attributes:** BeautifulSoup returns
 some HTML attributes (notably `class`) as lists. The parser joins
@@ -504,6 +505,21 @@ list-valued attributes with spaces to match the original HTML
 representation. For example, `class="glyphicon glyphicon-ok"` extracts
 as `"glyphicon glyphicon-ok"`, not a Python list. Use `pattern` to
 isolate a specific value when the attribute contains multiple tokens.
+
+**`sum`: one column of a table.** With `sum: true` a `css` selector
+returns every match, each is converted with the field's `type`, and the
+field carries their total. A match that does not convert is skipped; no
+match, or none that converts, omits the field. The selector must pick
+data cells only (for example `td:nth-child(2):not(.hd)` to leave the
+header cells out). The TC4400's LAN statistics table, one row per
+interface, uses it to total each counter:
+
+```yaml
+- css: "tr > td:nth-child(2):not(.hd)"
+  sum: true
+  field: lan_received_bytes
+  type: integer
+```
 
 **Use case — CSS-encoded status indicators:** Some modems encode status
 as CSS classes rather than visible text (e.g., Bootstrap `class="success"`

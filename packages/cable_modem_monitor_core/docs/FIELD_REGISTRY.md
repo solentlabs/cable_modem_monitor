@@ -177,6 +177,14 @@ registered_fields:
       type: integer
       unit: "B"
       description: "ISP-provisioned upstream max traffic burst"
+    lan_received_bytes:
+      type: integer
+      unit: "B"
+      description: "Cumulative bytes received on the modem's LAN interfaces, summed"
+    lan_transmitted_bytes:
+      type: integer
+      unit: "B"
+      description: "Cumulative bytes transmitted on the modem's LAN interfaces, summed"
 ```
 
 Downstream `bytes` is the modems' per-channel "octets" counter, stored

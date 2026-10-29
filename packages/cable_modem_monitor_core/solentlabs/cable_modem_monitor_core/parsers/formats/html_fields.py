@@ -57,6 +57,13 @@ class HTMLFieldsParser(BaseParser):
         result: dict[str, Any] = {}
         self.failed_fields = {}
         for field_cfg in self._fields:
+            if field_cfg.sum:
+                total, rejected = _sum_css(soup, field_cfg)
+                if total is not None:
+                    result[field_cfg.field] = total
+                elif rejected is not None:
+                    record_failed_field(self.failed_fields, field_cfg.field, rejected)
+                continue
             value = _extract_field(soup, field_cfg)
             if value is not None:
                 converted = convert_value(
@@ -72,6 +79,26 @@ class HTMLFieldsParser(BaseParser):
                     record_failed_field(self.failed_fields, field_cfg.field, value)
 
         return result
+
+
+def _sum_css(soup: BeautifulSoup | Tag, field_cfg: HTMLFieldMapping) -> tuple[int | float | None, str | None]:
+    """Total every css match that converts; also return the first raw value that did not."""
+    total: int | float | None = None
+    rejected: str | None = None
+    for element in soup.select(field_cfg.css):
+        raw = _element_value(element, field_cfg.attribute) or ""
+        converted = convert_value(
+            raw,
+            field_cfg.type,
+            map_config=field_cfg.map,
+            input_format=field_cfg.format,
+            scale=field_cfg.scale,
+        )
+        if isinstance(converted, int | float) and not isinstance(converted, bool):
+            total = converted if total is None else total + converted
+        elif rejected is None:
+            rejected = raw
+    return total, rejected
 
 
 def _extract_field(soup: BeautifulSoup | Tag, field_cfg: HTMLFieldMapping) -> str | None:

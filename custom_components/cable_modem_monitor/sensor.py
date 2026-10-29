@@ -195,8 +195,9 @@ class _FieldUnitMeta(NamedTuple):
 
 # Units and device classes for dynamic system_info fields.
 # Fields not listed here display as unitless strings. None carry a
-# state_class: these are plan configuration, not measurements, so they stay
-# out of long-term statistics.
+# state_class: provisioned speed and burst are plan configuration and the
+# LAN byte counters are cumulative totals, so they stay out of long-term
+# statistics.
 _SYSTEM_INFO_FIELD_UNITS: dict[str, _FieldUnitMeta] = {
     # HA applies no default scaling to DATA_RATE, so the raw bit/s these
     # store renders as "110100480 bit/s" without a suggested unit.
@@ -204,6 +205,9 @@ _SYSTEM_INFO_FIELD_UNITS: dict[str, _FieldUnitMeta] = {
     "provisioned_speed_up": _FieldUnitMeta("bit/s", _DRATE, suggested_unit="Mbit/s"),
     "provisioned_burst_down": _FieldUnitMeta("B", _DSIZE),
     "provisioned_burst_up": _FieldUnitMeta("B", _DSIZE),
+    # Cumulative LAN byte totals (#178): no state_class, so no long-term statistics.
+    "lan_received_bytes": _FieldUnitMeta("B", _DSIZE),
+    "lan_transmitted_bytes": _FieldUnitMeta("B", _DSIZE),
 }
 
 # Abbreviations uppercased in humanized field names.
@@ -214,6 +218,7 @@ _SYSINFO_ABBREVIATIONS = frozenset(
         "dhcp",
         "tftp",
         "ip",
+        "lan",
         "mac",
         "snr",
         "fft",

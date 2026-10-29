@@ -1,0 +1,10 @@
+{
+  "_description": "sum skips a match that does not convert and totals the rest",
+  "_html": "<table><tr><td class=\"v\">10</td></tr><tr><td class=\"v\">n/a</td></tr><tr><td class=\"v\">5</td></tr></table>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/stats.html",
+    "fields": [{"css": "td.v", "sum": true, "field": "total", "type": "integer"}]
+  },
+  "_expected": {"total": 15}
+}

@@ -60,3 +60,46 @@ def test_extract_by_label_public_entry() -> None:
     soup = BeautifulSoup(LABELLED_ROW, "html.parser")
     assert extract_by_label(soup, "Hardware Version") == "2.1.0"
     assert extract_by_label(soup, "Software Version") is None
+
+
+@pytest.mark.parametrize(
+    "mapping",
+    [
+        {"id": "x", "sum": True},
+        {"label": "x", "sum": True},
+    ],
+    ids=["id", "label"],
+)
+def test_sum_requires_css(mapping: dict[str, object]) -> None:
+    """sum totals the matches of a css selector, so id and label locators reject it."""
+    with pytest.raises(ValueError, match="sum"):
+        HTMLFieldsSource.model_validate(
+            {
+                "format": "html_fields",
+                "resource": "/stats.html",
+                "fields": [{"field": "total", "type": "integer", **mapping}],
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("html", "expected_failed"),
+    [
+        ("<table><tr><td class='v'>n/a</td></tr></table>", {"total": "n/a"}),
+        ("<table><tr><td class='v'>4</td><td class='v'>n/a</td></tr></table>", {}),
+        ("<table></table>", {}),
+    ],
+    ids=["none-convert", "partial-convert", "no-match"],
+)
+def test_sum_failed_fields(html: str, expected_failed: dict[str, str]) -> None:
+    """Only a sum whose every match was rejected counts as a failed field."""
+    source = HTMLFieldsSource.model_validate(
+        {
+            "format": "html_fields",
+            "resource": "/stats.html",
+            "fields": [{"css": "td.v", "sum": True, "field": "total", "type": "integer"}],
+        }
+    )
+    parser = HTMLFieldsParser(source)
+    parser.parse(_build_resources(html, "/stats.html"))
+    assert parser.failed_fields == expected_failed

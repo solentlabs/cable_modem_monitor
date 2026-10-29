@@ -54,6 +54,10 @@ notes: |
   System uptime available in cmswinfo.html.
   Data across multiple pages: cmconnectionstatus.html (channels), cmswinfo.html (system info).
   Restart reports zero power during reboot window (300 seconds).
+  LAN byte counters come from statsifc.html ("Statistics -- LAN"), summed across
+  its interface rows. They keep the page's own Received and Transmitted labels: the
+  capture does not say which way each points relative to the cable side, and no
+  transfer test or documentation has confirmed it.
 
 references:
   issues:

@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   there). Modems whose OFDM channels report no byte count, or whose counter is
   an expression, get no total rather than one that undercounts. Intake now
   recognizes the `Octets` column as `bytes`.
+- **LAN Received Bytes and LAN Transmitted Bytes sensors for the Technicolor
+  TC4400.** The modem's LAN statistics page counts bytes per interface; the
+  sensors total them, keep the page's own Received and Transmitted labels, and
+  stay out of long-term statistics. Which way each label points relative to the
+  cable side is not confirmed. A `sum` option on `html_fields` totals the
+  matches of a CSS selector.
 
 ### Changed
 

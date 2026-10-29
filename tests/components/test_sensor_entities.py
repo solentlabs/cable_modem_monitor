@@ -1117,6 +1117,24 @@ def test_system_info_field_with_unit_is_sticky(mock_runtime_data):
     assert sensor.available is True
 
 
+@pytest.mark.parametrize(
+    ("field", "name"),
+    [
+        ("lan_received_bytes", "LAN Received Bytes"),
+        ("lan_transmitted_bytes", "LAN Transmitted Bytes"),
+    ],
+)
+def test_lan_byte_counters_have_unit_and_no_state_class(mock_runtime_data, field, name):
+    """LAN byte totals are data sizes in bytes with no state_class (#178)."""
+    modem_data: dict[str, Any] = {"system_info": {field: 1234}, "downstream": [], "upstream": []}
+    sensor = _make_sensor(SystemInfoFieldSensor, mock_runtime_data, modem_data=modem_data, field=field)
+    assert sensor.name == name
+    assert sensor.native_unit_of_measurement == "B"
+    assert sensor.device_class == SensorDeviceClass.DATA_SIZE
+    assert sensor.state_class is None
+    assert sensor.native_value == 1234
+
+
 def test_continuous_data_sensor_unavailable_on_outage(mock_runtime_data):
     """Continuous data sensors are untouched — they go unavailable on outage."""
     sensor = _make_sensor(ModemChannelCountSensor, mock_runtime_data, direction="downstream")

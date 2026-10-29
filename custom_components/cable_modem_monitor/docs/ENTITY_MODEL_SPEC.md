@@ -534,7 +534,8 @@ it, so changing this table moves only newly created entities. Existing
 ones follow the **Discontinued entities** paths above — the entity's
 own settings, Reset Entities, or remove and re-add. None of these fields
 carries a `state_class`: provisioned speed and burst are plan configuration,
-not measurements, so they stay out of long-term statistics.
+not measurements, and the LAN byte counters are cumulative totals, so they
+stay out of long-term statistics (#178).
 
 **Graduation:** When a dynamic field gets a dedicated sensor class, add
 it to `_CONSUMED_SYSTEM_INFO_FIELDS`. The dynamic sensor for that field
