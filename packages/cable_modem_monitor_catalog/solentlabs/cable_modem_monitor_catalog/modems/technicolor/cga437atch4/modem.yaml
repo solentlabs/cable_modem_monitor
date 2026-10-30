@@ -1,0 +1,65 @@
+manufacturer: Technicolor
+model: CGA437ATCH4
+transport: http
+default_host: 192.168.0.1
+timeout: 15
+
+auth:
+  strategy: form_pbkdf2
+  login_endpoint: /api/v1/session/login
+  cookie_name: auth
+  csrf_header: X-CSRF-TOKEN
+  login_busy:
+    message: MSG_LOGIN_150
+  login_success:
+    error: ok
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+
+session:
+  headers:
+    Referer: "{base_url}/"
+    X-Requested-With: XMLHttpRequest
+  post_login_endpoints:
+    - /api/v1/session/menu
+
+hardware:
+  docsis_version: "3.1"
+
+status: awaiting_verification
+
+sources:
+  auth_config:
+    "[#227 Technicolor CGA437ATCH4](https://github.com/solentlabs/cable_modem_monitor/issues/227)
+    — two-step PBKDF2 login"
+  isps:
+    "[#227 Technicolor CGA437ATCH4](https://github.com/solentlabs/cable_modem_monitor/issues/227)
+    — contributor reports Vectra (Poland)"
+
+attribution:
+  contributors:
+    - github: https://github.com/blAkeOrfake
+      contribution: "HAR capture and testing (Issue #227)"
+
+isps:
+  - Vectra
+
+notes: |
+  DOCSIS 3.1 gateway. Same REST platform as CGA4236: channels from /api/v1/modem/ and system info from /api/v1/system/.
+  The firmware has no /api/v1/sta_* routes (the CGA6444VF resources answer 500).
+  Downstream error counters sit in ErrTbl, not in the channel rows; they join
+  the channels by row ordinal (SC-QAM) or ChannelIndex (OFDM). On the CGA4236
+  fixture, where both tables carry the counters, that join reproduces every
+  channel's own values.
+  Login is the two-step PBKDF2 flow. A successful login answers message
+  MSG_LOGIN_1, which the firmware's own translation table renders as an invalid
+  login, so success is error == "ok" (login_success).
+
+  test_data/modem.har is an assembled fixture (issue #227). Base: the
+  contributor's DevTools capture, sanitized by har-capture 0.15.1. One
+  substitution: the salt request's password FIELD_013d773e -> seeksalthash, the
+  literal the contributor quotes in the issue; the sanitizer redacts any value
+  under a credential-named key. Declared in log.comment. A DevTools export
+  carries no cookies, so cookie_name (auth) and login_busy (MSG_LOGIN_150) come
+  from the issue, not from a cookie-bearing capture. No logout or restart was captured, so
+  neither is declared. A full har-capture session replaces the fixture.

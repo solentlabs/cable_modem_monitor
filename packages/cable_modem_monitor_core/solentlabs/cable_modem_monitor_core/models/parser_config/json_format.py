@@ -24,6 +24,9 @@ class JSONArrayDefinition(BaseModel):
     instead of the section-level resource. This allows a single
     channel section to combine data from multiple API endpoints
     (e.g., QAM from one endpoint, OFDM from another).
+
+    An array with ``merge_by`` is a companion: its rows add fields to the
+    primary channels sharing the key instead of becoming channels.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -33,6 +36,7 @@ class JSONArrayDefinition(BaseModel):
     channel_type: ChannelTypeConfig | None = None
     fixed_fields: dict[str, str] = Field(default_factory=dict)
     filter: dict[str, FilterValue] = Field(default_factory=dict)
+    merge_by: list[str] | None = None
 
 
 class JSONSection(BaseModel):
@@ -93,6 +97,10 @@ class JSONSection(BaseModel):
                     "per array, not at section level (section-level values "
                     "are not applied to arrays)"
                 )
+            # Companions only enrich primary channels, so without a
+            # primary the section could never yield a channel.
+            if self.arrays and all(a.merge_by is not None for a in self.arrays):
+                raise ValueError("json arrays form needs at least one primary array (no merge_by)")
         return self
 
     @model_validator(mode="after")

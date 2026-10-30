@@ -113,6 +113,7 @@ upstream:
 | `fixed_fields` | map | no | Static field values for every channel. Applied after channel_type, before filter (same semantics as XML tables). |
 | `filter` | object | no | Keep/drop rules on converted field values: a plain value keeps only matching channels; `{not: value}` drops matching channels. Applied after `fixed_fields`. |
 | `arrays` | list | yes* | Multi-array form (alternative to array_path/fields) |
+| `arrays[].merge_by` | list[string] | no | Makes the array a companion merged into the primaries by these fields. See [Companion arrays](#companion-arrays-merge_by). |
 
 \* Mutually exclusive: use either flat form (`array_path` + `fields`)
 or multi-array form (`arrays`).
@@ -143,7 +144,8 @@ downstream:
 ```
 
 Each array entry has its own `array_path`, `fields`, `channel_type`,
-`fixed_fields`, and `filter`. Results from all arrays are concatenated.
+`fixed_fields`, and `filter`. Results from all primary arrays are
+concatenated.
 In multi-array form these three must be set per array — a section-level
 `channel_type`, `fixed_fields`, or `filter` alongside `arrays` is a
 validation error (it would otherwise be silently ignored).
@@ -174,6 +176,47 @@ resource for that array. Either provide a shared section-level
 ``resource`` or give every array its own --- partial coverage is a
 validation error.
 
+#### Companion arrays (merge_by)
+
+Some firmware reports a channel's error counters in a separate array
+from its signal fields. An array with `merge_by` is a companion: its
+rows add fields to the primary channels with the same key and are never
+channels themselves. Matching, conflict and unmatched-row rules are
+those of [FORMAT_TABLE_SPEC.md § Companion Tables](FORMAT_TABLE_SPEC.md#companion-tables-merge_by).
+
+The key is a field that every array maps, each from its own source key,
+so primaries that identify a channel differently (a row ordinal in one
+array, an index column in another) still join one companion. A
+modem-specific field serves as the key
+([FIELD_REGISTRY.md § Tier 3](FIELD_REGISTRY.md#tier-3--unregistered-fields)),
+and it stays on the channel as an attribute:
+
+```yaml
+downstream:
+  format: json
+  resource: "/api/status"
+  arrays:
+    - array_path: "data.qam"
+      channel_type: { fixed: qam }
+      fields:
+        - { key: "__id", field: channel_index, type: integer }
+        - { key: "channelID", field: channel_id, type: integer }
+    - array_path: "data.ofdm"
+      channel_type: { fixed: ofdm }
+      fields:
+        - { key: "ChannelIndex", field: channel_index, type: integer }
+        - { key: "channelID", field: channel_id, type: integer }
+    - array_path: "data.errors"
+      merge_by: [channel_index]
+      fields:
+        - { key: "__id", field: channel_index, type: integer }
+        - { key: "Correcteds", field: corrected, type: integer }
+        - { key: "Uncorrectables", field: uncorrected, type: integer }
+```
+
+At least one array must be a primary. A companion is not an anchor: a
+response missing only the companion still yields the primaries.
+
 **Extraction algorithm:**
 
 1. Get resource dict entry by path
@@ -181,7 +224,8 @@ validation error.
 3. For each object in each array, map keys to canonical fields,
    apply `channel_type`, apply `fixed_fields` (static values
    override/fill fields on every channel), then apply `filter`
-4. Concatenate results from all arrays
+4. Concatenate results from all primary arrays, then merge each
+   companion array into them by its `merge_by` fields
 5. Auto-assign `channel_number` from 1-based array index when not
    already mapped by parser.yaml (see
    [CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §10)

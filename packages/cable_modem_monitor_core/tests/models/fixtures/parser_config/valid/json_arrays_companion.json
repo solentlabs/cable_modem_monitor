@@ -1,0 +1,24 @@
+{
+  "downstream": {
+    "format": "json",
+    "resource": "/api/status",
+    "arrays": [
+      {
+        "array_path": "data.dsList",
+        "channel_type": {"fixed": "qam"},
+        "fields": [
+          {"key": "Index", "field": "channel_index", "type": "integer"},
+          {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+        ]
+      },
+      {
+        "array_path": "data.errList",
+        "merge_by": ["channel_index"],
+        "fields": [
+          {"key": "Index", "field": "channel_index", "type": "integer"},
+          {"key": "Correctable", "field": "corrected", "type": "integer"}
+        ]
+      }
+    ]
+  }
+}

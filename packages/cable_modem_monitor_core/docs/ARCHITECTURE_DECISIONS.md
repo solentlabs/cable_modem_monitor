@@ -1364,7 +1364,9 @@ lookup key — primary table wins on field conflicts.
 
 **Constrains:** All tables in a section share the section-level
 `resource`. Companion tables must have matching key fields for the
-merge to work.
+merge to work. Every format that reads several arrays or tables
+(`javascript_json`, `json`) declares companions the same way and reuses
+this merge; none implements its own join.
 
 ### Duplicated companion columns are declared by position
 

@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**51 configurations supported** — 33 confirmed on real hardware, 18 awaiting verification.
+**52 configurations supported** — 33 confirmed on real hardware, 19 awaiting verification.
 
 ---
 
@@ -64,6 +64,7 @@ and share a diagnostics snapshot.
 | NE6037 | JSON-RPC | Play | — | captured |
 | CGA2121 | HTML | Telia | generated | n/a |
 | CGA4236 | HTML | Unknown | — | n/a |
+| CGA437ATCH4 | HTML | Vectra | hybrid | n/a |
 | CGA6444VF | HTML | Vodafone | — | n/a |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy | — | n/a |
 | EVW32C-0N | HTML | Telemach | hybrid | captured |

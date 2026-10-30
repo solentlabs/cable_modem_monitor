@@ -252,15 +252,26 @@ def _parse_json_channels(
     JSONSection supports two shapes (see ``models/parser_config/
     json_format.py``):
     - flat: section-level ``resource`` + ``fields``
-    - arrays: list of ``arrays[].resource`` + per-array fields
+    - arrays: list of ``arrays[].resource`` + per-array fields; primaries
+      are concatenated, companions (``merge_by``) merged into them
 
     Anchor accounting is per-shape — the flat path counts the single
-    section resource; the arrays path counts each declared array's
-    resource. Stub detection on JSON modems isn't yet observed in the
-    field, so each path reports trivially fulfilled when its resources
-    are present.
+    section resource; the arrays path counts each primary array's
+    resource, since a companion only enriches primaries. Stub detection
+    on JSON modems isn't yet observed in the field, so each path reports
+    trivially fulfilled when its resources are present.
     """
     parser = JSONParser(section)
+
+    if section.arrays:
+        # Per-array resource takes precedence; fall back to section-level.
+        # See JSONSection model — arrays' resource defaults to "" and
+        # validation requires either flat `resource` or per-array resources.
+        primaries = [arr for arr in section.arrays if arr.merge_by is None]
+        fulfilled = sum(1 for arr in primaries if resources.get(arr.resource or section.resource) is not None)
+        channels = _join_companions(parser.parse_parts(resources))
+        return channels, AnchorCount(expected=len(primaries), fulfilled=fulfilled)
+
     channels = parser.parse(resources)
     if not isinstance(channels, list):
         channels = []
@@ -271,16 +282,6 @@ def _parse_json_channels(
         if "channel_number" not in channel:
             channel["channel_number"] = idx
 
-    if section.arrays:
-        # Multi-array shape: each array may have its own resource, or
-        # share the section-level resource (e.g., a single endpoint that
-        # returns a mixed list filtered by channel_type). Per-array
-        # resource takes precedence; fall back to section-level.
-        # See JSONSection model — arrays' resource defaults to "" and
-        # validation requires either flat `resource` or per-array resources.
-        expected = len(section.arrays)
-        fulfilled = sum(1 for arr in section.arrays if resources.get(arr.resource or section.resource) is not None)
-        return channels, AnchorCount(expected=expected, fulfilled=fulfilled)
     return channels, resource_present(resources, section.resource)
 
 

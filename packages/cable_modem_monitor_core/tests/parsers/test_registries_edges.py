@@ -57,6 +57,7 @@ class TestChannelTypeGuards:
     def test_json_non_list_returns_empty(self) -> None:
         """JSON parser returning None → empty list."""
         section = MagicMock()
+        section.arrays = None  # flat form
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.JSONParser") as mock_cls:
             mock_cls.return_value.parse.return_value = None
             result, _ = _parse_json_channels(section, {})
@@ -255,6 +256,118 @@ def test_js_json_arrays_anchor_counting(html: str | None, expected: int, fulfill
     _, count = _parse_js_json_channels(section, resources)
     assert count.expected == expected
     assert count.fulfilled == fulfilled
+
+
+# ------------------------------------------------------------------
+# json arrays form — companion merge_by
+# ------------------------------------------------------------------
+
+_JSON_COMPANION_FIELDS = [
+    {"key": "Index", "field": "channel_index", "type": "integer"},
+    {"key": "Counted", "field": "corrected", "type": "integer"},
+    {"key": "Missed", "field": "uncorrected", "type": "integer"},
+]
+
+
+def _json_companion_section(companion: dict[str, Any] | None = None) -> JSONSection:
+    """Two primaries keying the join from different source keys, plus one companion."""
+    return JSONSection.model_validate(
+        {
+            "format": "json",
+            "resource": "/api/status",
+            "arrays": [
+                {
+                    "array_path": "data.dsList",
+                    "channel_type": {"fixed": "qam"},
+                    "fields": [
+                        {"key": "Index", "field": "channel_index", "type": "integer"},
+                        {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                    ],
+                },
+                {
+                    "array_path": "data.ofdmList",
+                    "channel_type": {"fixed": "ofdm"},
+                    "fields": [
+                        {"key": "Slot", "field": "channel_index", "type": "integer"},
+                        {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+                    ],
+                },
+                companion
+                or {
+                    "array_path": "data.errList",
+                    "merge_by": ["channel_index"],
+                    "fields": _JSON_COMPANION_FIELDS,
+                },
+            ],
+        }
+    )
+
+
+_DS = [{"Index": "1", "ChannelID": "10"}, {"Index": "2", "ChannelID": "11"}]
+_OFDM = [{"Slot": "3", "ChannelID": "159"}]
+_QAM1 = {"channel_index": 1, "channel_id": 10, "channel_type": "qam", "channel_number": 1}
+_QAM2 = {"channel_index": 2, "channel_id": 11, "channel_type": "qam", "channel_number": 2}
+_OFD3 = {"channel_index": 3, "channel_id": 159, "channel_type": "ofdm", "channel_number": 3}
+
+_ERR_ROWS = [
+    {"Index": "1", "Counted": "5", "Missed": "0"},
+    {"Index": "2", "Counted": "7", "Missed": "1"},
+    {"Index": "3", "Counted": "900", "Missed": "44"},
+]
+_ALL_MERGED = [
+    {**_QAM1, "corrected": 5, "uncorrected": 0},
+    {**_QAM2, "corrected": 7, "uncorrected": 1},
+    {**_OFD3, "corrected": 900, "uncorrected": 44},
+]
+
+# fmt: off
+_JSON_COMPANION_CASES = [
+    # (id,                                data,                                                expected)
+    ("joins-across-primaries",
+     {"dsList": _DS, "ofdmList": _OFDM, "errList": _ERR_ROWS},                                 _ALL_MERGED),
+    ("unmatched-companion-row-ignored",
+     {"dsList": _DS, "ofdmList": _OFDM,
+      "errList": [_ERR_ROWS[0], {"Index": "9", "Counted": "1", "Missed": "1"}]},
+     [_ALL_MERGED[0], _QAM2, _OFD3]),
+    ("empty-companion",
+     {"dsList": _DS, "ofdmList": _OFDM, "errList": []},                                        [_QAM1, _QAM2, _OFD3]),
+    ("companion-path-missing",
+     {"dsList": _DS, "ofdmList": _OFDM},                                                       [_QAM1, _QAM2, _OFD3]),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "_id,data,expected",
+    _JSON_COMPANION_CASES,
+    ids=[c[0] for c in _JSON_COMPANION_CASES],
+)
+def test_json_arrays_companion_merge(_id: str, data: dict[str, Any], expected: list[dict[str, Any]]) -> None:
+    """A json companion array adds its fields to the primaries sharing its key and adds no channels."""
+    channels, _ = _parse_json_channels(_json_companion_section(), {"/api/status": {"data": data}})
+    assert channels == expected
+
+
+def test_json_arrays_companion_primary_wins_conflict() -> None:
+    """A field both a primary and its companion map keeps the primary's value."""
+    companion = {
+        "array_path": "data.errList",
+        "merge_by": ["channel_index"],
+        "fields": [
+            {"key": "Index", "field": "channel_index", "type": "integer"},
+            {"key": "Other", "field": "channel_id", "type": "integer"},
+        ],
+    }
+    data = {"dsList": _DS, "ofdmList": _OFDM, "errList": [{"Index": "1", "Other": "999"}]}
+    channels, _ = _parse_json_channels(_json_companion_section(companion), {"/api/status": {"data": data}})
+    assert channels[0]["channel_id"] == 10
+
+
+def test_json_arrays_companion_is_not_an_anchor() -> None:
+    """Only primary arrays count as anchors; a companion never makes a page a stub."""
+    resources = {"/api/status": {"data": {"dsList": _DS, "ofdmList": _OFDM}}}
+    _, count = _parse_json_channels(_json_companion_section(), resources)
+    assert (count.expected, count.fulfilled) == (2, 2)
 
 
 # ------------------------------------------------------------------
