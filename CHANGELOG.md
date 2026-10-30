@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.6] - 2026-10-30
+
 ### Added
 
 - **The Technicolor CGA437ATCH4 joins the catalog, awaiting verification
