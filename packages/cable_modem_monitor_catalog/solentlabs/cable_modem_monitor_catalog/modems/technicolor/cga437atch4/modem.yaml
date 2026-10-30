@@ -23,6 +23,21 @@ session:
   post_login_endpoints:
     - /api/v1/session/menu
 
+actions:
+  logout:
+    type: http
+    method: POST
+    endpoint: "/api/v1/session/logout"
+    requires_session: true
+    headers:
+      X-Requested-With: "XMLHttpRequest"
+    # INFERRED, not observed: no logout was captured for this firmware.
+    # Copied from CGA6444VF, whose HAR shows the browser ending each
+    # session with this POST. Single-session firmware, so without it the
+    # next poll's login can collide with our own session (MSG_LOGIN_150).
+    # Replace with the observed request once a har-capture session
+    # records the log out step.
+
 hardware:
   docsis_version: "3.1"
 
@@ -35,6 +50,10 @@ sources:
   isps:
     "[#227 Technicolor CGA437ATCH4](https://github.com/solentlabs/cable_modem_monitor/issues/227)
     — contributor reports Vectra (Poland)"
+  logout_action:
+    "[#120 CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120)
+    — POST /api/v1/session/logout observed in that modem's HAR; inferred
+    here, not observed on this firmware"
 
 attribution:
   contributors:
@@ -61,5 +80,6 @@ notes: |
   literal the contributor quotes in the issue; the sanitizer redacts any value
   under a credential-named key. Declared in log.comment. A DevTools export
   carries no cookies, so cookie_name (auth) and login_busy (MSG_LOGIN_150) come
-  from the issue, not from a cookie-bearing capture. No logout or restart was captured, so
-  neither is declared. A full har-capture session replaces the fixture.
+  from the issue, not from a cookie-bearing capture. No logout or restart was
+  captured. The logout action is inferred from CGA6444VF (see the comment on
+  it); no restart is declared. A full har-capture session replaces the fixture.
