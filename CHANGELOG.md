@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The Technicolor CGA437ATCH4 joins the catalog, awaiting verification
+  (#227).** It logs in with the two-step PBKDF2 form and reads SC-QAM and
+  OFDM/OFDMA channels from `/api/v1/modem/`. The capture did not include a
+  logout, so the logout request is copied from the CGA6444VF and is
+  unconfirmed. Without it, the modem's single web session may stay held after
+  each poll. No restart is declared.
+- **JSON arrays can merge a companion array into the channels.** A modem that
+  reports error counters in an array apart from the signal fields can declare
+  `merge_by` on that array. Its rows add fields to the channels with the same
+  key and are never channels themselves, as `javascript_json` and HTML
+  tables already do.
 - **Intake warns when a capture has no logout request.** A capture that never
   logged out, or whose logout appears only in page source, produced no
   warning. Intake now says so and asks for the logout step.
@@ -46,6 +57,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A companion row with no key no longer merges into unrelated channels.**
+  When a channel or companion row lacked its `merge_by` field, every keyless
+  channel took the last keyless companion row's values. Such rows now neither
+  join nor are joined. No catalog modem was affected.
 - **The Netgear CM1100 now reports uptime.** Its status page carries the
   uptime in a `System Up Time` element that the parser never read, so the
   modem had no Last Boot Time sensor. It now shows when the unit last booted.
