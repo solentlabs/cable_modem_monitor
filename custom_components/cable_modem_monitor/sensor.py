@@ -168,16 +168,6 @@ _US_METRICS = [
     ("frequency", "Frequency", "Hz",   _FREQ, None, "mdi:sine-wave", int),
 ]
 
-_LAN_METRICS = [
-    ("received_bytes",      "Received Bytes",      _DSIZE, "B"),
-    ("received_packets",    "Received Packets",    None,   None),
-    ("received_errors",     "Received Errors",     None,   None),
-    ("received_drops",      "Received Drops",      None,   None),
-    ("transmitted_bytes",   "Transmitted Bytes",   _DSIZE, "B"),
-    ("transmitted_packets", "Transmitted Packets", None,   None),
-    ("transmitted_errors",  "Transmitted Errors",  None,   None),
-    ("transmitted_drops",   "Transmitted Drops",   None,   None),
-]
 # fmt: on
 
 # Power and SNR are always created for downstream; power for upstream.
@@ -859,53 +849,6 @@ class ChannelSensor(ModemSensorBase):
 
 
 # ------------------------------------------------------------------
-# LAN statistics sensors
-# ------------------------------------------------------------------
-
-
-class LanStatsSensor(ModemSensorBase):
-    """LAN statistics sensor for a specific interface and metric."""
-
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(
-        self,
-        coordinator: DataUpdateCoordinator[ModemSnapshot],
-        entry: CableModemConfigEntry,
-        *,
-        interface: str,
-        field: str,
-        name_suffix: str,
-        device_class: SensorDeviceClass | None,
-        unit: str | None,
-    ) -> None:
-        """Initialize the LAN stats sensor."""
-        super().__init__(coordinator, entry)
-        self._interface = interface
-        self._field = field
-        self._attr_name = f"LAN {interface} {name_suffix}"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_lan_{interface}_{field}"
-        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
-        if device_class:
-            self._attr_device_class = device_class
-        if unit:
-            self._attr_native_unit_of_measurement = unit
-
-    @functools.cached_property
-    def native_value(self) -> int | None:
-        """Return the LAN stats value."""
-        modem_data = self._snapshot.modem_data
-        if modem_data is None:
-            return None
-        lan_stats = modem_data.get("lan_stats", {})
-        iface_data = lan_stats.get(self._interface)
-        if iface_data is None:
-            return None
-        value = iface_data.get(self._field)
-        return int(value) if value is not None else None
-
-
-# ------------------------------------------------------------------
 # Health sensors
 # ------------------------------------------------------------------
 
@@ -1117,32 +1060,6 @@ def _create_channel_sensors(
     return entities
 
 
-def _create_lan_sensors(
-    data_coord: DataUpdateCoordinator[ModemSnapshot],
-    entry: CableModemConfigEntry,
-    modem_data: dict[str, Any],
-) -> list[SensorEntity]:
-    """Create LAN statistics sensors from first poll data."""
-    entities: list[SensorEntity] = []
-    lan_stats = modem_data.get("lan_stats", {})
-
-    for interface in lan_stats:
-        for field, name, dev_cls, unit in _LAN_METRICS:
-            entities.append(
-                LanStatsSensor(
-                    data_coord,
-                    entry,
-                    interface=interface,
-                    field=field,
-                    name_suffix=name,
-                    device_class=dev_cls,
-                    unit=unit,
-                )
-            )
-
-    return entities
-
-
 def _create_data_dependent_entities(
     data_coord: DataUpdateCoordinator[ModemSnapshot],
     entry: CableModemConfigEntry,
@@ -1198,9 +1115,6 @@ def _create_data_dependent_entities(
 
     # Per-channel sensors
     entities.extend(_create_channel_sensors(data_coord, entry, modem_data))
-
-    # LAN stats sensors
-    entities.extend(_create_lan_sensors(data_coord, entry, modem_data))
 
     # Tier 3 dynamic system_info sensors (pass-through)
     for field in sorted(system_info):

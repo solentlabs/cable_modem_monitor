@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stops analysis. The TG3442DE capture now scores 82.4% (fleet 88.6% to
   90.2%).
 
+### Removed
+
+- **Per-interface LAN statistics sensors.** They read a `lan_stats` key that
+  no v3.14 parser produces, so they never had data. The LAN byte totals that
+  Core can sum from a table are unaffected.
+
 ### Fixed
 
 - **The Netgear CM1100 now reports uptime.** Its status page carries the

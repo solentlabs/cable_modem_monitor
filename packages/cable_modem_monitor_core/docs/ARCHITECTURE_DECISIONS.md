@@ -412,6 +412,10 @@ does not support.
 - Per-channel byte counts are not parsed into channel attributes: a
   value that changes every poll writes a recorder row per channel
   per poll (#178). `bytes` is never an attribute.
+- The HA adapter has no per-interface LAN statistics sensors. They read a
+  `lan_stats` key that no parser produces, and their `TOTAL_INCREASING`
+  class contradicted the rule above. LAN byte totals come from
+  `system_info` only.
 
 ---
 

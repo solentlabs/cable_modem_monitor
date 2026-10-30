@@ -60,7 +60,7 @@ signal readout — the Status sensor and every per-channel sensor
 (power, SNR, frequency, corrected/uncorrected). Everything else is
 supporting information and carries `EntityCategory.DIAGNOSTIC`: Modem
 Info, Software Version, DS/US channel counts, error totals and rates,
-Last Boot Time, system-info pass-through fields, LAN statistics, the
+Last Boot Time, system-info pass-through fields, the
 latency sensors, and the Update Modem Data button. Reset Entities is
 `CONFIG`. Diagnostic classification is applied on the shared bases
 (`_SystemInfoSensor`, `HealthSensorBase`) where the taxonomy already
@@ -239,21 +239,6 @@ regardless of mode. Additional fields (symbol_rate, lock_status,
 modulation, ranging_status, etc.) flow as attributes. A sensor with a
 `symbol_rate` attribute also carries `symbol_rate_unit: "Sym/s"`,
 because firmware labels the rate in ksym/s and Core stores Sym/s.
-
-### LAN Statistics Sensors
-
-Created per network interface, 8 sensors each.
-
-| Entity | unique_id suffix | Unit | device_class | state_class |
-|--------|-----------------|------|--------------|-------------|
-| Received Bytes | `_lan_{iface}_received_bytes` | B | DATA_SIZE | TOTAL_INCREASING |
-| Received Packets | `_lan_{iface}_received_packets` | — | — | TOTAL_INCREASING |
-| Received Errors | `_lan_{iface}_received_errors` | — | — | TOTAL_INCREASING |
-| Received Drops | `_lan_{iface}_received_drops` | — | — | TOTAL_INCREASING |
-| Transmitted Bytes | `_lan_{iface}_transmitted_bytes` | B | DATA_SIZE | TOTAL_INCREASING |
-| Transmitted Packets | `_lan_{iface}_transmitted_packets` | — | — | TOTAL_INCREASING |
-| Transmitted Errors | `_lan_{iface}_transmitted_errors` | — | — | TOTAL_INCREASING |
-| Transmitted Drops | `_lan_{iface}_transmitted_drops` | — | — | TOTAL_INCREASING |
 
 ### Buttons
 
@@ -672,7 +657,7 @@ produces parse errors — they report the failure state itself (latency
 = None, status = Unresponsive/Parser Error).
 
 ⁴ When the modem is unreachable at HA startup, data-dependent entities
-(channels, system metrics, LAN stats, sticky fields) are deferred
+(channels, system metrics, sticky fields) are deferred
 until the first successful poll — sticky holding needs a first value
 to hold. Status, Info, and Health sensors are created immediately and
 remain available during the outage. A delayed re-notification (1
@@ -762,12 +747,6 @@ ID mode (`id`):
 ```
 
 Example: `abc123_cable_modem_ds_ofdm_ch_159_power`
-
-**LAN sensors:**
-
-```text
-{entry_id}_cable_modem_lan_{interface}_{metric}
-```
 
 **Buttons:**
 
