@@ -94,7 +94,7 @@ from .coordinator import CableModemConfigEntry, CableModemRuntimeData
 from .core.log_buffer import setup_log_buffer
 from .lib.utils import get_device_name
 from .mapping_manager import ChannelMap, build_channel_map
-from .migrations import async_run_migrations
+from .migrations import async_run_migrations, v2_2_frequency_statistics
 from .recovery_adapter import attach_recovery_cadence_listener
 from .services import async_register_services
 
@@ -330,16 +330,23 @@ async def async_migrate_entry(
 ) -> bool:
     """Migrate a config entry to the current version.
 
-    Called by HA when entry.version < ConfigFlow.VERSION.  Delegates
-    to the migration registry which chains handlers in sequence.
+    Called by HA when the entry's version differs from ConfigFlow.VERSION
+    or MINOR_VERSION.  Delegates the major version to the migration
+    registry, which chains handlers in sequence, then runs the minor step.
     """
     _LOGGER.info(
-        "Migrating config entry %s from version %d to %d",
+        "Migrating config entry %s from version %d.%d to %d.%d",
         entry.entry_id,
         entry.version,
+        entry.minor_version,
         _CURRENT_VERSION,
+        v2_2_frequency_statistics.MINOR_VERSION,
     )
-    return await async_run_migrations(hass, entry, _CURRENT_VERSION)
+    if not await async_run_migrations(hass, entry, _CURRENT_VERSION):
+        return False
+    if entry.minor_version < v2_2_frequency_statistics.MINOR_VERSION:
+        return await v2_2_frequency_statistics.async_migrate(hass, entry)
+    return True
 
 
 def _attach_health_sync_listeners(

@@ -124,6 +124,7 @@ async def test_async_migrate_entry_delegates():
     entry = MagicMock()
     entry.entry_id = "test_id"
     entry.version = 1
+    entry.minor_version = 2
 
     with patch(
         "custom_components.cable_modem_monitor.async_run_migrations",

@@ -152,6 +152,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     """
 
     VERSION = 2
+    # Must match MINOR_VERSION in migrations/v2_2_frequency_statistics.py
+    MINOR_VERSION = 2
 
     def __init__(self) -> None:
         """Initialize config flow state."""

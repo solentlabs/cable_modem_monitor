@@ -472,17 +472,17 @@ data:
 
 ## Frequency Sensors Show a Repairs Warning
 
-### Problem: "State class no longer supported" for Channel Frequency Sensors
+### Problem: "No Longer Has a State Class" for Channel Frequency Sensors
 
 **Symptoms:**
 
-- **Settings → Repairs** lists one warning per channel **Frequency** sensor, for example 32 on a 24x8 modem
+- **Settings → Repairs** lists one "no longer has a state class" warning per channel **Frequency** sensor, for example 32 on a 24x8 modem
 
 **Cause:**
-A channel's frequency is its slot in the channel plan, not a measurement, so the Frequency sensors no longer feed long-term statistics. Home Assistant warns once per existing entity. The sensors keep their values and attributes.
+A channel's frequency is its slot in the channel plan, not a measurement, so the Frequency sensors have no `state_class` and feed no long-term statistics. Home Assistant warns about any sensor that has statistics recorded but no `state_class`. The upgrade clears those statistics once; the warnings then disappear on their own at the recorder's next hourly statistics run. The sensors keep their values and attributes.
 
 **Solution:**
-Open **Developer Tools → Statistics**, find each Frequency sensor and choose **Fix issue**. This deletes that sensor's old statistics. To keep them, leave the warnings alone: they change nothing else.
+Wait an hour after the upgrade. If a warning stays, the statistics came back, for example because an older version was reinstalled. Report it with diagnostics.
 
 ---
 
