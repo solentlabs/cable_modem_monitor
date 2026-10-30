@@ -20,6 +20,8 @@ Common issues and solutions for Cable Modem Monitor.
 - [Orphaned Channel Sensors](#orphaned-channel-sensors)
 - [Ghost Statistics in History](#ghost-statistics-in-history)
 - [Leftover State History](#leftover-state-history)
+- [Frequency Sensors Show a Repairs Warning](#frequency-sensors-show-a-repairs-warning)
+- [Keeping Channel Sensors Out of the Database](#keeping-channel-sensors-out-of-the-database)
 - [Duplicate Entities](#duplicate-entities)
 
 ---
@@ -465,6 +467,39 @@ data:
   entity_id: sensor.cable_modem_last_boot_time
   keep_days: 30
 ```
+
+---
+
+## Frequency Sensors Show a Repairs Warning
+
+### Problem: "No Longer Has a State Class" for Channel Frequency Sensors
+
+**Symptoms:**
+
+- **Settings → Repairs** lists one "no longer has a state class" warning per channel **Frequency** sensor, for example 32 on a 24x8 modem
+
+**Cause:**
+A channel's frequency is its slot in the channel plan, not a measurement, so the Frequency sensors have no `state_class` and feed no long-term statistics. Home Assistant warns about any sensor that has statistics recorded but no `state_class`. The upgrade clears those statistics once; the warnings then disappear on their own at the recorder's next hourly statistics run. The sensors keep their values and attributes.
+
+**Solution:**
+Wait an hour after the upgrade. If a warning stays, the statistics came back, for example because an older version was reinstalled. Report it with diagnostics.
+
+---
+
+## Keeping Channel Sensors Out of the Database
+
+### Problem: Channel Sensors Make the Database Grow
+
+Each channel sensor writes a state row on every poll and a long-term statistics row every hour. Across a 24x8 modem that adds up to roughly 100 MB a year (127 MB on a 32x8). Power, SNR and error counters keep their statistics by default. If you do not need per-channel history, exclude the channel sensors from the recorder in `configuration.yaml`:
+
+```yaml
+recorder:
+  exclude:
+    entity_globs:
+      - sensor.cable_modem_*_ch_*
+```
+
+The pattern covers both identity modes (`ds_ch_1_power` and `ds_qam_ch_1_power`) and every channel metric, so power, SNR, frequency and error history for each channel stops being recorded. Channel counts, error totals and the Status sensor are not matched. The glob uses the default `cable_modem` prefix; copy your entity IDs from **Settings → Entities** if they differ. Restart Home Assistant after editing. Rows already recorded stay until the recorder purges them or you remove them with the steps in [Leftover State History](#leftover-state-history).
 
 ---
 

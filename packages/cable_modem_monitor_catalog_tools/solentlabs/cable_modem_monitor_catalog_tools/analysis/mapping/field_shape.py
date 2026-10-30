@@ -36,6 +36,12 @@ class FieldShapeVocabulary:
         )
 
 
+# Registered system_info fields that carry integers (FIELD_REGISTRY Tier 2).
+_INTEGER_FIELDS = frozenset(
+    {"provisioned_speed_down", "provisioned_speed_up", "provisioned_burst_down", "provisioned_burst_up"}
+)
+
+
 def field_shape(
     field_name: str,
     raw_value: object,
@@ -52,6 +58,9 @@ def field_shape(
     if field_name == "system_uptime":
         fmt = detect_uptime_format(raw_value, vocabulary.uptime_formats)
         return ("uptime", fmt, {}) if fmt else ("string", "", {})
+
+    if field_name in _INTEGER_FIELDS:
+        return "integer", "", {}
 
     if field_name == "docsis_status":
         return "string", "", detect_docsis_status_map(raw_value, vocabulary.docsis_status_success_values)

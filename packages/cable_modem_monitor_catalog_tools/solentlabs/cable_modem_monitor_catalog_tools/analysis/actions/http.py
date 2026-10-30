@@ -73,6 +73,21 @@ def detect_http_actions(
     if restart is None:
         restart = _find_http_action_in_source(entries, _RESTART_PATTERNS, "restart", cookie_names, warnings)
 
+    _report_unobserved_action(
+        "logout",
+        logout,
+        "No logout endpoint observed in HAR. If this modem has single-session limits, a logout action will be needed.",
+        "log in, click Log out, then log in again",
+        warnings,
+    )
+    _report_unobserved_action(
+        "restart",
+        restart,
+        "No restart request observed in HAR. actions.restart is omitted. "
+        "Capture the restart (log in, restart the modem, then log in again) to declare it.",
+        "log in, restart the modem, then log in again",
+        warnings,
+    )
     for action_name, action in (("logout", logout), ("restart", restart)):
         _report_unobserved_body(action_name, action, warnings)
 
@@ -179,6 +194,23 @@ def _observed_body(post_data: dict[str, Any]) -> tuple[dict[str, str], dict[str,
         if isinstance(body, dict):
             return {}, body
     return parse_form_params(post_data), None
+
+
+def _report_unobserved_action(
+    action_name: str,
+    action: ActionDetail | None,
+    missing_message: str,
+    capture_steps: str,
+    warnings: list[str],
+) -> None:
+    """Warn when the capture holds no request for an action, so the contributor records one."""
+    if action is None:
+        warnings.append(missing_message)
+    elif action.source == "source_inferred":
+        warnings.append(
+            f"{action_name} action {action.method} {action.endpoint} (source_inferred): the capture holds no "
+            f"request to this endpoint. Capture the {action_name} ({capture_steps}) to confirm its request."
+        )
 
 
 def _report_unobserved_body(action_name: str, action: ActionDetail | None, warnings: list[str]) -> None:

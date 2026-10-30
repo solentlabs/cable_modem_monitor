@@ -11,7 +11,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import parse_qs, parse_qsl, urlparse
+from urllib.parse import parse_qs, parse_qsl, urljoin, urlparse
 
 
 @dataclass
@@ -34,6 +34,8 @@ def build_routes(
     *,
     login_path: str = "",
     login_success: str = "",
+    login_redirect: str = "",
+    login_dynamic: bool = False,
 ) -> dict[tuple[str, str], RouteEntry]:
     """Build route table from HAR entries.
 
@@ -52,20 +54,29 @@ def build_routes(
     Callers that leave ``login_path`` empty get the status rule on
     every key, as before.
 
-    With ``login_success`` set, the login POST keeps the exchange whose
-    body contains it over one that lacks it, so a capture that ends with
-    its wrong-password login still replays the accepted one.
+    With ``login_success`` or ``login_redirect`` set, the login POST
+    keeps the exchange meeting every declared criterion over one that
+    does not, so the wrong-password login may sit before, after or
+    between the real ones and the accepted one still replays.
+
+    Under a dynamic action (``login_dynamic``) the ``?id=`` belongs to
+    the page that served it, so every login exchange shares one route;
+    the request's id never picks between them.
 
     Args:
         har_entries: List of HAR ``log.entries`` dicts.
         login_path: Auth POST endpoint from ``auth.action``, when known.
         login_success: ``auth.success.indicator``, when declared.
+        login_redirect: ``auth.success.redirect``, when declared.
+        login_dynamic: True when ``auth.action_source`` is ``login_page``.
 
     Returns:
         Route table mapping ``(method, path)`` to response.
     """
     routes: dict[tuple[str, str], RouteEntry] = {}
-    login_key = ("POST", normalize_path(login_path)) if login_path else None
+    login_norm = normalize_path(login_path) if login_path else ""
+    login_key = ("POST", login_norm) if login_norm else None
+    login_judged = bool(login_success or login_redirect)
     login_accepted = False
 
     for entry in har_entries:
@@ -82,7 +93,7 @@ def build_routes(
         # Include query string in route key when present, so
         # endpoints like /setup.cgi?todo=X resolve independently.
         route_path = path
-        if parsed.query:
+        if parsed.query and not (login_dynamic and method == "POST" and path == login_norm):
             route_path = f"{path}?{parsed.query}"
 
         status = response.get("status", 0)
@@ -102,8 +113,8 @@ def build_routes(
         key = (method, route_path)
         existing = routes.get(key)
 
-        if key == login_key and login_success:
-            accepted = login_success in body
+        if key == login_key and login_judged:
+            accepted = _login_accepted(url, headers, body, login_success, login_redirect)
             if login_accepted and not accepted:
                 continue
             login_accepted = login_accepted or accepted
@@ -115,6 +126,29 @@ def build_routes(
             routes[key] = RouteEntry(status=status, headers=headers, body=body)
 
     return routes
+
+
+def _login_accepted(
+    url: str,
+    headers: list[tuple[str, str]],
+    body: str,
+    success_indicator: str,
+    success_redirect: str,
+) -> bool:
+    """True when a login exchange meets every declared success criterion.
+
+    Mirrors ``auth/form.py`` ``_check_success``: the indicator is a body
+    substring and the redirect a substring of the redirect's path. Core
+    reads the final URL; the capture holds the first hop, resolved
+    against the request URL so a relative ``Location`` still matches.
+    """
+    if success_indicator and success_indicator not in body:
+        return False
+    if success_redirect:
+        location = next((value for name, value in headers if name.lower() == "location"), "")
+        if success_redirect not in urlparse(urljoin(url, location)).path:
+            return False
+    return True
 
 
 def build_json_body_keys(

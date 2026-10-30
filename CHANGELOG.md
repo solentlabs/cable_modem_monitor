@@ -7,6 +7,119 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.6] - 2026-10-30
+
+### Added
+
+- **The Technicolor CGA437ATCH4 joins the catalog, awaiting verification
+  (#227).** It logs in with the two-step PBKDF2 form and reads SC-QAM and
+  OFDM/OFDMA channels from `/api/v1/modem/`. The capture did not include a
+  logout, so the logout request is copied from the CGA6444VF and is
+  unconfirmed. Without it, the modem's single web session may stay held after
+  each poll. No restart is declared.
+- **JSON arrays can merge a companion array into the channels.** A modem that
+  reports error counters in an array apart from the signal fields can declare
+  `merge_by` on that array. Its rows add fields to the channels with the same
+  key and are never channels themselves, as `javascript_json` and HTML
+  tables already do.
+- **Intake warns when a capture has no logout request.** A capture that never
+  logged out, or whose logout appears only in page source, produced no
+  warning. Intake now says so and asks for the logout step.
+- **Intake warns when a capture has no restart request.** A capture without a
+  restart, or whose restart appears only in page source, now says so and asks
+  for the restart step. The restart action is still never invented.
+
+### Changed
+
+- **Channel Frequency sensors no longer feed long-term statistics.** A
+  channel's frequency is its slot in the channel plan, so an hourly mean
+  describes no channel. The upgrade clears each Frequency sensor's old
+  statistics once, so Home Assistant raises no "no longer has a state class"
+  Repairs warning. The new
+  [troubleshooting entry](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#keeping-channel-sensors-out-of-the-database)
+  shows how to keep channel sensors out of the recorder altogether.
+- **Intake splits one channel array that mixes SC-QAM and OFDM.** The OFDM
+  keys (channel width, FFT type, active subcarriers) were missed because the
+  first channel decided the keys for every channel. Each type now gets its
+  own filtered entry, and an OFDM or OFDMA power is flagged for a person to
+  confirm its unit. The F3896LG-ZG capture now scores 98.5% (from 95.8%) and
+  the F3896LG-VMB 96.8% (from 92.7%).
+- **Intake warns, not stops, on a login page with no password input.** A
+  lapsed session on such a modem reaches Core as a data body with none of the
+  parser's anchors, so it surfaces as `LOAD_INTEGRITY` instead of `LOAD_AUTH`
+  and recovers the same way. A data page that holds a password input still
+  stops analysis. The TG3442DE capture now scores 82.4% (fleet 88.6% to
+  90.2%).
+
+### Removed
+
+- **Per-interface LAN statistics sensors.** They read a `lan_stats` key that
+  no v3.14 parser produces, so they never had data. The LAN byte totals that
+  Core can sum from a table are unaffected.
+
+### Fixed
+
+- **A companion row with no key no longer merges into unrelated channels.**
+  When a channel or companion row lacked its `merge_by` field, every keyless
+  channel took the last keyless companion row's values. Such rows now neither
+  join nor are joined. No catalog modem was affected.
+- **The Netgear CM1100 now reports uptime.** Its status page carries the
+  uptime in a `System Up Time` element that the parser never read, so the
+  modem had no Last Boot Time sensor. It now shows when the unit last booted.
+- **Provisioned speed and burst no longer feed long-term statistics.** They
+  were recorded as measurements, so a plan that never changes filled the
+  statistics database with a flat line. History already recorded stays;
+  statistics stop accruing for the four sensors. They also keep their last
+  value through a modem outage instead of going unavailable.
+- **Intake reads provisioned speed from a Netgear status page.** The page's
+  `InitProvRateTableTagValue` function labels its columns in a comment, which
+  intake never read, so the C7000v2 capture produced no provisioned speed. Intake
+  now maps positions from that comment, but only when its label count matches
+  the value count, since the C7000v2 `RouterStatus.htm` comment does not line up
+  with its data. It also read the commented-out sample assignment beside the
+  real one, which gave the C7000v2 a downstream speed of 100000000. A rate of 0
+  is not mapped. The C7000v2 capture scores 96.8% where it scored 96.1%.
+- **Intake reads Basic auth from a capture with no 401.** `har-capture
+  --username` hands the credentials to the browser, which hides the device's
+  401, so a Basic capture made that way passed validation and then stopped
+  with "Cannot determine auth mechanism". An `Authorization: Basic` header
+  now reads as `basic` when no other strategy matches, with a warning that
+  `challenge_cookie` cannot be observed. The Netgear CM600 capture scores
+  96.6% where it scored 0.0% (fleet 90.2% to 92.1%).
+- **Intake reads a modem that selects each document by query string.** The
+  DM1000 produced no parser from its capture, for four reasons. The data
+  page filter dropped JSON typed `applation/json`. Every `/setup.cgi?todo=`
+  endpoint collapsed into one page. The direction in `RF_DS_param` was
+  never read from the query. The replay instrument keyed responses by path
+  alone, so a declared `?todo=` resource was never found. A path answering
+  with several JSON documents is now one resource per document, and a
+  query parameter that selects the document is no longer reported as a
+  session parameter. The DM1000 scores 3.4% where it scored 0%: its
+  downstream key names are withheld from its own score, as for any new
+  modem.
+- **An action's scheme override no longer keeps the old scheme's default
+  port.** An action that names only a scheme sent `https://host:80` when the
+  modem URL carried `:80`, and `http://host:443` the other way round. The
+  default port now leaves with the scheme it belongs to. No catalog entry
+  declares a scheme without a port, so no current modem is affected.
+- **Netgear CM2000 login should work again (#226).** v3.14 posted to
+  `/goform/Login` without the `?id=` the modem requires, so every login was
+  refused. The entry now reads the form action off the login page, as the
+  CM2050V, CM2500 and CM3000 do, and expects `/index.htm` after an accepted
+  login. The catalog capture is now a real session from the reporter's unit.
+  Awaiting a test on hardware.
+- **Intake picks the accepted login when every attempt redirects.** A wrong
+  password that redirects to the login page tied with the accepted login and
+  the later one won, so a capture ending with the wrong password produced
+  `success.redirect: /Login.htm`. An attempt whose redirect lands on a page with
+  a password input is now a refusal, wherever it sits in the capture.
+- **The test harness replays the accepted login whatever its position and
+  `?id=`.** A dynamic form action recorded each attempt under its own `?id=`,
+  and the `?id=` of the served login page chose which one to replay, so a
+  capture that began with the wrong password replayed the refusal. A login now
+  matches on the declared `success.redirect` and `success.indicator`, and the
+  `?id=` value is not compared.
+
 ## [3.14.15-beta.5] - 2026-10-25
 
 ### Added

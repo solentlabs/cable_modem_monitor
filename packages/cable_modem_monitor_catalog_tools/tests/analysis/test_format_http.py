@@ -104,6 +104,22 @@ class TestIdentifyDataPages:
         result = identify_data_pages(entries)
         assert len(result) == 1
 
+    @pytest.mark.parametrize(
+        ("content_type", "kept"),
+        [
+            ("application/json", True),
+            ("applation/json", True),
+            ("application/vnd.api+json", True),
+            ("text/html", True),
+            ("application/octet-stream", False),
+        ],
+        ids=["json", "misspelled_json", "json_suffix", "html", "binary"],
+    )
+    def test_content_type_gate(self, content_type: str, kept: bool) -> None:
+        """A header containing json passes whatever its spelling; other non-data types do not."""
+        entries = [_make_entry("/setup.cgi", 200, content_type, '{"data": 1}')]
+        assert bool(identify_data_pages(entries)) is kept
+
     def test_deduplicates_by_path(self) -> None:
         """Same path is only included once."""
         entries = [
@@ -264,6 +280,26 @@ def test_js_json_variable_detection(script: str, name: str, kind: str) -> None:
     page = analyze_page(_make_entry("/wan.php", 200, "text/html", f"<html><script>{script}</script></html>"))
     found = [(v.name, type(v.data).__name__) for v in page.js_json_variables]
     assert found == ([] if kind == "none" else [(name, kind)])
+
+
+JS_TAG_VALUE_CASES = [
+    # (body, desc)
+    ("var tagValueList = '0|520|12|';", "plain assignment"),
+    ("//var tagValueList = \"1|100|0|\";\n    var tagValueList = '0|520|12|';", "line-commented sample skipped"),
+    ("/* var tagValueList = '1|100|0|'; */ var tagValueList = '0|520|12|';", "block-commented sample skipped"),
+]
+
+
+@pytest.mark.parametrize(
+    "body,desc",
+    JS_TAG_VALUE_CASES,
+    ids=[c[1] for c in JS_TAG_VALUE_CASES],
+)
+def test_js_tag_value_reads_the_live_assignment(body: str, desc: str) -> None:
+    """A commented-out sample assignment never supplies the function's values."""
+    script = f"function InitXTagValue() {{\n    {body}\n    return tagValueList.split('|');\n}}"
+    page = analyze_page(_make_entry("/s.htm", 200, "text/html", f"<html><script>{script}</script></html>"))
+    assert [f.values for f in page.js_functions] == [["0", "520", "12", ""]]
 
 
 @pytest.mark.parametrize(

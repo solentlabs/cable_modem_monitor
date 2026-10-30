@@ -31,6 +31,7 @@ the user-analytics distribution path.
 | [Entity Catalog](#entity-catalog) | Every entity the integration creates |
 | [Channel Identity](#channel-identity) | How channels are keyed and indexed |
 | [Field Pass-Through](#field-pass-through) | How parser fields flow to HA |
+| [state_class](#state_class) | Which sensors carry a state class |
 | [Core vs HA Boundary](#core-vs-ha-boundary) | What lives where |
 | [Device Model](#device-model) | HA device registration and naming |
 | [Availability](#availability) | When entities are available/unavailable |
@@ -59,7 +60,7 @@ signal readout — the Status sensor and every per-channel sensor
 (power, SNR, frequency, corrected/uncorrected). Everything else is
 supporting information and carries `EntityCategory.DIAGNOSTIC`: Modem
 Info, Software Version, DS/US channel counts, error totals and rates,
-Last Boot Time, system-info pass-through fields, LAN statistics, the
+Last Boot Time, system-info pass-through fields, the
 latency sensors, and the Update Modem Data button. Reset Entities is
 `CONFIG`. Diagnostic classification is applied on the shared bases
 (`_SystemInfoSensor`, `HealthSensorBase`) where the taxonomy already
@@ -80,6 +81,7 @@ output (some gated by config).
 | US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
 | Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
 | Total Uncorrected | `_total_uncorrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
+| Total Downstream Bytes | `_total_downstream_bytes` | int | DATA_SIZE | — | B | From `system_info`; no `state_class`, so no long-term statistics (#178). No suggested display unit; the user picks one |
 | Rate Corrected | `_rate_corrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
 | Rate Uncorrected | `_rate_uncorrected` | float | — | MEASUREMENT | errors/min | From `system_info` — orchestrator-computed inter-poll delta⁴ |
 | System Info Field³ | `_{field}` | pass-through⁶ | — | — | — | Dynamic per-field sensor for non-consumed system_info fields |
@@ -131,20 +133,20 @@ where both sources are absent. Stability contract: **the state
 changes only on a real reboot.**
 
 ⁶ **Sticky** (non-continuous data sensors). These fields carry no
-`state_class` or `unit`, so Home Assistant treats them as
+`state_class`, so Home Assistant treats them as
 non-continuous and logs **every** state change to the logbook —
 including a `→ Unavailable` transition when the modem goes
 unreachable. On a transient outage the Status sensor is the sole
 announcer (`→ Unreachable`); Software Version, Last Boot Time, and
-non-continuous pass-through fields therefore stay available and hold
+pass-through fields therefore stay available and hold
 their last value through the data gap, so no second logbook line is
 written (#178). This is the availability axis in action: **a sticky
 sensor's gap carries no information, so it is suppressed; a continuous
-sensor's gap is graph signal, so it is preserved.** Continuous
-pass-through fields (those in `_SYSTEM_INFO_FIELD_UNITS`, which carry
-a unit/`state_class`) opt out and keep the standard data-sensor
-availability. Firmware- and reboot-change logging is unaffected: a
-real change to Software Version or Last Boot Time is still a value
+sensor's gap is graph signal, so it is preserved.** Every
+pass-through field is sticky, including those in
+`_SYSTEM_INFO_FIELD_UNITS` (provisioned speed and burst): they are plan
+configuration, not measurements, so an outage gap carries no signal.
+Firmware- and reboot-change logging is unaffected: a real change to Software Version or Last Boot Time is still a value
 change and still logs one line.
 
 #### Boot-time source normalization
@@ -196,7 +198,7 @@ see [Capability Gating](#capability-gating).
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_ds_ch_{n}_power` | dBmV | — | MEASUREMENT | Always |
 | SNR | `_ds_ch_{n}_snr` | dB | — | MEASUREMENT | Always |
-| Frequency | `_ds_ch_{n}_frequency` | Hz | FREQUENCY | MEASUREMENT | If published |
+| Frequency | `_ds_ch_{n}_frequency` | Hz | FREQUENCY | — | If published |
 | Corrected | `_ds_ch_{n}_corrected` | — | — | TOTAL_INCREASING | If published |
 | Uncorrected | `_ds_ch_{n}_uncorrected` | — | — | TOTAL_INCREASING | If published |
 
@@ -206,7 +208,7 @@ see [Capability Gating](#capability-gating).
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_ds_{type}_ch_{id}_power` | dBmV | — | MEASUREMENT | Always |
 | SNR | `_ds_{type}_ch_{id}_snr` | dB | — | MEASUREMENT | Always |
-| Frequency | `_ds_{type}_ch_{id}_frequency` | Hz | FREQUENCY | MEASUREMENT | If published |
+| Frequency | `_ds_{type}_ch_{id}_frequency` | Hz | FREQUENCY | — | If published |
 | Corrected | `_ds_{type}_ch_{id}_corrected` | — | — | TOTAL_INCREASING | If published |
 | Uncorrected | `_ds_{type}_ch_{id}_uncorrected` | — | — | TOTAL_INCREASING | If published |
 
@@ -222,14 +224,14 @@ regardless of mode. Additional Tier 2/3 fields from parser output
 | Entity | unique_id suffix | Unit | device_class | state_class | Condition |
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_us_ch_{n}_power` | dBmV | — | MEASUREMENT | Always |
-| Frequency | `_us_ch_{n}_frequency` | Hz | FREQUENCY | MEASUREMENT | If published |
+| Frequency | `_us_ch_{n}_frequency` | Hz | FREQUENCY | — | If published |
 
 **ID mode** (`channel_identity: "id"`):
 
 | Entity | unique_id suffix | Unit | device_class | state_class | Condition |
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_us_{type}_ch_{id}_power` | dBmV | — | MEASUREMENT | Always |
-| Frequency | `_us_{type}_ch_{id}_frequency` | Hz | FREQUENCY | MEASUREMENT | If published |
+| Frequency | `_us_{type}_ch_{id}_frequency` | Hz | FREQUENCY | — | If published |
 
 **Attributes on every US channel sensor:** `channel_number`,
 `channel_id`, `channel_type`. Both identifiers are always present
@@ -237,21 +239,6 @@ regardless of mode. Additional fields (symbol_rate, lock_status,
 modulation, ranging_status, etc.) flow as attributes. A sensor with a
 `symbol_rate` attribute also carries `symbol_rate_unit: "Sym/s"`,
 because firmware labels the rate in ksym/s and Core stores Sym/s.
-
-### LAN Statistics Sensors
-
-Created per network interface, 8 sensors each.
-
-| Entity | unique_id suffix | Unit | device_class | state_class |
-|--------|-----------------|------|--------------|-------------|
-| Received Bytes | `_lan_{iface}_received_bytes` | B | DATA_SIZE | TOTAL_INCREASING |
-| Received Packets | `_lan_{iface}_received_packets` | — | — | TOTAL_INCREASING |
-| Received Errors | `_lan_{iface}_received_errors` | — | — | TOTAL_INCREASING |
-| Received Drops | `_lan_{iface}_received_drops` | — | — | TOTAL_INCREASING |
-| Transmitted Bytes | `_lan_{iface}_transmitted_bytes` | B | DATA_SIZE | TOTAL_INCREASING |
-| Transmitted Packets | `_lan_{iface}_transmitted_packets` | — | — | TOTAL_INCREASING |
-| Transmitted Errors | `_lan_{iface}_transmitted_errors` | — | — | TOTAL_INCREASING |
-| Transmitted Drops | `_lan_{iface}_transmitted_drops` | — | — | TOTAL_INCREASING |
 
 ### Buttons
 
@@ -409,7 +396,8 @@ different patterns:
   their own sensor entity via `SystemInfoFieldSensor`.
 
 The integration does not decide which fields are "important enough"
-for their own entity. It exposes everything the parser provides. Users
+for their own entity. It exposes everything the parser provides, with
+one exception: per-channel `bytes` (below). Users
 create template sensors/binary_sensors from attributes for their own
 automations.
 
@@ -428,7 +416,10 @@ sections below define how each data section maps to HA entities.
 | Tier 3 unregistered | Attribute on channel sensor | `t3_timeouts`, `security_type` |
 
 All non-metric fields from the channel dict are exposed as
-`extra_state_attributes` on the channel's primary sensor.
+`extra_state_attributes` on the channel's primary sensor, except
+`bytes`. It changes every poll, so as an attribute it would write a new
+recorder row per channel per poll (#178). Core keeps it per channel;
+the integration publishes only `total_downstream_bytes`.
 
 ### System Info Pass-Through
 
@@ -436,7 +427,7 @@ System info fields use a consumed/display-only/dynamic pattern:
 
 | Pattern | HA Entity | Fields |
 |---------|-----------|--------|
-| Consumed (dedicated class or derivation) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected`, `docsis_status` |
+| Consumed (dedicated class or derivation) | One sensor class per field | `software_version`, `system_uptime`, `downstream_channel_count`, `upstream_channel_count`, `total_corrected`, `total_uncorrected`, `total_downstream_bytes`, `docsis_status` |
 | Display-only (never minted) | None — display surfaces carry the value | `current_time`, `hardware_version`, `model_name` |
 | Dynamic (pass-through) | Generic `SystemInfoFieldSensor(field=key)` | Everything else in `system_info` |
 
@@ -517,8 +508,8 @@ creation — no data, no sensor. Straight pass-through — no type
 conversion or boolean mapping.
 
 **Unit metadata.** Fields listed in `_SYSTEM_INFO_FIELD_UNITS` get a
-`device_class`, `state_class`, and unit, and count as continuous for
-[§ Sensor Availability Logic](#sensor-availability-logic). The unit is
+`device_class` and unit. They stay sticky like every other pass-through
+field ([§ Sensor Availability Logic](#sensor-availability-logic)). The unit is
 the one Core stores, always base SI
 ([FIELD_REGISTRY.md § Naming Rules](../../../packages/cable_modem_monitor_core/docs/FIELD_REGISTRY.md#naming-rules-all-tiers)).
 Where that is not the unit users read, the field also declares a
@@ -527,12 +518,35 @@ is stored in bit/s and shown in Mbit/s. HA stamps a suggested unit into
 the entity registry the first time it sees an entity and never revisits
 it, so changing this table moves only newly created entities. Existing
 ones follow the **Discontinued entities** paths above — the entity's
-own settings, Reset Entities, or remove and re-add.
+own settings, Reset Entities, or remove and re-add. None of these fields
+carries a `state_class`: provisioned speed and burst are plan configuration,
+not measurements, and the LAN byte counters are cumulative totals, so they
+stay out of long-term statistics (#178).
 
 **Graduation:** When a dynamic field gets a dedicated sensor class, add
 it to `_CONSUMED_SYSTEM_INFO_FIELDS`. The dynamic sensor for that field
 stops being created. No entity migration — the dedicated class takes
 over with its own unique_id.
+
+---
+
+## state_class
+
+A `state_class` puts a sensor in Home Assistant's long-term statistics, which
+cost database space on every poll (#178). A sensor carries one only when
+its history is worth that cost; the class follows the shape of the value:
+
+| Value | state_class | Examples |
+|-------|-------------|----------|
+| Continuous measurement | `MEASUREMENT` | Channel power and SNR; error rates; channel counts; latencies |
+| Error counter | `TOTAL_INCREASING` | Per-channel and total corrected and uncorrected |
+| Plan configuration, pass-through field, cumulative traffic bytes | none | Channel frequency, provisioned speed and burst, Software Version, Last Boot Time, Total Downstream Bytes, LAN byte totals |
+
+Whether a sensor is sticky does not follow from its `state_class`: the
+class mixin decides it ([Availability](#availability) footnote ²). Channel
+frequency has no `state_class` yet goes unavailable in a gap, because a
+channel sensor carries no sticky mixin. A new sensor takes its class from
+this table; a shape the table does not cover is decided here first.
 
 ---
 
@@ -626,17 +640,16 @@ two modems, HA auto-suffixes entity_ids (`_2`, `_3`, etc.). Recommend
 | Parse error | unavailable | available | available | available³ | available |
 | Field not parsed by this modem | never created⁵ | never created⁵ | n/a | n/a | n/a |
 
-¹ **Continuous data sensors** carry a `state_class` or `unit`
-(channel metrics, error totals/rates, channel counts, and continuous
-pass-through fields). Their unavailable-gaps are meaningful on graphs,
-so they go unavailable when a poll returns no `modem_data`
-(`ModemSensorBase.available`).
+¹ **Continuous data sensors** are the channel metrics, error totals/rates
+and channel counts. They use no sticky mixin. Their unavailable-gaps are
+meaningful on graphs, so they go unavailable when a poll returns no
+`modem_data` (`ModemSensorBase.available`).
 
 ² **Sticky data sensors** (Software Version, Last Boot Time,
-non-continuous pass-through fields) carry no `state_class`/`unit` and
-drive the logbook. They stay available and hold their last value
-through a transient data gap so a modem outage logs no spurious
-`→ Unavailable` line — the Status sensor is the sole announcer (#178).
+pass-through fields) use the sticky mixins. The logbook records a sensor
+with no unit of measurement, so they stay available and hold their last
+value through a transient data gap: a modem outage logs no spurious
+`→ Unavailable` line, and the Status sensor is the sole announcer (#178).
 See catalog footnote ⁶.
 
 ³ Health sensors remain available when the modem is unreachable or
@@ -644,7 +657,7 @@ produces parse errors — they report the failure state itself (latency
 = None, status = Unresponsive/Parser Error).
 
 ⁴ When the modem is unreachable at HA startup, data-dependent entities
-(channels, system metrics, LAN stats, sticky fields) are deferred
+(channels, system metrics, sticky fields) are deferred
 until the first successful poll — sticky holding needs a first value
 to hold. Status, Info, and Health sensors are created immediately and
 remain available during the outage. A delayed re-notification (1
@@ -693,10 +706,9 @@ non-`None` value across the gap. Two small mixins compose this —
 `_HoldsLastValueMixin` (the value-holding helper). Software Version
 uses both; Last Boot Time uses only the availability mixin (its value
 already holds via `_stable_boot_time`); `SystemInfoFieldSensor` uses
-the value-holding mixin and branches its own `available` (sticky for
-non-continuous fields, standard `modem_data` rule for continuous
-ones). The Status and Info sensors override `available` the same way —
-always available while the coordinator is alive — because Status is
+the value-holding mixin and its own sticky `available`, so every
+pass-through field is sticky. The Status and Info sensors override
+`available` the same way — always available while the coordinator is alive — because Status is
 the single outage announcer.
 
 Health sensors (Ping, HTTP) have independent availability based on
@@ -735,12 +747,6 @@ ID mode (`id`):
 ```
 
 Example: `abc123_cable_modem_ds_ofdm_ch_159_power`
-
-**LAN sensors:**
-
-```text
-{entry_id}_cable_modem_lan_{interface}_{metric}
-```
 
 **Buttons:**
 

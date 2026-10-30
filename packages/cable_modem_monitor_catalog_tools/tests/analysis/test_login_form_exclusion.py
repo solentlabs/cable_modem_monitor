@@ -13,8 +13,8 @@ from typing import Any
 import pytest
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.format import detect_sections
-from solentlabs.cable_modem_monitor_catalog_tools.analysis.format.html_parsing import has_login_form
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.format.http import identify_data_pages
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.login_form import has_login_form
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.unread_resources import collect_resources
 from solentlabs.cable_modem_monitor_catalog_tools.analyze_har import analyze_har
 

@@ -369,52 +369,6 @@ class TestSystemInfoSerialization:
 class TestJsSystemInfoDetection:
     """Tests for JavaScript-embedded system info detection."""
 
-    def test_js_function_with_system_info_labels(self) -> None:
-        """JS function named InitSystemInfo with label values detected."""
-        page = PageAnalysis(
-            resource="/info.html",
-            content_type="text/html",
-            js_functions=[
-                DetectedJsFunction(
-                    name="InitSystemInfoTagValue",
-                    body="var tagValueList = '...';",
-                    delimiter="|",
-                    values=["", "System Up Time", "3 days 5 hours", "Software Version", "1.0.4"],
-                ),
-            ],
-        )
-        result = detect_system_info([page], [])
-        assert result is not None
-
-        detected_fields = set()
-        for source in result.sources:
-            for f in source.fields:
-                detected_fields.add(f.field)
-
-        assert "system_uptime" in detected_fields
-        assert "software_version" in detected_fields
-
-    def test_js_model_label_maps_to_model_name(self) -> None:
-        """A Model value in a JS function maps to model_name, not hardware_version."""
-        page = PageAnalysis(
-            resource="/info.html",
-            content_type="text/html",
-            js_functions=[
-                DetectedJsFunction(
-                    name="InitTagValue",
-                    body="",
-                    delimiter="|",
-                    values=["Model", "M-100", "Hardware Version", "1.0"],
-                ),
-            ],
-        )
-        result = detect_system_info([page], [])
-        assert result is not None
-        assert {f.field: f.source for src in result.sources for f in src.fields} == {
-            "model_name": "Model",
-            "hardware_version": "Hardware Version",
-        }
-
     def test_directional_js_function_skipped(self) -> None:
         """Directional JS functions (ds/us) are skipped for system_info."""
         page = PageAnalysis(
@@ -433,26 +387,6 @@ class TestJsSystemInfoDetection:
         # Directional function skipped — no JS system_info sources
         assert result is None
 
-    def test_non_directional_js_function_checked(self) -> None:
-        """Non-directional JS functions are checked for system_info labels."""
-        page = PageAnalysis(
-            resource="/status.htm",
-            content_type="text/html",
-            js_functions=[
-                DetectedJsFunction(
-                    name="InitTagValue",
-                    body="var tagValueList = '...';",
-                    delimiter="|",
-                    values=["", "System Up Time", "5 days 2 hours"],
-                ),
-            ],
-        )
-        result = detect_system_info([page], [])
-        assert result is not None
-
-        detected_fields = {f.field for src in result.sources for f in src.fields}
-        assert "system_uptime" in detected_fields
-
     def test_non_directional_js_no_matching_values(self) -> None:
         """Non-directional JS function with no system_info labels yields nothing."""
         page = PageAnalysis(
@@ -470,6 +404,69 @@ class TestJsSystemInfoDetection:
         result = detect_system_info([page], [])
         # Numeric status codes don't match any label — no system_info detected
         assert result is None
+
+
+# =====================================================================
+# Header-labelled JavaScript functions (ONBOARDING_SPEC Phase 6)
+# =====================================================================
+
+_PROV_HEADER = "/* Is Genie (text) | DS Provisioned Rate (text) | US Provisioned Rate (text) */"
+_STATE_HEADER = "/* Boot State (text) | Boot State Comment (text) | Security (text) */"
+
+# fmt: off
+JS_HEADER_CASES = [
+    # (header,        values,                                  expected {offset: (field, type)}, desc)
+    (_PROV_HEADER,    ["0", "520000000", "12000000", ""],      {1: ("provisioned_speed_down", "integer"),
+                                                                2: ("provisioned_speed_up", "integer")},
+                                                               "provisioned rates map; trailing empty dropped"),
+    (_PROV_HEADER,    ["0", "520000000", "0", ""],             {1: ("provisioned_speed_down", "integer")},
+                                                               "a rate of 0 is not mapped"),
+    (_PROV_HEADER,    ["0", "0", "0", ""],                     {},
+                                                               "no provisioned rate: nothing detected"),
+    (_PROV_HEADER,    ["0", "520000000", "12000000", "x", ""], {},
+                                                               "label and value counts differ: no position read"),
+    (_STATE_HEADER,   ["Operational", "ok", "Enabled"],        {0: ("boot_status", "string")},
+                                                               "other registered labels map by position"),
+    ("",              ["0", "520000000", "12000000", ""],      {},
+                                                               "no header comment: nothing detected"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("header", "values", "expected", "desc"),
+    JS_HEADER_CASES,
+    ids=[c[3] for c in JS_HEADER_CASES],
+)
+def test_js_header_labelled_function(
+    header: str, values: list[str], expected: dict[int, tuple[str, str]], desc: str
+) -> None:
+    """A function's header comment labels its positions when it lines up with the values."""
+    page = PageAnalysis(
+        resource="/status.htm",
+        content_type="text/html",
+        js_functions=[
+            DetectedJsFunction(
+                name="InitProvRateTableTagValue",
+                body=f"\n    {header}\n    var tagValueList = '{'|'.join(values)}';",
+                delimiter="|",
+                values=values,
+            ),
+        ],
+    )
+    result = detect_system_info([page], [])
+    if not expected:
+        assert result is None
+        return
+    assert result is not None
+    (source,) = result.sources
+    assert source.to_dict()["functions"] == [
+        {
+            "name": "InitProvRateTableTagValue",
+            "delimiter": "|",
+            "fields": [{"offset": o, "field": f, "type": t} for o, (f, t) in sorted(expected.items())],
+        }
+    ]
 
 
 # =====================================================================

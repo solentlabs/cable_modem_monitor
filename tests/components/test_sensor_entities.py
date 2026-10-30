@@ -1,7 +1,7 @@
 """Tests for sensor entity creation and value rendering.
 
 Verifies sensor entity creation logic via _create_channel_sensors,
-_create_lan_sensors, and _create_data_dependent_entities.  Entity
+and _create_data_dependent_entities.  Entity
 value rendering is tested with mock coordinator data.
 
 Deferred entity creation tests verify UC-84: when the first poll
@@ -35,7 +35,6 @@ from custom_components.cable_modem_monitor.mapping_manager import build_channel_
 from custom_components.cable_modem_monitor.sensor import (
     ChannelSensor,
     HttpLatencySensor,
-    LanStatsSensor,
     ModemChannelCountSensor,
     ModemErrorTotalSensor,
     ModemInfoSensor,
@@ -46,7 +45,6 @@ from custom_components.cable_modem_monitor.sensor import (
     SystemInfoFieldSensor,
     TcpLatencySensor,
     _create_channel_sensors,
-    _create_lan_sensors,
     _humanize_field_name,
 )
 
@@ -55,18 +53,6 @@ from .conftest import MOCK_DOWNSTREAM, MOCK_ENTRY_DATA, MOCK_MODEM_DATA, MOCK_UP
 # -----------------------------------------------------------------------
 # Module-level test data
 # -----------------------------------------------------------------------
-
-MODEM_DATA_WITH_LAN: dict[str, Any] = {
-    **MOCK_MODEM_DATA,
-    "lan_stats": {
-        "eth0": {"received_bytes": 1000, "transmitted_bytes": 500},
-    },
-}
-
-MODEM_DATA_LAN_SINGLE: dict[str, Any] = {
-    **MOCK_MODEM_DATA,
-    "lan_stats": {"eth0": {"received_bytes": 42000}},
-}
 
 # System_info with Tier 3 pass-through fields (not consumed by dedicated sensors)
 MODEM_DATA_WITH_PASSTHROUGH: dict[str, Any] = {
@@ -227,6 +213,29 @@ def test_create_channel_sensors_position_mode(mock_runtime_data):
     assert ds_power[0]._attr_name == "DS Ch 1 Power"
 
 
+CHANNEL_STATE_CLASS_CASES = [
+    ("power", SensorStateClass.MEASUREMENT, "power is a measurement"),
+    ("snr", SensorStateClass.MEASUREMENT, "snr is a measurement"),
+    ("frequency", None, "frequency is the channel plan slot, not a measurement"),
+    ("corrected", SensorStateClass.TOTAL_INCREASING, "corrected is an error counter"),
+    ("uncorrected", SensorStateClass.TOTAL_INCREASING, "uncorrected is an error counter"),
+]
+
+
+@pytest.mark.parametrize(
+    "field,expected,desc",
+    CHANNEL_STATE_CLASS_CASES,
+    ids=[case[2] for case in CHANNEL_STATE_CLASS_CASES],
+)
+def test_channel_sensor_state_class(mock_runtime_data, field, expected, desc):
+    """Every created channel sensor of a field declares that field's state_class."""
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    created = _create_channel_sensors(coord, entry, MOCK_MODEM_DATA)
+    sensors = [s for s in created if isinstance(s, ChannelSensor) and s._field == field]
+    assert sensors
+    assert {s.state_class for s in sensors} == {expected}
+
+
 @pytest.mark.parametrize(
     "channels,identity_mode,slot_key,expected,desc",
     CHANNEL_GATING_CASES,
@@ -282,14 +291,6 @@ def test_create_channel_sensors_empty_data(mock_runtime_data):
     coord, entry = _make_coord_and_entry({}, mock_runtime_data)
     sensors = _create_channel_sensors(coord, entry, {})
     assert sensors == []
-
-
-def test_create_lan_sensors(mock_runtime_data):
-    """LAN stats sensors created per interface per metric."""
-    coord, entry = _make_coord_and_entry(MODEM_DATA_WITH_LAN, mock_runtime_data)
-    sensors = _create_lan_sensors(coord, entry, MODEM_DATA_WITH_LAN)
-    # 1 interface × 8 metrics = 8
-    assert len(sensors) == 8
 
 
 # -----------------------------------------------------------------------
@@ -722,33 +723,6 @@ def test_latency_sensors_return_none_when_never_measured(mock_runtime_data):
     assert http.native_value is None
 
 
-def test_lan_stats_sensor_value(mock_runtime_data):
-    """LAN stats sensor reads interface data."""
-    coord = MagicMock()
-    coord.data = ModemSnapshot(
-        connection_status=ConnectionStatus.ONLINE,
-        docsis_status=DocsisStatus.OPERATIONAL,
-        modem_data=MODEM_DATA_LAN_SINGLE,
-    )
-    coord.last_update_success = True
-
-    entry = MagicMock()
-    entry.entry_id = "test_entry"
-    entry.data = MOCK_ENTRY_DATA
-    entry.runtime_data = mock_runtime_data
-
-    sensor = LanStatsSensor(
-        coord,
-        entry,
-        interface="eth0",
-        field="received_bytes",
-        name_suffix="Received Bytes",
-        device_class=None,
-        unit="B",
-    )
-    assert sensor.native_value == 42000
-
-
 # -----------------------------------------------------------------------
 # _humanize_field_name — pure function
 # -----------------------------------------------------------------------
@@ -804,7 +778,9 @@ def test_humanize_field_name(field, expected, desc):
 # │ burst_down             │ provisioned_burst_down │ 412876    │ 412876   │ B     │ DATA_SIZE  │ None      │
 # └────────────────────────┴────────────────────────┴───────────┴──────────┴───────┴────────────┴───────────┘
 # Native unit stays bit/s: that is what Core stores. The suggested unit is
-# display only, applied by HA at first entity registration.
+# display only, applied by HA at first entity registration. No case carries a
+# state_class: a provisioned rate is plan configuration, not a measurement,
+# so it stays out of long-term statistics.
 
 _DATA_RATE = SensorDeviceClass.DATA_RATE
 _DATA_SIZE = SensorDeviceClass.DATA_SIZE
@@ -865,6 +841,7 @@ def test_system_info_field_sensor(
     assert getattr(sensor, "_attr_native_unit_of_measurement", None) == expected_unit
     assert getattr(sensor, "_attr_device_class", None) == expected_device_class
     assert getattr(sensor, "_attr_suggested_unit_of_measurement", None) == expected_suggested_unit
+    assert sensor.state_class is None
 
 
 # -----------------------------------------------------------------------
@@ -873,7 +850,7 @@ def test_system_info_field_sensor(
 
 
 def test_create_data_dependent_entities(mock_runtime_data):
-    """Helper creates system, channel, and LAN sensors from modem data."""
+    """Helper creates system and channel sensors from modem data."""
     from custom_components.cable_modem_monitor.sensor import (
         ModemErrorRateSensor,
         _create_data_dependent_entities,
@@ -886,7 +863,6 @@ def test_create_data_dependent_entities(mock_runtime_data):
     #   system_info with total_corrected, total_uncorrected, rate_corrected,
     #     rate_uncorrected, software_version, system_uptime
     #   2 DS channels (qam + ofdm), 1 US channel (atdma)
-    #   No lan_stats
     #
     # Expected entities:
     #   2 channel counts (DS + US)
@@ -895,7 +871,6 @@ def test_create_data_dependent_entities(mock_runtime_data):
     #   1 software version
     #   1 last boot time (uptime present; no uptime sensor — display-derived)
     #   12 channel sensors (see test_create_channel_sensors_downstream)
-    #   0 LAN sensors (no lan_stats)
     # Total = 20
     assert len(entities) == 20
 
@@ -946,7 +921,7 @@ def test_create_data_dependent_entities_no_channels(mock_runtime_data):
     coord, entry = _make_coord_and_entry(minimal_data, mock_runtime_data)
     entities = _create_data_dependent_entities(coord, entry, minimal_data)
 
-    # 2 channel counts + 1 software version + 0 channels + 0 LAN = 3
+    # 2 channel counts + 1 software version + 0 channels = 3
     assert len(entities) == 3
 
 
@@ -1076,8 +1051,8 @@ def test_last_boot_time_stays_available_on_outage(mock_runtime_data):
     assert sensor.available is True
 
 
-def test_system_info_field_noncontinuous_is_sticky(mock_runtime_data):
-    """A non-continuous pass-through field holds value and stays available."""
+def test_system_info_field_without_unit_is_sticky(mock_runtime_data):
+    """A pass-through field without a unit holds value and stays available."""
     modem_data: dict[str, Any] = {
         "system_info": {"ds_scanning_status": "success"},
         "downstream": [],
@@ -1094,8 +1069,8 @@ def test_system_info_field_noncontinuous_is_sticky(mock_runtime_data):
     assert sensor.available is True
 
 
-def test_system_info_field_continuous_not_sticky(mock_runtime_data):
-    """A continuous pass-through field (unit/state_class) keeps graph gaps."""
+def test_system_info_field_with_unit_is_sticky(mock_runtime_data):
+    """A pass-through field with a unit (provisioned speed) holds value on outage."""
     modem_data: dict[str, Any] = {
         "system_info": {"provisioned_speed_down": 110100480},
         "downstream": [],
@@ -1110,8 +1085,26 @@ def test_system_info_field_continuous_not_sticky(mock_runtime_data):
     sensor.coordinator.data = _outage_snapshot()
     vars(sensor).pop("native_value", None)
 
-    assert sensor.native_value is None  # no holding — the gap is graph signal
-    assert sensor.available is False  # continuous → unavailable on outage
+    assert sensor.native_value == 110100480  # held
+    assert sensor.available is True
+
+
+@pytest.mark.parametrize(
+    ("field", "name"),
+    [
+        ("lan_received_bytes", "LAN Received Bytes"),
+        ("lan_transmitted_bytes", "LAN Transmitted Bytes"),
+    ],
+)
+def test_lan_byte_counters_have_unit_and_no_state_class(mock_runtime_data, field, name):
+    """LAN byte totals are data sizes in bytes with no state_class (#178)."""
+    modem_data: dict[str, Any] = {"system_info": {field: 1234}, "downstream": [], "upstream": []}
+    sensor = _make_sensor(SystemInfoFieldSensor, mock_runtime_data, modem_data=modem_data, field=field)
+    assert sensor.name == name
+    assert sensor.native_unit_of_measurement == "B"
+    assert sensor.device_class == SensorDeviceClass.DATA_SIZE
+    assert sensor.state_class is None
+    assert sensor.native_value == 1234
 
 
 def test_continuous_data_sensor_unavailable_on_outage(mock_runtime_data):
@@ -1485,46 +1478,6 @@ def test_channel_sensor_symbol_rate_unit_attribute(mock_runtime_data, extra_fiel
     assert sensor.extra_state_attributes.get("symbol_rate_unit") == expected_unit
 
 
-# -----------------------------------------------------------------------
-# LanStatsSensor — None paths
-# -----------------------------------------------------------------------
-# fmt: off
-# ┌──────────────────┬────────────────────┬──────────────────────────────────────┐
-# │ lan_stats        │ expected           │ description                          │
-# ├──────────────────┼────────────────────┼──────────────────────────────────────┤
-# │ absent key       │ None               │ interface not in lan_stats dict      │
-# │ modem_data=None  │ None               │ snapshot has no modem_data           │
-# └──────────────────┴────────────────────┴──────────────────────────────────────┘
-# fmt: on
-
-
-def _make_lan_sensor(modem_data, mock_runtime_data):
-    """Build a LanStatsSensor wired to the given modem_data snapshot."""
-    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
-    return LanStatsSensor(
-        coord,
-        entry,
-        interface="eth0",
-        field="received_bytes",
-        name_suffix="Received Bytes",
-        device_class=None,
-        unit=None,
-    )
-
-
-def test_lan_sensor_none_when_interface_absent(mock_runtime_data):
-    """native_value is None when the interface key is absent from lan_stats."""
-    modem_data = {**MOCK_MODEM_DATA, "lan_stats": {"eth1": {"received_bytes": 100}}}
-    sensor = _make_lan_sensor(modem_data, mock_runtime_data)
-    assert sensor.native_value is None
-
-
-def test_lan_sensor_none_when_no_modem_data(mock_runtime_data):
-    """native_value is None when snapshot.modem_data is None."""
-    sensor = _make_lan_sensor(None, mock_runtime_data)
-    assert sensor.native_value is None
-
-
 def test_deferred_creation_cleanup_on_unload(mock_runtime_data):
     """Deferred listener is cleaned up when entry unloads.
 
@@ -1875,3 +1828,91 @@ async def test_async_setup_entry_defers_when_no_modem_data(
 
     # Deferred registration was set up
     mock_register.assert_called_once_with(mock_runtime_data.data_coordinator, entry, add_entities)
+
+
+# -----------------------------------------------------------------------
+# Downstream bytes — aggregate-only (#178)
+# -----------------------------------------------------------------------
+
+_BYTES_TOTAL = 12038669013 + 10044551633
+
+
+def _modem_data_with_bytes() -> dict[str, Any]:
+    """MOCK_MODEM_DATA with per-channel bytes and the Core-computed total."""
+    downstream = [{**ch, "bytes": b} for ch, b in zip(MOCK_DOWNSTREAM, (12038669013, 10044551633), strict=True)]
+    return {
+        **MOCK_MODEM_DATA,
+        "system_info": {**MOCK_MODEM_DATA["system_info"], "total_downstream_bytes": _BYTES_TOTAL},
+        "downstream": downstream,
+    }
+
+
+def test_channel_sensor_never_exposes_bytes_attribute(mock_runtime_data):
+    """Per-channel bytes stays in Core output and out of channel sensor attributes."""
+    modem_data = _modem_data_with_bytes()
+    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
+    mock_runtime_data.channel_map = build_channel_map(modem_data["downstream"], MOCK_UPSTREAM, ChannelIdentity.ID)
+
+    sensor = ChannelSensor(
+        coord,
+        entry,
+        direction="downstream",
+        slot_key=("qam", 1),
+        identity_mode=ChannelIdentity.ID,
+        field="power",
+        name_suffix="Power",
+        unit="dBmV",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:signal",
+        value_type=float,
+    )
+    attrs = sensor.extra_state_attributes
+    assert "bytes" not in attrs
+    assert attrs["modulation"] == "256QAM"
+
+
+def test_downstream_bytes_sensor_contract(mock_runtime_data):
+    """Total sensor: bytes, DATA_SIZE, no state_class (no long-term statistics)."""
+    from homeassistant.components.sensor import SensorDeviceClass
+    from homeassistant.const import UnitOfInformation
+
+    from custom_components.cable_modem_monitor.sensor import ModemDownstreamBytesSensor
+
+    sensor = _make_sensor(ModemDownstreamBytesSensor, mock_runtime_data, modem_data=_modem_data_with_bytes())
+    assert sensor.native_value == _BYTES_TOTAL
+    assert sensor.name == "Total Downstream Bytes"
+    assert sensor.unique_id == "test_entry_cable_modem_total_downstream_bytes"
+    assert sensor.device_class == SensorDeviceClass.DATA_SIZE
+    assert sensor.native_unit_of_measurement == UnitOfInformation.BYTES
+    assert sensor.state_class is None
+    assert sensor.suggested_unit_of_measurement is None
+
+
+def test_downstream_bytes_sensor_missing(mock_runtime_data):
+    """Total sensor reads None when system_info lacks the field."""
+    from custom_components.cable_modem_monitor.sensor import ModemDownstreamBytesSensor
+
+    sensor = _make_sensor(ModemDownstreamBytesSensor, mock_runtime_data)
+    assert sensor.native_value is None
+
+
+@pytest.mark.parametrize(
+    ("has_total", "expected_count"),
+    [(True, 1), (False, 0)],
+    ids=["total_present_one_dedicated_sensor", "total_absent_no_sensor"],
+)
+def test_downstream_bytes_sensor_created_by_capability(mock_runtime_data, has_total, expected_count):
+    """Created only when Core reports the total; never doubled by the pass-through sensor."""
+    from custom_components.cable_modem_monitor.sensor import (
+        ModemDownstreamBytesSensor,
+        _create_data_dependent_entities,
+    )
+
+    modem_data = _modem_data_with_bytes() if has_total else MOCK_MODEM_DATA
+    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
+    entities = _create_data_dependent_entities(coord, entry, modem_data)
+
+    assert len([e for e in entities if isinstance(e, ModemDownstreamBytesSensor)]) == expected_count
+    passthrough = [e for e in entities if isinstance(e, SystemInfoFieldSensor) and "bytes" in (e.unique_id or "")]
+    assert passthrough == []

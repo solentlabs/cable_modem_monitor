@@ -19,7 +19,9 @@ from ...validation.har_utils import (
     is_static_resource,
     path_from_url,
 )
-from .html_parsing import detect_label_pairs, detect_tables, has_login_form
+from ..login_form import has_login_form
+from .html_parsing import detect_label_pairs, detect_tables
+from .resource_identity import resources_of
 from .table_analysis import is_channel_table, is_transposed
 from .types import (
     DetectedJsFunction,
@@ -47,6 +49,9 @@ _JS_TAG_VALUE_PATTERN = re.compile(
 # JS block comment pattern (strip before tagValueList search)
 _JS_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 
+# JS line comment on a line of its own (a commented-out sample assignment)
+_JS_LINE_COMMENT = re.compile(r"^[ \t]*//.*$", re.MULTILINE)
+
 # Common JS delimiters
 _JS_DELIMITERS: tuple[str, ...] = ("|", ",", ";", "^")
 
@@ -70,7 +75,9 @@ def _is_data_type_response(entry: dict[str, Any]) -> bool:
         return False
     if not has_content(resp):
         return False
-    return any(ct in content_type_of(resp) for ct in _DATA_CONTENT_TYPES)
+    content_type = content_type_of(resp)
+    # "json" in any spelling: some firmware ships a typo such as applation/json.
+    return "json" in content_type or any(ct in content_type for ct in _DATA_CONTENT_TYPES)
 
 
 def _holds_login_form(entry: dict[str, Any]) -> bool:
@@ -103,54 +110,33 @@ def login_pages_left_out(entries: list[dict[str, Any]], data_pages: list[dict[st
     return list(left_out)
 
 
+def identify_resources(
+    entries: list[dict[str, Any]],
+) -> list[tuple[dict[str, Any], str]]:
+    """Data pages with the resource each stands for, in HAR order.
+
+    A page is a 200, non-static response with content and a data-bearing
+    type that is not a login form. Per ONBOARDING_SPEC.md § Data page
+    identity, a path answering with several JSON documents gives each its
+    own ``path?query`` resource; otherwise the largest response at the path
+    wins. This handles auth flows where an authentication acknowledgment
+    (text/html, 31 bytes) appears before the data page at the same path.
+    """
+    return resources_of([entry for entry in entries if _is_data_candidate(entry)])
+
+
 def identify_data_pages(
     entries: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Filter HAR entries to data pages.
-
-    Returns entries with: status 200, non-static, has content,
-    and data-bearing Content-Type.
-
-    When multiple entries share the same path (e.g., a login URL with a
-    query parameter followed by the same path without query), the entry
-    with the most content wins.  This handles auth flows where an
-    authentication acknowledgment (text/html, 31 bytes) appears before
-    the actual data page at the same base path.
-    """
-    candidates: dict[str, dict[str, Any]] = {}
-
-    for entry in entries:
-        if not _is_data_candidate(entry):
-            continue
-        resp = entry.get("response", {})
-        url = entry.get("request", {}).get("url", "")
-
-        path = path_from_url(url)
-        existing = candidates.get(path)
-        if existing is None:
-            candidates[path] = entry
-        else:
-            # Prefer the entry with more content (real data page over auth ack)
-            existing_size = len(existing.get("response", {}).get("content", {}).get("text", ""))
-            new_size = len(resp.get("content", {}).get("text", ""))
-            if new_size > existing_size:
-                candidates[path] = entry
-
-    # Return in original HAR order
-    seen: set[str] = set()
-    result: list[dict[str, Any]] = []
-    for entry in entries:
-        url = entry.get("request", {}).get("url", "")
-        path = path_from_url(url)
-        if path in candidates and path not in seen and candidates[path] is entry:
-            result.append(entry)
-            seen.add(path)
-
-    return result
+    """The data page entries of a HAR, one per resource."""
+    return [entry for entry, _ in identify_resources(entries)]
 
 
-def analyze_page(entry: dict[str, Any]) -> PageAnalysis:
+def analyze_page(entry: dict[str, Any], resource: str | None = None) -> PageAnalysis:
     """Analyze a single data page entry for extractable content.
+
+    ``resource`` is the page's identity from ``identify_resources``; without
+    it the page is identified by its path.
 
     Returns a PageAnalysis with all detected content types:
     tables, JS functions, label-value pairs, and/or JSON data.
@@ -159,7 +145,7 @@ def analyze_page(entry: dict[str, Any]) -> PageAnalysis:
     req = entry.get("request", {})
     resp = entry.get("response", {})
     url = req.get("url", "")
-    resource = path_from_url(url)
+    resource = path_from_url(url) if resource is None else resource
     content_type = content_type_of(resp)
     body = decode_body(resp)
 
@@ -221,9 +207,9 @@ def _detect_js_functions(body: str) -> list[DetectedJsFunction]:
         name = match.group(1)
         func_body = match.group(2)
 
-        # Strip block comments — some modems have a commented-out
+        # Strip block and line comments — some modems have a commented-out
         # tagValueList example before the real assignment
-        clean_body = _JS_BLOCK_COMMENT.sub("", func_body)
+        clean_body = _JS_LINE_COMMENT.sub("", _JS_BLOCK_COMMENT.sub("", func_body))
 
         # Look for tagValueList assignment
         tag_match = _JS_TAG_VALUE_PATTERN.search(clean_body)

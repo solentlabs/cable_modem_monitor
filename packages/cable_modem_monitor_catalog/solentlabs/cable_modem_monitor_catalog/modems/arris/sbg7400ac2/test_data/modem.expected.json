@@ -7,7 +7,6 @@
       "corrected": 0,
       "frequency": 141000000,
       "modulation": "QAM256",
-      "octets": 522188,
       "power": 1.2,
       "snr": 40.37,
       "uncorrected": 0
@@ -19,7 +18,6 @@
       "corrected": 0,
       "frequency": 117000000,
       "modulation": "QAM256",
-      "octets": 230,
       "power": 2.2,
       "snr": 38.98,
       "uncorrected": 0
@@ -31,7 +29,6 @@
       "corrected": 0,
       "frequency": 123000000,
       "modulation": "QAM256",
-      "octets": 564,
       "power": 1.8,
       "snr": 38.98,
       "uncorrected": 0
@@ -43,7 +40,6 @@
       "corrected": 0,
       "frequency": 129000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 1.9,
       "snr": 40.37,
       "uncorrected": 0
@@ -55,7 +51,6 @@
       "corrected": 0,
       "frequency": 135000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 1.7,
       "snr": 40.37,
       "uncorrected": 0
@@ -67,7 +62,6 @@
       "corrected": 0,
       "frequency": 147000000,
       "modulation": "QAM256",
-      "octets": 58459,
       "power": 1.1,
       "snr": 40.37,
       "uncorrected": 0
@@ -79,7 +73,6 @@
       "corrected": 0,
       "frequency": 153000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 1.2,
       "snr": 40.37,
       "uncorrected": 0
@@ -91,7 +84,6 @@
       "corrected": 0,
       "frequency": 159000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 1.2,
       "snr": 40.95,
       "uncorrected": 0
@@ -103,7 +95,6 @@
       "corrected": 0,
       "frequency": 165000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 1.0,
       "snr": 40.37,
       "uncorrected": 0
@@ -115,7 +106,6 @@
       "corrected": 0,
       "frequency": 171000000,
       "modulation": "QAM256",
-      "octets": 236,
       "power": 0.9,
       "snr": 40.37,
       "uncorrected": 0
@@ -127,7 +117,6 @@
       "corrected": 0,
       "frequency": 177000000,
       "modulation": "QAM256",
-      "octets": 229,
       "power": 0.9,
       "snr": 40.37,
       "uncorrected": 0
@@ -139,7 +128,6 @@
       "corrected": 0,
       "frequency": 183000000,
       "modulation": "QAM256",
-      "octets": 149,
       "power": 0.9,
       "snr": 40.37,
       "uncorrected": 0
@@ -151,7 +139,6 @@
       "corrected": 0,
       "frequency": 189000000,
       "modulation": "QAM256",
-      "octets": 42940,
       "power": 1.0,
       "snr": 40.37,
       "uncorrected": 0
@@ -163,7 +150,6 @@
       "corrected": 0,
       "frequency": 195000000,
       "modulation": "QAM256",
-      "octets": 58459,
       "power": 1.1,
       "snr": 40.37,
       "uncorrected": 0
@@ -175,7 +161,6 @@
       "corrected": 0,
       "frequency": 201000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 1.1,
       "snr": 40.37,
       "uncorrected": 0
@@ -187,7 +172,6 @@
       "corrected": 0,
       "frequency": 207000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 1.1,
       "snr": 40.37,
       "uncorrected": 0
@@ -199,7 +183,6 @@
       "corrected": 0,
       "frequency": 213000000,
       "modulation": "QAM256",
-      "octets": 494,
       "power": 1.0,
       "snr": 40.37,
       "uncorrected": 0
@@ -211,7 +194,6 @@
       "corrected": 0,
       "frequency": 219000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 0.8,
       "snr": 40.95,
       "uncorrected": 0
@@ -223,7 +205,6 @@
       "corrected": 0,
       "frequency": 225000000,
       "modulation": "QAM256",
-      "octets": 150,
       "power": 0.6,
       "snr": 40.37,
       "uncorrected": 0
@@ -235,7 +216,6 @@
       "corrected": 0,
       "frequency": 231000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 0.6,
       "snr": 40.37,
       "uncorrected": 0
@@ -247,7 +227,6 @@
       "corrected": 0,
       "frequency": 237000000,
       "modulation": "QAM256",
-      "octets": 42888,
       "power": 0.9,
       "snr": 40.95,
       "uncorrected": 0
@@ -259,7 +238,6 @@
       "corrected": 0,
       "frequency": 243000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 1.1,
       "snr": 40.95,
       "uncorrected": 0
@@ -271,7 +249,6 @@
       "corrected": 0,
       "frequency": 249000000,
       "modulation": "QAM256",
-      "octets": 149,
       "power": 1.2,
       "snr": 40.37,
       "uncorrected": 0
@@ -283,7 +260,6 @@
       "corrected": 0,
       "frequency": 255000000,
       "modulation": "QAM256",
-      "octets": 68,
       "power": 1.2,
       "snr": 40.37,
       "uncorrected": 0

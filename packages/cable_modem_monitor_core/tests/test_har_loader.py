@@ -170,6 +170,52 @@ def _har_file(tmp_path: Path, entries: list[dict]) -> Path:
     return path
 
 
+SELECTED_CASES = [
+    # (id, urls the HAR holds, selected, expected keys with their body marker)
+    (
+        "each_selector_has_its_key",
+        ["/setup.cgi?todo=A", "/setup.cgi?todo=B"],
+        ["/setup.cgi?todo=A", "/setup.cgi?todo=B"],
+        {"/setup.cgi?todo=A": "/setup.cgi?todo=A", "/setup.cgi?todo=B": "/setup.cgi?todo=B"},
+    ),
+    (
+        "extra_parameters_still_answer",
+        ["/setup.cgi?todo=A&_n=7"],
+        ["/setup.cgi?todo=A"],
+        {"/setup.cgi?todo=A": "/setup.cgi?todo=A&_n=7"},
+    ),
+    ("another_selector_does_not", ["/setup.cgi?todo=B"], ["/setup.cgi?todo=A"], {}),
+    (
+        "last_answer_wins",
+        ["/setup.cgi?todo=A&_n=1", "/setup.cgi?todo=A&_n=2"],
+        ["/setup.cgi?todo=A"],
+        {"/setup.cgi?todo=A": "/setup.cgi?todo=A&_n=2"},
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("urls", "selected", "expected"),
+    [pytest.param(u, s, e, id=i) for i, u, s, e in SELECTED_CASES],
+)
+def test_selected_resources_key_by_declared_query(
+    tmp_path: Path, urls: list[str], selected: list[str], expected: dict[str, str]
+) -> None:
+    """A fetch-list path with a query takes the response to a request holding that query."""
+    entries = [
+        _har_entry(f"https://192.168.100.1{url}", json.dumps({"url": url}), mime="application/json") for url in urls
+    ]
+    resources = build_resource_dict(str(_har_file(tmp_path, entries)), selected=selected)
+    keyed = {key: value["url"] for key, value in resources.items() if "?" in key}
+    assert keyed == expected
+
+
+def test_selected_defaults_to_path_keys(tmp_path: Path) -> None:
+    """With nothing selected, a response is keyed by its path alone."""
+    entry = _har_entry("https://192.168.100.1/setup.cgi?todo=A", json.dumps({"k": 1}), mime="application/json")
+    assert list(build_resource_dict(str(_har_file(tmp_path, [entry])))) == ["/setup.cgi"]
+
+
 class TestBuildResourceDictJsonSniffing:
     """JSON body sniffing when Content-Type says text/html."""
 

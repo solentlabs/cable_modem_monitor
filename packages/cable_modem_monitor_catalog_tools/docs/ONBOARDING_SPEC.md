@@ -247,6 +247,7 @@ under AUTH FIXTURE ISSUES in the intake pipeline regression.
 |--------------|----------------|
 | `WWW-Authenticate: Basic` response header | `basic` auth |
 | `WWW-Authenticate: Digest` response header | Digest auth — **unsupported, flag** |
+| `Authorization: Basic` on requests, no challenge in the capture, and no other row matches | `basic` auth. `har-capture --username` supplies the credentials to the browser, which suppresses the 401 in the HAR, so a Basic capture made that way holds no challenge. Any other scheme, or a Basic header beside a matching login, does not make this row apply |
 | POST, PUT or PATCH to login endpoint with credential-shaped form body | `form` (or variant — continue analysis) |
 | `HNAP_AUTH` header on any request | `hnap` auth |
 | URL contains base64-encoded credentials | `url_token` auth |
@@ -382,7 +383,11 @@ recency alone.** A form POST to an auth-pattern URL counts as a login
 only when its body carries a password-shaped field name — names, not
 values, because the sanitizer redacts values. Among credential POSTs
 the accepted attempt is selected by its response, never by position, so
-the wrong password may come first or last: a response that redirects to
+the wrong password may come first, last or between real logins. An
+attempt is a refusal when its redirect lands on the login page, or its
+own body is that page (a 200 re-render): a password input, Core's own
+login-page test, on a page that names the endpoint the attempt posted
+to. A refusal ranks below every other attempt. Among the rest, a response that redirects to
 another path ranks above one that sets a cookie, which ranks above one
 that does neither, and among equals the latest wins. When equal-ranked
 attempts redirect to different paths, a warning names them. An
@@ -546,6 +551,11 @@ Check HAR entries for login flow:
   ├── 401 response with WWW-Authenticate: Basic
   │   └── strategy: basic
   │       Extract: challenge_cookie (retry with Set-Cookie?)
+  │
+  ├── Authorization: Basic on requests, no challenge captured,
+  │   and no branch above matched
+  │   └── strategy: basic
+  │       Extract: challenge_cookie (false: no challenge to retry)
   │
   └── Cannot determine → HARD STOP
 ```
@@ -860,6 +870,27 @@ or "DSChannel" → downstream. "Upstream" or "USChannel" → upstream.
 See [HNAPParser](../../cable_modem_monitor_core/docs/FORMAT_HNAP_SPEC.md#hnapparser) for the validated
 record layout and parser.yaml example.
 
+#### Data page identity
+
+A data page is one resource: a path, plus a query when the query selects
+the document. Core fetches the resource string verbatim, so it carries
+whatever the modem needs to answer.
+
+- Responses at one path are grouped by document. Two JSON responses are
+  the same document when they share a key structure (the key paths,
+  ignoring values and array lengths).
+- A path that answers with one JSON document, or with no JSON, is the
+  resource `path`. The largest body wins, which handles an
+  authentication acknowledgement that shares the path.
+- A path that answers with two or more JSON documents gives each its own
+  resource, `path?query`. A parameter whose value differs between the
+  requests that returned one document does not select it and is left out
+  (a cache buster, a rotating nonce).
+- A document requested once cannot show which of its parameters select it,
+  so all of them stay and the warning below names them.
+
+Ambiguity here is reported, not guessed: no parameter name is special.
+
 #### HTTP format detection
 
 For each data page in the HAR, examine the response body:
@@ -875,7 +906,9 @@ For each data page in the HAR, examine the response body:
 2. **Content-Type sniffing.** Some modems serve JSON with
    `Content-Type: text/html` (e.g., coda56) or misspelled headers
    (e.g., `applation/json`). Before the Content-Type dispatch:
-   - If the header contains `json` (any spelling), treat as JSON.
+   - If the header contains `json` (any spelling), treat as JSON. Data
+     page identification applies the same test, so a misspelled header
+     does not drop the response before it is read.
    - Otherwise, if the body starts with `{` or `[`, attempt JSON
      parse. If valid, treat as JSON. If invalid, fall through to the
      Content-Type-based branch (HTML parsing still runs).
@@ -935,7 +968,9 @@ matches either way. Every other cell is read verbatim, as Core reads it.
 **JSON direction inference.** After format classification, JSON pages
 need direction assignment (downstream vs upstream). The pipeline scans:
 
-1. Resource path (e.g., `/dsinfo.asp` → downstream)
+1. Resource path (e.g., `/dsinfo.asp` → downstream), then the words of its
+   query: `/setup.cgi?todo=RF_DS_param` is downstream. A `ds` or `us`
+   word names the direction; both together name neither.
 2. Top-level JSON keys (e.g., `{"downstream": [...]}`)
 3. Nested keys up to 3 levels deep (e.g., `{"docsis": {"dschannel": [...]}}`)
 
@@ -1020,10 +1055,26 @@ no candidate parses, since a format that matches nothing yields no value
 and no error.
 
 Both rules apply wherever the detector can see the field's value, which
-is the `html_fields`, `json`, and `hnap` sources. `javascript` sources
-are the exception: their values are positional, with no value bound to a
-field at detection time, so they still emit `type: string` and need the
-type and map filled in by hand.
+is the `html_fields`, `json`, and `hnap` sources, and `javascript`
+functions read through their header comment (below). Other `javascript`
+sources are the exception: their values are positional, with no value
+bound to a field at detection time, so they still emit `type: string` and
+need the type and map filled in by hand.
+
+**Header-labelled `javascript` functions.** Netgear's `Init*TagValue`
+functions open with a block comment naming their columns
+(`/* Is Genie (text) | DS Provisioned Rate (text) | US Provisioned Rate (text) */`).
+The detector reads positions from that comment, and only when the label
+count equals the value count, after dropping one trailing empty value left
+by a trailing delimiter. The comment is prose, not a schema: where it
+disagrees with the data, no position is read and the function is left to a
+hand mapping. c7000v2's `RouterStatus.htm` lists 32 labels for 61 values,
+and its System Up Time label is column 30 where the value sits at offset
+33, so reading the comment there would map the wrong cell. Each label
+matches through the same label vocabulary as `html_fields`, and the type
+and format come from the captured value. `DS Provisioned Rate` and
+`US Provisioned Rate` map to `provisioned_speed_down` and `_up`; a rate of
+0 or less is not mapped (FIELD_REGISTRY § Tier 2).
 
 **System info (Tier 2 registered — see FIELD_REGISTRY):**
 
@@ -1148,6 +1199,15 @@ generation.
 - One channel array per direction is emitted flat; several are emitted
   as `arrays`, one entry per array with its own mappings and channel
   type.
+- One array whose items carry a channel-type key with several canonical
+  types (`qam`, `ofdm`, ...) is read once per type: each entry keeps the
+  array's path, takes its mappings from that type's items and carries
+  `filter: {channel_type: <type>}`. Keys that only one type reports (OFDM
+  `channelWidth`, `fftType`) are then mapped. An OFDM or OFDMA entry that
+  maps `power` is never scaled and is warned, so a person confirms the
+  unit (some firmware reports tenths of dBmV). An array with one type, or
+  an item whose type is unmapped, is not split. A variable that holds
+  the array itself (`javascript_json`) is not split.
 - JSON key names → canonical field names: the baseline registry first,
   then the meaning committed `parser.yaml` files declare for the key.
   When they disagree, the key is an [ambiguity](#ambiguities-resolve-then-proceed);
@@ -1200,8 +1260,9 @@ Three constraints bind what may be emitted:
    `downstream` rule matches no items and yields no value without
    erroring. Any spelling that is not already the canonical word needs a
    `map` entry, capitalization included.
-3. **Provisioned values carry no scale** — raw bit/s and bytes. The
-   display unit is the consumer's choice.
+3. **Emit no `scale` when the capture shows raw bit/s and bytes.** Core
+   stores bit/s and bytes; the display unit is the consumer's choice. A
+   capture that shows another unit needs a `scale` to convert it.
 
 #### Table-to-section association
 
@@ -1420,7 +1481,9 @@ iterations (issue #86) because the pipeline only analyzed responses.
    parameters.
 5. A parameter present on **every** data-fetch entry that carries
    a query string is a session requirement. Parameters appearing
-   on fewer entries are endpoint-specific and ignored.
+   on fewer entries are endpoint-specific and ignored. So is a
+   parameter that is part of a resource's query (see Data page
+   identity): it selects the document.
 6. Filter known non-session parameters: jQuery's `cache: false`
    adds `_=<timestamp>` to every AJAX request. The bare `_` key
    is always excluded.
@@ -1721,9 +1784,9 @@ coordinator skips missing hooks.
 | Auth mechanism cannot be determined | "Cannot determine auth mechanism from HAR. Observed: [list evidence]. Missing: [what's needed]. Please provide additional information or a more complete HAR capture." |
 | Transport ambiguous | "Cannot determine transport. HNAP markers (HNAP1 URL, SOAPAction, HNAP_AUTH header) were not found, but some data responses are ambiguous. Please confirm the modem's data transport mechanism." |
 | HAR has no data pages (only login flow) | "HAR contains login flow but no data page responses. Please recapture including navigation to the modem's status/signal pages after login." |
-| Login page has no `<input type="password">` | "Login page {path} (entry [{n}], {size} bytes) has no `<input type="password">`, and Core recognizes a login page by that input alone ..." Recapture after the page finishes loading, or Core needs another login-page signal. |
 | Data page has `<input type="password">` outside a login form | "Data page {path} (entry [{n}]) contains a password field, so Core would read it as a login page on every poll ..." Confirm the page is a data page; if so, Core needs a way to exempt it. |
 | Only login-form pages remain as data pages | "No data page remains: {paths} hold a login form." If one carries the modem's data, Core needs a way to exempt a data page from login-page detection; otherwise recapture with the data pages open. |
+| Resource selected by several query parameters | "Resource {path?query} is selected by {n} query parameters; confirm each selects the document." Written when a split resource keeps more than one parameter, since one request cannot show which are cache busters. |
 
 Analysis does not read a response holding a login form (a `<form>`
 containing a password input) as a data page. A modem answers the pre-login
@@ -1737,7 +1800,7 @@ page holds a login form, none remains and analysis stops (Core reads any page
 with a password input as a login page, so such a page cannot be polled as
 data).
 
-Both password-field stops run after analysis (`analysis/login_page_detection.py`)
+The login-page warning and the data-page stop run after analysis (`analysis/login_page_detection.py`)
 and apply only to the HTTP transport with a strategy that holds a session.
 The login page is the one auth analysis identified, and is skipped when the
 config also reads it as data (`url_token` names the status page). Data
@@ -1750,12 +1813,16 @@ parses, not the pre-login visit. See
 | Condition | Message |
 |-----------|---------|
 | No logout flow in HAR | "No logout endpoint observed in HAR. If this modem has single-session limits, a logout action will be needed." |
+| Logout only in page source | "logout action GET /Logout.htm (source_inferred): the capture holds no request to this endpoint. Capture the logout (log in, click Log out, then log in again) to confirm its request." The endpoint is in page source and the capture holds no request to it, so its method and body are unconfirmed. |
 | No parseable data sections | "no parseable data sections detected" — auth and actions still analyzed; no parser can be generated (common on unprovisioned modems serving placeholder pages). |
 | Dynamic login action, no Core support | "login POST ... carries a query string" — per-session token; without `action_source` support (#189) the bare-action config may be rejected. |
-| Restart not in HAR | "No restart flow observed in HAR. `actions.restart` omitted. Can be added later from modem documentation." |
+| Restart not in HAR | "No restart request observed in HAR. `actions.restart` is omitted. Capture the restart (log in, restart the modem, then log in again) to declare it." `actions.restart` stays omitted: the action is never invented. HTTP transport only, like the logout warnings. |
+| Restart only in page source | "restart action POST /rest/v1/system/reboot (source_inferred): the capture holds no request to this endpoint. Capture the restart (log in, restart the modem, then log in again) to confirm its request." HTTP transport only. |
 | Action body encoded | "restart action PUT /actionHandler/ajaxSet_Reset_Restore.php: the observed JSON body holds sanitized or encoded values ['user'] and was not copied to json_body." The action carries `body: encoded`. |
 | Action body unobserved | "restart action POST /rest/v1/system/reboot (source_inferred): request body unobserved." The endpoint is in page source but the capture holds no request to it, so neither `params` nor `json_body` is generated. The action carries `body: unobserved`. |
+| Basic read from the header | "basic auth read from the Authorization header: the capture holds no 401, so challenge_cookie cannot be observed and is written false. Declare challenge_cookie: true if the modem's 401 sets a cookie that the retry must send." |
 | parser.py generated | "parser.py was generated for: [reasons]. Review the post-processing logic for correctness." |
+| Login page has no `<input type="password">` | "Login page {path} (entry [{n}], {size} bytes) has no `<input type=\"password\">`, so Core cannot recognize it as a login page. A lapsed session on this modem surfaces as LOAD_INTEGRITY (a data body with none of the parser's anchors) rather than LOAD_AUTH; recovery is the same." |
 
 ### Ambiguities (resolve, then proceed)
 

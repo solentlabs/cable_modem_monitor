@@ -142,3 +142,5 @@ notes: |
   The generated session block (`_n` query parameter, XMLHttpRequest header,
   `ver_` token prefix) came from the router GUI's traffic and is omitted; the
   cable modem pages need none of it (live test 2026-10-23).
+  Downstream bytes are not parsed: the DS table has an Octets column, one count per channel.
+  See ARCHITECTURE_DECISIONS.md § Byte counters are expressible, not mapped.

@@ -30,6 +30,14 @@ class HTMLFieldMapping(BaseModel):
     attribute: str = ""
     map: dict[str, str] | None = None
     scale: int | float | None = None
+    sum: bool = False
+
+    @model_validator(mode="after")
+    def validate_sum_uses_css(self) -> HTMLFieldMapping:
+        """Ensure sum comes with a css locator, the only one that matches many elements."""
+        if self.sum and (not self.css or self.id or self.label):
+            raise ValueError("html_fields sum requires a css locator and no id or label")
+        return self
 
     @model_validator(mode="after")
     def validate_has_locator(self) -> HTMLFieldMapping:

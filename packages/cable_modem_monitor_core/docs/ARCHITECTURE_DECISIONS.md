@@ -385,6 +385,40 @@ seen it" is a conclusion, not a gap to paper over.
 
 ---
 
+### Byte counters are expressible, not mapped
+
+**Decision:** Core totals a per-channel `bytes` field into
+`total_downstream_bytes` and sums a table's interface rows into
+`lan_received_bytes` and `lan_transmitted_bytes`; the HA adapter shows
+them with no `state_class`. No catalog modem maps them, and Core has no
+upstream byte field until a modem reports one.
+
+**Rationale:** What the fleet reports does not answer "how much
+traffic". Byte counts are cumulative since boot, not rates. They appear
+on downstream channels only, and no captured modem reports an upstream
+count. The CM3500B, G54 and CGA4236 omit the counter on OFDM channels,
+so a total would undercount, and the CODA56 reports its QAM count as an
+expression. The TC4400's LAN counters are labelled Received and
+Transmitted, and no capture or source says which way each points
+relative to the cable side. A cumulative figure with a partial scope, a
+single direction or an unconfirmed direction invites readings the data
+does not support.
+
+**Constrains:**
+
+- A catalog modem maps a byte counter only when its capture reports
+  both directions in full, each with an established direction. The
+  upstream field and total are added with the first such modem.
+- Per-channel byte counts are not parsed into channel attributes: a
+  value that changes every poll writes a recorder row per channel
+  per poll (#178). `bytes` is never an attribute.
+- The HA adapter has no per-interface LAN statistics sensors. They read a
+  `lan_stats` key that no parser produces, and their `TOTAL_INCREASING`
+  class contradicted the rule above. LAN byte totals come from
+  `system_info` only.
+
+---
+
 ### Time-anchored derivations belong to the consumer, not Core
 
 **Decision:** Core reports `system_uptime` as the modem gives it and
@@ -905,6 +939,30 @@ same GET, which a CLI has no UI reason to make.
 `session.query_params` like every other fetch. No response parsing, no
 conditional or templated paths, no per-modem retry policy.
 
+### Auth login POSTs do not carry `session.query_params`
+
+**Decision:** `session.query_params` is appended to data resources,
+`post_login_endpoints` and actions. No auth strategy appends it to its
+login POST.
+
+**Rationale:** This is an omission the evidence has not overturned, not a
+design preference. The Arris firmware's ajax prefilter adds `_n` to every
+request, login included, and real captures of the TG3442DE show it on the
+login POST. The TG3442DE is confirmed working without it (#86). Sending it
+changes the request on the one path where a wrong request can trip the
+firmware's lockout, and no live test of the change exists on a TG3442DE.
+
+**Evidence:** The TG3442DE is the only catalog entry that declares
+`query_params`. The SBG7400AC2, a different firmware in the same family,
+answers its login with 500 when `_n` is absent (live test 2026-10-23, in
+its `modem.yaml` notes); it carries `_n` through its own `action_auth`.
+
+**Constrains:** The replay harness refuses a login POST whose query names
+the capture never recorded (#189), so a real TG3442DE capture cannot
+replace its synthetic fixture until login sends the parameter. A modem
+whose login needs `session.query_params` is a Core change verified on
+hardware, not a `modem.yaml` field.
+
 ### Auth-failure detail via single WARNING log
 
 **Decision:** When the collector's auth phase fails, it emits one
@@ -1306,7 +1364,9 @@ lookup key — primary table wins on field conflicts.
 
 **Constrains:** All tables in a section share the section-level
 `resource`. Companion tables must have matching key fields for the
-merge to work.
+merge to work. Every format that reads several arrays or tables
+(`javascript_json`, `json`) declares companions the same way and reuses
+this merge; none implements its own join.
 
 ### Duplicated companion columns are declared by position
 

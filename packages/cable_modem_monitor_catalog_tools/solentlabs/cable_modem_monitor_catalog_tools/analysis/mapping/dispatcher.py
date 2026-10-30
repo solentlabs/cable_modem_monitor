@@ -402,7 +402,8 @@ def _extract_json_mappings(
     fleet: FleetPatterns | None = None,
 ) -> SectionDetail | None:
     """The first channel array of a JSON response, for callers that read one."""
-    arrays = extract_json_arrays(json_data, resource, warnings, fleet=fleet)
+    # Unsplit: one section cannot hold the pieces of a split array without dropping channels.
+    arrays = extract_json_arrays(json_data, resource, warnings, fleet=fleet, split_types=False)
     return arrays[0] if arrays else None
 
 
@@ -412,21 +413,52 @@ def extract_json_arrays(
     warnings: list[str],
     *,
     fleet: FleetPatterns | None = None,
+    split_types: bool = True,
 ) -> list[SectionDetail]:
     """Every channel array in a JSON response, in document order; every other list is warned."""
     sections: list[SectionDetail] = []
     for array_path, items in _list_arrays(json_data):
-        section = _json_array_section(array_path, items, resource, warnings, fleet)
-        if section is None:
-            # Named so a real channel array the rule missed shows at review.
-            warnings.append(
-                f"{WARNING_PREFIX} JSON array '{array_path}' on {resource} maps no channel "
-                f"measurement key ({', '.join(sorted(_MEASUREMENT_FIELDS))}); skipped. "
-                "Review it if it holds channels."
-            )
-            continue
-        sections.append(section)
+        for type_filter, group in _split_by_channel_type(items) if split_types else [(None, items)]:
+            section = _json_array_section(array_path, group, resource, warnings, fleet)
+            if section is None:
+                # Named so a real channel array the rule missed shows at review.
+                warnings.append(
+                    f"{WARNING_PREFIX} JSON array '{array_path}' on {resource} maps no channel "
+                    f"measurement key ({', '.join(sorted(_MEASUREMENT_FIELDS))}); skipped. "
+                    "Review it if it holds channels."
+                )
+                continue
+            if type_filter is not None:
+                section.filter = type_filter
+                _warn_ofdm_power_unit(section, array_path, type_filter["channel_type"], warnings)
+            sections.append(section)
     return sections
+
+
+def _split_by_channel_type(items: list[dict[str, Any]]) -> list[tuple[dict[str, Any] | None, list[dict[str, Any]]]]:
+    """Items grouped by canonical channel type when one array mixes types, else the whole array."""
+    channel_type = detect_channel_type_json(items)
+    if channel_type is None:
+        return [(None, items)]
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for item in items:
+        # _list_arrays vets only the first item, so a later one may not be an object.
+        canonical = channel_type["map"].get(str(item.get(channel_type["key"], ""))) if isinstance(item, dict) else None
+        if canonical is None:
+            return [(None, items)]
+        groups.setdefault(canonical, []).append(item)
+    if len(groups) < 2:
+        return [(None, items)]
+    return [({"channel_type": canonical}, group) for canonical, group in groups.items()]
+
+
+def _warn_ofdm_power_unit(section: SectionDetail, array_path: str, canonical: str, warnings: list[str]) -> None:
+    """Ask a person to confirm an OFDM or OFDMA power unit; intake never scales it."""
+    if canonical in ("ofdm", "ofdma") and FieldMapping.find_by(section.mappings, "power") is not None:
+        warnings.append(
+            f"{WARNING_PREFIX} {canonical} power in JSON array '{array_path}' is mapped unscaled: "
+            "confirm the power unit (some firmware reports tenths of dBmV) before generating."
+        )
 
 
 def _json_array_section(

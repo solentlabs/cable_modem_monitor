@@ -23,45 +23,60 @@ Use your modem's IP if it differs. For HTTP Basic Auth, add
 
 A browser opens. Work through these steps in it, in order.
 
-### Before logging in
+1. **Open a status page directly.**
 
-**Step 1. Open a status page directly.** Type its address into the
-address bar, for example `192.168.100.1/DocsisStatus.htm`.
-*Seeing the login page is expected: it shows how the modem answers
-when a session has expired.*
+   - Type its address into the address bar, for example
+     `192.168.100.1/DocsisStatus.htm`.
+   - Seeing the login page is expected.
+   - *Why: it shows how the modem answers when a session has expired.*
 
-### Logging in
+2. **Log in with the real password.**
 
-**Step 2. Log in with the real password, and wait for the next page
-to finish loading.**
-*That page is how the integration confirms a login worked.*
+   - Wait for the next page to finish loading.
+   - *Why: that page is how the integration confirms a login worked.*
 
-### Collecting data
+3. **Visit every status page.**
 
-**Step 3. Visit every status page, waiting 3–5 seconds on each.**
-*Some data loads after the page appears.*
+   - Wait 3 to 5 seconds on each.
+   - *Why: some data loads after the page appears.*
 
-**Step 4. If a page has a button that loads or shows more data
-(Refresh, More, Show channels), click it once.**
-*On some modems that button fetches data the page load does not.*
+4. **Click any button that loads more data.**
 
-### Finishing
+   - Examples: Refresh, More, Show channels.
+   - Click each one once.
+   - *Why: on some modems that button fetches data the page load does
+     not.*
 
-**Step 5. Log out.**
-*Modems that allow one login at a time need this to release the
-session.*
+5. **Log out.**
 
-**Step 6 (optional). Capture a restart.** Log back in, click Reboot or
-Restart, and close the browser once the click is sent.
-*Needed for the integration's Restart button. Your internet drops for
-a few minutes.*
+   - *Why: modems that allow one login at a time need this to release
+     the session.*
 
-**Step 7. Last, log in with a wrong password once.**
-*Some modems lock the account after a failed login, so this comes after
-everything else. On some a rejected login looks just like a success,
-and this can't be recorded later. The wrong guess is redacted.*
+6. **Log in with a wrong password, once.**
 
-The result is a `.sanitized.har.gz` file.
+   - Do this last.
+   - The wrong guess is redacted.
+   - *Why: some modems lock the account after a failed login. On some,
+     a rejected login looks just like a success, and this can't be
+     recorded later.*
+
+Then close the browser. The result is a `.sanitized.har.gz` file.
+
+### Capture a restart
+
+- Do this if your modem has a Reboot or Restart control.
+- The integration's Restart button needs it.
+- Your internet drops for a few minutes.
+
+1. **Run the `har-capture` command again.**
+
+   - This is a second capture.
+
+2. **Log in, then click Reboot or Restart.**
+
+   - Close the browser once the click is sent.
+
+3. **Attach this file to the same issue as the first.**
 
 ## 2. Check for personal data
 
@@ -89,6 +104,9 @@ If you find anything:
 Open a [Modem Request issue](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml),
 fill in the model and manufacturer, and attach the `.sanitized.har.gz`.
 Include the AI screen output if you ran it.
+
+Optional: the [HAR audit prompt](../CONTRIBUTING.md#auditing-a-har-for-completeness)
+checks a capture for missing login steps before you submit.
 
 For examples, see [past modem requests](https://github.com/solentlabs/cable_modem_monitor/issues?q=label%3A%22new+modem%22)
 and the [modem catalog](../packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/).

@@ -560,10 +560,14 @@ class HARMockServer(HTTPServer):
         # around is strategy knowledge, set by each strategy's handler.
         self.auth_handler = create_auth_handler(modem_config, har_entries)
         self.login_action = normalize_path(self.auth_handler.login_action)
+        success_indicator, success_redirect = _login_success_criteria(modem_config)
+        action_source = getattr(modem_config.auth, "action_source", "config") if modem_config else "config"
         self.routes = build_routes(
             har_entries,
             login_path=self.login_action,
-            login_success=_login_success_indicator(modem_config),
+            login_success=success_indicator,
+            login_redirect=success_redirect,
+            login_dynamic=action_source == "login_page",
         )
         self.json_body_keys = build_json_body_keys(har_entries)
         self.form_bodies = build_form_bodies(har_entries)
@@ -596,10 +600,10 @@ class HARMockServer(HTTPServer):
         self.server_close()
 
 
-def _login_success_indicator(modem_config: ModemConfig | None) -> str:
-    """Return the form auth ``success.indicator`` the config declares, or an empty string."""
+def _login_success_criteria(modem_config: ModemConfig | None) -> tuple[str, str]:
+    """Return the form auth ``success`` ``(indicator, redirect)`` the config declares, empty where not."""
     success = getattr(modem_config.auth, "success", None) if modem_config else None
-    return getattr(success, "indicator", "") or ""
+    return getattr(success, "indicator", "") or "", getattr(success, "redirect", "") or ""
 
 
 def _extract_post_login_endpoints(modem_config: ModemConfig | None) -> frozenset[str]:

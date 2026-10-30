@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 
 # IMPORTANT: Do not edit VERSION manually!
 # Use: python scripts/release.py <version>
-VERSION = "3.14.15-beta.5"
+VERSION = "3.14.15-beta.6"
 
 DOMAIN = "cable_modem_monitor"
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
@@ -104,6 +104,7 @@ CONSUMED_SYSTEM_INFO_FIELDS: frozenset[str] = frozenset({
     "upstream_channel_count",
     "total_corrected",
     "total_uncorrected",
+    "total_downstream_bytes",
     "rate_corrected",
     "rate_uncorrected",
 })

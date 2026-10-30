@@ -143,10 +143,14 @@ class SystemInfoFieldDetail:
     # Value normalization, e.g. a vendor docsis_status spelling to the
     # canonical "Operational".
     map: dict[str, str] = dataclass_field(default_factory=dict)
+    # Position in a delimited JS function's values.
+    offset: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to the sections output format."""
         result: dict[str, Any] = {"field": self.field, "type": self.type}
+        if self.offset is not None:
+            result["offset"] = self.offset
         if self.format:
             result["format"] = self.format
         if self.selector_type == "label":
@@ -199,6 +203,19 @@ class ChildAggregateDetail:
 
 
 @dataclass
+class JsFunctionDetail:
+    """A JS function whose positions carry system_info fields."""
+
+    name: str
+    delimiter: str
+    fields: list[SystemInfoFieldDetail]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to the sections output format."""
+        return {"name": self.name, "delimiter": self.delimiter, "fields": [f.to_dict() for f in self.fields]}
+
+
+@dataclass
 class SystemInfoSourceDetail:
     """A detected system_info source page."""
 
@@ -207,14 +224,15 @@ class SystemInfoSourceDetail:
     fields: list[SystemInfoFieldDetail]
     response_key: str = ""
     child_aggregates: list[ChildAggregateDetail] = dataclass_field(default_factory=list)
+    functions: list[JsFunctionDetail] = dataclass_field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to the sections output format."""
-        result: dict[str, Any] = {
-            "format": self.format,
-            "resource": self.resource,
-            "fields": [f.to_dict() for f in self.fields],
-        }
+        result: dict[str, Any] = {"format": self.format, "resource": self.resource}
+        if self.functions:
+            result["functions"] = [f.to_dict() for f in self.functions]
+        else:
+            result["fields"] = [f.to_dict() for f in self.fields]
         if self.response_key:
             result["response_key"] = self.response_key
         if self.child_aggregates:

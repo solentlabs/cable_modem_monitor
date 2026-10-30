@@ -75,6 +75,11 @@ notes: |
   Variant check: firmware has isModel6442 flag (this modem is NOT 6442).
   Session timeout: 600s (logoutTime JS variable).
 
+  The firmware adds _n to its own login POST; Core's login omits it and the
+  modem is confirmed working that way (#86). Rationale in
+  ARCHITECTURE_DECISIONS § Auth login POSTs do not carry
+  session.query_params.
+
 references:
   issues:
     - "[#86 — [Modem Request] Arris Touchstone TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"

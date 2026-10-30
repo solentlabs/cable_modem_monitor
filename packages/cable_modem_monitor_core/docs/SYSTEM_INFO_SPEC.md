@@ -465,6 +465,16 @@ any other spelling — normalizes them in the aggregate's `map`. Cross-file
 validation rejects an aggregate that filters on the wrong direction,
 because a swap produces plausible-looking but inverted speeds.
 
+#### Service flow units
+
+Speed fields are bit/s and burst fields are bytes, as registered in
+[FIELD_REGISTRY.md](FIELD_REGISTRY.md). A modem that emits another unit
+declares a `scale` that converts it, as for every other field. Nothing
+enforces a bound on these values: no service flow spec text was
+available to source one, and the fleet's few values cannot set one. A
+wrong unit is caught when a modem is mapped, by checking its
+`modem.expected.json` against the capture.
+
 ### `html_fields` selector types
 
 | Selector | When to use | Algorithm |
@@ -487,6 +497,7 @@ All three selector types support these optional fields:
 | `attribute` | string | Extract an HTML attribute value instead of text content. When omitted, `get_text()` is used. |
 | `pattern` | string | Regex applied to the extracted value (text or attribute). A single capture group returns `group(1)`; no capture group returns the full match. No match → field is skipped. |
 | `map` | dict | Value mapping (exact match, applied before type conversion). E.g., `{"Allowed": "Operational"}`. |
+| `sum` | bool | `css` only. Sum every element the selector matches, not just the first (see below). Default `false`. |
 
 **`attribute` and multi-valued HTML attributes:** BeautifulSoup returns
 some HTML attributes (notably `class`) as lists. The parser joins
@@ -494,6 +505,21 @@ list-valued attributes with spaces to match the original HTML
 representation. For example, `class="glyphicon glyphicon-ok"` extracts
 as `"glyphicon glyphicon-ok"`, not a Python list. Use `pattern` to
 isolate a specific value when the attribute contains multiple tokens.
+
+**`sum`: one column of a table.** With `sum: true` a `css` selector
+returns every match, each is converted with the field's `type`, and the
+field carries their total. A match that does not convert is skipped; no
+match, or none that converts, omits the field. The selector must pick
+data cells only (for example `td:nth-child(2):not(.hd)` to leave the
+header cells out). The TC4400's LAN statistics table, one row per
+interface, uses it to total each counter:
+
+```yaml
+- css: "tr > td:nth-child(2):not(.hd)"
+  sum: true
+  field: lan_received_bytes
+  type: integer
+```
 
 **Use case — CSS-encoded status indicators:** Some modems encode status
 as CSS classes rather than visible text (e.g., Bootstrap `class="success"`
@@ -632,7 +658,8 @@ totals, error rates. Elevation criteria:
 Currently Tier 2: software_version, system_uptime, channel counts,
 error totals, error rates (`rate_corrected`, `rate_uncorrected`,
 errors/min, MEASUREMENT), provisioned_speed_down/up (bit/s, displayed
-as Mbit/s, DATA_RATE), provisioned_burst_down/up (B, DATA_SIZE).
+as Mbit/s, DATA_RATE), provisioned_burst_down/up (B, DATA_SIZE),
+total_downstream_bytes (B, DATA_SIZE, no state_class).
 
 **Source of value.** Most Tier 2 fields are populated by the parser
 coordinator (native mapping, aggregate, or computed). Error rates are

@@ -8,10 +8,13 @@ default_host: "192.168.100.1"
 auth:
   strategy: form
   action: "/goform/Login"
+  action_source: login_page
+  login_page: "/"
   username_field: loginName
   password_field: loginPassword
+  cookie_name: "XSRF_TOKEN"
   success:
-    redirect: "/DocsisStatus.htm"
+    redirect: "/index.htm"
 
 actions:
   restart:
@@ -21,6 +24,8 @@ actions:
     endpoint_pattern: "RouterStatus"
     params:
       buttonSelect: "2"
+      wantype: dhcp
+      enable_apmode: "0"
 
     pre_fetch_url: "/RouterStatus.htm"
 
@@ -33,7 +38,18 @@ status: awaiting_verification
 
 sources:
   brands: "[Netgear product page](https://www.netgear.com/home/wifi/modems/cm2000/) — Nighthawk branding"
-  auth_config: "[#38 Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
+  auth_config:
+    "[#226 Netgear CM2000 login fails on v3.14.x](https://github.com/solentlabs/cable_modem_monitor/issues/226)
+    — reporter's capture (fw V8.01.02), committed as test_data/modem.har: the
+    login form action /goform/Login?id=N differs on every page load, GET /
+    sets XSRF_TOKEN, an accepted login is a 302 to /index.htm and a refused one
+    a 302 to /Login.htm"
+  restart_action:
+    "test_data/modem.har entries 188-189, transplanted from the netgear/cm2500
+    capture (#189): the POST and the Reboot.htm page. This unit's own
+    RouterStatus.htm (entry 81) carries the same form: action
+    /goform/RouterStatus?id=N, hidden buttonSelect, wantype=dhcp and
+    enable_apmode=0"
   chipset: "[Homeowner.com Review](https://www.homeowner.com/connectivity/netgear/netgear-cm2000-review)"
   detection_hints: "[#38 Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
   release_date: "[Dong Knows, 2020-09-22](https://dongknows.com/netgear-2-5-gbps-cable-modems-now-shipping): 'the CM2000 and CM2050V are both available now'. [SpeedGuide](https://www.speedguide.net/routers/netgear-cm2000-nighthawk-25gbps-cable-modem-4652) added its listing 2020-08-30. A NETGEAR community post says ISP release was about 2020-01-23; the August month is the earliest retail-side evidence, not a launch notice."
@@ -44,7 +60,8 @@ attribution:
     - github: https://github.com/m4dh4tt3r-88
       contribution:
         "[Issue #38](https://github.com/solentlabs/cable_modem_monitor/issues/38)
-        diagnostics"
+        diagnostics, [issue #226](https://github.com/solentlabs/cable_modem_monitor/issues/226)
+        capture"
 
 isps:
   - Comcast
@@ -62,7 +79,25 @@ notes: |
   InitProvRateTableTagValue() body loads by XHR and no capture on file
   holds it. A capture taken with the current guide (one Refresh click per
   status page) would supply it.
+  Login: the form action's ?id= changes on every page load and a POST
+  without it is refused (#226), so action_source reads it off the login
+  page at every login. Accepted logins redirect to /index.htm, refused ones
+  to /Login.htm.
+  Fixture: test_data/modem.har is a composite. Entries 0-187 are the #226
+  reporter's real session on this unit (original creator Playwright, serial
+  replaced by hand); that session never sent a restart. Entries 188-189
+  (POST /goform/RouterStatus and GET /Reboot.htm) come from the CM2500
+  capture (#189) and were not observed on a CM2000. A capture of the restart
+  on this model replaces them.
+  Logout: not declared. The capture never exercised it. index.htm's
+  gui_logout() opens Logout.htm, and the page's own script submits a form to
+  /goform/logout?id=N (the v3.13.1 fixture), so a plain GET may not end the
+  session. A capture that logs in, logs out and logs in again decides it.
+  Hand redaction: the TLS certificate subject in modem.har carried the unit's
+  MAC (har-capture's pseudonym for it) and now reads XX:XX:XX:XX:XX:XX;
+  har-capture masks headers and cookies but not _securityDetails.
 
 references:
   issues:
     - "[#38 — [Modem Request] Netgear CM2000](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
+    - "[#226 — [Bug]: Netgear CM2000 login fails on v3.14.x: catalog entry lost `?id=` form-action handling (regression from v3.13.1)](https://github.com/solentlabs/cable_modem_monitor/issues/226)"

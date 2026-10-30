@@ -105,28 +105,35 @@ class JSONParser(BaseParser):
         )
 
     def _parse_multi_array(self, resources: dict[str, Any]) -> list[dict[str, Any]]:
-        """Parse channels from multiple arrays and concatenate results.
+        """Concatenate the primary arrays' channels; companions are left to ``parse_parts``."""
+        channels: list[dict[str, Any]] = []
+        for part, merge_by in self.parse_parts(resources):
+            if merge_by is None:
+                channels.extend(part)
+        return channels
+
+    def parse_parts(self, resources: dict[str, Any]) -> list[tuple[list[dict[str, Any]], list[str] | None]]:
+        """Parse each array, pairing its rows with its ``merge_by`` (None for a primary).
 
         Each array may specify its own resource endpoint. When absent,
         the section-level resource is used as the default.
         """
-        channels: list[dict[str, Any]] = []
+        parts: list[tuple[list[dict[str, Any]], list[str] | None]] = []
         for array_def in self._config.arrays or []:
             resource_key = array_def.resource or self._config.resource
             data = _get_resource(resources, resource_key)
             if data is None:
                 continue
-            channels.extend(
-                _extract_from_array(
-                    data,
-                    array_def.array_path,
-                    array_def.fields,
-                    array_def.channel_type,
-                    array_def.fixed_fields,
-                    array_def.filter,
-                )
+            channels = _extract_from_array(
+                data,
+                array_def.array_path,
+                array_def.fields,
+                array_def.channel_type,
+                array_def.fixed_fields,
+                array_def.filter,
             )
-        return channels
+            parts.append((channels, array_def.merge_by))
+        return parts
 
 
 def _get_resource(resources: dict[str, Any], key: str) -> dict[str, Any] | None:

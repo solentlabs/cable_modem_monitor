@@ -52,6 +52,10 @@ notes: |
   PBKDF2 parameters from HAR JavaScript (sjcl.js): iterations and key
   length are firmware defaults, may need verification per firmware version.
   Processor speed: 1503 MHz (BCM3390, hardware-fixed; documented here, not parsed as a live sensor).
+  Downstream bytes are not parsed: DSTbl rows carry `Octets` but exDSTbl
+  (OFDM) rows carry no byte or codeword counter, so a total would count
+  SC-QAM channels only.
+  See ARCHITECTURE_DECISIONS.md § Byte counters are expressible, not mapped.
 
 references:
   issues:

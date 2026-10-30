@@ -1,8 +1,10 @@
 """Form login attempts: which one the server accepted, and what separates it from a rejected one.
 
 A capture can hold several credential POSTs to the login endpoint: a typo,
-a retry, or the capture guide's closing wrong password. The accepted
-attempt is selected by its response, never by position. When the accepted
+a retry, or the capture guide's deliberate wrong password. The accepted
+attempt is selected by its response, never by position: an attempt whose
+answer is the login form again is a refusal and ranks below the rest.
+When the accepted
 response is not a redirect, the tokens it holds that a rejected response
 lacks are offered as ``auth.success.indicator`` candidates.
 
@@ -13,9 +15,11 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import urljoin
 
 from ...validation.har_utils import WARNING_PREFIX, has_set_cookie, lower_headers, path_from_url
 from ..ambiguity import Ambiguity, Candidate, Evidence
+from ..login_form import has_password_input
 
 _REDIRECTS = (301, 302)
 # A quoted attribute (http-equiv="refresh") stays whole; anything else splits on
@@ -26,8 +30,10 @@ _CONTEXT_CHARS = 40
 _REJECTED_SNIPPET_CHARS = 200
 
 
-def attempt_rank(entry: dict[str, Any]) -> int:
-    """2 when the response redirects to another path, 1 when it sets a cookie, else 0."""
+def attempt_rank(entry: dict[str, Any], entries: list[dict[str, Any]]) -> int:
+    """-1 for a refusal, else 2 when the response redirects to another path, 1 when it sets a cookie, 0 otherwise."""
+    if is_refusal(entry, entries):
+        return -1
     resp = entry["response"]
     if resp.get("status") in _REDIRECTS:
         location = lower_headers(resp).get("location", "")
@@ -36,12 +42,48 @@ def attempt_rank(entry: dict[str, Any]) -> int:
     return 1 if has_set_cookie(resp) else 0
 
 
-def redirect_conflict_warning(accepted: dict[str, Any], attempts: list[dict[str, Any]]) -> str | None:
+def is_refusal(entry: dict[str, Any], entries: list[dict[str, Any]]) -> bool:
+    """True when the attempt's answer is the login page again, wherever the attempt sits in the capture.
+
+    Either its own body is that page (a 200 re-render) or the page its
+    redirect lands on is. The page must hold a password input, Core's own
+    login-page test (a tree parse misses firmware markup that closes the
+    form early), and name the endpoint the attempt posted to: a home page
+    with a change-password form is not the login page. A redirect whose
+    target the capture never fetched says nothing, so the attempt is not
+    called a refusal.
+    """
+    resp = entry["response"]
+    request_url = entry["request"].get("url", "")
+    login_path = path_from_url(request_url)
+    if _is_login_page(_body(entry), login_path):
+        return True
+    location = lower_headers(resp).get("location", "")
+    if resp.get("status") not in _REDIRECTS or not location:
+        return False
+    target = path_from_url(urljoin(request_url, location))
+    position = next((i for i, e in enumerate(entries) if e is entry), len(entries))
+    for later in entries[position + 1 :]:
+        if later["request"].get("method") == "GET" and path_from_url(later["request"].get("url", "")) == target:
+            return _is_login_page(_body(later), login_path)
+    return False
+
+
+def _is_login_page(text: str, login_path: str) -> bool:
+    """A password input on a page that references the login endpoint."""
+    return has_password_input(text) and login_path in text
+
+
+def redirect_conflict_warning(
+    accepted: dict[str, Any], attempts: list[dict[str, Any]], entries: list[dict[str, Any]]
+) -> str | None:
     """A warning when attempts ranked with the accepted one redirect to different paths."""
-    rank = attempt_rank(accepted)
+    rank = attempt_rank(accepted, entries)
     if rank != 2:
         return None
-    paths = sorted({path_from_url(lower_headers(a["response"])["location"]) for a in attempts if attempt_rank(a) == 2})
+    paths = sorted(
+        {path_from_url(lower_headers(a["response"])["location"]) for a in attempts if attempt_rank(a, entries) == 2}
+    )
     if len(paths) < 2:
         return None
     return (

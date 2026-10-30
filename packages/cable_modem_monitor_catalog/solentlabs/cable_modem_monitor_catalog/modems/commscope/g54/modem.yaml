@@ -49,6 +49,10 @@ notes: |
   Firmware self-reports product "G54_COMMSCOPE" on platform "G5X" and
   customer "ARRIS Group, Inc." (see test_data/modem.har).
   Default IPs: 192.168.100.1 (modem mode) or 192.168.0.1 (router mode).
+  Downstream bytes are not parsed: dschannel rows carry `octets` but
+  ofdmchannel rows carry no byte or codeword counter, so a total would
+  count QAM channels only.
+  See ARCHITECTURE_DECISIONS.md § Byte counters are expressible, not mapped.
 
 references:
   issues:

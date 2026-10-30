@@ -1,0 +1,131 @@
+{
+  "_description": "Form auth, both attempts redirect: the wrong password comes last and its landing page has firmware markup that closes the form early, leaving the password input outside any form; the page is still a login page by Core's own test, so the accepted attempt is selected",
+  "_transport": "http",
+  "_expected_strategy": "form",
+  "_expected_fields": {
+    "action": "/goform/login",
+    "success": {
+      "redirect": "/index.htm"
+    }
+  },
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "YWRtaW4="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {
+            "name": "Location",
+            "value": "/index.htm"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://host/index.htm",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {
+          "size": 41,
+          "mimeType": "text/html",
+          "text": "<html><body><h1>Status</h1></body></html>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "YWRtaW4="
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {
+            "name": "Location",
+            "value": "/Login.htm"
+          }
+        ],
+        "cookies": [],
+        "content": {
+          "size": 0,
+          "mimeType": "text/html",
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://host/Login.htm",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {
+          "size": 293,
+          "mimeType": "text/html",
+          "text": "<html><body><div><table><tr><td><table><form id=\"target\" method=\"POST\" action=\"/goform/login\"><th colspan=\"2\">Please enter password to login</tr><tr><td>Password: </td><td><input type=\"password\" id=\"password\" name=\"loginPassword\"></td></tr></form></table></td></tr></table></div></body></html>"
+        }
+      }
+    }
+  ]
+}

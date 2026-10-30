@@ -43,6 +43,8 @@ notes: |
   Two resources: /cgi-bin/status_cgi (channels + uptime) and
   /cgi-bin/vers_cgi (firmware/hardware version). Version info requires
   parser.py post-processor to parse the "System:" blob.
+  Downstream bytes are not parsed: the DS table has an Octets column, one count per channel.
+  See ARCHITECTURE_DECISIONS.md § Byte counters are expressible, not mapped.
 
 references:
   prs:

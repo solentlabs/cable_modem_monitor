@@ -22,7 +22,7 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from ..analysis.format.http import identify_data_pages
+from ..analysis.format.http import identify_resources
 from ..analysis.session import SessionDetail, first_origin
 
 # jQuery's ``cache: false`` adds ``_=<timestamp>`` to every AJAX
@@ -49,11 +49,18 @@ def detect_request_requirements(
     if transport == "hnap":
         return
 
-    data_pages = identify_data_pages(first_origin(entries))
+    resources = identify_resources(first_origin(entries))
+    data_pages = [entry for entry, _ in resources]
     if len(data_pages) < 2:
         return
 
-    query_params = _detect_session_query_params(data_pages, session_result.token_prefix)
+    # A parameter in a resource's query selects the document, so it is not session-level.
+    selectors = {name for _, resource in resources for name in _extract_query_params(resource)}
+    query_params = {
+        name: value
+        for name, value in _detect_session_query_params(data_pages, session_result.token_prefix).items()
+        if name not in selectors
+    }
     if query_params:
         session_result.query_params = query_params
         param_list = ", ".join(f"{k}={v!r}" for k, v in query_params.items())

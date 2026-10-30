@@ -56,6 +56,11 @@ notes: |
   Authenticated mode untested. OFDM/OFDMA channels on separate endpoints
   (dsofdminfo.asp, usofdminfo.asp) but disabled in this capture;
   SC-QAM channels parsed from dsinfo.asp and usinfo.asp.
+  Downstream bytes are not parsed: dsinfo.asp reports `dsoctets` as an
+  expression ("18 * 2e32 + N"), not an integer, while dsofdminfo.asp
+  reports a plain integer, so the QAM and OFDM counters are not read the
+  same way.
+  See ARCHITECTURE_DECISIONS.md § Byte counters are expressible, not mapped.
 
 references:
   issues:

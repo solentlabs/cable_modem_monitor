@@ -1,0 +1,10 @@
+{
+  "_description": "sum where no match converts omits the field",
+  "_html": "<table><tr><td class=\"v\">n/a</td></tr><tr><td class=\"v\">--</td></tr></table>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/stats.html",
+    "fields": [{"css": "td.v", "sum": true, "field": "total", "type": "integer"}]
+  },
+  "_expected": {}
+}

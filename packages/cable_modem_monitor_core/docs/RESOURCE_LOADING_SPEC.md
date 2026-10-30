@@ -37,11 +37,13 @@ Keys are the URL paths on the fetch list. Values are parsed HTML.
 }
 ```
 
-- Keys are the path component only (no host, no query string).
-  This is load-bearing: auth strategies that modify the URL (e.g.,
-  `url_token` appending `?ct_<token>`) produce the same resource
-  dict keys as unauthenticated variants. This enables multi-variant
-  modems to share a single parser.yaml.
+- Keys are the fetch-list path: no host, and no query string unless
+  parser.yaml declares one in `resource` (the DM1000 selects each
+  document with `?todo=<name>`). A query the loader adds, such as a
+  `url_token` `?ct_<token>`, is never part of the key. This is
+  load-bearing: auth strategies that modify the URL produce the same
+  resource dict keys as unauthenticated variants. This enables
+  multi-variant modems to share a single parser.yaml.
 - Values are `BeautifulSoup` objects parsed from the response body
 - One entry per unique path (see deduplication below)
 - A capture read offline (`build_resource_dict(har, requests=...)`)
@@ -50,6 +52,9 @@ Keys are the URL paths on the fetch list. Values are parsed HTML.
   every declared form field), as the loader fetches it, and is absent
   when the capture holds none: a GET of the same URL can serve empty
   tables ([PARSING_SPEC.md § Fetch List Derivation](PARSING_SPEC.md#fetch-list-derivation)).
+  A fetch-list path that carries a query (`build_resource_dict(...,
+  selected=...)`) takes the last 200 response to that path whose query
+  holds every declared parameter, and is keyed by the declared string.
 
 ### HTTP Transport — Structured Formats
 
@@ -567,18 +572,19 @@ schema change if the need arises.
 During HAR analysis, the MCP pipeline flags potential detection issues
 (scope and wording: ONBOARDING_SPEC § Error Handling):
 
-1. **Login page without password input** — If the HAR shows a login
-   page that has no `<input type="password">` in the initial HTML
-   (e.g., JS-rendered SPA login), flag it: "Login page detection may
-   not work for this modem — password field is dynamically rendered."
+1. **Login page without password input** (warning) — If the HAR shows a
+   login page that has no `<input type="password">` in the initial HTML
+   (e.g., JS-rendered login), warn: Core cannot recognize that page, so
+   a lapsed session on this modem surfaces as `LOAD_INTEGRITY` (a data
+   body with none of the parser's anchors, UC-19a) rather than
+   `LOAD_AUTH`. Recovery, streak and breaker are the same for both
+   signals, so the modem can ship.
 
-2. **Data page with password input** — If any data page response in
-   the HAR contains `<input type="password">`, flag it: "Data page
-   {path} contains a password field — login page detection will
-   produce false positives."
-
-Both are HARD STOP flags during onboarding — they require human
-review before the modem can ship.
+2. **Data page with password input** (hard stop) — If any data page
+   response in the HAR contains `<input type="password">`, flag it:
+   "Data page {path} contains a password field — login page detection
+   will produce false positives." It requires human review before the
+   modem can ship: every poll would read as an expired session.
 
 ---
 

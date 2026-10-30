@@ -229,6 +229,105 @@ class TestBuildRoutes:
         routes = build_routes(entries, login_path="/cgi-bin/login", login_success=indicator)
         assert routes[("POST", "/cgi-bin/login")].body == replayed
 
+    _LOGIN, _HOME, _ABS = "/Login.htm", "/index.htm", "https://192.168.100.1:443"
+    # (Location of each login POST in capture order, success.redirect, replayed Location, id)
+    LOGIN_REDIRECT_CASES = [
+        ([_LOGIN, _HOME], _HOME, _HOME, "refusal_first"),
+        ([_HOME, _LOGIN], _HOME, _HOME, "refusal_last"),
+        ([_LOGIN, _HOME, _LOGIN], _HOME, _HOME, "refusal_between"),
+        ([_HOME, _LOGIN, _HOME], _HOME, _HOME, "later_accepted_wins"),
+        (["login.asp", "at_a_glance.jst", "login.asp"], "/at_a_glance.jst", "at_a_glance.jst", "relative_location"),
+        ([f"{_ABS}{_LOGIN}", f"{_ABS}{_HOME}", f"{_ABS}{_LOGIN}"], _HOME, f"{_ABS}{_HOME}", "absolute_location"),
+        ([_HOME, _LOGIN], "", _LOGIN, "no_criterion_last_wins"),
+        ([_LOGIN, "/Other.htm"], _HOME, "/Other.htm", "none_matches_last_wins"),
+    ]
+
+    @pytest.mark.parametrize(
+        "locations,redirect,replayed",
+        [c[:3] for c in LOGIN_REDIRECT_CASES],
+        ids=[c[3] for c in LOGIN_REDIRECT_CASES],
+    )
+    def test_login_redirect_picks_the_accepted_exchange(
+        self, locations: list[str], redirect: str, replayed: str
+    ) -> None:
+        """The declared success redirect keeps the accepted login over a refusal, wherever the refusal sits."""
+        entries = [
+            {
+                "request": {"method": "POST", "url": "http://192.168.100.1/goform/login"},
+                "response": {"status": 302, "headers": [{"name": "Location", "value": loc}], "content": {}},
+            }
+            for loc in locations
+        ]
+        routes = build_routes(entries, login_path="/goform/login", login_redirect=redirect)
+        assert routes[("POST", "/goform/login")].headers == [("Location", replayed)]
+
+    def test_login_needs_every_declared_criterion(self) -> None:
+        """Redirect and indicator are ANDed, as Core's success check does."""
+        entries = [
+            {
+                "request": {"method": "POST", "url": "http://192.168.100.1/goform/login"},
+                "response": {
+                    "status": 302,
+                    "headers": [{"name": "Location", "value": "/index.htm"}],
+                    "content": {"text": "wrong body"},
+                },
+            },
+            {
+                "request": {"method": "POST", "url": "http://192.168.100.1/goform/login"},
+                "response": {
+                    "status": 302,
+                    "headers": [{"name": "Location", "value": "/index.htm"}],
+                    "content": {"text": "welcome"},
+                },
+            },
+            {
+                "request": {"method": "POST", "url": "http://192.168.100.1/goform/login"},
+                "response": {
+                    "status": 302,
+                    "headers": [{"name": "Location", "value": "/Login.htm"}],
+                    "content": {"text": "welcome"},
+                },
+            },
+        ]
+        routes = build_routes(entries, login_path="/goform/login", login_success="welcome", login_redirect="/index.htm")
+        assert routes[("POST", "/goform/login")].body == "welcome"
+        assert routes[("POST", "/goform/login")].headers == [("Location", "/index.htm")]
+
+    @pytest.mark.parametrize(
+        "locations",
+        [["/Login.htm", "/index.htm"], ["/index.htm", "/Login.htm"]],
+        ids=["first", "last"],
+    )
+    def test_dynamic_login_exchanges_share_one_route(self, locations: list[str]) -> None:
+        """Under a dynamic action the ?id= is the page's, so every login exchange is one route."""
+        entries = [
+            {
+                "request": {"method": "POST", "url": f"http://192.168.100.1/goform/login?id={i}"},
+                "response": {"status": 302, "headers": [{"name": "Location", "value": loc}], "content": {}},
+            }
+            for i, loc in enumerate(locations)
+        ]
+        routes = build_routes(
+            entries,
+            login_path="/goform/login",
+            login_redirect="/index.htm",
+            login_dynamic=True,
+        )
+        assert list(routes) == [("POST", "/goform/login")]
+        assert routes[("POST", "/goform/login")].headers == [("Location", "/index.htm")]
+
+    def test_static_action_keeps_each_login_query_as_its_own_route(self) -> None:
+        """Without a dynamic action a query value is part of the route (DM1000: /setup.cgi?todo=...)."""
+        entries = [
+            {
+                "request": {"method": "POST", "url": f"http://192.168.100.1/setup.cgi?todo={todo}"},
+                "response": {"status": 200, "headers": [], "content": {"text": todo}},
+            }
+            for todo in ("login", "reboot")
+        ]
+        routes = build_routes(entries, login_path="/setup.cgi")
+        assert set(routes) == {("POST", "/setup.cgi?todo=login"), ("POST", "/setup.cgi?todo=reboot")}
+
     def test_login_exemption_does_not_reach_other_paths(self) -> None:
         """Naming a login path leaves the status preference on every other key."""
         entries = [
@@ -1250,14 +1349,34 @@ class TestHARMockServerFormLoginPage:
         with HARMockServer(entries, modem_config=_make_config({"auth": self._FORM})) as server:
             assert requests.get(f"{server.base_url}/").status_code == 401
 
-    def test_accepted_login_is_the_later_capture(self, entries: list[dict[str, Any]]) -> None:
-        """Refused-then-accepted logins under distinct ?id= keys replay the accepted one."""
-        with HARMockServer(entries, modem_config=_make_config({"auth": self._FORM})) as server:
+    # Fixture order: page, refused ?id=111, accepted ?id=222, index, status.
+    _DYNAMIC = {**_FORM, "action_source": "login_page", "success": {"redirect": "/index.htm"}}
+    _ORDERS = {
+        "refusal_first": [0, 1, 2, 3, 4],
+        "refusal_last": [0, 2, 3, 4, 1],
+        "refusal_between": [0, 2, 1, 3, 4],
+    }
+
+    @pytest.mark.parametrize("order", list(_ORDERS.values()), ids=list(_ORDERS))
+    @pytest.mark.parametrize("sent_id", ["111", "222", "999"])
+    def test_accepted_login_wins_whatever_id_is_sent(
+        self, entries: list[dict[str, Any]], order: list[int], sent_id: str
+    ) -> None:
+        """A dynamic ?id= never selects the answer: the page serves one capture's id, Core posts it back."""
+        ordered = [entries[i] for i in order]
+        with HARMockServer(ordered, modem_config=_make_config({"auth": self._DYNAMIC})) as server:
             session = requests.Session()
-            login = session.post(f"{server.base_url}/goform/login?id=999", allow_redirects=False)
+            login = session.post(f"{server.base_url}/goform/login?id={sent_id}", allow_redirects=False)
             assert login.status_code == 302
             assert login.headers["Location"].endswith("/index.htm")
             assert session.get(f"{server.base_url}/status.html").status_code == 200
+
+    def test_login_without_the_id_is_still_refused(self, entries: list[dict[str, Any]]) -> None:
+        """Collapsing the login routes leaves the query-shape check in force (#189)."""
+        with HARMockServer(entries, modem_config=_make_config({"auth": self._DYNAMIC})) as server:
+            login = requests.post(f"{server.base_url}/goform/login", allow_redirects=False)
+        assert login.status_code == 500
+        assert "query params not in the capture" in login.text
 
 
 class TestAuthFactoryRestartWiring:

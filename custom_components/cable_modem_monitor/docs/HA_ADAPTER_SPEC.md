@@ -1484,7 +1484,7 @@ When HA loads an entry whose stored version is lower than the current
 data and returns `True` (success) or `False` (failure — entry won't
 load, user must reconfigure).
 
-**Current version:** 2
+**Current version:** 2.2 (`VERSION = 2`, `MINOR_VERSION = 2`)
 
 **Design: auto-discovered migration registry.**
 
@@ -1502,6 +1502,22 @@ stored v1 → v1_to_v2.async_migrate() → v2_to_v3.async_migrate() → current 
 ```
 
 Adding a future migration = one file.  No changes to dispatch logic.
+
+**Minor version.** HA also calls `async_migrate_entry` when the stored
+`minor_version` differs from `MINOR_VERSION`.  Minor steps are not
+discovered: `async_migrate_entry` runs them after the major chain, each
+guarded by `entry.minor_version`, and each step records its own minor
+version with `async_update_entry`.  New entries are created at the
+current minor version, so they skip every minor step.
+
+Minor versions start at 1, not 0: HA gives every entry that predates
+`MINOR_VERSION` a `minor_version` of 1.  The first minor step therefore
+targets 2 and its module is named for the version it sets
+(`v2_2_...`, "from 2.1 to 2.2").
+
+| Minor | Module | Effect |
+|-------|--------|--------|
+| 2 | `v2_2_frequency_statistics` | Clears long-term statistics of the entry's channel Frequency sensors (registry sensors whose `unique_id` ends `_frequency`) through the recorder; skipped when no recorder is loaded |
 
 **v1 → v2 key mapping:**
 

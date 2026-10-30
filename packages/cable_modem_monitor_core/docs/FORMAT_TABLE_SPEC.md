@@ -409,7 +409,9 @@ them."
    copies over any fields the primary doesn't already have.
 
 Primary always wins on conflicts — if both tables have a field with the
-same name, the primary table's value is kept.
+same name, the primary table's value is kept. A row missing any
+`merge_by` field has no identity: it is never joined, and a primary
+row without the key gets nothing from the companion.
 
 All `tables[]` entries in a section share the section-level `resource`.
 If a future modem has companion data on a different page, adding a
@@ -473,12 +475,13 @@ def _merge_channels(
     merge_map: dict[tuple, dict] = {}
     for ch in merge_table:
         key = tuple(ch.get(field) for field in merge_by)
-        merge_map[key] = ch
+        if None not in key:
+            merge_map[key] = ch
 
     # Enrich primary channels (primary wins on conflicts)
     for ch in primary:
         key = tuple(ch.get(field) for field in merge_by)
-        extra = merge_map.get(key, {})
+        extra = {} if None in key else merge_map.get(key, {})
         for field, value in extra.items():
             if field not in ch:
                 ch[field] = value

@@ -16,6 +16,7 @@ import pytest
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.ambiguity import Ambiguity
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.format import detect_sections
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.format.dispatcher import _direction_from_array_path
+from solentlabs.cable_modem_monitor_catalog_tools.analysis.mapping import extract_section_mappings
 from solentlabs.cable_modem_monitor_catalog_tools.analysis.types import FleetPatterns
 
 
@@ -219,3 +220,58 @@ PATH_CASES: list[tuple[str, str, str]] = [
 def test_direction_from_array_path(path: str, direction: str) -> None:
     """DOCSIS terms in the path decide direction, leaf segment first."""
     assert _direction_from_array_path(path) == direction
+
+
+def _mixed(types: list[str]) -> dict[str, Any]:
+    """A response with one downstream array whose items differ by channelType; OFDM carries its own keys."""
+    channels = []
+    for n, kind in enumerate(types, start=1):
+        item: dict[str, Any] = {"channelId": n, "channelType": kind, "frequency": 500000000 + n, "power": 3}
+        if kind == "sc_qam":
+            item["snr"] = 38
+        else:
+            item.update({"channelWidth": 96000000, "fftType": "4K"})
+        channels.append(item)
+    return {"downstream": {"channels": channels}}
+
+
+class TestMixedChannelTypes:
+    """One array holding SC-QAM and OFDM items is read once per type, each with its own filter."""
+
+    def _downstream(self, types: list[str]) -> tuple[dict[str, Any], list[str]]:
+        sections, warnings = _sections([_entry("/rest/v1/cablemodem/downstream", json.dumps(_mixed(types)))])
+        return sections["downstream"], warnings
+
+    def test_arrays_split_by_type(self) -> None:
+        """Each type gets an entry on the same path, filtered to that type."""
+        section, _ = self._downstream(["sc_qam", "sc_qam", "ofdm"])
+        assert [(a["array_path"], a["filter"]) for a in section["arrays"]] == [
+            ("downstream.channels", {"channel_type": "qam"}),
+            ("downstream.channels", {"channel_type": "ofdm"}),
+        ]
+
+    def test_keys_come_from_that_types_items(self) -> None:
+        """OFDM-only keys map on the OFDM entry only; the SC-QAM sample no longer hides them."""
+        section, _ = self._downstream(["sc_qam", "sc_qam", "ofdm"])
+        keys = [{m["key"] for m in a["mappings"]} for a in section["arrays"]]
+        assert "snr" in keys[0] and "channelWidth" not in keys[0]
+        assert "channelWidth" in keys[1] and "snr" not in keys[1]
+
+    def test_ofdm_power_is_warned_not_scaled(self) -> None:
+        """No scale is guessed for OFDM power; a person is asked to confirm the unit."""
+        section, warnings = self._downstream(["sc_qam", "ofdm"])
+        ofdm = section["arrays"][1]
+        assert all("scale" not in m for m in ofdm["mappings"])
+        unit_warnings = [w for w in warnings if "power unit" in w]
+        assert len(unit_warnings) == 1 and "downstream.channels" in unit_warnings[0] and "ofdm" in unit_warnings[0]
+
+    def test_one_type_stays_flat(self) -> None:
+        """An array of a single type is not split."""
+        section, warnings = self._downstream(["sc_qam", "sc_qam"])
+        assert "arrays" not in section and "filter" not in section
+        assert not [w for w in warnings if "power unit" in w]
+
+    def test_single_array_reader_keeps_every_channel(self) -> None:
+        """The reader of one array (a JS variable holding the array) is not split, so no channel is dropped."""
+        section = extract_section_mappings("json", json_data=_mixed(["sc_qam", "sc_qam", "ofdm"]))
+        assert section is not None and section.channel_count == 3 and section.filter is None

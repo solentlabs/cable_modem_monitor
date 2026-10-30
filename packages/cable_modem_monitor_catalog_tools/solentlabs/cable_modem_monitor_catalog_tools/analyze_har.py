@@ -32,7 +32,7 @@ from .analysis.auth.patterns import fleet_password_names
 from .analysis.default_host import detect_default_host
 from .analysis.format import detect_sections
 from .analysis.js_endpoints import detect_uncalled_json_rpc_methods, detect_uncaptured_endpoints
-from .analysis.login_page_detection import detect_login_page_hard_stops
+from .analysis.login_page_detection import detect_login_page_hard_stops, detect_login_page_warnings
 from .analysis.request_requirements import detect_request_requirements
 from .analysis.request_timing import RequestTiming, detect_request_timing
 from .analysis.session import SessionDetail
@@ -148,6 +148,7 @@ def _analyze_entries(entries: list[dict[str, Any]], fleet: FleetPatterns | None)
 
     # Post-analysis: the two password-input checks Core's login-page detection depends on
     hard_stops.extend(detect_login_page_hard_stops(entries, sections, auth_result, transport_result.transport))
+    warnings.extend(detect_login_page_warnings(entries, sections, auth_result, transport_result.transport))
 
     # An unprovisioned modem serves placeholder pages, so auth analyzes
     # cleanly while sections come back empty; without this warning the

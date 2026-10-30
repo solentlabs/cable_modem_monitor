@@ -1,0 +1,10 @@
+{
+  "_description": "sum with no matching element omits the field",
+  "_html": "<table><tr><td>x</td></tr></table>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/stats.html",
+    "fields": [{"css": "td.absent", "sum": true, "field": "total", "type": "integer"}]
+  },
+  "_expected": {}
+}

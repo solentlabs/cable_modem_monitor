@@ -1,0 +1,72 @@
+{
+  "_description": "Form auth outranks a single Authorization: Basic header on an unrelated request",
+  "_entries": [
+    {
+      "request": {
+        "cookies": [],
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "method": "POST",
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {
+              "name": "loginUsername",
+              "value": "admin"
+            },
+            {
+              "name": "loginPassword",
+              "value": "YWRtaW4="
+            }
+          ]
+        },
+        "url": "http://host/goform/login"
+      },
+      "response": {
+        "content": {
+          "size": 0,
+          "text": ""
+        },
+        "cookies": [],
+        "headers": [
+          {
+            "name": "Location",
+            "value": "/home.asp"
+          }
+        ],
+        "status": 302
+      }
+    },
+    {
+      "request": {
+        "cookies": [],
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Basic dXNlcjpwYXNz"
+          }
+        ],
+        "method": "GET",
+        "url": "/api/status"
+      },
+      "response": {
+        "content": {
+          "size": 4,
+          "text": "data"
+        },
+        "cookies": [],
+        "headers": [],
+        "status": 200
+      }
+    }
+  ],
+  "_expected_fields": {
+    "action": "/goform/login"
+  },
+  "_expected_strategy": "form",
+  "_transport": "http"
+}

@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from solentlabs.cable_modem_monitor_core.config_loader import validate_parser_config
+from solentlabs.cable_modem_monitor_core.fetch_list import collect_fetch_targets
 from solentlabs.cable_modem_monitor_core.har import build_resource_dict
 from solentlabs.cable_modem_monitor_core.models.field_registry import SYSTEM_INFO_FIELDS
 from solentlabs.cable_modem_monitor_core.parsers.coordinator import ModemParserCoordinator
@@ -89,8 +90,13 @@ def generate_golden_file(
 
     # Load HAR and build resource dict
     try:
+        selected = [target.path for target in collect_fetch_targets(parser_config) if "?" in target.path]
         resources = build_resource_dict(
-            har_path, transport=transport, getter_endpoint=getter_endpoint, requests=parser_config.requests
+            har_path,
+            transport=transport,
+            getter_endpoint=getter_endpoint,
+            requests=parser_config.requests,
+            selected=selected,
         )
     except Exception as e:
         return GenerateGoldenFileResult(

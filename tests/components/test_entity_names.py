@@ -53,14 +53,6 @@ _EXPECTED_NAMES: list[tuple[str, str]] = [
     ("ChannelSensor", "US ATDMA Ch 1 Frequency"),
     ("ChannelSensor", "US ATDMA Ch 1 Power"),
     ("HttpLatencySensor", "HTTP Latency"),
-    ("LanStatsSensor", "LAN eth0 Received Bytes"),
-    ("LanStatsSensor", "LAN eth0 Received Drops"),
-    ("LanStatsSensor", "LAN eth0 Received Errors"),
-    ("LanStatsSensor", "LAN eth0 Received Packets"),
-    ("LanStatsSensor", "LAN eth0 Transmitted Bytes"),
-    ("LanStatsSensor", "LAN eth0 Transmitted Drops"),
-    ("LanStatsSensor", "LAN eth0 Transmitted Errors"),
-    ("LanStatsSensor", "LAN eth0 Transmitted Packets"),
     ("ModemChannelCountSensor", "DS Channel Count"),
     ("ModemChannelCountSensor", "US Channel Count"),
     ("ModemErrorRateSensor", "Rate Corrected Errors"),
@@ -80,10 +72,8 @@ _EXPECTED_NAMES: list[tuple[str, str]] = [
 
 
 def _rich_modem_data() -> dict[str, Any]:
-    """Fixture exercising system sensors, both channel directions, and LAN stats."""
-    data: dict[str, Any] = dict(MOCK_MODEM_DATA)
-    data["lan_stats"] = {"eth0": {"received_bytes": 42000, "transmitted_bytes": 1701}}
-    return data
+    """Fixture exercising system sensors and both channel directions."""
+    return dict(MOCK_MODEM_DATA)
 
 
 def _display_name(entity: Any, platform: str) -> str:

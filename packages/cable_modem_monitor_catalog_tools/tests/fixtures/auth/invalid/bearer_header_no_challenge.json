@@ -1,0 +1,30 @@
+{
+  "_description": "A non-Basic Authorization scheme with no challenge is not read as Basic - hard stop",
+  "_entries": [
+    {
+      "request": {
+        "cookies": [],
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Bearer abc123"
+          }
+        ],
+        "method": "GET",
+        "url": "/status.html"
+      },
+      "response": {
+        "content": {
+          "size": 4,
+          "text": "data"
+        },
+        "cookies": [],
+        "headers": [],
+        "status": 200
+      }
+    }
+  ],
+  "_expected_hard_stop": "Cannot determine auth mechanism",
+  "_expected_strategy": "unknown",
+  "_transport": "http"
+}

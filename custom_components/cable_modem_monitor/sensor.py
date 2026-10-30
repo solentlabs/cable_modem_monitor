@@ -146,31 +146,28 @@ _DRATE = SensorDeviceClass.DATA_RATE
 # Unit of the symbol_rate channel attribute (FIELD_REGISTRY: stored in Sym/s).
 _SYMBOL_RATE_UNIT = "Sym/s"
 
+# Channel fields that never become attributes: a per-poll counter would write
+# a new recorder row per channel per poll (#178). Core keeps them; the
+# integration publishes the aggregate (ENTITY_MODEL_SPEC § Channel Field
+# Pass-Through).
+_NEVER_ATTRIBUTE_FIELDS = frozenset({"bytes"})
+
 # Each tuple: (field, name_suffix, unit, device_class, state_class, icon, value_type)
+# Frequency has no state_class: it is the channel plan slot, so a long-term mean is meaningless.
 # fmt: off
 _DS_METRICS = [
     ("power",       "Power",       "dBmV", None,  _M,  "mdi:signal",        float),
     ("snr",         "SNR",         "dB",   None,  _M,  "mdi:signal-variant", float),
-    ("frequency",   "Frequency",   "Hz",   _FREQ, _M,  "mdi:sine-wave",     int),
+    ("frequency",   "Frequency",   "Hz",   _FREQ, None, "mdi:sine-wave",    int),
     ("corrected",   "Corrected",   None,   None,  _TI, "mdi:check-circle",  int),
     ("uncorrected", "Uncorrected", None,   None,  _TI, "mdi:alert-circle",  int),
 ]
 
 _US_METRICS = [
     ("power",     "Power",     "dBmV", None,  _M, "mdi:signal",    float),
-    ("frequency", "Frequency", "Hz",   _FREQ, _M, "mdi:sine-wave", int),
+    ("frequency", "Frequency", "Hz",   _FREQ, None, "mdi:sine-wave", int),
 ]
 
-_LAN_METRICS = [
-    ("received_bytes",      "Received Bytes",      _DSIZE, "B"),
-    ("received_packets",    "Received Packets",    None,   None),
-    ("received_errors",     "Received Errors",     None,   None),
-    ("received_drops",      "Received Drops",      None,   None),
-    ("transmitted_bytes",   "Transmitted Bytes",   _DSIZE, "B"),
-    ("transmitted_packets", "Transmitted Packets", None,   None),
-    ("transmitted_errors",  "Transmitted Errors",  None,   None),
-    ("transmitted_drops",   "Transmitted Drops",   None,   None),
-]
 # fmt: on
 
 # Power and SNR are always created for downstream; power for upstream.
@@ -180,23 +177,28 @@ _US_ALWAYS_FIELDS = frozenset(("power",))
 
 
 class _FieldUnitMeta(NamedTuple):
-    """HA unit metadata for a continuous system_info field."""
+    """HA unit metadata for a system_info field."""
 
     native_unit: str
     device_class: SensorDeviceClass | None
-    state_class: SensorStateClass | None
     suggested_unit: str | None = None
 
 
 # Units and device classes for dynamic system_info fields.
-# Fields not listed here display as unitless strings.
+# Fields not listed here display as unitless strings. None carry a
+# state_class: provisioned speed and burst are plan configuration and the
+# LAN byte counters are cumulative totals, so they stay out of long-term
+# statistics.
 _SYSTEM_INFO_FIELD_UNITS: dict[str, _FieldUnitMeta] = {
     # HA applies no default scaling to DATA_RATE, so the raw bit/s these
     # store renders as "110100480 bit/s" without a suggested unit.
-    "provisioned_speed_down": _FieldUnitMeta("bit/s", _DRATE, _M, suggested_unit="Mbit/s"),
-    "provisioned_speed_up": _FieldUnitMeta("bit/s", _DRATE, _M, suggested_unit="Mbit/s"),
-    "provisioned_burst_down": _FieldUnitMeta("B", _DSIZE, _M),
-    "provisioned_burst_up": _FieldUnitMeta("B", _DSIZE, _M),
+    "provisioned_speed_down": _FieldUnitMeta("bit/s", _DRATE, suggested_unit="Mbit/s"),
+    "provisioned_speed_up": _FieldUnitMeta("bit/s", _DRATE, suggested_unit="Mbit/s"),
+    "provisioned_burst_down": _FieldUnitMeta("B", _DSIZE),
+    "provisioned_burst_up": _FieldUnitMeta("B", _DSIZE),
+    # Cumulative LAN byte totals (#178): no state_class, so no long-term statistics.
+    "lan_received_bytes": _FieldUnitMeta("B", _DSIZE),
+    "lan_transmitted_bytes": _FieldUnitMeta("B", _DSIZE),
 }
 
 # Abbreviations uppercased in humanized field names.
@@ -207,6 +209,7 @@ _SYSINFO_ABBREVIATIONS = frozenset(
         "dhcp",
         "tftp",
         "ip",
+        "lan",
         "mac",
         "snr",
         "fft",
@@ -542,6 +545,30 @@ class ModemErrorTotalSensor(_SystemInfoSensor):
         return int(value) if value is not None else None
 
 
+class ModemDownstreamBytesSensor(_SystemInfoSensor):
+    """Cumulative downstream bytes; no state_class, so no long-term statistics (#178)."""
+
+    _attr_name = "Total Downstream Bytes"
+    _attr_device_class = SensorDeviceClass.DATA_SIZE
+    _attr_native_unit_of_measurement = "B"
+    _attr_icon = "mdi:download-network"
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize the downstream bytes sensor."""
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_total_downstream_bytes"
+
+    @functools.cached_property
+    def native_value(self) -> int | None:
+        """Return the downstream byte total."""
+        value = self._get_system_info().get("total_downstream_bytes")
+        return int(value) if value is not None else None
+
+
 class ModemErrorRateSensor(_SystemInfoSensor):
     """Per-minute corrected or uncorrected error rate sensor (#164)."""
 
@@ -679,8 +706,9 @@ class SystemInfoFieldSensor(_HoldsLastValueMixin, _SystemInfoSensor):
     all pass-through fields.  Value is returned as-is with no type
     conversion.
 
-    Sticky for non-continuous fields (#178); continuous fields (those
-    in _SYSTEM_INFO_FIELD_UNITS) keep their graph-meaningful gaps.
+    Sticky (#178): no pass-through field carries a state_class, so none has
+    a graph gap worth preserving. Fields in _SYSTEM_INFO_FIELD_UNITS
+    (provisioned speed and burst) hold their last value too.
 
     See ENTITY_MODEL_SPEC.md § Field Pass-Through.
     """
@@ -699,25 +727,20 @@ class SystemInfoFieldSensor(_HoldsLastValueMixin, _SystemInfoSensor):
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_{field}"
         self._attr_icon = "mdi:information-outline"
         unit_meta = _SYSTEM_INFO_FIELD_UNITS.get(field)
-        self._continuous = unit_meta is not None
         if unit_meta is not None:
             self._attr_native_unit_of_measurement = unit_meta.native_unit
             self._attr_device_class = unit_meta.device_class
-            self._attr_state_class = unit_meta.state_class
             self._attr_suggested_unit_of_measurement = unit_meta.suggested_unit
 
     @property
     def available(self) -> bool:
-        """Sticky for non-continuous fields; continuous fields keep graph gaps."""
-        if self._continuous:
-            return super().available  # ModemSensorBase: requires modem_data
+        """Sticky: available while the coordinator is alive."""
         return self.coordinator.last_update_success
 
     @functools.cached_property
     def native_value(self) -> str | int | float | None:
-        """Return the field value as-is; held across gaps when non-continuous."""
-        current = self._get_system_info().get(self._field)
-        return current if self._continuous else self._hold_last(current)
+        """Return the field value as-is, held across gaps."""
+        return self._hold_last(self._get_system_info().get(self._field))
 
 
 # ------------------------------------------------------------------
@@ -750,7 +773,7 @@ class ChannelSensor(ModemSensorBase):
         name_suffix: str,
         unit: str | None,
         device_class: SensorDeviceClass | None,
-        state_class: SensorStateClass,
+        state_class: SensorStateClass | None,
         icon: str,
         value_type: type,
     ) -> None:
@@ -776,7 +799,8 @@ class ChannelSensor(ModemSensorBase):
             self._attr_unique_id = f"{entry.entry_id}_cable_modem_{dir_code}_{ch_type}_ch_{ch_id}_{field}"
 
         self._attr_icon = icon
-        self._attr_state_class = state_class
+        if state_class:
+            self._attr_state_class = state_class
         if unit:
             self._attr_native_unit_of_measurement = unit
         if device_class:
@@ -816,59 +840,12 @@ class ChannelSensor(ModemSensorBase):
         ch = self._find_channel()
         if ch is None:
             return {}
-        attrs = {key: value for key, value in ch.items() if key != self._field}
+        attrs = {key: value for key, value in ch.items() if key != self._field and key not in _NEVER_ATTRIBUTE_FIELDS}
         # Core stores symbol_rate in Sym/s; firmware labels vary (ksym/s,
         # Msym/s), so the unit is stated beside the value.
         if "symbol_rate" in attrs:
             attrs["symbol_rate_unit"] = _SYMBOL_RATE_UNIT
         return attrs
-
-
-# ------------------------------------------------------------------
-# LAN statistics sensors
-# ------------------------------------------------------------------
-
-
-class LanStatsSensor(ModemSensorBase):
-    """LAN statistics sensor for a specific interface and metric."""
-
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(
-        self,
-        coordinator: DataUpdateCoordinator[ModemSnapshot],
-        entry: CableModemConfigEntry,
-        *,
-        interface: str,
-        field: str,
-        name_suffix: str,
-        device_class: SensorDeviceClass | None,
-        unit: str | None,
-    ) -> None:
-        """Initialize the LAN stats sensor."""
-        super().__init__(coordinator, entry)
-        self._interface = interface
-        self._field = field
-        self._attr_name = f"LAN {interface} {name_suffix}"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_lan_{interface}_{field}"
-        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
-        if device_class:
-            self._attr_device_class = device_class
-        if unit:
-            self._attr_native_unit_of_measurement = unit
-
-    @functools.cached_property
-    def native_value(self) -> int | None:
-        """Return the LAN stats value."""
-        modem_data = self._snapshot.modem_data
-        if modem_data is None:
-            return None
-        lan_stats = modem_data.get("lan_stats", {})
-        iface_data = lan_stats.get(self._interface)
-        if iface_data is None:
-            return None
-        value = iface_data.get(self._field)
-        return int(value) if value is not None else None
 
 
 # ------------------------------------------------------------------
@@ -1083,32 +1060,6 @@ def _create_channel_sensors(
     return entities
 
 
-def _create_lan_sensors(
-    data_coord: DataUpdateCoordinator[ModemSnapshot],
-    entry: CableModemConfigEntry,
-    modem_data: dict[str, Any],
-) -> list[SensorEntity]:
-    """Create LAN statistics sensors from first poll data."""
-    entities: list[SensorEntity] = []
-    lan_stats = modem_data.get("lan_stats", {})
-
-    for interface in lan_stats:
-        for field, name, dev_cls, unit in _LAN_METRICS:
-            entities.append(
-                LanStatsSensor(
-                    data_coord,
-                    entry,
-                    interface=interface,
-                    field=field,
-                    name_suffix=name,
-                    device_class=dev_cls,
-                    unit=unit,
-                )
-            )
-
-    return entities
-
-
 def _create_data_dependent_entities(
     data_coord: DataUpdateCoordinator[ModemSnapshot],
     entry: CableModemConfigEntry,
@@ -1143,6 +1094,11 @@ def _create_data_dependent_entities(
         entities.append(ModemErrorTotalSensor(data_coord, entry, error_type="uncorrected"))
         entities.append(ModemErrorRateSensor(data_coord, entry, error_type="uncorrected"))
 
+    # Downstream byte total (gated by field presence; Core declares it only
+    # for modems whose every downstream channel reports bytes).
+    if "total_downstream_bytes" in system_info:
+        entities.append(ModemDownstreamBytesSensor(data_coord, entry))
+
     # Software version (gated by field presence). system_uptime gets no
     # sensor of its own — it feeds Last Boot Time below, and uptime is
     # rendered at display time as now − last_boot (#178).
@@ -1159,9 +1115,6 @@ def _create_data_dependent_entities(
 
     # Per-channel sensors
     entities.extend(_create_channel_sensors(data_coord, entry, modem_data))
-
-    # LAN stats sensors
-    entities.extend(_create_lan_sensors(data_coord, entry, modem_data))
 
     # Tier 3 dynamic system_info sensors (pass-through)
     for field in sorted(system_info):

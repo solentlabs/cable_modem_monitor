@@ -1,0 +1,18 @@
+{
+  "_expected_error": "at least one primary array",
+  "_config": {
+    "downstream": {
+      "format": "json",
+      "resource": "/api/status",
+      "arrays": [
+        {
+          "array_path": "data.errList",
+          "merge_by": ["channel_index"],
+          "fields": [
+            {"key": "Index", "field": "channel_index", "type": "integer"}
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1113,7 +1113,11 @@ class TestHttpActionQuery:
 # │ https://192.168.100.1        │ 8443 │ None   │ https://192.168.100.1:8443   │ scheme kept        │
 # │ http://[2001:db8::1]:80      │ 8080 │ None   │ http://[2001:db8::1]:8080    │ IPv6 host kept     │
 # │ https://192.168.100.1        │ 8080 │ http   │ http://192.168.100.1:8080    │ scheme overridden  │
-# │ https://192.168.100.1:443    │ None │ http   │ http://192.168.100.1:443     │ scheme only        │
+# │ https://192.168.100.1:443    │ None │ http   │ http://192.168.100.1         │ default port goes  │
+# │ http://192.168.100.1:80      │ None │ https  │ https://192.168.100.1        │ default port goes  │
+# │ http://192.168.100.1:8080    │ None │ https  │ https://192.168.100.1:8080   │ other port stays   │
+# │ http://192.168.100.1:80      │ None │ http   │ http://192.168.100.1:80      │ same scheme        │
+# │ http://[2001:db8::1]:80      │ None │ https  │ https://[2001:db8::1]        │ IPv6 default goes  │
 # └──────────────────────────────┴──────┴────────┴──────────────────────────────┴────────────────────┘
 # fmt: off
 WITH_PORT_CASES = [
@@ -1124,7 +1128,11 @@ WITH_PORT_CASES = [
     ("https://192.168.100.1",     8443,  None,    "https://192.168.100.1:8443", "scheme_kept"),
     ("http://[2001:db8::1]:80",   8080,  None,    "http://[2001:db8::1]:8080",  "ipv6_host_kept"),
     ("https://192.168.100.1",     8080,  "http",  "http://192.168.100.1:8080",  "scheme_overridden"),
-    ("https://192.168.100.1:443", None,  "http",  "http://192.168.100.1:443",   "scheme_only"),
+    ("https://192.168.100.1:443", None,  "http",  "http://192.168.100.1",       "https_default_port_goes"),
+    ("http://192.168.100.1:80",   None,  "https", "https://192.168.100.1",      "http_default_port_goes"),
+    ("http://192.168.100.1:8080", None,  "https", "https://192.168.100.1:8080", "other_port_stays"),
+    ("http://192.168.100.1:80",   None,  "http",  "http://192.168.100.1:80",    "same_scheme_untouched"),
+    ("http://[2001:db8::1]:80",   None,  "https", "https://[2001:db8::1]",      "ipv6_default_port_goes"),
 ]
 # fmt: on
 
@@ -1135,7 +1143,7 @@ WITH_PORT_CASES = [
     ids=[c[4] for c in WITH_PORT_CASES],
 )
 def test_with_port(base_url: str, port: int | None, scheme: str | None, expected: str) -> None:
-    """with_port swaps the port and scheme the action names, and nothing else of the configured URL."""
+    """with_port swaps the port and scheme the action names; a default port goes with its scheme."""
     assert with_port(base_url, port, scheme) == expected
 
 

@@ -126,6 +126,7 @@ words:
   - SNMP
   - Snmp
   - SOAP
+  - statsifc
   - subcarrier
   - subcarriers
   - Symb
@@ -199,6 +200,7 @@ words:
 
   # Modem manufacturers and product lines
   - Arris
+  - ATCH
   - COMMSCOPE
   - TCOM
   - Compal
@@ -258,6 +260,7 @@ words:
   - unitymedia
   - UNKN
   - VARI
+  - Vectra
   - Videotron
   - videotron
   - Vidéotron
@@ -290,6 +293,7 @@ words:
   - dschannel
   - dsid
   - dsinfo
+  - dsoctets
   - dsofdminfo
   - firmwares
   - firmwareversion
