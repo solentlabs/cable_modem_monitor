@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Repairs warning, "state class no longer supported", once each: 32 on a 24x8
   modem. Fix each under Developer Tools, Statistics, or leave it. Statistics
   stop accruing; the database does not shrink. The new
-  [troubleshooting entry](docs/TROUBLESHOOTING.md#keeping-channel-sensors-out-of-the-database)
+  [troubleshooting entry](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#keeping-channel-sensors-out-of-the-database)
   shows how to keep channel sensors out of the recorder altogether.
 - **Intake splits one channel array that mixes SC-QAM and OFDM.** The OFDM
   keys (channel width, FFT type, active subcarriers) were missed because the
@@ -53,7 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Provisioned speed and burst no longer feed long-term statistics.** They
   were recorded as measurements, so a plan that never changes filled the
   statistics database with a flat line. History already recorded stays;
-  statistics stop accruing for the four sensors.
+  statistics stop accruing for the four sensors. They also keep their last
+  value through a modem outage instead of going unavailable.
 - **Intake reads provisioned speed from a Netgear status page.** The page's
   `InitProvRateTableTagValue` function labels its columns in a comment, which
   intake never read, so the C7000v2 capture produced no provisioned speed. Intake
