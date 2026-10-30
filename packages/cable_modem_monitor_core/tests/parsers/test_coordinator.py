@@ -133,6 +133,20 @@ MERGE_CASES = [
         ["channel_id"],
         [],
     ),
+    (
+        "keyless rows do not join each other",
+        [{"power": 3.2}, {"channel_id": 1, "power": 4.0}],
+        [{"corrected": 7}, {"channel_id": 1, "corrected": 100}],
+        ["channel_id"],
+        [{"power": 3.2}, {"channel_id": 1, "power": 4.0, "corrected": 100}],
+    ),
+    (
+        "partial composite key is keyless",
+        [{"channel_type": "qam", "power": 3.2}],
+        [{"channel_type": "qam", "corrected": 7}],
+        ["channel_type", "channel_id"],
+        [{"channel_type": "qam", "power": 3.2}],
+    ),
 ]
 
 
@@ -402,7 +416,7 @@ class TestDerivedFieldEnrichment:
         result, _ = coordinator.parse(resources)
 
         # Native value (99) wins over computed (1). The field declares
-        # type: integer, so it arrives as an int, same as the computed
+        # an integer type, so it arrives as an int, same as the computed
         # path. See PARSING_SPEC § Output Contract.
         assert result["system_info"]["downstream_channel_count"] == 99
 
@@ -468,7 +482,7 @@ class TestDerivedFieldEnrichment:
         result, _ = coordinator.parse(resources)
 
         # Native value (999) wins over computed (300). The field declares
-        # type: integer, so it arrives as an int, same as the computed path.
+        # an integer type, so it arrives as an int, same as the computed path.
         assert result["system_info"]["total_corrected"] == 999
 
     def test_aggregate_type_qualified_scope(self) -> None:

@@ -21,6 +21,9 @@ from solentlabs.cable_modem_monitor_core.models.parser_config.json_format import
 from solentlabs.cable_modem_monitor_core.models.parser_config.transposed import (
     HTMLTableTransposedSection,
 )
+from solentlabs.cable_modem_monitor_core.parsers.formats.json_parser import (
+    JSONParser,
+)
 from solentlabs.cable_modem_monitor_core.parsers.registries import (
     _parse_hnap_channels,
     _parse_hnap_sysinfo,
@@ -361,6 +364,31 @@ def test_json_arrays_companion_primary_wins_conflict() -> None:
     data = {"dsList": _DS, "ofdmList": _OFDM, "errList": [{"Index": "1", "Other": "999"}]}
     channels, _ = _parse_json_channels(_json_companion_section(companion), {"/api/status": {"data": data}})
     assert channels[0]["channel_id"] == 10
+
+
+def test_json_parser_parse_excludes_companion_rows() -> None:
+    """JSONParser.parse() returns primary channels only; merging is the registry's job."""
+    data = {"dsList": _DS, "ofdmList": _OFDM, "errList": _ERR_ROWS}
+    channels = JSONParser(_json_companion_section()).parse({"/api/status": {"data": data}})
+    assert [c["channel_index"] for c in channels] == [1, 2, 3]
+    assert all("corrected" not in c for c in channels)
+
+
+def test_json_arrays_companion_with_own_resource() -> None:
+    """A companion on its own endpoint merges into primaries from the section resource."""
+    companion = {
+        "array_path": "errors",
+        "resource": "/api/errors",
+        "merge_by": ["channel_index"],
+        "fields": _JSON_COMPANION_FIELDS,
+    }
+    resources = {
+        "/api/status": {"data": {"dsList": _DS, "ofdmList": _OFDM}},
+        "/api/errors": {"errors": _ERR_ROWS},
+    }
+    channels, count = _parse_json_channels(_json_companion_section(companion), resources)
+    assert channels == _ALL_MERGED
+    assert (count.expected, count.fulfilled) == (2, 2)
 
 
 def test_json_arrays_companion_is_not_an_anchor() -> None:

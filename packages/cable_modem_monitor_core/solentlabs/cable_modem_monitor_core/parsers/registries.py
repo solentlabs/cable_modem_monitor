@@ -572,18 +572,20 @@ def _merge_channels(
     """Merge fields from a companion table into primary channels.
 
     Builds a lookup by the declared key fields, then enriches primary
-    channels. Primary always wins on field conflicts.
+    channels. Primary always wins on field conflicts. A row missing any
+    key field has no identity, so it neither joins nor is joined.
 
     Per PARSING_SPEC.md Companion Tables (merge_by) section.
     """
     merge_map: dict[tuple[Any, ...], dict[str, Any]] = {}
     for ch in merge_table:
         key = tuple(ch.get(field) for field in merge_by)
-        merge_map[key] = ch
+        if None not in key:
+            merge_map[key] = ch
 
     for ch in primary:
         key = tuple(ch.get(field) for field in merge_by)
-        extra = merge_map.get(key, {})
+        extra = {} if None in key else merge_map.get(key, {})
         for field, value in extra.items():
             if field not in ch:
                 ch[field] = value
