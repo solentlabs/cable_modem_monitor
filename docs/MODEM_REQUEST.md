@@ -7,14 +7,14 @@ Comfortable with AI tools and want to do more of the work yourself? See
 the [AI-assisted catalog contribution guide](../CONTRIBUTING.md#ai-assisted-catalog-contribution).
 
 The integration reads channel data, error counts, connection status,
-firmware and uptime; never WiFi settings, device lists or account
-details.
+firmware and uptime. It only reads, apart from the optional Restart
+button.
 
 ## If an AI agent is helping
 
 - Say which tool and model helped, in the issue.
-- Capture with `har-capture` (section 1). A browser DevTools export has
-  no cookies and loses login values the catalog needs.
+- Capture with `har-capture` (section 1), not a browser DevTools
+  export. The intake pipeline expects its `.sanitized.har` output.
 - Do not send a failed login to the device outside step 6 of the
   capture.
 - File through the [issue form](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml)
