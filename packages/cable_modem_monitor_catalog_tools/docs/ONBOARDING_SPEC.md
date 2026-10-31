@@ -621,16 +621,17 @@ uses `"error": "ok"` on success — treating `error` as a general status
 field rather than a strict failure indicator. The default check
 ("no truthy `error` = success") breaks for these modems.
 
-**Detection rule:** Inspect the response body of the *login* POST (the
-second POST to `login_endpoint`, where the password field carries the
-derived hash — not the salt-trigger POST). Parse the response JSON.
+**Detection rule:** Inspect the response body of the accepted *login* POST
+(the one where the password field carries the derived hash, not the
+salt-trigger POST). Parse the response JSON.
 
-- If a field is present with a value that is non-null, non-false, and reads
-  as a sentinel (short string like `"ok"`, integer `0` meaning "no error",
-  boolean `true`) rather than an error description, emit `login_success`
-  with that key-value pair.
-- If the response has no `error` field, or `error` is null/false/absent,
-  omit `login_success` — the default behaviour handles it.
+- If its `error` value is a non-empty string and a rejected attempt in the
+  capture answered a different `error` value, emit `login_success` with
+  that pair. The rejected attempt is what tells a success sentinel such as
+  `"ok"` from an error description.
+- If the capture holds no rejected attempt, or `error` is absent, null or
+  not a string, omit `login_success`. The default behaviour handles it, and
+  a firmware that needs it is declared by hand after hardware confirms.
 
 **Examples:**
 

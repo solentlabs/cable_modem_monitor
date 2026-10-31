@@ -1,0 +1,46 @@
+{
+  "_description": "Form-encoded salt request then derived-hash login is form_pbkdf2; with no rejected attempt to compare, no login_success",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/api/v1/session/login",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded; charset=UTF-8"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded; charset=UTF-8",
+          "text": "username=user&password=seeksalthash"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 60, "text": "{\"error\":\"ok\",\"salt\":\"abc\",\"saltwebui\":\"def\"}"}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/api/v1/session/login",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded; charset=UTF-8"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded; charset=UTF-8",
+          "text": "username=user&password=derivedhash"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Set-Cookie", "value": "auth=token; Path=/"}],
+        "cookies": [{"name": "auth", "value": "token"}],
+        "content": {"size": 40, "text": "{\"error\":\"ok\",\"message\":\"MSG_LOGIN_1\"}"}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form_pbkdf2",
+  "_expected_fields": {"login_endpoint": "/api/v1/session/login"},
+  "_expected_absent_fields": ["salt_value", "login_success"],
+  "_expected_warning": "form_pbkdf2"
+}

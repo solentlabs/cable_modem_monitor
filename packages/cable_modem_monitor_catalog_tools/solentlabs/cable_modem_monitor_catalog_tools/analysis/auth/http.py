@@ -339,6 +339,11 @@ def _check_url_token_signals(
             signals.has_any_auth_signal = True
 
 
+def _has_salt_trigger(text: str) -> bool:
+    """True when a request body carries a PBKDF2 salt trigger."""
+    return any(trigger in text.lower() for trigger in _PBKDF2_SALT_TRIGGERS)
+
+
 def _check_json_post_signals(
     entry: dict[str, Any],
     text: str,
@@ -352,7 +357,7 @@ def _check_json_post_signals(
     if _is_login_url(url) and (any(f in text for f in _SJCL_POST_FIELDS) or _has_json_key(resp, _SJCL_RESPONSE_FIELDS)):
         signals.sjcl_login_entry = entry
         signals.has_any_auth_signal = True
-    elif any(trigger in text.lower() for trigger in _PBKDF2_SALT_TRIGGERS):
+    elif _has_salt_trigger(text):
         # form_pbkdf2 needs salt evidence; a login-shaped URL is not any
         signals.pbkdf2_entries.append(entry)
         signals.has_any_auth_signal = True
@@ -380,7 +385,12 @@ def _check_post_signals(
         _check_json_post_signals(entry, post_data.get("text", ""), resp, url, signals)
 
     if "form" in mime or "x-www-form-urlencoded" in mime:
-        if _is_login_url(url):
+        if _is_login_url(url) and _has_salt_trigger(post_data.get("text", "")):
+            # The salt request is not the login: the derived-hash POST that
+            # follows is, and it reaches the form path on its own.
+            signals.pbkdf2_entries.append(entry)
+            signals.has_any_auth_signal = True
+        elif _is_login_url(url):
             _check_form_login_post(entry, all_entries, url, status, signals)
         elif has_credential_fields(post_data):
             signals.unmatched_credential_posts.append(path_from_url(url))
@@ -779,10 +789,38 @@ def _extract_form_pbkdf2(signals: _HttpAuthSignals, warnings: list[str]) -> Auth
         pbkdf2_params = _extract_pbkdf2_params_from_response(resp_text)
         fields.update(pbkdf2_params)
 
+    login_success = _pbkdf2_login_success(signals)
+    if login_success:
+        fields["login_success"] = login_success
+
     return AuthDetail(
         strategy="form_pbkdf2",
         fields=fields,
     )
+
+
+def _pbkdf2_login_success(signals: _HttpAuthSignals) -> dict[str, Any]:
+    """The accepted login's ``error`` value, when a rejected attempt answered a different one."""
+    accepted = signals.form_post_entry
+    if accepted is None:
+        return {}
+    value = _response_error_value(accepted)
+    if not isinstance(value, str) or not value:
+        return {}
+    rejected = [_response_error_value(a) for a in signals.form_login_attempts if a is not accepted]
+    # Without a rejected attempt to differ from, a success sentinel cannot be told from an error description
+    if not any(isinstance(r, str) and r != value for r in rejected):
+        return {}
+    return {"error": value}
+
+
+def _response_error_value(entry: dict[str, Any]) -> Any:
+    """The ``error`` key of an entry's JSON response body, or None."""
+    try:
+        data = json.loads(entry["response"].get("content", {}).get("text", ""))
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return data.get("error") if isinstance(data, dict) else None
 
 
 def _extract_form_nonce(signals: _HttpAuthSignals) -> AuthDetail:
@@ -1277,7 +1315,8 @@ def _detect_basic_credential_in_query(req: dict[str, Any]) -> str | None:
 def _extract_pbkdf2_params_from_response(resp_text: str) -> dict[str, Any]:
     """Try to extract PBKDF2 parameters from a JSON response body.
 
-    Looks for salt, iterations, and key length fields in the response.
+    Looks for iterations and key length fields in the response. The salt
+    is a per-session server value, not config, so it is never extracted.
     Returns extracted params as a dict (may be partial or empty).
     """
     params: dict[str, Any] = {}
@@ -1295,7 +1334,6 @@ def _extract_pbkdf2_params_from_response(resp_text: str) -> dict[str, Any]:
         ("iter", "pbkdf2_iterations"),
         ("keyLength", "pbkdf2_key_length"),
         ("key_length", "pbkdf2_key_length"),
-        ("salt", "salt_value"),
     ]:
         if key in data:
             params[config_key] = data[key]

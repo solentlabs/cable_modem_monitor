@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the request the modem answered in the capture, replacing the copy from the
   CGA6444VF, and a Restart button is declared from the captured reset request.
   It still awaits verification on the reporter's hardware.
+- **Intake reads a form-encoded salt exchange as `form_pbkdf2` (#227).** The
+  salt trigger was recognised only in JSON bodies, so the CGA437ATCH4 login
+  came out as a plain `form` login. Intake also writes `login_success` from
+  the accepted login's `error` value when a rejected attempt in the capture
+  answered differently, and no longer copies the response's per-session salt
+  into the auth block, where the config schema rejects it.
 
 ## [3.14.15-beta.6] - 2026-10-30
 
