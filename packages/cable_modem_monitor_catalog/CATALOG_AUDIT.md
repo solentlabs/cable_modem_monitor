@@ -64,7 +64,7 @@ and share a diagnostics snapshot.
 | NE6037 | JSON-RPC | Play | — | captured |
 | CGA2121 | HTML | Telia | generated | n/a |
 | CGA4236 | HTML | Unknown | — | n/a |
-| CGA437ATCH4 | HTML | Vectra | hybrid | n/a |
+| CGA437ATCH4 | HTML | Vectra | — | captured |
 | CGA6444VF | HTML | Vodafone | — | n/a |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy | — | n/a |
 | EVW32C-0N | HTML | Telemach | hybrid | captured |

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The CGA437ATCH4 entry now rests on a full capture (#227).** The logout is
+  the request the modem answered in the capture, replacing the copy from the
+  CGA6444VF, and a Restart button is declared from the captured reset request.
+  It still awaits verification on the reporter's hardware.
+
 ## [3.14.15-beta.6] - 2026-10-30
 
 ### Added

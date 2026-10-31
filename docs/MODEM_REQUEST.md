@@ -10,6 +10,19 @@ The integration reads channel data, error counts, connection status,
 firmware and uptime; never WiFi settings, device lists or account
 details.
 
+## If an AI agent is helping
+
+- Say which tool and model helped, in the issue.
+- Capture with `har-capture` (section 1). A browser DevTools export has
+  no cookies and loses login values the catalog needs.
+- Do not send a failed login to the device outside step 6 of the
+  capture.
+- File through the [issue form](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml)
+  in a browser, not the API. The form carries the capture instructions
+  and the file upload.
+- Report what you observed on the device or in the logs, and mark
+  anything inferred.
+
 ## 1. Capture
 
 ```bash
@@ -107,6 +120,18 @@ Include the AI screen output if you ran it.
 
 Optional: the [HAR audit prompt](../CONTRIBUTING.md#auditing-a-har-for-completeness)
 checks a capture for missing login steps before you submit.
+
+## 4. Test the beta
+
+The maintainer comments when a beta with your modem is out. HACS lists
+only stable releases by default.
+
+1. In HACS, open Cable Modem Monitor, choose **Redownload**, turn on
+   **Show beta versions** and pick the version named in the comment.
+2. Restart Home Assistant.
+3. Add the integration and select your modem from the list.
+4. Download diagnostics (Settings, Devices & services, Cable Modem
+   Monitor, the three-dot menu) and attach the file to the issue.
 
 For examples, see [past modem requests](https://github.com/solentlabs/cable_modem_monitor/issues?q=label%3A%22new+modem%22)
 and the [modem catalog](../packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/).

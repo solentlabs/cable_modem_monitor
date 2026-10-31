@@ -31,12 +31,24 @@ actions:
     requires_session: true
     headers:
       X-Requested-With: "XMLHttpRequest"
-    # INFERRED, not observed: no logout was captured for this firmware.
-    # Copied from CGA6444VF, whose HAR shows the browser ending each
-    # session with this POST. Single-session firmware, so without it the
-    # next poll's login can collide with our own session (MSG_LOGIN_150).
-    # Replace with the observed request once a har-capture session
-    # records the log out step.
+    # HAR-observed: POST with the auth cookie and X-CSRF-TOKEN, no body;
+    # answers {"error":"ok","message":"logged out"}. Single-session
+    # firmware, so without it the next poll's login can collide with our
+    # own session (MSG_LOGIN_150).
+  restart:
+    type: http
+    method: POST
+    endpoint: "/api/v1/reset"
+    params:
+      reboot: "Router,Wifi,VoIP,Dect,MoCA"
+      ui_access: "reboot_device"
+    headers:
+      X-Requested-With: "XMLHttpRequest"
+    # HAR-observed: the Restart button of /views/adm_reset.html. The page
+    # reads GET /api/v1/reset first; the capture shows nothing on that
+    # response the POST needs, so no pre_fetch_url. The modem answers
+    # {"error":"ok","message":"all values saved","data":{"not_support":[],
+    # "set_failure":[]}}. reboot is one field listing the subsystems.
 
 hardware:
   docsis_version: "3.1"
@@ -51,9 +63,11 @@ sources:
     "[#227 Technicolor CGA437ATCH4](https://github.com/solentlabs/cable_modem_monitor/issues/227)
     — contributor reports Vectra (Poland)"
   logout_action:
-    "[#120 CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120)
-    — POST /api/v1/session/logout observed in that modem's HAR; inferred
-    here, not observed on this firmware"
+    "[#227 Technicolor CGA437ATCH4](https://github.com/solentlabs/cable_modem_monitor/issues/227)
+    — POST /api/v1/session/logout in the har-capture session"
+  restart:
+    "[#227 Technicolor CGA437ATCH4](https://github.com/solentlabs/cable_modem_monitor/issues/227)
+    — POST /api/v1/reset in the har-capture session"
 
 attribution:
   contributors:
@@ -74,12 +88,14 @@ notes: |
   MSG_LOGIN_1, which the firmware's own translation table renders as an invalid
   login, so success is error == "ok" (login_success).
 
-  test_data/modem.har is an assembled fixture (issue #227). Base: the
-  contributor's DevTools capture, sanitized by har-capture 0.15.1. One
-  substitution: the salt request's password FIELD_013d773e -> seeksalthash, the
-  literal the contributor quotes in the issue; the sanitizer redacts any value
-  under a credential-named key. Declared in log.comment. A DevTools export
-  carries no cookies, so cookie_name (auth) and login_busy (MSG_LOGIN_150) come
-  from the issue, not from a cookie-bearing capture. No logout or restart was
-  captured. The logout action is inferred from CGA6444VF (see the comment on
-  it); no restart is declared. A full har-capture session replaces the fixture.
+  A wrong password answers error "error" with message MSG_LOGIN_1 and
+  data.failedAttempts; it did not lock the account in the capture.
+  login_busy (MSG_LOGIN_150) is read from the firmware's login.html and
+  lang/en.json in the capture; no busy response was captured.
+
+  test_data/modem.har is the contributor's har-capture session (issue #227):
+  login, status pages, logout, a wrong-password login mid-run, and a restart.
+  Hand-applied redaction, by the contributor's account in the issue: the
+  login username, SSID, LAN hostnames and non-empty comments were replaced
+  with ***REDACTED***, because the sanitizer's review of those heuristic
+  matches was skipped. Everything else is sanitizer output.
