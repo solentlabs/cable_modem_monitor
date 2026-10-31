@@ -218,6 +218,22 @@ def test_unmatched_action_write_is_candidate(post_data: dict, expected_field: st
     assert [(a.field, a.blocking, [c.value for c in a.candidates]) for a in ambiguities] == expected
 
 
+@pytest.mark.parametrize(
+    ("post_data", "restart_warned"),
+    [
+        # A restart candidate is offered, so the capture does hold a restart request
+        ({"params": [{"name": "RebootAction", "value": "1"}]}, False),
+        # No action-like write: the capture holds no restart
+        ({"mimeType": "application/json", "text": '{"language": "en"}'}, True),
+    ],
+)
+def test_restart_candidate_silences_the_not_observed_warning(post_data: dict, restart_warned: bool) -> None:
+    """The not-observed warning is withheld when a candidate for that action is offered."""
+    warnings: list[str] = []
+    detect_actions([_post("/api/v9/devctl", post_data)], "http", warnings, [])
+    assert any(w.startswith(_NO_RESTART) for w in warnings) == restart_warned
+
+
 @pytest.mark.parametrize(("method", "candidate"), [("POST", True), ("PUT", True), ("PATCH", True), ("GET", False)])
 def test_unmatched_action_any_write_method(method: str, candidate: bool) -> None:
     """A logout sent by any write method at an unknown URL is a candidate; a GET carries no body to read."""

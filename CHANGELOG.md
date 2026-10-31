@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the accepted login's `error` value when a rejected attempt in the capture
   answered differently, and no longer copies the response's per-session salt
   into the auth block, where the config schema rejects it.
+- **Intake reads form-encoded request bodies decoded (#227).** An action body
+  captured as text came out as `Router%2CWifi`, which Core would encode a
+  second time, while the same body from a structured capture was decoded.
+  Intake also stops saying no restart was observed when it offers one as a
+  candidate.
 
 ## [3.14.15-beta.6] - 2026-10-30
 

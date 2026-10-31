@@ -11,6 +11,7 @@ import base64
 import contextlib
 import json
 from typing import Any
+from urllib.parse import unquote_plus
 
 # ---------------------------------------------------------------------------
 # Issue prefixes — structured markers for validation results
@@ -146,6 +147,8 @@ def parse_form_params(post_data: dict[str, Any]) -> dict[str, str]:
     """Parse form parameters from HAR postData.
 
     Handles both the ``params`` array and ``text`` with URL-encoded data.
+    Both return decoded names and values: Core sends configured params as a
+    dict, which it encodes itself.
     """
     result: dict[str, str] = {}
 
@@ -162,6 +165,6 @@ def parse_form_params(post_data: dict[str, Any]) -> dict[str, str]:
         for pair in text.split("&"):
             if "=" in pair:
                 k, v = pair.split("=", 1)
-                result[k] = v
+                result[unquote_plus(k)] = unquote_plus(v)
 
     return result
