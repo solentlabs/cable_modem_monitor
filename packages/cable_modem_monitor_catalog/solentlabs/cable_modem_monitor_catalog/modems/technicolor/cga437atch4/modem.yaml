@@ -53,6 +53,10 @@ actions:
 hardware:
   docsis_version: "3.1"
 
+detection:
+  http_headers:
+    - "WebServer"
+
 status: awaiting_verification
 
 sources:
