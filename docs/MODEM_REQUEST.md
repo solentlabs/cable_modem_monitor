@@ -123,11 +123,11 @@ checks a capture for missing login steps before you submit.
 
 ## 4. Test the beta
 
-The maintainer comments when a beta with your modem is out. HACS lists
-only stable releases by default.
+The maintainer comments when a beta with your modem is out.
 
-1. In HACS, open Cable Modem Monitor, choose **Redownload**, turn on
-   **Show beta versions** and pick the version named in the comment.
+1. In HACS, open Cable Modem Monitor, choose **Redownload**, click
+   **Need a different version?** and pick the version named in the
+   comment from the **Release** dropdown.
 2. Restart Home Assistant.
 3. Add the integration and select your modem from the list.
 4. Download diagnostics (Settings, Devices & services, Cable Modem
