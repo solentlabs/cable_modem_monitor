@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**52 configurations supported** — 33 confirmed on real hardware, 19 awaiting verification.
+**52 configurations supported** — 34 confirmed on real hardware, 18 awaiting verification.
 
 ---
 
@@ -67,7 +67,6 @@ and share a diagnostics snapshot.
 | CGA437ATCH4 | HTML | Vectra | — | captured |
 | CGA6444VF | HTML | Vodafone | — | n/a |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy | — | n/a |
-| EVW32C-0N | HTML | Telemach | hybrid | captured |
 
 ## Pending Review
 
@@ -122,6 +121,7 @@ Entries with an open capability gap are listed above, not here.
 | XB6 | HTML | Rogers | — | n/a |
 | XB7 | HTML | Rogers, Comcast, Xfinity | generated | n/a |
 | XB8 | HTML | Rogers, Comcast, Xfinity, Cox | — | captured |
+| EVW32C-0N | HTML | Telemach | hybrid | captured |
 
 ---
 

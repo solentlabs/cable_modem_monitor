@@ -33,7 +33,7 @@ hardware:
   docsis_version: "3.0"
   release_date: "2016"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   model: "[Issue #221 HAR](https://github.com/solentlabs/cable_modem_monitor/issues/221): UbeeSysInfo.asp reports Model EVW32C-0N (entry 8)"
