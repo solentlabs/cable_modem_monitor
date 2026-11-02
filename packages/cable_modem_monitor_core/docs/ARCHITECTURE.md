@@ -171,7 +171,7 @@ Core's engine. Depends on both Core and Catalog.
 | Reset entities button | Removes all entities from HA registry and reloads the integration |
 | Reauth flow | Circuit breaker triggers HA native `async_step_reauth` via `entry.async_start_reauth()`. On success: entry updated + reloaded — a fresh orchestrator starts with clean auth state |
 | Diagnostics | Combines Core's `OrchestratorDiagnostics` with HA-side sanitized logs, channel dump, PII checklist |
-| Dashboard generator | Service that generates Lovelace YAML for modem dashboard based on current channels |
+| Dashboard card generator | Service that generates the YAML for one Lovelace card for the modem, based on current channels |
 
 No parsing, no auth, no modem-specific knowledge. The integration has no
 capture affordance — `har-capture` is the tool for collecting raw modem

@@ -268,10 +268,7 @@ This spec does NOT address:
   [`dev_tools.py`](../dev_tools.py), registered in
   [`services.py`](../services.py)) covers most dashboard use cases via the
   copy-paste developer-tool pattern.
-- **Dashboard generator productization or JS dashboard strategies.**
-  Separate concern, documented in a separate forthcoming spec.
-- **Custom Lovelace cards.** General HA frontend components, not
-  modem-specific.
+- **Custom Lovelace cards.** Not a blueprint concern.
 - **HACS distribution of blueprints.** Deferred until the growth triggers
   in the Growth Path section are met.
 - **Auto-population of bundled blueprints inside the integration directory.**

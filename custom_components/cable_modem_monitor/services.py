@@ -1,7 +1,7 @@
 """Service registration wiring for Cable Modem Monitor.
 
 Registers and unregisters all HA services for this integration.
-Dev tool implementations (dashboard generator, channel identity
+Dev tool implementations (card generator, channel identity
 converter) live in dev_tools.py; this module is a thin registration
 layer that imports their handler factories.
 
