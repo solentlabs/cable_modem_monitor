@@ -2,7 +2,10 @@
   "domain": "cable_modem_monitor",
   "name": "Cable Modem Monitor",
   "after_dependencies": [
-    "recorder"
+    "frontend",
+    "http",
+    "recorder",
+    "websocket_api"
   ],
   "codeowners": [
     "@solentlabs"

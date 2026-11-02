@@ -127,12 +127,14 @@ def test_evaluate_zero_totals_never_actionable(desc, stored, onboarding_eligible
 # ---------------------------------------------------------------------
 
 
-def test_onboarding_message_includes_counts_and_service():
+def test_onboarding_message_includes_counts_and_card_pointer():
     message = format_onboarding_message(model="TPS-2000", current=_CURRENT)
     assert "TPS-2000" in message
     assert "24 downstream" in message
     assert "4 upstream" in message
-    assert "cable_modem_monitor.generate_dashboard_card" in message
+    assert "Add card" in message
+    assert "Cable Modem" in message
+    assert "generate_dashboard_card" not in message
 
 
 def test_change_message_formatter_is_gone():

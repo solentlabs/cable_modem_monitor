@@ -58,6 +58,7 @@ from solentlabs.cable_modem_monitor_core.post_processor import (
     load_post_processor,
 )
 
+from .card import async_register_card
 from .channel_bond_notifier import (
     ChannelTotals,
     evaluate,
@@ -456,6 +457,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     entry at call time. See HA_ADAPTER_SPEC.md § Services.
     """
     async_register_services(hass)
+    await async_register_card(hass)
     return True
 
 

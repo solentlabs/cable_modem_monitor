@@ -41,7 +41,7 @@ Core, it should.
 | [Reauth Flow](#reauth-flow) | Circuit breaker → `async_step_reauth` |
 | [Diagnostics Platform](#diagnostics-platform) | Core diagnostics + HA-side data |
 | [Services](#services) | `generate_dashboard_card`, `request_refresh`, `request_health_check` |
-| [Notifications](#notifications) | When one is warranted; first-poll onboarding with `generate_dashboard_card` hint |
+| [Notifications](#notifications) | When one is warranted; first-poll onboarding pointing to the Cable Modem card |
 | [Config Entry Migration](#config-entry-migration) | Version-keyed migration with auto-discovery |
 | [Testing](#testing) | No modem-specific names, dynamic catalog discovery |
 | [Distribution](#distribution) | HACS zip, PyPI packages, version pinning, release tiers |
@@ -1421,8 +1421,8 @@ channel number addressed the latter (#197).
 
 The data coordinator fires one persistent notification per config entry, the
 first time a successful poll reports channel totals. It points the user at
-`generate_dashboard_card` (Tools → Actions) so they can add a modem card to
-a dashboard.
+**Edit → Add card → Cable Modem** so they can add a modem card to a
+dashboard (DASHBOARD_CARD_SPEC.md).
 
 | Trigger | When it fires | Notification ID |
 |---------|---------------|-----------------|
@@ -1619,6 +1619,7 @@ The HA adapter layer consists of these modules:
 | `const.py` | Domain constants, config keys, defaults |
 | `services.py` | Service registration wiring — constants, schemas, `async_request_modem_refresh`, `request_refresh` / `request_health_check` handler factories, `async_register_services` |
 | `dev_tools.py` | Dev tool implementations — dashboard card YAML generator (`_build_*` / `_format_*` / channel helpers / `create_generate_dashboard_card_handler`) and channel identity converter (`_plan_stat_renames_*` / `_migrate_statistics` / `create_convert_channel_identity_handler`) |
+| `card/` | Bundled Cable Modem Lovelace card: websocket command, registration, and the frontend module (DASHBOARD_CARD_SPEC.md) |
 | `migrations/` | Version-keyed config entry migration handlers |
 | `core/log_buffer.py` | Log capture for diagnostics (HA adapter + Core package loggers) |
 | `lib/host_validation.py` | URL building, host input parsing |

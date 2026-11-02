@@ -24,12 +24,12 @@ from custom_components.cable_modem_monitor.coordinator import (
 from custom_components.cable_modem_monitor.dev_tools import (
     NO_ERROR_TOTAL_MESSAGE,
     _add_channel_graphs,
-    _build_channel_graph_yaml,
+    _build_channel_graph,
     _build_channel_lookup,
-    _build_error_graphs_yaml,
-    _build_latency_graph_yaml,
-    _build_restart_button_card_yaml,
-    _build_status_card_yaml,
+    _build_error_graphs,
+    _build_latency_graph,
+    _build_restart_button_card,
+    _build_status_card,
     _EntityResolver,
     _find_loaded_entry,
     _format_channel_label,
@@ -56,6 +56,12 @@ from custom_components.cable_modem_monitor.services import (
     create_request_health_check_handler,
     create_request_refresh_handler,
 )
+
+
+def _yaml_of(obj: Any) -> str:
+    """Render a card dict (or list of cards) as YAML for substring checks."""
+    return yaml_lib.safe_dump(obj, sort_keys=False)
+
 
 # -----------------------------------------------------------------------
 # _get_channel_info
@@ -198,11 +204,11 @@ def test_dashboard_titles_long():
 
 
 # -----------------------------------------------------------------------
-# YAML builders
+# Card builders
 # -----------------------------------------------------------------------
 
 
-def test_build_status_card_yaml_full():
+def test_build_status_card_full():
     """Status card includes counts (stable summary values) and excludes rates.
 
     Rate sensors exist as HA entities but are intentionally omitted from
@@ -218,13 +224,13 @@ def test_build_status_card_yaml_full():
         "rate_corrected": 5.0,
         "rate_uncorrected": 0.0,
     }
-    lines = _build_status_card_yaml(
+    card = _build_status_card(
         _resolver_for(),
         system_info,
         has_icmp=True,
         has_head=True,
     )
-    yaml = "\n".join(lines)
+    yaml = _yaml_of(card)
     assert "sensor.cable_modem_status" in yaml
     assert "sensor.cable_modem_ping_latency" in yaml
     assert "sensor.cable_modem_tcp_latency" in yaml
@@ -242,16 +248,16 @@ def test_build_status_card_yaml_full():
     assert "restart_modem" not in yaml
 
 
-def test_build_status_card_yaml_minimal():
+def test_build_status_card_minimal():
     """Status card omits entities when modem data is sparse and HEAD unsupported."""
     system_info: dict[str, Any] = {}
-    lines = _build_status_card_yaml(
+    card = _build_status_card(
         _resolver_for(),
         system_info,
         has_icmp=False,
         has_head=False,
     )
-    yaml = "\n".join(lines)
+    yaml = _yaml_of(card)
     assert "sensor.cable_modem_status" in yaml
     assert "sensor.cable_modem_tcp_latency" in yaml
     assert "ds_channel_count" in yaml
@@ -263,7 +269,7 @@ def test_build_status_card_yaml_minimal():
     assert "total_corrected_errors" not in yaml
 
 
-def test_build_status_card_yaml_passthrough_fields():
+def test_build_status_card_passthrough_fields():
     """Unknown system_info fields appear via the dynamic pass-through loop."""
     system_info = {
         "ds_power_status": "Good",
@@ -276,8 +282,8 @@ def test_build_status_card_yaml_passthrough_fields():
         "total_uncorrected": 0,
         "rate_corrected": 5.0,
     }
-    lines = _build_status_card_yaml(_resolver_for(), system_info, has_icmp=False, has_head=False)
-    yaml = "\n".join(lines)
+    card = _build_status_card(_resolver_for(), system_info, has_icmp=False, has_head=False)
+    yaml = _yaml_of(card)
     assert "sensor.cable_modem_ds_power_status" in yaml
     assert "sensor.cable_modem_ds_snr_status" in yaml
     assert "sensor.cable_modem_us_power_status" in yaml
@@ -317,10 +323,10 @@ def test_passthrough_formerly_explicit_fields(system_info: dict[str, Any], expec
     Exclusion is disabled here — this test asserts loop reach, not the
     default exclusion policy (covered below).
     """
-    lines = _build_status_card_yaml(
+    card = _build_status_card(
         _resolver_for("modem"), system_info, has_icmp=False, has_head=False, exclude_fields=frozenset()
     )
-    assert expected_entity in "\n".join(lines)
+    assert expected_entity in _yaml_of(card)
 
 
 def test_status_card_display_only_fields_never_appear():
@@ -332,19 +338,22 @@ def test_status_card_display_only_fields_never_appear():
         "software_version": "1.0",
         "ds_power_status": "Good",
     }
-    lines = _build_status_card_yaml(_resolver_for("modem"), system_info, has_icmp=False, has_head=False)
-    yaml = "\n".join(lines)
+    card = _build_status_card(_resolver_for("modem"), system_info, has_icmp=False, has_head=False)
+    yaml = _yaml_of(card)
     assert "hardware_version" not in yaml
     assert "model_name" not in yaml
     assert "sensor.modem_ds_power_status" in yaml
     # DOCSIS status is an attribute row off the Status sensor (the
     # standalone sensor was retired, #178) — no standalone entity.
     assert "sensor.modem_docsis_status" not in yaml
-    assert lines.count("        attribute: docsis_status") == 1
-    assert "name: DOCSIS Status" in yaml
+    assert card is not None
+    rows = card["entities"]
+    assert [row for row in rows if row.get("attribute") == "docsis_status"] == [
+        {"type": "attribute", "entity": "sensor.modem_status", "attribute": "docsis_status", "name": "DOCSIS Status"}
+    ]
     # Positioned before Software Version, at its historical spot.
-    docsis_idx = lines.index("        attribute: docsis_status")
-    sw_idx = lines.index("      - entity: sensor.modem_software_version")
+    docsis_idx = next(i for i, row in enumerate(rows) if row.get("attribute") == "docsis_status")
+    sw_idx = next(i for i, row in enumerate(rows) if row["entity"] == "sensor.modem_software_version")
     assert docsis_idx < sw_idx
 
 
@@ -355,8 +364,8 @@ def test_status_card_exclude_override():
         "ds_power_status": "Good",
         "dhcp_status": "Ready",
     }
-    yaml = "\n".join(
-        _build_status_card_yaml(
+    yaml = _yaml_of(
+        _build_status_card(
             _resolver_for("modem"),
             system_info,
             has_icmp=False,
@@ -372,8 +381,8 @@ def test_status_card_exclude_override():
 def test_status_card_exclude_drops_docsis_row():
     """Excluding docsis_status removes the explicit DOCSIS Status row."""
     system_info = {"docsis_status": "Operational"}
-    yaml = "\n".join(
-        _build_status_card_yaml(
+    yaml = _yaml_of(
+        _build_status_card(
             _resolver_for("modem"),
             system_info,
             has_icmp=False,
@@ -384,10 +393,10 @@ def test_status_card_exclude_drops_docsis_row():
     assert "docsis_status" not in yaml
 
 
-def test_build_restart_button_card_yaml():
+def test_build_restart_button_card():
     """Restart button is a dedicated `button` card so confirmation always fires."""
-    lines = _build_restart_button_card_yaml(_resolver_for())
-    yaml = "\n".join(lines)
+    card = _build_restart_button_card(_resolver_for())
+    yaml = _yaml_of(card)
     assert "type: button" in yaml
     assert "entity: button.cable_modem_restart_modem" in yaml
     # Entities-card row tap_actions get bypassed by the button widget,
@@ -397,12 +406,23 @@ def test_build_restart_button_card_yaml():
     assert "entity_id: button.cable_modem_restart_modem" in yaml
     assert "confirmation:" in yaml
     assert "This will restart your modem" in yaml
+    assert card is not None
+    assert card["tap_action"]["confirmation"] == {
+        "text": "This will restart your modem and temporarily disconnect your internet."
+    }
 
 
-def test_build_channel_graph_yaml():
+def test_build_restart_button_card_absent_without_button():
+    """No restart button registered: no card, not an empty shell."""
+    resolver = MagicMock()
+    resolver.button.return_value = None
+    assert _build_restart_button_card(resolver) is None
+
+
+def test_build_channel_graph():
     """Channel graph card has correct entity IDs and labels."""
     info = [("qam", 1), ("qam", 2)]
-    lines = _build_channel_graph_yaml(
+    card = _build_channel_graph(
         _resolver_for("cm"),
         "DS Power",
         24,
@@ -410,57 +430,57 @@ def test_build_channel_graph_yaml():
         "ds_{ch_type}_ch_{ch_id}_power",
         "full",
     )
-    yaml = "\n".join(lines)
+    yaml = _yaml_of(card)
     assert "title: DS Power" in yaml
     assert "hours_to_show: 24" in yaml
     assert "sensor.cm_ds_qam_ch_1_power" in yaml
     assert "sensor.cm_ds_qam_ch_2_power" in yaml
 
 
-def test_build_error_graphs_yaml_counts_only_by_default():
+def test_build_error_graphs_counts_only_by_default():
     """Default: counts only — rate graphs are opt-in via include_rates."""
     titles = _get_dashboard_titles(False)
-    lines = _build_error_graphs_yaml(_resolver_for("cm"), titles)
-    yaml = "\n".join(lines)
+    card = _build_error_graphs(_resolver_for("cm"), titles)
+    yaml = _yaml_of(card)
     assert "sensor.cm_total_corrected_errors" in yaml
     assert "sensor.cm_total_uncorrected_errors" in yaml
     assert "rate_corrected_errors" not in yaml
     assert "rate_uncorrected_errors" not in yaml
 
 
-def test_build_error_graphs_yaml_with_rates_opt_in():
+def test_build_error_graphs_with_rates_opt_in():
     """include_rates=True appends rate history graphs after counts."""
     titles = _get_dashboard_titles(False)
-    lines = _build_error_graphs_yaml(_resolver_for("cm"), titles, include_rates=True)
-    yaml = "\n".join(lines)
+    card = _build_error_graphs(_resolver_for("cm"), titles, include_rates=True)
+    yaml = _yaml_of(card)
     assert "sensor.cm_total_corrected_errors" in yaml
     assert "sensor.cm_total_uncorrected_errors" in yaml
     assert "sensor.cm_rate_corrected_errors" in yaml
     assert "sensor.cm_rate_uncorrected_errors" in yaml
 
 
-def test_build_latency_graph_yaml_with_icmp_and_head():
+def test_build_latency_graph_with_icmp_and_head():
     """Latency graph includes Ping, TCP, and HTTP HEAD when all available."""
-    lines = _build_latency_graph_yaml(_resolver_for("cm"), has_icmp=True, has_head=True)
-    yaml = "\n".join(lines)
+    card = _build_latency_graph(_resolver_for("cm"), has_icmp=True, has_head=True)
+    yaml = _yaml_of(card)
     assert "sensor.cm_ping_latency" in yaml
     assert "sensor.cm_tcp_latency" in yaml
     assert "sensor.cm_http_latency" in yaml
 
 
-def test_build_latency_graph_yaml_no_icmp_no_head():
+def test_build_latency_graph_no_icmp_no_head():
     """Latency graph omits Ping and HTTP when unavailable; TCP always present."""
-    lines = _build_latency_graph_yaml(_resolver_for("cm"), has_icmp=False, has_head=False)
-    yaml = "\n".join(lines)
+    card = _build_latency_graph(_resolver_for("cm"), has_icmp=False, has_head=False)
+    yaml = _yaml_of(card)
     assert "ping_latency" not in yaml
     assert "sensor.cm_tcp_latency" in yaml
     assert "http_latency" not in yaml
 
 
-def test_build_latency_graph_yaml_icmp_only():
+def test_build_latency_graph_icmp_only():
     """Latency graph: ICMP supported but HEAD not — no HTTP line."""
-    lines = _build_latency_graph_yaml(_resolver_for("cm"), has_icmp=True, has_head=False)
-    yaml = "\n".join(lines)
+    card = _build_latency_graph(_resolver_for("cm"), has_icmp=True, has_head=False)
+    yaml = _yaml_of(card)
     assert "sensor.cm_ping_latency" in yaml
     assert "sensor.cm_tcp_latency" in yaml
     assert "http_latency" not in yaml
@@ -473,7 +493,7 @@ def test_build_latency_graph_yaml_icmp_only():
 
 def test_add_channel_graphs_by_direction_single_type():
     """By-direction grouping with single type inserts type in title."""
-    parts: list[str] = []
+    parts: list[dict[str, Any]] = []
     info = [("qam", 1), ("qam", 2)]
     _add_channel_graphs(
         parts,
@@ -486,14 +506,14 @@ def test_add_channel_graphs_by_direction_single_type():
         "by_direction",
         False,
     )
-    yaml = "\n".join(parts)
+    yaml = _yaml_of(parts)
     assert "QAM" in yaml  # type inserted in title
     assert "sensor.cm_ds_qam_ch_1_power" in yaml
 
 
 def test_add_channel_graphs_by_type():
     """By-type grouping creates separate cards per type."""
-    parts: list[str] = []
+    parts: list[dict[str, Any]] = []
     info = [("qam", 1), ("ofdm", 33)]
     _add_channel_graphs(
         parts,
@@ -506,14 +526,14 @@ def test_add_channel_graphs_by_type():
         "by_type",
         False,
     )
-    yaml = "\n".join(parts)
+    yaml = _yaml_of(parts)
     # Two separate title cards
     assert yaml.count("title:") == 2
 
 
 def test_add_channel_graphs_empty():
     """Empty channel list produces no output."""
-    parts: list[str] = []
+    parts: list[dict[str, Any]] = []
     _add_channel_graphs(
         parts,
         _resolver_for("cm"),
@@ -952,7 +972,7 @@ def test_find_loaded_entry_none() -> None:
 
 def test_add_channel_graphs_multi_type_by_direction() -> None:
     """Multi-type by-direction uses base title and full labels."""
-    parts: list[str] = []
+    parts: list[dict[str, Any]] = []
     info = [("qam", 1), ("ofdm", 33)]
     _add_channel_graphs(
         parts,
@@ -965,7 +985,7 @@ def test_add_channel_graphs_multi_type_by_direction() -> None:
         "by_direction",
         False,
     )
-    yaml = "\n".join(parts)
+    yaml = _yaml_of(parts)
     # Multi-type uses base title (no type prefix)
     assert "Downstream Power Levels (dBmV)" in yaml
     # Auto label becomes "full" for multi-type
@@ -1029,6 +1049,12 @@ def test_generate_dashboard_handler(
     assert "sensor.cable_modem_tcp_latency" in yaml
     assert "sensor.cable_modem_http_latency" in yaml
     assert "entity: button.cable_modem_restart_modem" in yaml
+    # The pasted YAML and the `card` dict are one card: the YAML is the
+    # dict serialised, with list items indented under their key.
+    assert list(result) == ["yaml"]
+    # List items sit indented under their key, as HA's editor shows them.
+    assert "cards:\n  - type: " in yaml
+    assert yaml_lib.safe_load(yaml)["type"] == "vertical-stack"
 
 
 # Suffixes where the entity ID and unique ID spellings diverge (#205).

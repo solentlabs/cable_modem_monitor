@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A Cable Modem card you add from the dashboard's Add card list (#229).**
+  Pick Cable Modem, choose your modem and which graphs to show in the form,
+  and no YAML is needed. The onboarding notification now points there instead
+  of at the `generate_dashboard_card` action, which stays for anyone who
+  wants the YAML. The card is separate from monitoring: if it cannot load,
+  your modem keeps working.
+
 ### Changed
 
 - **The CGA437ATCH4 entry now rests on a full capture (#227).** The logout is
