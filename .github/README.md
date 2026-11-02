@@ -303,7 +303,7 @@ The integration registers three buttons under the modem device:
 
 ### Services
 
-- **`cable_modem_monitor.generate_dashboard`**: Generates a Lovelace dashboard YAML tailored to your modem's channel layout. Configurable: which graphs to include (status card, downstream/upstream power/SNR/frequency, errors, latency), `graph_hours` window (1–168), and short-title mode.
+- **`cable_modem_monitor.generate_dashboard_card`**: Generates the YAML for one Lovelace card tailored to your modem's channel layout, to paste into a dashboard through Add card > By card > Manual. Configurable: which graphs to include (status card, downstream/upstream power/SNR/frequency, errors, latency), `graph_hours` window (1–168), and short-title mode.
 - **`cable_modem_monitor.request_refresh`**: Triggers an immediate data poll for the selected device.
 - **`cable_modem_monitor.request_health_check`**: Runs an immediate health probe (ICMP / TCP / HTTP) outside the regular cadence.
 - **`cable_modem_monitor.convert_channel_identity`**: Renames recorder statistics from the previous Channel Identity mode to the current one, so historical graphs survive a remove-and-re-add in the other mode. Modem must be online.
@@ -342,7 +342,7 @@ Ready-to-use dashboard and automation examples are available in the **[Examples 
 
 Includes:
 
-- **Dashboard generator service** — auto-generates Lovelace YAML tailored to your modem's channels
+- **Dashboard card generator action** — generates Lovelace card YAML tailored to your modem's channels
 - Complete manual dashboard YAML for monitoring all channels
 - Automations for error alerts, SNR warnings, and auto-restart
 - Last boot time display format options

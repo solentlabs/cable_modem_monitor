@@ -79,7 +79,7 @@ def format_onboarding_message(*, model: str, current: ChannelTotals) -> str:
     """Body text for the one-time onboarding notification."""
     return (
         f"{model} is online with {current.downstream} downstream and "
-        f"{current.upstream} upstream bonded channels. You can auto-generate "
-        f"a Lovelace dashboard for this modem via Developer Tools → Actions → "
-        f"`cable_modem_monitor.generate_dashboard`."
+        f"{current.upstream} upstream bonded channels. To add a card for this "
+        f"modem to a dashboard, run Tools → Actions → "
+        f"`cable_modem_monitor.generate_dashboard_card`."
     )

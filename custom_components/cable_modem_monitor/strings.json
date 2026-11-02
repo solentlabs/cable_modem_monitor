@@ -143,13 +143,13 @@
     }
   },
   "services": {
-    "generate_dashboard": {
-      "name": "Generate Dashboard",
-      "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
+    "generate_dashboard_card": {
+      "name": "Generate Dashboard Card",
+      "description": "Generates the YAML for one Cable Modem Monitor card. Press Perform action, scroll down to the Response below the form, copy the lines after yaml: |-, and paste them into Add card > By card > Manual on a dashboard.",
       "fields": {
         "device_id": {
           "name": "Device",
-          "description": "Which modem to generate the dashboard for. Defaults to the first configured modem."
+          "description": "Which modem to generate the card for. Defaults to the first configured modem."
         },
         "include_status_card": {
           "name": "Status Card",

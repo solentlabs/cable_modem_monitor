@@ -44,11 +44,11 @@ from custom_components.cable_modem_monitor.dev_tools import (
     _resolve_config_entry_for_device,
     _unique_types,
     create_convert_channel_identity_handler,
-    create_generate_dashboard_handler,
+    create_generate_dashboard_card_handler,
     create_orphaned_statistics_handler,
 )
 from custom_components.cable_modem_monitor.services import (
-    SERVICE_GENERATE_DASHBOARD_SCHEMA,
+    SERVICE_GENERATE_DASHBOARD_CARD_SCHEMA,
     _find_loaded_entries,
     _resolve_target_entries,
     async_register_services,
@@ -244,7 +244,7 @@ def test_build_status_card_yaml_full():
 
 def test_build_status_card_yaml_minimal():
     """Status card omits entities when modem data is sparse and HEAD unsupported."""
-    system_info = {}
+    system_info: dict[str, Any] = {}
     lines = _build_status_card_yaml(
         _resolver_for(),
         system_info,
@@ -974,7 +974,7 @@ def test_add_channel_graphs_multi_type_by_direction() -> None:
 
 
 # -----------------------------------------------------------------------
-# generate_dashboard service handler
+# generate_dashboard_card service handler
 # -----------------------------------------------------------------------
 
 
@@ -997,7 +997,7 @@ def test_generate_dashboard_handler(
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
 
-    handler = create_generate_dashboard_handler(hass)
+    handler = create_generate_dashboard_card_handler(hass)
     call = MagicMock()
     call.data = {
         "include_downstream_power": True,
@@ -1017,7 +1017,7 @@ def test_generate_dashboard_handler(
     result = handler(call)
 
     yaml = result["yaml"]
-    assert "Cable Modem Dashboard" in yaml
+    assert "Cable Modem Card" in yaml
     assert "sensor.cable_modem_status" in yaml
     assert "sensor.cable_modem_ds_qam_ch_1_power" in yaml
     assert "sensor.cable_modem_ds_ofdm_ch_2_power" in yaml
@@ -1153,7 +1153,7 @@ def test_generate_dashboard_uses_registry_entity_ids(
         "custom_components.cable_modem_monitor.dev_tools.er.async_get",
         return_value=registry,
     ):
-        handler = create_generate_dashboard_handler(hass)
+        handler = create_generate_dashboard_card_handler(hass)
         yaml = handler(_make_mock_call({"include_status_card": True}))["yaml"]
 
     assert "sensor.dan_room_arris_cable_modem_status" in yaml
@@ -1189,7 +1189,7 @@ def test_generate_dashboard_omits_disabled_entities(
         "custom_components.cable_modem_monitor.dev_tools.er.async_get",
         return_value=registry,
     ):
-        handler = create_generate_dashboard_handler(hass)
+        handler = create_generate_dashboard_card_handler(hass)
         yaml = handler(_make_mock_call({"include_status_card": True, "include_latency": True}))["yaml"]
 
     assert "sensor.cable_modem_tcp_latency" in yaml
@@ -1218,7 +1218,7 @@ def test_generate_dashboard_raises_when_nothing_resolves(
         ),
         pytest.raises(ServiceValidationError, match="No entities found for this modem"),
     ):
-        handler = create_generate_dashboard_handler(hass)
+        handler = create_generate_dashboard_card_handler(hass)
         handler(_make_mock_call({"include_status_card": True}))
 
 
@@ -1237,7 +1237,7 @@ def test_generate_dashboard_handler_with_error_rates_opt_in(
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
 
-    handler = create_generate_dashboard_handler(hass)
+    handler = create_generate_dashboard_card_handler(hass)
     call = MagicMock()
     call.data = {
         "include_errors": True,
@@ -1315,7 +1315,7 @@ def test_generate_dashboard_no_totals_card(
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
 
-    handler = create_generate_dashboard_handler(hass)
+    handler = create_generate_dashboard_card_handler(hass)
     with caplog.at_level("INFO", logger="custom_components.cable_modem_monitor.dev_tools"):
         yaml = handler(_make_mock_call({"include_errors": include_errors}))["yaml"]
 
@@ -1348,7 +1348,7 @@ def test_generate_dashboard_no_totals_card_alone_still_raises(
         ),
         pytest.raises(ServiceValidationError, match="No entities found for this modem"),
     ):
-        handler = create_generate_dashboard_handler(hass)
+        handler = create_generate_dashboard_card_handler(hass)
         handler(_make_mock_call({"include_errors": True}))
 
 
@@ -1364,7 +1364,7 @@ def test_generate_dashboard_handler_no_restart_support(
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
 
-    handler = create_generate_dashboard_handler(hass)
+    handler = create_generate_dashboard_card_handler(hass)
     call = MagicMock()
     call.data = {}
 
@@ -1409,7 +1409,7 @@ def test_generate_dashboard_number_mode_without_lock_status(
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
 
-    handler = create_generate_dashboard_handler(hass)
+    handler = create_generate_dashboard_card_handler(hass)
     call = MagicMock()
     call.data = {
         "include_downstream_power": True,
@@ -1431,7 +1431,7 @@ def test_generate_dashboard_no_entry_raises() -> None:
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = []
 
-    handler = create_generate_dashboard_handler(hass)
+    handler = create_generate_dashboard_card_handler(hass)
     call = MagicMock()
     call.data = {}
 
@@ -1451,7 +1451,7 @@ def test_generate_dashboard_no_snapshot_raises(
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
 
-    handler = create_generate_dashboard_handler(hass)
+    handler = create_generate_dashboard_card_handler(hass)
     call = MagicMock()
     call.data = {}
 
@@ -1472,7 +1472,7 @@ def test_register_services() -> None:
     assert hass.services.async_register.call_count == 5
     registered = {call.args[1] for call in hass.services.async_register.call_args_list}
     assert registered == {
-        "generate_dashboard",
+        "generate_dashboard_card",
         "request_refresh",
         "request_health_check",
         "convert_channel_identity",
@@ -1481,7 +1481,7 @@ def test_register_services() -> None:
 
 
 # -----------------------------------------------------------------------
-# generate_dashboard schema: graph_hours range matches the UI selector
+# generate_dashboard_card schema: graph_hours range matches the UI selector
 # -----------------------------------------------------------------------
 
 # ┌─────────────┬────────┬──────────────────────────────┐
@@ -1509,12 +1509,12 @@ GRAPH_HOURS_CASES: list[tuple[int, bool, str]] = [
 def test_generate_dashboard_schema_graph_hours_range(hours: int, valid: bool, desc: str) -> None:
     """The schema enforces the same 1-168 range as the services.yaml selector."""
     if valid:
-        validated = SERVICE_GENERATE_DASHBOARD_SCHEMA({"graph_hours": hours})
+        validated = SERVICE_GENERATE_DASHBOARD_CARD_SCHEMA({"graph_hours": hours})
         assert isinstance(validated, dict)
         assert validated["graph_hours"] == hours
     else:
         with pytest.raises(vol.Invalid):
-            SERVICE_GENERATE_DASHBOARD_SCHEMA({"graph_hours": hours})
+            SERVICE_GENERATE_DASHBOARD_CARD_SCHEMA({"graph_hours": hours})
 
 
 # -----------------------------------------------------------------------
@@ -1880,7 +1880,7 @@ def test_get_channel_info_number_mode_treats_missing_lock_status_as_locked() -> 
         _get_channel_info_number_mode,
     )
 
-    channels = [
+    channels: list[dict[str, Any]] = [
         {"channel_number": 2},
         {"channel_number": 1, "power": -5.0},
         {"channel_number": 3, "lock_status": None},

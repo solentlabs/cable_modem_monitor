@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   second time, while the same body from a structured capture was decoded.
   Intake also stops saying no restart was observed when it offers one as a
   candidate.
+- **The `generate_dashboard` action is now `generate_dashboard_card` (#229).**
+  It returns the YAML for one card, not a dashboard, so the action name, its
+  description, the onboarding notification and the docs now say card. This is
+  a breaking rename: an automation or script that calls
+  `cable_modem_monitor.generate_dashboard` must call
+  `cable_modem_monitor.generate_dashboard_card`. The docs now name the Tools
+  page, which Home Assistant renamed from Developer Tools in 2026.8, and say
+  to copy the lines after `yaml: |-` in the response.
 
 ## [3.14.15-beta.6] - 2026-10-30
 

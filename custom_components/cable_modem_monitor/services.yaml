@@ -1,4 +1,4 @@
-generate_dashboard:
+generate_dashboard_card:
   fields:
     device_id:
       required: false

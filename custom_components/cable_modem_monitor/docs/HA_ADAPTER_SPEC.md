@@ -40,8 +40,8 @@ Core, it should.
 | [Reset Entities Concurrency Guard](#reset-entities-concurrency-guard) | `active_operation` guard, null-safety |
 | [Reauth Flow](#reauth-flow) | Circuit breaker → `async_step_reauth` |
 | [Diagnostics Platform](#diagnostics-platform) | Core diagnostics + HA-side data |
-| [Services](#services) | `generate_dashboard`, `request_refresh`, `request_health_check` |
-| [Notifications](#notifications) | When one is warranted; first-poll onboarding with `generate_dashboard` hint |
+| [Services](#services) | `generate_dashboard_card`, `request_refresh`, `request_health_check` |
+| [Notifications](#notifications) | When one is warranted; first-poll onboarding with `generate_dashboard_card` hint |
 | [Config Entry Migration](#config-entry-migration) | Version-keyed migration with auto-discovery |
 | [Testing](#testing) | No modem-specific names, dynamic catalog discovery |
 | [Distribution](#distribution) | HACS zip, PyPI packages, version pinning, release tiers |
@@ -1120,12 +1120,12 @@ CMM fires unconditionally — it does not know or care whether any consumer is
 listening. Data never leaves the user's HA instance unless a subscriber
 (e.g., CMMT) explicitly transmits it.
 
-### Listening in Developer Tools
+### Listening in Tools
 
-Developer Tools → Events → enter `cable_modem_monitor_data_updated` →
+Tools → Events → enter `cable_modem_monitor_data_updated` →
 Start Listening. The next poll will show the full payload.
 
-The raw event from Developer Tools includes HA-injected wrapper fields
+The raw event from the Events tool includes HA-injected wrapper fields
 (`origin`, `time_fired`, `context`) that are not part of the CMM
 payload. The CMM payload is the `data:` block only. `context.user_id`
 and `context.parent_id` are always null — CMM fires unconditionally on
@@ -1238,10 +1238,17 @@ normally and are not errors: "no statistics to migrate", "no orphaned
 statistics found", and the orphaned-statistics preview listing are all
 successful outcomes.
 
-### `generate_dashboard`
+### `generate_dashboard_card`
 
-Generates Lovelace YAML for a complete modem dashboard based on
-current channel data.
+Generates the YAML for one Lovelace card (a `vertical-stack`) from
+current channel data. It is a developer tool: the user pastes the card
+into a dashboard through **Add card → By card → Manual**. It does not return a
+dashboard (`title:` / `views:`), so a dashboard's raw configuration
+editor rejects it.
+
+The action returns `{"yaml": <string>}`. Tools → Actions shows the
+response below the form as `yaml: |-` followed by the card, so the user
+copies the lines after `yaml: |-`.
 
 **Input options (UI form — `services.yaml`):**
 
@@ -1267,9 +1274,9 @@ its valid values depend on the modem, so a static form cannot list them.
 
 1. Resolves target modem from `device_id` or falls back to first entry
 2. Reads current channel data from `entry.runtime_data.data_coordinator`
-3. Decides which entities belong on the dashboard from that data
+3. Decides which entities belong on the card from that data
 4. Resolves each one's entity ID from the entity registry by unique ID
-5. Returns YAML string the user pastes into a manual dashboard card
+5. Returns the card YAML the user pastes into **Add card → By card → Manual**
 
 **Entity IDs come from the registry, never from the entity prefix.**
 Steps 3 and 4 answer different questions. Whether an entity *belongs* is
@@ -1414,7 +1421,8 @@ channel number addressed the latter (#197).
 
 The data coordinator fires one persistent notification per config entry, the
 first time a successful poll reports channel totals. It points the user at
-`generate_dashboard` so they can build a Lovelace dashboard for the modem.
+`generate_dashboard_card` (Tools → Actions) so they can add a modem card to
+a dashboard.
 
 | Trigger | When it fires | Notification ID |
 |---------|---------------|-----------------|
@@ -1610,7 +1618,7 @@ The HA adapter layer consists of these modules:
 | `diagnostics.py` | Diagnostics download combining Core + HA-side data |
 | `const.py` | Domain constants, config keys, defaults |
 | `services.py` | Service registration wiring — constants, schemas, `async_request_modem_refresh`, `request_refresh` / `request_health_check` handler factories, `async_register_services` |
-| `dev_tools.py` | Dev tool implementations — dashboard YAML generator (`_build_*` / `_format_*` / channel helpers / `create_generate_dashboard_handler`) and channel identity converter (`_plan_stat_renames_*` / `_migrate_statistics` / `create_convert_channel_identity_handler`) |
+| `dev_tools.py` | Dev tool implementations — dashboard card YAML generator (`_build_*` / `_format_*` / channel helpers / `create_generate_dashboard_card_handler`) and channel identity converter (`_plan_stat_renames_*` / `_migrate_statistics` / `create_convert_channel_identity_handler`) |
 | `migrations/` | Version-keyed config entry migration handlers |
 | `core/log_buffer.py` | Log capture for diagnostics (HA adapter + Core package loggers) |
 | `lib/host_validation.py` | URL building, host input parsing |

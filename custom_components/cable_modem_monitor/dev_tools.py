@@ -681,13 +681,13 @@ def _resolve_dashboard_target(hass: HomeAssistant, call: ServiceCall) -> tuple[C
     return entry, snapshot.modem_data
 
 
-def create_generate_dashboard_handler(
+def create_generate_dashboard_card_handler(
     hass: HomeAssistant,
 ) -> Any:
-    """Create the generate_dashboard service handler."""
+    """Create the generate_dashboard_card service handler."""
 
-    def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:
-        """Handle the generate_dashboard service call."""
+    def handle_generate_dashboard_card(call: ServiceCall) -> dict[str, Any]:
+        """Handle the generate_dashboard_card service call."""
         entry, modem_data = _resolve_dashboard_target(hass, call)
 
         resolver = _EntityResolver(hass, entry)
@@ -794,8 +794,8 @@ def create_generate_dashboard_handler(
         return {
             "yaml": "\n".join(
                 [
-                    "# Cable Modem Dashboard",
-                    "# Copy from here, paste into: Dashboard > Add Card > Manual",
+                    "# Cable Modem Card",
+                    "# Paste into: a dashboard > Edit > Add card > By card > Manual",
                     "type: vertical-stack",
                     "cards:",
                     *yaml_parts,
@@ -803,7 +803,7 @@ def create_generate_dashboard_handler(
             )
         }
 
-    return handle_generate_dashboard
+    return handle_generate_dashboard_card
 
 
 # ------------------------------------------------------------------

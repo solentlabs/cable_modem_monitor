@@ -6,8 +6,8 @@ converter) live in dev_tools.py; this module is a thin registration
 layer that imports their handler factories.
 
 Services:
-    cable_modem_monitor.generate_dashboard:
-        Generates Lovelace YAML for a complete modem dashboard based on
+    cable_modem_monitor.generate_dashboard_card:
+        Generates the YAML for one Lovelace card (not a dashboard) based on
         current channel data.
     cable_modem_monitor.request_refresh:
         Triggers an immediate modem data poll, bypassing connectivity
@@ -43,18 +43,18 @@ from .dev_tools import (
     STATUS_CARD_DEFAULT_EXCLUDE,
     _resolve_config_entry_for_device,
     create_convert_channel_identity_handler,
-    create_generate_dashboard_handler,
+    create_generate_dashboard_card_handler,
     create_orphaned_statistics_handler,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-SERVICE_GENERATE_DASHBOARD = "generate_dashboard"
+SERVICE_GENERATE_DASHBOARD_CARD = "generate_dashboard_card"
 SERVICE_REQUEST_REFRESH = "request_refresh"
 SERVICE_REQUEST_HEALTH_CHECK = "request_health_check"
 SERVICE_CONVERT_CHANNEL_IDENTITY = "convert_channel_identity"
 SERVICE_ORPHANED_STATISTICS = "orphaned_statistics"
-SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
+SERVICE_GENERATE_DASHBOARD_CARD_SCHEMA = vol.Schema(
     {
         vol.Optional("device_id"): cv.string,
         vol.Optional("include_downstream_power", default=True): cv.boolean,
@@ -206,9 +206,9 @@ def async_register_services(hass: HomeAssistant) -> None:
     """Register services (called once at component load from async_setup)."""
     hass.services.async_register(
         DOMAIN,
-        SERVICE_GENERATE_DASHBOARD,
-        create_generate_dashboard_handler(hass),
-        schema=SERVICE_GENERATE_DASHBOARD_SCHEMA,
+        SERVICE_GENERATE_DASHBOARD_CARD,
+        create_generate_dashboard_card_handler(hass),
+        schema=SERVICE_GENERATE_DASHBOARD_CARD_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
     hass.services.async_register(
@@ -246,7 +246,7 @@ def async_register_services(hass: HomeAssistant) -> None:
     )
     _LOGGER.debug(
         "Registered services: %s, %s, %s, %s, %s",
-        SERVICE_GENERATE_DASHBOARD,
+        SERVICE_GENERATE_DASHBOARD_CARD,
         SERVICE_REQUEST_REFRESH,
         SERVICE_REQUEST_HEALTH_CHECK,
         SERVICE_CONVERT_CHANNEL_IDENTITY,
