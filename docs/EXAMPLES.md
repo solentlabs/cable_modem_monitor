@@ -4,10 +4,48 @@ Ready-to-use examples for monitoring your cable modem in Home Assistant.
 
 ## Table of Contents
 
+- [Cable Modem Card](#cable-modem-card)
 - [Dashboard Card Generator](#dashboard-card-generator)
 - [Manual Dashboard Example](#manual-dashboard-example)
 - [Last Boot Time Display Options](#last-boot-time-display-options)
 - [Automation Examples](#automation-examples)
+
+---
+
+## Cable Modem Card
+
+The integration ships a Cable Modem card. Add it from the card picker and
+set it up in a form, with no YAML.
+
+### How to use
+
+1. Open a dashboard and click **Edit** (the pencil icon)
+2. Click **Add card** and search for **Cable Modem**. It is listed under
+   community cards
+3. In the editor, choose the sections you want. Leave **Modem** empty to
+   use your first modem
+4. Click **Save**
+
+The card is tailored to your modem the same way as the generated YAML
+below, and uses the same options and defaults. It updates its layout when
+your modem's channel counts change.
+
+If the modem is offline or has no data yet, the card says so and tries
+again.
+
+### YAML mode
+
+The card's options are the generator's, under the same names:
+
+```yaml
+type: custom:cable-modem-card
+include_error_rates: true
+graph_hours: 48
+```
+
+The [YAML-only options](#yaml-only-options) below also work in the card's
+YAML. A card that sets one opens in the YAML editor, so the form never
+drops it.
 
 ---
 

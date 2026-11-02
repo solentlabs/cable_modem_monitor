@@ -342,6 +342,7 @@ Ready-to-use dashboard and automation examples are available in the **[Examples 
 
 Includes:
 
+- **Cable Modem card** — add it from the dashboard's Add card list and set it up in a form, no YAML
 - **Dashboard card generator action** — generates Lovelace card YAML tailored to your modem's channels
 - Complete manual dashboard YAML for monitoring all channels
 - Automations for error alerts, SNR warnings, and auto-restart
