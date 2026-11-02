@@ -9,7 +9,8 @@ Core's synchronous API and HA's async event loop.
 scheduling, entity creation, and HA lifecycle. If logic could live in
 Core, it should.
 
-**Minimum HA version:** 2024.12 (for `entry.runtime_data` support).
+**Minimum HA version:** 2025.1. Core requires pydantic 2, which HA pins from
+2025.1; HA 2024.12 pins pydantic 1.
 
 **Related specs:**
 

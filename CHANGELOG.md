@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Home Assistant 2025.1.0 is now the declared minimum.** HA 2024.12 pins
+  pydantic 1 and the integration requires pydantic 2, so the earlier 2024.12
+  minimum could not be met. `hacs.json` and the specs now say 2025.1.0.
 - **The CGA437ATCH4 entry now rests on a full capture (#227).** The logout is
   the request the modem answered in the capture, replacing the copy from the
   CGA6444VF, and a Restart button is declared from the captured reset request.

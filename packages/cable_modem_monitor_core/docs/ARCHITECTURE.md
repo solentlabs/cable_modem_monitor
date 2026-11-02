@@ -161,7 +161,7 @@ Core's engine. Depends on both Core and Catalog.
 | Responsibility | What |
 |----------------|------|
 | Config flow | Manufacturer dropdown (union of `manufacturer` and `brands` values) → model filter → variant → connection → validate. Uses Core's `list_modems()` with Catalog's `CATALOG_PATH` |
-| Runtime storage | `CableModemRuntimeData` on `entry.runtime_data` (HA 2024.12+) |
+| Runtime storage | `CableModemRuntimeData` on `entry.runtime_data` (HA 2025.1+) |
 | Data coordinator | Wraps Core's `Orchestrator.get_modem_data()` in HA's `DataUpdateCoordinator` |
 | Health coordinator | Second `DataUpdateCoordinator` wrapping `HealthMonitor.ping()`. Conditional — only created if probes work. Independent cadence (default 30s) |
 | Entities | Maps Core's `ModemSnapshot` → platform entities. Channel entities unavailable when `modem_data` is None |

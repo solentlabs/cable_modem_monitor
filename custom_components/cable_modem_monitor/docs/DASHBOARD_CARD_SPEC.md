@@ -12,8 +12,9 @@ YAML.
   the integration touches it through a single registration call
 - The card is additive: no card failure, and no missing frontend, may
   affect modem monitoring or its configuration
-- Core is unchanged. Capabilities stay implicit (ARCHITECTURE.md § Data
-  Models), and the layout is HA presentation that belongs in the adapter
+- Core is unchanged. Capabilities stay implicit (ARCHITECTURE_DECISIONS.md
+  § Capabilities are implicit from parser output), and the layout is HA
+  presentation that belongs in the adapter
 - The card's config keys are a persisted public contract
 
 **Related specs:**
@@ -209,7 +210,7 @@ repo has no JS test tooling and the module holds no layout logic:
 - The picker lists the card; the form renders, saves, and the card
   updates.
 - Offline modem and channel-count change refresh the card.
-- Helper behavior on the 2024.12 floor.
+- Helper behavior on the 2025.1 floor.
 
 ---
 

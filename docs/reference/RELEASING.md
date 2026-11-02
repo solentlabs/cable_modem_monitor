@@ -206,7 +206,7 @@ cause of the beta.11 commitlint rewrite and force-push).
 {
   "name": "Cable Modem Monitor",
   "render_readme": true,
-  "homeassistant": "2024.12.0",
+  "homeassistant": "2025.1.0",
   "hacs": "2.0.0",
   "zip_release": true,
   "filename": "cable_modem_monitor.zip",
