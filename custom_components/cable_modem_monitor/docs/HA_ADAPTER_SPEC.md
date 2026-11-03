@@ -1422,8 +1422,8 @@ channel number addressed the latter (#197).
 
 The data coordinator fires one persistent notification per config entry, the
 first time a successful poll reports channel totals. It points the user at
-**Edit → Add card → Cable Modem** so they can add a modem card to a
-dashboard (DASHBOARD_CARD_SPEC.md).
+**Edit → Add card → Cable Modem**, after a browser refresh, so they can
+add a modem card to a dashboard (DASHBOARD_CARD_SPEC.md § Notifications).
 
 | Trigger | When it fires | Notification ID |
 |---------|---------------|-----------------|

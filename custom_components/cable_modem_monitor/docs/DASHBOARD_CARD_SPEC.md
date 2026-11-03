@@ -194,9 +194,11 @@ short_titles: true
 ## Notifications
 
 The onboarding notification points to **Edit → Add card → Cable Modem**
-instead of the action. Persistent notifications stay English, like services and
-entity names (TRANSLATION_GUIDE.md § Translated Scope Is Deliberately
-Limited).
+instead of the action, and tells the user to refresh the browser first: the
+frontend learns the card's script URL at page load, so a tab opened before
+the integration was added never receives it. Persistent notifications stay
+English, like services and entity names (TRANSLATION_GUIDE.md § Translated
+Scope Is Deliberately Limited).
 
 ---
 

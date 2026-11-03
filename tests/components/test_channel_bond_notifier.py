@@ -133,6 +133,7 @@ def test_onboarding_message_includes_counts_and_card_pointer():
     assert "24 downstream" in message
     assert "4 upstream" in message
     assert "Add card" in message
+    assert "refresh your browser" in message
     assert "Cable Modem" in message
     assert "generate_dashboard_card" not in message
 

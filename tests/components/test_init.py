@@ -850,6 +850,7 @@ async def test_channel_bond_fresh_setup_fires_onboarding():
     assert payload["notification_id"] == "cable_modem_monitor_onboarding_entry_abc"
     assert "TPS-2000" in payload["message"]
     assert "Add card" in payload["message"]
+    assert "refresh your browser" in payload["message"]
 
 
 async def test_channel_bond_upgraded_entry_silent_init():

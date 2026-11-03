@@ -80,5 +80,6 @@ def format_onboarding_message(*, model: str, current: ChannelTotals) -> str:
     return (
         f"{model} is online with {current.downstream} downstream and "
         f"{current.upstream} upstream bonded channels. To add a card for this "
-        f"modem, open a dashboard, choose Edit → Add card, and pick Cable Modem."
+        f"modem, refresh your browser, open a dashboard, choose Edit → Add card, and "
+        f"pick Cable Modem."
     )

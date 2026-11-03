@@ -19,7 +19,8 @@ set it up in a form, with no YAML.
 
 ### How to use
 
-1. Open a dashboard and click **Edit** (the pencil icon)
+1. Refresh your browser if it was open when you added the integration,
+   then open a dashboard and click **Edit** (the pencil icon)
 2. Click **Add card** and search for **Cable Modem**. It is listed under
    community cards
 3. In the editor, choose the sections you want. Leave **Modem** empty to
