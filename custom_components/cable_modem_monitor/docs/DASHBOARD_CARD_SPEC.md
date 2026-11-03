@@ -127,7 +127,12 @@ The module defines its custom element and fills `window.customCards` at
 the top level, before any `await`. HA waits up to two seconds for an
 undefined `custom:` element and rebuilds when it appears
 (`create-element-base.ts`), so a small module that defines immediately
-stays inside that window. `add_extra_js_url` is used rather than a
+stays inside that window. The frontend can also replace
+`window.customElements` with a scoped-registry polyfill after the module
+has run (seen on HA 2025.1.0), which hides an element defined earlier and
+leaves the picker tile spinning. The module therefore re-checks the
+registry in use every 100 ms for 15 s and defines the element again if it
+is missing. `add_extra_js_url` is used rather than a
 Lovelace resource: it works in storage and YAML mode alike and touches no
 Lovelace internals. The URL is re-added on every start because HA keeps
 it in memory only.

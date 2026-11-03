@@ -159,9 +159,31 @@ class CableModemCard extends HTMLElement {
   }
 }
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, CableModemCard);
+// HA's frontend can replace `window.customElements` with a scoped-registry
+// polyfill after this module has run (seen on HA 2025.1.0), which hides an
+// element defined earlier. Define now, then re-check until the registry in
+// use holds the element, so the picker and `custom:` lookups always find it.
+const REGISTER_EVERY_MS = 100;
+const REGISTER_FOR_MS = 15000;
+
+function register() {
+  if (!window.customElements.get(CARD_TAG)) {
+    window.customElements.define(CARD_TAG, CableModemCard);
+  }
 }
+
+register();
+const registerUntil = Date.now() + REGISTER_FOR_MS;
+const registerTimer = setInterval(() => {
+  try {
+    register();
+  } catch (err) {
+    console.warn("cable-modem-card: could not register", err);
+  }
+  if (Date.now() >= registerUntil) {
+    clearInterval(registerTimer);
+  }
+}, REGISTER_EVERY_MS);
 
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === CARD_TAG)) {
