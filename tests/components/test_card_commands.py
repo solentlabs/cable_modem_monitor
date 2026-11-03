@@ -64,11 +64,11 @@ def test_card_config_passes_validated_options(
 
 
 def test_card_config_unavailable_modem_sends_error() -> None:
-    """No modem, or one with no data, reaches the card as an error with the reason."""
+    """A modem that cannot be resolved reaches the card as an error with the reason."""
     connection = MagicMock()
-    with patch(_BUILD, side_effect=ServiceValidationError("No modem data available")):
+    with patch(_BUILD, side_effect=ServiceValidationError("No cable modem configured")):
         ws_card_config(MagicMock(), connection, {"id": 3, "options": {}})
-    connection.send_error.assert_called_once_with(3, ERR_CARD_UNAVAILABLE, "No modem data available")
+    connection.send_error.assert_called_once_with(3, ERR_CARD_UNAVAILABLE, "No cable modem configured")
     connection.send_result.assert_not_called()
 
 

@@ -30,8 +30,8 @@ The card is tailored to your modem the same way as the generated YAML
 below, and uses the same options and defaults. It updates its layout when
 your modem's channel counts change.
 
-If the modem is offline or has no data yet, the card says so and tries
-again.
+The card appears whether or not the modem is online, and updates by itself
+when the modem comes back.
 
 ### YAML mode
 

@@ -639,17 +639,59 @@ def _build_channel_graph_defs(
 
 def _resolve_dashboard_target(
     hass: HomeAssistant, device_id: str | None
-) -> tuple[CableModemConfigEntry, dict[str, Any]]:
-    """Resolve the config entry and modem data for a dashboard request."""
+) -> tuple[CableModemConfigEntry, dict[str, Any] | None]:
+    """Resolve the config entry and, when the last poll succeeded, its modem data."""
     entry = _resolve_config_entry_for_device(hass, device_id) if device_id else _find_loaded_entry(hass)
     if entry is None:
         raise ServiceValidationError("No cable modem configured")
 
     snapshot = entry.runtime_data.data_coordinator.data
-    if snapshot is None or snapshot.modem_data is None:
-        raise ServiceValidationError("No modem data available — the modem must be online")
+    return entry, (snapshot.modem_data if snapshot is not None else None)
 
-    return entry, snapshot.modem_data
+
+def _system_info_from_registry(resolver: _EntityResolver) -> dict[str, None]:
+    """The system_info fields the status card shows, rebuilt from registered sensors.
+
+    sensor.py creates each of these only when the modem reported the field,
+    so a registered sensor means the field exists. DOCSIS Status is an
+    attribute of the Status sensor, which always carries it.
+    """
+    fields: dict[str, None] = {"docsis_status": None}
+    if resolver.sensor("software_version") is not None:
+        fields["software_version"] = None
+    if resolver.sensor("last_boot_time") is not None:
+        fields["system_uptime"] = None
+    for name in ("total_corrected", "total_uncorrected"):
+        if resolver.sensor(name) is not None:
+            fields[name] = None
+    return fields
+
+
+def _channel_info_from_registry(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+    identity_mode: ChannelIdentity,
+) -> tuple[list[tuple[str, int]], list[tuple[str, int]]]:
+    """Channel info for both directions from the registered Power sensors.
+
+    Used when the modem has no live data: channel entities outlive a failed
+    poll, so the layout does not depend on the modem being online.
+    """
+    prefix = re.escape(f"{entry.entry_id}_cable_modem_")
+    if identity_mode == ChannelIdentity.NUMBER:
+        pattern = re.compile(rf"^{prefix}(ds|us)_ch_(\d+)_power$")
+    else:
+        pattern = re.compile(rf"^{prefix}(ds|us)_([a-z0-9]+)_ch_(\d+)_power$")
+    downstream: list[tuple[str, int]] = []
+    upstream: list[tuple[str, int]] = []
+    for record in er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id):
+        match = pattern.match(record.unique_id)
+        if match is None:
+            continue
+        direction, *rest = match.groups()
+        pair = ("" if identity_mode == ChannelIdentity.NUMBER else rest[0], int(rest[-1]))
+        (downstream if direction == "ds" else upstream).append(pair)
+    return sorted(downstream), sorted(upstream)
 
 
 def build_card_config(hass: HomeAssistant, options: Mapping[str, Any]) -> dict[str, Any]:
@@ -660,7 +702,9 @@ def build_card_config(hass: HomeAssistant, options: Mapping[str, Any]) -> dict[s
     has_icmp = bool(entry.data.get(CONF_SUPPORTS_ICMP, False))
     has_head = bool(entry.data.get(CONF_SUPPORTS_HEAD, False))
     has_restart = entry.runtime_data.orchestrator.supports_restart
-    system_info = modem_data.get("system_info", {})
+    system_info: dict[str, Any] = (
+        modem_data.get("system_info", {}) if modem_data is not None else _system_info_from_registry(resolver)
+    )
 
     opts = {
         "ds_power": options.get("include_downstream_power", True),
@@ -680,7 +724,10 @@ def build_card_config(hass: HomeAssistant, options: Mapping[str, Any]) -> dict[s
     channel_grouping = options.get("channel_grouping", "by_direction")
 
     identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
-    downstream_info, upstream_info = _get_channel_info(modem_data, identity_mode)
+    if modem_data is not None:
+        downstream_info, upstream_info = _get_channel_info(modem_data, identity_mode)
+    else:
+        downstream_info, upstream_info = _channel_info_from_registry(hass, entry, identity_mode)
 
     cards: list[dict[str, Any]] = []
     # The no-total note is not an entity; it must not mask an empty result.
@@ -729,7 +776,7 @@ def build_card_config(hass: HomeAssistant, options: Mapping[str, Any]) -> dict[s
                 include_rates=opts["error_rates"],
             )
         )
-    elif opts["errors"] and _has_channel_error_counters(modem_data):
+    elif opts["errors"] and modem_data is not None and _has_channel_error_counters(modem_data):
         # Errors were requested but no graph can be drawn; say why in
         # the dashboard, where the user looks, and in the log.
         cards.append(_build_no_error_total_card())
@@ -762,10 +809,15 @@ def build_card_config(hass: HomeAssistant, options: Mapping[str, Any]) -> dict[s
 
 
 def card_watch_entities(hass: HomeAssistant, options: Mapping[str, Any]) -> list[str]:
-    """Entity IDs whose state changes mean the card's layout is stale (the channel counts)."""
+    """Entity IDs whose state changes mean the card's layout is stale (status and channel counts)."""
     entry, _ = _resolve_dashboard_target(hass, options.get("device_id"))
     resolver = _EntityResolver(hass, entry)
-    ids = (resolver.sensor("downstream_channel_count"), resolver.sensor("upstream_channel_count"))
+    # Status exists from the first poll, so a modem that was offline at start still triggers a refresh.
+    ids = (
+        resolver.sensor("status"),
+        resolver.sensor("downstream_channel_count"),
+        resolver.sensor("upstream_channel_count"),
+    )
     return [entity_id for entity_id in ids if entity_id is not None]
 
 

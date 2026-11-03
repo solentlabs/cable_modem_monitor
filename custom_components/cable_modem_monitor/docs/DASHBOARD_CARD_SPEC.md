@@ -76,7 +76,8 @@ returns the dict as JSON.
 |------|--------|
 | One builder | `build_card_config(hass, options) -> dict` resolves the modem and returns the `vertical-stack` card. `generate_dashboard_card` serialises it; the websocket command returns it |
 | Same options | Both validate against `SERVICE_GENERATE_DASHBOARD_CARD_SCHEMA`, so the option list has one definition |
-| Same errors | An unresolvable modem or one with no data raises `ServiceValidationError`; the command sends its message as an error |
+| Same errors | A modem that cannot be resolved, or one with no entities to show, raises `ServiceValidationError`; the command sends its message as an error |
+| Offline | A failed poll is not an error. With no live data the registry supplies what the modem's data would: the channel list from the registered channel Power sensors, and the status rows (Software Version, Last Boot and Uptime, error totals) from their registered sensors, each created only when the modem reported the field. DOCSIS Status always shows, as an attribute of the Status sensor. Rows for pass-through fields with no dedicated sensor class appear only online |
 | Entity IDs | Resolved from the entity registry by unique ID, never from the entity prefix (HA_ADAPTER_SPEC.md § Services) |
 
 ---
@@ -88,8 +89,9 @@ The card calls one read-only websocket command,
 `options` field is validated by `SERVICE_GENERATE_DASHBOARD_CARD_SCHEMA`
 (defaults included) and passed to the builder. The result is
 `{"card": <dict>, "watch": [<entity id>, ...]}`, where `watch` holds
-the downstream and upstream channel-count sensors; a modem that cannot be resolved or has no data sends
-the error code `card_unavailable` with the builder's message.
+the Status sensor and the downstream and upstream channel-count sensors. A modem that cannot be
+resolved sends the error code `card_unavailable` with the builder's message. Whether the modem is
+online does not decide whether the card renders.
 
 The websocket API is the channel for frontend-only data, so the user-facing
 action keeps its single `{"yaml": ...}` response and its own contract.
@@ -147,12 +149,13 @@ it in memory only.
 - **Picker.** `window.customCards` registers `cable-modem-card` with a
   name, description and `documentationURL`. `getStubConfig` returns `{}`:
   the defaults are the generator's.
-- **States.** Loading, "no modem configured", and "modem offline" (the
-  command's error text) each render as a message inside `ha-card`. No
-  state throws.
+- **States.** Loading and "no modem configured" (the command's error
+  text) render as a message inside `ha-card`. An offline modem is not a
+  state: the layout renders and its entities show their own unavailable
+  state. No state throws.
 - **Refresh.** The card re-fetches when its config changes and when the
-  state of any `watch` entity changes, since the channel counts are what
-  change the layout.
+  state of any `watch` entity changes: the channel counts change the layout,
+  and Status changes when a modem that was offline comes back.
 - **Editor.** `getConfigForm` returns the form schema: a device selector
   limited to this integration (as in `services.yaml`), the content
   toggles, graph hours and short titles. HA renders it, so the card
@@ -203,8 +206,9 @@ Tested in the suite:
 
 - Builder output serialises to the same YAML the action returned before
   the dict refactor.
-- The action's `card` response key: success, no modem, offline, multiple
-  modems, invalid options.
+- The command's result: success, no modem, multiple modems, invalid options.
+- A modem with no live data still yields the full layout, in ID and
+  number identity modes.
 - `async_register_card` registers the static path and the JS URL once.
 - Every key in the form schema validates against the generator schema.
 

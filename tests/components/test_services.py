@@ -43,6 +43,7 @@ from custom_components.cable_modem_monitor.dev_tools import (
     _plan_stat_renames_to_number,
     _resolve_config_entry_for_device,
     _unique_types,
+    card_watch_entities,
     create_convert_channel_identity_handler,
     create_generate_dashboard_card_handler,
     create_orphaned_statistics_handler,
@@ -1465,24 +1466,95 @@ def test_generate_dashboard_no_entry_raises() -> None:
         handler(call)
 
 
-def test_generate_dashboard_no_snapshot_raises(
+def _registered(*unique_suffixes: str, entry_id: str = "test_entry") -> list[MagicMock]:
+    """Registry records for the given ``cable_modem_`` unique ID suffixes."""
+    records = []
+    for suffix in unique_suffixes:
+        record = MagicMock()
+        record.unique_id = f"{entry_id}_cable_modem_{suffix}"
+        records.append(record)
+    return records
+
+
+_REGISTRY_RECORDS = "custom_components.cable_modem_monitor.dev_tools.er.async_entries_for_config_entry"
+
+# ┌──────────┬───────────────────────────────────────────┬──────────────────────────────────────────┐
+# │ identity │ registered Power sensors                  │ graph entities                            │
+# ├──────────┼───────────────────────────────────────────┼──────────────────────────────────────────┤
+# │ ID       │ ds_qam_ch_1, ds_qam_ch_2, us_atdma_ch_1   │ ds_qam_ch_1/2_power, us_atdma_ch_1_power  │
+# │ NUMBER   │ ds_ch_1, ds_ch_2, us_ch_1                 │ ds_ch_1/2_power, us_ch_1_power            │
+# └──────────┴───────────────────────────────────────────┴──────────────────────────────────────────┘
+_OFFLINE_CASES = [
+    pytest.param(
+        "id",
+        ("ds_qam_ch_1_power", "ds_qam_ch_2_power", "us_atdma_ch_1_power"),
+        ["sensor.cable_modem_ds_qam_ch_1_power", "sensor.cable_modem_ds_qam_ch_2_power"],
+        ["sensor.cable_modem_us_atdma_ch_1_power"],
+        id="id-mode",
+    ),
+    pytest.param(
+        "number",
+        ("ds_ch_1_power", "ds_ch_2_power", "us_ch_1_power"),
+        ["sensor.cable_modem_ds_ch_1_power", "sensor.cable_modem_ds_ch_2_power"],
+        ["sensor.cable_modem_us_ch_1_power"],
+        id="number-mode",
+    ),
+]
+
+
+@pytest.mark.parametrize(("identity", "registered", "downstream", "upstream"), _OFFLINE_CASES)
+def test_generate_dashboard_offline_builds_from_registry(
     mock_runtime_data: CableModemRuntimeData,
+    identity: str,
+    registered: tuple[str, ...],
+    downstream: list[str],
+    upstream: list[str],
 ) -> None:
-    """Raises rather than smuggling an error string back as YAML."""
-    mock_runtime_data.data_coordinator.data = None  # type: ignore[assignment]
+    """No live data still yields the full layout: the channel list comes from the registry."""
+    from custom_components.cable_modem_monitor.const import CONF_CHANNEL_IDENTITY, ChannelIdentity
 
+    mock_runtime_data.data_coordinator.data = None  # type: ignore[assignment]  # rationale: an offline modem has no snapshot; the coordinator types data as non-Optional
     entry = _make_mock_entry(mock_runtime_data)
-    entry.data = {"entity_prefix": "none", "host": "192.168.100.1"}
-
+    entry.data = {
+        "entity_prefix": "none",
+        "host": "192.168.100.1",
+        CONF_CHANNEL_IDENTITY: ChannelIdentity.NUMBER if identity == "number" else ChannelIdentity.ID,
+    }
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
 
     handler = create_generate_dashboard_card_handler(hass)
-    call = MagicMock()
-    call.data = {}
+    with patch(_REGISTRY_RECORDS, return_value=_registered(*registered)):
+        yaml_out = handler(_make_mock_call())["yaml"]
 
-    with pytest.raises(ServiceValidationError, match="modem must be online"):
-        handler(call)
+    cards = yaml_lib.safe_load(yaml_out)["cards"]
+    graphs = {c["title"]: [row["entity"] for row in c["entities"]] for c in cards if c["type"] == "history-graph"}
+    assert cards[0]["type"] == "entities"  # the status card is still first
+    status_rows = {row["name"] for row in cards[0]["entities"]}
+    # The rows an online card has for these fields; none depend on live data.
+    assert {
+        "DOCSIS Status",
+        "Software Version",
+        "Uptime",
+        "Last Boot",
+        "Total Corrected Errors",
+        "Total Uncorrected Errors",
+    } <= status_rows
+    assert any(entities == downstream for entities in graphs.values())
+    assert any(entities == upstream for entities in graphs.values())
+    assert any(title.lower().startswith("latency") for title in graphs)
+
+
+def test_card_watch_entities_offline_includes_status(
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """Offline, the card still names the Status sensor so it refreshes when the modem returns."""
+    mock_runtime_data.data_coordinator.data = None  # type: ignore[assignment]  # rationale: an offline modem has no snapshot; the coordinator types data as non-Optional
+    entry = _make_mock_entry(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    assert "sensor.cable_modem_status" in card_watch_entities(hass, {})
 
 
 # -----------------------------------------------------------------------
