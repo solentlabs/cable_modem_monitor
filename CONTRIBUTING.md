@@ -455,7 +455,10 @@ applies to an open issue, and a closed issue carries none. Same for
 `needs-testing` is not applied until the code is released. A parser on
 an unreleased branch is `in-development` even when complete. Apply
 `release:vX.Y` when the work is committed to that release (branch cut,
-or merged); all `release:vX.Y` descriptions read "Tagged for vX.Y."
+or merged); all `release:vX.Y` descriptions read "Tagged for vX.Y." The
+v3.14 line labels each patch release: `release:v3.14` is v3.14.0, then
+`release:v3.14.1`, `release:v3.14.15` and so on, described "Tagged for
+v3.14.1." An issue carries the latest release that contains its fix.
 
 When a user confirms a modem parser works on real hardware, the modem
 is promoted per the
