@@ -77,7 +77,7 @@ returns the dict as JSON.
 | One builder | `build_card_config(hass, options) -> dict` resolves the modem and returns the `vertical-stack` card. `generate_dashboard_card` serialises it; the websocket command returns it |
 | Same options | Both validate against `SERVICE_GENERATE_DASHBOARD_CARD_SCHEMA`, so the option list has one definition |
 | Same errors | A modem that cannot be resolved, or one with no entities to show, raises `ServiceValidationError`; the command sends its message as an error |
-| Offline | A failed poll is not an error. With no live data the registry supplies what the modem's data would: the channel list from the registered channel Power sensors, and the status rows (Software Version, Last Boot and Uptime, error totals) from their registered sensors, each created only when the modem reported the field. DOCSIS Status always shows, as an attribute of the Status sensor. Rows for pass-through fields with no dedicated sensor class appear only online |
+| Offline | A failed poll is not an error. With no live data the registry supplies what the modem's data would: the channel list from the registered channel Power sensors, and the status rows (Software Version, Last Boot and Uptime, error totals) from their registered sensors, each created only when the modem reported the field. DOCSIS Status always shows, as an attribute of the Status sensor. Pass-through fields are the registered sensors that are neither in a fixed list of sensor suffixes nor per-channel; a test builds the real sensors and fails when the list drifts |
 | Entity IDs | Resolved from the entity registry by unique ID, never from the entity prefix (HA_ADAPTER_SPEC.md § Services) |
 
 ---

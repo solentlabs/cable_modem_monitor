@@ -1916,3 +1916,57 @@ def test_downstream_bytes_sensor_created_by_capability(mock_runtime_data, has_to
     assert len([e for e in entities if isinstance(e, ModemDownstreamBytesSensor)]) == expected_count
     passthrough = [e for e in entities if isinstance(e, SystemInfoFieldSensor) and "bytes" in (e.unique_id or "")]
     assert passthrough == []
+
+
+# -----------------------------------------------------------------------
+# Registry-derived pass-through fields (the offline dashboard card)
+# -----------------------------------------------------------------------
+
+
+def test_registry_passthrough_fields_match_created_sensors(mock_runtime_data):
+    """Every sensor sensor.py creates is either fixed or a pass-through field, never mistaken.
+
+    The offline card finds pass-through rows by excluding a fixed list of
+    unique ID suffixes. A new sensor class missing from that list would
+    appear as a bogus row, so this builds the real sensors and compares.
+    """
+    from unittest.mock import patch
+
+    from custom_components.cable_modem_monitor.dev_tools import _passthrough_fields_from_registry
+    from custom_components.cable_modem_monitor.sensor import (
+        HttpLatencySensor,
+        ModemInfoSensor,
+        ModemStatusSensor,
+        TcpLatencySensor,
+        _create_data_dependent_entities,
+    )
+
+    system_info = {
+        **MOCK_MODEM_DATA["system_info"],
+        "total_downstream_bytes": 1,
+        "extra_field_example": "x",
+    }
+    modem_data = {**MOCK_MODEM_DATA, "system_info": system_info}
+    coord, entry = _make_coord_and_entry(modem_data, mock_runtime_data)
+    health = MagicMock()
+    health.data = HealthInfo(health_status=HealthStatus.RESPONSIVE, icmp_latency_ms=1.0, http_latency_ms=1.0)
+
+    entities = [
+        ModemStatusSensor(coord, entry),
+        ModemInfoSensor(coord, entry),
+        TcpLatencySensor(health, entry),
+        PingLatencySensor(health, entry),
+        HttpLatencySensor(health, entry),
+        *_create_data_dependent_entities(coord, entry, modem_data),
+    ]
+    records = []
+    for entity in entities:
+        record = MagicMock()
+        record.domain = "sensor"
+        record.unique_id = entity.unique_id
+        records.append(record)
+
+    with patch(
+        "custom_components.cable_modem_monitor.dev_tools.er.async_entries_for_config_entry", return_value=records
+    ):
+        assert _passthrough_fields_from_registry(MagicMock(), entry) == ["extra_field_example"]

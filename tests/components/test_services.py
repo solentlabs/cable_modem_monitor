@@ -1471,6 +1471,7 @@ def _registered(*unique_suffixes: str, entry_id: str = "test_entry") -> list[Mag
     records = []
     for suffix in unique_suffixes:
         record = MagicMock()
+        record.domain = "sensor"
         record.unique_id = f"{entry_id}_cable_modem_{suffix}"
         records.append(record)
     return records
@@ -1543,6 +1544,24 @@ def test_generate_dashboard_offline_builds_from_registry(
     assert any(entities == downstream for entities in graphs.values())
     assert any(entities == upstream for entities in graphs.values())
     assert any(title.lower().startswith("latency") for title in graphs)
+
+
+def test_generate_dashboard_offline_keeps_passthrough_rows(
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """A pass-through field's row survives the modem going offline, as it has online."""
+    mock_runtime_data.data_coordinator.data = None  # type: ignore[assignment]  # rationale: an offline modem has no snapshot; the coordinator types data as non-Optional
+    entry = _make_mock_entry(mock_runtime_data)
+    entry.data = {"entity_prefix": "none", "host": "192.168.100.1"}
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    handler = create_generate_dashboard_card_handler(hass)
+    with patch(_REGISTRY_RECORDS, return_value=_registered("ds_qam_ch_1_power", "provisioned_speed")):
+        cards = yaml_lib.safe_load(handler(_make_mock_call())["yaml"])["cards"]
+
+    rows = {row["name"]: row["entity"] for row in cards[0]["entities"]}
+    assert rows["Provisioned Speed"] == "sensor.cable_modem_provisioned_speed"
 
 
 def test_card_watch_entities_offline_includes_status(

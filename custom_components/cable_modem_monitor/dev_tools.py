@@ -649,7 +649,45 @@ def _resolve_dashboard_target(
     return entry, (snapshot.modem_data if snapshot is not None else None)
 
 
-def _system_info_from_registry(resolver: _EntityResolver) -> dict[str, None]:
+# Unique ID suffixes of every sensor that is not a pass-through system_info
+# field. A guard test builds the real sensors and fails if this list drifts.
+_FIXED_SENSOR_SUFFIXES = frozenset(
+    {
+        "status",
+        "info",
+        "downstream_channel_count",
+        "upstream_channel_count",
+        "total_corrected",
+        "total_uncorrected",
+        "rate_corrected",
+        "rate_uncorrected",
+        "total_downstream_bytes",
+        "software_version",
+        "last_boot_time",
+        "ping_latency",
+        "tcp_latency",
+        "http_latency",
+    }
+)
+_CHANNEL_SENSOR_SUFFIX = re.compile(r"^(ds|us)_")
+
+
+def _passthrough_fields_from_registry(hass: HomeAssistant, entry: CableModemConfigEntry) -> list[str]:
+    """Pass-through system_info fields, from registered sensors that are neither fixed nor per-channel."""
+    prefix = f"{entry.entry_id}_cable_modem_"
+    fields: list[str] = []
+    for record in er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id):
+        if record.domain != "sensor" or not record.unique_id.startswith(prefix):
+            continue
+        suffix = record.unique_id[len(prefix) :]
+        if suffix not in _FIXED_SENSOR_SUFFIXES and not _CHANNEL_SENSOR_SUFFIX.match(suffix):
+            fields.append(suffix)
+    return sorted(fields)
+
+
+def _system_info_from_registry(
+    hass: HomeAssistant, entry: CableModemConfigEntry, resolver: _EntityResolver
+) -> dict[str, None]:
     """The system_info fields the status card shows, rebuilt from registered sensors.
 
     sensor.py creates each of these only when the modem reported the field,
@@ -664,6 +702,8 @@ def _system_info_from_registry(resolver: _EntityResolver) -> dict[str, None]:
     for name in ("total_corrected", "total_uncorrected"):
         if resolver.sensor(name) is not None:
             fields[name] = None
+    for name in _passthrough_fields_from_registry(hass, entry):
+        fields[name] = None
     return fields
 
 
@@ -703,7 +743,9 @@ def build_card_config(hass: HomeAssistant, options: Mapping[str, Any]) -> dict[s
     has_head = bool(entry.data.get(CONF_SUPPORTS_HEAD, False))
     has_restart = entry.runtime_data.orchestrator.supports_restart
     system_info: dict[str, Any] = (
-        modem_data.get("system_info", {}) if modem_data is not None else _system_info_from_registry(resolver)
+        modem_data.get("system_info", {})
+        if modem_data is not None
+        else _system_info_from_registry(hass, entry, resolver)
     )
 
     opts = {
