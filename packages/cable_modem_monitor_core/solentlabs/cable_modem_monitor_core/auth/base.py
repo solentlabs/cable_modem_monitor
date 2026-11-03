@@ -237,6 +237,11 @@ class BaseAuthManager(abc.ABC):
         """Wrap ``body`` the way this session's firmware expects; ``None`` when it cannot encode."""
         return None
 
+    def _session_cookie_value(self, session: requests.Session) -> str:
+        """Value of the declared session cookie; ``""`` when none is declared or it is absent."""
+        cookie_name = self.session_cookie_name()
+        return (session.cookies.get(cookie_name, "") or "") if cookie_name else ""
+
     def _prefixed_url_token(
         self,
         session: requests.Session,
@@ -248,6 +253,4 @@ class BaseAuthManager(abc.ABC):
             return ("", "")
         if context is not None and context.url_token:
             return (token_prefix, context.url_token)
-        cookie_name = self.session_cookie_name()
-        token = (session.cookies.get(cookie_name, "") or "") if cookie_name else ""
-        return (token_prefix, token)
+        return (token_prefix, self._session_cookie_value(session))

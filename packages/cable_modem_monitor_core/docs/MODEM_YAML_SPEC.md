@@ -766,14 +766,34 @@ actions:
 | `pbkdf2_iterations` | int | required | PBKDF2 iteration count |
 | `pbkdf2_key_length` | int | required | Derived key length in bits |
 | `double_hash` | bool | `true` | Hash twice: first with `salt`, then with `saltwebui` |
-| `csrf_init_endpoint` | string | `""` | Endpoint to fetch a fresh CSRF token (e.g., `/api/v1/session/init_page`). Called before each POST that requires CSRF (login, logout). If empty, CSRF token is extracted from the login response and reused for all POSTs. |
-| `csrf_header` | string | `""` | Header name for the CSRF token (e.g., `X-CSRF-TOKEN`). The `form_pbkdf2` strategy fetches the token value (via `csrf_init_endpoint` or login response) and attaches it as this header. Which requests carry the token and how the token is obtained are strategy-specific — other strategies that need CSRF may define their own fields. |
+| `csrf_source` | enum | `init_endpoint` | Where the CSRF token comes from. `init_endpoint`: fetched from `csrf_init_endpoint`. `cookie`: the value of the `cookie_name` cookie the login sets. `cookie` requires `csrf_header` and `cookie_name` and forbids `csrf_init_endpoint`. |
+| `csrf_init_endpoint` | string | `""` | Endpoint fetched once per login, before the salt request, for the CSRF token (e.g., `/api/v1/session/init_page`). The token is read from a JSON `token`, `csrf` or `csrfToken` key, else from a response header named `csrf_header`. |
+| `csrf_header` | string | `""` | Request header that carries the CSRF token (e.g., `X-CSRF-TOKEN`). Core sends it on every request once the token is obtained, GET and POST alike, including actions. Empty: no CSRF header is sent. Other strategies that need CSRF define their own fields. |
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `login_success` | dict | `{}` | When set, login is considered successful only when every key-value pair in this dict matches the response JSON. Values may be string, integer, or boolean — matched by equality against the parsed JSON response. Use when the firmware signals success with a specific field rather than absence of an error (e.g., Technicolor CGA6444VF returns `{"error": "ok", ...}` — set `login_success: {error: "ok"}`). |
 | `login_busy` | dict | `{}` | When set and every key-value pair matches the response JSON, the modem declined to serve the login without judging the credential: Core reports the attempt busy and the collector classifies it `AUTH_UNAVAILABLE`, the same as a 5xx (UC-87a). Same matching rules as `login_success`, checked first. Use when single-session firmware refuses a second login under HTTP 200 (e.g., Technicolor CGA6444VF answers `{"message": "MSG_LOGIN_150", ...}` — set `login_busy: {message: "MSG_LOGIN_150"}`). |
 
 Session-wide headers and logout are declared in their respective
 sections. See [Session](#session) and [Actions](#actions).
+
+**CSRF from the session cookie:** firmware that echoes its session
+cookie as a request header declares the cookie as the source, for
+example the Technicolor CGA437ATCH4:
+
+```yaml
+auth:
+  strategy: form_pbkdf2
+  cookie_name: "auth"
+  csrf_source: cookie
+  csrf_header: "X-CSRF-TOKEN"
+```
+
+Core reads the cookie after a successful login and sends its value as
+`csrf_header` on every later request. A cookie missing after a
+successful login logs an ERROR and sends no header. The header lives
+here and not in `session.headers` because its value is the login's
+output, and `session.headers` is static
+([ARCHITECTURE_DECISIONS.md § CSRF token source is a named value](ARCHITECTURE_DECISIONS.md#csrf-token-source-is-a-named-value)).
 
 **Success detection:** HTTP 401 is always treated as failure. If
 `login_busy` is set and every key-value pair matches the response

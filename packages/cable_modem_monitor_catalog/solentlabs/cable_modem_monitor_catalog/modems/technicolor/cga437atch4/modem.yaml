@@ -8,6 +8,7 @@ auth:
   strategy: form_pbkdf2
   login_endpoint: /api/v1/session/login
   cookie_name: auth
+  csrf_source: cookie
   csrf_header: X-CSRF-TOKEN
   login_busy:
     message: MSG_LOGIN_150

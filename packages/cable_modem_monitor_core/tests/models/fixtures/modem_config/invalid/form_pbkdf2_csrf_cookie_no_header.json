@@ -1,0 +1,21 @@
+{
+  "_expected_error": "csrf_source: cookie requires csrf_header",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {
+      "strategy": "form_pbkdf2",
+      "login_endpoint": "/api/v1/session/login",
+      "pbkdf2_iterations": 1000,
+      "pbkdf2_key_length": 128,
+      "csrf_source": "cookie",
+      "cookie_name": "auth"
+    },
+    "hardware": {"docsis_version": "3.1"},
+    "status": "awaiting_verification",
+    "attribution": {"contributors": [{"github": "test-user", "contribution": "HAR capture"}]},
+    "isps": ["Various"]
+  }
+}

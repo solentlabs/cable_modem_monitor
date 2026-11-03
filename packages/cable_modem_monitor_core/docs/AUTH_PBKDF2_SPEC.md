@@ -20,11 +20,12 @@ These modems use the SJCL JavaScript library for PBKDF2 computation, but unlike 
 ## Auth Flow
 
 ```text
-1. Fetch CSRF token (optional, if csrf_init_endpoint configured):
+1. Fetch CSRF token (csrf_source: init_endpoint with csrf_init_endpoint configured):
    GET csrf_init_endpoint
    Extract token from JSON body ("token"|"csrf"|"csrfToken" keys)
    or from response header (csrf_header name)
    Set on session: session.headers[csrf_header] = token
+   With csrf_source: cookie this step is skipped; step 6 supplies the token.
 
 2. Request server salts (form-encoded):
    POST login_endpoint  username=<user>&password=<salt_trigger>
@@ -46,11 +47,14 @@ These modems use the SJCL JavaScript library for PBKDF2 computation, but unlike 
    Content-Type: application/x-www-form-urlencoded
    Busy:    HTTP != 401 AND login_busy dict matches response (checked first; AuthResult.busy)
    Success: HTTP != 401 AND ("error" field absent/falsy, OR login_success dict matches response)
-   Sets PHPSESSID cookie
+   Sets the session cookie (cookie_name)
 
-6. Subsequent requests:
-   GETs use PHPSESSID cookie only
-   POSTs include PHPSESSID + csrf_header
+6. Token from the session cookie (csrf_source: cookie):
+   session.headers[csrf_header] = session cookie value (cookie_name)
+   Cookie absent after a successful login: log ERROR, send no header.
+
+7. Subsequent requests, GET and POST alike, including actions:
+   the session cookie, plus csrf_header when a token was obtained
 ```
 
 ## Firmware Assumptions
@@ -67,6 +71,7 @@ What's hardcoded in `auth/form_pbkdf2.py` that is specific to the Technicolor RE
 | Error detail field | `"message"` key in error response | HAR response analysis | Firmware-specific |
 | Form-encoded POST | `application/x-www-form-urlencoded` | HAR request headers, login.js jQuery `$.ajax({data})` | All known Technicolor REST modems use form-encoded |
 | Same endpoint for salt and login | Single `login_endpoint` for both rounds | Technicolor API design | Other designs may separate these |
+| Cookie echoed as CSRF header | `csrf_source: cookie`: the `cookie_name` value is the token, sent on every request | CGA437ATCH4 capture: 50 `/api/v1/` requests carry `X-CSRF-TOKEN`, each equal to the `auth` cookie; the reporter's probe got 401 for a wrong token (#227) | A firmware that derives its token another way needs a different `csrf_source` value |
 
 ## Config Reference
 
@@ -81,7 +86,7 @@ Fields that map to **firmware** (Technicolor-level):
 
 - `salt_trigger` -- the magic string that triggers salt response
 - `login_endpoint` -- URL path
-- `csrf_init_endpoint`, `csrf_header` -- CSRF mechanism
+- `csrf_source`, `csrf_init_endpoint`, `csrf_header` -- CSRF mechanism
 - `cookie_name` -- session cookie name
 
 ## Evidence Base

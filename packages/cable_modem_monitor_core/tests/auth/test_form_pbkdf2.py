@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -272,6 +273,31 @@ _BUSY_CASES = [
 ]
 # fmt: on
 
+# csrf_source: cookie sends the session cookie's value as csrf_header after a
+# successful login (#227). The default source must leave the request as it
+# was: csrf_header without csrf_init_endpoint sends nothing, cookie or not.
+#
+# ┌──────────────────────────┬─────────┬──────────┬─────────┬──────────┬───────┐
+# │ description              │ source  │ cookie   │ login   │ header   │ ERROR │
+# ├──────────────────────────┼─────────┼──────────┼─────────┼──────────┼───────┤
+# │ cookie_echoed            │ cookie  │ set      │ ok      │ cookie   │ no    │
+# │ cookie_absent            │ cookie  │ absent   │ ok      │ none     │ yes   │
+# │ login_rejected           │ cookie  │ set      │ bad     │ none     │ no    │
+# │ default_source_unchanged │ default │ set      │ ok      │ none     │ no    │
+# └──────────────────────────┴─────────┴──────────┴─────────┴──────────┴───────┘
+_CSRF_COOKIE_VALUE = "cookie-value-1"
+_CSRF_BAD_BODY = {"error": "error", "message": "MSG_LOGIN_2"}
+
+# fmt: off
+_CSRF_COOKIE_CASES = [
+    # (description,             csrf_source, cookie,             login_body,    expected_header,    error_logged)
+    ("cookie_echoed",           "cookie",    _CSRF_COOKIE_VALUE, _OK_BODY,      _CSRF_COOKIE_VALUE, False),
+    ("cookie_absent",           "cookie",    None,               _OK_BODY,      None,               True),
+    ("login_rejected",          "cookie",    _CSRF_COOKIE_VALUE, _CSRF_BAD_BODY, None,              False),
+    ("default_source_unchanged", None,       _CSRF_COOKIE_VALUE, _OK_BODY,      None,               False),
+]
+# fmt: on
+
 
 class TestFormPbkdf2AuthManager:
     """FormPbkdf2AuthManager multi-round-trip auth.
@@ -495,3 +521,55 @@ class TestFormPbkdf2AuthManager:
         assert result.success is False
         assert expected_error.lower() in result.error.lower()
         assert (result.response is not None) is expects_response
+
+    @pytest.mark.parametrize(
+        "desc,csrf_source,cookie,login_body,expected_header,error_logged",
+        _CSRF_COOKIE_CASES,
+        ids=[c[0] for c in _CSRF_COOKIE_CASES],
+    )
+    def test_csrf_header_from_session_cookie(
+        self,
+        session: requests.Session,
+        caplog: pytest.LogCaptureFixture,
+        desc: str,
+        csrf_source: str | None,
+        cookie: str | None,
+        login_body: dict[str, Any],
+        expected_header: str | None,
+        error_logged: bool,
+    ) -> None:
+        """csrf_source decides whether the login's cookie becomes the CSRF header."""
+        overrides: dict[str, Any] = {
+            "double_hash": False,
+            "login_success": {"error": "ok"},
+            "csrf_header": "X-CSRF-TOKEN",
+            "cookie_name": "auth",
+        }
+        if csrf_source:
+            overrides["csrf_source"] = csrf_source
+        manager = FormPbkdf2AuthManager(self._make_config(**overrides))
+        manager.configure_session(session, {})
+
+        salt_resp = MagicMock()
+        salt_resp.json.return_value = {"salt": "s"}
+        login_resp = MagicMock()
+        login_resp.status_code = 200
+        login_resp.json.return_value = login_body
+
+        responses = iter([salt_resp, login_resp])
+
+        def post(url: str, **_kwargs: Any) -> MagicMock:
+            response = next(responses)
+            # The modem sets its cookie on the login response, not the salt one.
+            if response is login_resp and cookie is not None:
+                session.cookies.set("auth", cookie)
+            return response
+
+        with caplog.at_level(logging.ERROR), patch.object(session, "post", side_effect=post):
+            manager.authenticate(session, "http://192.168.0.1", "admin", "pw")
+
+        assert session.headers.get("X-CSRF-TOKEN") == expected_header
+        errors = [r for r in caplog.records if r.levelno >= logging.ERROR]
+        assert bool(errors) is error_logged
+        if error_logged:
+            assert "auth" in errors[0].getMessage()

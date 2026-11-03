@@ -44,6 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `cable_modem_monitor.generate_dashboard_card`. The docs now name the Tools
   page, which Home Assistant renamed from Developer Tools in 2026.8, and say
   to copy the lines after `yaml: |-` in the response.
+- **Form PBKDF2 logins can send the session cookie as the CSRF header
+  (#227).** The CGA437ATCH4 answers 401 to data requests that lack an
+  `X-CSRF-TOKEN` header equal to its `auth` cookie, so beta.6 logged in and
+  then failed its first read. A new `csrf_source: cookie` setting makes Core
+  send that header on every request after login, and the CGA437ATCH4 entry
+  uses it. Entries that fetch the token from an endpoint are unchanged. It
+  still awaits verification on the reporter's hardware.
 
 ## [3.14.15-beta.6] - 2026-10-30
 

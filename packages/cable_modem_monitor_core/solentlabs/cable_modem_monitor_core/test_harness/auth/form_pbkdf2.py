@@ -51,6 +51,10 @@ class FormPbkdf2AuthHandler(FormAuthHandler):
         csrf_init_endpoint: GET endpoint for CSRF token (empty if none).
         csrf_header: CSRF header name (empty if none).
         cookie_name: Session cookie name (empty for IP-based).
+        csrf_source: ``cookie`` makes a data request authenticated only
+            when ``csrf_header`` carries the session cookie's value, as
+            the firmware does (#227). ``init_endpoint`` gates on the
+            session alone.
         login_success: Key-value pairs the firmware returns on success
             (e.g., ``{"error": "ok"}``). When set, the mock success
             response body mirrors these pairs so the auth manager's
@@ -74,6 +78,7 @@ class FormPbkdf2AuthHandler(FormAuthHandler):
         csrf_header: str = "",
         cookie_name: str = "",
         login_success: dict[str, Any] | None = None,
+        csrf_source: str = "init_endpoint",
     ) -> None:
         super().__init__(
             login_path=login_endpoint,
@@ -85,6 +90,7 @@ class FormPbkdf2AuthHandler(FormAuthHandler):
         self._double_hash = double_hash
         self._csrf_init_path = normalize_path(csrf_init_endpoint) if csrf_init_endpoint else ""
         self._csrf_header = csrf_header
+        self._csrf_source = csrf_source
         self._login_success = login_success or {}
 
         # Pre-compute expected derived key from test password + test salts
@@ -95,6 +101,14 @@ class FormPbkdf2AuthHandler(FormAuthHandler):
         if self._csrf_init_path and method == "GET" and normalize_path(path) == self._csrf_init_path:
             return True
         return super().is_login_request(method, path)
+
+    def is_authenticated(self, headers: dict[str, str], *, query: str = "") -> bool:
+        """Session state, plus the cookie-valued CSRF header when ``csrf_source`` is ``cookie``."""
+        if not super().is_authenticated(headers, query=query):
+            return False
+        if self._csrf_source != "cookie":
+            return True
+        return headers.get(self._csrf_header.lower()) == self._SESSION_TOKEN
 
     def handle_login(
         self,
@@ -247,6 +261,7 @@ def create_handler(
         csrf_header=auth.csrf_header,
         cookie_name=action_cfg.cookie_name,
         login_success=auth.login_success or None,
+        csrf_source=auth.csrf_source,
     )
     handler.login_action = auth.login_endpoint
     return handler

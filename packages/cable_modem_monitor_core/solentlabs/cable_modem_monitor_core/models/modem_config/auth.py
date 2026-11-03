@@ -249,6 +249,7 @@ class FormPbkdf2Auth(AuthStrategyBase):
     pbkdf2_iterations: int
     pbkdf2_key_length: int
     double_hash: bool = True
+    csrf_source: Literal["init_endpoint", "cookie"] = "init_endpoint"
     csrf_init_endpoint: str = ""
     csrf_header: str = ""
     cookie_name: str = ""
@@ -258,6 +259,21 @@ class FormPbkdf2Auth(AuthStrategyBase):
     display_name: ClassVar[str] = "Form Login (PBKDF2)"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
+
+    @model_validator(mode="after")
+    def _csrf_cookie_source_is_complete(self) -> FormPbkdf2Auth:
+        # The cookie is the token, so it needs a header to travel in and a
+        # name to be read by. An init endpoint would be a second source that
+        # could disagree with it.
+        if self.csrf_source != "cookie":
+            return self
+        if not self.csrf_header:
+            raise ValueError("csrf_source: cookie requires csrf_header")
+        if not self.cookie_name:
+            raise ValueError("csrf_source: cookie requires cookie_name")
+        if self.csrf_init_endpoint:
+            raise ValueError("csrf_source: cookie forbids csrf_init_endpoint")
+        return self
 
     def landing_signals(self) -> LandingSignals:
         """The paths and cookies this strategy's config declares."""

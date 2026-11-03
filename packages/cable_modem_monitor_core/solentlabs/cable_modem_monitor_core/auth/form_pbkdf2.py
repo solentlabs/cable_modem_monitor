@@ -14,7 +14,7 @@ import requests
 from ..connectivity import is_connectivity_error
 from ..models.modem_config.auth import FormPbkdf2Auth
 from .base import AuthFailureMode, AuthResult, BaseAuthManager
-from .response import matches_criteria, parse_json_dict, post_form
+from .response import matches_criteria, parse_json_dict, place_token_header, post_form
 
 _logger = logging.getLogger(__name__)
 
@@ -48,6 +48,21 @@ class FormPbkdf2AuthManager(BaseAuthManager):
     def session_cookie_name(self) -> str:
         """The declared ``cookie_name``."""
         return self._config.cookie_name
+
+    def _place_cookie_csrf_token(self, session: requests.Session) -> None:
+        """Send the login's session cookie value as ``csrf_header`` on every later request."""
+        token = self._session_cookie_value(session)
+        if not token:
+            # The modem accepted the login, so failing it would break a login
+            # that worked; ERROR because a declared source that yields nothing
+            # is a config defect, and every later request will be rejected.
+            _logger.error(
+                "CSRF cookie %r absent after login; %s header not sent",
+                self._config.cookie_name,
+                self._config.csrf_header,
+            )
+            return
+        place_token_header(session, self._config.csrf_header, token)
 
     def authenticate(
         self,
@@ -118,6 +133,9 @@ class FormPbkdf2AuthManager(BaseAuthManager):
         if isinstance(login_result, AuthResult):
             return login_result
         response = login_result
+
+        if config.csrf_source == "cookie":
+            self._place_cookie_csrf_token(session)
 
         _logger.log(
             log_level,

@@ -11,7 +11,7 @@ files; this document explains the choices that shaped them.
 | [Package Boundaries](#package-boundaries) | Runtime package split, dependency direction, where each piece lives, pruning Core's exported surface, specs citing the catalog rather than restating its coverage |
 | [Core Schema Model](#core-schema-model) | What enters Core's schema vs what stays user-side; catalog stores source-faithful strings and maps only observed values, display normalizes; derived and dynamic fields, health as its own structure |
 | [Transport and Constraint Model](#transport-and-constraint-model) | Transport as protocol identifier, JSON-RPC as a transport, generated constraint tables, implicit capabilities, shared protocol primitives, config as parameters |
-| [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, failure logging, credential reconfiguration as reconstruction |
+| [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, CSRF token source, failure logging, credential reconfiguration as reconstruction |
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
 | [Recovery Architecture](#recovery-architecture) | Restart vs recovery, restart never state-gated, generic timing, reboot-signal vote, observer callback, no session preservation |
@@ -1200,6 +1200,29 @@ both `bearer` and `json_sjcl` call; no strategy imports a sibling
 strategy. `{host}` in `extra_fields` is the one
 placeholder; a second would be a new key in that fixed set, not a
 template syntax (MODEM_YAML_SPEC § a fixed key set).
+
+### CSRF token source is a named value
+
+**Decision:** `form_pbkdf2` names where its CSRF token comes from with
+`csrf_source`: `init_endpoint` (default) or `cookie`. The strategy
+places the token under `csrf_header` on the session after login, with
+the `place_token_header` helper in `auth/response.py`.
+
+**Rationale:** The token is an output of the login flow, so it is
+declared on the strategy that produced it
+([Session is lifecycle, auth owns the cookie](#session-is-lifecycle-auth-owns-the-cookie)).
+`session.headers` is static and built before login. `{cookie:name}`
+resolves in action `params` only. Neither can carry a value that exists
+only after login for every request.
+
+**Constrains:** A new token source is a new `csrf_source` value, never
+a second flag (§ Auth extraction sources are named, not flagged).
+`cookie` forbids `csrf_init_endpoint`, so two sources cannot disagree.
+The unset path is the pre-extension request. A source that yields
+nothing logs an ERROR rather than failing a login the modem accepted
+(§ How to extend an existing auth strategy).
+
+---
 
 ### JS-driven auth is a `form` variant
 
