@@ -148,26 +148,30 @@ The catalog grows when contributors with hardware step up. Two paths:
 
 ## Installation
 
-### HACS (Recommended)
+### Marketplace (Recommended)
 
-> **Don't have HACS?** Follow the [HACS installation guide](https://www.hacs.xyz/docs/use/download/download/) first.
+The Marketplace is built into Home Assistant 2026.11 and later. On earlier versions, install through [HACS](https://www.hacs.xyz/docs/use/download/download/) instead: open **HACS** from the sidebar, search for **"Cable Modem Monitor"** and click **Download**.
 
-1. Open **HACS** from the sidebar
-2. Search for **"Cable Modem Monitor"**
-3. Click **Download**
-4. Restart Home Assistant
+1. Open **Settings → Marketplace**.
+2. Search for **"Cable Modem Monitor"** and open it.
+3. Click **Install**.
+4. If Home Assistant asks for a restart, restart it.
 
 ### Testing a Beta Release
 
 Betas don't auto-update; each one is a manual per-version install.
 
-1. In HACS, open **Cable Modem Monitor**.
-2. Click the **⋯** menu → **Redownload**.
-3. Click **Need a different version?**.
-4. Pick the desired beta from the **Release** dropdown.
-5. Click **Download** and restart Home Assistant.
+1. Open **Settings → Marketplace → Cable Modem Monitor**.
+2. Click the **⋮** menu → **Include pre-releases** and confirm.
+3. Click the **⋮** menu → **Install another version**.
+4. Pick the desired beta from the list. Betas are labeled **Pre-release**.
+5. Click **Install** and restart Home Assistant if prompted.
 
-To return to stable: repeat the steps and pick the latest stable release.
+If the list reports a rate limit, connect GitHub: **Settings → Devices & Services → Marketplace**, **⋮** menu → **Reconfigure**.
+
+To return to stable: use **Exclude pre-releases** and install the latest stable release from **Install another version**. Home Assistant advises restoring a backup to go back to an earlier version.
+
+On Home Assistant before 2026.11, in HACS open **Cable Modem Monitor**, click the **⋯** menu → **Redownload**, click **Need a different version?**, pick the beta from the **Release** dropdown, then **Download**.
 
 ## Setup
 
@@ -358,7 +362,7 @@ To remove a single modem:
 
 Deleting the integration does not purge recorded sensor history; your Home Assistant **recorder** settings govern it. To clear leftover channel history, use the `orphaned_statistics` service or follow [Ghost Statistics in History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#ghost-statistics-in-history). To clear state history, see [Leftover State History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#leftover-state-history).
 
-To uninstall completely, delete every modem entry as above, then remove **Cable Modem Monitor** from **HACS** (open it, **⋯** menu → **Remove**) and restart Home Assistant.
+To uninstall completely, delete every modem entry as above, then open **Settings → Marketplace → Cable Modem Monitor**, click the **⋮** menu → **Uninstall**, and restart Home Assistant if prompted. On Home Assistant before 2026.11, use **HACS** (open it, **⋯** menu → **Remove**).
 
 ## Known Limitations
 
