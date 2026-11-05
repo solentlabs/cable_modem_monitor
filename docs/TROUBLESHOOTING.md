@@ -549,15 +549,16 @@ Schema migrations are one-way. Newer integration versions migrate older config e
 
 **Solution:**
 
-1. Open **HACS** → **Cable Modem Monitor**
-2. Click the **⋯** menu → **Redownload**
-3. Click **Need a different version?**
-4. Pick the version you actually wanted (latest stable, or a specific release tag) from the **Release** dropdown
-5. Click **Download** and restart Home Assistant
+1. Open **Settings** → **Marketplace** → **Cable Modem Monitor**
+2. Click the **⋮** menu → **Install another version**
+3. Pick the version you actually wanted (latest stable, or a specific release tag) from the list
+4. Click **Install** and restart Home Assistant
+
+On Home Assistant before 2026.11, use HACS instead: open **Cable Modem Monitor**, click the **⋯** menu → **Redownload**, click **Need a different version?**, pick the version from the **Release** dropdown, then **Download**.
 
 If you're stuck after rolling back too far, delete and re-add the integration after returning to a compatible version.
 
-> The HA `update.install` service is not supported for this integration. Use the HACS picker above instead.
+> The HA `update.install` service is not supported for this integration. Use the version picker above instead.
 
 ---
 

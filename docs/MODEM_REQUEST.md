@@ -125,10 +125,13 @@ checks a capture for missing login steps before you submit.
 
 The maintainer comments when a beta with your modem is out.
 
-1. In HACS, open Cable Modem Monitor, choose **Redownload**, click
-   **Need a different version?** and pick the version named in the
-   comment from the **Release** dropdown.
-2. Restart Home Assistant.
+1. Go to Settings, Marketplace, Cable Modem Monitor. In the three-dot
+   menu choose **Include pre-releases** and confirm, then choose
+   **Install another version** and pick the version named in the
+   comment. On Home Assistant before 2026.11, use HACS: open Cable Modem
+   Monitor, choose **Redownload**, click **Need a different version?**
+   and pick the version from the **Release** dropdown.
+2. Restart Home Assistant if prompted.
 3. Add the integration and select your modem from the list.
 4. Download diagnostics (Settings, Devices & services, Cable Modem
    Monitor, the three-dot menu) and attach the file to the issue.
