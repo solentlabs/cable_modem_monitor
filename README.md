@@ -32,9 +32,9 @@ Modem not listed? [File a request](https://github.com/solentlabs/cable_modem_mon
 
 ## Setup
 
-1. Install via HACS (you're here).
-2. Restart Home Assistant.
-3. Settings → Devices & Services → Add Integration → "Cable Modem Monitor".
+1. Open **Settings → Marketplace**, search for "Cable Modem Monitor" and select **Install**. On Home Assistant before 2026.11, install it from HACS instead.
+2. If Home Assistant asks for a restart, restart it.
+3. Settings → Devices & Services → Add Integration → "Cable Modem Monitor". The setup page may open on its own after the install.
 4. Pick your manufacturer and model, enter your modem's IP (usually `192.168.100.1`) and credentials if required.
 
 ## Privacy and security
