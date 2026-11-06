@@ -21,11 +21,11 @@ and per-entry provenance live in the auto-generated catalog
 Two pip packages and an HA integration in a monorepo with strict dependency
 direction. Each pip package has its own `pyproject.toml` and enforces boundaries
 through real Python packaging — import violations are missing module errors, not
-lint warnings. The HA integration is distributed via HACS.
+lint warnings. The HA integration is distributed through the Home Assistant Marketplace and HACS.
 
 **Naming convention:** `cable_modem_monitor_` prefix for all packages in the
 `solentlabs` namespace. The HA integration name (`cable_modem_monitor`) is
-locked to the HACS store.
+locked to the store listing.
 
 ```mermaid
 graph TD

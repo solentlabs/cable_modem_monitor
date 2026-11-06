@@ -120,7 +120,7 @@ We follow [Semantic Versioning](https://semver.org/):
 
 4. **Announcement**
    - GitHub release is published
-   - Users are notified via HACS
+   - Users are notified via the Marketplace and HACS
 
 ### Release Schedule
 

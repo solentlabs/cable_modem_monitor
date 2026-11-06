@@ -324,7 +324,8 @@ def generate_index(output_path: Path | None = None) -> str:
         + "(https://opensource.org/licenses/MIT)",
         "",
         "> **Internal dependency of [Cable Modem Monitor](https://github.com/solentlabs/cable_modem_monitor).**",
-        "> Not intended for direct use — install the HA integration via [HACS](https://hacs.xyz/).",
+        "> Not intended for direct use — install the HA integration from the Marketplace in "
+        "Home Assistant 2026.11 and later, or via [HACS](https://hacs.xyz/).",
         ">",
         "> This package contains modem configuration files, parser configs, and test fixtures",
         "> for all supported DOCSIS cable modems. The table below is the canonical list of",

@@ -45,7 +45,7 @@ Core, it should.
 | [Notifications](#notifications) | When one is warranted; first-poll onboarding pointing to the Cable Modem card |
 | [Config Entry Migration](#config-entry-migration) | Version-keyed migration with auto-discovery |
 | [Testing](#testing) | No modem-specific names, dynamic catalog discovery |
-| [Distribution](#distribution) | HACS zip, PyPI packages, version pinning, release tiers |
+| [Distribution](#distribution) | Integration zip, PyPI packages, version pinning, release tiers |
 
 ---
 

@@ -4,7 +4,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor?include_prereleases)](https://github.com/solentlabs/cable_modem_monitor/releases)
 [![Core](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-core?label=core)](https://pypi.org/project/solentlabs-cable-modem-monitor-core/)
 [![Catalog](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-catalog?label=catalog)](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)
-[![HACS installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HACS&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
+[![HA analytics installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HA%20analytics&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <!-- Build Status -->
@@ -159,7 +159,7 @@ The Marketplace is built into Home Assistant 2026.11 and later. On earlier versi
 
 ### Testing a Beta Release
 
-Betas don't auto-update; each one is a manual per-version install.
+Betas are opt-in. Pre-releases stay hidden until you turn on **Include pre-releases**, and you install each beta yourself.
 
 1. Open **Settings → Marketplace → Cable Modem Monitor**.
 2. Click the **⋮** menu → **Include pre-releases** and confirm.
@@ -169,7 +169,7 @@ Betas don't auto-update; each one is a manual per-version install.
 
 If the list reports a rate limit, connect GitHub: **Settings → Devices & Services → Marketplace**, **⋮** menu → **Reconfigure**.
 
-To return to stable: use **Exclude pre-releases** and install the latest stable release from **Install another version**. Home Assistant advises restoring a backup to go back to an earlier version.
+To leave the beta channel, click the **⋮** menu → **Exclude pre-releases**. The next stable release then arrives as a normal update. Installing an older stable release than the beta you ran can break your config entry, because migrations are one-way (see [Migration handler not found](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#migration-handler-not-found-after-rolling-back-to-an-older-version)). Restore a backup instead.
 
 On Home Assistant before 2026.11, in HACS open **Cable Modem Monitor**, click the **⋯** menu → **Redownload**, click **Need a different version?**, pick the beta from the **Release** dropdown, then **Download**.
 

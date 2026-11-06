@@ -51,6 +51,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   send that header on every request after login, and the CGA437ATCH4 entry
   uses it. Entries that fetch the token from an endpoint are unchanged. It
   still awaits verification on the reporter's hardware.
+- **Install and beta steps now use the Home Assistant Marketplace.** Home
+  Assistant 2026.11 replaces HACS with the built-in Marketplace, under
+  Settings → Marketplace. The README, troubleshooting and modem request
+  guides give the Marketplace steps, including **Include pre-releases** for
+  testing a beta, and keep the HACS steps for earlier versions. The bug
+  report form has a Marketplace option.
 
 ## [3.14.15-beta.6] - 2026-10-30
 

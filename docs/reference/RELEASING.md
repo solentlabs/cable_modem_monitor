@@ -147,7 +147,7 @@ The tag push triggers `.github/workflows/release.yml` which:
   `CHANGELOG.md`, **not** from the tag message. The tag message is for
   readers of `git`; what users see is the changelog section, so that
   section has to be right before the tag is pushed.
-- Attaches the `cable_modem_monitor.zip` asset HACS installs from
+- Attaches the `cable_modem_monitor.zip` asset the Marketplace and HACS install from
 
 Verify at: <https://github.com/solentlabs/cable_modem_monitor/releases>
 
@@ -157,14 +157,17 @@ Two tiers ship: beta and stable. Both publish to PyPI and create
 GitHub Releases with a zip asset. Beta tags carry the GitHub
 `prerelease` flag; stable tags don't.
 
-| Tier   | Tag pattern       | PyPI      | GitHub Release          | HACS visibility                   |
+| Tier   | Tag pattern       | PyPI      | GitHub Release          | Marketplace visibility            |
 |--------|-------------------|-----------|-------------------------|-----------------------------------|
-| Beta   | `v*.*.*-beta.*`   | Published | Pre-release + zip asset | Manual install via version picker |
+| Beta   | `v*.*.*-beta.*`   | Published | Pre-release + zip asset | Opt-in: Include pre-releases      |
 | Stable | `v*.*.*` (no `-`) | Published | Release + zip asset     | Default (auto-update offer)       |
 
-Betas install manually via HACS → integration → Redownload → "Need
-a different version?" → Release. There is no auto-update path on
-betas — by design, each beta is a deliberate per-version install.
+Betas install manually: Settings → Marketplace → Cable Modem Monitor →
+⋮ menu → Include pre-releases, then Install another version. On Home
+Assistant before 2026.11, HACS → integration → Redownload → "Need a
+different version?" → Release. Betas are opt-in: with Include
+pre-releases on, the Marketplace offers each new beta as an update, and
+nothing installs until the user chooses it.
 
 **Where tags live:**
 
@@ -221,6 +224,9 @@ selector entirely. Users can't accidentally try to install from a
 branch ref, which would 404 (see "Why branch tracking is unsupported"
 below).
 
+The Marketplace reads the same `hacs.json`. `render_readme` applies to
+HACS only; the Marketplace always renders the root `README.md`.
+
 ### Why branch tracking is unsupported
 
 HACS reads `hacs.json` from the **default branch**, not from the
@@ -258,11 +264,11 @@ References:
 
 ### Rollback safety
 
-`zip_release: true` means HACS expects a `cable_modem_monitor.zip`
+`zip_release: true` means HACS and the Marketplace expect a `cable_modem_monitor.zip`
 asset on every release a user might roll back to. Older stable
 releases (v3.13.x and earlier) lack this asset because the zip
 wasn't built before the beta cut. Without a backfill of those older
-releases, rollback to a pre-beta release fails with a HACS
+releases, rollback to a pre-beta release fails with an
 asset-not-found error. Forward-only updates work fine.
 
 ## Version Numbering
@@ -285,7 +291,7 @@ when the manifest changes.
 All three packages are released in lock-step. `scripts/release.py`
 bumps all version files atomically. Independent versioning is not
 supported — even a catalog-only change (new modem config) triggers a
-full release, because the user needs a HACS update (new manifest pin)
+full release, because the user needs an integration update (new manifest pin)
 to receive the new catalog version.
 
 ## Package Architecture
@@ -294,18 +300,18 @@ to receive the new catalog version.
 
 | Package | Delivery | Contents |
 |---------|----------|----------|
-| HACS zip (`cable_modem_monitor.zip`) | GitHub release asset | HA adapter: config flow, coordinator, sensors, buttons, services, translations, icons |
+| Integration zip (`cable_modem_monitor.zip`) | GitHub release asset | HA adapter: config flow, coordinator, sensors, buttons, services, translations, icons |
 | Core (`solentlabs-cable-modem-monitor-core`) | PyPI wheel | Auth, parsers, orchestration, loaders, protocol, MCP tools |
 | Catalog (`solentlabs-cable-modem-monitor-catalog`) | PyPI wheel | modem.yaml, parser.yaml for each supported modem |
 
-The HACS zip contains only runtime files — `docs/` is excluded from
+The integration zip contains only runtime files — `docs/` is excluded from
 the zip build. Spec files stay in the repo for contributors but don't
 ship to users.
 
 ### Install flow
 
-1. HACS downloads `cable_modem_monitor.zip` from the GitHub release
-2. HACS extracts the zip into `custom_components/cable_modem_monitor/`
+1. The Marketplace (or HACS) downloads `cable_modem_monitor.zip` from the GitHub release
+2. It extracts the zip into `custom_components/cable_modem_monitor/`
 3. HA reads `manifest.json` → sees `requirements` pins
 4. HA pip-installs Core and Catalog from PyPI (exact `==` pins)
 5. Integration loads
@@ -376,11 +382,11 @@ internal refactors, or test/spec updates with no user- or
 contributor-facing surface change. The merge can wait until the
 next beta with contributor-facing changes, or until stable cut.
 
-**HACS note:** `main` being on a beta version string is acceptable
-here. HACS users who haven't opted into the beta channel install
+**Marketplace note:** `main` being on a beta version string is acceptable
+here. Marketplace and HACS users who haven't opted into pre-releases install
 the latest *stable tag*, not the default branch — so a beta version
 string on `main` doesn't break stable installs. Beta-channel users
-opt in separately. Don't argue against the merge on HACS grounds.
+opt in separately. Don't argue against the merge on Marketplace or HACS grounds.
 
 **Original driver:** the v3.14 architecture moved to `main` early
 because contributors were starting on the wrong branch — a major
@@ -469,7 +475,7 @@ git push origin hotfix/3.14.1
 - [ ] PR reviewed and merged to main
 - [ ] Tag created on main (not feature branch)
 - [ ] GitHub Release created automatically
-- [ ] Verify HACS picks up new version
+- [ ] Verify the Marketplace picks up the new version
 
 ## Troubleshooting
 
