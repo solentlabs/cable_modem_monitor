@@ -1,0 +1,107 @@
+manufacturer: Netgear
+model: C6250
+transport: http
+default_host: 192.168.0.1
+
+auth:
+  strategy: basic
+  challenge_cookie: true
+  cookie_name: XSRF_TOKEN
+
+actions:
+  logout:
+    type: http
+    method: POST
+    endpoint: /goform/logout
+    endpoint_pattern: logout
+    params:
+      nowTime: "1794501764860"
+    pre_fetch_url: /Logout.htm
+    requires_session: true
+  restart:
+    type: http
+    method: POST
+    endpoint: /goform/RouterStatus
+    endpoint_pattern: RouterStatus
+    params:
+      buttonSelect: "2"
+      curlang: English
+      enable_apmode: "0"
+      wantype: dhcp
+    pre_fetch_url: /RouterStatus.htm
+
+hardware:
+  docsis_version: "3.0"
+  chipset: Broadcom BCM33843
+  release_date: "2015"
+
+status: awaiting_verification
+
+sources:
+  docsis_version:
+    "[NETGEAR C6250-100NAS data sheet](https://www.cox.com/content/dam/cox/residential/support/internet/print_media/NetgearC6250_DataSheet.pdf):
+    DOCSIS 3.0, 16 downstream and 4 upstream channels"
+  auth_config:
+    "test_data/modem.har, maintainer bench capture of this unit (2026-11-12,
+    fw V1.02.02): a request without credentials is answered 401 with Set-Cookie XSRF_TOKEN,
+    and the retry with credentials and that cookie is answered 200"
+  chipset: "[DeviWiki](https://deviwiki.com/wiki/Netgear_C6250)"
+  isps:
+    "[NETGEAR C6250-100NAS data sheet](https://www.cox.com/content/dam/cox/residential/support/internet/print_media/NetgearC6250_DataSheet.pdf):
+    'CableLabs certified to work with cable Internet provider Comcast XFINITY'.
+    Xfinity is Comcast's brand."
+  logout_action:
+    "test_data/modem.har: Logout.htm pre-fetch and the page's own POST
+    to /goform/logout?id=N observed on this unit"
+  release_date:
+    "[NETGEAR C6250-100NAS data sheet](https://www.cox.com/content/dam/cox/residential/support/internet/print_media/NetgearC6250_DataSheet.pdf),
+    a proxy for launch: the PDF's creation date is 2015-10-05 (file metadata; the
+    sheet prints no date). The product may predate it."
+  restart_action:
+    "test_data/modem.har: the RouterStatus.htm form's POST to /goform/RouterStatus?id=N
+    with buttonSelect=2, answered 302 to /Reboot.htm, observed on this unit; the unit
+    then stopped answering"
+
+attribution:
+  contributors:
+    - github: https://github.com/kwschulz
+      contribution:
+        Bench HAR capture and login, session and restart probes (2026-11-11/12,
+        HW 1.02, SW V1.02.02)
+
+isps:
+  - Comcast
+
+notes: |
+  AC1600 WiFi cable modem router, DOCSIS 3.0, 16x4 channel bonding. Realm and pages name it
+  NETGEAR C6250-100NAS. Same page structure as the C7000v2: channel data in
+  InitDsTableTagValue() and InitUsTableTagValue() on DocsisStatus.htm, system info in
+  tagValueList on RouterStatus.htm. parser.yaml is the C7000v2's verbatim; every field was
+  checked against this unit's pages.
+  Maintainer bench unit on coax, not provisioned with an ISP account. modem.har holds three
+  fetches of DocsisStatus.htm, each within three minutes of a boot: 16 downstream locked in
+  all, and 2, 4 and 3 upstream locked. The golden is the last fetch (16 and 3; upstream
+  channel 1 reads Not Locked). Nothing here has been run by the integration on the hardware.
+  Bench probes on this unit, 2026-11-11/12:
+  Login: credentials are served only with an XSRF_TOKEN cookie from one of the unit's own
+  401s; without it the right password gets the same 401 as a wrong one. A cookie is gone
+  after 5 minutes with no session request. Every third failed credentialed request in a row
+  is answered 200 with a page that sends the browser to PwdRec_index.htm. No lockout by
+  number of failures was seen.
+  Busy redirect: while a login is alive the unit counts requests from anyone and, at about
+  the 100th in about 2 minutes, answers pages that need a login with a 302 to
+  /MultiLogin.htm. modem.har holds that redirect and the takeover POST to /goform/MultiLogin.
+  Logout: GET /Logout.htm ends nothing; the POST to /goform/logout?id=N ends the cookie. The
+  id is the token of the page served last; without it the answer is a 302 to /ErrorMsg.htm
+  and the cookie stays good. With no Referer the answer is a 302 to /DashBoard.htm; with a
+  Referer other than /Logout.htm it is a 401, and the cookie is ended all the same. The
+  captured nowTime was the browser's clock; whether the unit reads the value is unverified.
+  Restart: answered 302 to /Reboot.htm; the unit was silent from about 6 s to about 104 s
+  after the request.
+  Hand redaction, four values that har-capture 0.18.0 left in script and that now read
+  [REDACTED]: on /WirelessSettings_h.htm the 2.4 GHz network name in tagValueList; on
+  /WirelessSettings.htm three values in commented-out sample lists, the shared-secret field
+  of the list commented out in InitTagEnterprise() and two key-shaped values in the comment
+  inside InitTagValue() (both occurrences of each). The last three were flagged by this
+  repository's PII check. They sit in page-source comments and the live shared-secret field
+  beside them is empty, so they read as the vendor's samples, not this unit's settings.

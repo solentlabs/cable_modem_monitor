@@ -283,6 +283,7 @@ words:
   - channeltype
   - wantype
   - apmode
+  - curlang
   - cmconfiguration
   - cmconnectionstatus
   - cmstatus

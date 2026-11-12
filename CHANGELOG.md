@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of at the `generate_dashboard_card` action, which stays for anyone who
   wants the YAML. The card is separate from monitoring: if it cannot load,
   your modem keeps working.
+- **The Netgear C6250 joins the catalog, awaiting verification.** It uses the
+  C7000v2's pages and login (Basic with the challenge cookie). Restart and a
+  logout after each poll are declared from a capture of a bench unit; nothing
+  has been run by the integration on the hardware yet.
 
 ### Changed
 
