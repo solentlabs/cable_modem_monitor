@@ -191,7 +191,7 @@ class CollectorSignal(Enum):
 
     OK = "ok"                          # Collection completed — modem_data is populated
     AUTH_FAILED = "auth_failed"        # Wrong credentials or strategy mismatch
-    AUTH_UNAVAILABLE = "auth_unavailable"  # Login answered 5xx or a declared busy body: modem busy, not a credential verdict
+    AUTH_UNAVAILABLE = "auth_unavailable"  # Login answered 5xx, or with an answer the strategy marks busy: not a credential verdict
     AUTH_LOCKOUT = "auth_lockout"      # Firmware anti-brute-force triggered
     CONNECTIVITY = "connectivity"      # Connection refused, timeout, DNS failure
     LOAD_ERROR = "load_error"          # HTTP error on data page (5xx, 404)
@@ -1367,9 +1367,10 @@ issue or reconfigures.
 **Transient auth failure:**
 Modem is busy and declines to serve the login: a 5xx, a response body
 the entry declares busy (`login_busy` on `form_pbkdf2`, `bearer` or
-`json_sjcl`, MODEM_YAML_SPEC), or a protocol token the strategy reads as a
+`json_sjcl`, MODEM_YAML_SPEC), a protocol token the strategy reads as a
 restart-the-login (`hnap` `RELOAD`; `form_cbn` `cbnLogin` and
-`cbnFirstInstall`).
+`cbnFirstInstall`), or an `hnap` challenge answer that carries no
+challenge (AUTH_HNAP_SPEC.md § No challenge issued).
 
 ```text
 Poll N:   AUTH_UNAVAILABLE — unreachable (streak unchanged, circuit closed)

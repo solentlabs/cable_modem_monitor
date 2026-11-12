@@ -378,7 +378,7 @@ config_flow_helpers.validate_connection(hass, host, user, pass, modem_dir, varia
 |----------------|-------------------|-------------|
 | `CONNECTIVITY` | `cannot_connect` | Modem not responding |
 | `AUTH_FAILED` | `invalid_auth` | Login failed |
-| `AUTH_UNAVAILABLE` | `modem_busy` | Modem declined the login (5xx, or a declared busy body); not a credential problem (UC-87a) |
+| `AUTH_UNAVAILABLE` | `modem_busy` | Modem declined the login (5xx, or an answer the strategy marks busy); not a credential problem (UC-87a) |
 | `AUTH_LOCKOUT` | `invalid_auth` | Login failed |
 | `LOAD_ERROR` | `cannot_connect` | Modem not responding |
 | `LOAD_AUTH` | strategy-dependent, see below | |

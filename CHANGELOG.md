@@ -63,6 +63,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   beta. The manifest declares the `computers_network.routers_network`
   category the Marketplace browses by.
 
+### Fixed
+
+- **HNAP modems stopped polling when one login got no challenge (#230).** An
+  Arris S33 occasionally answers the first step of a routine re-login with
+  `LoginResult: "SYNC_FAILED"` and no challenge. No password has been sent at
+  that step, but Core reported the credentials as rejected, opened the auth
+  circuit breaker on that single answer and stopped polling until the user
+  signed in again. A challenge answer with no challenge is now read as the
+  modem declining to serve the login, so the poll reports unreachable and
+  polling continues. The warning also names the `LoginResult` the modem sent.
+  This applies to every HNAP entry (Arris S33, S33v2, S33v3, S34 and SB8200
+  HNAP; Motorola MB8600 and MB8611). It awaits confirmation on the reporter's
+  hardware.
+
 ## [3.14.15-beta.6] - 2026-10-30
 
 ### Added

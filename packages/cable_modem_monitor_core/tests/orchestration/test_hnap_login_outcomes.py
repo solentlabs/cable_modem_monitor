@@ -21,6 +21,7 @@ and the catalog replay suite cover it.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -84,6 +85,12 @@ def _login_response(login_result: str | None) -> MagicMock:
         {"LoginResponse": inner},
         f'{{"LoginResponse": {{"LoginResult": "{login_result}"}}}}',
     )
+
+
+def _no_challenge_response(login_result: str | None) -> MagicMock:
+    """Phase 1 answer with no challenge in it, carrying *login_result* or nothing."""
+    inner = {} if login_result is None else {"LoginResult": login_result}
+    return _response({"LoginResponse": inner}, json.dumps({"LoginResponse": inner}))
 
 
 def _poll(login_result: str | None) -> tuple[CollectorSignal, ConnectionStatus, SignalPolicy]:
@@ -155,6 +162,53 @@ def test_login_refusal_outcome(
     assert actual_status is status
     assert policy.circuit_open is breaker
     assert policy.auth_failure_streak == streak
+
+
+# Phase 1 answers that carry no challenge (#230). The modem has been sent no
+# password-derived value yet, so it has judged nothing, and every row must
+# leave the breaker closed. Login.js never reads LoginResult at this step,
+# so the outcome follows the missing fields, whatever token rides along.
+#
+# ┌──────────────┬────────────────────┬──────────────┬────────┬────────┐
+# │ LoginResult  │ signal             │ status       │ breaker│ streak │
+# ├──────────────┼────────────────────┼──────────────┼────────┼────────┤
+# │ SYNC_FAILED  │ AUTH_UNAVAILABLE   │ UNREACHABLE  │ closed │ 0      │
+# │ OK           │ AUTH_UNAVAILABLE   │ UNREACHABLE  │ closed │ 0      │
+# │ (absent)     │ AUTH_UNAVAILABLE   │ UNREACHABLE  │ closed │ 0      │
+# └──────────────┴────────────────────┴──────────────┴────────┴────────┘
+NO_CHALLENGE_CASES = ["SYNC_FAILED", "OK", None]
+
+
+@pytest.mark.parametrize("login_result", NO_CHALLENGE_CASES, ids=[c or "absent" for c in NO_CHALLENGE_CASES])
+def test_no_challenge_leaves_polling_running(login_result: str | None) -> None:
+    """A phase 1 answer with no challenge is the modem declining, not a verdict."""
+    collector = ModemDataCollector(_hnap_config(), None, None, "http://192.0.2.1", "admin", "pw")
+    with patch.object(collector._session, "post") as mock_post:
+        mock_post.side_effect = [_no_challenge_response(login_result)]
+        result = collector.execute()
+    policy = SignalPolicy(collector, model="T100")
+    status = policy.apply(result)
+
+    assert result.signal is CollectorSignal.AUTH_UNAVAILABLE
+    assert status is ConnectionStatus.UNREACHABLE
+    assert policy.circuit_open is False
+    assert policy.auth_failure_streak == 0
+    # The login step was never sent, so no credential reached the modem.
+    assert mock_post.call_count == 1
+
+
+def test_no_challenge_never_trips_however_often_it_repeats() -> None:
+    """#230: polling must outlive a modem that keeps withholding the challenge."""
+    collector = ModemDataCollector(_hnap_config(), None, None, "http://192.0.2.1", "admin", "pw")
+    policy = SignalPolicy(collector, model="T100")
+
+    for _ in range(policy._threshold * 10):
+        with patch.object(collector._session, "post") as mock_post:
+            mock_post.side_effect = [_no_challenge_response("SYNC_FAILED")]
+            policy.apply(collector.execute())
+
+    assert policy.circuit_open is False
+    assert policy.auth_failure_streak == 0
 
 
 def test_reload_never_trips_however_often_it_repeats() -> None:

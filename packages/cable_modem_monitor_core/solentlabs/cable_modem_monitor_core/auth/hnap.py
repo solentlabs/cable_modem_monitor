@@ -14,7 +14,7 @@ for lockout handling.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import requests
 
@@ -26,7 +26,7 @@ from ..protocol.hnap import (
     hmac_hex,
 )
 from .base import AuthContext, AuthFailureMode, AuthResult, BaseAuthManager, LoginLockoutError
-from .response import parse_json_dict
+from .response import parse_json_dict, safe_preview
 
 if TYPE_CHECKING:
     from ..models.modem_config.auth import HnapAuth
@@ -50,6 +50,12 @@ _LOCKOUT_RESULTS = frozenset({"LOCKUP", "REBOOT"})
 _RETRY_RESULTS = frozenset({"RELOAD"})
 
 HANDLED_LOGIN_RESULTS = _SUCCESS_RESULTS | _REJECTED_RESULTS | _LOCKOUT_RESULTS | _RETRY_RESULTS
+
+
+def _login_response(data: dict[str, Any]) -> dict[str, Any]:
+    """Return the ``LoginResponse`` object, empty when absent or not an object."""
+    inner = data.get("LoginResponse")
+    return inner if isinstance(inner, dict) else {}
 
 
 class HnapAuthManager(BaseAuthManager):
@@ -188,18 +194,28 @@ class HnapAuthManager(BaseAuthManager):
         if isinstance(data, AuthResult):
             return data
 
-        login_response = data.get("LoginResponse", {})
+        login_response = _login_response(data)
         challenge = login_response.get("Challenge")
         public_key = login_response.get("PublicKey")
         cookie = login_response.get("Cookie")
 
         if not challenge or not public_key or not cookie:
+            # No challenge means nothing password-derived has been sent, so
+            # the modem has judged nothing. Reading it as a verdict trips
+            # the breaker on the first occurrence and stops polling over a
+            # credential that was never examined (#230). busy routes it to
+            # AUTH_UNAVAILABLE (UC-87a). The token leads the detail: the
+            # reason line is the part of the log that survives being copied.
+            # Every value is the modem's, so each is previewed, not trusted
+            # for length.
             return AuthResult(
                 success=False,
+                busy=True,
                 error=(
                     "HNAP challenge response missing required fields "
-                    f"(Challenge={challenge!r}, PublicKey={public_key!r}, "
-                    f"Cookie={cookie!r})"
+                    f"(LoginResult={safe_preview(login_response.get('LoginResult'))}, "
+                    f"Challenge={safe_preview(challenge)}, PublicKey={safe_preview(public_key)}, "
+                    f"Cookie={safe_preview(cookie)})"
                 ),
                 response=response,
             )
@@ -285,7 +301,7 @@ class HnapAuthManager(BaseAuthManager):
         if isinstance(data, AuthResult):
             return data
 
-        login_response = data.get("LoginResponse", {})
+        login_response = _login_response(data)
         login_result = login_response.get("LoginResult", "")
 
         if login_result in _LOCKOUT_RESULTS:

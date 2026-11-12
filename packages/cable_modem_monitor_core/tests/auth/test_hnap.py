@@ -371,6 +371,11 @@ def _setup_login_unexpected_result(mock_post: MagicMock) -> None:
     ]
 
 
+def _setup_login_response_not_object(mock_post: MagicMock) -> None:
+    """The login answer parses, but LoginResponse is null instead of an object."""
+    mock_post.side_effect = [_challenge_ok(), _resp_with_json({"LoginResponse": None})]
+
+
 # ┌────────────────────────────────┬────────────────────────────────────┬────────────────────────┬──────────────────┐
 # │ description                    │ setup_fn                           │ expected_error         │ expects_response │
 # ├────────────────────────────────┼────────────────────────────────────┼────────────────────────┼──────────────────┤
@@ -380,6 +385,7 @@ def _setup_login_unexpected_result(mock_post: MagicMock) -> None:
 # │ login_request_exception        │ non-connectivity on login POST     │ "login request failed" │ False            │
 # │ login_not_dict_*               │ login body is non-dict JSON        │ "expected json object" │ True             │
 # │ login_unexpected_result        │ LoginResult absent from Login.js   │ "unexpected result"    │ True             │
+# │ login_response_not_object      │ LoginResponse is null              │ "unexpected result"    │ True             │
 # └────────────────────────────────┴────────────────────────────────────┴────────────────────────┴──────────────────┘
 # expects_response: True when a Response was in scope at failure (collector's
 # _log_auth_failure_detail can dump request/response detail). False when the
@@ -398,6 +404,7 @@ _FAILURE_CASES = [
     ("login_not_dict_list",             _setup_login_not_dict_list,         "expected json object",  True),
     ("login_not_dict_int",              _setup_login_not_dict_int,          "expected json object",  True),
     ("login_unexpected_result",         _setup_login_unexpected_result,     "unexpected result",     True),
+    ("login_response_not_object",       _setup_login_response_not_object,   "unexpected result",     True),
 ]
 # fmt: on
 
@@ -431,6 +438,69 @@ def test_failure_scenario(
     assert result.success is False
     assert expected_error.lower() in result.error.lower()
     assert (result.response is not None) is expects_response
+
+
+# Phase 1 answers that parse as a JSON object but hold no usable challenge.
+# Nothing password-derived has been sent, so each is the modem declining to
+# serve, not a verdict: busy, which the collector reads as AUTH_UNAVAILABLE
+# (#230, AUTH_HNAP_SPEC.md § No challenge issued).
+#
+# ┌──────────────────┬───────────────────────────────────────────────┐
+# │ description      │ challenge answer                              │
+# ├──────────────────┼───────────────────────────────────────────────┤
+# │ token_only       │ the #230 body: a LoginResult, no challenge    │
+# │ empty            │ LoginResponse is {}                           │
+# │ partial          │ Challenge present, PublicKey and Cookie not   │
+# │ absent           │ no LoginResponse key                          │
+# │ null             │ LoginResponse is null                         │
+# │ string           │ LoginResponse is a string                     │
+# │ oversized_token  │ LoginResult far longer than any token         │
+# └──────────────────┴───────────────────────────────────────────────┘
+#
+# fmt: off
+_NO_CHALLENGE_CASES: list[tuple[str, Any]] = [
+    # (description,      challenge answer)
+    ("token_only",       {"LoginResponse": {"LoginResult": "SYNC_FAILED"}}),
+    ("empty",            {"LoginResponse": {}}),
+    ("partial",          {"LoginResponse": {"Challenge": "abc"}}),
+    ("absent",           {}),
+    ("null",             {"LoginResponse": None}),
+    ("string",           {"LoginResponse": "SYNC_FAILED"}),
+    ("oversized_token",  {"LoginResponse": {"LoginResult": "X" * 5000}}),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("desc,answer", _NO_CHALLENGE_CASES, ids=[c[0] for c in _NO_CHALLENGE_CASES])
+def test_no_challenge_is_busy(desc: str, answer: Any) -> None:
+    """A challenge answer with no usable challenge is busy, with a bounded reason."""
+    manager = _make_manager()
+    session = requests.Session()
+
+    with patch.object(session, "post") as mock_post:
+        mock_post.return_value = _resp_with_json(answer)
+        result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+    assert result.success is False
+    assert result.busy is True
+    assert result.response is not None
+    assert "missing required" in result.error.lower()
+    # The reason line carries modem-supplied values, so each is previewed.
+    assert len(result.error) < 1000
+    # Only the challenge request went out: no password-derived value was sent.
+    assert mock_post.call_count == 1
+
+
+def test_no_challenge_reason_names_the_token() -> None:
+    """The reason line names the LoginResult, the part of the log that survives a copy."""
+    manager = _make_manager()
+    session = requests.Session()
+
+    with patch.object(session, "post") as mock_post:
+        mock_post.return_value = _resp_with_json({"LoginResponse": {"LoginResult": "SYNC_FAILED"}})
+        result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+    assert "LoginResult='SYNC_FAILED'" in result.error
 
 
 def test_connection_refused() -> None:
