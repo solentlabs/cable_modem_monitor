@@ -1,0 +1,52 @@
+{
+  "_description": "Basic auth with challenge cookie, then a later 401 on another path with no retry: the handshake still reads challenge_cookie=true",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "/status.html", "headers": [], "cookies": []},
+      "response": {
+        "status": 401,
+        "headers": [
+          {"name": "WWW-Authenticate", "value": "Basic realm=\"modem\""},
+          {"name": "Set-Cookie", "value": "challenge=abc; path=/"}
+        ],
+        "cookies": [{"name": "challenge", "value": "abc"}],
+        "content": {"size": 0, "text": ""}
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/status.html",
+        "headers": [{"name": "Authorization", "value": "Basic dXNlcjpwYXNz"}],
+        "cookies": [{"name": "challenge", "value": "abc"}]
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "data"}}
+    },
+    {
+      "request": {"method": "GET", "url": "/icon.jpg", "headers": [], "cookies": []},
+      "response": {
+        "status": 401,
+        "headers": [
+          {"name": "WWW-Authenticate", "value": "Basic realm=\"modem\""},
+          {"name": "Set-Cookie", "value": "challenge=def; path=/"}
+        ],
+        "cookies": [{"name": "challenge", "value": "def"}],
+        "content": {"size": 0, "text": ""}
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/other.html",
+        "headers": [{"name": "Authorization", "value": "Basic dXNlcjpwYXNz"}],
+        "cookies": [{"name": "challenge", "value": "abc"}]
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "data"}}
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "basic",
+  "_expected_fields": {
+    "challenge_cookie": true
+  }
+}

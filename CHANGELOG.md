@@ -76,6 +76,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This applies to every HNAP entry (Arris S33, S33v2, S33v3, S34 and SB8200
   HNAP; Motorola MB8600 and MB8611). It awaits confirmation on the reporter's
   hardware.
+- **Intake keeps `challenge_cookie: true` when a later 401 follows the
+  handshake.** The result was taken from the last Basic 401 in the capture, so
+  one unrelated 401 after the login wrote `false` with no warning. Any 401
+  whose cookie is followed by a retry of its path now sets it.
 
 ## [3.14.15-beta.6] - 2026-10-30
 

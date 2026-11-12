@@ -550,7 +550,8 @@ Check HAR entries for login flow:
   │
   ├── 401 response with WWW-Authenticate: Basic
   │   └── strategy: basic
-  │       Extract: challenge_cookie (retry with Set-Cookie?)
+  │       Extract: challenge_cookie (any 401 sets a cookie and
+  │                the next request retries its path?)
   │
   ├── Authorization: Basic on requests, no challenge captured,
   │   and no branch above matched

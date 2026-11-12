@@ -296,7 +296,10 @@ def _check_entry_auth_signals(
             signals.digest_www_authenticate = www_auth
         elif scheme == "basic":
             signals.basic_challenge = True
-            signals.basic_challenge_cookie = _has_challenge_cookie_retry(all_entries, entry)
+            # Any 401 may be the handshake: a later 401 with no retry must not unset it.
+            signals.basic_challenge_cookie = signals.basic_challenge_cookie or _has_challenge_cookie_retry(
+                all_entries, entry
+            )
 
     # URL token pattern: login_<base64> or bare base64 credential in URL
     _check_url_token_signals(url, req, entry, signals)
