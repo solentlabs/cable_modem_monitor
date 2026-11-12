@@ -2479,9 +2479,11 @@ Phases:
 4. **Main request**: send the action request to the resolved endpoint.
 
 Connection errors and timeouts are treated as success (the modem is
-rebooting during restart). Any response that arrives is judged on
-`resp.ok`: a 4xx or 5xx is a refused action, matching the CBN
-executor. Returns `ActionResult`.
+rebooting during restart). The modem's answer to the action request
+is judged on `resp.ok`: a 4xx or 5xx is a refused action, matching the
+CBN executor. A redirect answer is followed, and the landing page's
+status is not judged: after a logout it is requested on the session
+the action just ended. Returns `ActionResult`.
 
 ### HNAP Executor
 

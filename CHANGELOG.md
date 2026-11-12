@@ -69,6 +69,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A logout or restart is judged by the modem's own answer, not the page a
+  redirect lands on.** A modem that answers a logout with a redirect had the
+  landing page requested on the session the logout just ended, and its 401 was
+  read as a refused logout. Core then kept the ended session and reused it at
+  the next poll, which on the Netgear C6250 led to polls failing with
+  `auth_failed`.
 - **HNAP modems stopped polling when one login got no challenge (#230).** An
   Arris S33 occasionally answers the first step of a routine re-login with
   `LoginResult: "SYNC_FAILED"` and no challenge. No password has been sent at

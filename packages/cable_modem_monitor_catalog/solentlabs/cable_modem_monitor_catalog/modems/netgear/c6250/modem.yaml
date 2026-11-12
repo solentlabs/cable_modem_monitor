@@ -94,7 +94,9 @@ notes: |
   Logout: GET /Logout.htm ends nothing; the POST to /goform/logout?id=N ends the cookie. The
   id is the token of the page served last; without it the answer is a 302 to /ErrorMsg.htm
   and the cookie stays good. With no Referer the answer is a 302 to /DashBoard.htm; with a
-  Referer other than /Logout.htm it is a 401, and the cookie is ended all the same. The
+  Referer other than /Logout.htm it is a 401, and the cookie is ended all the same. One
+  client's logout ends every client's session: with two clients logged in, the other's next
+  request with its own cookie is answered 401. The
   captured nowTime was the browser's clock; whether the unit reads the value is unverified.
   Restart: answered 302 to /Reboot.htm; the unit was silent from about 6 s to about 104 s
   after the request.

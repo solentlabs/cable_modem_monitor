@@ -11,6 +11,8 @@ import json
 import logging
 from collections.abc import Callable
 from functools import partial
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -68,6 +70,7 @@ class TestExecuteHttpAction:
         resp = MagicMock()
         resp.status_code = 200
         resp.ok = True
+        resp.history = []
         session.request.return_value = resp
         action = HttpAction(
             type="http",
@@ -96,6 +99,7 @@ class TestExecuteHttpAction:
         resp = MagicMock()
         resp.status_code = status
         resp.ok = False
+        resp.history = []
         session.request.return_value = resp
         action = HttpAction(type="http", method="POST", endpoint="/rest/v1/system/reboot")
 
@@ -110,12 +114,79 @@ class TestExecuteHttpAction:
         resp = MagicMock()
         resp.status_code = 302
         resp.ok = True
+        resp.history = []
         session.request.return_value = resp
         action = HttpAction(type="http", method="POST", endpoint="/goform/restart")
 
         result = execute_http_action(session, "http://192.168.100.1", action)
 
         assert result.success is True
+
+
+class _RecordingServer(HTTPServer):
+    """Local server that records each path it serves."""
+
+    def __init__(self) -> None:
+        super().__init__(("127.0.0.1", 0), _RedirectingHandler)
+        self.served: list[str] = []
+
+
+class _RedirectingHandler(BaseHTTPRequestHandler):
+    """Answers the action 302 and its landing page 401, recording each path served."""
+
+    def _record(self) -> None:
+        assert isinstance(self.server, _RecordingServer)
+        self.server.served.append(self.path)
+
+    def do_GET(self) -> None:  # noqa: N802
+        self._record()
+        self.send_response(401)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def do_POST(self) -> None:  # noqa: N802
+        self._record()
+        self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        self.send_response(302)
+        self.send_header("Location", "/landing.htm")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+        pass
+
+
+# ┌───────────┬──────────────────────────────┐
+# │ body      │ action fields                │
+# ├───────────┼──────────────────────────────┤
+# │ form      │ params                       │
+# │ json      │ json_body                    │
+# └───────────┴──────────────────────────────┘
+#
+# fmt: off
+REDIRECT_CASES = [
+    ("form", {"params": {"confirm": "yes"}}),
+    ("json", {"json_body": {"confirm": "yes"}}),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("fields", [c[1] for c in REDIRECT_CASES], ids=[c[0] for c in REDIRECT_CASES])
+def test_redirect_answer_is_judged_not_its_landing_page(fields: dict[str, Any]) -> None:
+    """The action's own 302 is the verdict, whatever the followed landing page answers."""
+    server = _RecordingServer()
+    Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        action = HttpAction(type="http", method="POST", endpoint="/goform/logout", **fields)
+        result = execute_http_action(requests.Session(), f"http://127.0.0.1:{server.server_port}", action)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert result.success is True
+    assert result.session_refused is False
+    assert result.details["status_code"] == 302
+    assert server.served == ["/goform/logout", "/landing.htm"]
 
 
 # ------------------------------------------------------------------
@@ -673,6 +744,7 @@ class TestHttpCookieParamInterpolation:
 
         resp = MagicMock()
         resp.status_code = 200
+        resp.history = []
         session.request.return_value = resp
 
         action = HttpAction(
@@ -697,6 +769,7 @@ class TestHttpCookieParamInterpolation:
         session = MagicMock(spec=requests.Session)
         resp = MagicMock()
         resp.status_code = 200
+        resp.history = []
         session.request.return_value = resp
 
         action = HttpAction(type="http", method="POST", endpoint="/action")
@@ -749,6 +822,7 @@ class TestHttpAuthEndpointInterpolation:
         session = MagicMock(spec=requests.Session)
         resp = MagicMock()
         resp.status_code = 204
+        resp.history = []
         session.request.return_value = resp
 
         action = HttpAction(type="http", method="DELETE", endpoint=endpoint)
@@ -763,6 +837,7 @@ class TestHttpAuthEndpointInterpolation:
         session.cookies = requests.cookies.RequestsCookieJar()
         resp = MagicMock()
         resp.status_code = 200
+        resp.history = []
         session.request.return_value = resp
 
         action = HttpAction(
@@ -951,6 +1026,7 @@ class TestHttpActionJsonBody:
         session = MagicMock(spec=requests.Session)
         resp = MagicMock()
         resp.status_code = 200
+        resp.history = []
         session.request.return_value = resp
 
         action = HttpAction(
@@ -975,6 +1051,7 @@ class TestHttpActionJsonBody:
         session = MagicMock(spec=requests.Session)
         resp = MagicMock()
         resp.status_code = 200
+        resp.history = []
         session.request.return_value = resp
 
         action = HttpAction(
@@ -994,6 +1071,7 @@ class TestHttpActionJsonBody:
         session = MagicMock(spec=requests.Session)
         resp = MagicMock()
         resp.status_code = 200
+        resp.history = []
         session.request.return_value = resp
 
         action = HttpAction(
@@ -1056,7 +1134,7 @@ class TestHttpActionQuery:
     ) -> None:
         """Query values go out as written, after the endpoint's and the session's own query."""
         session = MagicMock(spec=requests.Session)
-        session.request.return_value = MagicMock(status_code=200)
+        session.request.return_value = MagicMock(status_code=200, history=[])
         action = HttpAction(type="http", method="GET", endpoint=endpoint, query=query)
 
         execute_http_action(session, "http://192.168.100.1", action, query_params=session_query)
@@ -1066,7 +1144,7 @@ class TestHttpActionQuery:
     def test_query_and_params_both_sent(self) -> None:
         """A request can carry a URL query and a form body together."""
         session = MagicMock(spec=requests.Session)
-        session.request.return_value = MagicMock(status_code=200)
+        session.request.return_value = MagicMock(status_code=200, history=[])
         action = HttpAction(
             type="http", method="POST", endpoint="/goform/restart", query={"id": "7"}, params={"restart": "1"}
         )
@@ -1084,7 +1162,7 @@ class TestHttpActionQuery:
     def test_query_and_json_body_both_sent(self) -> None:
         """``query`` is not part of the params/json_body exclusion."""
         session = MagicMock(spec=requests.Session)
-        session.request.return_value = MagicMock(status_code=200)
+        session.request.return_value = MagicMock(status_code=200, history=[])
         action = HttpAction(
             type="http", method="POST", endpoint="/rest/reboot", query={"id": "7"}, json_body={"reboot": True}
         )
@@ -1176,6 +1254,7 @@ class TestHttpActionPort:
         resp = MagicMock()
         resp.status_code = 200
         resp.ok = True
+        resp.history = []
         fresh_session.request.return_value = resp
         patch_session = "solentlabs.cable_modem_monitor_core.orchestration.actions.create_session"
         patch_manager = "solentlabs.cable_modem_monitor_core.auth.factory.create_auth_manager_for_action"
@@ -1192,6 +1271,7 @@ class TestHttpActionPort:
         original_session = MagicMock(spec=requests.Session)
         resp = MagicMock()
         resp.status_code = 200
+        resp.history = []
         original_session.request.return_value = resp
         collector = MagicMock()
         collector._session = original_session
@@ -1254,6 +1334,7 @@ class TestHttpActionWithActionAuth:
         action_resp.status_code = 200
         action_resp.ok = True
         fresh.post.return_value = login_resp
+        action_resp.history = []
         fresh.request.return_value = action_resp
         return fresh
 
@@ -1325,6 +1406,7 @@ class TestHttpActionWithActionAuth:
         original_session = MagicMock(spec=requests.Session)
         resp = MagicMock()
         resp.status_code = 200
+        resp.history = []
         original_session.request.return_value = resp
 
         action = HttpAction(
@@ -1377,6 +1459,7 @@ def _ok_session() -> MagicMock:
     resp = MagicMock()
     resp.status_code = 200
     resp.ok = True
+    resp.history = []
     session.request.return_value = resp
     return session
 

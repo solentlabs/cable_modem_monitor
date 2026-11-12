@@ -190,6 +190,7 @@ def _ok_response() -> MagicMock:
     resp = MagicMock(spec=requests.Response)
     resp.ok = True
     resp.status_code = 200
+    resp.history = []
     return resp
 
 

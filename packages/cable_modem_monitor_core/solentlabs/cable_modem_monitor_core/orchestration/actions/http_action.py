@@ -124,14 +124,18 @@ def execute_http_action(
                 headers=headers,
                 timeout=timeout,
             )
+        # The modem's answer to the action is the verdict. When it redirects,
+        # the landing page is a second request, and after a logout it goes
+        # out on the session the action just ended.
+        answer = resp.history[0] if resp.history else resp
         log_event(
             _logger,
             ActionCompleted(
                 model=model,
                 transport="http",
                 action_name=action_name,
-                status_code=resp.status_code,
-                result="ok" if resp.ok else "error",
+                status_code=answer.status_code,
+                result="ok" if answer.ok else "error",
                 level=level,
             ),
         )
@@ -139,11 +143,11 @@ def execute_http_action(
         # connection is read as success, and only because the reboot
         # itself is what drops it.
         return ActionResult(
-            success=resp.ok,
-            message=f"Action {'completed' if resp.ok else 'refused'} with status {resp.status_code}",
-            details={"status_code": resp.status_code},
+            success=answer.ok,
+            message=f"Action {'completed' if answer.ok else 'refused'} with status {answer.status_code}",
+            details={"status_code": answer.status_code},
             # The data path's stale-session verdict (LOAD_AUTH); any other status says nothing about the session.
-            session_refused=resp.status_code in (401, 403),
+            session_refused=answer.status_code in (401, 403),
         )
     except CONNECTIVITY_ERRORS:
         log_event(_logger, ActionConnectionLost(model=model, transport="http", action_name=action_name, level=level))
