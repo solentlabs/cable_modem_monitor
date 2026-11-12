@@ -98,7 +98,7 @@ This integration relies on the following open source libraries:
 
 - **GitHub** - Code hosting and collaboration
 - **GitHub Actions** - CI/CD automation
-- **HACS** (Home Assistant Community Store) - Distribution platform
+- **HACS** (Home Assistant Community Store) - Distribution platform, built into Home Assistant 2026.11 as the Marketplace
 - **Home Assistant** - Smart home platform
 
 ---

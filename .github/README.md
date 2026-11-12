@@ -95,7 +95,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/latency.png" alt="Modem Latency Monitoring" width="500">
 </picture>
 <!-- markdownlint-enable MD033 --><br>
-<em>Ping and HTTP latency monitoring for real-time health assessment</em>
+<em>Ping, TCP and HTTP latency monitoring for real-time health assessment</em>
 
 <!-- markdownlint-disable MD033 -->
 <picture>
@@ -418,7 +418,6 @@ Cable Modem Monitor is maintained by one person, in the evenings, around a day j
 ### External Resources
 
 - [Home Assistant Releases](https://github.com/home-assistant/core/releases)
-- [HACS Brand Repository](https://github.com/home-assistant/brands/tree/master/custom_integrations/cable_modem_monitor)
 
 ### Related Solent Labs Projects
 

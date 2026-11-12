@@ -495,6 +495,7 @@ ATTRIBUTION.md.
 ## Resources
 
 - [Home Assistant Developer Docs](https://developers.home-assistant.io/)
+- [Marketplace publishing docs](https://contributors.home-assistant.io/marketplace/)
 - [HACS Documentation](https://hacs.xyz/)
 - [Python asyncio](https://docs.python.org/3/library/asyncio.html)
 - [pytest Documentation](https://docs.pytest.org/)

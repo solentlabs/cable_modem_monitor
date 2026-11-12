@@ -57,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   guides give the Marketplace steps, including **Include pre-releases** for
   testing a beta, and keep the HACS steps for earlier versions. The bug
   report form has a Marketplace option.
+- **The Marketplace listing says what support to expect sooner.** The
+  support note moves up beside the supported modems list, and the release
+  badge shows the stable release the Marketplace installs, not the newest
+  beta. The manifest declares the `computers_network.routers_network`
+  category the Marketplace browses by.
 
 ## [3.14.15-beta.6] - 2026-10-30
 
