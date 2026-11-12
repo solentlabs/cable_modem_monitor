@@ -558,7 +558,7 @@ On Home Assistant before 2026.11, use HACS instead: open **Cable Modem Monitor**
 
 If you're stuck after rolling back too far, delete and re-add the integration after returning to a compatible version.
 
-> The HA `update.install` service is not supported for this integration. Use the version picker above instead.
+> A branch name is not an installable version. Installs come from the zip attached to each release, and a branch has none, so `update.install` with a branch name fails. Pick a release with the version picker above.
 
 ---
 

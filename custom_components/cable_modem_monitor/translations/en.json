@@ -185,7 +185,7 @@
         },
         "include_latency": {
           "name": "Latency Graph",
-          "description": "Ping and HTTP response times (6-hour view)."
+          "description": "Ping, TCP and HTTP response times (6-hour view)."
         },
         "graph_hours": {
           "name": "Graph History (hours)",
@@ -203,7 +203,7 @@
     },
     "request_health_check": {
       "name": "Request Health Check",
-      "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
+      "description": "Triggers an immediate health check (ICMP, TCP and HTTP probes). Only works if health monitoring is enabled for the modem."
     },
     "convert_channel_identity": {
       "name": "Convert Channel Identity",
