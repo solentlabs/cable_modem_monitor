@@ -24,7 +24,8 @@ Cable Modem Monitor is an open-source project that provides a Home Assistant int
 **Decision Making:**
 
 - The maintainer has final decision authority on all aspects of the project
-- Major changes should be discussed in issues before implementation
+- A change in direction is agreed in a Discussion before code is written; see
+  [CONTRIBUTING.md § Before You File](CONTRIBUTING.md#before-you-file)
 - Community feedback is valued and considered in decisions
 
 ### Contributors
@@ -54,7 +55,9 @@ Users of the integration who may report issues, suggest features, or help others
 ### 1. Issue Creation
 
 - Check for existing issues before creating new ones
-- Use the appropriate issue template (bug report or feature request)
+- Use the matching issue form: bug report, modem request, modem
+  verification or feature request. An idea still taking shape goes to a
+  Discussion; see [CONTRIBUTING.md § Before You File](CONTRIBUTING.md#before-you-file)
 - Provide clear, detailed information
 - Be patient and respectful
 
@@ -64,7 +67,7 @@ Users of the integration who may report issues, suggest features, or help others
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes with tests
-4. Run pre-commit hooks and tests locally
+4. Run `make validate-ci` locally
 5. Submit a pull request
 6. Respond to review feedback
 7. Maintainer merges when approved
@@ -76,7 +79,7 @@ Contributors don't write CHANGELOG entries — see
 ### 3. Review Process
 
 - All pull requests require review by the maintainer
-- Reviews should be completed within 2 weeks when possible
+- Review pace is stated in [SUPPORT.md § What to expect](SUPPORT.md#what-to-expect)
 - Contributors should respond to feedback within 2 weeks
 - PRs may be closed if inactive for 30+ days
 
@@ -93,40 +96,9 @@ Pull requests must meet these requirements before merging:
 
 ## Release Process
 
-### Versioning
-
-We follow [Semantic Versioning](https://semver.org/):
-
-- **MAJOR** (X.0.0): Breaking changes
-- **MINOR** (x.X.0): New features, backward compatible
-- **PATCH** (x.x.X): Bug fixes, backward compatible
-
-### Release Workflow
-
-1. **Preparation**
-   - Update version in `manifest.json`
-   - Update CHANGELOG.md with release notes
-   - Ensure all tests pass
-   - Create release commit
-
-2. **Tagging**
-   - Create annotated tag: `git tag -a vX.Y.Z -m "Release X.Y.Z"`
-   - Push tag: `git push origin vX.Y.Z`
-
-3. **Automation**
-   - GitHub Actions automatically creates the release
-   - Release notes are extracted from CHANGELOG.md
-   - Assets are attached automatically
-
-4. **Announcement**
-   - GitHub release is published
-   - Users are notified via the Marketplace and HACS
-
-### Release Schedule
-
-- **Patch releases**: As needed for bug fixes
-- **Minor releases**: When new features are ready (typically monthly)
-- **Major releases**: When breaking changes are necessary (rare)
+The maintainer handles releases. Versioning, the release script, tagging
+and the beta and stable tiers are in
+[RELEASING.md](docs/reference/RELEASING.md).
 
 ## Decision Making Process
 
@@ -149,23 +121,8 @@ New features are evaluated based on:
 
 ## Communication Channels
 
-### GitHub Issues
-
-- Bug reports
-- Feature requests
-- Technical discussions
-
-### GitHub Discussions
-
-- General questions
-- Community support
-- Ideas and proposals
-
-### Pull Requests
-
-- Code review
-- Implementation discussion
-- Technical decisions
+Where to ask what is in [SUPPORT.md § Where to ask](SUPPORT.md#where-to-ask).
+Code review and implementation discussion happen on the pull request.
 
 ## Code of Conduct Enforcement
 
@@ -179,7 +136,8 @@ The maintainer is responsible for enforcing the [Code of Conduct](CODE_OF_CONDUC
 
 ### Appeals
 
-Appeals can be submitted to the maintainer via email. Decisions on appeals are final.
+Appeals go to the maintainer at the email address listed in the
+[GitHub profile](https://github.com/kwschulz). Decisions on appeals are final.
 
 ## Changes to Governance
 
@@ -207,6 +165,6 @@ This project would not be possible without:
 
 ---
 
-**Last Updated:** 2026-07-23
+**Last Updated:** 2026-11-11
 **Effective Date:** 2025-11-06
 **Maintainer:** @kwschulz
