@@ -79,7 +79,7 @@ card, not a whole dashboard.
 | Upstream Frequency | on | Frequency for all upstream channels |
 | Error Graphs | on | Corrected and uncorrected error totals (7-day view); a note instead when the modem has no totals |
 | Error Rates | off | Per-minute corrected and uncorrected error rates (7-day view) |
-| Latency | on | Ping and HTTP latency (6-hour view) |
+| Latency | on | Ping, TCP and HTTP latency (6-hour view) |
 | Graph Hours | 24 | Hours of history shown in channel graphs (1-168) |
 | Short Titles | on | Compact card titles, "DS Power" rather than "Downstream Power Levels" |
 

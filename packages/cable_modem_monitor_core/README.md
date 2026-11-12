@@ -15,7 +15,7 @@ Platform-agnostic DOCSIS monitoring engine. Provides:
 - **Auth managers** — Pluggable authentication strategies (form, basic, HNAP, PBKDF2, SJCL)
 - **Parsers** — Declarative channel and system info extraction from HTML, JSON, and HNAP
 - **Orchestration** — Session management, polling coordination, circuit breakers
-- **Health monitoring** — ICMP ping and HTTP probes on independent cadence
+- **Health monitoring** — ICMP ping, TCP connect and HTTP HEAD probes on independent cadence
 - **MCP tools** — Onboarding pipeline for new modem configs from HAR captures
 
 ## Installation
