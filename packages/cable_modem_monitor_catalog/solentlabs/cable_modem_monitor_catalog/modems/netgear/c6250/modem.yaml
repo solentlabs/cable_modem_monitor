@@ -35,7 +35,7 @@ hardware:
   chipset: Broadcom BCM33843
   release_date: "2015"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   docsis_version:
@@ -81,7 +81,8 @@ notes: |
   Maintainer bench unit on coax, not provisioned with an ISP account. modem.har holds three
   fetches of DocsisStatus.htm, each within three minutes of a boot: 16 downstream locked in
   all, and 2, 4 and 3 upstream locked. The golden is the last fetch (16 and 3; upstream
-  channel 1 reads Not Locked). Nothing here has been run by the integration on the hardware.
+  channel 1 reads Not Locked). modem.verified.json is the integration's diagnostics from this
+  unit, after setup and four scheduled polls, with a restart sent from the integration.
   Bench probes on this unit, 2026-11-11/12:
   Login: credentials are served only with an XSRF_TOKEN cookie from one of the unit's own
   401s; without it the right password gets the same 401 as a wrong one. A cookie is gone
