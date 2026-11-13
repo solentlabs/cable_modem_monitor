@@ -101,6 +101,9 @@ def execute_http_action(
 
     log_event(_logger, ActionStarted(model=model, transport="http", action_name=action_name, level=level))
 
+    # A redirect is not followed: the 3xx is the modem's answer to the action,
+    # and the page it points at would be a second request, after a logout on
+    # the session the action just ended.
     try:
         if json_body is not None:
             resp = session.request(
@@ -109,6 +112,7 @@ def execute_http_action(
                 json=json_body,
                 headers=headers,
                 timeout=timeout,
+                allow_redirects=False,
             )
         else:
             raw_params = dict(action.params) if action.params else None
@@ -123,19 +127,16 @@ def execute_http_action(
                 data=data,
                 headers=headers,
                 timeout=timeout,
+                allow_redirects=False,
             )
-        # The modem's answer to the action is the verdict. When it redirects,
-        # the landing page is a second request, and after a logout it goes
-        # out on the session the action just ended.
-        answer = resp.history[0] if resp.history else resp
         log_event(
             _logger,
             ActionCompleted(
                 model=model,
                 transport="http",
                 action_name=action_name,
-                status_code=answer.status_code,
-                result="ok" if answer.ok else "error",
+                status_code=resp.status_code,
+                result="ok" if resp.ok else "error",
                 level=level,
             ),
         )
@@ -143,11 +144,11 @@ def execute_http_action(
         # connection is read as success, and only because the reboot
         # itself is what drops it.
         return ActionResult(
-            success=answer.ok,
-            message=f"Action {'completed' if answer.ok else 'refused'} with status {answer.status_code}",
-            details={"status_code": answer.status_code},
+            success=resp.ok,
+            message=f"Action {'completed' if resp.ok else 'refused'} with status {resp.status_code}",
+            details={"status_code": resp.status_code},
             # The data path's stale-session verdict (LOAD_AUTH); any other status says nothing about the session.
-            session_refused=answer.status_code in (401, 403),
+            session_refused=resp.status_code in (401, 403),
         )
     except CONNECTIVITY_ERRORS:
         log_event(_logger, ActionConnectionLost(model=model, transport="http", action_name=action_name, level=level))

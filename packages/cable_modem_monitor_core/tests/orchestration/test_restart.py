@@ -77,7 +77,6 @@ def _make_fresh_session_success(token: str = "tok") -> MagicMock:
     action_resp = MagicMock()
     action_resp.status_code = 200
     fresh.post.return_value = login_resp
-    action_resp.history = []
     fresh.request.return_value = action_resp
     return fresh
 
@@ -396,7 +395,6 @@ def _collector_refusing_the_command(status: int = 401) -> MagicMock:
     rejected = MagicMock()
     rejected.status_code = status
     rejected.ok = False
-    rejected.history = []
     collector._session.request.return_value = rejected
     return collector
 

@@ -80,12 +80,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   poll; three in a row and it hands out no cookie, so the poll failed. The
   request now goes out without credentials, as a browser's does. This applies
   to the C6250, C7000v2 and the CM1200's Basic variant.
-- **A logout or restart is judged by the modem's own answer, not the page a
-  redirect lands on.** A modem that answers a logout with a redirect had the
+- **A logout or restart is judged by the modem's own answer, and its redirect
+  is no longer followed.** A modem that answers a logout with a redirect had the
   landing page requested on the session the logout just ended, and its 401 was
   read as a refused logout. Core then kept the ended session and reused it at
   the next poll, which on the Netgear C6250 led to polls failing with
-  `auth_failed`.
+  `auth_failed`, and the request itself was logged by the modem as a failed
+  login at every poll. The Netgear restart still reboots the modem without its
+  redirect page being loaded.
 - **HNAP modems stopped polling when one login got no challenge (#230).** An
   Arris S33 occasionally answers the first step of a routine re-login with
   `LoginResult: "SYNC_FAILED"` and no challenge. No password has been sent at

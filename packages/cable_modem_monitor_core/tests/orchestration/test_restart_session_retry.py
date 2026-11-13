@@ -84,7 +84,6 @@ def test_http_executor_marks_a_refusal(case_id: str, status: int, refused: bool)
     response = MagicMock()
     response.status_code = status
     response.ok = status < 400
-    response.history = []
     session.request.return_value = response
     result = execute_http_action(session, "http://192.168.100.1", _action(), model="T100")
     assert result.session_refused is refused

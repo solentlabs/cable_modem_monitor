@@ -56,7 +56,6 @@ def _make_session(
     if raise_on_request is not None:
         session.request.side_effect = raise_on_request
     else:
-        resp.history = []
         session.request.return_value = resp
 
     if raise_on_get is not None:
