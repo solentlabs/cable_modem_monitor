@@ -13,6 +13,8 @@ from custom_components.cable_modem_monitor.channel_bond_notifier import (
     ChannelTotals,
     evaluate,
     format_onboarding_message,
+    format_verification_request,
+    needs_verification_request,
     verification_issue_url,
 )
 from custom_components.cable_modem_monitor.channel_bond_storage import BondState
@@ -191,3 +193,33 @@ def test_change_message_formatter_is_gone():
     from custom_components.cable_modem_monitor import channel_bond_notifier
 
     assert not hasattr(channel_bond_notifier, "format_change_message")
+
+
+_ASKED = BondState(baseline_downstream=24, baseline_upstream=4, verification_asked=True)
+
+# fmt: off
+NEEDS_REQUEST_CASES = [
+    # (desc,                          current,  stored,           recovery, expected)
+    ("not yet baselined",             _CURRENT, None,             False,    False),
+    ("baselined, not yet asked",      _CURRENT, _MATCHING_STATE,  False,    True),
+    ("already asked",                 _CURRENT, _ASKED,           False,    False),
+    ("recovery window open",          _CURRENT, _MATCHING_STATE,  True,     False),
+    ("zero totals, modem not working", _ZERO,   _MATCHING_STATE,  False,    False),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("current", "stored", "recovery_active", "expected"),
+    [c[1:] for c in NEEDS_REQUEST_CASES],
+    ids=[c[0] for c in NEEDS_REQUEST_CASES],
+)
+def test_needs_verification_request(current, stored, recovery_active, expected):
+    assert needs_verification_request(current=current, stored=stored, recovery_active=recovery_active) is expected
+
+
+def test_verification_request_names_the_model_and_links_the_issue():
+    message = format_verification_request(model="TPS-2000", verification_url=_VERIFY_URL)
+    assert message.startswith("TPS-2000 has not been confirmed")
+    assert "Download diagnostics" in message
+    assert f"({_VERIFY_URL})" in message

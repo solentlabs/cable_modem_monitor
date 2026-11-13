@@ -10,10 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Unconfirmed modems ask for help confirming them.** When a modem's catalog
-  entry has not been confirmed on real hardware, the notification that appears
-  after its first successful poll also asks you to download diagnostics and
-  attach them to a Verify Working Modem issue, with a link that fills in the
-  model. It is asked once, alongside the dashboard card pointer.
+  entry has not been confirmed on real hardware, you are asked once to download
+  diagnostics and attach them to a Verify Working Modem issue, with a link that
+  fills in the model. A modem you add gets the request in the notification after
+  its first successful poll; one already set up gets it once, after its first
+  successful poll on this version.
 - **A Cable Modem card you add from the dashboard's Add card list (#229).**
   Pick Cable Modem, choose your modem and which graphs to show in the form,
   and no YAML is needed. The onboarding notification now points there instead

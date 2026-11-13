@@ -1409,8 +1409,8 @@ Each notification the integration raises is one or the other. The auth lockout
 asks you to fix your credentials. Restart sent, restart failed and entity reset
 complete each confirm a button press. The onboarding message confirms the modem
 came online after you added it, and fires once per config entry. For a model not
-yet confirmed it also asks for the diagnostics that would confirm it, which is
-something to act on.
+yet confirmed, the integration also asks once per config entry for the
+diagnostics that would confirm it, which is something to act on.
 
 Bonded channel totals changing is neither, so it raises nothing. The totals are
 published on the DS and US Channel Count sensors every poll, which an automation
@@ -1427,17 +1427,22 @@ first time a successful poll reports channel totals. It points the user at
 **Edit → Add card → Cable Modem**, after a browser refresh, so they can
 add a modem card to a dashboard (DASHBOARD_CARD_SPEC.md § Notifications).
 
-When the loaded `modem.yaml`'s `status` is not `confirmed`, the message adds
-a request: download diagnostics and attach them to a Verify Working Modem
-issue (`.github/ISSUE_TEMPLATE/modem_verification.yml`), linked with the
+When the loaded `modem.yaml`'s `status` is not `confirmed`, the integration
+asks once per config entry for help confirming the model: download
+diagnostics and attach them to a Verify Working Modem issue
+(`.github/ISSUE_TEMPLATE/modem_verification.yml`), linked with the
 manufacturer and model in the issue title. Confirmation is per variant, so
-the status read is the variant's. The request rides on the onboarding
-notification and nothing else: it is asked once, after a poll has shown the
-modem working.
+the status read is the variant's. A fresh entry gets the request inside its
+onboarding message. An entry that has no onboarding left to fire (set up
+before the request existed, or upgraded) gets it as its own notification at
+its first successful poll that passes the suppression rules below. Either
+way it is asked after a poll has shown the modem working, and never again
+for that entry.
 
 | Trigger | When it fires | Notification ID |
 |---------|---------------|-----------------|
 | Onboarding | First successful poll after setup | `cable_modem_monitor_onboarding_{entry_id}` |
+| Verification request | First successful poll of an already-onboarded or upgraded entry on an unconfirmed model | `cable_modem_monitor_verification_{entry_id}` |
 
 Stable IDs per entry mean re-firing replaces rather than stacks.
 
@@ -1450,11 +1455,13 @@ Stable IDs per entry mean re-firing replaces rather than stacks.
   update listener reload.
 - Baseline totals live in a dedicated `homeassistant.helpers.storage.Store`
   (`channel_bond_storage.py`) keyed by entry ID. The Store payload is
-  `{baseline_downstream: int, baseline_upstream: int}`. Presence of a
-  Store payload means the entry has already been onboarded (fresh) or
-  silently baselined (upgrade); absence means the next successful poll
-  should run first-time logic. The totals themselves are no longer
-  compared — presence is what carries the meaning.
+  `{baseline_downstream: int, baseline_upstream: int, verification_asked: bool}`.
+  Presence of a Store payload means the entry has already been onboarded
+  (fresh) or silently baselined (upgrade); absence means the next
+  successful poll should run first-time logic. The totals themselves are
+  no longer compared — presence is what carries the meaning.
+  `verification_asked` records that the verification request was made; a
+  payload saved before the field existed reads as `false`.
 
 **Why Store, not entry data.** The integration's update listener
 reloads the integration on **any** entry-data mutation, so per-entry

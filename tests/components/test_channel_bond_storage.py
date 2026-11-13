@@ -50,6 +50,35 @@ async def test_save_then_load_round_trip():
     assert loaded == BondState(baseline_downstream=24, baseline_upstream=4)
 
 
+async def test_verification_asked_round_trips():
+    """The verification flag is saved and read back with the baseline."""
+    hass = MagicMock()
+    captured: dict[str, object] = {}
+
+    mock_store = MagicMock()
+    mock_store.async_save = AsyncMock(side_effect=captured.update)
+    mock_store.async_load = AsyncMock(side_effect=lambda: dict(captured) if captured else None)
+    state = BondState(baseline_downstream=24, baseline_upstream=4, verification_asked=True)
+
+    with patch(f"{_MODULE}.Store", return_value=mock_store):
+        await async_save_bond_state(hass, "entry_abc", state)
+        loaded = await async_load_bond_state(hass, "entry_abc")
+
+    assert loaded == state
+
+
+async def test_payload_saved_before_the_flag_reads_as_not_asked():
+    """A baseline stored by an earlier version has no flag; the request has not been made."""
+    hass = MagicMock()
+    mock_store = MagicMock()
+    mock_store.async_load = AsyncMock(return_value={"baseline_downstream": 24, "baseline_upstream": 4})
+
+    with patch(f"{_MODULE}.Store", return_value=mock_store):
+        loaded = await async_load_bond_state(hass, "entry_abc")
+
+    assert loaded == BondState(baseline_downstream=24, baseline_upstream=4, verification_asked=False)
+
+
 async def test_remove_delegates_to_store():
     """``async_remove`` calls Store.async_remove so ``async_remove_entry`` cleans up."""
     hass = MagicMock()

@@ -99,10 +99,24 @@ def format_onboarding_message(*, model: str, current: ChannelTotals, verificatio
     )
     if verification_url is None:
         return message
+    return f"{message}\n\n{format_verification_request(model='This model', verification_url=verification_url)}"
+
+
+def format_verification_request(*, model: str, verification_url: str) -> str:
+    """Body text asking for the diagnostics that would confirm an unconfirmed model."""
     return (
-        f"{message}\n\n"
-        f"This model has not been confirmed on real hardware yet. If the readings look "
+        f"{model} has not been confirmed on real hardware yet. If the readings look "
         f"right, you can help confirm it: Download diagnostics (Settings > Devices & "
         f"Services > Cable Modem Monitor > ...) and attach the file to a "
         f"[Verify Working Modem issue]({verification_url})."
     )
+
+
+def needs_verification_request(*, current: ChannelTotals, stored: BondState | None, recovery_active: bool) -> bool:
+    """True when a baselined entry, polling normally, has not yet been asked to help confirm its model."""
+    # Same guards as onboarding: ask only after a poll has shown the modem working.
+    if current.downstream == 0 and current.upstream == 0:
+        return False
+    if recovery_active or stored is None:
+        return False
+    return not stored.verification_asked

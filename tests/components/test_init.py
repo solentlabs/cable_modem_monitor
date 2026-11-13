@@ -43,6 +43,7 @@ from custom_components.cable_modem_monitor import (
     async_setup_entry,
     async_unload_entry,
 )
+from custom_components.cable_modem_monitor.channel_bond_storage import BondState
 from custom_components.cable_modem_monitor.const import PLATFORMS
 from custom_components.cable_modem_monitor.coordinator import CableModemRuntimeData
 from custom_components.cable_modem_monitor.migrations import async_run_migrations
@@ -869,6 +870,61 @@ async def test_channel_bond_onboarding_carries_the_verification_link():
     message = hass.services.async_call.call_args.args[2]["message"]
     assert "Download diagnostics" in message
     assert "(https://example.invalid/verify)" in message
+
+
+_VERIFY_URL = "https://example.invalid/verify"
+
+_NOT_ASKED = BondState(24, 4)
+_ASKED = BondState(24, 4, verification_asked=True)
+
+# ┌──────────────────────────────┬──────────┬─────────────┬─────┬──────────────┬───────┐
+# │ case                         │ eligible │ stored      │ url │ notification │ asked │
+# ├──────────────────────────────┼──────────┼─────────────┼─────┼──────────────┼───────┤
+# │ fresh entry, unconfirmed     │ yes      │ none        │ yes │ onboarding   │ saved │
+# │ upgraded entry, unconfirmed  │ no       │ none        │ yes │ verification │ saved │
+# │ onboarded earlier, not asked │ yes      │ not asked   │ yes │ verification │ saved │
+# │ already asked                │ yes      │ asked       │ yes │ none         │ -     │
+# │ confirmed model              │ yes      │ not asked   │ no  │ none         │ -     │
+# └──────────────────────────────┴──────────┴─────────────┴─────┴──────────────┴───────┘
+#
+# fmt: off
+VERIFICATION_ASK_CASES = [
+    ("fresh entry, unconfirmed",     True,  None,       _VERIFY_URL, "onboarding",   True),
+    ("upgraded entry, unconfirmed",  False, None,       _VERIFY_URL, "verification", True),
+    ("onboarded earlier, not asked", True,  _NOT_ASKED, _VERIFY_URL, "verification", True),
+    ("already asked",                True,  _ASKED,     _VERIFY_URL, None,           None),
+    ("confirmed model",              True,  _NOT_ASKED, None,        None,           None),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("eligible", "stored", "url", "notification", "saved_asked"),
+    [c[1:] for c in VERIFICATION_ASK_CASES],
+    ids=[c[0] for c in VERIFICATION_ASK_CASES],
+)
+async def test_verification_request_is_asked_once_per_entry(eligible, stored, url, notification, saved_asked):
+    """An unconfirmed model is asked about once, in onboarding or on its own, and never again."""
+    hass, entry, orchestrator, snapshot = _make_bond_test_harness(entry_data={"channel_onboarding_eligible": eligible})
+
+    with (
+        patch("custom_components.cable_modem_monitor.async_load_bond_state", AsyncMock(return_value=stored)),
+        patch("custom_components.cable_modem_monitor.async_save_bond_state", AsyncMock()) as mock_save,
+    ):
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", url)
+
+    if notification is None:
+        hass.services.async_call.assert_not_called()
+    else:
+        hass.services.async_call.assert_awaited_once()
+        payload = hass.services.async_call.call_args.args[2]
+        assert payload["notification_id"] == f"cable_modem_monitor_{notification}_entry_abc"
+        assert f"({_VERIFY_URL})" in payload["message"]
+    if saved_asked is None:
+        mock_save.assert_not_awaited()
+    else:
+        mock_save.assert_awaited_once()
+        assert mock_save.call_args.args[2].verification_asked is saved_asked
 
 
 async def test_channel_bond_upgraded_entry_silent_init():
