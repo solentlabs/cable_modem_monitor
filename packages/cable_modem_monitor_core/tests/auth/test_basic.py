@@ -47,6 +47,24 @@ class TestBasicAuthManager:
             result = manager.authenticate(session, server.base_url, "admin", "secret")
             assert result.success is True
 
+    def test_challenge_request_carries_no_credentials(self, session: requests.Session) -> None:
+        """The cookie request goes out anonymously, as a browser's does; the cookie it sets is kept."""
+        entries, modem_config = load_auth_fixture("har_basic_challenge_cookie.json")
+
+        with HARMockServer(entries, modem_config=modem_config) as server:
+            manager = BasicAuthManager(modem_config.auth)
+            manager.configure_session(session, {})
+            sent: list[requests.PreparedRequest] = []
+            session.hooks["response"].append(lambda resp, *args, **kwargs: sent.append(resp.request))
+
+            result = manager.authenticate(session, server.base_url, "admin", "secret")
+
+        assert result.success is True
+        assert len(sent) == 1
+        assert "Authorization" not in sent[0].headers
+        assert "XSRF_TOKEN" in session.cookies
+        assert session.auth == ("admin", "secret")
+
     def test_challenge_cookie_connectivity_error_reraises(self, session: requests.Session) -> None:
         """A connection/timeout during the challenge request propagates so the collector maps it to CONNECTIVITY."""
         config = BasicAuth(strategy="basic", challenge_cookie=True)

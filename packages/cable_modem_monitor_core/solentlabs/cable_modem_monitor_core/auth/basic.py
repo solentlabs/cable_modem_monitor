@@ -22,9 +22,9 @@ class BasicAuthManager(BaseAuthManager):
     Sets ``Authorization: Basic`` credentials on the session. Every
     request carries the header — no login endpoint, no session cookie.
 
-    If ``challenge_cookie`` is enabled, the manager makes an initial
-    request to receive a server-set cookie (some modems require this
-    cookie alongside the auth header on retry).
+    If ``challenge_cookie`` is enabled, the manager first requests the
+    root without credentials to receive a server-set cookie, which some
+    modems require alongside the auth header on every later request.
 
     Args:
         config: Validated ``BasicAuth`` config from modem.yaml.
@@ -63,9 +63,12 @@ class BasicAuthManager(BaseAuthManager):
         Returns:
             AuthResult — always succeeds (auth is per-request).
         """
-        session.auth = (username, password)
-
         if self._challenge_cookie:
+            # Anonymous, as a browser's first request is: the 401 to it sets the
+            # cookie, and firmware that counts failed logins counts a request
+            # carrying credentials without that cookie as one (C6250 bench).
+            # A re-login reuses the session, so clear what the last one set.
+            session.auth = None
             try:
                 resp = session.get(
                     f"{base_url}/",
@@ -86,6 +89,7 @@ class BasicAuthManager(BaseAuthManager):
                     error=f"Challenge cookie request failed: {type(e).__name__}: {e}",
                 )
 
+        session.auth = (username, password)
         return AuthResult(success=True)
 
 

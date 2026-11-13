@@ -2200,9 +2200,9 @@ The `basic` exception holds exactly while no challenge probe is
 configured. `none` issues no request at all, and plain `basic` only sets
 `session.auth`, so neither has a status to read. With
 `challenge_cookie: true` (`netgear/c7000v2`, `netgear/cm1200`'s basic
-variant) `basic` does send a credential-bearing `GET /` and returns
+variant, `netgear/c6250`) `basic` does send an anonymous `GET /` and returns
 success whatever it answers. **That is deliberate and unresolved, not an
-oversight:** both entries record the 401 from that probe as the thing
+oversight:** all three entries record the 401 from that probe as the thing
 that sets `XSRF_TOKEN`, so on those modems the refusal is the mechanism
 rather than a verdict, and a status guard there would break the auth it
 is meant to protect. Telling that expected 401 apart from a genuine 5xx

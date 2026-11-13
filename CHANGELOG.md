@@ -69,6 +69,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Basic login with a challenge cookie asks for the cookie without the
+  password.** Core's first request carried the password but no cookie, which
+  the Netgear C6250 counts as a failed login and writes to its log at every
+  poll; three in a row and it hands out no cookie, so the poll failed. The
+  request now goes out without credentials, as a browser's does. This applies
+  to the C6250, C7000v2 and the CM1200's Basic variant.
 - **A logout or restart is judged by the modem's own answer, not the page a
   redirect lands on.** A modem that answers a logout with a redirect had the
   landing page requested on the session the logout just ended, and its 401 was

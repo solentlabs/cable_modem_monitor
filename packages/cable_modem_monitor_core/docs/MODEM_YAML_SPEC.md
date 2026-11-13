@@ -311,7 +311,7 @@ devices that expose read-only status endpoints.
 ### `basic`
 
 HTTP Basic Authentication. Credentials sent as `Authorization: Basic`
-header on every request.
+header on every request, except the challenge request below.
 
 ```yaml
 auth:
@@ -322,7 +322,7 @@ auth:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `challenge_cookie` | bool | `false` | If `true`, retry with server-set cookie on initial 401. Some firmware returns a challenge cookie that must be included in the retry. |
+| `challenge_cookie` | bool | `false` | If `true`, Core first requests `/` without credentials, as a browser does, and keeps the cookie the 401 sets; every later request carries the credentials and that cookie. Some firmware counts a request with credentials but without that cookie as a failed login. |
 | `cookie_name` | string | `""` | Session cookie produced by login. Empty = stateless. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md "Session is lifecycle, auth owns the cookie." |
 
 **Success detection:** Always succeeds. Basic auth is per-request

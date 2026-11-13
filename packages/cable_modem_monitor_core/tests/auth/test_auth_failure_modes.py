@@ -118,7 +118,9 @@ _MINIMAL_AUTH: dict[str, dict[str, Any]] = {
 
 def _manager_for(strategy: str, **overrides: Any) -> Any:
     """Build the auth manager for a strategy from its minimal config, plus any overrides."""
-    auth = TypeAdapter(AuthConfig).validate_python({"strategy": strategy, **_MINIMAL_AUTH[strategy], **overrides})
+    auth: AuthConfig = TypeAdapter(AuthConfig).validate_python(
+        {"strategy": strategy, **_MINIMAL_AUTH[strategy], **overrides}
+    )
     # create_auth_manager only reads .auth; a full ModemConfig would add
     # a dozen unrelated required fields to every row of _MINIMAL_AUTH.
     # ModemConfig is named unquoted so the import is a live reference: a
@@ -281,11 +283,11 @@ def test_basic_challenge_probe_status_is_not_read(always_503_server: str) -> Non
     """Pinned, not endorsed: `basic` with a challenge probe ignores what the probe answers.
 
     The row above exempts `basic` because at its minimal config it sends
-    nothing. With ``challenge_cookie: true`` it does send a
-    credential-bearing ``GET /`` and still returns success whatever comes
-    back. Two catalog entries depend on that: `netgear/c7000v2` and
-    `netgear/cm1200`'s basic variant both record the 401 from this probe
-    as what sets ``XSRF_TOKEN``, so on those modems the refusal is the
+    nothing. With ``challenge_cookie: true`` it does send an anonymous
+    ``GET /`` and still returns success whatever comes back. Three catalog
+    entries depend on that: `netgear/c7000v2`, `netgear/cm1200`'s basic
+    variant and `netgear/c6250` record the 401 from this probe as what
+    sets ``XSRF_TOKEN``, so on those modems the refusal is the
     mechanism and a status guard would break the auth it protects.
 
     Whether that expected 401 can be told apart from a genuine 5xx is an
@@ -295,13 +297,20 @@ def test_basic_challenge_probe_status_is_not_read(always_503_server: str) -> Non
     session = requests.Session()
     manager = _manager_for("basic", challenge_cookie=True)
 
-    with patch.object(session, "get", wraps=session.get) as probe:
+    auth_at_probe: list[object] = []
+
+    def _probe(url: str, **kwargs: Any) -> requests.Response:
+        auth_at_probe.append(session.auth)
+        return requests.Session.get(session, url, **kwargs)
+
+    with patch.object(session, "get", side_effect=_probe) as probe:
         result = manager.authenticate(session, always_503_server, "admin", "pw")
 
-    # Assert the probe fired and carried the credential; without this the
-    # test would still pass if the probe were removed entirely.
+    # Assert the probe fired; without this the test would still pass if the
+    # probe were removed entirely.
     assert probe.call_count == 1, "the challenge probe must actually be sent"
-    assert session.auth == ("admin", "pw"), "the probe carries the credential"
+    assert auth_at_probe == [None], "the probe goes out without credentials"
+    assert session.auth == ("admin", "pw"), "later requests carry the credential"
     assert probe.call_args.args[0].endswith("/"), "the probe targets the modem root"
 
     assert result.success is True, "a 503 on the challenge probe is not currently read"

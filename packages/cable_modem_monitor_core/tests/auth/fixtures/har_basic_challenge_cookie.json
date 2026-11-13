@@ -1,0 +1,25 @@
+{
+  "_description": "Basic auth with the challenge cookie: the mock answers an unauthenticated request 401 with Set-Cookie XSRF_TOKEN",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {"name": "Content-Type", "value": "text/html"}
+        ],
+        "content": {"text": "<html>Modem</html>"}
+      }
+    }
+  ],
+  "_modem_config": {
+    "auth": {
+      "strategy": "basic",
+      "challenge_cookie": true,
+      "cookie_name": "XSRF_TOKEN"
+    }
+  }
+}
