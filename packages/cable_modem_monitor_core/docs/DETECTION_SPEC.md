@@ -94,8 +94,9 @@ list means nothing answered. `match_page()`, `read_reply()` and
 host, and the accuracy report calls them on captured replies, so
 runtime and report cannot drift. `describe_response()` turns a landing
 response into its `Observation` and the text `match_page()` reads, with
-the text of § Matching: the `Server` header, then the body decoded as
-UTF-8 with replacement and cut at the § Sweep body limit.
+the text of § Matching: the `Server` header, the `WWW-Authenticate`
+realm, then the body decoded as UTF-8 with replacement and cut at the
+§ Sweep body limit, one per line.
 `read_reply()` takes each response of a redirect chain as `(url,
 headers, body)`.
 
@@ -125,8 +126,11 @@ request, and its redirects, is all a probe sends.
 
 ## Matching
 
-Text is the landing response's `Server` header followed by its body. It
-is lowercased and split into runs of `[a-z0-9]`. A name matches when its
+Text is the landing response's `Server` header, the realm of its
+`WWW-Authenticate` header, then its body. Basic-login firmware answers
+the probe with a 401 whose body names nothing, and its realm is the one
+place the reply can name the model. The text is lowercased and split
+into runs of `[a-z0-9]`. A name matches when its
 own tokens appear as a consecutive run in the page's tokens, so `CM600`
 does not match `CM6000`.
 
@@ -210,8 +214,9 @@ login driven by script may reference nothing its config declares.
 
 The `Observation` is evidence for the user, the log and the accuracy
 report. Beyond the password field the contradiction rule reads, neither
-the matcher nor `narrow()` reads it. The other landing response markers
-(scheme, `WWW-Authenticate`) are used at runtime only as
+the matcher nor `narrow()` reads it; the realm reaches the matcher as
+text, under § Matching. The other landing response markers (scheme,
+whether `WWW-Authenticate` is sent) are used at runtime only as
 [INTAKE_PIPELINE.md § Marker accuracy](../../cable_modem_monitor_catalog_tools/docs/INTAKE_PIPELINE.md#marker-accuracy)
 permits.
 

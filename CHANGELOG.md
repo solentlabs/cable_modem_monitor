@@ -69,6 +69,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Auto-detect reads the model name from a Basic login's realm.** A modem
+  that answers with a 401 often names itself only in its
+  `WWW-Authenticate` realm, as the Netgear C6250 does, so setup found no
+  model and the user had to pick it. The realm is now searched for catalog
+  names along with the `Server` header and the page.
 - **Basic login with a challenge cookie asks for the cookie without the
   password.** Core's first request carried the password but no cookie, which
   the Netgear C6250 counts as a failed login and writes to its log at every

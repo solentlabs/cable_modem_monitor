@@ -101,13 +101,13 @@ def test_name_without_tokens_never_matches(name: str) -> None:
 
 
 DESCRIBE_CASES = [
-    ("http://h/", {}, b"", Observation("http", 200, "/", None, None, None, False), "\n", "bare"),
+    ("http://h/", {}, b"", Observation("http", 200, "/", None, None, None, False), "\n\n", "bare"),
     (
         "https://h/a/b.html?x=1",
         {"server": "S"},
         b"<TITLE>\n Hi   there </TITLE>",
         Observation("https", 200, "/a/b.html", "S", "Hi there", None, False),
-        "S\n<TITLE>\n Hi   there </TITLE>",
+        "S\n\n<TITLE>\n Hi   there </TITLE>",
         "path-title-lowercase-header",
     ),
     (
@@ -115,15 +115,31 @@ DESCRIBE_CASES = [
         {"WWW-Authenticate": "Basic"},
         b"<input name=p type='password'>",
         Observation("http", 200, "/", None, None, "Basic", True),
-        "\n<input name=p type='password'>",
+        "\n\n<input name=p type='password'>",
         "challenge-and-password",
+    ),
+    (
+        "http://h/",
+        {"WWW-Authenticate": 'Basic realm="ACME AB600-100"'},
+        b"<h4>HTTP 401 - Unauthorized</h4>",
+        Observation("http", 200, "/", None, None, 'Basic realm="ACME AB600-100"', False),
+        "\nACME AB600-100\n<h4>HTTP 401 - Unauthorized</h4>",
+        "realm-is-matched-text",
+    ),
+    (
+        "http://h/",
+        {"www-authenticate": "Basic realm=AB600, charset=UTF-8"},
+        b"",
+        Observation("http", 200, "/", None, None, "Basic realm=AB600, charset=UTF-8", False),
+        "\nAB600\n",
+        "unquoted-realm",
     ),
     (
         "http://h/",
         {},
         b"<input type=text name=password>",
         Observation("http", 200, "/", None, None, None, False),
-        "\n<input type=text name=password>",
+        "\n\n<input type=text name=password>",
         "password-name-is-not-a-password-field",
     ),
     (
@@ -131,7 +147,7 @@ DESCRIBE_CASES = [
         {},
         b"\xff\xfeAB600",
         Observation("http", 200, "/", None, None, None, False),
-        "\n\ufffd\ufffdAB600",
+        "\n\n\ufffd\ufffdAB600",
         "undecodable-bytes-replaced",
     ),
 ]
@@ -149,5 +165,5 @@ def test_describe_response(
 def test_describe_response_cuts_the_body_at_the_cap() -> None:
     _, text = describe_response("http://h/", 200, {}, b"a" * (256 * 1024) + b"tail")
 
-    assert len(text) == 1 + 256 * 1024
+    assert len(text) == 2 + 256 * 1024
     assert "tail" not in text
