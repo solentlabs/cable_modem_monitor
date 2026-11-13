@@ -19,6 +19,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
+from urllib.parse import quote
+
+from solentlabs.cable_modem_monitor_core.orchestration.models import ModemIdentity
 
 from .channel_bond_storage import BondState
 
@@ -75,11 +78,31 @@ def evaluate(
     return "none"
 
 
-def format_onboarding_message(*, model: str, current: ChannelTotals) -> str:
+_VERIFICATION_ISSUE_URL = "https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_verification.yml"
+
+
+def verification_issue_url(identity: ModemIdentity) -> str | None:
+    """Link to a Verify Working Modem issue for an unconfirmed model; ``None`` once it is confirmed."""
+    if identity.status == "confirmed":
+        return None
+    title = quote(f"[Verification] {identity.manufacturer} {identity.model}")
+    return f"{_VERIFICATION_ISSUE_URL}&title={title}"
+
+
+def format_onboarding_message(*, model: str, current: ChannelTotals, verification_url: str | None) -> str:
     """Body text for the one-time onboarding notification."""
-    return (
+    message = (
         f"{model} is online with {current.downstream} downstream and "
         f"{current.upstream} upstream bonded channels. To add a card for this "
         f"modem, refresh your browser, open a dashboard, choose Edit → Add card, and "
         f"pick Cable Modem."
+    )
+    if verification_url is None:
+        return message
+    return (
+        f"{message}\n\n"
+        f"This model has not been confirmed on real hardware yet. If the readings look "
+        f"right, you can help confirm it: Download diagnostics (Settings > Devices & "
+        f"Services > Cable Modem Monitor > ...) and attach the file to a "
+        f"[Verify Working Modem issue]({verification_url})."
     )

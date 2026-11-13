@@ -1408,7 +1408,9 @@ without interrupting anyone.
 Each notification the integration raises is one or the other. The auth lockout
 asks you to fix your credentials. Restart sent, restart failed and entity reset
 complete each confirm a button press. The onboarding message confirms the modem
-came online after you added it, and fires once per config entry.
+came online after you added it, and fires once per config entry. For a model not
+yet confirmed it also asks for the diagnostics that would confirm it, which is
+something to act on.
 
 Bonded channel totals changing is neither, so it raises nothing. The totals are
 published on the DS and US Channel Count sensors every poll, which an automation
@@ -1424,6 +1426,14 @@ The data coordinator fires one persistent notification per config entry, the
 first time a successful poll reports channel totals. It points the user at
 **Edit → Add card → Cable Modem**, after a browser refresh, so they can
 add a modem card to a dashboard (DASHBOARD_CARD_SPEC.md § Notifications).
+
+When the loaded `modem.yaml`'s `status` is not `confirmed`, the message adds
+a request: download diagnostics and attach them to a Verify Working Modem
+issue (`.github/ISSUE_TEMPLATE/modem_verification.yml`), linked with the
+manufacturer and model in the issue title. Confirmation is per variant, so
+the status read is the variant's. The request rides on the onboarding
+notification and nothing else: it is asked once, after a poll has shown the
+modem working.
 
 | Trigger | When it fires | Notification ID |
 |---------|---------------|-----------------|

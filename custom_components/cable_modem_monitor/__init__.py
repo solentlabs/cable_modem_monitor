@@ -63,6 +63,7 @@ from .channel_bond_notifier import (
     ChannelTotals,
     evaluate,
     format_onboarding_message,
+    verification_issue_url,
 )
 from .channel_bond_storage import (
     BondState,
@@ -137,6 +138,7 @@ async def _check_channel_bond_onboarding(
     snapshot: ModemSnapshot,
     orchestrator: Orchestrator,
     model: str,
+    verification_url: str | None,
 ) -> None:
     """Fire the one-time onboarding notification once the modem is online.
 
@@ -184,7 +186,7 @@ async def _check_channel_bond_onboarding(
         "create",
         {
             "title": "Cable Modem Monitor: Modem online",
-            "message": format_onboarding_message(model=model, current=current),
+            "message": format_onboarding_message(model=model, current=current, verification_url=verification_url),
             "notification_id": f"cable_modem_monitor_onboarding_{entry.entry_id}",
         },
     )
@@ -515,6 +517,7 @@ async def async_setup_entry(
     coordinator_label = f"{model} ({host})" if model != host else host
 
     identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
+    verification_url = verification_issue_url(modem_identity)
 
     # Mutable cells so the edge survives across polls (Silver
     # log-when-unavailable); see _log_availability_transition. The
@@ -528,7 +531,7 @@ async def async_setup_entry(
         _log_availability_transition(snapshot, model, reported_unavailable)
         await _announce_auth_stop(hass, entry, snapshot, orchestrator, model, lockout_reported)
         _rebuild_channel_map(entry, snapshot, identity_mode)
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, model)
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, model, verification_url)
         hass.bus.async_fire(
             "cable_modem_monitor_data_updated",
             _build_snapshot_payload(snapshot),

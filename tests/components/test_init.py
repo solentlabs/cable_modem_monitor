@@ -833,7 +833,7 @@ async def test_channel_bond_fresh_setup_fires_onboarding():
             AsyncMock(),
         ) as mock_save,
     ):
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000")
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", None)
 
     # Baseline persisted via Store, not entry data.
     hass.config_entries.async_update_entry.assert_not_called()
@@ -851,6 +851,24 @@ async def test_channel_bond_fresh_setup_fires_onboarding():
     assert "TPS-2000" in payload["message"]
     assert "Add card" in payload["message"]
     assert "refresh your browser" in payload["message"]
+    assert "Download diagnostics" not in payload["message"]
+
+
+async def test_channel_bond_onboarding_carries_the_verification_link():
+    """An unconfirmed model's onboarding notification links its verification issue."""
+    hass, entry, orchestrator, snapshot = _make_bond_test_harness(entry_data={"channel_onboarding_eligible": True})
+
+    with (
+        patch("custom_components.cable_modem_monitor.async_load_bond_state", AsyncMock(return_value=None)),
+        patch("custom_components.cable_modem_monitor.async_save_bond_state", AsyncMock()),
+    ):
+        await _check_channel_bond_onboarding(
+            hass, entry, snapshot, orchestrator, "TPS-2000", "https://example.invalid/verify"
+        )
+
+    message = hass.services.async_call.call_args.args[2]["message"]
+    assert "Download diagnostics" in message
+    assert "(https://example.invalid/verify)" in message
 
 
 async def test_channel_bond_upgraded_entry_silent_init():
@@ -868,7 +886,7 @@ async def test_channel_bond_upgraded_entry_silent_init():
             AsyncMock(),
         ) as mock_save,
     ):
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000")
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", None)
 
     hass.config_entries.async_update_entry.assert_not_called()
     mock_save.assert_awaited_once()
@@ -897,7 +915,7 @@ async def test_channel_bond_change_no_longer_notifies():
             AsyncMock(),
         ) as mock_save,
     ):
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000")
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", None)
 
     hass.config_entries.async_update_entry.assert_not_called()
     # No re-baseline: the Store is untouched, so the entry stays "onboarded"
@@ -927,7 +945,7 @@ async def test_channel_bond_recovered_totals_no_longer_notify():
             AsyncMock(),
         ) as mock_save,
     ):
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000")
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", None)
 
     mock_save.assert_not_awaited()
     hass.services.async_call.assert_not_called()
@@ -951,7 +969,7 @@ async def test_channel_bond_steady_counts_no_op():
             AsyncMock(),
         ) as mock_save,
     ):
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000")
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", None)
 
     hass.config_entries.async_update_entry.assert_not_called()
     mock_save.assert_not_awaited()
@@ -980,7 +998,7 @@ async def test_channel_bond_recovery_suppresses_change():
             AsyncMock(),
         ) as mock_save,
     ):
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000")
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", None)
 
     hass.config_entries.async_update_entry.assert_not_called()
     mock_save.assert_not_awaited()
@@ -1003,7 +1021,7 @@ async def test_channel_bond_missing_snapshot_data_no_op():
             AsyncMock(),
         ) as mock_save,
     ):
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000")
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", None)
 
     mock_load.assert_not_awaited()
     mock_save.assert_not_awaited()
@@ -1054,7 +1072,7 @@ async def test_channel_bond_no_modem_data_no_op():
         "custom_components.cable_modem_monitor.async_load_bond_state",
         AsyncMock(),
     ) as mock_load:
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000")
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", None)
 
     mock_load.assert_not_awaited()
     hass.services.async_call.assert_not_called()
