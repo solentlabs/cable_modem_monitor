@@ -118,9 +118,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `hw_model_element`). `username_value` is now unset by default, which
   encrypts the entered username; the CH7465MT entry declares its `"NULL"`
   placeholder explicitly. The login values are now URL-encoded as the browser
-  sends them, and the AC01 lockout, restart and wrong-password replies
-  (`MaxAttemptReached`, `GUILogin`, `GUIFirstInstall`, `idloginincorrect`)
-  are recognised. The entry now rests on a full capture from the reporter's
+  sends them. On the Compal CH7465MT this changes only passwords of 16 to 47
+  bytes, whose encrypted value now sends `%3D` where it sent `=`, as the
+  modem's own login page does. The AC01 lockout, restart and wrong-password
+  replies (`MaxAttemptReached`, `GUILogin`, `GUIFirstInstall`,
+  `idloginincorrect`) are recognised. The entry now rests on a full capture from the reporter's
   modem: the OFDM downstream channels are read, SC-QAM codeword counts come
   from the firmware's signal table through a new XML `merge_by`, and
   hardware version, uptime and status come from the fields the firmware
