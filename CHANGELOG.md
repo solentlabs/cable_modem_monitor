@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.7] - 2026-11-14
+
 ### Added
 
 - **Unconfirmed modems ask for help confirming them.** When a modem's catalog
