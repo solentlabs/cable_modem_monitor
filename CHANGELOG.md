@@ -109,6 +109,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   handshake.** The result was taken from the last Basic 401 in the capture, so
   one unrelated 401 after the login wrote `false` with no warning. Any 401
   whose cookie is followed by a retry of its path now sets it.
+- **The Arris SB8200 Form Login CBN entry logs in the way its firmware does
+  (#231).** The entry was built from the #109 capture without a modem to test
+  it, and reused the Compal CH7465MT login. The AC01 firmware's own login page
+  reads the model with a pre-login request, encrypts the username as well as
+  the password, and labels both with `HS:<model>:`. Core now does the same,
+  configured by three new `form_cbn` fields (`cipher_prefix`, `hw_model_fun`,
+  `hw_model_element`). `username_value` is now unset by default, which
+  encrypts the entered username; the CH7465MT entry declares its `"NULL"`
+  placeholder explicitly. The login values are now URL-encoded as the browser
+  sends them, and the AC01 lockout, restart and wrong-password replies
+  (`MaxAttemptReached`, `GUILogin`, `GUIFirstInstall`, `idloginincorrect`)
+  are recognised. The entry now rests on a full capture from the reporter's
+  modem: the OFDM downstream channels are read, SC-QAM codeword counts come
+  from the firmware's signal table through a new XML `merge_by`, and
+  hardware version, uptime and status come from the fields the firmware
+  displays. It awaits confirmation on the reporter's hardware.
 
 ## [3.14.15-beta.6] - 2026-10-30
 

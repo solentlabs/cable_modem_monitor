@@ -7,6 +7,11 @@ default_host: "192.168.100.1"
 
 auth:
   strategy: form_cbn
+  # CBN_Encrypt(EncryptString, HwModel) in encrypt_cryptoJS.js labels the
+  # envelope "HS:" + HwModel + ":"; LoginFunc (js/Login.js) encrypts the
+  # entered username too, with HwModel from getter fun=1 (common_api.js).
+  cipher_prefix: "HS:{hw_model}:"
+  hw_model_fun: 1
 
 actions:
   restart:
@@ -26,7 +31,7 @@ hardware:
 status: awaiting_verification
 
 sources:
-  auth_config: "[#109 — SB8200v3 HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/109)"
+  auth_config: "Firmware JS in test_data/modem.har ([#231](https://github.com/solentlabs/cable_modem_monitor/issues/231)): encrypt_cryptoJS.js CBN_Encrypt, js/Login.js LoginFunc, js/common_api.js loadGlobalValue. Same firmware and JS as the [#109](https://github.com/solentlabs/cable_modem_monitor/issues/109) capture."
   brands: "[SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/) — SURFboard styling"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
   hardware: "[ARRIS SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/)"
@@ -37,6 +42,8 @@ attribution:
   contributors:
     - github: https://github.com/petep0p
       contribution: "HAR capture, firmware identification (AC01 variant)"
+    - github: https://github.com/mplawner
+      contribution: "Full-session HAR capture (login, status pages, logout) and failed-login capture"
     - github: https://github.com/kwschulz
       contribution: "Maintainer — v3.14 CBN transport, parser, catalog entry"
 
@@ -52,10 +59,15 @@ notes: |
   XML POST API: /xml/getter.xml and /xml/setter.xml, fun=N dispatch.
   Rotating sessionToken cookie on every response.
   AES-256-CBC encrypted login (CBN_Encrypt from encrypt_cryptoJS.js).
-  Max 1 concurrent session — explicit logout required.
-  Default credentials: admin / user-configured password.
+
+  test_data/modem.har is the #231 har-capture session. The contributor
+  redacted the login field values and session tokens and stripped
+  Set-Cookie headers before sharing. At intake the TLS certificate
+  subjectName (a per-device identifier, 267 entries) was replaced with
+  XXXXXXXXXXXX: har-capture's sanitizer does not reach _securityDetails.
 
 references:
   issues:
     - "[#109 — [Modem Request] ARRIS SB8200v3 (AC01 firmware)](https://github.com/solentlabs/cable_modem_monitor/issues/109)"
+    - "[#231 — SB8200v3 AC01: Form Login CBN disconnects during setup on v3.14.1](https://github.com/solentlabs/cable_modem_monitor/issues/231)"
     - "[#81 — SB8200 HTTPS variant (AB01 firmware, separate entry)](https://github.com/solentlabs/cable_modem_monitor/issues/81)"

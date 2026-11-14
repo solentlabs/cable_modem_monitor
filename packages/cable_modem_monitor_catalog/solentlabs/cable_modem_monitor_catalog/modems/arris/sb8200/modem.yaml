@@ -18,6 +18,7 @@ hardware:
 detection:
   http_headers:
     - "micro_httpd"
+    - "lighttpd"
     - "ARRIS Server"
 
 status: awaiting_verification

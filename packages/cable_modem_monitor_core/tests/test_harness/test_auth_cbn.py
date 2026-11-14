@@ -11,11 +11,14 @@ import base64
 import hashlib
 import re
 from typing import Any
+from urllib.parse import quote
 
 import pytest
+from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
 from solentlabs.cable_modem_monitor_core.protocol.cbn import compal_encrypt
 from solentlabs.cable_modem_monitor_core.test_harness.auth.form_cbn import (
     FormCbnAuthHandler,
+    create_handler,
 )
 
 
@@ -29,6 +32,8 @@ def _make_handler(
     logout_fun: int | None = 16,
     restart_fun: int | None = 8,
     har_entries: list[dict[str, Any]] | None = None,
+    cipher_prefix: str = ":",
+    username_value: str | None = "NULL",
 ) -> FormCbnAuthHandler:
     """Build a handler with deterministic test parameters."""
     return FormCbnAuthHandler(
@@ -40,6 +45,8 @@ def _make_handler(
         logout_fun=logout_fun,
         restart_fun=restart_fun,
         har_entries=har_entries,
+        cipher_prefix=cipher_prefix,
+        username_value=username_value,
     )
 
 
@@ -238,6 +245,106 @@ def test_login_key_follows_the_last_served_token() -> None:
     handler.handle_login("GET", "/common_page/login.html", b"", {})
     fresh = handler.handle_login("POST", "/xml/setter.xml", _login_body(password=_RIGHT), {})
     assert fresh is not None and "successful" in fresh.body.lower()
+
+
+# ------------------------------------------------------------------
+# Tests — username and envelope prefix (SB8200 AC01 shape)
+# ------------------------------------------------------------------
+
+_PREFIX = "HS:T1:"
+
+
+def _prefixed_login_body(
+    username: str = "admin", password: str = "pw", prefix: str = _PREFIX, token: str = _INITIAL
+) -> bytes:
+    """A login body with both fields encrypted under ``prefix``, URL-encoded as Core sends it."""
+    user = quote(compal_encrypt(username, token, prefix), safe="")
+    secret = quote(compal_encrypt(password, token, prefix), safe="")
+    return f"token=tok&fun=15&Username={user}&Password={secret}".encode()
+
+
+# fmt: off
+PREFIXED_CASES = [
+    # (body,                                                     accepted, id)
+    (_prefixed_login_body(),                                     True,     "right-prefix-and-username"),
+    (_prefixed_login_body(prefix=":"),                           False,    "colon-prefix"),
+    (_prefixed_login_body(username="other"),                     False,    "wrong-username"),
+    (_prefixed_login_body(password="wrong"),                     False,    "wrong-password"),
+    (b"token=tok&fun=15&Username=NULL&Password="
+     + quote(compal_encrypt("pw", _INITIAL, _PREFIX), safe="").encode(), False, "placeholder-username"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("body,accepted", [c[:2] for c in PREFIXED_CASES], ids=[c[2] for c in PREFIXED_CASES])
+def test_prefixed_login(body: bytes, accepted: bool) -> None:
+    """An encrypted-username handler accepts only both fields under its prefix."""
+    handler = _make_handler(cipher_prefix=_PREFIX, username_value=None)
+    response = handler.handle_login("POST", "/xml/setter.xml", body, {})
+    assert response is not None
+    assert ("successful" in response.body.lower()) is accepted
+    assert handler.is_authenticated({}) is accepted
+
+
+def test_placeholder_username_must_match_verbatim() -> None:
+    """A placeholder-username handler rejects any other Username."""
+    handler = _make_handler(username_value="NULL")
+    body = _login_body().replace(b"Username=NULL", b"Username=admin")
+    response = handler.handle_login("POST", "/xml/setter.xml", body, {})
+    assert response is not None and "successful" not in response.body.lower()
+
+
+def _model_config(**auth: Any) -> ModemConfig:
+    """A minimal CBN ModemConfig with the given auth fields."""
+    return ModemConfig.model_validate(
+        {
+            "manufacturer": "Solent Labs",
+            "model": "T1",
+            "transport": "cbn",
+            "default_host": "192.168.100.1",
+            "auth": {"strategy": "form_cbn", **auth},
+            "hardware": {"docsis_version": "3.1"},
+            "status": "awaiting_verification",
+            "attribution": {"contributors": [{"github": "test-user", "contribution": "HAR capture"}]},
+            "isps": ["Various"],
+        }
+    )
+
+
+def test_create_handler_fills_the_model_from_the_capture() -> None:
+    """The handler expects the prefix the capture's model reply names, keyed on the rotated token."""
+    config = _model_config(cipher_prefix="HS:{hw_model}:", hw_model_fun=1)
+    entries = [_har_getter_entry(1, "<GlobalSettings><HwModel>T1</HwModel></GlobalSettings>")]
+    handler = create_handler(config, entries)
+
+    handler.handle_login("GET", "/common_page/login.html", b"", {})
+    handler.get_route_override("POST", "/xml/getter.xml", _getter_body(fun=1), {})
+    body = _prefixed_login_body(token=handler.current_token)
+    response = handler.handle_login("POST", "/xml/setter.xml", body, {})
+    assert response is not None and "successful" in response.body.lower()
+
+
+def test_model_read_is_served_before_login() -> None:
+    """The firmware answers the model fun before login; other getter funs still need a session."""
+    config = _model_config(cipher_prefix="HS:{hw_model}:", hw_model_fun=1)
+    entries = [
+        _har_getter_entry(1, "<GlobalSettings><HwModel>T1</HwModel></GlobalSettings>"),
+        _har_getter_entry(10, "<downstream_table/>"),
+    ]
+    handler = create_handler(config, entries)
+
+    assert handler.is_login_request("POST", "/xml/getter.xml") is True
+    model = handler.handle_login("POST", "/xml/getter.xml", _getter_body(fun=1), {})
+    assert model is not None and "<HwModel>T1</HwModel>" in model.body
+    assert handler.handle_login("POST", "/xml/getter.xml", _getter_body(fun=10), {}) is None
+    assert handler.is_authenticated({}) is False
+
+
+def test_create_handler_without_the_model_reply_fails_loudly() -> None:
+    """A capture missing the model reply cannot stand in for the modem."""
+    config = _model_config(cipher_prefix="HS:{hw_model}:", hw_model_fun=1)
+    with pytest.raises(ValueError, match="HwModel"):
+        create_handler(config, [])
 
 
 # ------------------------------------------------------------------
@@ -444,6 +551,43 @@ def _har_getter_entry(fun: int, xml_body: str) -> dict[str, Any]:
             "content": {"text": xml_body},
         },
     }
+
+
+def _har_setter_entry(fun: int, response: str) -> dict[str, Any]:
+    """Build a minimal HAR entry for a setter POST with fun=N."""
+    return {
+        "request": {
+            "method": "POST",
+            "url": "http://192.168.0.1/xml/setter.xml",
+            "postData": {"text": f"token=abc&fun={fun}"},
+        },
+        "response": {"status": 200, "headers": [], "content": {"text": response}},
+    }
+
+
+def test_getter_replies_follow_session_state() -> None:
+    """In-session calls get the capture's in-session reply; the pre-login read gets one from outside it."""
+    entries = [
+        _har_getter_entry(1, "<G><Shape>pre</Shape></G>"),
+        _har_setter_entry(15, "successful;SID=1"),
+        _har_getter_entry(1, "<G><Shape>session</Shape></G>"),
+        _har_setter_entry(16, ""),
+        _har_getter_entry(1, "<G><Shape>after-logout</Shape></G>"),
+    ]
+    handler = _make_handler(har_entries=entries)
+    handler._hw_model_fun = 1  # the pre-login read is served only for the model fun
+
+    public = handler.handle_login("POST", "/xml/getter.xml", _getter_body(fun=1), {})
+    in_session = handler.get_route_override("POST", "/xml/getter.xml", _getter_body(fun=1), {})
+
+    assert public is not None and "after-logout" in public.body
+    assert in_session is not None and "session" in in_session.body
+
+    # Once logged in, the model fun is an ordinary in-session call.
+    handler.handle_login("GET", "/common_page/login.html", b"", {})
+    handler.handle_login("POST", "/xml/setter.xml", _login_body(), {})
+    assert handler.is_authenticated({}) is True
+    assert handler.handle_login("POST", "/xml/getter.xml", _getter_body(fun=1), {}) is None
 
 
 def _getter_body(fun: int = 10, token: str = "tok") -> bytes:

@@ -128,7 +128,7 @@ upstream:
 | Property | Type | Required | Description |
 |----------|------|:--------:|-------------|
 | `format` | string | yes | `"xml"` |
-| `tables` | list | yes | One or more table definitions (min 1). Results concatenated in order. |
+| `tables` | list | yes | One or more table definitions (min 1). Primary tables concatenated in order; companion tables (`merge_by`) merged into them. At least one primary. |
 
 ## Table-Level Properties
 
@@ -148,6 +148,7 @@ Each item in `tables`:
 | `lock_status` | object | no | `all_of`: list of sub-element tag names whose boolean values are ANDed — all true → `"locked"`, otherwise `"not_locked"` |
 | `fixed_fields` | map | no | Static field values for every channel. Applied after column extraction and channel_type. |
 | `filter` | map | no | Field-based row filtering (same as HTML table filter) |
+| `merge_by` | list | no | Makes the table a companion: its rows add fields to the primary channels with matching values for these fields instead of becoming channels. Primary wins on conflicts. Semantics as [FORMAT_TABLE_SPEC.md § Companion Tables](FORMAT_TABLE_SPEC.md#companion-tables-merge_by); each XML table names its own `resource`. |
 
 ## System Info Schema
 
@@ -198,7 +199,8 @@ system_info:
    i. Apply `fixed_fields` — static values override/fill fields on
       every channel
    j. Apply `filter` — exclude channels by field value
-2. Concatenate channels from all tables in order
+2. Concatenate channels from primary tables in order, then merge each
+   companion table (`merge_by`) into them by its key fields
 3. Auto-assign `channel_number` from 1-based element index when not
    already mapped by parser.yaml (see
    [CHANNEL_IDENTIFICATION_SPEC.md](CHANNEL_IDENTIFICATION_SPEC.md) §10)

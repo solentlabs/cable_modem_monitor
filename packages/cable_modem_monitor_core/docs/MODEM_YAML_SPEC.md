@@ -1089,8 +1089,15 @@ auth:
   setter_endpoint: "/xml/setter.xml"
   session_cookie_name: "sessionToken"
   sid_cookie_name: "SID"
-  username_value: "NULL"
+  username_value: "NULL"     # password-only login page
   login_fun: 15
+
+# A firmware that labels the envelope with the hardware model and
+# encrypts the entered username (Arris SB8200 AC01):
+#   cipher_prefix: "HS:{hw_model}:"
+#   hw_model_fun: 1
+#   hw_model_element: "HwModel"
+#   (username_value unset)
 
 session:
   headers:
@@ -1112,23 +1119,30 @@ actions:
 | `setter_endpoint` | string | `"/xml/setter.xml"` | URL for login, logout, and action POSTs |
 | `session_cookie_name` | string | `"sessionToken"` | Cookie that carries the rotating session token. Rotates on every response. |
 | `sid_cookie_name` | string | `"SID"` | Secondary session cookie set after login. Extracted from login response body. Stable for the session lifetime. |
-| `username_value` | string | `"NULL"` | Username sent in the login POST. Compal modems use single-password auth — literal `"NULL"` is the default. |
+| `username_value` | string | unset | Placeholder sent verbatim as `Username`, for a firmware whose login page has no username field (Compal CH7465MT sends `"NULL"`). Unset: the entered username, encrypted like the password. |
 | `login_fun` | int | `15` | `fun` parameter value for the login POST to `setter_endpoint` |
+| `cipher_prefix` | string | `":"` | Text the firmware's `CBN_Encrypt` puts before the hex ciphertext, inside the base64. `{hw_model}` is replaced with the value read by `hw_model_fun`; no other placeholder is accepted. |
+| `hw_model_fun` | int | unset | `fun` of a getter POST made after the login page and before the login POST, whose `hw_model_element` fills `{hw_model}`. Required when `cipher_prefix` contains `{hw_model}`. |
+| `hw_model_element` | string | `"HwModel"` | XML element in the `hw_model_fun` reply that holds the model. |
 
 **Auth flow:**
 
 1. **GET login page** — receive initial `sessionToken` cookie.
-2. **Derive AES key and IV** — `key = SHA256(sessionToken)` (32 bytes),
-   `iv = MD5(sessionToken)` (16 bytes).
-3. **Encrypt password** — AES-256-CBC with PKCS7 padding. Output is
-   `base64(":" + hex(ciphertext))`. This replicates the `CBN_Encrypt`
-   function from Compal's `encrypt_cryptoJS.js`.
+2. **Read the model** (only with `hw_model_fun`) — getter POST
+   `fun=<hw_model_fun>`; read `<hw_model_element>`. The reply rotates the
+   token, so steps 3–4 use the rotated one.
+3. **Encrypt** — the password, and the entered username when
+   `username_value` is unset: AES-256-CBC, key `SHA256(sessionToken)`,
+   IV `MD5(sessionToken)`, PKCS7. Output is
+   `base64(cipher_prefix + hex(ciphertext))`, with `{hw_model}` filled in.
 4. **POST login** — send to `setter_endpoint`:
-   `token=<sessionToken>&fun=<login_fun>&Username=<username_value>&Password=<encrypted>`.
+   `token=<sessionToken>&fun=<login_fun>&Username=<value>&Password=<encrypted>`,
+   values URL-encoded as the browser sends them.
    **Token must be the first parameter** (modem firmware rejects other
    orderings).
 5. **Check response** — HTTP status is always 200. Body contains
-   `"successful"` on success or `"idloginincorrect"` on failure.
+   `"successful"` on success; other bodies map per
+   [AUTH_CBN_SPEC.md § Login Token Vocabulary](AUTH_CBN_SPEC.md#login-token-vocabulary).
    Extract SID from response body via `SID=(\d+)` regex.
 6. **Set SID cookie** — domain must match the modem hostname (not empty
    domain), otherwise `requests` won't send the cookie for IP addresses.
@@ -1145,7 +1159,9 @@ after too many failed attempts.
 
 Evidence: Compal
 [CH7465MT](../../cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/compal/ch7465mt/modem.yaml)
-(Magenta AT / UPC / Ziggo / Virgin Media "Connect Box"). The
+(Magenta AT / UPC / Ziggo / Virgin Media "Connect Box"); Arris
+[SB8200 AC01](../../cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/sb8200-cbn/modem.yaml)
+for `cipher_prefix`, `hw_model_fun` and the encrypted username. The
 `CBN_Encrypt` function is in `encrypt_cryptoJS.js` which loads CryptoJS
 v3.1.2 (`AES.js`, `sha256.js`, `md5.js`).
 

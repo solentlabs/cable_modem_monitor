@@ -55,7 +55,7 @@ and share a diagnostics snapshot.
 | Modem | Transport | ISPs | Capture | Restart |
 |-------|-----------|------|---------|---------|
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
-| SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
+| SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | — | not captured |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated | n/a |
 | C3700 | HTML | Comcast, Cox, Spectrum | synthetic | not captured |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | hybrid | captured |

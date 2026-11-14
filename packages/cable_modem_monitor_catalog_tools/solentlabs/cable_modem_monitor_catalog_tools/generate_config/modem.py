@@ -245,7 +245,7 @@ def _clean_auth_defaults(block: dict[str, Any]) -> None:
     if block.get("strategy") == "form_cbn":
         # Core's model is the one home for these defaults.
         for key, model_field in FormCbnAuth.model_fields.items():
-            if key != "strategy" and block.get(key) == model_field.default:
+            if key != "strategy" and key in block and block[key] == model_field.default:
                 block.pop(key)
         return
 

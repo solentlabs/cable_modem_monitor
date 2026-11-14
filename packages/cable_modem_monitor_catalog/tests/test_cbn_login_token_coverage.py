@@ -12,9 +12,9 @@ The gate reads the tokens back out of each entry's captured firmware JS
 and asserts the auth manager knows them, so the next firmware line that
 adds one fails here instead of in the field.
 
-Scope note: the CBN vocabulary rests on a single capture (CH7465MT).
-``arris/sb8200-cbn`` ships a synthetic fixture with no firmware JS and
-contributes nothing, so ``test_extractor_finds_tokens`` pairs the gate --
+Scope note: the CBN vocabulary rests on two captures, the CH7465MT and
+the Arris SB8200 AC01 (``arris/sb8200-cbn``), each read for its own
+firmware's tokens. ``test_extractor_finds_tokens`` pairs the gate --
 without it, an extractor that silently matched nothing would pass the
 whole fleet. Those two entries are the entire CBN fleet.
 """
@@ -38,6 +38,13 @@ from solentlabs.cable_modem_monitor_core.har import load_har_json
 # $("#cbnLogin"), where cbnLogin is a CSS element id rather than a token.
 _RESPONSE_TOKEN = re.compile(r'response\s*(?:\.\s*match\s*\(\s*|==\s*)"([^"]+)"')
 
+# The AC01 LoginFunc (js/Login.js) builds each test as a pattern first:
+#     patt = new RegExp("MaxAttemptReached"); patt.test(response)
+# The literal is not scoped to `response` in the syntax, so the noise
+# assertion below is what keeps it honest: in both captures it matches only
+# login tokens.
+_REGEXP_TOKEN = re.compile(r'new\s+RegExp\s*\(\s*"([^"]+)"\s*\)')
+
 # Noise the unscoped pattern would pull in. Asserted against so a widened
 # regex fails loudly instead of quietly inflating the token set.
 _KNOWN_NOISE = frozenset({"index.html", "HomePage.html", "level2", "level3arrow", "json", "mac", "error"})
@@ -60,7 +67,7 @@ def _login_token_set(modem_dir: Path) -> set[str]:
         har = load_har_json(har_path)
         for entry in har["log"]["entries"]:
             body = (entry.get("response", {}).get("content") or {}).get("text") or ""
-            tokens |= set(_RESPONSE_TOKEN.findall(body))
+            tokens |= set(_RESPONSE_TOKEN.findall(body)) | set(_REGEXP_TOKEN.findall(body))
     return tokens
 
 
@@ -99,9 +106,10 @@ def test_extractor_finds_tokens() -> None:
         if _is_cbn(modem_yaml):
             found |= _login_token_set(modem_yaml.parent)
 
-    # The CH7465MT capture is the sole source of the CBN vocabulary; if
-    # these stop being found, the extractor broke, not the firmware.
+    # The two captures are the source of the CBN vocabulary; if these stop
+    # being found, the extractor broke, not the firmware.
     assert {"lockedout", "cbnAccessDenied", "cbnLogin", "cbnFirstInstall", "cbnBlockContent"} <= found
+    assert {"MaxAttemptReached", "loginpwdcfg", "GUILogin", "GUIFirstInstall", "idloginincorrect"} <= found
 
     # Scoping regression: these appear in the same capture behind a bare
     # `.match("` and must never reach the token set.
