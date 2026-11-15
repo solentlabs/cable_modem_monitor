@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The debug log no longer shows the session ID on Compal logins.** After a
+  successful login on the CH7465MT and the SB8200 AC01 firmware, the debug log
+  recorded the modem's session ID. It now records only its length.
+
 ## [3.14.15-beta.7] - 2026-11-14
 
 ### Added

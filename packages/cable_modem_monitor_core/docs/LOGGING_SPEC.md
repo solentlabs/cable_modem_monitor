@@ -50,6 +50,12 @@ values; a changed value warns again. The diagnostics download carries
 the current findings, so demoting the repeats loses nothing.
 `LoginPageDriftDetected` follows this rule.
 
+## Secret values
+
+No password, session ID or token value reaches a log line or the
+diagnostics download, at any level. Where its presence matters, log its
+shape as `<set, len=N>`.
+
 ## Event inventory
 
 ### Phase: connectivity

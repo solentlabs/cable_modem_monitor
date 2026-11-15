@@ -265,7 +265,7 @@ class FormCbnAuthManager(BaseAuthManager):
         sid_value = sid_match.group(1)
         hostname = urlparse(base_url).hostname or ""
         session.cookies.set(config.sid_cookie_name, sid_value, domain=hostname)
-        log(log_level, "CBN auth: SID=%s set on session", sid_value)
+        log(log_level, "CBN auth: SID=<set, len=%d> set on session", len(sid_value))
 
         return AuthResult(
             success=True,
