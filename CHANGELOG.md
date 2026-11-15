@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.8] - 2026-11-15
+
 ### Added
 
 - **Add modem with custom config.** Adding the integration now offers two
