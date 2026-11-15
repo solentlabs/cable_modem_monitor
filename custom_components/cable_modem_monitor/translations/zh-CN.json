@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Cable Modem Monitor",
+        "description": "{icon}您想如何添加调制解调器？",
+        "menu_options": {
+          "manufacturer": "添加调制解调器",
+          "custom_config_start": "使用自定义配置添加调制解调器"
+        }
+      },
+      "manufacturer": {
+        "title": "Cable Modem Monitor",
         "description": "选择制造商、选择「全部」，或选择「Auto-detect」在网络中查找您的调制解调器。",
         "data": {
           "manufacturer": "制造商"
@@ -46,6 +54,13 @@
           "host": "通常是 192.168.100.1。添加 http:// 或 https:// 可跳过协议检测。",
           "username": "如果不需要请留空。",
           "password": "如果不需要请留空。"
+        }
+      },
+      "custom_config": {
+        "title": "自定义配置",
+        "description": "“提交”会在您的调制解调器上测试此配置；测试通过之前不会保存任何内容。失败的测试会在[日志]({logs_url})中写入 \"custom config report\"。[指南]({guide_url})",
+        "data": {
+          "modem_config": "调制解调器配置 (modem.yaml)"
         }
       },
       "reauth_confirm": {
@@ -97,7 +112,9 @@
       "modem_busy": "调制解调器正忙，拒绝了本次登录。\n\n这不是用户名或密码的问题。一次只允许一个会话的固件在他人已登录调制解调器网页时，或在您的运营商支持人员连接时，会这样应答。调制解调器重启期间也会如此。\n\n如果您打开着调制解调器的网页，请先关闭，然后重试。",
       "session_rejected": "登录成功，但调制解调器拒绝了数据请求。\n\n登录已成功，因此这不是用户名或密码的问题。Home Assistant 日志中已有关于该失败请求的警告，其中包含调制解调器的返回内容。",
       "parse_failed": "已连接但无法读取调制解调器数据。\n\n这可能意味着您的调制解调器需要选择不同的变体。请尝试返回并选择其他选项，或检查您的调制解调器固件是否受支持。",
-      "unknown": "意外错误。请查看 Home Assistant 日志了解详情。"
+      "unknown": "意外错误。请查看 Home Assistant 日志了解详情。",
+      "custom_yaml_invalid": "调制解调器配置不是有效的 YAML，或不符合 modem.yaml 格式。详细信息见 Home Assistant 日志中的自定义配置报告。",
+      "custom_attempt_failed": "测试失败。打开 Home Assistant 日志并搜索 \"custom config report\"：其中显示每个步骤以及调制解调器的响应。此处的登录失败可能来自您编辑的配置，而不仅是用户名或密码。"
     },
     "abort": {
       "already_configured": "此调制解调器已配置。",

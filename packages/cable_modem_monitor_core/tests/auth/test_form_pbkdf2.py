@@ -334,6 +334,7 @@ class TestFormPbkdf2AuthManager:
 
             result = manager.authenticate(session, "http://192.168.100.1", "admin", "pw")
             assert result.success is True
+            assert manager.derived_secrets()  # scrubbed like the password
             assert mock_post.call_count == 2
 
     def test_wrong_password_fails_login(self, session: requests.Session) -> None:

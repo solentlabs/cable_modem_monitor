@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - ".devcontainer/**"
+      - ".github/workflows/devcontainer.yml"
       - "docker-compose.test.yml"
       - "scripts/dev/**"
       - "requirements-dev.txt"
@@ -15,6 +16,7 @@ on:
   pull_request:
     paths:
       - ".devcontainer/**"
+      - ".github/workflows/devcontainer.yml"
       - "docker-compose.test.yml"
       - "scripts/dev/**"
       - "requirements-dev.txt"
@@ -24,7 +26,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build and test devcontainer
         uses: devcontainers/ci@v0.3

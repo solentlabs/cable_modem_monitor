@@ -1000,11 +1000,22 @@ on their failure ``AuthResult`` so the collector can render the
 detail. The response body snippet is truncated to ~500 characters
 and the user's literal password is replaced with ``[REDACTED]``;
 URL query strings are stripped wholesale (some strategies put
-credentials in the query — Arris ``url_token`` notably). Derived
-credential forms (PBKDF2 hashes, SJCL/CBN encrypted blobs) are
-left intact in the snippet — they are protocol-shaped, not the
-user's secret, and they're often the diagnostic signal a
-maintainer needs to confirm the strategy ran.
+credentials in the query — Arris ``url_token`` notably).
+
+**Derived credentials are scrubbed like the password.** Every value a
+strategy derives from the credential and sends (base64 or URI-encoded
+password, PBKDF2 key, HMAC, SJCL/CBN ciphertext) is replaced with
+``[DERIVED, len=N]`` wherever the password is scrubbed. Some are the
+password in reversible form (base64) and ``form_pbkdf2``'s key is a
+working LAN login, and debug setup (CONFIG_FLOW_SPEC.md § Debug Setup)
+makes pasting these surfaces into public issues and LLM chats the
+expected path. Presence and length still show that the strategy ran;
+the value itself is only checkable with the password in hand, i.e. on a
+maintainer's own modem.
+
+**Constrains:** a strategy registers each derived value it puts on the
+wire through ``BaseAuthManager._record_secret``; one it omits is not
+scrubbed. ``derived_secrets()`` holds the last login's values only.
 
 **Login-page drift is logged, not corrected.** A criterion mismatch and
 a wrong password both end ``AUTH_FAILED``, and the one input the
@@ -1065,14 +1076,8 @@ responses). Scrubbing happens at capture, not at download: the value is
 retained for the runtime, so a body stored with the password still in
 it stays that way.
 
-Derived credential forms are left intact here, as they are in the
-auth-failure snippet and for the same stated reason — see § Auth-failure
-detail via single WARNING log. Note the asymmetry that reasoning now
-carries: on a strategy like ``form_pbkdf2`` the derived value is what
-the modem accepts, so it is a working LAN-side credential and not only a
-protocol artifact. That tradeoff is ratified, not overlooked; revisit it
-with evidence of a derived credential reaching a public issue, not on
-the argument alone.
+Derived credential values are scrubbed here too — see § Auth-failure
+detail via single WARNING log.
 
 ### Resource-load failure detail via request-shape log
 

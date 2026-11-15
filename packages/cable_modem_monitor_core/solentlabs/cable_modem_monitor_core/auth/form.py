@@ -35,6 +35,7 @@ class FormAuthManager(BaseAuthManager):
     """
 
     def __init__(self, config: FormAuth) -> None:
+        super().__init__()
         self._config = config
 
     def session_cookie_name(self) -> str:
@@ -51,6 +52,11 @@ class FormAuthManager(BaseAuthManager):
         if self._config.success is not None:
             return AuthFailureMode.SESSION_REJECTED
         return super().auth_failure_mode()
+
+    def _record_form_secrets(self, form_data: dict[str, str], password: str) -> None:
+        """Register the encoded credential values the login POST carries."""
+        for field_name in (self._config.credential_field, *self._config.password_field):
+            self._record_secret(form_data.get(field_name, ""), password)
 
     def authenticate(
         self,
@@ -136,6 +142,8 @@ class FormAuthManager(BaseAuthManager):
 
         # Step 2: Build form data
         form_data = _build_form_data(config, discovered_fields, username, password)
+        self._record_form_secrets(form_data, password)
+        _logger.log(log_level, "Form login: %s %s", config.method, login_url)
 
         # Step 3: POST to login endpoint with Referer header.
         # Some modem firmware rejects login POSTs without a matching

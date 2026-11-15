@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Moniteur de Modem Câble",
+        "description": "{icon}Comment voulez-vous ajouter votre modem ?",
+        "menu_options": {
+          "manufacturer": "Ajouter un modem",
+          "custom_config_start": "Ajouter un modem avec une configuration personnalisée"
+        }
+      },
+      "manufacturer": {
+        "title": "Moniteur de Modem Câble",
         "description": "Sélectionnez un fabricant, choisissez 'Tous' ou choisissez 'Auto-detect' pour rechercher votre modem sur le réseau.",
         "data": {
           "manufacturer": "Fabricant"
@@ -46,6 +54,13 @@
           "host": "Généralement 192.168.100.1. Incluez http:// ou https:// pour ignorer la détection de protocole.",
           "username": "Laisser vide si non requis.",
           "password": "Laisser vide si non requis."
+        }
+      },
+      "custom_config": {
+        "title": "Configuration personnalisée",
+        "description": "Valider teste cette configuration sur votre modem ; rien n'est enregistré tant qu'un test n'a pas réussi. Les tests échoués écrivent un \"custom config report\" dans le [journal]({logs_url}). [Guide]({guide_url})",
+        "data": {
+          "modem_config": "Configuration du modem (modem.yaml)"
         }
       },
       "reauth_confirm": {
@@ -97,7 +112,9 @@
       "modem_busy": "Le modem est occupé et a refusé la connexion.\n\nCe n'est pas un problème de nom d'utilisateur ou de mot de passe. Un micrologiciel n'autorisant qu'une seule session à la fois répond ainsi lorsqu'une autre personne est connectée à la page web du modem, ou lorsque le support de votre opérateur est connecté. Cela se produit aussi pendant le redémarrage du modem.\n\nFermez la page web du modem si elle est ouverte, puis réessayez.",
       "session_rejected": "Connexion réussie, mais le modem a refusé la requête de données.\n\nLa connexion a fonctionné, il ne s'agit donc pas d'un problème de nom d'utilisateur ou de mot de passe. Le journal Home Assistant contient déjà un avertissement sur la requête en échec avec la réponse du modem.",
       "parse_failed": "Connecté, mais impossible de lire les données du modem.\n\nCela peut signifier que votre modem nécessite une sélection de variante différente. Essayez de revenir en arrière et de sélectionner une autre option, ou vérifiez que le firmware de votre modem est compatible.",
-      "unknown": "Erreur inattendue. Vérifiez les journaux de Home Assistant pour plus de détails."
+      "unknown": "Erreur inattendue. Vérifiez les journaux de Home Assistant pour plus de détails.",
+      "custom_yaml_invalid": "La configuration du modem n'est pas du YAML valide ou ne correspond pas au format modem.yaml. Les détails figurent dans le rapport de configuration personnalisée du journal de Home Assistant.",
+      "custom_attempt_failed": "Le test a échoué. Ouvrez le journal de Home Assistant et recherchez \"custom config report\" : il montre chaque étape et la réponse du modem. Ici, un échec de connexion peut venir de votre configuration modifiée, pas seulement du nom d'utilisateur ou du mot de passe."
     },
     "abort": {
       "already_configured": "Ce modem est déjà configuré.",

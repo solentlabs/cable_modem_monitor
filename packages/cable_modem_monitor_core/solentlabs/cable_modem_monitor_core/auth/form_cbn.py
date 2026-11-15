@@ -148,6 +148,7 @@ class FormCbnAuthManager(BaseAuthManager):
     """
 
     def __init__(self, config: FormCbnAuth) -> None:
+        super().__init__()
         self._config = config
 
     def authenticate(
@@ -213,6 +214,8 @@ class FormCbnAuthManager(BaseAuthManager):
             username_field, encrypted = self._encode_credentials(username, password, session_token, hw_model)
         except ImportError as exc:
             return AuthResult(success=False, error=str(exc))
+        self._record_secret(encrypted, password)
+        self._record_secret(quote(encrypted, safe=""), password)
 
         # Step 5: POST login — token must be first parameter. Values are
         # URL-encoded as the browser's form serialization sends them: base64
@@ -265,7 +268,7 @@ class FormCbnAuthManager(BaseAuthManager):
         sid_value = sid_match.group(1)
         hostname = urlparse(base_url).hostname or ""
         session.cookies.set(config.sid_cookie_name, sid_value, domain=hostname)
-        log(log_level, "CBN auth: SID=%s set on session", sid_value)
+        log(log_level, "CBN auth: SID=<set, len=%d> set on session", len(sid_value))
 
         return AuthResult(
             success=True,

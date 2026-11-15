@@ -77,6 +77,7 @@ from .channel_bond_storage import (
 from .const import (
     CONF_CHANNEL_IDENTITY,
     CONF_CHANNEL_ONBOARDING_ELIGIBLE,
+    CONF_CUSTOM_MODEM_YAML,
     CONF_ENTITY_PREFIX,
     CONF_HEALTH_CHECK_INTERVAL,
     CONF_LEGACY_SSL,
@@ -97,10 +98,12 @@ from .const import (
 )
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
 from .core.log_buffer import setup_log_buffer
+from .custom_config import parse_modem_yaml
 from .lib.utils import get_device_name
 from .mapping_manager import ChannelMap, build_channel_map
 from .migrations import async_run_migrations, v2_2_frequency_statistics
 from .recovery_adapter import attach_recovery_cadence_listener
+from .repairs import async_sync_with_catalog
 from .services import async_register_services
 
 _LOGGER = logging.getLogger(__name__)
@@ -535,6 +538,9 @@ async def async_setup_entry(
         entry.data.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL),
     )
 
+    # Step 0: a custom config entry may return to the catalog file first.
+    await async_sync_with_catalog(hass, entry)
+
     # Steps 1-5: Load config and create Core components (sync I/O)
     try:
         orchestrator, health_monitor, modem_identity, setup_keys = await hass.async_add_executor_job(
@@ -546,8 +552,9 @@ async def async_setup_entry(
         # ConfigEntryError (not ConfigEntryNotReady). The modem being
         # unreachable is a different case: the first poll never raises
         # and setup proceeds with deferred entities (see § Data Coordinator).
-        _LOGGER.exception("Failed to load modem configuration from catalog")
-        raise ConfigEntryError(f"Failed to load modem configuration from catalog: {err}") from err
+        source = "custom config" if CONF_CUSTOM_MODEM_YAML in entry.data else "catalog"
+        _LOGGER.exception("Failed to load modem configuration from %s", source)
+        raise ConfigEntryError(f"Failed to load modem configuration from {source}: {err}") from err
 
     # Step 6: Create data DataUpdateCoordinator
     host = entry.data[CONF_HOST]
@@ -777,7 +784,10 @@ def _create_core_components(
     parser_yaml = modem_dir / "parser.yaml"
     parser_py = modem_dir / "parser.py"
 
-    modem_config = load_modem_config(modem_yaml)
+    # A custom config entry's own modem.yaml replaces the variant file
+    # (CONFIG_FLOW_SPEC § Custom Config Setup).
+    custom_text = data.get(CONF_CUSTOM_MODEM_YAML)
+    modem_config = parse_modem_yaml(custom_text) if custom_text is not None else load_modem_config(modem_yaml)
     parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
     post_processor = load_post_processor(parser_py) if parser_py.exists() else None
 

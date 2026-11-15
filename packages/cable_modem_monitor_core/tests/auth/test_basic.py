@@ -23,6 +23,7 @@ class TestBasicAuthManager:
 
         result = manager.authenticate(session, "http://192.168.100.1", "admin", "secret")
         assert result.success is True
+        assert manager.derived_secrets()  # scrubbed like the password
         assert session.auth == ("admin", "secret")
 
     def test_no_challenge_cookie_no_request(self, session: requests.Session) -> None:

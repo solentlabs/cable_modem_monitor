@@ -344,3 +344,17 @@ class TestEncodeActionBody:
         manager_cls = type(create_auth_manager_for_action(config))
         overrides = manager_cls.encode_action_body is not BaseAuthManager.encode_action_body
         assert type(config).encodes_action_bodies is overrides
+
+
+def test_record_secret_skips_empty_and_literal_password_and_reset_clears() -> None:
+    """Only real derived values are kept, and each login starts from none."""
+    manager = _BareManager()
+
+    manager._record_secret("", "pw")
+    manager._record_secret("pw", "pw")
+    returned = manager._record_secret("cHc=", "pw")
+
+    assert returned == "cHc="
+    assert manager.derived_secrets() == frozenset({"cHc="})
+    manager.reset_derived_secrets()
+    assert manager.derived_secrets() == frozenset()

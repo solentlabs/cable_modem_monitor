@@ -50,8 +50,12 @@ PR titles and bodies are not edited by the maintainer — any feedback comes in 
 
 ## Adding Modem Support
 
-There are two paths, depending on what you want to do:
+There are three paths, depending on what you want to do:
 
+- **Your modem is close to a catalog entry but doesn't work with it** —
+  add it with **Add modem with custom config** and adjust its
+  `modem.yaml` in Home Assistant until it does. See
+  [docs/CUSTOM_CONFIG.md](./docs/CUSTOM_CONFIG.md).
 - **Requesting support for your modem** — see
   [docs/MODEM_REQUEST.md](./docs/MODEM_REQUEST.md). Capture a HAR,
   screen it for PII, file a request. A maintainer or contributor builds
@@ -64,7 +68,7 @@ There are two paths, depending on what you want to do:
   [MODEM_INTAKE_WORKFLOW.md](packages/cable_modem_monitor_catalog_tools/docs/MODEM_INTAKE_WORKFLOW.md)
   for the full walkthrough.
 
-Either path is valuable.
+Every path is valuable.
 
 If the intake pipeline stops with a **Core gap** — a pattern the pipeline
 can't classify — the gap report is the contribution. Paste it into your

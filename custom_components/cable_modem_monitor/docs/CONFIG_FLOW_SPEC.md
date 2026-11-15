@@ -14,6 +14,14 @@ with authenticated polling.
 
 ## Steps
 
+The first screen (`user`, a menu) chooses **Add modem**, which runs the
+steps below, or **Add modem with custom config** (§ Custom Config Setup).
+It shows `static/setup-icon.svg`, a 64 px copy of `brand/icon.svg`
+served unauthenticated at `/cable_modem_monitor/static`. HA's
+`/api/brands` endpoint needs a token an image in a dialog cannot send,
+HA strips size attributes from dialog markup, and the release zip
+leaves out `brand/`.
+
 ```text
 ┌─────────────────────────────────────────────────┐
 │ Step 1a: Select manufacturer                    │
@@ -440,6 +448,89 @@ once and reused at every runtime poll — no re-discovery.
 
 ---
 
+## Custom Config Setup
+
+The first screen offers two choices: **Add modem** (the steps above) and
+**Add modem with custom config**. The custom path is the same Steps 1–3
+followed by a loop on the variant's modem.yaml, so a user can adjust
+the config without waiting for a release. It also serves a modem or
+variant the catalog lacks when a nearby entry needs only small changes.
+The user guide is [docs/CUSTOM_CONFIG.md](../../../docs/CUSTOM_CONFIG.md).
+
+**Separation.** The two paths share the Step 1–3 methods and the
+validation pipeline. The custom path's only branch in them is that its
+Step 3 submit opens the `custom_config` step instead of validating.
+
+**`custom_config` step fields:**
+
+| Field | Initial value |
+|-------|---------------|
+| Modem config | The selected variant's modem.yaml text |
+
+Host and credentials come from Step 3, where a scheme prefix on the
+host picks the transport (§ Step 3). Changing them means starting the
+setup again: HA flows have no back step, and a field for it costs the
+editor a full form row. On this path Step 3 always shows the credential
+fields, since the edited config may change the login strategy. Only modem.yaml is editable; parser.yaml and parser.py load
+from the catalog.
+
+**Each submit** runs one attempt:
+
+1. Parse the text as YAML and validate it against Core's `ModemConfig`
+   schema. A failure stops the attempt before anything reaches the
+   modem.
+2. Run the Step 4 pipeline with that config in place of the catalog
+   file. Authentication runs exactly once.
+3. On success, create the entry (§ Config Entry, custom fields). Text
+   that parses the same as the catalog file creates an ordinary entry.
+4. On failure, re-show the form with the user's text, a link to HA's
+   log page, and `custom_attempt_failed` (`custom_yaml_invalid` for a
+   YAML or schema error). Normal setup's error messages are not reused:
+   an edited config fails a login as readily as a bad password does.
+
+**Attempt report.** Every failed attempt writes one WARNING record holding:
+
+- integration version, catalog file the text started from, host as
+  submitted
+- outcome: the strings.json error key with the failure detail, or the
+  YAML/schema error
+- every Core and integration record the attempt emitted, DEBUG and up,
+  in order
+
+One record, because HA's log page on HAOS keeps WARNING and above only:
+the step lines survive inside it. During the attempt HA's own log gets
+only the records it would have logged anyway; the DEBUG lines go to the
+report alone, which is scrubbed and they are not. The text is sanitized as diagnostics
+logs are (`sanitize_log_message`) and scrubbed of the password and
+derived credentials (`scrub_secrets`,
+[ORCHESTRATION_SPEC.md](../../../packages/cable_modem_monitor_core/docs/ORCHESTRATION_SPEC.md)),
+since users paste it into LLM chats and public issues.
+
+**Nothing is saved until an attempt passes.** A failing config never
+becomes an entry, so it is never polled. Closing the dialog discards
+the text; the guide tells users to keep their YAML outside the dialog.
+
+**Returning to the catalog.** At each startup a custom entry compares
+the installed catalog file with its own YAML and with
+`custom_base_yaml`, on the parsed YAML (comments, formatting and key
+order don't count).
+
+| Catalog file vs user YAML | Catalog file vs base | Action |
+|---------------------------|----------------------|--------|
+| equal | any | Drop the custom fields, load the catalog file, notify the user (persistent notification) |
+| differs | changed | Repair issue: the project's config changed. Its fix tests the catalog file once; on pass the custom fields are dropped, on fail the user's YAML stays and the attempt report is logged |
+| differs | unchanged | Nothing |
+
+The repair's test logs in while the entry may be polling. On a modem
+that allows one session this can cost the entry one poll, which the
+next poll recovers; the test does not wait for a quiet modem.
+
+The equal case brings a reporter back in sync once their finding is in
+the catalog. Deleting the entry and adding the modem again also returns
+to the catalog file.
+
+---
+
 ## Config Entry
 
 After successful validation, these fields are stored in the HA config
@@ -470,7 +561,17 @@ supports_head: true
 # Polling configuration (options flow)
 scan_interval: 600                 # seconds (10 min default), or 0 for disabled
 health_check_interval: 30          # seconds (30s default), or 0 for disabled
+
+# Custom config setup only (absent otherwise)
+custom_modem_yaml: "..."           # the user's modem.yaml text, used instead of the catalog file
+custom_base_yaml: "..."            # the catalog text it started from
+custom_base_version: "3.14.15"     # integration version that supplied the base text
 ```
+
+A custom entry loads `custom_modem_yaml` wherever any other entry loads
+its variant file: startup, options-flow and reauth validation. The
+diagnostics download carries the diff from base to user text
+([HA_ADAPTER_SPEC.md § Diagnostics Platform](HA_ADAPTER_SPEC.md#diagnostics-platform)).
 
 **Thin entry, runtime lookup.** The parser code is in the catalog package
 and can't be stored in the config entry — the package is already a hard

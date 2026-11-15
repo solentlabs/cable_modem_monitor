@@ -34,10 +34,10 @@ Releases follow a PR-based workflow:
 ### 1. Prepare the Release (on feature branch)
 
 `make validate-ci` ends with `scripts/check_owned_deps.py`. It is
-informational and always exits 0: it compares the local venv against
-PyPI, so a package it lists may already be permitted by our declared
-floor. Read it, and open a separate deps commit if something we declare
-is genuinely behind. It does not gate a release.
+informational and always exits 0. It lists only declared versions that
+need a commit and known CVEs in our `==` pins; bump them with the
+`ha-safe-deps-bump` skill in a separate deps commit. It does not gate a
+release.
 
 ```bash
 # Ensure you're on your feature branch with all changes committed

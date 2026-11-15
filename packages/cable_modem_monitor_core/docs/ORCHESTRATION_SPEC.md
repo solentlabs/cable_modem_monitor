@@ -365,13 +365,17 @@ bounds volume during persistent failure.
 
 - The user's literal password is replaced with ``[REDACTED]`` if it
   appears in the body snippet.
+- Each credential-derived value the strategy put on the wire in its
+  last login (base64 or URI-encoded password, PBKDF2 key, HMAC,
+  encrypted blob; ``BaseAuthManager.derived_secrets()``) is replaced
+  with ``[DERIVED, len=N]``.
 - URL query strings are stripped wholesale (``?<redacted>``) — some
   strategies (Arris ``url_token``) put credentials in the query.
 - Body snippet is truncated to 500 characters.
 
-Derived credential forms (PBKDF2 hashes, encrypted blobs) are left
-intact — they're protocol-shaped, not the user's secret, and the
-maintainer needs them to confirm the strategy ran.
+The same scrub (``scrub_secrets``) covers every surface that carries
+the password scrub: auth-failure and ``HttpStatusError`` snippets, the
+captured stub body, and the HA debug-setup report.
 
 Auth managers must include the ``requests.Response`` on their
 failure ``AuthResult`` so the collector can render the detail.

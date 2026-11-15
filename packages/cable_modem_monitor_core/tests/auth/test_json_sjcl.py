@@ -313,6 +313,7 @@ class TestJsonSjclSessionState:
         manager = JsonSjclAuthManager(_config())
 
         result = manager.authenticate(session, _IP, "admin", _PASSWORD)
+        assert manager.derived_secrets()  # scrubbed like the password
 
         state = SjclSession(key=_KEY, iv_hex=_IV, user="admin", aad=_AAD, tag_length=16)
         for text in (repr(result.auth_context), repr(manager), repr(manager.encode_action_body), repr(state)):

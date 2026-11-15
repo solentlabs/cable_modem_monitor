@@ -31,6 +31,7 @@ class FormPbkdf2AuthManager(BaseAuthManager):
     """
 
     def __init__(self, config: FormPbkdf2Auth) -> None:
+        super().__init__()
         self._config = config
 
     def auth_failure_mode(self) -> AuthFailureMode:
@@ -119,8 +120,10 @@ class FormPbkdf2AuthManager(BaseAuthManager):
         if config.double_hash:
             salt_webui = salt_json.get("saltwebui", salt_json["salt"])
             derived = _derive_key(derived, salt_webui, config.pbkdf2_iterations, config.pbkdf2_key_length)
+        self._record_secret(derived, password)
 
         # Step 5: Login with derived hash
+        _logger.log(log_level, "PBKDF2 login: POST %s", login_url)
         login_result = _submit_login(
             session,
             login_url,

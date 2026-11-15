@@ -14,12 +14,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           lfs: true
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           # Pinned to match Home Assistant's supported Python version.
           # Both packages declare requires-python = ">=3.12". Update
@@ -38,7 +38,7 @@ jobs:
           pytest -v --tb=short --cov=custom_components/cable_modem_monitor --cov-report=xml --cov-report=term --cov-fail-under=95
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage.xml
           flags: unittests
@@ -56,12 +56,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           lfs: true
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -81,7 +81,7 @@ jobs:
           pip install -e packages/cable_modem_monitor_catalog
           # check_fixture_pii.py imports har_capture, and the catalog test
           # suite imports that script. Floor matches pyproject.toml.
-          pip install "har-capture~=0.16.1"
+          pip install "har-capture~=0.19.0"
 
       - name: Run Catalog tests
         working-directory: packages/cable_modem_monitor_catalog
@@ -146,20 +146,20 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       # ruff, black and mypy pins also live in .pre-commit-config.yaml,
-      # requirements-dev.txt, requirements-security.txt (mypy) and the
+      # requirements-dev.txt and the
       # root and Core pyproject.toml dev lists; bump every copy together.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff==0.15.12 black==26.1.0 mypy==2.1.0 types-requests types-PyYAML pytest-socket pydantic types-cryptography requests-mock har-capture~=0.16.1
+          pip install ruff==0.17.5 black==26.10.1 mypy==2.4.1 types-requests types-PyYAML pytest-socket pydantic types-cryptography requests-mock har-capture~=0.19.0
           pip install -e packages/cable_modem_monitor_core
           pip install -e packages/cable_modem_monitor_catalog
 
@@ -181,10 +181,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -213,19 +213,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           lfs: true
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install beautifulsoup4 har-capture~=0.16.1 pyyaml
+          pip install beautifulsoup4 har-capture~=0.19.0 pyyaml
 
       - name: Check fixtures for PII
         run: |
@@ -237,7 +237,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install cspell
         run: npm install -g cspell@10
@@ -256,7 +256,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Need full history so the scanner can diff against the
           # base ref (origin/main or the PR target) to scope checks
@@ -264,7 +264,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -288,10 +288,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -310,14 +310,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # The audit reads each fixture's provenance from the HAR's
           # creator field, so it needs real HAR bytes, not LFS pointers.
           lfs: true
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -353,13 +353,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Full history so the scan can diff against the base ref.
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -382,10 +382,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 

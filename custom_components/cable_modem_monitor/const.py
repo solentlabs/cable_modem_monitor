@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 
 # IMPORTANT: Do not edit VERSION manually!
 # Use: python scripts/release.py <version>
-VERSION = "3.14.15-beta.7"
+VERSION = "3.14.15-beta.8"
 
 DOMAIN = "cable_modem_monitor"
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
@@ -37,6 +37,11 @@ CONF_SUPPORTS_HEAD = "supports_head"
 # (which reloads the integration). Baseline totals themselves live in
 # the dedicated Store (``channel_bond_storage``), not entry data.
 CONF_CHANNEL_ONBOARDING_ELIGIBLE = "channel_onboarding_eligible"
+
+# Config entry keys — custom config setup only (CONFIG_FLOW_SPEC § Custom Config Setup)
+CONF_CUSTOM_MODEM_YAML = "custom_modem_yaml"
+CONF_CUSTOM_BASE_YAML = "custom_base_yaml"
+CONF_CUSTOM_BASE_VERSION = "custom_base_version"
 
 # Polling configuration (options flow)
 CONF_SCAN_INTERVAL = "scan_interval"

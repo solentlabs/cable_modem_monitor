@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.components.http import StaticPathConfig
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_core.auth.base import AuthFailureMode
 from solentlabs.cable_modem_monitor_core.auth.factory import create_auth_manager
@@ -39,9 +42,11 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     get_strategy_display_labels,
 )
 from solentlabs.cable_modem_monitor_core.orchestration import (
+    ModemDataCollector,
     apply_setup_params,
     create_collector,
     detect_setup_params,
+    scrub_secrets,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.models import ModemResult
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
@@ -54,6 +59,7 @@ from solentlabs.cable_modem_monitor_core.post_processor import (
 from .const import (
     DEFAULT_HEALTH_CHECK_INTERVAL,
 )
+from .custom_config import capture_attempt, parse_modem_yaml
 from .lib.host_validation import parse_host_input
 
 if TYPE_CHECKING:
@@ -108,6 +114,25 @@ def format_variant_labels(variants: list[VariantInfo]) -> list[str]:
 # ---------------------------------------------------------------------------
 # Catalog browsing (async wrappers around Core sync API)
 # ---------------------------------------------------------------------------
+
+
+# The setup screen's icon, served unauthenticated: HA's own /api/brands
+# endpoint needs a token an image in a dialog can't send. A 64 px copy of
+# brand/icon.svg, because HA strips size attributes from dialog markup, and
+# outside brand/, which the release zip leaves out.
+STATIC_URL_BASE = "/cable_modem_monitor/static"
+_STATIC_DIR = Path(__file__).parent / "static"
+_STATIC_REGISTERED = "cable_modem_monitor_static_path"
+
+
+async def async_brand_icon_url(hass: HomeAssistant) -> str | None:
+    """Serve the static folder once and return the setup icon's URL; ``None`` when HA has no http."""
+    if "http" not in hass.config.components:
+        return None
+    if not hass.data.get(_STATIC_REGISTERED):
+        await hass.http.async_register_static_paths([StaticPathConfig(STATIC_URL_BASE, str(_STATIC_DIR), True)])
+        hass.data[_STATIC_REGISTERED] = True
+    return f"{STATIC_URL_BASE}/setup-icon.svg"
 
 
 async def load_modem_catalog(hass: HomeAssistant) -> list[ModemSummary]:
@@ -367,6 +392,7 @@ def _attempt_validation(
     username: str,
     password: str,
     legacy_ssl: bool,
+    on_collector: Callable[[ModemDataCollector], None] | None = None,
 ) -> ModemResult:
     """Run one validation attempt, always releasing the server-side session."""
     # Shared by initial setup, reauth, and options-flow re-validation —
@@ -380,6 +406,8 @@ def _attempt_validation(
         password=password,
         legacy_ssl=legacy_ssl,
     )
+    if on_collector is not None:
+        on_collector(collector)
     try:
         return collector.execute()
     finally:
@@ -396,8 +424,15 @@ def _run_validation(
     password: str,
     modem_dir: Path,
     variant: str | None,
+    modem_yaml_text: str | None = None,
+    on_collector: Callable[[ModemDataCollector], None] | None = None,
 ) -> dict[str, Any]:
     """Full validation pipeline (sync — runs in executor): protocol detect → load config → collect → probe discovery."""
+    # A custom entry's own modem.yaml text replaces the catalog file. It is
+    # parsed first, so text that fails the schema never reaches the modem
+    # (CONFIG_FLOW_SPEC.md § Custom Config Setup).
+    override = parse_modem_yaml(modem_yaml_text) if modem_yaml_text is not None else None
+
     # -- Step 1: Protocol detection -------------------------------------------
     # Probe both ports; let detect_protocol's TLS handshake observe
     # whether the modem speaks legacy TLS. User-specified protocols
@@ -420,7 +455,7 @@ def _run_validation(
     parser_yaml = modem_dir / "parser.yaml"
     parser_py = modem_dir / "parser.py"
 
-    modem_config = load_modem_config(modem_yaml)
+    modem_config = override if override is not None else load_modem_config(modem_yaml)
     parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
     post_processor = load_post_processor(parser_py) if parser_py.exists() else None
 
@@ -444,6 +479,7 @@ def _run_validation(
         username=username,
         password=password,
         legacy_ssl=legacy_ssl,
+        on_collector=on_collector,
     )
 
     if not result.success:
@@ -474,6 +510,7 @@ async def validate_connection(
     password: str,
     modem_dir: Path,
     variant: str | None,
+    modem_yaml_text: str | None = None,
 ) -> dict[str, Any]:
     """Async wrapper around ``_run_validation`` — decomposes the raw host input and runs in an executor thread."""
     hostname, user_protocol = parse_host_input(host)
@@ -486,4 +523,70 @@ async def validate_connection(
         password,
         modem_dir,
         variant,
+        modem_yaml_text,
+    )
+
+
+def read_variant_yaml(modem_dir: Path, variant: str | None) -> str:
+    """The selected variant's modem.yaml text, the custom config path's starting point (sync — executor)."""
+    name = f"modem-{variant}.yaml" if variant else "modem.yaml"
+    return (modem_dir / name).read_text(encoding="utf-8")
+
+
+@dataclass
+class CustomAttempt:
+    """One custom config attempt: the validation result or the failure, plus what it logged."""
+
+    validation: dict[str, Any] | None
+    error: Exception | None
+    records: list[logging.LogRecord]
+    scrub: Callable[[str], str]
+
+
+def _run_custom_attempt(
+    host: str,
+    protocol: str | None,
+    username: str,
+    password: str,
+    modem_dir: Path,
+    variant: str | None,
+    modem_yaml_text: str,
+) -> CustomAttempt:
+    """Run ``_run_validation`` on the user's text, capturing the records it emits (sync — executor)."""
+    collectors: list[ModemDataCollector] = []
+    with capture_attempt() as records:
+        try:
+            validation = _run_validation(
+                host, protocol, username, password, modem_dir, variant, modem_yaml_text, collectors.append
+            )
+            error: Exception | None = None
+        except Exception as exc:  # noqa: BLE001 - every failure is reported to the user, not raised
+            validation, error = None, exc
+    # Before a collector exists (YAML error, unreachable host) only the
+    # literal password can be on the wire.
+    scrub = collectors[0].scrub_secrets if collectors else (lambda text: scrub_secrets(text, password))
+    return CustomAttempt(validation=validation, error=error, records=records, scrub=scrub)
+
+
+async def run_custom_attempt(
+    hass: HomeAssistant,
+    *,
+    host: str,
+    username: str,
+    password: str,
+    modem_dir: Path,
+    variant: str | None,
+    modem_yaml_text: str,
+) -> CustomAttempt:
+    """Async wrapper around ``_run_custom_attempt`` (CONFIG_FLOW_SPEC.md § Custom Config Setup)."""
+    hostname, user_protocol = parse_host_input(host)
+    return await hass.async_add_executor_job(
+        _run_custom_attempt,
+        hostname,
+        user_protocol,
+        username,
+        password,
+        modem_dir,
+        variant,
+        modem_yaml_text,
     )

@@ -35,9 +35,9 @@ from .auth_failure import (
     _auth_failure_hint,
     _build_auth_failed_event,
     _build_http_status_error_event,
-    _scrub_password,
     _should_detect_login_pages,
     _strategy_name,
+    scrub_secrets,
 )
 from .events import (
     AuthSucceeded,
@@ -166,6 +166,7 @@ class ModemDataCollector:
                     response=None,
                     error=error_with_type,
                     password=self._password,
+                    derived=self._auth_manager.derived_secrets(),
                 ),
             )
             return ModemResult(
@@ -183,6 +184,7 @@ class ModemDataCollector:
                     response=auth_result.response,
                     error=auth_result.error,
                     password=self._password,
+                    derived=self._auth_manager.derived_secrets(),
                 ),
             )
             status = auth_result.response.status_code if auth_result.response is not None else None
@@ -270,6 +272,10 @@ class ModemDataCollector:
             modem_data=data,
             signal=CollectorSignal.OK,
         )
+
+    def scrub_secrets(self, text: str) -> str:
+        """Scrub the password and the last login's derived values from ``text``."""
+        return scrub_secrets(text, self._password, self._auth_manager.derived_secrets())
 
     @property
     def session_is_valid(self) -> bool:
@@ -386,6 +392,7 @@ class ModemDataCollector:
 
         self._session_reused = False
         _logger.debug("No active session [%s] — Authenticating", self._modem_config.model)
+        self._auth_manager.reset_derived_secrets()
         result = self._auth_manager.authenticate(
             self._session,
             self._base_url,
@@ -656,6 +663,7 @@ class ModemDataCollector:
                     content_type=exc.content_type,
                     response_body=exc.response_body,
                     password=self._password,
+                    derived=self._auth_manager.derived_secrets(),
                 ),
             )
             return ModemResult(
@@ -773,11 +781,11 @@ class ModemDataCollector:
         # way for as long as the integration runs. It ships
         # whole in the diagnostics download users attach to public issues,
         # and firmware echoing the submitted credential inside its own
-        # pages is observed (technicolor/cga4236). Derived forms are
-        # deliberately left intact — ARCHITECTURE_DECISIONS
-        # § LOAD_INTEGRITY failure detail via diagnostics download.
+        # pages is observed (technicolor/cga4236). Derived values are
+        # scrubbed too — ARCHITECTURE_DECISIONS
+        # § Auth-failure detail via single WARNING log.
         self._last_stub_bodies = {
-            path: _scrub_password(str(body), self._password)
+            path: self.scrub_secrets(str(body))
             for path in diagnostics.zero_fulfillment_resources
             if (body := resources.get(path)) is not None
         }

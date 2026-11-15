@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Monitor de Módem de Cable",
+        "description": "{icon}¿Cómo quieres añadir tu módem?",
+        "menu_options": {
+          "manufacturer": "Añadir módem",
+          "custom_config_start": "Añadir módem con configuración personalizada"
+        }
+      },
+      "manufacturer": {
+        "title": "Monitor de Módem de Cable",
         "description": "Selecciona un fabricante, elige 'Todos' o elige 'Auto-detect' para buscar tu módem en la red.",
         "data": {
           "manufacturer": "Fabricante"
@@ -46,6 +54,13 @@
           "host": "Normalmente 192.168.100.1. Incluye http:// o https:// para omitir la detección de protocolo.",
           "username": "Dejar en blanco si no es necesario.",
           "password": "Dejar en blanco si no es necesario."
+        }
+      },
+      "custom_config": {
+        "title": "Configuración personalizada",
+        "description": "Enviar prueba esta configuración con tu módem; no se guarda nada hasta que una prueba tenga éxito. Las pruebas fallidas escriben un \"custom config report\" en el [registro]({logs_url}). [Guía]({guide_url})",
+        "data": {
+          "modem_config": "Configuración del módem (modem.yaml)"
         }
       },
       "reauth_confirm": {
@@ -97,7 +112,9 @@
       "modem_busy": "El módem está ocupado y rechazó el inicio de sesión.\n\nNo es un problema de usuario ni de contraseña. El firmware que solo permite una sesión a la vez responde así cuando otra persona ha iniciado sesión en la página web del módem, o cuando el equipo de soporte de su proveedor está conectado. También ocurre mientras el módem se reinicia.\n\nCierre la página web del módem si la tiene abierta y vuelva a intentarlo.",
       "session_rejected": "Inicio de sesión correcto, pero el módem rechazó la solicitud de datos.\n\nEl inicio de sesión funcionó, así que no es un problema de usuario ni de contraseña. El registro de Home Assistant ya contiene una advertencia sobre la solicitud fallida con la respuesta del módem.",
       "parse_failed": "Conectado, pero no se pudieron leer los datos del módem.\n\nEsto puede significar que tu módem necesita una selección de variante diferente. Intenta volver atrás y seleccionar otra opción, o verifica que el firmware de tu módem sea compatible.",
-      "unknown": "Error inesperado. Revisa los registros de Home Assistant para más detalles."
+      "unknown": "Error inesperado. Revisa los registros de Home Assistant para más detalles.",
+      "custom_yaml_invalid": "La configuración del módem no es YAML válido o no coincide con el formato de modem.yaml. Los detalles están en el informe de configuración personalizada del registro de Home Assistant.",
+      "custom_attempt_failed": "La prueba falló. Abre el registro de Home Assistant y busca \"custom config report\": muestra cada paso y lo que respondió el módem. Aquí un fallo de inicio de sesión puede deberse a tu configuración editada, no solo al usuario o la contraseña."
     },
     "abort": {
       "already_configured": "Este módem ya está configurado.",

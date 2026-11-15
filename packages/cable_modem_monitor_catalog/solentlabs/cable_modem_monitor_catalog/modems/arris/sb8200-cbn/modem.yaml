@@ -13,6 +13,15 @@ auth:
   cipher_prefix: "HS:{hw_model}:"
   hw_model_fun: 1
 
+session:
+  # The browser's jQuery POSTs carry these on every getter/setter call in
+  # all three AC01 captures; the firmware's check, if any, is unobserved
+  # (#231). Referer is the login page's, as on the login calls.
+  headers:
+    Origin: "{base_url}"
+    Referer: "{base_url}/common_page/login.html"
+    X-Requested-With: "XMLHttpRequest"
+
 actions:
   restart:
     type: cbn
@@ -32,6 +41,11 @@ status: awaiting_verification
 
 sources:
   auth_config: "Firmware JS in test_data/modem.har ([#231](https://github.com/solentlabs/cable_modem_monitor/issues/231)): encrypt_cryptoJS.js CBN_Encrypt, js/Login.js LoginFunc, js/common_api.js loadGlobalValue. Same firmware and JS as the [#109](https://github.com/solentlabs/cable_modem_monitor/issues/109) capture."
+  session_headers:
+    "test_data/modem.har — Origin, Referer and X-Requested-With: XMLHttpRequest
+    on the getter fun=1 [27] and login setter fun=15 [28] POSTs; the same three
+    on every getter/setter POST in the #109 capture and the #231 failed-login
+    capture"
   brands: "[SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/) — SURFboard styling"
   chipset: "[DeviWiki](https://deviwiki.com/wiki/Arris_SB8200)"
   hardware: "[ARRIS SB8200 product page](https://www.surfboard.com/products/cable-modems/sb8200/)"

@@ -1,20 +1,5 @@
-# Security linting and analysis tools
+# Security linting: Bandit, run by `make lint-all` when installed.
+# CodeQL (security-extended) is the CI security gate; this is optional local use.
 # Install with: pip install -r requirements-security.txt
 
-# Bandit - Python security linter (catches many CodeQL issues)
 bandit[toml]==1.9.4
-
-# Semgrep - Multi-language security scanner
-semgrep==1.159.0
-
-# pip-audit - Dependency vulnerability scanner (PyPA/OSV, no auth required)
-pip-audit==2.10.0
-
-# Additional security-focused flake8 plugins
-flake8==7.3.0
-flake8-bandit==4.1.1
-flake8-bugbear==25.11.29
-
-# Type checking
-mypy==2.1.0  # same pin as .github/workflows/tests.yml and requirements-dev.txt
-types-requests==2.33.0.20260408

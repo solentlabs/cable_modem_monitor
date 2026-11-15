@@ -1,4 +1,4 @@
-"""Tests for the login-page-detection gate in ``auth_failure``.
+"""Tests for ``auth_failure``: the login-page-detection gate and secret scrubbing.
 
 The gate is derived, not hand-written: it reads each strategy's own
 ``stateless`` and ``transport`` ClassVars. These tests pin the answer
@@ -33,8 +33,10 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
 )
 from solentlabs.cable_modem_monitor_core.orchestration.auth_failure import (
     _FAILURE_BODY_SNIPPET_MAX,
+    _build_auth_failed_event,
     _build_http_status_error_event,
     _should_detect_login_pages,
+    scrub_secrets,
 )
 
 # Real auth models, not mocks: the gate reads the strategy's own
@@ -198,3 +200,57 @@ def test_snippet_still_truncated_to_budget() -> None:
     )
     assert event.response_body.endswith("... (truncated)")
     assert len(event.response_body) <= _FAILURE_BODY_SNIPPET_MAX + len("... (truncated)")
+
+
+# =============================================================================
+# scrub_secrets — password and derived credentials
+# =============================================================================
+
+# ┌────────────────┬──────────┬────────────────┬─────────────────────────┬─────────────────────┐
+# │ text           │ password │ derived        │ expected                │ description         │
+# ├────────────────┼──────────┼────────────────┼─────────────────────────┼─────────────────────┤
+# │ "pw=hunter2"   │ hunter2  │ —              │ "pw=[REDACTED]"         │ literal password    │
+# │ "k=aHVudGVy"   │ hunter2  │ {aHVudGVy}     │ "k=[DERIVED, len=8]"    │ derived value       │
+# │ "ABCD BC"      │ —        │ {BC, ABCD}     │ "[..len=4] [..len=2]"   │ longest first       │
+# │ "Xhunter2X"    │ hunter2  │ {Xhunter2X}    │ "[DERIVED, len=9]"      │ derived first       │
+# │ "nothing"      │ —        │ —              │ "nothing"               │ no secrets          │
+# └────────────────┴──────────┴────────────────┴─────────────────────────┴─────────────────────┘
+#
+# fmt: off
+SCRUB_CASES = [
+    ("pw=hunter2", "hunter2", frozenset(),                "pw=[REDACTED]",                     "literal password"),
+    ("k=aHVudGVy", "hunter2", frozenset({"aHVudGVy"}),    "k=[DERIVED, len=8]",                "derived value"),
+    ("ABCD BC",    "",        frozenset({"BC", "ABCD"}),  "[DERIVED, len=4] [DERIVED, len=2]", "longest first"),
+    ("Xhunter2X",  "hunter2", frozenset({"Xhunter2X"}),   "[DERIVED, len=9]",                  "derived first"),
+    ("nothing",    "",        frozenset(),                "nothing",                           "no secrets"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("text", "password", "derived", "expected", "desc"), SCRUB_CASES, ids=[c[-1] for c in SCRUB_CASES]
+)
+def test_scrub_secrets(text: str, password: str, derived: frozenset[str], expected: str, desc: str) -> None:
+    """The password becomes [REDACTED] and each derived value [DERIVED, len=N]."""
+    assert scrub_secrets(text, password, derived) == expected, desc
+
+
+def test_auth_failed_event_scrubs_derived_values() -> None:
+    """A derived credential echoed in the login response never reaches the event."""
+    response = MagicMock()
+    response.request.method = "POST"
+    response.url = "http://192.168.100.1/login"
+    response.status_code = 200
+    response.headers = {"Content-Type": "text/html"}
+    response.text = "<p>bad key aHVudGVyMg==</p>"
+
+    event = _build_auth_failed_event(
+        model="T100",
+        strategy="form",
+        response=response,
+        error="rejected",
+        password="hunter2",
+        derived=frozenset({"aHVudGVyMg=="}),
+    )
+
+    assert event.response_body == "<p>bad key [DERIVED, len=12]</p>"

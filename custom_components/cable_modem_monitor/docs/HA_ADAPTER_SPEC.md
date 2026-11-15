@@ -166,8 +166,13 @@ is HA-specific); assembly logic lives in Core.
 ```text
 async_setup_entry(hass, entry)
  │
+ ├─ 0. Custom config entries only: catalog sync
+ │     adopt the catalog file, raise a repair, or keep the user's text
+ │     (CONFIG_FLOW_SPEC.md § Custom Config Setup)
+ │
  ├─ 1. Load configs from catalog
  │     catalog_path / manufacturer / model / modem[-variant].yaml
+ │     (a custom entry's custom_modem_yaml replaces the variant file)
  │     → modem_config, parser_config, post_processor
  │     (runs in executor — file I/O)
  │
@@ -997,6 +1002,10 @@ during diagnostics build.
 - Config entry details (host, protocol, supports_icmp, etc.)
 - Coordinator state (last_update_success, update_interval)
 - `active_operation` field — surfaces a stuck mutex in user reports
+- `custom_config` (custom config entries only) — catalog file label,
+  `custom_base_version`, and the unified diff from `custom_base_yaml`
+  to `custom_modem_yaml`: the finding to fold into the catalog
+  (CONFIG_FLOW_SPEC.md § Custom Config Setup)
 - Recovery window state — `recovery_active`, `recovery_reason`, and
   window elapsed seconds so a stuck-fast-poll report is
   self-diagnosing

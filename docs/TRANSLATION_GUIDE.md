@@ -48,8 +48,10 @@ Home Assistant automatically loads the appropriate translation file based on the
 
 ### Translated Scope Is Deliberately Limited
 
-Only the config and options flows are translated. Three things are
+Only the config and options flows are translated. Four things are
 explicitly **out of scope** and stay English:
+
+- **Repair issues** and their fix flows (`issues` in `strings.json`)
 
 - **Service (action) names and descriptions**
 - **Entity names** — sensors, buttons, and their per-channel variants

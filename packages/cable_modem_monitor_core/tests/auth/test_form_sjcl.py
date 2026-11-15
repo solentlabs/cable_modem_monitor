@@ -163,6 +163,7 @@ class TestFormSjclAuthManager:
             result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
 
         assert result.success is True
+        assert manager.derived_secrets()  # scrubbed like the password
         assert session.headers.get("csrfNonce") == _TEST_CSRF_NONCE
         assert mock_post.call_count == 2
         # Session validation POST sends empty body (no json= kwarg).

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 from typing import Any
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qsl
@@ -77,7 +78,30 @@ class TestSuccessfulLogin:
         result = manager.authenticate(session, "http://192.168.0.1", "admin", "password123")
 
         assert result.success is True
+        assert manager.derived_secrets()  # scrubbed like the password
         assert session.cookies.get("SID") == "12345"
+
+    def test_sid_logged_as_shape_not_value(self, session: requests.Session, caplog: pytest.LogCaptureFixture) -> None:
+        """The SID is logged as its shape; the value never reaches the log."""
+        manager = FormCbnAuthManager(_make_config())
+        sid = "4815162342"
+
+        def mock_get(url: str, **kwargs: Any) -> MagicMock:
+            session.cookies.set("sessionToken", "tok")
+            return _mock_response(text="<html>login</html>")
+
+        login_post_resp = _mock_response(text=f"successful SID={sid}")
+
+        with (
+            patch.object(session, "get", side_effect=mock_get),
+            patch.object(session, "post", return_value=login_post_resp),
+            caplog.at_level(logging.DEBUG),
+        ):
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password123")
+
+        assert result.success is True
+        assert sid not in caplog.text
+        assert f"SID=<set, len={len(sid)}>" in caplog.text
 
     def test_custom_login_fun(self, session: requests.Session) -> None:
         """Custom login_fun value is used in POST body."""

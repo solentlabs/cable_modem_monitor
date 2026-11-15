@@ -141,6 +141,7 @@ class TestSuccessfulLogin:
         result = manager.authenticate(session, hnap_server, "admin", "pw")
 
         assert result.success is True
+        assert manager.derived_secrets()  # scrubbed like the password
         assert result.error == ""
         assert result.auth_context.private_key != ""
 

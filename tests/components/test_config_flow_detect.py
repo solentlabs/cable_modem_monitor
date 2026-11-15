@@ -13,7 +13,6 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from solentlabs.cable_modem_monitor_core.catalog_manager import ModemSummary
@@ -21,9 +20,8 @@ from solentlabs.cable_modem_monitor_core.detection import Candidate, Detection, 
 from solentlabs.cable_modem_monitor_core.orchestration.events import DetectionChosen
 
 from custom_components.cable_modem_monitor.config_flow_detect import code_span, describe_observations, plan_detection
-from custom_components.cable_modem_monitor.const import DOMAIN
 
-from .conftest import FAKE_CATALOG, MOCK_SINGLE_VARIANT, MOCK_VALIDATION_RESULT
+from .conftest import FAKE_CATALOG, MOCK_SINGLE_VARIANT, MOCK_VALIDATION_RESULT, start_add_modem
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
@@ -87,7 +85,7 @@ async def _start(hass: HomeAssistant, detections: list[Detection]) -> Any:
         patch(f"{_CF}.load_modem_catalog", return_value=CATALOG),
         patch(f"{_CF}.detect", return_value=detections),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         return await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={"manufacturer": "__detect__"}
         )
@@ -102,7 +100,7 @@ def _options(result: Any, field: str) -> list[dict[str, str]]:
 async def test_auto_detect_is_the_second_step_1a_option(hass: HomeAssistant):
     """Auto-detect sits below All while its matching is a best attempt."""
     with patch(f"{_CF}.load_modem_catalog", return_value=CATALOG):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
 
     values = [o["value"] for o in _options(result, "manufacturer")]
     assert values[:2] == ["__all__", "__detect__"]
@@ -120,7 +118,7 @@ async def test_detect_runs_in_an_executor_thread(hass: HomeAssistant):
         patch(f"{_CF}.load_modem_catalog", return_value=CATALOG),
         patch(f"{_CF}.detect", fake_detect),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         await hass.config_entries.flow.async_configure(result["flow_id"], user_input={"manufacturer": "__detect__"})
 
     assert len(threads) == 1
@@ -146,7 +144,7 @@ ROUTE_CASES = [
     ([_d(H1, models=[M1, M2, M3, M4])],          "detect_pick",    "four_models"),
     ([_d(H1, models=[M1, M2, M3, M4, M5])],      "model",          "five_models"),
     ([_d(H1, models=[M1]), _d(H2, models=[M1])], "detect_pick",    "same_model_two_hosts"),
-    ([_d(H1, models=[])],                        "user",           "nothing_identified"),
+    ([_d(H1, models=[])],                        "manufacturer",   "nothing_identified"),
     ([],                                         "no_match",       "nothing_answered"),
 ]
 # fmt: on
@@ -170,7 +168,7 @@ def test_plan_matches_the_route(detections: list[Detection], step_id: str, case_
         "detect_confirm": "confirm",
         "detect_pick": "pick",
         "model": "filtered_models",
-        "user": "manufacturers",
+        "manufacturer": "manufacturers",
         "no_match": "no_match",
     }
 
@@ -271,7 +269,7 @@ async def test_choose_manually_goes_straight_to_step_1a_with_the_host_carried(ha
     with patch(f"{_CF}.log_event") as log_event, patch(f"{_CF}.load_modem_catalog", return_value=CATALOG):
         result: Any = await _start(hass, [_detection("192.168.0.1", models=[M1])])
         result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={"choice": "manual"})
-        assert result.get("step_id") == "user"
+        assert result.get("step_id") == "manufacturer"
         assert "__detect__" not in [o["value"] for o in _options(result, "manufacturer")]
 
         result = await hass.config_entries.flow.async_configure(
@@ -414,12 +412,12 @@ async def test_a_failed_sweep_lands_on_manual_selection(hass: HomeAssistant):
         patch(f"{_CF}.load_modem_catalog", return_value=CATALOG),
         patch(f"{_CF}.detect", broken),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={"manufacturer": "__detect__"}
         )
 
-    assert result.get("step_id") == "user"
+    assert result.get("step_id") == "manufacturer"
     assert "__detect__" not in [o["value"] for o in _options(result, "manufacturer")]
     assert [(e.outcome, e.host, e.selected) for e in _chosen(log_event)] == [("no_match", None, None)]
 
@@ -476,6 +474,6 @@ async def test_other_likely_matches_with_none_left_opens_the_manufacturer_step(h
             result["flow_id"], user_input={"choice": "others", "entity_prefix": "none", "channel_identity": "number"}
         )
 
-    assert result.get("step_id") == "user"
+    assert result.get("step_id") == "manufacturer"
     assert "__detect__" not in [o["value"] for o in _options(result, "manufacturer")]
     assert [(e.outcome, e.host, e.selected) for e in _chosen(log_event)] == [("rejected", H2, None)]

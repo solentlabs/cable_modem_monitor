@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.8] - 2026-11-15
+
+### Added
+
+- **Add modem with custom config.** Adding the integration now offers two
+  choices. The second runs the normal setup, then lets you edit your modem's
+  `modem.yaml` and test it against the modem until it works, without waiting
+  for a release. Each failed test writes one report to the Home Assistant log,
+  and a working setup's diagnostics show what you changed so it can go into
+  the catalog. When the catalog catches up, your modem switches back with a
+  notification; if the catalog changes in another way, a repair offers to test
+  and switch. Guide: [docs/CUSTOM_CONFIG.md](docs/CUSTOM_CONFIG.md).
+
+### Changed
+
+- **Logs and diagnostics hide encoded and hashed forms of your password.**
+  Values the login computes from your password (base64, PBKDF2 keys, HMACs,
+  encrypted blobs) were left in failure logs and diagnostics; some decode back
+  to the password, and one is a working login. They now show as
+  `[DERIVED, len=N]`, as the password already showed as `[REDACTED]`.
+
+### Fixed
+
+- **The ARRIS SB8200 with AC01 firmware sends the headers its browser login
+  sends (#231).** Every request to the modem now carries the `Origin`,
+  `Referer` and `X-Requested-With` headers present on every login and data
+  request in three browser captures from two owners. Setup on this firmware
+  still dropped the connection with the previous beta.
+- **The debug log no longer shows the session ID on Compal logins.** After a
+  successful login on the CH7465MT and the SB8200 AC01 firmware, the debug log
+  recorded the modem's session ID. It now records only its length.
+- **The Cable Modem card no longer fills the log while you edit it.** Each
+  refresh of the card logged a "Generated dashboard" line at info level;
+  it is now a debug line.
+
 ## [3.14.15-beta.7] - 2026-11-14
 
 ### Added

@@ -26,6 +26,7 @@ class BearerAuthManager(BaseAuthManager):
     """Sends credentials as JSON, reads a token from the body or a header, sends it back as declared."""
 
     def __init__(self, config: BearerAuth) -> None:
+        super().__init__()
         self._config = config
 
     def authenticate(

@@ -5,6 +5,7 @@ See MODEM_YAML_SPEC.md ``basic`` strategy.
 
 from __future__ import annotations
 
+import base64
 import logging
 
 import requests
@@ -31,6 +32,7 @@ class BasicAuthManager(BaseAuthManager):
     """
 
     def __init__(self, config: BasicAuth) -> None:
+        super().__init__()
         self._challenge_cookie = config.challenge_cookie
         self._cookie_name = config.cookie_name
 
@@ -90,6 +92,8 @@ class BasicAuthManager(BaseAuthManager):
                 )
 
         session.auth = (username, password)
+        # requests sends this pair as base64 in the Authorization header.
+        self._record_secret(base64.b64encode(f"{username}:{password}".encode()).decode("ascii"), password)
         return AuthResult(success=True)
 
 

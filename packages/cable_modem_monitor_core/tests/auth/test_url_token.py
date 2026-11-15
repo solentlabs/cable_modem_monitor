@@ -37,6 +37,7 @@ class TestUrlTokenAuthManager:
 
             result = manager.authenticate(session, server.base_url, _USERNAME, _PASSWORD)
             assert result.success is True
+            assert manager.derived_secrets()  # scrubbed like the password
 
     def test_session_cookie_set_after_login(self, session: requests.Session) -> None:
         """Session cookie is set after successful login for runner to extract."""

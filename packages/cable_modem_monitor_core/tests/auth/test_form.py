@@ -78,6 +78,7 @@ class TestFormAuthManager:
 
             result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
+            assert manager.derived_secrets() == {base64.b64encode(b"pw").decode()}
 
     def test_password_field_list(self, session: requests.Session) -> None:
         """password_field as list sends encoded password to all fields."""
@@ -1171,3 +1172,15 @@ def test_busy_indicator(session: requests.Session, body: str, busy_indicator: st
 
     assert result.busy is busy
     assert result.success is ok
+
+
+def test_login_logs_its_target(session: requests.Session, caplog: pytest.LogCaptureFixture) -> None:
+    """The login line names where the credentials went, so a report shows a wrong action."""
+    entries, modem_config = load_auth_fixture("har_form_login.json")
+
+    with HARMockServer(entries, modem_config=modem_config) as server, caplog.at_level(logging.INFO):
+        manager = FormAuthManager(FormAuth(strategy="form", action="/goform/login"))
+        manager.configure_session(session, {})
+        manager.authenticate(session, server.base_url, "admin", "pw", log_level=logging.INFO)
+
+    assert f"Form login: POST {server.base_url}/goform/login" in caplog.text

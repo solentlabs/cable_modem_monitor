@@ -3,11 +3,15 @@
 Four-step setup wizard that guides the user from "I want to monitor
 my modem" to a working integration entry:
 
+    Step 0   — Choose "Add modem" or "Add modem with custom config"
     Step 1a  — Select manufacturer ("Auto-detect", "All", or a name)
     Step 1b  — Select model + entity prefix
     Step 2   — Select variant  (skipped for single-variant modems)
     Step 3   — Enter connection details (host, credentials)
     Step 4   — Validate  (inside the Step 3 submit)
+
+The custom config path runs Steps 1a-3, then loops on the variant's
+modem.yaml until an attempt passes (CONFIG_FLOW_SPEC § Custom Config Setup).
 
 Plus:
     Options flow  — change host, credentials, prefix, intervals
@@ -41,6 +45,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.logging import log_event
 
 from .config_flow_detect import DetectionPlan, Tier1, plan_detection
 from .config_flow_helpers import (
+    async_brand_icon_url,
     build_model_display_name,
     build_model_options,
     default_health_check_interval,
@@ -48,12 +53,17 @@ from .config_flow_helpers import (
     get_manufacturers,
     load_modem_catalog,
     load_variant_list,
+    read_variant_yaml,
     restart_requires_credentials,
+    run_custom_attempt,
     validate_connection,
 )
 from .const import (
     CONF_CHANNEL_IDENTITY,
     CONF_CHANNEL_ONBOARDING_ELIGIBLE,
+    CONF_CUSTOM_BASE_VERSION,
+    CONF_CUSTOM_BASE_YAML,
+    CONF_CUSTOM_MODEM_YAML,
     CONF_ENTITY_PREFIX,
     CONF_HEALTH_CHECK_INTERVAL,
     CONF_LEGACY_SSL,
@@ -69,9 +79,11 @@ from .const import (
     DEFAULT_HEALTH_CHECK_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    VERSION,
     ChannelIdentity,
     EntityPrefix,
 )
+from .custom_config import CustomYamlError, build_report, same_config
 from .lib.host_validation import parse_host_input
 
 _LOGGER = logging.getLogger(__name__)
@@ -100,6 +112,12 @@ _CATALOG_MODEM_LIST_URL = (
 # Modem-request guide linked from the no-match page, passed as the {request_url}
 # description placeholder like the catalog list URL.
 _MODEM_REQUEST_URL = "https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md"
+
+# Custom config step: the user guide and HA's log page, where each failed
+# attempt's report lands (CONFIG_FLOW_SPEC § Custom Config Setup).
+_CUSTOM_CONFIG_GUIDE_URL = "https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/CUSTOM_CONFIG.md"
+_HA_LOGS_PATH = "/config/logs"
+_FIELD_MODEM_CONFIG = "modem_config"
 
 # Cooloff window before options-flow validation re-auths the modem.
 # Some modems (e.g. MB7621) only allow one logged-in session and
@@ -133,6 +151,8 @@ def _validation_failure_key(exc: Exception) -> str:
     """Map any validation failure to its strings.json error key, logging unexpected ones."""
     if isinstance(exc, (ConnectionError, PermissionError, RuntimeError)):
         return _validation_error_key(exc)
+    if isinstance(exc, CustomYamlError):
+        return "custom_yaml_invalid"
     _LOGGER.error("Unexpected validation error", exc_info=exc)
     return "unknown"
 
@@ -186,6 +206,11 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         # Address that answered, per matched model; Step 3 host default.
         self._model_hosts: dict[Path, str] = {}
         self._prefill_host: str | None = None
+        # Custom config path (CONFIG_FLOW_SPEC § Custom Config Setup): the
+        # catalog text the user started from and their current edit.
+        self._custom_config: bool = False
+        self._custom_base_yaml: str = ""
+        self._custom_yaml: str = ""
 
     @staticmethod
     @callback
@@ -196,10 +221,35 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         return OptionsFlowHandler()
 
     # -----------------------------------------------------------------
-    # Step 1a: Select manufacturer
+    # Step 0: Choose the setup path
     # -----------------------------------------------------------------
 
     async def async_step_user(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Step 0 — Add modem, or add modem with custom config."""
+        icon_url = await async_brand_icon_url(self.hass)
+        icon = f"![Cable Modem Monitor]({icon_url})\n\n" if icon_url else ""
+        return self.async_show_menu(
+            step_id="user",
+            menu_options=["manufacturer", "custom_config_start"],
+            description_placeholders={"icon": icon},
+        )
+
+    async def async_step_custom_config_start(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Enter the custom config path: the normal steps, then the modem.yaml loop."""
+        self._custom_config = True
+        return await self.async_step_manufacturer()
+
+    # -----------------------------------------------------------------
+    # Step 1a: Select manufacturer
+    # -----------------------------------------------------------------
+
+    async def async_step_manufacturer(
         self,
         user_input: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
@@ -220,7 +270,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             options.insert(1, selector.SelectOptionDict(value=_AUTO_DETECT, label="Auto-detect"))
 
         return self.async_show_form(
-            step_id="user",
+            step_id="manufacturer",
             data_schema=vol.Schema(
                 {
                     vol.Required("manufacturer"): selector.SelectSelector(
@@ -377,7 +427,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             # Auto-detect is a best attempt: a failed sweep must never block manual setup.
             _LOGGER.warning("Auto-detect failed; continuing with manual selection", exc_info=True)
             self._log_chosen("no_match", None, None)
-            return await self.async_step_user()
+            return await self.async_step_manufacturer()
         plan = plan_detection(detections)
         self._detect_plan = plan
         self._model_hosts = {}
@@ -396,7 +446,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         self._log_chosen("no_match", plan.first_answered, None)
         if plan.route == "manufacturers":
             # Something answered and nothing identified it: the ordinary manufacturer step, host carried.
-            return await self.async_step_user()
+            return await self.async_step_manufacturer()
         return await self.async_step_no_match()
 
     async def async_step_detect_confirm(
@@ -434,12 +484,12 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                 self._log_chosen("rejected", host, None)
                 self._leave_detection()
                 self._prefill_host = plan.first_answered
-                return await self.async_step_user()
+                return await self.async_step_manufacturer()
             # Choose manually: back to the start, host carried.
             self._log_chosen("rejected", host, None)
             self._leave_detection()
             self._prefill_host = plan.first_answered
-            return await self.async_step_user()
+            return await self.async_step_manufacturer()
 
         return self.async_show_form(
             step_id="detect_confirm",
@@ -518,7 +568,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         if user_input is not None:
             self._leave_detection()
             self._prefill_host = plan.first_answered if plan else None
-            return await self.async_step_user()
+            return await self.async_step_manufacturer()
 
         return self.async_show_form(
             step_id="no_match",
@@ -634,6 +684,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             self._connection_input = user_input
             if rerender:
                 return self._show_connection_form(include_variant=True)
+            if self._custom_config:
+                return await self.async_step_custom_config()
             return await self._async_validate()
 
         return self._show_connection_form()
@@ -654,6 +706,9 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
     def _shows_credentials(self) -> bool:
         """True if the current variant's connection form shows username/password fields."""
+        # A custom config may switch the login strategy, so its path always asks.
+        if self._custom_config:
+            return True
         return self._get_selected_auth_strategy() != "none" or self._restart_needs_credentials
 
     def _build_connection_schema(
@@ -689,7 +744,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
         fields[vol.Required(CONF_HOST, default=default_host)] = str
 
-        if auth_strategy != "none":
+        if auth_strategy != "none" or self._custom_config:
             fields[vol.Optional(CONF_USERNAME, default=d.get(CONF_USERNAME, ""))] = str
             fields[vol.Optional(CONF_PASSWORD, default=d.get(CONF_PASSWORD, ""))] = str
         elif self._restart_needs_credentials:
@@ -780,11 +835,107 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
         return await self._async_create_validated_entry(self._selected_summary, self._connection_input, validation)
 
+    # -----------------------------------------------------------------
+    # Custom config loop (CONFIG_FLOW_SPEC § Custom Config Setup)
+    # -----------------------------------------------------------------
+
+    def _catalog_file_label(self) -> str:
+        """The selected variant file, relative to the catalog (e.g. ``arris/sb8200/modem.yaml``)."""
+        name = f"modem-{self._selected_variant}.yaml" if self._selected_variant else "modem.yaml"
+        return str((self._get_selected_modem_dir() / name).relative_to(CATALOG_PATH))
+
+    async def async_step_custom_config(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Edit the variant's modem.yaml and test it; the entry is created only when an attempt passes."""
+        if not self._connection_input or not self._selected_summary:
+            return self.async_abort(reason="missing_input")
+
+        if not self._custom_base_yaml:
+            self._custom_base_yaml = await self.hass.async_add_executor_job(
+                read_variant_yaml, self._get_selected_modem_dir(), self._selected_variant
+            )
+            self._custom_yaml = self._custom_base_yaml
+
+        if user_input is None:
+            return self._show_custom_config_form()
+
+        self._custom_yaml = user_input[_FIELD_MODEM_CONFIG]
+        attempt = await run_custom_attempt(
+            self.hass,
+            host=self._connection_input[CONF_HOST],
+            username=self._connection_input.get(CONF_USERNAME, ""),
+            password=self._connection_input.get(CONF_PASSWORD, ""),
+            modem_dir=self._get_selected_modem_dir(),
+            variant=self._selected_variant,
+            modem_yaml_text=self._custom_yaml,
+        )
+        if attempt.validation is not None:
+            # The catalog text unchanged makes an ordinary entry: nothing to keep or retire later.
+            custom = (
+                None
+                if same_config(self._custom_yaml, self._custom_base_yaml)
+                else {
+                    CONF_CUSTOM_MODEM_YAML: self._custom_yaml,
+                    CONF_CUSTOM_BASE_YAML: self._custom_base_yaml,
+                    CONF_CUSTOM_BASE_VERSION: VERSION,
+                }
+            )
+            return await self._async_create_validated_entry(
+                self._selected_summary, self._connection_input, attempt.validation, custom=custom
+            )
+
+        error = attempt.error or RuntimeError("unknown")
+        error_key = _validation_failure_key(error)
+        # The report carries the detail (an LLM reads it); the form points at
+        # the report instead of reusing normal setup's credential advice,
+        # since an edited config fails a login as readily as a bad password.
+        detail = str(error)
+        if detail.startswith(("auth_error:", "collection_error:")):
+            detail = detail.split(":", 2)[-1]  # drop the "{kind}:{key}:" encoding
+        outcome = f"{error_key}: {detail}"
+        form_key = error_key if isinstance(error, CustomYamlError) else "custom_attempt_failed"
+        # One WARNING record: HA's log page on HAOS keeps WARNING and up, so
+        # the step lines survive inside it.
+        _LOGGER.warning(
+            "%s",
+            build_report(
+                version=VERSION,
+                catalog_file=self._catalog_file_label(),
+                host=self._connection_input[CONF_HOST],
+                outcome=outcome,
+                records=attempt.records,
+                scrub=attempt.scrub,
+            ),
+        )
+        return self._show_custom_config_form(errors={"base": form_key})
+
+    def _show_custom_config_form(self, *, errors: dict[str, str] | None = None) -> config_entries.ConfigFlowResult:
+        """Render the custom config form with the user's current text."""
+        return self.async_show_form(
+            step_id="custom_config",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(_FIELD_MODEM_CONFIG, default=self._custom_yaml): selector.TextSelector(
+                        selector.TextSelectorConfig(multiline=True)
+                    ),
+                }
+            ),
+            errors=errors,
+            description_placeholders={
+                "guide_url": _CUSTOM_CONFIG_GUIDE_URL,
+                "logs_url": _HA_LOGS_PATH,
+            },
+        )
+
     async def _async_create_validated_entry(
         self,
         summary: ModemSummary,
         conn: dict[str, Any],
         validation: dict[str, Any],
+        *,
+        custom: dict[str, str] | None = None,
     ) -> config_entries.ConfigFlowResult:
         """Create the config entry from the selections and the validation result."""
 
@@ -836,6 +987,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             # doesn't trip the update listener. Upgraded entries lack the
             # key entirely and skip onboarding (silent init instead).
             CONF_CHANNEL_ONBOARDING_ELIGIBLE: True,
+            # Custom config path only: the user's modem.yaml and its base.
+            **(custom or {}),
         }
 
         return self.async_create_entry(title=title, data=entry_data)
@@ -886,6 +1039,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                     password=user_input.get(CONF_PASSWORD, ""),
                     modem_dir=modem_dir,
                     variant=entry.data.get(CONF_VARIANT),
+                    modem_yaml_text=entry.data.get(CONF_CUSTOM_MODEM_YAML),
                 )
             except (ConnectionError, PermissionError, RuntimeError) as exc:
                 _LOGGER.error("Reauth validation failed: %s", exc)
@@ -1066,6 +1220,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             password=password,
             modem_dir=modem_dir,
             variant=variant,
+            modem_yaml_text=entry.data.get(CONF_CUSTOM_MODEM_YAML),
         )
 
     async def _wait_for_quiet_modem(
