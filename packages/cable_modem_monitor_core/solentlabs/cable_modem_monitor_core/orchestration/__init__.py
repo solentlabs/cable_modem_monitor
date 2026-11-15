@@ -20,6 +20,7 @@ from ..auth.setup import (
     setup_param_keys,
 )
 from .actions import ActionResult, execute_action, execute_hnap_action, execute_http_action
+from .auth_failure import scrub_secrets
 from .collector import LoginLockoutError, ModemDataCollector
 from .event_payload import (
     SCHEMA_VERSION,
@@ -88,5 +89,6 @@ __all__ = [
     "execute_hnap_action",
     "execute_http_action",
     "run_restart",
+    "scrub_secrets",
     "setup_param_keys",
 ]

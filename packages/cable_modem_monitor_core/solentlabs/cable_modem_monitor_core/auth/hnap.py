@@ -76,6 +76,7 @@ class HnapAuthManager(BaseAuthManager):
     """
 
     def __init__(self, config: HnapAuth) -> None:
+        super().__init__()
         self._hmac_algorithm = config.hmac_algorithm
 
     def auth_failure_mode(self) -> AuthFailureMode:
@@ -131,6 +132,7 @@ class HnapAuthManager(BaseAuthManager):
             return challenge_result  # Error occurred
 
         # Phase 2: Compute credentials and login
+        _logger.log(log_level, "HNAP login: POST %s", url)
         return self._login_with_credentials(
             session,
             url,
@@ -249,6 +251,8 @@ class HnapAuthManager(BaseAuthManager):
             message=self._challenge,
             algorithm=self._hmac_algorithm,
         )
+        self._record_secret(private_key, password)
+        self._record_secret(login_password, password)
 
         # Set session cookies from challenge response.
         # Login.js sets both cookies after deriving the private key:

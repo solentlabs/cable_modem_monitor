@@ -38,6 +38,11 @@ CONF_SUPPORTS_HEAD = "supports_head"
 # the dedicated Store (``channel_bond_storage``), not entry data.
 CONF_CHANNEL_ONBOARDING_ELIGIBLE = "channel_onboarding_eligible"
 
+# Config entry keys — custom config setup only (CONFIG_FLOW_SPEC § Custom Config Setup)
+CONF_CUSTOM_MODEM_YAML = "custom_modem_yaml"
+CONF_CUSTOM_BASE_YAML = "custom_base_yaml"
+CONF_CUSTOM_BASE_VERSION = "custom_base_version"
+
 # Polling configuration (options flow)
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_HEALTH_CHECK_INTERVAL = "health_check_interval"

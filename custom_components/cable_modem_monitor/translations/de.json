@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Kabelmodem-Monitor",
+        "description": "{icon}Wie möchtest du dein Modem hinzufügen?",
+        "menu_options": {
+          "manufacturer": "Modem hinzufügen",
+          "custom_config_start": "Modem mit eigener Konfiguration hinzufügen"
+        }
+      },
+      "manufacturer": {
+        "title": "Kabelmodem-Monitor",
         "description": "Wähle einen Hersteller, wähle 'Alle' oder wähle 'Auto-detect', um dein Modem im Netzwerk zu suchen.",
         "data": {
           "manufacturer": "Hersteller"
@@ -46,6 +54,13 @@
           "host": "Normalerweise 192.168.100.1. Mit http:// oder https:// die Protokollerkennung überspringen.",
           "username": "Leer lassen, wenn nicht erforderlich.",
           "password": "Leer lassen, wenn nicht erforderlich."
+        }
+      },
+      "custom_config": {
+        "title": "Eigene Konfiguration",
+        "description": "Absenden testet diese Konfiguration mit deinem Modem; gespeichert wird erst, wenn ein Test erfolgreich ist. Fehlgeschlagene Tests schreiben einen \"custom config report\" ins [Protokoll]({logs_url}). [Anleitung]({guide_url})",
+        "data": {
+          "modem_config": "Modemkonfiguration (modem.yaml)"
         }
       },
       "reauth_confirm": {
@@ -97,7 +112,9 @@
       "modem_busy": "Das Modem ist ausgelastet und hat die Anmeldung abgewiesen.\n\nDies ist kein Problem mit Benutzername oder Passwort. Firmware, die nur eine Sitzung gleichzeitig zulässt, antwortet so, wenn jemand anderes an der Weboberfläche des Modems angemeldet ist oder das Support-Team Ihres Anbieters verbunden ist. Das passiert auch, während das Modem neu startet.\n\nSchließen Sie die Weboberfläche des Modems, falls Sie sie geöffnet haben, und versuchen Sie es erneut.",
       "session_rejected": "Anmeldung erfolgreich, aber das Modem hat die Datenanfrage abgelehnt.\n\nDie Anmeldung hat funktioniert, es liegt also kein Problem mit Benutzername oder Passwort vor. Im Home Assistant Protokoll steht bereits eine Warnung zur fehlgeschlagenen Anfrage mit der Antwort des Modems.",
       "parse_failed": "Verbunden, aber Modemdaten konnten nicht gelesen werden.\n\nDies kann bedeuten, dass dein Modem eine andere Variantenauswahl benötigt. Gehe zurück und wähle eine andere Option, oder prüfe ob die Firmware deines Modems unterstützt wird.",
-      "unknown": "Unerwarteter Fehler. Überprüfe die Home Assistant-Logs für Details."
+      "unknown": "Unerwarteter Fehler. Überprüfe die Home Assistant-Logs für Details.",
+      "custom_yaml_invalid": "Die Modemkonfiguration ist kein gültiges YAML oder entspricht nicht dem modem.yaml-Format. Details stehen im Custom-Config-Bericht im Home Assistant-Protokoll.",
+      "custom_attempt_failed": "Der Test ist fehlgeschlagen. Öffne das Home Assistant-Protokoll und suche nach \"custom config report\": Dort steht jeder Schritt und was das Modem geantwortet hat. Ein Anmeldefehler kann hier auch von deiner bearbeiteten Konfiguration kommen, nicht nur von Benutzername oder Passwort."
     },
     "abort": {
       "already_configured": "Dieses Modem ist bereits konfiguriert.",

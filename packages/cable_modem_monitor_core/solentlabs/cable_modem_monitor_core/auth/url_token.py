@@ -49,6 +49,7 @@ class UrlTokenAuthManager(BaseAuthManager):
     """
 
     def __init__(self, config: UrlTokenAuth) -> None:
+        super().__init__()
         self._config = config
 
     def session_cookie_name(self) -> str:
@@ -86,7 +87,9 @@ class UrlTokenAuthManager(BaseAuthManager):
         # Clear stale session cookie before login (G-2)
         self._clear_stale_cookie(session, log_level)
 
-        # Send login request
+        # Send login request. The query carries the credential, so the line
+        # shows only that one is there.
+        _logger.log(log_level, "URL token login: GET %s%s?<credential>", base_url, self._config.login_page)
         response = self._send_login_request(
             session,
             base_url,
@@ -140,6 +143,7 @@ class UrlTokenAuthManager(BaseAuthManager):
         credential = base64.b64encode(
             f"{username}:{password}".encode(),
         ).decode("ascii")
+        self._record_secret(credential, password)
 
         # Build login URL
         login_url = f"{base_url}{config.login_page}"

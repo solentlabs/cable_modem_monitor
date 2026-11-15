@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Monitor modemu kablowego",
+        "description": "{icon}Jak chcesz dodać modem?",
+        "menu_options": {
+          "manufacturer": "Dodaj modem",
+          "custom_config_start": "Dodaj modem z własną konfiguracją"
+        }
+      },
+      "manufacturer": {
+        "title": "Monitor modemu kablowego",
         "description": "Wybierz producenta, wybierz 'Wszystkie' albo wybierz 'Auto-detect', aby wyszukać modem w sieci.",
         "data": {
           "manufacturer": "Producent"
@@ -46,6 +54,13 @@
           "host": "Zwykle 192.168.100.1. Dodaj http:// lub https://, aby pominąć wykrywanie protokołu.",
           "username": "Pozostaw puste, jeśli nie jest wymagane.",
           "password": "Pozostaw puste, jeśli nie jest wymagane."
+        }
+      },
+      "custom_config": {
+        "title": "Własna konfiguracja",
+        "description": "Zatwierdź testuje tę konfigurację na twoim modemie; nic nie zostanie zapisane, dopóki test się nie powiedzie. Nieudane testy zapisują \"custom config report\" w [dzienniku]({logs_url}). [Przewodnik]({guide_url})",
+        "data": {
+          "modem_config": "Konfiguracja modemu (modem.yaml)"
         }
       },
       "reauth_confirm": {
@@ -97,7 +112,9 @@
       "modem_busy": "Modem jest zajęty i odrzucił logowanie.\n\nTo nie jest problem z nazwą użytkownika ani hasłem. Oprogramowanie dopuszczające tylko jedną sesję naraz odpowiada w ten sposób, gdy ktoś inny jest zalogowany na stronie modemu lub gdy połączony jest zespół wsparcia Twojego dostawcy. Zdarza się to również podczas ponownego uruchamiania modemu.\n\nZamknij stronę modemu, jeśli jest otwarta, i spróbuj ponownie.",
       "session_rejected": "Logowanie powiodło się, ale modem odrzucił żądanie danych.\n\nLogowanie zadziałało, więc nie jest to problem z nazwą użytkownika ani hasłem. W dzienniku Home Assistant znajduje się już ostrzeżenie o nieudanym żądaniu wraz z odpowiedzią modemu.",
       "parse_failed": "Połączono, ale nie udało się odczytać danych modemu.\n\nMoże to oznaczać, że Twój modem wymaga innego wyboru wariantu. Spróbuj wrócić i wybrać inną opcję lub sprawdź, czy firmware Twojego modemu jest obsługiwany.",
-      "unknown": "Nieoczekiwany błąd. Sprawdź logi Home Assistant, aby uzyskać szczegóły."
+      "unknown": "Nieoczekiwany błąd. Sprawdź logi Home Assistant, aby uzyskać szczegóły.",
+      "custom_yaml_invalid": "Konfiguracja modemu nie jest poprawnym YAML lub nie pasuje do formatu modem.yaml. Szczegóły są w raporcie własnej konfiguracji w dzienniku Home Assistant.",
+      "custom_attempt_failed": "Test się nie powiódł. Otwórz dziennik Home Assistant i wyszukaj \"custom config report\": pokazuje każdy krok i odpowiedź modemu. Tutaj błąd logowania może wynikać z edytowanej konfiguracji, a nie tylko z nazwy użytkownika lub hasła."
     },
     "abort": {
       "already_configured": "Ten modem jest już skonfigurowany.",

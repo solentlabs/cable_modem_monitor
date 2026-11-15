@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Kabelmodem Monitor",
+        "description": "{icon}Hoe wil je je modem toevoegen?",
+        "menu_options": {
+          "manufacturer": "Modem toevoegen",
+          "custom_config_start": "Modem toevoegen met eigen configuratie"
+        }
+      },
+      "manufacturer": {
+        "title": "Kabelmodem Monitor",
         "description": "Selecteer een fabrikant, kies 'Alle' of kies 'Auto-detect' om je modem op het netwerk te zoeken.",
         "data": {
           "manufacturer": "Fabrikant"
@@ -46,6 +54,13 @@
           "host": "Meestal 192.168.100.1. Voeg http:// of https:// toe om protocoldetectie over te slaan.",
           "username": "Leeg laten indien niet vereist.",
           "password": "Leeg laten indien niet vereist."
+        }
+      },
+      "custom_config": {
+        "title": "Eigen configuratie",
+        "description": "Verzenden test deze configuratie op je modem; er wordt niets opgeslagen totdat een test slaagt. Mislukte tests schrijven een \"custom config report\" naar het [logboek]({logs_url}). [Handleiding]({guide_url})",
+        "data": {
+          "modem_config": "Modemconfiguratie (modem.yaml)"
         }
       },
       "reauth_confirm": {
@@ -97,7 +112,9 @@
       "modem_busy": "De modem is bezig en heeft de aanmelding geweigerd.\n\nDit is geen probleem met de gebruikersnaam of het wachtwoord. Firmware die maar één sessie tegelijk toestaat, antwoordt zo wanneer iemand anders is aangemeld op de webpagina van de modem, of wanneer de supportafdeling van uw provider verbonden is. Het gebeurt ook terwijl de modem opnieuw opstart.\n\nSluit de webpagina van de modem als u die open hebt staan en probeer het opnieuw.",
       "session_rejected": "Aanmelding geslaagd, maar de modem weigerde het gegevensverzoek.\n\nDe aanmelding werkte, dus dit is geen probleem met de gebruikersnaam of het wachtwoord. Het Home Assistant-logboek bevat al een waarschuwing over het mislukte verzoek met het antwoord van de modem.",
       "parse_failed": "Verbonden, maar kon de modemgegevens niet lezen.\n\nDit kan betekenen dat uw modem een andere variantselectie nodig heeft. Probeer terug te gaan en een andere optie te kiezen, of controleer of de firmware van uw modem wordt ondersteund.",
-      "unknown": "Onverwachte fout. Controleer de Home Assistant-logs voor details."
+      "unknown": "Onverwachte fout. Controleer de Home Assistant-logs voor details.",
+      "custom_yaml_invalid": "De modemconfiguratie is geen geldige YAML of past niet bij het modem.yaml-formaat. De details staan in het custom-config-rapport in het Home Assistant-logboek.",
+      "custom_attempt_failed": "De test is mislukt. Open het Home Assistant-logboek en zoek op \"custom config report\": daar staat elke stap en wat het modem antwoordde. Een mislukte aanmelding kan hier ook door je bewerkte configuratie komen, niet alleen door gebruikersnaam of wachtwoord."
     },
     "abort": {
       "already_configured": "Deze modem is al geconfigureerd.",

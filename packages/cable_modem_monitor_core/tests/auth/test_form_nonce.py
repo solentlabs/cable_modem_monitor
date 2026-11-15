@@ -209,6 +209,7 @@ class TestB64PackedIntegration:
 
             result = manager.authenticate(session, server.base_url, "admin", "pw")
             assert result.success is True
+            assert manager.derived_secrets()  # scrubbed like the password
 
     def test_plain_login_with_prefetch(self, session: requests.Session) -> None:
         """Regression: plain encoding still works when login page is pre-fetched."""

@@ -58,6 +58,7 @@ class FormNonceAuthManager(BaseAuthManager):
     """
 
     def __init__(self, config: FormNonceAuth) -> None:
+        super().__init__()
         self._config = config
 
     def session_cookie_name(self) -> str:
@@ -108,6 +109,7 @@ class FormNonceAuthManager(BaseAuthManager):
                 config.password_field,
                 password,
             )
+            self._record_secret(packed, password)
             form_data = {
                 config.credential_field: packed,
                 config.nonce_field: nonce,
@@ -118,6 +120,8 @@ class FormNonceAuthManager(BaseAuthManager):
                 config.password_field: password,
                 config.nonce_field: nonce,
             }
+
+        _logger.log(log_level, "Nonce login: POST %s", login_url)
 
         # Step 3: POST with X-Requested-With (both firmware variants
         # send this via jQuery $.ajax — per-request, not session-wide).

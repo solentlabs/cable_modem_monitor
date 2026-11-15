@@ -145,6 +145,25 @@ class BaseAuthManager(abc.ABC):
     succeeds, the session is ready for the loader to use.
     """
 
+    def __init__(self) -> None:
+        """Start with no recorded derived secrets."""
+        self._derived_secrets: set[str] = set()
+
+    def derived_secrets(self) -> frozenset[str]:
+        """Credential-derived values the last login put on the wire; scrubbed like the password."""
+        # ARCHITECTURE_DECISIONS.md § Auth-failure detail via single WARNING log.
+        return frozenset(self._derived_secrets)
+
+    def reset_derived_secrets(self) -> None:
+        """Forget the previous login's derived values; called before each login."""
+        self._derived_secrets.clear()
+
+    def _record_secret(self, value: str, password: str) -> str:
+        """Register ``value`` for scrubbing unless it is empty or the literal password; return it."""
+        if value and value != password:
+            self._derived_secrets.add(value)
+        return value
+
     @abc.abstractmethod
     def authenticate(
         self,

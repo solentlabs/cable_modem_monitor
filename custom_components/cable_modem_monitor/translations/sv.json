@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Kabelmodem-monitor",
+        "description": "{icon}Hur vill du lägga till ditt modem?",
+        "menu_options": {
+          "manufacturer": "Lägg till modem",
+          "custom_config_start": "Lägg till modem med egen konfiguration"
+        }
+      },
+      "manufacturer": {
+        "title": "Kabelmodem-monitor",
         "description": "Välj en tillverkare, välj 'Alla' eller välj 'Auto-detect' för att leta efter ditt modem i nätverket.",
         "data": {
           "manufacturer": "Tillverkare"
@@ -46,6 +54,13 @@
           "host": "Vanligtvis 192.168.100.1. Inkludera http:// eller https:// för att hoppa över protokolldetektering.",
           "username": "Lämna tomt om det inte krävs.",
           "password": "Lämna tomt om det inte krävs."
+        }
+      },
+      "custom_config": {
+        "title": "Egen konfiguration",
+        "description": "Skicka testar den här konfigurationen mot ditt modem; inget sparas förrän ett test lyckas. Misslyckade test skriver en \"custom config report\" till [loggen]({logs_url}). [Guide]({guide_url})",
+        "data": {
+          "modem_config": "Modemkonfiguration (modem.yaml)"
         }
       },
       "reauth_confirm": {
@@ -97,7 +112,9 @@
       "modem_busy": "Modemet är upptaget och avvisade inloggningen.\n\nDet är inte ett problem med användarnamn eller lösenord. Fast programvara som bara tillåter en session åt gången svarar så här när någon annan är inloggad på modemets webbsida, eller när din leverantörs support är ansluten. Det händer även medan modemet startar om.\n\nStäng modemets webbsida om du har den öppen och försök igen.",
       "session_rejected": "Inloggningen lyckades, men modemet avvisade databegäran.\n\nInloggningen fungerade, så det är inte ett problem med användarnamn eller lösenord. Home Assistant-loggen innehåller redan en varning om den misslyckade begäran med modemets svar.",
       "parse_failed": "Ansluten men kunde inte läsa modemdata.\n\nDetta kan innebära att ditt modem behöver ett annat variantval. Försök gå tillbaka och välj ett annat alternativ, eller kontrollera att modemets firmware stöds.",
-      "unknown": "Oväntat fel. Kontrollera Home Assistant-loggarna för detaljer."
+      "unknown": "Oväntat fel. Kontrollera Home Assistant-loggarna för detaljer.",
+      "custom_yaml_invalid": "Modemkonfigurationen är inte giltig YAML eller följer inte modem.yaml-formatet. Detaljerna finns i rapporten för egen konfiguration i Home Assistant-loggen.",
+      "custom_attempt_failed": "Testet misslyckades. Öppna Home Assistant-loggen och sök efter \"custom config report\": den visar varje steg och vad modemet svarade. En misslyckad inloggning här kan bero på din redigerade konfiguration, inte bara på användarnamn eller lösenord."
     },
     "abort": {
       "already_configured": "Detta modem är redan konfigurerat.",

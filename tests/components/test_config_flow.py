@@ -45,6 +45,7 @@ from .conftest import (
     MOCK_SINGLE_VARIANT,
     MOCK_SUMMARIES,
     MOCK_VALIDATION_RESULT,
+    start_add_modem,
 )
 
 _PATCH_CATALOG_PATH = "custom_components.cable_modem_monitor.config_flow.CATALOG_PATH"
@@ -170,16 +171,16 @@ def test_validation_failure_key(exc_type, message, expected_key, desc):
 # -----------------------------------------------------------------------
 
 
-async def test_step_user_shows_form(hass: HomeAssistant):
+async def test_step_manufacturer_shows_form(hass: HomeAssistant):
     """Step 1a shows manufacturer dropdown."""
     with patch(
         "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
         return_value=MOCK_SUMMARIES,
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
 
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "user"
+    assert result["step_id"] == "manufacturer"
 
 
 async def test_step_user_selects_manufacturer(hass: HomeAssistant):
@@ -188,7 +189,7 @@ async def test_step_user_selects_manufacturer(hass: HomeAssistant):
         "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
         return_value=MOCK_SUMMARIES,
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "Solent Labs"},
@@ -217,7 +218,7 @@ async def test_step_model_selects_model_single_variant(hass: HomeAssistant):
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
         # Step 1a — init flow
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         # Step 1a — select "All" manufacturers
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -253,7 +254,7 @@ async def test_step_variant_shown_for_multi_variant(hass: HomeAssistant):
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
         # Step 1a → Step 1b
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -283,7 +284,7 @@ async def test_step_variant_advances_to_connection(hass: HomeAssistant):
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
         # Steps 1a → 1b → variant form
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -321,7 +322,7 @@ async def test_step_connection_shows_form(hass: HomeAssistant):
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
         # Steps 1a → 1b → connection form (single variant, skips step 2)
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -390,7 +391,7 @@ async def test_connection_form_shows_selected_variant(hass: HomeAssistant):
         ),
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -428,7 +429,7 @@ async def test_single_variant_connection_still_populates_variant(hass: HomeAssis
         ),
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -469,7 +470,7 @@ async def test_full_flow_creates_entry(hass: HomeAssistant):
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
         # Step 1a → Step 1b → Step 3 (single variant, skip step 2)
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -540,7 +541,7 @@ async def test_full_flow_stores_setup_params(hass: HomeAssistant, setup_params: 
         ),
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -611,7 +612,7 @@ async def test_full_flow_sibling_variant_uses_sibling_modem_dir(hass: HomeAssist
         ),
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -670,7 +671,7 @@ async def test_full_flow_get_only_modem_uses_default_cadence(hass: HomeAssistant
         ),
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -711,7 +712,7 @@ async def test_validation_connection_error_shows_form(hass: HomeAssistant):
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
         # Steps 1a → 1b → 3 → 4 (validation raises ConnectionError)
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -750,7 +751,7 @@ async def test_validation_auth_error(hass: HomeAssistant):
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
         # Steps 1a → 1b → 3 → 4 (validation raises PermissionError)
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -835,7 +836,7 @@ async def test_connection_submit_returns_outcome_directly(
         patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={"manufacturer": "__all__"}
         )
@@ -866,7 +867,7 @@ async def _drive_multi_variant_to_failure(hass: HomeAssistant, *, connection: di
     Assumes the caller holds the load_modem_catalog / load_variant_list /
     validate_connection patches open.
     """
-    result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result: Any = await start_add_modem(hass)
     result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input={"manufacturer": "__all__"})
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={"model": "Solent Labs/TPS-3000", "entity_prefix": "none"}
@@ -921,7 +922,7 @@ async def test_single_variant_failure_has_no_variant_switch(hass: HomeAssistant)
         ),
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={"manufacturer": "__all__"}
         )
@@ -1021,7 +1022,7 @@ async def test_switch_to_credentialed_variant_rerenders_before_validating(hass: 
         ) as mock_validate,
         patch(_PATCH_CATALOG_PATH, FAKE_CATALOG),
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={"manufacturer": "__all__"}
         )
@@ -1531,7 +1532,7 @@ async def test_duplicate_entity_prefix_aborts(hass: HomeAssistant):
     ):
         await hass.config_entries.async_setup(existing.entry_id)
 
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -1582,7 +1583,7 @@ async def test_different_entity_prefix_at_same_host_succeeds(hass: HomeAssistant
     ):
         await hass.config_entries.async_setup(existing.entry_id)
 
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},
@@ -1661,7 +1662,7 @@ async def test_model_step_description_renders_catalog_link(hass: HomeAssistant, 
         "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
         return_value=MOCK_SUMMARIES,
     ):
-        result: Any = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+        result: Any = await start_add_modem(hass)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"manufacturer": "__all__"},

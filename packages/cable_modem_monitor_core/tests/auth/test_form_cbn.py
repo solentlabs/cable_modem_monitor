@@ -78,6 +78,7 @@ class TestSuccessfulLogin:
         result = manager.authenticate(session, "http://192.168.0.1", "admin", "password123")
 
         assert result.success is True
+        assert manager.derived_secrets()  # scrubbed like the password
         assert session.cookies.get("SID") == "12345"
 
     def test_sid_logged_as_shape_not_value(self, session: requests.Session, caplog: pytest.LogCaptureFixture) -> None:

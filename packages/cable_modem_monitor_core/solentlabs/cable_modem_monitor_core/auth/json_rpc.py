@@ -18,6 +18,7 @@ class JsonRpcAuthManager(BaseAuthManager):
     """Logs in with the entry's login method and sends the token as ``?<token_param>=``."""
 
     def __init__(self, config: JsonRpcAuth) -> None:
+        super().__init__()
         self._config = config
 
     def authenticate(

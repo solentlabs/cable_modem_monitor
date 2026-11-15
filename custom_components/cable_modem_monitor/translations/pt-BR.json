@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Monitor de Modem a Cabo",
+        "description": "{icon}Como você quer adicionar seu modem?",
+        "menu_options": {
+          "manufacturer": "Adicionar modem",
+          "custom_config_start": "Adicionar modem com configuração personalizada"
+        }
+      },
+      "manufacturer": {
+        "title": "Monitor de Modem a Cabo",
         "description": "Selecione um fabricante, escolha 'Todos' ou escolha 'Auto-detect' para procurar seu modem na rede.",
         "data": {
           "manufacturer": "Fabricante"
@@ -46,6 +54,13 @@
           "host": "Geralmente 192.168.100.1. Inclua http:// ou https:// para ignorar a detecção de protocolo.",
           "username": "Deixe em branco se não for necessário.",
           "password": "Deixe em branco se não for necessário."
+        }
+      },
+      "custom_config": {
+        "title": "Configuração personalizada",
+        "description": "Enviar testa esta configuração no seu modem; nada é salvo até que um teste seja bem-sucedido. Testes com falha gravam um \"custom config report\" no [log]({logs_url}). [Guia]({guide_url})",
+        "data": {
+          "modem_config": "Configuração do modem (modem.yaml)"
         }
       },
       "reauth_confirm": {
@@ -97,7 +112,9 @@
       "modem_busy": "O modem está ocupado e recusou o login.\n\nNão é um problema de usuário ou senha. Firmwares que permitem apenas uma sessão por vez respondem assim quando outra pessoa está conectada à página web do modem, ou quando a equipe de suporte do seu provedor está conectada. Também acontece enquanto o modem reinicia.\n\nFeche a página web do modem, se estiver aberta, e tente novamente.",
       "session_rejected": "Login realizado com sucesso, mas o modem recusou a requisição de dados.\n\nO login funcionou, portanto não é um problema de usuário ou senha. O log do Home Assistant já contém um aviso sobre a requisição que falhou, com a resposta do modem.",
       "parse_failed": "Conectado, mas não foi possível ler os dados do modem.\n\nIsso pode significar que seu modem precisa de uma seleção de variante diferente. Tente voltar e selecionar outra opção, ou verifique se o firmware do seu modem é suportado.",
-      "unknown": "Erro inesperado. Verifique os logs do Home Assistant para detalhes."
+      "unknown": "Erro inesperado. Verifique os logs do Home Assistant para detalhes.",
+      "custom_yaml_invalid": "A configuração do modem não é um YAML válido ou não segue o formato do modem.yaml. Os detalhes estão no relatório de configuração personalizada no log do Home Assistant.",
+      "custom_attempt_failed": "O teste falhou. Abra o log do Home Assistant e pesquise \"custom config report\": ele mostra cada etapa e o que o modem respondeu. Aqui, uma falha de login pode vir da sua configuração editada, não só do usuário ou da senha."
     },
     "abort": {
       "already_configured": "Este modem já está configurado.",

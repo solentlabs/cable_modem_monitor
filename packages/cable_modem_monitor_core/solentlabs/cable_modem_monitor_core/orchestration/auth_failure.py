@@ -39,11 +39,12 @@ def _build_http_status_error_event(
     content_type: str,
     response_body: str,
     password: str,
+    derived: frozenset[str] = frozenset(),
 ) -> HttpStatusError:
     """Build a sanitized HttpStatusError carrying 401/403 wire detail."""
     # Scrub before truncating. Cutting first can split the password across the
     # budget, leaving a prefix that no longer matches and so survives the replace.
-    body = _scrub_password(response_body, password)[:_FAILURE_BODY_SNIPPET_MAX]
+    body = scrub_secrets(response_body, password, derived)[:_FAILURE_BODY_SNIPPET_MAX]
     if len(response_body) > _FAILURE_BODY_SNIPPET_MAX:
         body = body + "... (truncated)"
 
@@ -83,6 +84,7 @@ def _build_auth_failed_event(
     response: requests.Response | None,
     error: str,
     password: str,
+    derived: frozenset[str] = frozenset(),
 ) -> AuthFailed:
     """Build a sanitized AuthFailed event from raw auth result data."""
     if response is None:
@@ -102,7 +104,7 @@ def _build_auth_failed_event(
     status = response.status_code
     content_type = response.headers.get("Content-Type", "")
     # Scrub before truncating; see _build_http_status_error_event.
-    body_snippet = _scrub_password(response.text, password)[:_FAILURE_BODY_SNIPPET_MAX]
+    body_snippet = scrub_secrets(response.text, password, derived)[:_FAILURE_BODY_SNIPPET_MAX]
     if len(response.text) > _FAILURE_BODY_SNIPPET_MAX:
         body_snippet = body_snippet + "... (truncated)"
 
@@ -139,20 +141,13 @@ def _strategy_name(modem_config: Any) -> str:
     return getattr(auth, "strategy", "none") if auth is not None else "none"
 
 
-def _scrub_password(text: str, password: str) -> str:
-    """Replace literal occurrences of the user's password with ``[REDACTED]``.
-
-    Catches the common cases:
-
-    - Modem error pages that echo the submitted password back.
-    - Form-encoded request bodies that some modems include in their
-      response (rare but observed).
-
-    Does not attempt to scrub derived forms (PBKDF2 hashes, encrypted
-    blobs) — those are protocol-shaped credentials, not the user's
-    secret, and reversing them isn't trivial enough to leak useful
-    info from a body snippet.
-    """
+def scrub_secrets(text: str, password: str, derived: frozenset[str] = frozenset()) -> str:
+    """Replace the literal password with ``[REDACTED]`` and each derived value with ``[DERIVED, len=N]``."""
+    # Derived values first, longest first: a base64 blob can contain the
+    # literal password by chance, and a shorter value can sit inside a longer.
+    # ARCHITECTURE_DECISIONS.md § Auth-failure detail via single WARNING log.
+    for value in sorted(derived, key=len, reverse=True):
+        text = text.replace(value, f"[DERIVED, len={len(value)}]")
     if not password:
         return text
     return text.replace(password, _REDACTED)

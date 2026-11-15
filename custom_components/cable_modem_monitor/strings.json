@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Cable Modem Monitor",
+        "description": "{icon}How do you want to add your modem?",
+        "menu_options": {
+          "manufacturer": "Add modem",
+          "custom_config_start": "Add modem with custom config"
+        }
+      },
+      "manufacturer": {
+        "title": "Cable Modem Monitor",
         "description": "Select a manufacturer, choose 'All', or choose 'Auto-detect' to look for your modem on the network.",
         "data": {
           "manufacturer": "Manufacturer"
@@ -46,6 +54,13 @@
           "host": "Usually 192.168.100.1. Include http:// or https:// to skip protocol detection.",
           "username": "Leave blank if not required.",
           "password": "Leave blank if not required."
+        }
+      },
+      "custom_config": {
+        "title": "Custom config",
+        "description": "Submit tests this config against your modem; nothing is saved until a test passes. Failed tests write a \"custom config report\" to the [log]({logs_url}). [Guide]({guide_url})",
+        "data": {
+          "modem_config": "Modem config (modem.yaml)"
         }
       },
       "reauth_confirm": {
@@ -97,7 +112,9 @@
       "modem_busy": "The modem is busy and turned the login away.\n\nThis is not a username or password problem. Firmware that allows only one session at a time answers this way when someone else is signed in to the modem's web page, or when your provider's support team is connected. It also happens while the modem is restarting.\n\nClose the modem's web page if you have it open, then try again.",
       "session_rejected": "Logged in successfully, but the modem refused the data request.\n\nThe login worked, so this is not a username or password problem. The Home Assistant log already has a warning for the failing request showing what the modem returned.",
       "parse_failed": "Connected but couldn't read modem data.\n\nThis may mean your modem needs a different variant selection. Try going back and selecting another option, or check that your modem's firmware is supported.",
-      "unknown": "Unexpected error. Check Home Assistant logs for details."
+      "unknown": "Unexpected error. Check Home Assistant logs for details.",
+      "custom_yaml_invalid": "The modem config is not valid YAML, or doesn't match the modem.yaml format. The details are in the custom config report in the Home Assistant log.",
+      "custom_attempt_failed": "The test failed. Open the Home Assistant log and search for \"custom config report\": it shows each step and what the modem answered. A login failure here can come from your edited config, not only the username or password."
     },
     "abort": {
       "already_configured": "This modem is already configured.",
@@ -226,6 +243,22 @@
         "execute": {
           "name": "Execute",
           "description": "Set to true to purge all orphaned statistics immediately. Default is false (preview only). Purge is permanent and cannot be undone."
+        }
+      }
+    }
+  },
+  "issues": {
+    "custom_config_catalog_changed": {
+      "title": "Project config changed for {title}",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Switch to the project's config",
+            "description": "{title} uses a custom modem config, and the project's config for this modem has changed since you set it up.\n\nSubmit to test the project's config against your modem once. If the test passes, the modem switches to it and gets future fixes. If it fails, your custom config stays in use and the report is in the Home Assistant log."
+          }
+        },
+        "error": {
+          "catalog_test_failed": "The project's config failed against your modem. Your custom config stays in use; the report is in the Home Assistant log."
         }
       }
     }

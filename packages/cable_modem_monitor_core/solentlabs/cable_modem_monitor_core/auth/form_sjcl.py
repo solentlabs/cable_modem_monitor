@@ -65,6 +65,7 @@ class FormSjclAuthManager(BaseAuthManager):
     """
 
     def __init__(self, config: FormSjclAuth) -> None:
+        super().__init__()
         self._config = config
 
     def headers(self) -> frozenset[str]:
@@ -141,8 +142,10 @@ class FormSjclAuthManager(BaseAuthManager):
             config.encrypt_aad,
             config.ccm_tag_length,
         )
+        self._record_secret(encrypted_hex, password)
 
         # Step 4: POST login and check status
+        _logger.log(log_level, "SJCL login: POST %s", login_url)
         login_payload = {
             "EncryptData": encrypted_hex,
             "Name": username,

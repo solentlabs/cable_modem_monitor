@@ -173,6 +173,27 @@ def _fresh_login_collector(response_url: str = "/status.html"):
     return collector
 
 
+def test_fresh_login_forgets_the_previous_logins_derived_values():
+    """Each login starts with no derived values, so only the current login's are scrubbed."""
+    collector = _fresh_login_collector()
+    manager = cast(MagicMock, collector._auth_manager)
+    order: list[str] = []
+    manager.reset_derived_secrets.side_effect = lambda: order.append("reset")
+    manager.authenticate.side_effect = lambda *a, **k: order.append("login") or manager.authenticate.return_value
+
+    collector.authenticate()
+
+    assert order == ["reset", "login"]
+
+
+def test_collector_scrub_secrets_covers_password_and_derived_values():
+    """The public scrub (used by the HA custom config report) removes both kinds of secret."""
+    collector = _make_collector()
+    cast(MagicMock, collector._auth_manager).derived_secrets.return_value = frozenset({"c2VjcmV0"})
+
+    assert collector.scrub_secrets("pw secret, b64 c2VjcmV0") == "pw [REDACTED], b64 [DERIVED, len=8]"
+
+
 def _only_auth_succeeded(events) -> AuthSucceeded:
     return next(e for e in events if isinstance(e, AuthSucceeded))
 

@@ -11,6 +11,8 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
 from solentlabs.cable_modem_monitor_core.catalog_manager import (
     ModemSummary,
     VariantInfo,
@@ -42,6 +44,7 @@ from custom_components.cable_modem_monitor.const import (
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONF_VARIANT,
+    DOMAIN,
     ChannelIdentity,
     EntityPrefix,
 )
@@ -346,3 +349,10 @@ def mock_runtime_data(
         health_monitor=mock_health_monitor,
         modem_identity=mock_modem_identity,
     )
+
+
+async def start_add_modem(hass: HomeAssistant) -> Any:
+    """Open the setup flow and choose "Add modem": returns the manufacturer step (CONFIG_FLOW_SPEC § Steps)."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    flow_id = result["flow_id"]
+    return await hass.config_entries.flow.async_configure(flow_id, user_input={"next_step_id": "manufacturer"})

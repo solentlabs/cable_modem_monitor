@@ -39,6 +39,7 @@ class JsonSjclAuthManager(BaseAuthManager):
     """Encrypts the credentials under a page-supplied salt and IV, reads the session token from a header."""
 
     def __init__(self, config: JsonSjclAuth) -> None:
+        super().__init__()
         self._config = config
         # The last successful login's SJCL parameters; the firmware encrypts
         # post-login bodies under them too. Held here, never in AuthContext,
@@ -120,6 +121,7 @@ class JsonSjclAuthManager(BaseAuthManager):
             tag_length=config.ccm_tag_length,
         )
         body = encrypt_payload(sjcl_session, {"username": user, "password": password})
+        self._record_secret(body["EncryptedData"], password)
 
         _logger.log(log_level, "json_sjcl login: %s %s", config.method, config.login_endpoint)
         send = session.put if config.method == "PUT" else session.post

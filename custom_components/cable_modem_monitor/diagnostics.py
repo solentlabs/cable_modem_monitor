@@ -29,9 +29,13 @@ from solentlabs.cable_modem_monitor_core.models.field_registry import (
 
 from .const import (
     CONF_CHANNEL_IDENTITY,
+    CONF_CUSTOM_BASE_VERSION,
+    CONF_CUSTOM_BASE_YAML,
+    CONF_CUSTOM_MODEM_YAML,
     CONF_LEGACY_SSL,
     CONF_MANUFACTURER,
     CONF_MODEL,
+    CONF_MODEM_DIR,
     CONF_PROTOCOL,
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
@@ -44,6 +48,7 @@ from .core.log_buffer import (
     sanitize_log_message,
     strip_logger_prefix,
 )
+from .custom_config import yaml_diff
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -268,6 +273,23 @@ def _has_credentials(entry_data: Mapping[str, Any]) -> bool:
     return bool(entry_data.get("username") or entry_data.get("password"))
 
 
+def _custom_config_section(data: Mapping[str, Any]) -> dict[str, Any]:
+    """A custom entry's change to the catalog file, the finding to fold back in; ``{}`` otherwise."""
+    # CONFIG_FLOW_SPEC § Custom Config Setup.
+    if CONF_CUSTOM_MODEM_YAML not in data:
+        return {}
+    variant = data.get(CONF_VARIANT)
+    label = f"{data.get(CONF_MODEM_DIR, '')}/{f'modem-{variant}.yaml' if variant else 'modem.yaml'}"
+    diff = yaml_diff(base_text=data.get(CONF_CUSTOM_BASE_YAML, ""), user_text=data[CONF_CUSTOM_MODEM_YAML], label=label)
+    return {
+        "custom_config": {
+            "catalog_file": label,
+            "base_version": data.get(CONF_CUSTOM_BASE_VERSION),
+            "diff": sanitize_log_message(diff),
+        }
+    }
+
+
 def _build_diagnostics_dict(
     hass: HomeAssistant,
     entry: CableModemConfigEntry,
@@ -333,6 +355,8 @@ def _build_diagnostics_dict(
             "update_interval": str(data_coord.update_interval),
         },
     }
+
+    diagnostics.update(_custom_config_section(entry.data))
 
     # Health coordinator (conditional)
     if runtime.health_coordinator is not None:

@@ -9,6 +9,7 @@ specs, see the indexes in each package's `docs/` directory.
 |----------|----------|--------|
 | [CODE_REVIEW.md](CODE_REVIEW.md) | Contributors | Coding standards, test patterns, naming |
 | [MODEM_REQUEST.md](MODEM_REQUEST.md) | Contributors | How to submit a modem request with HAR capture |
+| [CUSTOM_CONFIG.md](CUSTOM_CONFIG.md) | Users | Adjusting a modem's config in the setup dialog, with an AI assistant, and sending the finding back |
 | [EXAMPLES.md](EXAMPLES.md) | Contributors | Usage examples |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Users | Common issues and solutions |
 | [TRANSLATION_GUIDE.md](TRANSLATION_GUIDE.md) | Translators | Localization process |
