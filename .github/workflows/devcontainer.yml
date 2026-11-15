@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - ".devcontainer/**"
+      - ".github/workflows/devcontainer.yml"
       - "docker-compose.test.yml"
       - "scripts/dev/**"
       - "requirements-dev.txt"
@@ -15,6 +16,7 @@ on:
   pull_request:
     paths:
       - ".devcontainer/**"
+      - ".github/workflows/devcontainer.yml"
       - "docker-compose.test.yml"
       - "scripts/dev/**"
       - "requirements-dev.txt"
