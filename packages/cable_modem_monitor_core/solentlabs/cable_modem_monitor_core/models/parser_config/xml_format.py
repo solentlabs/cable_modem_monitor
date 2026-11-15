@@ -71,6 +71,7 @@ class XMLTableDefinition(BaseModel):
     lock_status: LockStatusAllOf | None = None
     fixed_fields: dict[str, str] = Field(default_factory=dict)
     filter: dict[str, FilterValue] = Field(default_factory=dict)
+    merge_by: list[str] | None = None
 
 
 class XMLSection(BaseModel):
@@ -90,3 +91,10 @@ class XMLSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
     format: Literal["xml"]
     tables: list[XMLTableDefinition] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_has_primary(self) -> XMLSection:
+        """Companion tables (``merge_by``) need a primary table to join."""
+        if all(table.merge_by is not None for table in self.tables):
+            raise ValueError("xml tables need at least one primary table (no merge_by)")
+        return self

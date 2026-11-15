@@ -5,6 +5,8 @@ default_host: "192.168.0.1"
 
 auth:
   strategy: form_cbn
+  # Password-only login page: login.html and common_api.js post 'Username':"NULL".
+  username_value: "NULL"
 
 actions:
   restart:

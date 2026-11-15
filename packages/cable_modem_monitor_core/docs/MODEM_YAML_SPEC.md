@@ -311,7 +311,7 @@ devices that expose read-only status endpoints.
 ### `basic`
 
 HTTP Basic Authentication. Credentials sent as `Authorization: Basic`
-header on every request.
+header on every request, except the challenge request below.
 
 ```yaml
 auth:
@@ -322,7 +322,7 @@ auth:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `challenge_cookie` | bool | `false` | If `true`, retry with server-set cookie on initial 401. Some firmware returns a challenge cookie that must be included in the retry. |
+| `challenge_cookie` | bool | `false` | If `true`, Core first requests `/` without credentials, as a browser does, and keeps the cookie the 401 sets; every later request carries the credentials and that cookie. Some firmware counts a request with credentials but without that cookie as a failed login. |
 | `cookie_name` | string | `""` | Session cookie produced by login. Empty = stateless. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md "Session is lifecycle, auth owns the cookie." |
 
 **Success detection:** Always succeeds. Basic auth is per-request
@@ -766,14 +766,34 @@ actions:
 | `pbkdf2_iterations` | int | required | PBKDF2 iteration count |
 | `pbkdf2_key_length` | int | required | Derived key length in bits |
 | `double_hash` | bool | `true` | Hash twice: first with `salt`, then with `saltwebui` |
-| `csrf_init_endpoint` | string | `""` | Endpoint to fetch a fresh CSRF token (e.g., `/api/v1/session/init_page`). Called before each POST that requires CSRF (login, logout). If empty, CSRF token is extracted from the login response and reused for all POSTs. |
-| `csrf_header` | string | `""` | Header name for the CSRF token (e.g., `X-CSRF-TOKEN`). The `form_pbkdf2` strategy fetches the token value (via `csrf_init_endpoint` or login response) and attaches it as this header. Which requests carry the token and how the token is obtained are strategy-specific — other strategies that need CSRF may define their own fields. |
+| `csrf_source` | enum | `init_endpoint` | Where the CSRF token comes from. `init_endpoint`: fetched from `csrf_init_endpoint`. `cookie`: the value of the `cookie_name` cookie the login sets. `cookie` requires `csrf_header` and `cookie_name` and forbids `csrf_init_endpoint`. |
+| `csrf_init_endpoint` | string | `""` | Endpoint fetched once per login, before the salt request, for the CSRF token (e.g., `/api/v1/session/init_page`). The token is read from a JSON `token`, `csrf` or `csrfToken` key, else from a response header named `csrf_header`. |
+| `csrf_header` | string | `""` | Request header that carries the CSRF token (e.g., `X-CSRF-TOKEN`). Core sends it on every request once the token is obtained, GET and POST alike, including actions. Empty: no CSRF header is sent. Other strategies that need CSRF define their own fields. |
 | `cookie_name` | string | `""` | Session cookie produced by login. Auth owns the cookie it produces — see ARCHITECTURE_DECISIONS.md. |
 | `login_success` | dict | `{}` | When set, login is considered successful only when every key-value pair in this dict matches the response JSON. Values may be string, integer, or boolean — matched by equality against the parsed JSON response. Use when the firmware signals success with a specific field rather than absence of an error (e.g., Technicolor CGA6444VF returns `{"error": "ok", ...}` — set `login_success: {error: "ok"}`). |
 | `login_busy` | dict | `{}` | When set and every key-value pair matches the response JSON, the modem declined to serve the login without judging the credential: Core reports the attempt busy and the collector classifies it `AUTH_UNAVAILABLE`, the same as a 5xx (UC-87a). Same matching rules as `login_success`, checked first. Use when single-session firmware refuses a second login under HTTP 200 (e.g., Technicolor CGA6444VF answers `{"message": "MSG_LOGIN_150", ...}` — set `login_busy: {message: "MSG_LOGIN_150"}`). |
 
 Session-wide headers and logout are declared in their respective
 sections. See [Session](#session) and [Actions](#actions).
+
+**CSRF from the session cookie:** firmware that echoes its session
+cookie as a request header declares the cookie as the source, for
+example the Technicolor CGA437ATCH4:
+
+```yaml
+auth:
+  strategy: form_pbkdf2
+  cookie_name: "auth"
+  csrf_source: cookie
+  csrf_header: "X-CSRF-TOKEN"
+```
+
+Core reads the cookie after a successful login and sends its value as
+`csrf_header` on every later request. A cookie missing after a
+successful login logs an ERROR and sends no header. The header lives
+here and not in `session.headers` because its value is the login's
+output, and `session.headers` is static
+([ARCHITECTURE_DECISIONS.md § CSRF token source is a named value](ARCHITECTURE_DECISIONS.md#csrf-token-source-is-a-named-value)).
 
 **Success detection:** HTTP 401 is always treated as failure. If
 `login_busy` is set and every key-value pair matches the response
@@ -1069,8 +1089,15 @@ auth:
   setter_endpoint: "/xml/setter.xml"
   session_cookie_name: "sessionToken"
   sid_cookie_name: "SID"
-  username_value: "NULL"
+  username_value: "NULL"     # password-only login page
   login_fun: 15
+
+# A firmware that labels the envelope with the hardware model and
+# encrypts the entered username (Arris SB8200 AC01):
+#   cipher_prefix: "HS:{hw_model}:"
+#   hw_model_fun: 1
+#   hw_model_element: "HwModel"
+#   (username_value unset)
 
 session:
   headers:
@@ -1092,23 +1119,30 @@ actions:
 | `setter_endpoint` | string | `"/xml/setter.xml"` | URL for login, logout, and action POSTs |
 | `session_cookie_name` | string | `"sessionToken"` | Cookie that carries the rotating session token. Rotates on every response. |
 | `sid_cookie_name` | string | `"SID"` | Secondary session cookie set after login. Extracted from login response body. Stable for the session lifetime. |
-| `username_value` | string | `"NULL"` | Username sent in the login POST. Compal modems use single-password auth — literal `"NULL"` is the default. |
+| `username_value` | string | unset | Placeholder sent verbatim as `Username`, for a firmware whose login page has no username field (Compal CH7465MT sends `"NULL"`). Unset: the entered username, encrypted like the password. |
 | `login_fun` | int | `15` | `fun` parameter value for the login POST to `setter_endpoint` |
+| `cipher_prefix` | string | `":"` | Text the firmware's `CBN_Encrypt` puts before the hex ciphertext, inside the base64. `{hw_model}` is replaced with the value read by `hw_model_fun`; no other placeholder is accepted. |
+| `hw_model_fun` | int | unset | `fun` of a getter POST made after the login page and before the login POST, whose `hw_model_element` fills `{hw_model}`. Required when `cipher_prefix` contains `{hw_model}`. |
+| `hw_model_element` | string | `"HwModel"` | XML element in the `hw_model_fun` reply that holds the model. |
 
 **Auth flow:**
 
 1. **GET login page** — receive initial `sessionToken` cookie.
-2. **Derive AES key and IV** — `key = SHA256(sessionToken)` (32 bytes),
-   `iv = MD5(sessionToken)` (16 bytes).
-3. **Encrypt password** — AES-256-CBC with PKCS7 padding. Output is
-   `base64(":" + hex(ciphertext))`. This replicates the `CBN_Encrypt`
-   function from Compal's `encrypt_cryptoJS.js`.
+2. **Read the model** (only with `hw_model_fun`) — getter POST
+   `fun=<hw_model_fun>`; read `<hw_model_element>`. The reply rotates the
+   token, so steps 3–4 use the rotated one.
+3. **Encrypt** — the password, and the entered username when
+   `username_value` is unset: AES-256-CBC, key `SHA256(sessionToken)`,
+   IV `MD5(sessionToken)`, PKCS7. Output is
+   `base64(cipher_prefix + hex(ciphertext))`, with `{hw_model}` filled in.
 4. **POST login** — send to `setter_endpoint`:
-   `token=<sessionToken>&fun=<login_fun>&Username=<username_value>&Password=<encrypted>`.
+   `token=<sessionToken>&fun=<login_fun>&Username=<value>&Password=<encrypted>`,
+   values URL-encoded as the browser sends them.
    **Token must be the first parameter** (modem firmware rejects other
    orderings).
 5. **Check response** — HTTP status is always 200. Body contains
-   `"successful"` on success or `"idloginincorrect"` on failure.
+   `"successful"` on success; other bodies map per
+   [AUTH_CBN_SPEC.md § Login Token Vocabulary](AUTH_CBN_SPEC.md#login-token-vocabulary).
    Extract SID from response body via `SID=(\d+)` regex.
 6. **Set SID cookie** — domain must match the modem hostname (not empty
    domain), otherwise `requests` won't send the cookie for IP addresses.
@@ -1125,7 +1159,9 @@ after too many failed attempts.
 
 Evidence: Compal
 [CH7465MT](../../cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/compal/ch7465mt/modem.yaml)
-(Magenta AT / UPC / Ziggo / Virgin Media "Connect Box"). The
+(Magenta AT / UPC / Ziggo / Virgin Media "Connect Box"); Arris
+[SB8200 AC01](../../cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/sb8200-cbn/modem.yaml)
+for `cipher_prefix`, `hw_model_fun` and the encrypted username. The
 `CBN_Encrypt` function is in `encrypt_cryptoJS.js` which loads CryptoJS
 v3.1.2 (`AES.js`, `sha256.js`, `md5.js`).
 

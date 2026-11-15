@@ -108,6 +108,7 @@ body:
       label: Installation Method
       description: How did you install the integration?
       options:
+        - Marketplace
         - HACS
         - Manual
     validations:

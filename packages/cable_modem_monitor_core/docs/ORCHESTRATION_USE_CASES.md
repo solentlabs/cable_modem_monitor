@@ -2379,6 +2379,15 @@ Like HNAP, the token set comes from firmware shared across the platform
 rather than from entry config, so the strategy sets `busy` directly
 (AUTH_CBN_SPEC.md § Login Token Vocabulary).
 
+**A fifth route: no challenge to answer.** The Arris S33 (`TB01.03.*`
+firmware, #230) answered the HNAP challenge request of a routine
+re-login with HTTP 200, `LoginResult: "SYNC_FAILED"` and no challenge.
+Nothing password-derived is sent until a challenge arrives, so no
+credential was judged, and a manual login minutes later was accepted
+unchanged. Read as a verdict it tripped the breaker on that one answer
+and polling stayed stopped until that login. The strategy sets `busy` on any challenge
+answer missing its fields (AUTH_HNAP_SPEC.md § No challenge issued).
+
 **Why a declared body criterion, not a Core error table:** firmware
 that refuses under HTTP 200 gives the status rule nothing to read, and
 before `login_busy` existed the CGA6444VF's refusal failed the
@@ -2520,7 +2529,7 @@ them well. Four shapes reach here:
 |-------|---------|-------|
 | The login page did not carry what the strategy needs | "Login page missing myIv or mySalt JS variables" | `form_sjcl` |
 | A value the page carried failed validation | `myIv` is not valid hex; AES-CCM decryption failed | `form_sjcl` |
-| The handshake response omitted a required field | HNAP challenge missing `Challenge` or `PublicKey`; `url_token` inject with an empty body | `hnap`, `url_token` |
+| The handshake response omitted a required field | `url_token` inject with an empty body | `url_token` |
 | An environment problem, not a modem one | the `cryptography` package is absent | `form_sjcl`, `form_cbn` |
 
 A login page answering `>= 400` is not one of them. That is an HTTP
@@ -2528,6 +2537,9 @@ failure carrying a status worth reading, so it classifies from that
 status like any other login failure and a 5xx is UC-87a. Only a page
 answering **under** 400 reaches here: the wrong device at the address,
 or firmware that moved the variables.
+
+Nor is an HNAP challenge answer with no challenge in it, which is
+UC-87a's fifth route.
 
 | Step | Action | State change | Observable |
 |------|--------|-------------|------------|

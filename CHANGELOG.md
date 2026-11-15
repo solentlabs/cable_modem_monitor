@@ -7,6 +7,129 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.7] - 2026-11-14
+
+### Added
+
+- **Unconfirmed modems ask for help confirming them.** When a modem's catalog
+  entry has not been confirmed on real hardware, you are asked once to download
+  diagnostics and attach them to a Verify Working Modem issue, with a link that
+  fills in the model. A modem you add gets the request in the notification after
+  its first successful poll; one already set up gets it once, after its first
+  successful poll on this version.
+- **A Cable Modem card you add from the dashboard's Add card list (#229).**
+  Pick Cable Modem, choose your modem and which graphs to show in the form,
+  and no YAML is needed. The onboarding notification now points there instead
+  of at the `generate_dashboard_card` action, which stays for anyone who
+  wants the YAML. The card is separate from monitoring: if it cannot load,
+  your modem keeps working.
+- **The Netgear C6250 joins the catalog, confirmed.** It uses the C7000v2's
+  pages and login (Basic with the challenge cookie). Restart and a logout after
+  each poll are declared from a capture of a bench unit, and the integration
+  was confirmed on that unit.
+
+### Changed
+
+- **Home Assistant 2025.1.0 is now the declared minimum.** HA 2024.12 pins
+  pydantic 1 and the integration requires pydantic 2, so the earlier 2024.12
+  minimum could not be met. `hacs.json` and the specs now say 2025.1.0.
+- **The CGA437ATCH4 entry now rests on a full capture (#227).** The logout is
+  the request the modem answered in the capture, replacing the copy from the
+  CGA6444VF, and a Restart button is declared from the captured reset request.
+  It still awaits verification on the reporter's hardware.
+- **Intake reads a form-encoded salt exchange as `form_pbkdf2` (#227).** The
+  salt trigger was recognised only in JSON bodies, so the CGA437ATCH4 login
+  came out as a plain `form` login. Intake also writes `login_success` from
+  the accepted login's `error` value when a rejected attempt in the capture
+  answered differently, and no longer copies the response's per-session salt
+  into the auth block, where the config schema rejects it.
+- **Intake reads form-encoded request bodies decoded (#227).** An action body
+  captured as text came out as `Router%2CWifi`, which Core would encode a
+  second time, while the same body from a structured capture was decoded.
+  Intake also stops saying no restart was observed when it offers one as a
+  candidate.
+- **The `generate_dashboard` action is now `generate_dashboard_card` (#229).**
+  It returns the YAML for one card, not a dashboard, so the action name, its
+  description, the onboarding notification and the docs now say card. This is
+  a breaking rename: an automation or script that calls
+  `cable_modem_monitor.generate_dashboard` must call
+  `cable_modem_monitor.generate_dashboard_card`. The docs now name the Tools
+  page, which Home Assistant renamed from Developer Tools in 2026.8, and say
+  to copy the lines after `yaml: |-` in the response.
+- **Form PBKDF2 logins can send the session cookie as the CSRF header
+  (#227).** The CGA437ATCH4 answers 401 to data requests that lack an
+  `X-CSRF-TOKEN` header equal to its `auth` cookie, so beta.6 logged in and
+  then failed its first read. A new `csrf_source: cookie` setting makes Core
+  send that header on every request after login, and the CGA437ATCH4 entry
+  uses it. Entries that fetch the token from an endpoint are unchanged. It
+  still awaits verification on the reporter's hardware.
+- **Install and beta steps now use the Home Assistant Marketplace.** Home
+  Assistant 2026.11 replaces HACS with the built-in Marketplace, under
+  Settings → Marketplace. The README, troubleshooting and modem request
+  guides give the Marketplace steps, including **Include pre-releases** for
+  testing a beta, and keep the HACS steps for earlier versions. The bug
+  report form has a Marketplace option.
+- **The Marketplace listing says what support to expect sooner.** The
+  support note moves up beside the supported modems list, and the release
+  badge shows the stable release the Marketplace installs, not the newest
+  beta. The manifest declares the `computers_network.routers_network`
+  category the Marketplace browses by.
+
+### Fixed
+
+- **Auto-detect reads the model name from a Basic login's realm.** A modem
+  that answers with a 401 often names itself only in its
+  `WWW-Authenticate` realm, as the Netgear C6250 does, so setup found no
+  model and the user had to pick it. The realm is now searched for catalog
+  names along with the `Server` header and the page.
+- **Basic login with a challenge cookie asks for the cookie without the
+  password.** Core's first request carried the password but no cookie, which
+  the Netgear C6250 counts as a failed login and writes to its log at every
+  poll; three in a row and it hands out no cookie, so the poll failed. The
+  request now goes out without credentials, as a browser's does. This applies
+  to the C6250, C7000v2 and the CM1200's Basic variant.
+- **A logout or restart is judged by the modem's own answer, and its redirect
+  is no longer followed.** A modem that answers a logout with a redirect had the
+  landing page requested on the session the logout just ended, and its 401 was
+  read as a refused logout. Core then kept the ended session and reused it at
+  the next poll, which on the Netgear C6250 led to polls failing with
+  `auth_failed`, and the request itself was logged by the modem as a failed
+  login at every poll. The Netgear restart still reboots the modem without its
+  redirect page being loaded.
+- **HNAP modems stopped polling when one login got no challenge (#230).** An
+  Arris S33 occasionally answers the first step of a routine re-login with
+  `LoginResult: "SYNC_FAILED"` and no challenge. No password has been sent at
+  that step, but Core reported the credentials as rejected, opened the auth
+  circuit breaker on that single answer and stopped polling until the user
+  signed in again. A challenge answer with no challenge is now read as the
+  modem declining to serve the login, so the poll reports unreachable and
+  polling continues. The warning also names the `LoginResult` the modem sent.
+  This applies to every HNAP entry (Arris S33, S33v2, S33v3, S34 and SB8200
+  HNAP; Motorola MB8600 and MB8611). It awaits confirmation on the reporter's
+  hardware.
+- **Intake keeps `challenge_cookie: true` when a later 401 follows the
+  handshake.** The result was taken from the last Basic 401 in the capture, so
+  one unrelated 401 after the login wrote `false` with no warning. Any 401
+  whose cookie is followed by a retry of its path now sets it.
+- **The Arris SB8200 Form Login CBN entry logs in the way its firmware does
+  (#231).** The entry was built from the #109 capture without a modem to test
+  it, and reused the Compal CH7465MT login. The AC01 firmware's own login page
+  reads the model with a pre-login request, encrypts the username as well as
+  the password, and labels both with `HS:<model>:`. Core now does the same,
+  configured by three new `form_cbn` fields (`cipher_prefix`, `hw_model_fun`,
+  `hw_model_element`). `username_value` is now unset by default, which
+  encrypts the entered username; the CH7465MT entry declares its `"NULL"`
+  placeholder explicitly. The login values are now URL-encoded as the browser
+  sends them. On the Compal CH7465MT this changes only passwords of 16 to 47
+  bytes, whose encrypted value now sends `%3D` where it sent `=`, as the
+  modem's own login page does. The AC01 lockout, restart and wrong-password
+  replies (`MaxAttemptReached`, `GUILogin`, `GUIFirstInstall`,
+  `idloginincorrect`) are recognised. The entry now rests on a full capture from the reporter's
+  modem: the OFDM downstream channels are read, SC-QAM codeword counts come
+  from the firmware's signal table through a new XML `merge_by`, and
+  hardware version, uptime and status come from the fields the firmware
+  displays. It awaits confirmation on the reporter's hardware.
+
 ## [3.14.15-beta.6] - 2026-10-30
 
 ### Added

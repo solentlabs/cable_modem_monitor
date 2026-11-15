@@ -86,7 +86,10 @@ def _execute(collector: ModemDataCollector, *, auth: Any = None, load: Any = Non
         if auth is not None
         else patch.object(collector, "authenticate", return_value=MagicMock(success=True))
     )
-    parsed = ({"downstream": [], "upstream": [], "system_info": {}}, ParseDiagnostics())
+    parsed: tuple[dict[str, Any], ParseDiagnostics] = (
+        {"downstream": [], "upstream": [], "system_info": {}},
+        ParseDiagnostics(),
+    )
     with (
         auth_patch,
         patch.object(collector, "_load_resources", side_effect=load),

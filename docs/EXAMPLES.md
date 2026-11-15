@@ -4,26 +4,68 @@ Ready-to-use examples for monitoring your cable modem in Home Assistant.
 
 ## Table of Contents
 
-- [Dashboard Generator Service](#dashboard-generator-service)
+- [Cable Modem Card](#cable-modem-card)
+- [Dashboard Card Generator](#dashboard-card-generator)
 - [Manual Dashboard Example](#manual-dashboard-example)
 - [Last Boot Time Display Options](#last-boot-time-display-options)
 - [Automation Examples](#automation-examples)
 
 ---
 
-## Dashboard Generator Service
+## Cable Modem Card
 
-The built-in generator service reads your modem's channel data and
-produces ready-to-paste Lovelace YAML, with no manual entity counting.
+The integration ships a Cable Modem card. Add it from the card picker and
+set it up in a form, with no YAML.
 
 ### How to use
 
-1. Open **Developer Tools > Actions** in Home Assistant
-2. Select **Cable Modem Monitor: Generate Dashboard**
+1. Refresh your browser if it was open when you added the integration,
+   then open a dashboard and click **Edit** (the pencil icon)
+2. Click **Add card** and search for **Cable Modem**. It is listed under
+   community cards
+3. In the editor, choose the sections you want. Leave **Modem** empty to
+   use your first modem
+4. Click **Save**
+
+The card is tailored to your modem the same way as the generated YAML
+below, and uses the same options and defaults. It updates its layout when
+your modem's channel counts change.
+
+The card appears whether or not the modem is online, and updates by itself
+when the modem comes back.
+
+### YAML mode
+
+The card's options are the generator's, under the same names:
+
+```yaml
+type: custom:cable-modem-card
+include_error_rates: true
+graph_hours: 48
+```
+
+The [YAML-only options](#yaml-only-options) below also work in the card's
+YAML. A card that sets one opens in the YAML editor, so the form never
+drops it.
+
+---
+
+## Dashboard Card Generator
+
+The built-in action reads your modem's channel data and produces the
+YAML for one Lovelace card, with no manual entity counting. It returns a
+card, not a whole dashboard.
+
+### How to use
+
+1. Open **Tools > Actions** in Home Assistant
+2. Select **Cable Modem Monitor: Generate Dashboard Card**
 3. Toggle the sections you want (all on by default except Error Rates)
 4. Click **Perform action**
-5. Copy the YAML from the response
-6. Go to your dashboard, click **Add Card > Manual**, paste the YAML
+5. Scroll down to the **Response** below the form. Copy the lines after
+   `yaml: |-`, without that line
+6. Go to your dashboard, click **Edit**, then **Add card > By card >
+   Manual**, and paste the YAML
 
 ### Options
 
@@ -37,17 +79,20 @@ produces ready-to-paste Lovelace YAML, with no manual entity counting.
 | Upstream Frequency | on | Frequency for all upstream channels |
 | Error Graphs | on | Corrected and uncorrected error totals (7-day view); a note instead when the modem has no totals |
 | Error Rates | off | Per-minute corrected and uncorrected error rates (7-day view) |
-| Latency | on | Ping and HTTP latency (6-hour view) |
+| Latency | on | Ping, TCP and HTTP latency (6-hour view) |
 | Graph Hours | 24 | Hours of history shown in channel graphs (1-168) |
 | Short Titles | on | Compact card titles, "DS Power" rather than "Downstream Power Levels" |
 
 The generated YAML is tailored to your modem — correct channel count,
 channel types (QAM, OFDM, ATDMA, OFDMA), and entity prefix.
 
-### Calling from an automation or script
+### YAML mode
+
+Switch the Actions form to **YAML mode** (top right) to set the same
+options as text:
 
 ```yaml
-action: cable_modem_monitor.generate_dashboard
+action: cable_modem_monitor.generate_dashboard_card
 data:
   include_status_card: true
   include_downstream_power: true
@@ -57,15 +102,11 @@ data:
   # Fields to leave off the status card. Empty by default; for
   # example, listing docsis_status drops the DOCSIS Status row.
   status_card_exclude: []
-response_variable: result
 ```
-
-The YAML is in `result.yaml`.
 
 ### YAML-only options
 
-These are not on the Actions form. Pass them from an automation or
-script, or in the form's YAML mode.
+These are not on the Actions form. Set them in the form's YAML mode.
 
 | Option | Default | Description |
 |--------|---------|-------------|

@@ -10,7 +10,11 @@ Payload schema::
     {
         "baseline_downstream": int,
         "baseline_upstream": int,
+        "verification_asked": bool,
     }
+
+``verification_asked`` is absent from payloads saved before it existed and
+reads as ``False``.
 
 Absence of the Store key means either a fresh install (onboarding not
 yet fired) or an upgraded entry that pre-dates this feature. The
@@ -39,9 +43,10 @@ class BondState:
 
     baseline_downstream: int
     baseline_upstream: int
+    verification_asked: bool = False
 
 
-def _store(hass: HomeAssistant, entry_id: str) -> Store[dict[str, int]]:
+def _store(hass: HomeAssistant, entry_id: str) -> Store[dict[str, int | bool]]:
     return Store(
         hass,
         _STORAGE_VERSION,
@@ -55,8 +60,9 @@ async def async_load_bond_state(hass: HomeAssistant, entry_id: str) -> BondState
     if payload is None:
         return None
     return BondState(
-        baseline_downstream=payload["baseline_downstream"],
-        baseline_upstream=payload["baseline_upstream"],
+        baseline_downstream=int(payload["baseline_downstream"]),
+        baseline_upstream=int(payload["baseline_upstream"]),
+        verification_asked=bool(payload.get("verification_asked", False)),
     )
 
 

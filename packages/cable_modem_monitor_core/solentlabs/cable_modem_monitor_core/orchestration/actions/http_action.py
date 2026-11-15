@@ -101,6 +101,9 @@ def execute_http_action(
 
     log_event(_logger, ActionStarted(model=model, transport="http", action_name=action_name, level=level))
 
+    # A redirect is not followed: the 3xx is the modem's answer to the action,
+    # and the page it points at would be a second request, after a logout on
+    # the session the action just ended.
     try:
         if json_body is not None:
             resp = session.request(
@@ -109,6 +112,7 @@ def execute_http_action(
                 json=json_body,
                 headers=headers,
                 timeout=timeout,
+                allow_redirects=False,
             )
         else:
             raw_params = dict(action.params) if action.params else None
@@ -123,6 +127,7 @@ def execute_http_action(
                 data=data,
                 headers=headers,
                 timeout=timeout,
+                allow_redirects=False,
             )
         log_event(
             _logger,

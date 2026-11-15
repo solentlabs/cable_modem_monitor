@@ -5,8 +5,11 @@ Table-driven failure scenarios. Mock HTTP responses simulate the modem.
 
 from __future__ import annotations
 
+import base64
+import hashlib
 from typing import Any
 from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qsl
 
 import pytest
 import requests
@@ -353,18 +356,24 @@ def test_connectivity_propagates_from_every_request_site(
 # The firmware distinguishes five outcomes; Core collapsed the middle four
 # into "wrong password", so one restart token stopped polling and told the
 # user to reconfigure a credential that was never judged. Evidence is the
-# CH7465MT capture: the inline handler in common_page/login.html and
-# js/common_api.js. See AUTH_CBN_SPEC.md § Login Token Vocabulary.
+# CH7465MT capture (common_page/login.html, js/common_api.js) and the
+# SB8200 AC01 capture (js/Login.js, js/common_api.js, Loginpwdcfg.html).
+# See AUTH_CBN_SPEC.md § Login Token Vocabulary.
 #
 # ┌──────────────────┬────────────────────────┬──────────────────────────┐
 # │ body token       │ firmware does          │ Core reports             │
 # ├──────────────────┼────────────────────────┼──────────────────────────┤
 # │ "successful"     │ index.html             │ success                  │
+# │ + loginpwdcfg    │ Loginpwdcfg.html       │ success                  │
 # │ lockedout        │ Access-denied.html     │ raises LoginLockoutError │
 # │ cbnAccessDenied  │ Access-denied.html     │ raises LoginLockoutError │
+# │ MaxAttemptReached│ lockout alert          │ raises LoginLockoutError │
 # │ cbnLogin         │ login.html             │ busy -> AUTH_UNAVAILABLE │
 # │ cbnFirstInstall  │ login.html             │ busy -> AUTH_UNAVAILABLE │
+# │ GUILogin         │ login.html             │ busy -> AUTH_UNAVAILABLE │
+# │ GUIFirstInstall  │ login.html             │ busy -> AUTH_UNAVAILABLE │
 # │ cbnBlockContent  │ Blocked-content.html   │ rejected, token named    │
+# │ idloginincorrect │ password error         │ rejected                 │
 # │ anything else    │ ShowPasswordError()    │ rejected                 │
 # └──────────────────┴────────────────────────┴──────────────────────────┘
 
@@ -385,13 +394,17 @@ def _setup_login_body(session: requests.Session, body: str) -> None:
 # fmt: off
 LOGIN_TOKEN_CASES = [
     # (description,      body,                  outcome)
-    ("success",          "successful SID=12345", "success"),
-    ("lockedout",        "lockedout",            "lockout"),
-    ("access_denied",    "cbnAccessDenied",      "lockout"),
-    ("login",            "cbnLogin",             "restart"),
-    ("first_install",    "cbnFirstInstall",      "restart"),
-    ("block_content",    "cbnBlockContent",      "blocked"),
-    ("wrong_password",   "idloginincorrect",     "rejected"),
+    ("success",          "successful SID=12345",             "success"),
+    ("password_change",  "successful SID=12345 loginpwdcfg", "success"),
+    ("lockedout",        "lockedout",                        "lockout"),
+    ("access_denied",    "cbnAccessDenied",                  "lockout"),
+    ("max_attempts",     "MaxAttemptReached",                "lockout"),
+    ("login",            "cbnLogin",                         "restart"),
+    ("first_install",    "cbnFirstInstall",                  "restart"),
+    ("gui_login",        "GUILogin",                         "restart"),
+    ("gui_first_install", "GUIFirstInstall",                 "restart"),
+    ("block_content",    "cbnBlockContent",                  "blocked"),
+    ("wrong_password",   "idloginincorrect",                 "rejected"),
 ]
 # fmt: on
 
@@ -445,9 +458,173 @@ def test_login_token_dispatch(
 def test_handled_tokens_is_the_union_of_the_groups() -> None:
     """The fleet gate reads HANDLED_LOGIN_TOKENS; it must cover every group."""
     assert sorted(HANDLED_LOGIN_TOKENS) == [
+        "GUIFirstInstall",
+        "GUILogin",
+        "MaxAttemptReached",
         "cbnAccessDenied",
         "cbnBlockContent",
         "cbnFirstInstall",
         "cbnLogin",
+        "idloginincorrect",
         "lockedout",
+        "loginpwdcfg",
     ]
+
+
+# ---------------------------------------------------------------------------
+# Username and envelope prefix
+# ---------------------------------------------------------------------------
+
+# The CH7465MT login page has no username field and sends a placeholder;
+# the SB8200 AC01 LoginFunc encrypts the entered username like the
+# password, and CBN_Encrypt(EncryptString, HwModel) labels both envelopes
+# "HS:" + HwModel + ":", with HwModel read from getter fun=1 before login.
+# AUTH_CBN_SPEC.md § Auth Flow.
+
+_PAGE_TOKEN = "tok-page"
+_ROTATED_TOKEN = "tok-rotated"
+_MODEL_REPLY = (
+    '<?xml version="1.0" encoding="utf-8"?>'
+    "<GlobalSettings><AccessLevel>1</AccessLevel><HwModel>SB8200v3</HwModel></GlobalSettings>"
+)
+
+
+def _open_envelope(value: str, token: str) -> tuple[str, str]:
+    """Split a CBN envelope into (prefix, plaintext), decrypting with ``token``."""
+    # Written against the cryptography library directly, not protocol/cbn.py,
+    # so a shared mistake cannot pass both sides (#86).
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.padding import PKCS7
+
+    decoded = base64.b64decode(value).decode("ascii")
+    prefix, _, hex_ct = decoded.rpartition(":")
+    key = hashlib.sha256(token.encode()).digest()
+    iv = hashlib.md5(token.encode()).digest()  # noqa: S324
+    decryptor = Cipher(algorithms.AES(key), modes.CBC(iv)).decryptor()
+    padded = decryptor.update(bytes.fromhex(hex_ct)) + decryptor.finalize()
+    unpadder = PKCS7(128).unpadder()
+    return prefix + ":", (unpadder.update(padded) + unpadder.finalize()).decode("utf-8")
+
+
+def _setup_model_login(session: requests.Session, model_reply: str) -> list[tuple[str, str]]:
+    """Login page sets a token; the getter reply rotates it; record every POST."""
+    posts: list[tuple[str, str]] = []
+
+    def mock_get(url: str, **kwargs: Any) -> MagicMock:
+        session.cookies.set("sessionToken", _PAGE_TOKEN)
+        return _mock_response(text="<html>login</html>")
+
+    def mock_post(url: str, data: str = "", **kwargs: Any) -> MagicMock:
+        posts.append((url, data))
+        if url.endswith("/xml/getter.xml"):
+            session.cookies.set("sessionToken", _ROTATED_TOKEN)
+            return _mock_response(text=model_reply)
+        return _mock_response(text="successful;SID=12345")
+
+    session.get = mock_get  # type: ignore[assignment]  # rationale: this file's Session-stubbing idiom
+    session.post = mock_post  # type: ignore[assignment]  # rationale: this file's Session-stubbing idiom
+    return posts
+
+
+def _model_config() -> FormCbnAuth:
+    """The SB8200 AC01 shape: model-labelled envelope, entered username encrypted."""
+    return FormCbnAuth.model_validate(
+        {"strategy": "form_cbn", "cipher_prefix": "HS:{hw_model}:", "hw_model_fun": 1, "hw_model_element": "HwModel"}
+    )
+
+
+class TestModelLabelledEnvelope:
+    """Pre-login model read, prefixed envelope, encrypted username."""
+
+    def test_reads_model_then_logs_in_with_rotated_token(self, session: requests.Session) -> None:
+        """getter fun=1 runs first; both fields encrypt under the rotated token with the model prefix."""
+        posts = _setup_model_login(session, _MODEL_REPLY)
+
+        result = FormCbnAuthManager(_model_config()).authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+        assert result.success is True
+        assert [url for url, _ in posts] == [
+            "http://192.168.100.1/xml/getter.xml",
+            "http://192.168.100.1/xml/setter.xml",
+        ]
+        assert posts[0][1] == f"token={_PAGE_TOKEN}&fun=1"
+        login_body = posts[1][1]
+        assert login_body.startswith(f"token={_ROTATED_TOKEN}&fun=15&")
+        fields = dict(parse_qsl(login_body))
+        assert _open_envelope(fields["Username"], _ROTATED_TOKEN) == ("HS:SB8200v3:", "admin")
+        assert _open_envelope(fields["Password"], _ROTATED_TOKEN) == ("HS:SB8200v3:", "pw")
+
+    def test_login_values_are_url_encoded(self, session: requests.Session) -> None:
+        """Base64 padding travels as %3D, as the browser's form serialization sends it."""
+        posts = _setup_model_login(session, _MODEL_REPLY)
+
+        FormCbnAuthManager(_model_config()).authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+        login_body = posts[1][1]
+        # "HS:SB8200v3:" + 32 hex is 44 bytes, so every envelope ends in "=".
+        assert "%3D" in login_body
+        assert login_body.count("=") == 4
+
+    def test_missing_model_stops_before_login(self, session: requests.Session) -> None:
+        """No model element: no credential is posted (the firmware's LoginFunc aborts too)."""
+        posts = _setup_model_login(session, "<GlobalSettings><AccessLevel>1</AccessLevel></GlobalSettings>")
+
+        result = FormCbnAuthManager(_model_config()).authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+        assert result.success is False
+        assert "HwModel" in result.error
+        assert result.response is not None
+        assert [url for url, _ in posts] == ["http://192.168.100.1/xml/getter.xml"]
+        # No credential was sent, so this is not a verdict on one: busy keeps
+        # it off AUTH_FAILED and the breaker that trips on it (#200).
+        assert result.busy is True
+
+    def test_model_read_connectivity_propagates(self, session: requests.Session) -> None:
+        """A dropped connection at the model read is CONNECTIVITY, not a failed login (#200)."""
+        session.cookies.set("sessionToken", _PAGE_TOKEN)
+        session.get = lambda *a, **k: _mock_response(text="<html>login</html>")  # type: ignore[assignment]  # rationale: this file's Session-stubbing idiom
+        session.post = MagicMock(side_effect=requests.ConnectionError("dropped"))  # type: ignore[assignment]  # rationale: this file's Session-stubbing idiom
+
+        with pytest.raises(requests.ConnectionError):
+            FormCbnAuthManager(_model_config()).authenticate(session, "http://192.168.100.1", "admin", "pw")
+
+
+# fmt: off
+USERNAME_CASES = [
+    # (description,          username_value, sent_as)
+    ("placeholder_verbatim", "NULL",         "verbatim"),
+    ("unset_encrypts_entry", None,           "encrypted"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "desc,username_value,sent_as",
+    USERNAME_CASES,
+    ids=[c[0] for c in USERNAME_CASES],
+)
+def test_username_field(session: requests.Session, desc: str, username_value: str | None, sent_as: str) -> None:
+    """username_value is sent verbatim when set; unset, the entered username is encrypted."""
+    posts: list[str] = []
+
+    def mock_get(url: str, **kwargs: Any) -> MagicMock:
+        session.cookies.set("sessionToken", _PAGE_TOKEN)
+        return _mock_response(text="<html>login</html>")
+
+    def mock_post(url: str, data: str = "", **kwargs: Any) -> MagicMock:
+        posts.append(data)
+        return _mock_response(text="successful SID=1")
+
+    session.get = mock_get  # type: ignore[assignment]  # rationale: this file's Session-stubbing idiom
+    session.post = mock_post  # type: ignore[assignment]  # rationale: this file's Session-stubbing idiom
+
+    config: dict[str, Any] = {"strategy": "form_cbn"}
+    if username_value is not None:
+        config["username_value"] = username_value
+    FormCbnAuthManager(FormCbnAuth.model_validate(config)).authenticate(session, "http://192.168.0.1", "admin", "pw")
+
+    sent = dict(parse_qsl(posts[0]))["Username"]
+    if sent_as == "verbatim":
+        assert sent == username_value
+    else:
+        assert _open_envelope(sent, _PAGE_TOKEN) == (":", "admin")

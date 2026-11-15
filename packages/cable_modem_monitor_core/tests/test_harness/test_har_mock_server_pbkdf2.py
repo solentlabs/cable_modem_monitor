@@ -24,6 +24,26 @@ from tests._helpers import load_fixture
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
+# csrf_source: cookie makes the firmware reject a data request whose CSRF
+# header is missing or is not the session cookie's value (#227). The mock's
+# session cookie is "mock-session-token".
+#
+# ┌───────────────────────┬───────────────────────┬───────────────┐
+# │ description           │ csrf header sent      │ authenticated │
+# ├───────────────────────┼───────────────────────┼───────────────┤
+# │ header_missing        │ none                  │ False         │
+# │ header_wrong_value    │ not the cookie value  │ False         │
+# │ header_is_cookie      │ the cookie value      │ True          │
+# └───────────────────────┴───────────────────────┴───────────────┘
+# fmt: off
+_CSRF_COOKIE_GATE_CASES = [
+    # (description,         request headers,                               authenticated)
+    ("header_missing",      {},                                            False),
+    ("header_wrong_value",  {"x-csrf-token": "0000"},                      False),
+    ("header_is_cookie",    {"x-csrf-token": "mock-session-token"},        True),
+]
+# fmt: on
+
 
 def _load_entries(name: str) -> list[dict[str, Any]]:
     """Load HAR entries from a fixture file."""
@@ -311,3 +331,86 @@ class TestHARMockServerPbkdf2Auth:
             # Data page still gated
             data_resp = session.get(f"{base}/status.html")
             assert data_resp.status_code == 401
+
+
+class TestCsrfCookieGate:
+    """csrf_source: cookie — the mock rejects data requests the real firmware would (#227)."""
+
+    @pytest.fixture()
+    def logged_in(self) -> FormPbkdf2AuthHandler:
+        """Handler with csrf_source: cookie, after an accepted login."""
+        handler = FormPbkdf2AuthHandler(
+            login_endpoint="/api/v1/session/login",
+            salt_trigger="seeksalthash",
+            pbkdf2_iterations=1000,
+            pbkdf2_key_length=128,
+            double_hash=False,
+            csrf_header="X-CSRF-TOKEN",
+            cookie_name="auth",
+            csrf_source="cookie",
+        )
+        derived = _derive_key("pw", handler._TEST_SALT, 1000, 128)
+        body = json.dumps({"username": "admin", "password": derived}).encode()
+        handler.handle_login("POST", "/api/v1/session/login", body, {})
+        return handler
+
+    @pytest.mark.parametrize(
+        "desc,headers,expected",
+        _CSRF_COOKIE_GATE_CASES,
+        ids=[c[0] for c in _CSRF_COOKIE_GATE_CASES],
+    )
+    def test_data_request_needs_cookie_value_as_header(
+        self,
+        logged_in: FormPbkdf2AuthHandler,
+        desc: str,
+        headers: dict[str, str],
+        expected: bool,
+    ) -> None:
+        """A logged-in session is authenticated only when the header carries the cookie value."""
+        assert logged_in.is_authenticated(headers) is expected
+
+    def test_default_source_ignores_header(self) -> None:
+        """Without csrf_source: cookie the gate is the session alone, as before."""
+        handler = FormPbkdf2AuthHandler(
+            login_endpoint="/api/v1/session/login",
+            salt_trigger="seeksalthash",
+            pbkdf2_iterations=1000,
+            pbkdf2_key_length=128,
+            double_hash=False,
+            csrf_header="X-CSRF-TOKEN",
+            cookie_name="auth",
+        )
+        derived = _derive_key("pw", handler._TEST_SALT, 1000, 128)
+        handler.handle_login("POST", "/api/v1/session/login", json.dumps({"password": derived}).encode(), {})
+        assert handler.is_authenticated({}) is True
+
+    def test_auth_manager_reads_through_the_gate(self) -> None:
+        """The real auth manager logs in and then reads data past a cookie-source gate."""
+        from solentlabs.cable_modem_monitor_core.auth.form_pbkdf2 import FormPbkdf2AuthManager
+
+        config = _make_config(
+            {
+                "auth": {
+                    "strategy": "form_pbkdf2",
+                    "login_endpoint": "/api/v1/session/login",
+                    "pbkdf2_iterations": 1000,
+                    "pbkdf2_key_length": 128,
+                    "double_hash": False,
+                    "csrf_source": "cookie",
+                    "csrf_header": "X-CSRF-TOKEN",
+                    "cookie_name": "auth",
+                },
+            }
+        )
+        entries = _load_entries("har_entries_no_auth.json")
+        with HARMockServer(entries, modem_config=config) as server:
+            session = requests.Session()
+            manager = FormPbkdf2AuthManager(config.auth)
+            manager.configure_session(session, {})
+            result = manager.authenticate(session, server.base_url, "admin", "pw")
+            assert result.success is True
+
+            assert session.get(f"{server.base_url}/status.html").status_code == 200
+            # The same session without the header is what beta.6 sent.
+            del session.headers["X-CSRF-TOKEN"]
+            assert session.get(f"{server.base_url}/status.html").status_code == 401

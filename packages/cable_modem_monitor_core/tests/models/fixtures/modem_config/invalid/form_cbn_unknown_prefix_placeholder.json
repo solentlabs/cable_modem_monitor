@@ -1,0 +1,18 @@
+{
+  "_expected_error": "cipher_prefix placeholder {serial} is not supported",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "cbn",
+    "default_host": "192.168.100.1",
+    "auth": {
+      "strategy": "form_cbn",
+      "cipher_prefix": "HS:{serial}:",
+      "hw_model_fun": 1
+    },
+    "hardware": {"docsis_version": "3.1"},
+    "status": "awaiting_verification",
+    "attribution": {"contributors": [{"github": "test-user", "contribution": "HAR capture"}]},
+    "isps": ["Various"]
+  }
+}

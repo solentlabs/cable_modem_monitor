@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Mapping
+from dataclasses import replace
 from datetime import timedelta
 from importlib.metadata import version as pkg_version
 from typing import Any
@@ -58,10 +59,14 @@ from solentlabs.cable_modem_monitor_core.post_processor import (
     load_post_processor,
 )
 
+from .card import async_register_card
 from .channel_bond_notifier import (
     ChannelTotals,
     evaluate,
     format_onboarding_message,
+    format_verification_request,
+    needs_verification_request,
+    verification_issue_url,
 )
 from .channel_bond_storage import (
     BondState,
@@ -136,8 +141,9 @@ async def _check_channel_bond_onboarding(
     snapshot: ModemSnapshot,
     orchestrator: Orchestrator,
     model: str,
+    verification_url: str | None,
 ) -> None:
-    """Fire the one-time onboarding notification once the modem is online.
+    """Fire the one-time onboarding notification, and the one-time verification request, once the modem is online.
 
     Silent on the first post-upgrade poll (no retroactive onboarding) and
     while a recovery window is open. Persists the baseline to a dedicated
@@ -168,25 +174,60 @@ async def _check_channel_bond_onboarding(
         recovery_active=orchestrator.recovery_active,
     )
 
-    if action == "none":
+    if action == "onboarding":
+        # A fresh entry is asked to help confirm its model inside the onboarding message.
+        state = BondState(current.downstream, current.upstream, verification_asked=verification_url is not None)
+        await async_save_bond_state(hass, entry.entry_id, state)
+        await hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {
+                "title": "Cable Modem Monitor: Modem online",
+                "message": format_onboarding_message(model=model, current=current, verification_url=verification_url),
+                "notification_id": f"cable_modem_monitor_onboarding_{entry.entry_id}",
+            },
+        )
         return
 
-    new_state = BondState(baseline_downstream=current.downstream, baseline_upstream=current.upstream)
-    await async_save_bond_state(hass, entry.entry_id, new_state)
-
+    # An entry with no onboarding left to fire is asked once on its own (HA_ADAPTER_SPEC § Channel bond onboarding).
+    recovery_active = orchestrator.recovery_active
     if action == "silent_init":
+        baseline = BondState(current.downstream, current.upstream)
+        if verification_url is not None and needs_verification_request(
+            current=current, stored=baseline, recovery_active=recovery_active
+        ):
+            await _ask_for_verification(hass, entry, model, baseline, verification_url)
+        else:
+            await async_save_bond_state(hass, entry.entry_id, baseline)
         return
 
-    # Only "onboarding" reaches here — "none" and "silent_init" returned above.
+    if (
+        stored is not None
+        and verification_url is not None
+        and needs_verification_request(current=current, stored=stored, recovery_active=recovery_active)
+    ):
+        await _ask_for_verification(hass, entry, model, stored, verification_url)
+
+
+async def _ask_for_verification(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+    model: str,
+    stored: BondState,
+    verification_url: str,
+) -> None:
+    """Ask the entry to help confirm its model, then record that it was asked."""
     await hass.services.async_call(
         "persistent_notification",
         "create",
         {
-            "title": "Cable Modem Monitor: Modem online",
-            "message": format_onboarding_message(model=model, current=current),
-            "notification_id": f"cable_modem_monitor_onboarding_{entry.entry_id}",
+            "title": "Cable Modem Monitor: Help confirm your modem",
+            "message": format_verification_request(model=model, verification_url=verification_url),
+            "notification_id": f"cable_modem_monitor_verification_{entry.entry_id}",
         },
     )
+    # Recorded only after the notification landed: a failed call is retried on the next poll.
+    await async_save_bond_state(hass, entry.entry_id, replace(stored, verification_asked=True))
 
 
 def _rebuild_channel_map(
@@ -456,6 +497,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     entry at call time. See HA_ADAPTER_SPEC.md § Services.
     """
     async_register_services(hass)
+    await async_register_card(hass)
     return True
 
 
@@ -513,6 +555,7 @@ async def async_setup_entry(
     coordinator_label = f"{model} ({host})" if model != host else host
 
     identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
+    verification_url = verification_issue_url(modem_identity)
 
     # Mutable cells so the edge survives across polls (Silver
     # log-when-unavailable); see _log_availability_transition. The
@@ -526,7 +569,7 @@ async def async_setup_entry(
         _log_availability_transition(snapshot, model, reported_unavailable)
         await _announce_auth_stop(hass, entry, snapshot, orchestrator, model, lockout_reported)
         _rebuild_channel_map(entry, snapshot, identity_mode)
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, model)
+        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, model, verification_url)
         hass.bus.async_fire(
             "cable_modem_monitor_data_updated",
             _build_snapshot_payload(snapshot),

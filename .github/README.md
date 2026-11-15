@@ -4,7 +4,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor?include_prereleases)](https://github.com/solentlabs/cable_modem_monitor/releases)
 [![Core](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-core?label=core)](https://pypi.org/project/solentlabs-cable-modem-monitor-core/)
 [![Catalog](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-catalog?label=catalog)](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)
-[![HACS installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HACS&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
+[![HA analytics installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HA%20analytics&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <!-- Build Status -->
@@ -95,7 +95,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/latency.png" alt="Modem Latency Monitoring" width="500">
 </picture>
 <!-- markdownlint-enable MD033 --><br>
-<em>Ping and HTTP latency monitoring for real-time health assessment</em>
+<em>Ping, TCP and HTTP latency monitoring for real-time health assessment</em>
 
 <!-- markdownlint-disable MD033 -->
 <picture>
@@ -148,26 +148,30 @@ The catalog grows when contributors with hardware step up. Two paths:
 
 ## Installation
 
-### HACS (Recommended)
+### Marketplace (Recommended)
 
-> **Don't have HACS?** Follow the [HACS installation guide](https://www.hacs.xyz/docs/use/download/download/) first.
+The Marketplace is built into Home Assistant 2026.11 and later. On earlier versions, install through [HACS](https://www.hacs.xyz/docs/use/download/download/) instead: open **HACS** from the sidebar, search for **"Cable Modem Monitor"** and click **Download**.
 
-1. Open **HACS** from the sidebar
-2. Search for **"Cable Modem Monitor"**
-3. Click **Download**
-4. Restart Home Assistant
+1. Open **Settings → Marketplace**.
+2. Search for **"Cable Modem Monitor"** and open it.
+3. Click **Install**.
+4. If Home Assistant asks for a restart, restart it.
 
 ### Testing a Beta Release
 
-Betas don't auto-update; each one is a manual per-version install.
+Betas are opt-in. Pre-releases stay hidden until you turn on **Include pre-releases**, and you install each beta yourself.
 
-1. In HACS, open **Cable Modem Monitor**.
-2. Click the **⋯** menu → **Redownload**.
-3. Click **Need a different version?**.
-4. Pick the desired beta from the **Release** dropdown.
-5. Click **Download** and restart Home Assistant.
+1. Open **Settings → Marketplace → Cable Modem Monitor**.
+2. Click the **⋮** menu → **Include pre-releases** and confirm.
+3. Click the **⋮** menu → **Install another version**.
+4. Pick the desired beta from the list. Betas are labeled **Pre-release**.
+5. Click **Install** and restart Home Assistant if prompted.
 
-To return to stable: repeat the steps and pick the latest stable release.
+If the list reports a rate limit, connect GitHub: **Settings → Devices & Services → Marketplace**, **⋮** menu → **Reconfigure**.
+
+To leave the beta channel, click the **⋮** menu → **Exclude pre-releases**. The next stable release then arrives as a normal update. Installing an older stable release than the beta you ran can break your config entry, because migrations are one-way (see [Migration handler not found](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#migration-handler-not-found-after-rolling-back-to-an-older-version)). Restore a backup instead.
+
+On Home Assistant before 2026.11, in HACS open **Cable Modem Monitor**, click the **⋯** menu → **Redownload**, click **Need a different version?**, pick the beta from the **Release** dropdown, then **Download**.
 
 ## Setup
 
@@ -303,7 +307,7 @@ The integration registers three buttons under the modem device:
 
 ### Services
 
-- **`cable_modem_monitor.generate_dashboard`**: Generates a Lovelace dashboard YAML tailored to your modem's channel layout. Configurable: which graphs to include (status card, downstream/upstream power/SNR/frequency, errors, latency), `graph_hours` window (1–168), and short-title mode.
+- **`cable_modem_monitor.generate_dashboard_card`**: Generates the YAML for one Lovelace card tailored to your modem's channel layout, to paste into a dashboard through Add card > By card > Manual. Configurable: which graphs to include (status card, downstream/upstream power/SNR/frequency, errors, latency), `graph_hours` window (1–168), and short-title mode.
 - **`cable_modem_monitor.request_refresh`**: Triggers an immediate data poll for the selected device.
 - **`cable_modem_monitor.request_health_check`**: Runs an immediate health probe (ICMP / TCP / HTTP) outside the regular cadence.
 - **`cable_modem_monitor.convert_channel_identity`**: Renames recorder statistics from the previous Channel Identity mode to the current one, so historical graphs survive a remove-and-re-add in the other mode. Modem must be online.
@@ -342,7 +346,8 @@ Ready-to-use dashboard and automation examples are available in the **[Examples 
 
 Includes:
 
-- **Dashboard generator service** — auto-generates Lovelace YAML tailored to your modem's channels
+- **Cable Modem card** — add it from the dashboard's Add card list and set it up in a form, no YAML
+- **Dashboard card generator action** — generates Lovelace card YAML tailored to your modem's channels
 - Complete manual dashboard YAML for monitoring all channels
 - Automations for error alerts, SNR warnings, and auto-restart
 - Last boot time display format options
@@ -357,7 +362,7 @@ To remove a single modem:
 
 Deleting the integration does not purge recorded sensor history; your Home Assistant **recorder** settings govern it. To clear leftover channel history, use the `orphaned_statistics` service or follow [Ghost Statistics in History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#ghost-statistics-in-history). To clear state history, see [Leftover State History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#leftover-state-history).
 
-To uninstall completely, delete every modem entry as above, then remove **Cable Modem Monitor** from **HACS** (open it, **⋯** menu → **Remove**) and restart Home Assistant.
+To uninstall completely, delete every modem entry as above, then open **Settings → Marketplace → Cable Modem Monitor**, click the **⋮** menu → **Uninstall**, and restart Home Assistant if prompted. On Home Assistant before 2026.11, use **HACS** (open it, **⋯** menu → **Remove**).
 
 ## Known Limitations
 
@@ -413,7 +418,6 @@ Cable Modem Monitor is maintained by one person, in the evenings, around a day j
 ### External Resources
 
 - [Home Assistant Releases](https://github.com/home-assistant/core/releases)
-- [HACS Brand Repository](https://github.com/home-assistant/brands/tree/master/custom_integrations/cable_modem_monitor)
 
 ### Related Solent Labs Projects
 

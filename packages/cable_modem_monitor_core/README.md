@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Internal dependency of [Cable Modem Monitor](https://github.com/solentlabs/cable_modem_monitor).**
-> Not intended for direct use — install the HA integration via [HACS](https://hacs.xyz/).
+> Not intended for direct use — install the HA integration from the Marketplace in Home Assistant 2026.11 and later, or via [HACS](https://hacs.xyz/).
 
 Platform-agnostic DOCSIS monitoring engine. Provides:
 
@@ -15,7 +15,7 @@ Platform-agnostic DOCSIS monitoring engine. Provides:
 - **Auth managers** — Pluggable authentication strategies (form, basic, HNAP, PBKDF2, SJCL)
 - **Parsers** — Declarative channel and system info extraction from HTML, JSON, and HNAP
 - **Orchestration** — Session management, polling coordination, circuit breakers
-- **Health monitoring** — ICMP ping and HTTP probes on independent cadence
+- **Health monitoring** — ICMP ping, TCP connect and HTTP HEAD probes on independent cadence
 - **MCP tools** — Onboarding pipeline for new modem configs from HAR captures
 
 ## Installation

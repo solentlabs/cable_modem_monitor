@@ -8,8 +8,9 @@ Algorithm
 ---------
 1. ``key = SHA256(sessionToken)`` — 32 bytes (AES-256)
 2. ``iv  = MD5(sessionToken)``   — 16 bytes (CBC block size)
-3. ``ciphertext = AES-256-CBC(password, key, iv)`` with PKCS7 padding
-4. ``result = base64(":" + hex(ciphertext))``
+3. ``ciphertext = AES-256-CBC(plaintext, key, iv)`` with PKCS7 padding
+4. ``result = base64(prefix + hex(ciphertext))``: ``":"`` on the
+   CH7465MT, ``"HS:" + HwModel + ":"`` on the Arris SB8200 AC01
 
 Requires the ``cryptography`` package: install Core with ``[cbn]``.
 
@@ -36,15 +37,16 @@ def cbn_params(auth: AuthConfig | None) -> FormCbnAuth:
     return auth if isinstance(auth, FormCbnAuth) else FormCbnAuth(strategy="form_cbn")
 
 
-def compal_encrypt(password: str, session_token: str) -> str:
+def compal_encrypt(plaintext: str, session_token: str, prefix: str = ":") -> str:
     """Replicate CBN_Encrypt from Compal's encrypt_cryptoJS.js.
 
     Args:
-        password: Plaintext password.
+        plaintext: Password or username to encrypt.
         session_token: Value of the ``sessionToken`` cookie.
+        prefix: Text the firmware puts before the hex ciphertext.
 
     Returns:
-        Encrypted password string for the login POST body.
+        Encrypted value for the login POST body.
 
     Raises:
         ImportError: If ``cryptography`` is not installed.
@@ -65,12 +67,13 @@ def compal_encrypt(password: str, session_token: str) -> str:
 
     # AES-256-CBC encrypt with PKCS7 padding
     padder = PKCS7(128).padder()
-    padded = padder.update(password.encode("utf-8")) + padder.finalize()
+    padded = padder.update(plaintext.encode("utf-8")) + padder.finalize()
 
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(padded) + encryptor.finalize()
 
-    # ":" + hex(ciphertext), then base64 encode
+    # prefix + hex(ciphertext), then base64 encode. The prefix stays outside
+    # the ciphertext: it never enters the key or IV.
     hex_ct = ciphertext.hex()
-    return base64.b64encode((":" + hex_ct).encode("utf-8")).decode("utf-8")
+    return base64.b64encode((prefix + hex_ct).encode("utf-8")).decode("utf-8")

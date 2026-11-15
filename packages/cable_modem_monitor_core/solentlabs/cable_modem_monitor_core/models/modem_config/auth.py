@@ -12,6 +12,7 @@ constraint model.
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Any, ClassVar, Literal, NamedTuple, get_args
 from urllib.parse import urlparse
 
@@ -21,6 +22,11 @@ from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, field_val
 # replies); Auto-detect reads it as the transport's signal (DETECTION_SPEC.md § Signals).
 # Lives here, not in protocol.hnap, which imports this module.
 HNAP_CLIENT_SCRIPT = "/js/SOAP/SOAPAction.js"
+
+# The one placeholder ``form_cbn.cipher_prefix`` accepts, filled from the
+# ``hw_model_fun`` reply (AUTH_CBN_SPEC.md § Auth Flow).
+CBN_HW_MODEL_PLACEHOLDER = "{hw_model}"
+_PLACEHOLDER_RE = re.compile(r"\{[^{}]*\}")
 
 
 class LandingSignals(NamedTuple):
@@ -249,6 +255,7 @@ class FormPbkdf2Auth(AuthStrategyBase):
     pbkdf2_iterations: int
     pbkdf2_key_length: int
     double_hash: bool = True
+    csrf_source: Literal["init_endpoint", "cookie"] = "init_endpoint"
     csrf_init_endpoint: str = ""
     csrf_header: str = ""
     cookie_name: str = ""
@@ -258,6 +265,21 @@ class FormPbkdf2Auth(AuthStrategyBase):
     display_name: ClassVar[str] = "Form Login (PBKDF2)"
     transport: ClassVar[str] = "http"
     stateless: ClassVar[bool] = False
+
+    @model_validator(mode="after")
+    def _csrf_cookie_source_is_complete(self) -> FormPbkdf2Auth:
+        # The cookie is the token, so it needs a header to travel in and a
+        # name to be read by. An init endpoint would be a second source that
+        # could disagree with it.
+        if self.csrf_source != "cookie":
+            return self
+        if not self.csrf_header:
+            raise ValueError("csrf_source: cookie requires csrf_header")
+        if not self.cookie_name:
+            raise ValueError("csrf_source: cookie requires cookie_name")
+        if self.csrf_init_endpoint:
+            raise ValueError("csrf_source: cookie forbids csrf_init_endpoint")
+        return self
 
     def landing_signals(self) -> LandingSignals:
         """The paths and cookies this strategy's config declares."""
@@ -303,10 +325,11 @@ class FormCbnAuth(AuthStrategyBase):
     """CBN (Compal Broadband Networks) AES-256-CBC encrypted form auth.
 
     Compal modem firmwares use the CryptoJS library to encrypt the
-    password client-side. The AES key and IV are derived from a
-    rotating session token cookie. The login POST goes to a
-    ``setter.xml`` endpoint with ``fun=N`` parameters (same XML POST
-    pattern used for data fetching and actions).
+    password (and on some firmware the username) client-side. The AES
+    key and IV are derived from a rotating session token cookie. The
+    login POST goes to a ``setter.xml`` endpoint with ``fun=N``
+    parameters (same XML POST pattern used for data fetching and
+    actions). See MODEM_YAML_SPEC.md § form_cbn.
 
     Requires the ``cryptography`` package: install Core with the
     ``[cbn]`` extra.
@@ -319,12 +342,25 @@ class FormCbnAuth(AuthStrategyBase):
     setter_endpoint: str = "/xml/setter.xml"
     session_cookie_name: str = "sessionToken"
     sid_cookie_name: str = "SID"
-    username_value: str = "NULL"
+    username_value: str | None = None
     login_fun: int = 15
+    cipher_prefix: str = ":"
+    hw_model_fun: int | None = None
+    hw_model_element: str = "HwModel"
 
     display_name: ClassVar[str] = "Form Login CBN"
     transport: ClassVar[str] = "cbn"
     stateless: ClassVar[bool] = False
+
+    @model_validator(mode="after")
+    def validate_cipher_prefix(self) -> FormCbnAuth:
+        """Reject a prefix placeholder Core cannot fill."""
+        for placeholder in _PLACEHOLDER_RE.findall(self.cipher_prefix):
+            if placeholder != CBN_HW_MODEL_PLACEHOLDER:
+                raise ValueError(f"cipher_prefix placeholder {placeholder} is not supported")
+        if CBN_HW_MODEL_PLACEHOLDER in self.cipher_prefix and self.hw_model_fun is None:
+            raise ValueError(f"cipher_prefix uses {CBN_HW_MODEL_PLACEHOLDER} but hw_model_fun is not set")
+        return self
 
     def landing_signals(self) -> LandingSignals:
         """The paths and cookies this strategy's config declares."""

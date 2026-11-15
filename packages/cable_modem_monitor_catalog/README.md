@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Internal dependency of [Cable Modem Monitor](https://github.com/solentlabs/cable_modem_monitor).**
-> Not intended for direct use — install the HA integration via [HACS](https://hacs.xyz/).
+> Not intended for direct use — install the HA integration from the Marketplace in Home Assistant 2026.11 and later, or via [HACS](https://hacs.xyz/).
 >
 > This package contains modem configuration files, parser configs, and test fixtures
 > for all supported DOCSIS cable modems. The table below is the canonical list of
@@ -21,9 +21,9 @@ Auto-generated index of the v3.14 modem catalog.
 
 - `modem.yaml` — Single source of truth (manufacturer, model, hardware, ISPs, status)
 
-**47 modems, 52 configurations** (33 ✅ confirmed, 19 ⏳ awaiting)
+**48 modems, 53 configurations** (35 ✅ confirmed, 18 ⏳ awaiting)
 
-**Auth strategies:** form (17), none (8), hnap (7), basic (5), url_token (3), bearer (3), form_pbkdf2 (3), form_cbn (2), form_nonce (1), form_sjcl (1), json_sjcl (1), json_rpc (1)
+**Auth strategies:** form (17), none (8), hnap (7), basic (6), url_token (3), bearer (3), form_pbkdf2 (3), form_cbn (2), form_nonce (1), form_sjcl (1), json_sjcl (1), json_rpc (1)
 
 ## Directory Structure
 
@@ -74,6 +74,7 @@ packages/cable_modem_monitor_catalog/.../modems/
 | Motorola | [MB8600](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/motorola/mb8600/modem.yaml) | 3.1 | ![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth") | [BCM3390](#bcm3390) | ![hnap](https://img.shields.io/badge/-hnap-5B8FBF?style=flat-square "HNAP") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | MB8600 | ✅ Confirmed |
 | Motorola | [MB8611](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/motorola/mb8611/modem.yaml) | 3.1 | ![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth") | [BCM3390](#bcm3390) | ![hnap](https://img.shields.io/badge/-hnap-5B8FBF?style=flat-square "HNAP") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | MB8611 | ✅ Confirmed |
 | Netgear | [C3700](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/netgear/c3700/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3383](#bcm3383) | ![basic](https://img.shields.io/badge/-basic-C07820?style=flat-square "Basic Authentication") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | C3700 | ⏳ Awaiting |
+| Netgear | [C6250](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/netgear/c6250/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3384](#bcm3384) | ![basic](https://img.shields.io/badge/-basic-C07820?style=flat-square "Basic Authentication") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) | C6250 | ✅ Confirmed |
 | Netgear | [C7000v2](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/netgear/c7000v2/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3384](#bcm3384) | ![basic](https://img.shields.io/badge/-basic-C07820?style=flat-square "Basic Authentication") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) | C7000v2 | ✅ Confirmed |
 | Netgear | [CM1100](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/netgear/cm1100/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) | CM1100 | ✅ Confirmed |
 | Netgear | [CM1200 (basic)](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/netgear/cm1200/modem-basic.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![basic](https://img.shields.io/badge/-basic-C07820?style=flat-square "Basic Authentication") | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) | CM1200 | ✅ Confirmed |
@@ -96,7 +97,7 @@ packages/cable_modem_monitor_catalog/.../modems/
 | Technicolor | [XB6](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb6/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications")](#rogers) | XB6<br>CGM4140COM | ✅ Confirmed |
 | Technicolor | [XB7](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb7/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications")](#rogers) [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) | XB7<br>CGM4331COM | ✅ Confirmed |
 | Technicolor | [XB8](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/technicolor/xb8/modem.yaml) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications")](#rogers) [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) | XB8<br>CGM4981COM | ✅ Confirmed |
-| Ubee | [EVW32C-0N](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/ubee/evw32c-0n/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![TMC](https://img.shields.io/badge/-TMC-88aa55?style=flat-square "Telemach")](#telemach) | EVW32C-0N<br>EVW32C | ⏳ Awaiting |
+| Ubee | [EVW32C-0N](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/ubee/evw32c-0n/modem.yaml) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | ![form](https://img.shields.io/badge/-form-4A7FB8?style=flat-square "Form Login") | [![TMC](https://img.shields.io/badge/-TMC-88aa55?style=flat-square "Telemach")](#telemach) | EVW32C-0N<br>EVW32C | ✅ Confirmed |
 
 ## Unsupported Modems
 
@@ -115,6 +116,7 @@ DOCSIS 3.0
 ├── 2014  Netgear     C3700      ░░░░░███████████████  12yr  Current
 ├── 2014  Arris       SB6183     ░░░░░███████████████  12yr  Current
 ├── 2014  ARRIS       TM1602A    ░░░░░███████████████  12yr  Current
+├── 2015  Netgear     C6250      ░░░░░░██████████████  11yr  Current
 ├── 2015  Compal      CH7465MT   ░░░░░░██████████████  11yr  Current
 ├── 2015  Netgear     CM600      ░░░░░░██████████████  11yr  Current
 ├── 2016  Ubee        EVW32C-0N  ░░░░░░░█████████████  10yr  Current
@@ -222,4 +224,4 @@ _Scale: 2010-2026 (16 years)_
 
 ---
 
-Generated by `scripts/generate_catalog_index.py` from 53 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).
+Generated by `scripts/generate_catalog_index.py` from 54 modem configs ([source](https://github.com/solentlabs/cable_modem_monitor/blob/main/packages/cable_modem_monitor_catalog/scripts/generate_catalog_index.py)).

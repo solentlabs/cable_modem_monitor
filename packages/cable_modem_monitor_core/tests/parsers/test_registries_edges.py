@@ -543,18 +543,7 @@ class TestJsJsonChannelNumberAssignment:
 
 
 class TestXmlChannelParser:
-    """_parse_xml_channels: list path + non-list early-out."""
-
-    def test_xml_non_list_returns_empty(self) -> None:
-        from solentlabs.cable_modem_monitor_core.parsers.registries import (
-            _parse_xml_channels,
-        )
-
-        section = MagicMock()
-        with patch("solentlabs.cable_modem_monitor_core.parsers.registries.XMLChannelParser") as mock_cls:
-            mock_cls.return_value.parse.return_value = None
-            result, _ = _parse_xml_channels(section, {})
-        assert result == []
+    """_parse_xml_channels: parts joined, channel numbers assigned."""
 
     def test_xml_list_assigns_channel_numbers(self) -> None:
         from solentlabs.cable_modem_monitor_core.parsers.registries import (
@@ -563,9 +552,8 @@ class TestXmlChannelParser:
 
         section = MagicMock()
         with patch("solentlabs.cable_modem_monitor_core.parsers.registries.XMLChannelParser") as mock_cls:
-            mock_cls.return_value.parse.return_value = [
-                {"channel_id": 1},
-                {"channel_id": 2, "channel_number": 99},  # preserved
+            mock_cls.return_value.parse_parts.return_value = [
+                ([{"channel_id": 1}, {"channel_id": 2, "channel_number": 99}], None),  # 99 preserved
             ]
             result, _ = _parse_xml_channels(section, {})
 

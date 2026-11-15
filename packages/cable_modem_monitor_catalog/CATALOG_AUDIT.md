@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**52 configurations supported** — 33 confirmed on real hardware, 19 awaiting verification.
+**53 configurations supported** — 35 confirmed on real hardware, 18 awaiting verification.
 
 ---
 
@@ -55,7 +55,7 @@ and share a diagnostics snapshot.
 | Modem | Transport | ISPs | Capture | Restart |
 |-------|-----------|------|---------|---------|
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
-| SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
+| SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | — | not captured |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated | n/a |
 | C3700 | HTML | Comcast, Cox, Spectrum | synthetic | not captured |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | hybrid | captured |
@@ -64,10 +64,9 @@ and share a diagnostics snapshot.
 | NE6037 | JSON-RPC | Play | — | captured |
 | CGA2121 | HTML | Telia | generated | n/a |
 | CGA4236 | HTML | Unknown | — | n/a |
-| CGA437ATCH4 | HTML | Vectra | hybrid | n/a |
+| CGA437ATCH4 | HTML | Vectra | — | captured |
 | CGA6444VF | HTML | Vodafone | — | n/a |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy | — | n/a |
-| EVW32C-0N | HTML | Telemach | hybrid | captured |
 
 ## Pending Review
 
@@ -110,6 +109,7 @@ Entries with an open capability gap are listed above, not here.
 | MB7621 | HTML | Comcast, Cox, Spectrum, TWC, CableOne, RCN, Comcast Xfinity, Suddenlink, BrightHouse | — | captured |
 | MB8600 | HNAP | Comcast, Xfinity, Cox, Spectrum | synthetic | not captured |
 | MB8611 | HNAP | Comcast, Xfinity, Cox, Spectrum | synthetic | captured |
+| C6250 | HTML | Comcast | — | captured |
 | C7000v2 | HTML | Comcast | — | not captured |
 | CM1100 | HTML | Comcast | — | n/a |
 | CM1200 (basic) | HTML | Comcast, Spectrum, Cox | — | n/a |
@@ -122,6 +122,7 @@ Entries with an open capability gap are listed above, not here.
 | XB6 | HTML | Rogers | — | n/a |
 | XB7 | HTML | Rogers, Comcast, Xfinity | generated | n/a |
 | XB8 | HTML | Rogers, Comcast, Xfinity, Cox | — | captured |
+| EVW32C-0N | HTML | Telemach | hybrid | captured |
 
 ---
 

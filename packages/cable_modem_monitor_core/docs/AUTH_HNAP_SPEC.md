@@ -105,9 +105,10 @@ POST to `{base_url}/HNAP1/`:
         "LoginResult": "OK"
      }}
 
-   Any of Challenge / PublicKey / Cookie missing -> auth fails before
-   phase 2; the collector surfaces AUTH_FAILED with the missing-field
-   detail.
+   Any of Challenge / PublicKey / Cookie missing -> no challenge to
+   answer, so the login stops before phase 2 (AuthResult busy=True,
+   which the collector maps to AUTH_UNAVAILABLE; see § No challenge
+   issued below)
 
 2. Derive keys from challenge response:
    PrivateKey    = hmac_hex(PublicKey + password, Challenge, algorithm)
@@ -251,6 +252,37 @@ the same reason (AUTH_CBN_SPEC.md § Login Token Vocabulary). The
 structural difference is with `form_pbkdf2`, `bearer` and `json_sjcl`,
 whose busy body is entry data (`login_busy`).
 
+### No challenge issued
+
+A phase 1 answer missing any of `Challenge`, `PublicKey` or `Cookie`
+gives the client nothing to derive a key from; a `LoginResponse` that
+is absent or not an object counts as missing all three. Nothing
+password-derived has been sent at that point, so the modem has judged
+nothing. The manager returns `AuthResult(success=False, busy=True)`,
+the same `AUTH_UNAVAILABLE` route as `RELOAD` above. Its error names
+the `LoginResult` the answer carried, each value truncated because the
+modem supplied it.
+
+The rule keys on the missing fields, not on a token. `Login.js` tests
+phase 1 for the three fields alone and never reads `LoginResult` there,
+so firmware defines no vocabulary for this step.
+
+Observed on the S33 `TB01.03.*` line (#230): one routine re-login
+answered HTTP 200 with
+`{"LoginResponse": {"LoginResult": "SYNC_FAILED"}}`. `SYNC_FAILED`
+appears in no captured `Login.js`, and what the modem means by it is
+not established.
+
+Not established either:
+
+- Whether the following poll would have been served. Polling had
+  already stopped; a manual login 17 minutes later was accepted with
+  the same credential.
+- Whether repeated challenge requests count toward the firmware
+  lockout (§ Lockout behaviour). `AUTH_UNAVAILABLE` carries no backoff,
+  so a modem that keeps withholding the challenge is asked once per
+  poll.
+
 ## Firmware Assumptions
 
 What's hardcoded in `protocol/hnap.py` and `auth/hnap.py` that is
@@ -263,7 +295,7 @@ specific to HNAP firmware family, not inherent to HMAC:
 | Pre-auth signing key | literal string `"withoutloginkey"` | Login.js challenge request | Firmware rejects the challenge if anything else is used |
 | Login action body keys | `Action`, `Username`, `LoginPassword`, `Captcha`, `PrivateLogin` | Login.js | Known HNAP firmware (Motorola, Arris Surfboard) all use this shape |
 | `PrivateLogin` value | `"LoginPassword"` | Login.js | Selects the `LoginPassword` credential field; variant firmware could declare a different field name |
-| Challenge response fields | `Challenge`, `PublicKey`, `Cookie`, `LoginResult` inside `LoginResponse` | Login.js, HAR captures | Missing any of the three credential fields aborts auth |
+| Challenge response fields | `Challenge`, `PublicKey`, `Cookie`, `LoginResult` inside `LoginResponse` | Login.js, HAR captures | Missing any of the three credential fields stops the login as `AUTH_UNAVAILABLE` (§ No challenge issued) |
 | `uid` cookie name | `uid` | Login.js (`$.cookie('uid', ...)`) | Hardcoded; firmware variant could pick a different cookie name |
 | `PrivateKey` cookie name | `PrivateKey` | Login.js (`$.cookie('PrivateKey', ...)`) | Needed to avoid HTTP 500 on data requests on some firmware |
 | `LoginResult` success values | `OK`, `OK_CHANGED` | Login.js, observed HAR | Other values currently treated as protocol-unexpected |

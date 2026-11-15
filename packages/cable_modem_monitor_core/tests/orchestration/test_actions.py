@@ -11,6 +11,8 @@ import json
 import logging
 from collections.abc import Callable
 from functools import partial
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -87,6 +89,7 @@ class TestExecuteHttpAction:
             data={"confirm": "yes"},
             headers={"X-Token": "abc"},
             timeout=5,
+            allow_redirects=False,
         )
 
     @pytest.mark.parametrize("status", [401, 403, 404, 500])
@@ -116,6 +119,72 @@ class TestExecuteHttpAction:
         result = execute_http_action(session, "http://192.168.100.1", action)
 
         assert result.success is True
+
+
+class _RecordingServer(HTTPServer):
+    """Local server that records each path it serves."""
+
+    def __init__(self) -> None:
+        super().__init__(("127.0.0.1", 0), _RedirectingHandler)
+        self.served: list[str] = []
+
+
+class _RedirectingHandler(BaseHTTPRequestHandler):
+    """Answers the action 302 and its landing page 401, recording each path served."""
+
+    def _record(self) -> None:
+        assert isinstance(self.server, _RecordingServer)
+        self.server.served.append(self.path)
+
+    def do_GET(self) -> None:  # noqa: N802
+        self._record()
+        self.send_response(401)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def do_POST(self) -> None:  # noqa: N802
+        self._record()
+        self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        self.send_response(302)
+        self.send_header("Location", "/landing.htm")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+        pass
+
+
+# ┌───────────┬──────────────────────────────┐
+# │ body      │ action fields                │
+# ├───────────┼──────────────────────────────┤
+# │ form      │ params                       │
+# │ json      │ json_body                    │
+# └───────────┴──────────────────────────────┘
+#
+# fmt: off
+REDIRECT_CASES = [
+    ("form", {"params": {"confirm": "yes"}}),
+    ("json", {"json_body": {"confirm": "yes"}}),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("fields", [c[1] for c in REDIRECT_CASES], ids=[c[0] for c in REDIRECT_CASES])
+def test_redirect_answer_is_judged_and_not_followed(fields: dict[str, Any]) -> None:
+    """The action's own 302 is the verdict; the page it points at is never requested."""
+    server = _RecordingServer()
+    Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        action = HttpAction(type="http", method="POST", endpoint="/goform/logout", **fields)
+        result = execute_http_action(requests.Session(), f"http://127.0.0.1:{server.server_port}", action)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert result.success is True
+    assert result.session_refused is False
+    assert result.details["status_code"] == 302
+    assert server.served == ["/goform/logout"]
 
 
 # ------------------------------------------------------------------
@@ -172,6 +241,7 @@ class TestHttpPreFetch:
             data=None,
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
     def test_no_pre_fetch_skips_get(self) -> None:
@@ -214,6 +284,7 @@ class TestFormActionExtraction:
             data=None,
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
     def test_double_quotes_in_form_action(self) -> None:
@@ -241,6 +312,7 @@ class TestFormActionExtraction:
             data=None,
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
     def test_no_match_falls_back_to_static_endpoint(self) -> None:
@@ -269,6 +341,7 @@ class TestFormActionExtraction:
             data=None,
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
     def test_no_match_no_fallback_returns_failure(self) -> None:
@@ -319,6 +392,7 @@ class TestFormActionExtraction:
             data=None,
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
 
@@ -690,6 +764,7 @@ class TestHttpCookieParamInterpolation:
             data=expected_data,
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
     def test_no_params_no_interpolation_attempted(self) -> None:
@@ -709,6 +784,7 @@ class TestHttpCookieParamInterpolation:
             data=None,
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
 
@@ -968,6 +1044,7 @@ class TestHttpActionJsonBody:
             json={"reboot": {"enable": True}},
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
     def test_json_body_does_not_send_data_kwarg(self) -> None:
@@ -1011,6 +1088,7 @@ class TestHttpActionJsonBody:
             data={"restart": "1"},
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
     def test_json_body_and_params_mutual_exclusion(self) -> None:
@@ -1079,6 +1157,7 @@ class TestHttpActionQuery:
             data={"restart": "1"},
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
     def test_query_and_json_body_both_sent(self) -> None:
@@ -1097,6 +1176,7 @@ class TestHttpActionQuery:
             json={"reboot": True},
             headers=None,
             timeout=10,
+            allow_redirects=False,
         )
 
 

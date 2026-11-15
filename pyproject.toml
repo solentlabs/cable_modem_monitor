@@ -13,7 +13,7 @@ dependencies = [
     # Runtime dependencies
     "requests>=2.34.2",   # HTTP client for modem polling
     "pydantic>=2.0",      # Data validation and modeling
-    "har-capture~=0.14.1", # HAR sanitization + PII validation; library API (custom_patterns kwarg) used in catalog scripts; 0.14.1 floor is a hard one: below 0.14.0 an SNMP OID tail read as a public IP, and below 0.14.1 a login response that equals a redacted cookie value was collapsed to a bare placeholder; below 0.13.1 serials, IPv6 and 10.x addresses went unredacted and password-label redaction overwrote JavaScript
+    "har-capture~=0.16.1", # HAR sanitization + PII validation; library API (custom_patterns kwarg) used in catalog scripts; 0.16.1 redacts a value under a JSON SSID key instead of only flagging it; 0.14.1 is a hard floor: below 0.14.0 an SNMP OID tail read as a public IP, and below 0.14.1 a login response that equals a redacted cookie value was collapsed to a bare placeholder; below 0.13.1 serials, IPv6 and 10.x addresses went unredacted and password-label redaction overwrote JavaScript
 ]
 
 [project.optional-dependencies]

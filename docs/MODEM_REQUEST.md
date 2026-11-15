@@ -7,8 +7,21 @@ Comfortable with AI tools and want to do more of the work yourself? See
 the [AI-assisted catalog contribution guide](../CONTRIBUTING.md#ai-assisted-catalog-contribution).
 
 The integration reads channel data, error counts, connection status,
-firmware and uptime; never WiFi settings, device lists or account
-details.
+firmware and uptime. It only reads, apart from the optional Restart
+button.
+
+## If an AI agent is helping
+
+- Say which tool and model helped, in the issue.
+- Capture with `har-capture` (section 1), not a browser DevTools
+  export. The intake pipeline expects its `.sanitized.har` output.
+- Do not send a failed login to the device outside step 6 of the
+  capture.
+- File through the [issue form](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml)
+  in a browser, not the API. The form carries the capture instructions
+  and the file upload.
+- Report what you observed on the device or in the logs, and mark
+  anything inferred.
 
 ## 1. Capture
 
@@ -107,6 +120,21 @@ Include the AI screen output if you ran it.
 
 Optional: the [HAR audit prompt](../CONTRIBUTING.md#auditing-a-har-for-completeness)
 checks a capture for missing login steps before you submit.
+
+## 4. Test the beta
+
+The maintainer comments when a beta with your modem is out.
+
+1. Go to Settings, Marketplace, Cable Modem Monitor. In the three-dot
+   menu choose **Include pre-releases** and confirm, then choose
+   **Install another version** and pick the version named in the
+   comment. On Home Assistant before 2026.11, use HACS: open Cable Modem
+   Monitor, choose **Redownload**, click **Need a different version?**
+   and pick the version from the **Release** dropdown.
+2. Restart Home Assistant if prompted.
+3. Add the integration and select your modem from the list.
+4. Download diagnostics (Settings, Devices & services, Cable Modem
+   Monitor, the three-dot menu) and attach the file to the issue.
 
 For examples, see [past modem requests](https://github.com/solentlabs/cable_modem_monitor/issues?q=label%3A%22new+modem%22)
 and the [modem catalog](../packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/).

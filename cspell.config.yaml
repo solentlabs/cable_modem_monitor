@@ -52,6 +52,7 @@ ignoreWords:
   - UIDSBG # FCC ID UIDSBG7400 (ARRIS SBG7400AC2), cited in the catalog entry
   - Vonk
   - Fzcw
+  - getdocsis # ARRIS SB8200 AC01 firmware index.html function getdocsisSignal
   - didnt
   - dlindnegm
   - Tatsh
@@ -98,6 +99,7 @@ words:
   - Datasheet
   - DCID
   - DCIDs
+  - Dect
   - UCID
   - Docsis
   - DOCSIS
@@ -282,6 +284,7 @@ words:
   - channeltype
   - wantype
   - apmode
+  - curlang
   - cmconfiguration
   - cmconnectionstatus
   - cmstatus

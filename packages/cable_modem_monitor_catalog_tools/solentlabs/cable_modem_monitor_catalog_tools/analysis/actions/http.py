@@ -73,12 +73,20 @@ def detect_http_actions(
     if restart is None:
         restart = _find_http_action_in_source(entries, _RESTART_PATTERNS, "restart", cookie_names, warnings)
 
+    actions = ActionsDetail(logout=logout, restart=restart)
+    # Offer unmatched action-like writes as candidates (only when both traffic
+    # and source-scan came up empty; source_inferred counts as found)
+    if logout is None or restart is None:
+        ambiguities.extend(_unmatched_action_ambiguities(entries, actions, warnings))
+    # A candidate is a captured request, so "not observed" would contradict it
+    offered = {a.field for a in ambiguities}
     _report_unobserved_action(
         "logout",
         logout,
         "No logout endpoint observed in HAR. If this modem has single-session limits, a logout action will be needed.",
         "log in, click Log out, then log in again",
         warnings,
+        "actions.logout.endpoint" in offered,
     )
     _report_unobserved_action(
         "restart",
@@ -87,15 +95,11 @@ def detect_http_actions(
         "Capture the restart (log in, restart the modem, then log in again) to declare it.",
         "log in, restart the modem, then log in again",
         warnings,
+        "actions.restart.endpoint" in offered,
     )
     for action_name, action in (("logout", logout), ("restart", restart)):
         _report_unobserved_body(action_name, action, warnings)
 
-    actions = ActionsDetail(logout=logout, restart=restart)
-    # Offer unmatched action-like writes as candidates (only when both traffic
-    # and source-scan came up empty; source_inferred counts as found)
-    if logout is None or restart is None:
-        ambiguities.extend(_unmatched_action_ambiguities(entries, actions, warnings))
     return actions
 
 
@@ -202,10 +206,12 @@ def _report_unobserved_action(
     missing_message: str,
     capture_steps: str,
     warnings: list[str],
+    candidate_offered: bool,
 ) -> None:
     """Warn when the capture holds no request for an action, so the contributor records one."""
     if action is None:
-        warnings.append(missing_message)
+        if not candidate_offered:
+            warnings.append(missing_message)
     elif action.source == "source_inferred":
         warnings.append(
             f"{action_name} action {action.method} {action.endpoint} (source_inferred): the capture holds no "

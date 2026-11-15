@@ -4,7 +4,9 @@ Speaks the Compal Broadband Networks encrypted login protocol: serves
 a login page with a deterministic ``sessionToken`` cookie, then decrypts
 the AES-256-CBC encrypted password POST with the token it served and
 returns a success response with a rotating session token and SID only
-when the plaintext is the test password.
+when the plaintext is the test password, the envelope carries the
+entry's prefix, and the username is the placeholder the entry declares
+or, without one, the test username encrypted the same way.
 
 CBN-specific: login, logout, and restart all POST to the same setter
 endpoint, discriminated by the ``fun=N`` parameter in the body. This
@@ -37,6 +39,7 @@ _logger = logging.getLogger(__name__)
 _FUN_RE = re.compile(rb"fun=(\d+)")
 _FUN_TEXT_RE = re.compile(r"fun=(\d+)")
 _PASSWORD_RE = re.compile(rb"(?:^|&)Password=([^&]*)")
+_USERNAME_RE = re.compile(rb"(?:^|&)Username=([^&]*)")
 
 
 class FormCbnAuthHandler(FormAuthHandler):
@@ -45,14 +48,17 @@ class FormCbnAuthHandler(FormAuthHandler):
     The real ``FormCbnAuthManager`` does a multi-phase login:
 
     1. GET login page → receive ``sessionToken`` cookie.
-    2. Encrypt password via ``compal_encrypt(pw, sessionToken)``.
-    3. POST to setter endpoint with ``fun=<login_fun>``.
-    4. Check response for ``"successful"`` and extract ``SID``.
+    2. Optionally read the model from a getter ``fun`` (rotates the token).
+    3. Encrypt via ``compal_encrypt(value, sessionToken, prefix)``.
+    4. POST to setter endpoint with ``fun=<login_fun>``.
+    5. Check response for ``"successful"`` and extract ``SID``.
 
     This handler serves a login page with a known session token,
-    decrypts the login POST's ``Password`` with that token, and returns
-    a success response with SID only when it decrypts to
-    ``_TEST_PASSWORD``. Anything else gets a failed-login body.
+    decrypts the login POST with the last token it served, and returns
+    a success response with SID only when ``Password`` decrypts to
+    ``_TEST_PASSWORD`` under the entry's prefix and ``Username`` is the
+    entry's placeholder or, without one, ``_TEST_USERNAME`` encrypted
+    the same way. Anything else gets a failed-login body.
 
     CBN-specific: All setter endpoint POSTs (login, logout, restart)
     share the same URL, discriminated by ``fun=N`` in the POST body.
@@ -71,8 +77,13 @@ class FormCbnAuthHandler(FormAuthHandler):
         logout_fun: ``fun`` parameter value for logout POST (None if no logout).
         restart_fun: ``fun`` parameter value for restart POST (None if no restart).
         har_entries: HAR ``log.entries`` list for building getter responses.
+        cipher_prefix: Envelope prefix the login must carry, placeholders filled.
+        username_value: Placeholder ``Username`` the login must send verbatim;
+            ``None`` expects the test username encrypted like the password.
+        hw_model_fun: Getter ``fun`` the firmware answers before login.
     """
 
+    _TEST_USERNAME = "admin"
     _TEST_PASSWORD = "pw"
     _INITIAL_SESSION_TOKEN = "mock-cbn-session-token-0000"
     _TEST_SID = "12345"
@@ -87,6 +98,9 @@ class FormCbnAuthHandler(FormAuthHandler):
         logout_fun: int | None = None,
         restart_fun: int | None = None,
         har_entries: list[dict[str, Any]] | None = None,
+        cipher_prefix: str = ":",
+        username_value: str | None = None,
+        hw_model_fun: int | None = None,
     ) -> None:
         super().__init__(
             login_path=setter_endpoint,
@@ -99,14 +113,22 @@ class FormCbnAuthHandler(FormAuthHandler):
         self._login_fun = login_fun
         self._logout_fun = logout_fun
         self._restart_fun = restart_fun
+        self._cipher_prefix = cipher_prefix
+        self._username_value = username_value
+        self._hw_model_fun = hw_model_fun
         self._token_counter = 0
         self._served_token = self._INITIAL_SESSION_TOKEN
 
-        # Build fun→response lookup from HAR entries for getter dispatch.
-        self._getter_responses = _build_getter_responses(
-            har_entries or [],
-            self._getter_endpoint,
-        )
+        # Build fun→response lookups from HAR entries for getter dispatch.
+        # The firmware answers some funs differently inside a session (fun=1
+        # before login carries only the model; after it, status and uptime),
+        # so each side serves the reply the capture recorded in that state,
+        # falling back to any reply for a fun recorded only on the other side.
+        entries = har_entries or []
+        outside, during = _split_by_session(entries, self._setter_endpoint, login_fun, logout_fun)
+        everything = _build_getter_responses(entries, self._getter_endpoint)
+        self._getter_responses = {**everything, **_build_getter_responses(during, self._getter_endpoint)}
+        self._public_responses = {**everything, **_build_getter_responses(outside, self._getter_endpoint)}
 
     @property
     def current_token(self) -> str:
@@ -120,14 +142,19 @@ class FormCbnAuthHandler(FormAuthHandler):
         return self._served_token
 
     def is_login_request(self, method: str, path: str) -> bool:
-        """CBN login: GET login page or any POST to setter endpoint.
+        """CBN login: GET login page, any POST to setter endpoint, and the pre-login model read.
 
         All setter POSTs are routed here so ``handle_login`` can
-        inspect the body and dispatch by ``fun`` parameter.
+        inspect the body and dispatch by ``fun`` parameter. With a
+        model read configured, getter POSTs come here too: ``handle_login``
+        answers that ``fun`` and returns ``None`` for the rest, which the
+        server then auth-checks, as it does for HNAP data calls.
         """
         norm = normalize_path(path)
         if method == "GET" and norm == self._login_page_path:
             return True
+        if method == "POST" and norm == self._getter_endpoint:
+            return self._hw_model_fun is not None
         return method == "POST" and norm == self._setter_endpoint
 
     def handle_login(
@@ -149,6 +176,18 @@ class FormCbnAuthHandler(FormAuthHandler):
 
         if method == "GET" and norm == self._login_page_path:
             return self._login_page_response()
+
+        if method == "POST" and norm == self._getter_endpoint:
+            # The firmware's login page reads the model before anyone is
+            # logged in (common_api.js loadGlobalValue); nothing else is public.
+            # Inside a session the same fun is an ordinary data call.
+            if (
+                not self._authenticated
+                and self._hw_model_fun is not None
+                and self._parse_fun(body) == self._hw_model_fun
+            ):
+                return self._serve_getter(self._hw_model_fun, self._public_responses)
+            return None
 
         if method == "POST" and norm == self._setter_endpoint:
             fun = self._parse_fun(body)
@@ -180,10 +219,16 @@ class FormCbnAuthHandler(FormAuthHandler):
         )
 
     def _handle_login_post(self, body: bytes) -> RouteEntry:
-        """Return success with SID if the password decrypts right, else a failed login."""
-        plaintext = _decrypt_password(body, self._served_token)
-        if plaintext != self._TEST_PASSWORD:
-            _logger.debug("Mock server: CBN login rejected, password did not decrypt to the test password")
+        """Return success with SID if both credentials check out, else a failed login."""
+        password = _decrypt_field(_PASSWORD_RE, body, self._served_token, self._cipher_prefix)
+        if self._username_value is None:
+            username_ok = (
+                _decrypt_field(_USERNAME_RE, body, self._served_token, self._cipher_prefix) == self._TEST_USERNAME
+            )
+        else:
+            username_ok = _field(_USERNAME_RE, body) == self._username_value
+        if password != self._TEST_PASSWORD or not username_ok:
+            _logger.debug("Mock server: CBN login rejected, credentials did not decrypt to the test credentials")
             # A body with none of the firmware's login tokens is its
             # wrong-password branch (AUTH_CBN_SPEC.md § Login Token Vocabulary).
             return RouteEntry(status=200, headers=[("Content-Type", "text/xml")], body="")
@@ -237,10 +282,15 @@ class FormCbnAuthHandler(FormAuthHandler):
             return None
 
         fun = self._parse_fun(body)
-        if fun is None or fun not in self._getter_responses:
+        if fun is None:
             return None
+        return self._serve_getter(fun, self._getter_responses)
 
-        base = self._getter_responses[fun]
+    def _serve_getter(self, fun: int, responses: dict[int, RouteEntry]) -> RouteEntry | None:
+        """The recorded reply for ``fun`` with a rotated session token, or ``None``."""
+        base = responses.get(fun)
+        if base is None:
+            return None
         new_token = self._next_token()
         response_headers = list(base.headers)
         response_headers.append(
@@ -262,21 +312,27 @@ class FormCbnAuthHandler(FormAuthHandler):
         return int(match.group(1)) if match else None
 
 
-def _decrypt_password(body: bytes, session_token: str) -> str | None:
-    """Decrypt the login POST's ``Password`` field, or ``None`` if it does not decode."""
+def _field(pattern: re.Pattern[bytes], body: bytes) -> str | None:
+    """A login POST field's URL-decoded value, or ``None`` if absent."""
+    match = pattern.search(body)
+    return unquote(match.group(1).decode("ascii")) if match else None
+
+
+def _decrypt_field(pattern: re.Pattern[bytes], body: bytes, session_token: str, prefix: str) -> str | None:
+    """Decrypt a login POST field under ``prefix``, or ``None`` if it does not decode."""
     # Written against the cryptography library directly, not protocol/cbn.py:
     # a harness sharing Core's crypto code passes any error the two share (#86).
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
     from cryptography.hazmat.primitives.padding import PKCS7
 
-    match = _PASSWORD_RE.search(body)
-    if match is None:
+    value = _field(pattern, body)
+    if value is None:
         return None
     try:
-        decoded = base64.b64decode(unquote(match.group(1).decode("ascii")), validate=True).decode("ascii")
-        if not decoded.startswith(":"):
+        decoded = base64.b64decode(value, validate=True).decode("ascii")
+        if not decoded.startswith(prefix):
             return None
-        ciphertext = bytes.fromhex(decoded[1:])
+        ciphertext = bytes.fromhex(decoded[len(prefix) :])
         token_bytes = session_token.encode("utf-8")
         key = hashlib.sha256(token_bytes).digest()
         iv = hashlib.md5(token_bytes).digest()  # noqa: S324
@@ -287,6 +343,34 @@ def _decrypt_password(body: bytes, session_token: str) -> str | None:
         return plain.decode("utf-8")
     except (binascii.Error, UnicodeDecodeError, ValueError):
         return None
+
+
+def _split_by_session(
+    har_entries: list[dict[str, Any]],
+    setter_endpoint: str,
+    login_fun: int,
+    logout_fun: int | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split entries into (outside a session, inside it) at the accepted login and the logout."""
+    start: int | None = None
+    end = len(har_entries)
+    for index, entry in enumerate(har_entries):
+        request = entry.get("request", {})
+        if request.get("method", "").upper() != "POST":
+            continue
+        if normalize_path(urlparse(request.get("url", "")).path) != setter_endpoint:
+            continue
+        match = _FUN_TEXT_RE.search((request.get("postData") or {}).get("text", ""))
+        fun = int(match.group(1)) if match else None
+        body = str((entry.get("response", {}).get("content") or {}).get("text", ""))
+        if start is None and fun == login_fun and "successful" in body.lower():
+            start = index
+        elif start is not None and logout_fun is not None and fun == logout_fun:
+            end = index
+            break
+    if start is None:
+        return har_entries, []
+    return har_entries[:start] + har_entries[end + 1 :], har_entries[start + 1 : end]
 
 
 def _build_getter_responses(
@@ -355,13 +439,24 @@ def _build_getter_responses(
     return responses
 
 
+def _hw_model_from_har(har_entries: list[dict[str, Any]], getter_endpoint: str, fun: int, element: str) -> str:
+    """The model text in the capture's reply to ``fun``; raises when the capture lacks it."""
+    import defusedxml.ElementTree as DefusedET
+
+    reply = _build_getter_responses(har_entries, getter_endpoint).get(fun)
+    found = DefusedET.fromstring(reply.body).find(f".//{element}") if reply and reply.body else None
+    if found is None or not (found.text or "").strip():
+        raise ValueError(f"capture has no getter fun={fun} reply carrying <{element}>")
+    return (found.text or "").strip()
+
+
 def create_handler(
     modem_config: ModemConfig,
     har_entries: list[dict[str, Any]] | None = None,
 ) -> FormCbnAuthHandler:
     """Entry point for dynamic auth handler dispatch."""
     from ...models.modem_config.actions import CbnAction
-    from ...models.modem_config.auth import FormCbnAuth
+    from ...models.modem_config.auth import CBN_HW_MODEL_PLACEHOLDER, FormCbnAuth
 
     auth = modem_config.auth
     assert isinstance(auth, FormCbnAuth)
@@ -374,6 +469,15 @@ def create_handler(
         if modem_config.actions.restart and isinstance(modem_config.actions.restart, CbnAction):
             restart_fun = modem_config.actions.restart.fun
 
+    prefix = auth.cipher_prefix
+    if auth.hw_model_fun is not None:
+        # The model comes from the capture's own reply, the one this handler
+        # serves the auth manager, so both sides read the same value.
+        hw_model = _hw_model_from_har(
+            har_entries or [], normalize_path(auth.getter_endpoint), auth.hw_model_fun, auth.hw_model_element
+        )
+        prefix = prefix.replace(CBN_HW_MODEL_PLACEHOLDER, hw_model)
+
     handler = FormCbnAuthHandler(
         login_page_path=auth.login_page,
         setter_endpoint=auth.setter_endpoint,
@@ -383,6 +487,9 @@ def create_handler(
         logout_fun=logout_fun,
         restart_fun=restart_fun,
         har_entries=har_entries,
+        cipher_prefix=prefix,
+        username_value=auth.username_value,
+        hw_model_fun=auth.hw_model_fun,
     )
     handler.login_page = auth.login_page
     return handler

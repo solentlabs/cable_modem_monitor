@@ -49,6 +49,35 @@ def test_compal_encrypt_known_vector(password: str, token: str, expected: str) -
 
 
 # ---------------------------------------------------------------------------
+# Prefixed envelope: the Arris SB8200 AC01 CBN_Encrypt(EncryptString, HwModel)
+# returns base64("HS:" + HwModel + ":" + hex). Vectors produced by running
+# that firmware's encrypt_cryptoJS.js with its CryptoJS 3.1.2 and
+# jquery.base64.js in node. The hex inside matches ENCRYPT_VECTORS for the
+# same plaintext and token: the prefix does not touch the key or IV.
+# ---------------------------------------------------------------------------
+
+# fmt: off
+PREFIX_VECTORS = [
+    # (plaintext,   token,              prefix,         expected)
+    ("password123", "abc123token",      "HS:SB8200v3:", "SFM6U0I4MjAwdjM6ZmYxMWQ5ZTIwZjk5N2M2ODlmNjkyMzM0NTczYTcyZTU="),
+    ("admin",       "9876543210abcdef", "HS:SB8200v3:", "SFM6U0I4MjAwdjM6MzRmNjFhNzVkZGU1MWUxZTllZTNmY2NkNjAzNzBhOGU="),
+    ("",            "sometoken",        "HS:SB8200v3:", "SFM6U0I4MjAwdjM6MTRmMjU0MDEwY2NmMjFkZTA3Zjk5YTNlNDQ4MTY4NTY="),
+    ("short",       "a",                "HS:MODELX:",   "SFM6TU9ERUxYOmM1NDk4YWU1MDFiYzFmZjRkNDM3MjM5NDgyYzAwZGVk"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "plaintext,token,prefix,expected",
+    PREFIX_VECTORS,
+    ids=[f"{v[0] or 'empty'}_{v[2]}" for v in PREFIX_VECTORS],
+)
+def test_compal_encrypt_prefix_vector(plaintext: str, token: str, prefix: str, expected: str) -> None:
+    """A firmware prefix is placed before the hex, inside the base64."""
+    assert compal_encrypt(plaintext, token, prefix=prefix) == expected
+
+
+# ---------------------------------------------------------------------------
 # Round-trip: encrypt → manual decrypt → original password
 # ---------------------------------------------------------------------------
 

@@ -719,7 +719,7 @@ Related to #<issue>
 
 Reply on the originating issue with a short, personal close: thank
 the contributor, point them at the `Cable Modem Monitor: Generate
-Dashboard` action under **Developer Tools > Actions**, and invite a
+Dashboard Card` action under **Tools > Actions**, and invite a
 fresh issue if anything looks off later. Then close the issue.
 
 ## Confirmation Gotchas

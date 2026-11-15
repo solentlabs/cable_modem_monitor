@@ -19,6 +19,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
+from urllib.parse import quote
+
+from solentlabs.cable_modem_monitor_core.orchestration.models import ModemIdentity
 
 from .channel_bond_storage import BondState
 
@@ -75,11 +78,45 @@ def evaluate(
     return "none"
 
 
-def format_onboarding_message(*, model: str, current: ChannelTotals) -> str:
+_VERIFICATION_ISSUE_URL = "https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_verification.yml"
+
+
+def verification_issue_url(identity: ModemIdentity) -> str | None:
+    """Link to a Verify Working Modem issue for an unconfirmed model; ``None`` once it is confirmed."""
+    if identity.status == "confirmed":
+        return None
+    title = quote(f"[Verification] {identity.manufacturer} {identity.model}")
+    return f"{_VERIFICATION_ISSUE_URL}&title={title}"
+
+
+def format_onboarding_message(*, model: str, current: ChannelTotals, verification_url: str | None) -> str:
     """Body text for the one-time onboarding notification."""
-    return (
+    message = (
         f"{model} is online with {current.downstream} downstream and "
-        f"{current.upstream} upstream bonded channels. You can auto-generate "
-        f"a Lovelace dashboard for this modem via Developer Tools → Actions → "
-        f"`cable_modem_monitor.generate_dashboard`."
+        f"{current.upstream} upstream bonded channels. To add a card for this "
+        f"modem, refresh your browser, open a dashboard, choose Edit → Add card, and "
+        f"pick Cable Modem."
     )
+    if verification_url is None:
+        return message
+    return f"{message}\n\n{format_verification_request(model='This model', verification_url=verification_url)}"
+
+
+def format_verification_request(*, model: str, verification_url: str) -> str:
+    """Body text asking for the diagnostics that would confirm an unconfirmed model."""
+    return (
+        f"{model} has not been confirmed on real hardware yet. If the readings look "
+        f"right, you can help confirm it: Download diagnostics (Settings > Devices & "
+        f"Services > Cable Modem Monitor > ...) and attach the file to a "
+        f"[Verify Working Modem issue]({verification_url})."
+    )
+
+
+def needs_verification_request(*, current: ChannelTotals, stored: BondState | None, recovery_active: bool) -> bool:
+    """True when a baselined entry, polling normally, has not yet been asked to help confirm its model."""
+    # Same guards as onboarding: ask only after a poll has shown the modem working.
+    if current.downstream == 0 and current.upstream == 0:
+        return False
+    if recovery_active or stored is None:
+        return False
+    return not stored.verification_asked

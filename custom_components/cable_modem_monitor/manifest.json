@@ -2,7 +2,13 @@
   "domain": "cable_modem_monitor",
   "name": "Cable Modem Monitor",
   "after_dependencies": [
-    "recorder"
+    "frontend",
+    "http",
+    "recorder",
+    "websocket_api"
+  ],
+  "categories": [
+    "computers_network.routers_network"
   ],
   "codeowners": [
     "@solentlabs"
@@ -17,8 +23,8 @@
     "solentlabs.cable_modem_monitor_catalog"
   ],
   "requirements": [
-    "solentlabs-cable-modem-monitor-core==3.14.15-beta.6",
-    "solentlabs-cable-modem-monitor-catalog==3.14.15-beta.6"
+    "solentlabs-cable-modem-monitor-core==3.14.15-beta.7",
+    "solentlabs-cable-modem-monitor-catalog==3.14.15-beta.7"
   ],
-  "version": "3.14.15-beta.6"
+  "version": "3.14.15-beta.7"
 }

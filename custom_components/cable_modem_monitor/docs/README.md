@@ -8,6 +8,7 @@ Home Assistant-specific specs for the Cable Modem Monitor integration.
 | [ENTITY_MODEL_SPEC.md](ENTITY_MODEL_SPEC.md) | Entity mapping — platforms, attributes, availability, naming |
 | [HA_ADAPTER_SPEC.md](HA_ADAPTER_SPEC.md) | HA wiring — runtime data, coordinators, polling modes, restart, reauth |
 | [BLUEPRINT_DISTRIBUTION_SPEC.md](BLUEPRINT_DISTRIBUTION_SPEC.md) | HA blueprint distribution from CMM — docs/examples/ + URL import |
+| [DASHBOARD_CARD_SPEC.md](DASHBOARD_CARD_SPEC.md) | Bundled Cable Modem Lovelace card — `card/` boundary, layout builder, commands, config contract |
 
 For architecture, parsing, and all other specs, see the
 [Core documentation](../../../packages/cable_modem_monitor_core/docs/).

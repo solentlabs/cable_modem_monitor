@@ -1,0 +1,20 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T701",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {
+    "strategy": "form_pbkdf2",
+    "login_endpoint": "/api/v1/session/login",
+    "pbkdf2_iterations": 1000,
+    "pbkdf2_key_length": 128,
+    "csrf_source": "cookie",
+    "csrf_header": "X-CSRF-TOKEN",
+    "cookie_name": "auth",
+    "login_success": {"error": "ok"}
+  },
+  "hardware": {"docsis_version": "3.1"},
+  "status": "awaiting_verification",
+  "attribution": {"contributors": [{"github": "test-user", "contribution": "HAR capture"}]},
+  "isps": ["Various"]
+}

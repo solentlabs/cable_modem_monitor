@@ -92,7 +92,7 @@ After starting, open <http://localhost:8123>.
 > code — only a restart re-imports your edits.
 >
 > **A changed `services.yaml` default won't appear in an action form you
-> have already used.** Developer Tools → Actions saves your last-used
+> have already used.** Tools → Actions saves your last-used
 > values per action and replays them over the service definition, so the
 > form keeps showing the old value no matter how many times you restart.
 > Clear the saved data to see the new default: select the action, switch

@@ -48,11 +48,13 @@ Home Assistant automatically loads the appropriate translation file based on the
 
 ### Translated Scope Is Deliberately Limited
 
-Only the config and options flows are translated. Two things are
+Only the config and options flows are translated. Three things are
 explicitly **out of scope** and stay English:
 
 - **Service (action) names and descriptions**
 - **Entity names** — sensors, buttons, and their per-channel variants
+- **Persistent notifications** — the text is built in Python, not in
+  `strings.json`
 
 This is a maintenance decision, not an oversight. Home Assistant falls
 back to English per key, so an untranslated surface degrades cleanly.

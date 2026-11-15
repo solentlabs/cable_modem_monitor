@@ -10,7 +10,7 @@ Entity types:
     - System: channel counts, error totals, software version, uptime
     - Per-channel: power, SNR, frequency, corrected/uncorrected
     - LAN stats: bytes, packets, errors, drops per interface
-    - Health: ICMP and HTTP latency (from health coordinator)
+    - Health: ICMP, TCP and HTTP latency (from health coordinator)
 
 See ENTITY_MODEL_SPEC.md for the full entity catalog.
 """

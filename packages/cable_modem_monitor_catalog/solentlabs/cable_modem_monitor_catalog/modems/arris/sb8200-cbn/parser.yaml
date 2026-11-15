@@ -28,8 +28,24 @@ downstream:
       filter:
         channel_id:
           not: 0
+    # SC-QAM codeword counters, keyed by dsid (= fun 10 chid). index.html
+    # getdocsisSignal reads them into the table it renders for fun 10.
+    - resource: "19"
+      root_element: signal_table
+      child_element: signal
+      merge_by: [channel_id]
+      columns:
+        - source: dsid
+          field: channel_id
+          type: integer
+        - source: correctable
+          field: corrected
+          type: integer
+        - source: uncorrectable
+          field: uncorrected
+          type: integer
     - resource: "9"
-      root_element: downstream_table
+      root_element: downstreamOFDM_table
       child_element: downstream
       columns:
         - source: dsid
@@ -84,7 +100,7 @@ upstream:
         channel_id:
           not: 0
     - resource: "6"
-      root_element: upstream_table
+      root_element: upstreamOFDMA_table
       child_element: upstream
       columns:
         - source: usid
@@ -96,14 +112,20 @@ upstream:
         - source: repPower1_6
           field: power
           type: float
+        # index.html getUpstreamTable: bandwidth = parseInt(width*1000).
         - source: width
           field: channel_width
           type: integer
+          scale: 1000
       channel_type:
         fixed: "ofdma"
       lock_status:
         all_of:
           - ofdmaLocked
+      # index.html skips usid 0.
+      filter:
+        channel_id:
+          not: 0
 
 system_info:
   sources:
@@ -114,11 +136,19 @@ system_info:
         - source: SwVersion
           field: software_version
           type: string
-        - source: HwModel
+        # Cmswinfo.html: Hardware Version shows cm_hardware_version, System
+        # Up Time shows cm_system_uptime; common_api.js shows cm_status as
+        # the modem's status line.
+        - source: cm_hardware_version
           field: hardware_version
           type: string
-        - source: cm_connected
+        - source: HwModel
+          field: model_name
+          type: string
+        - source: cm_system_uptime
+          field: system_uptime
+          type: uptime
+          format: "{days}day(s){hours}h:{minutes}m:{seconds}s"
+        - source: cm_status
           field: docsis_status
           type: string
-          map:
-            "1": "Operational"

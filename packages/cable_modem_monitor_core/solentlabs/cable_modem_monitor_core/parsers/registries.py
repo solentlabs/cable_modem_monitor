@@ -347,7 +347,7 @@ def _parse_xml_channels(
     section: XMLSection,
     resources: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], AnchorCount]:
-    """Parse channels from an XML section.
+    """Parse channels from an XML section: primaries concatenated, companions merged by ``merge_by``.
 
     XMLSection has multiple ``tables[].resource`` rather than a single
     section-level resource. For now, treat as trivially fulfilled —
@@ -355,17 +355,7 @@ def _parse_xml_channels(
     drives UC-19a; opt in if the same pattern surfaces.
     """
     parser = XMLChannelParser(section)
-    channels = parser.parse(resources)
-    if not isinstance(channels, list):
-        channels = []
-
-    # Auto-assign channel_number from 1-based row position when not
-    # already mapped by parser.yaml.  See CHANNEL_IDENTIFICATION_SPEC §10.
-    for idx, channel in enumerate(channels, start=1):
-        if "channel_number" not in channel:
-            channel["channel_number"] = idx
-
-    return channels, _ANCHOR_TRIVIAL
+    return _join_companions(parser.parse_parts(resources)), _ANCHOR_TRIVIAL
 
 
 def _parse_json_transposed_channels(

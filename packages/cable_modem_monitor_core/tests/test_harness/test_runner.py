@@ -684,8 +684,8 @@ def test_cbn_replay_fails_on_wrong_ciphertext(
     from solentlabs.cable_modem_monitor_core.auth import form_cbn
     from solentlabs.cable_modem_monitor_core.protocol.cbn import compal_encrypt
 
-    def broken_encrypt(real_password: str, session_token: str) -> str:
-        return compal_encrypt(password or real_password, token or session_token)
+    def broken_encrypt(real_password: str, session_token: str, prefix: str = ":") -> str:
+        return compal_encrypt(password or real_password, token or session_token, prefix)
 
     monkeypatch.setattr(form_cbn, "compal_encrypt", broken_encrypt)
     case = _build_test_dir(

@@ -1,7 +1,7 @@
 # Cable Modem Monitor
 
-[![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor?include_prereleases)](https://github.com/solentlabs/cable_modem_monitor/releases)
-[![HACS installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HACS&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
+[![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor)](https://github.com/solentlabs/cable_modem_monitor/releases)
+[![HA analytics installs](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=HA%20analytics&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.cable_modem_monitor.total)](https://analytics.home-assistant.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Supported Modems](https://img.shields.io/badge/Supported%20Modems-View%20Catalog-blue.svg)](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)
 
@@ -30,11 +30,15 @@ Check the [catalog of supported modems on PyPI](https://pypi.org/project/solentl
 
 Modem not listed? [File a request](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md); the guide walks through the capture.
 
+## Support
+
+Cable Modem Monitor is maintained by one person, in the evenings, around a day job. What to expect from replies and reviews, and where to ask what, is in [SUPPORT.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/SUPPORT.md).
+
 ## Setup
 
-1. Install via HACS (you're here).
-2. Restart Home Assistant.
-3. Settings → Devices & Services → Add Integration → "Cable Modem Monitor".
+1. Open **Settings → Marketplace**, search for "Cable Modem Monitor" and select **Install**. On Home Assistant before 2026.11, install it from HACS instead.
+2. If Home Assistant asks for a restart, restart it.
+3. Settings → Devices & Services → Add Integration → "Cable Modem Monitor". The setup page may open on its own after the install.
 4. Pick your manufacturer and model, enter your modem's IP (usually `192.168.100.1`) and credentials if required.
 
 ## Privacy and security
@@ -47,10 +51,6 @@ The integration reads from the modem's local web interface; the only write actio
 - [Dashboard and automation examples](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/EXAMPLES.md) — ready-to-use Lovelace YAML and automation templates
 - [Troubleshooting guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md) — connection problems, missing sensors, duplicate entities
 - [Changelog](https://github.com/solentlabs/cable_modem_monitor/blob/main/CHANGELOG.md) — what changed in each release
-
-## Support
-
-Cable Modem Monitor is maintained by one person, in the evenings, around a day job. What to expect from replies and reviews, and where to ask what, is in [SUPPORT.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/SUPPORT.md).
 
 ## Contributing and modem support
 

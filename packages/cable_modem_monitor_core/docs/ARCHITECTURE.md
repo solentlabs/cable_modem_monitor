@@ -21,11 +21,11 @@ and per-entry provenance live in the auto-generated catalog
 Two pip packages and an HA integration in a monorepo with strict dependency
 direction. Each pip package has its own `pyproject.toml` and enforces boundaries
 through real Python packaging — import violations are missing module errors, not
-lint warnings. The HA integration is distributed via HACS.
+lint warnings. The HA integration is distributed through the Home Assistant Marketplace and HACS.
 
 **Naming convention:** `cable_modem_monitor_` prefix for all packages in the
 `solentlabs` namespace. The HA integration name (`cable_modem_monitor`) is
-locked to the HACS store.
+locked to the store listing.
 
 ```mermaid
 graph TD
@@ -161,7 +161,7 @@ Core's engine. Depends on both Core and Catalog.
 | Responsibility | What |
 |----------------|------|
 | Config flow | Manufacturer dropdown (union of `manufacturer` and `brands` values) → model filter → variant → connection → validate. Uses Core's `list_modems()` with Catalog's `CATALOG_PATH` |
-| Runtime storage | `CableModemRuntimeData` on `entry.runtime_data` (HA 2024.12+) |
+| Runtime storage | `CableModemRuntimeData` on `entry.runtime_data` (HA 2025.1+) |
 | Data coordinator | Wraps Core's `Orchestrator.get_modem_data()` in HA's `DataUpdateCoordinator` |
 | Health coordinator | Second `DataUpdateCoordinator` wrapping `HealthMonitor.ping()`. Conditional — only created if probes work. Independent cadence (default 30s) |
 | Entities | Maps Core's `ModemSnapshot` → platform entities. Channel entities unavailable when `modem_data` is None |
@@ -171,7 +171,7 @@ Core's engine. Depends on both Core and Catalog.
 | Reset entities button | Removes all entities from HA registry and reloads the integration |
 | Reauth flow | Circuit breaker triggers HA native `async_step_reauth` via `entry.async_start_reauth()`. On success: entry updated + reloaded — a fresh orchestrator starts with clean auth state |
 | Diagnostics | Combines Core's `OrchestratorDiagnostics` with HA-side sanitized logs, channel dump, PII checklist |
-| Dashboard generator | Service that generates Lovelace YAML for modem dashboard based on current channels |
+| Dashboard card generator | Service that generates the YAML for one Lovelace card for the modem, based on current channels |
 
 No parsing, no auth, no modem-specific knowledge. The integration has no
 capture affordance — `har-capture` is the tool for collecting raw modem

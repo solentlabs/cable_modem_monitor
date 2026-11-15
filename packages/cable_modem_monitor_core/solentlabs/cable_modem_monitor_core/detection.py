@@ -43,6 +43,7 @@ _MAX_WORKERS = 32
 _TOKEN = re.compile(r"[A-Za-z0-9]+")
 _TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 _PASSWORD_INPUT = re.compile(r"<input\b[^>]*\btype\s*=\s*[\"']?password\b", re.IGNORECASE)
+_REALM = re.compile(r"\brealm\s*=\s*(?:\"([^\"]*)\"|([^\s,]+))", re.IGNORECASE)
 # DETECTION_SPEC.md § Reply evidence: attribute values that point at a path.
 _POINTER = re.compile(r"""\b(?:src|href|action|data)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""", re.IGNORECASE)
 _META = re.compile(r"<meta\b[^>]*>", re.IGNORECASE)
@@ -263,7 +264,7 @@ def _read_capped(response: requests.Response, deadline: float) -> bytes:
 
 
 def describe_response(url: str, status: int, headers: Mapping[str, str], body: bytes) -> tuple[Observation, str]:
-    """Return a landing response's observation and the text the matcher reads (``Server`` header, then body)."""
+    """Return a landing response's observation and the text the matcher reads (``Server``, realm, body)."""
     lowered = {name.lower(): value for name, value in headers.items()}
     text = body[:_BODY_CAP].decode("utf-8", errors="replace")
     title_match = _TITLE.search(text)
@@ -278,7 +279,9 @@ def describe_response(url: str, status: int, headers: Mapping[str, str], body: b
         www_authenticate=lowered.get("www-authenticate"),
         password_field=bool(_PASSWORD_INPUT.search(text)),
     )
-    return observation, f"{observation.server or ''}\n{text}"
+    realm_match = _REALM.search(observation.www_authenticate or "")
+    realm = (realm_match.group(1) or realm_match.group(2) or "") if realm_match else ""
+    return observation, f"{observation.server or ''}\n{realm}\n{text}"
 
 
 def _probe(host: str, timeout: float) -> _Probe:

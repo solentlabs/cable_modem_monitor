@@ -441,7 +441,7 @@ They are listed in `CONSUMED_SYSTEM_INFO_FIELDS`:
   derivation. It has **no sensor of its own**: an uptime state changes
   every poll by definition, writing a recorder row per cycle for a
   value that is `now − last_boot` at display time (#178). The
-  dashboard generator renders Last Boot Time with `format: relative`
+  card generator renders Last Boot Time with `format: relative`
   to carry the uptime display.
 - `downstream_channel_count`, `upstream_channel_count` — always
   computed by the parser coordinator (`len(channels)`); native value from
@@ -457,7 +457,7 @@ They are listed in `CONSUMED_SYSTEM_INFO_FIELDS`:
   own**: minting a standalone `SystemInfoFieldSensor` for it
   double-logs every real lock change (once on Status, once on the
   standalone) and adds a fourth `→ Unavailable` line on every outage
-  (#178). The standalone entity was retired; the dashboard generator
+  (#178). The standalone entity was retired; the card generator
   renders DOCSIS Status as an `attribute` row off the Status sensor.
 
 **Display-only fields** (`DISPLAY_ONLY_SYSTEM_INFO_FIELDS`) are

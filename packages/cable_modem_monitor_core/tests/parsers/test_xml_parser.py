@@ -168,3 +168,70 @@ def test_apply_channel_type_map_assigns_mapped_value() -> None:
     assert result[1]["channel_type"] == "sc-qam"
     # Unknown source value: no mapping, channel_type left unset
     assert "channel_type" not in result[2]
+
+
+# -----------------------------------------------------------------------
+# Companion tables (merge_by): FORMAT_XML_SPEC.md § Table-Level Properties
+# -----------------------------------------------------------------------
+
+# A firmware that serves codeword counters from a separate call keyed by
+# the channel id (CBN fun=19 signal_table, keyed by dsid = fun=10 chid).
+_PRIMARY_TABLE: dict[str, Any] = {
+    "resource": "10",
+    "root_element": "downstream_table",
+    "child_element": "downstream",
+    "columns": [
+        {"source": "chid", "field": "channel_id", "type": "integer"},
+        {"source": "pow", "field": "power", "type": "float"},
+    ],
+}
+_COMPANION_TABLE: dict[str, Any] = {
+    "resource": "19",
+    "root_element": "signal_table",
+    "child_element": "signal",
+    "merge_by": ["channel_id"],
+    "columns": [
+        {"source": "dsid", "field": "channel_id", "type": "integer"},
+        {"source": "pow", "field": "power", "type": "float"},
+        {"source": "correctable", "field": "corrected", "type": "integer"},
+        {"source": "uncorrectable", "field": "uncorrected", "type": "integer"},
+    ],
+}
+_PRIMARY_XML = (
+    "<downstream_table>"
+    "<downstream><chid>2</chid><pow>8.1</pow></downstream>"
+    "<downstream><chid>1</chid><pow>8.3</pow></downstream>"
+    "<downstream><chid>3</chid><pow>8.5</pow></downstream>"
+    "</downstream_table>"
+)
+_COMPANION_XML = (
+    "<signal_table>"
+    "<signal><dsid>1</dsid><pow>0</pow><correctable>11</correctable><uncorrectable>1</uncorrectable></signal>"
+    "<signal><dsid>2</dsid><pow>0</pow><correctable>22</correctable><uncorrectable>2</uncorrectable></signal>"
+    "<signal><dsid>99</dsid><correctable>9</correctable><uncorrectable>9</uncorrectable></signal>"
+    "</signal_table>"
+)
+
+
+def test_companion_table_merges_into_primaries() -> None:
+    """Companion rows join primaries by key; primary wins; unmatched rows add no channel."""
+    from solentlabs.cable_modem_monitor_core.parsers.registries import _parse_xml_channels
+
+    section = XMLSection.model_validate({"format": "xml", "tables": [_COMPANION_TABLE, _PRIMARY_TABLE]})
+    resources = {"10": DefusedET.fromstring(_PRIMARY_XML), "19": DefusedET.fromstring(_COMPANION_XML)}
+
+    channels, _ = _parse_xml_channels(section, resources)
+
+    assert channels == [
+        {"channel_id": 2, "power": 8.1, "corrected": 22, "uncorrected": 2, "channel_number": 1},
+        {"channel_id": 1, "power": 8.3, "corrected": 11, "uncorrected": 1, "channel_number": 2},
+        {"channel_id": 3, "power": 8.5, "channel_number": 3},
+    ]
+
+
+def test_all_companion_section_is_rejected() -> None:
+    """A section needs a primary table for companions to join."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="at least one primary table"):
+        XMLSection.model_validate({"format": "xml", "tables": [_COMPANION_TABLE]})

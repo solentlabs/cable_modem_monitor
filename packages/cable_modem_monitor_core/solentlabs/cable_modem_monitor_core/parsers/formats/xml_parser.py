@@ -12,6 +12,7 @@ Supports:
 - ``lock_status`` (AND of multiple boolean XML fields)
 - ``fixed_fields`` (static values for every channel)
 - ``filter`` (exclude channels by field value)
+- ``merge_by`` (companion tables, joined by the registry via ``parse_parts``)
 
 See PARSING_SPEC.md XMLParser section.
 """
@@ -66,6 +67,10 @@ class XMLChannelParser:
         for table in self._config.tables:
             channels.extend(self._parse_table(table, resources))
         return channels
+
+    def parse_parts(self, resources: dict[str, Any]) -> list[tuple[list[dict[str, Any]], list[str] | None]]:
+        """Parse each table, pairing its rows with its ``merge_by`` (None for a primary)."""
+        return [(self._parse_table(table, resources), table.merge_by) for table in self._config.tables]
 
     def _parse_table(self, table: XMLTableDefinition, resources: dict[str, Any]) -> list[dict[str, Any]]:
         """Extract channels from a single table definition."""

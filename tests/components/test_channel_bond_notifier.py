@@ -7,11 +7,15 @@ with a table plus a focused check on the onboarding message formatter.
 from __future__ import annotations
 
 import pytest
+from solentlabs.cable_modem_monitor_core.orchestration.models import ModemIdentity
 
 from custom_components.cable_modem_monitor.channel_bond_notifier import (
     ChannelTotals,
     evaluate,
     format_onboarding_message,
+    format_verification_request,
+    needs_verification_request,
+    verification_issue_url,
 )
 from custom_components.cable_modem_monitor.channel_bond_storage import BondState
 
@@ -127,12 +131,61 @@ def test_evaluate_zero_totals_never_actionable(desc, stored, onboarding_eligible
 # ---------------------------------------------------------------------
 
 
-def test_onboarding_message_includes_counts_and_service():
-    message = format_onboarding_message(model="TPS-2000", current=_CURRENT)
+def test_onboarding_message_includes_counts_and_card_pointer():
+    message = format_onboarding_message(model="TPS-2000", current=_CURRENT, verification_url=None)
     assert "TPS-2000" in message
     assert "24 downstream" in message
     assert "4 upstream" in message
-    assert "cable_modem_monitor.generate_dashboard" in message
+    assert "Add card" in message
+    assert "refresh your browser" in message
+    assert "Cable Modem" in message
+    assert "generate_dashboard_card" not in message
+
+
+_VERIFY_URL = "https://example.invalid/verify"
+
+# ┌──────────────────────┬──────────────────┬─────────────────────────┐
+# │ case                 │ verification_url │ asks for diagnostics    │
+# ├──────────────────────┼──────────────────┼─────────────────────────┤
+# │ confirmed model      │ None             │ no                      │
+# │ unconfirmed model    │ a URL            │ yes, linking that URL   │
+# └──────────────────────┴──────────────────┴─────────────────────────┘
+#
+# fmt: off
+VERIFICATION_REQUEST_CASES = [
+    ("confirmed model",   None,        False),
+    ("unconfirmed model", _VERIFY_URL, True),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("verification_url", "asks"),
+    [c[1:] for c in VERIFICATION_REQUEST_CASES],
+    ids=[c[0] for c in VERIFICATION_REQUEST_CASES],
+)
+def test_onboarding_message_asks_for_confirmation_only_when_unconfirmed(verification_url, asks):
+    message = format_onboarding_message(model="TPS-2000", current=_CURRENT, verification_url=verification_url)
+    assert ("Download diagnostics" in message) is asks
+    assert (f"({_VERIFY_URL})" in message) is asks
+    assert "Add card" in message
+
+
+# fmt: off
+VERIFICATION_URL_CASES = [
+    # (status,                 expected)
+    ("confirmed",              None),
+    ("awaiting_verification",
+     "https://github.com/solentlabs/cable_modem_monitor/issues/new"
+     "?template=modem_verification.yml&title=%5BVerification%5D%20Acme%20TPS-2000"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(("status", "expected"), VERIFICATION_URL_CASES, ids=[c[0] for c in VERIFICATION_URL_CASES])
+def test_verification_issue_url(status, expected):
+    identity = ModemIdentity(manufacturer="Acme", model="TPS-2000", status=status)
+    assert verification_issue_url(identity) == expected
 
 
 def test_change_message_formatter_is_gone():
@@ -140,3 +193,33 @@ def test_change_message_formatter_is_gone():
     from custom_components.cable_modem_monitor import channel_bond_notifier
 
     assert not hasattr(channel_bond_notifier, "format_change_message")
+
+
+_ASKED = BondState(baseline_downstream=24, baseline_upstream=4, verification_asked=True)
+
+# fmt: off
+NEEDS_REQUEST_CASES = [
+    # (desc,                          current,  stored,           recovery, expected)
+    ("not yet baselined",             _CURRENT, None,             False,    False),
+    ("baselined, not yet asked",      _CURRENT, _MATCHING_STATE,  False,    True),
+    ("already asked",                 _CURRENT, _ASKED,           False,    False),
+    ("recovery window open",          _CURRENT, _MATCHING_STATE,  True,     False),
+    ("zero totals, modem not working", _ZERO,   _MATCHING_STATE,  False,    False),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    ("current", "stored", "recovery_active", "expected"),
+    [c[1:] for c in NEEDS_REQUEST_CASES],
+    ids=[c[0] for c in NEEDS_REQUEST_CASES],
+)
+def test_needs_verification_request(current, stored, recovery_active, expected):
+    assert needs_verification_request(current=current, stored=stored, recovery_active=recovery_active) is expected
+
+
+def test_verification_request_names_the_model_and_links_the_issue():
+    message = format_verification_request(model="TPS-2000", verification_url=_VERIFY_URL)
+    assert message.startswith("TPS-2000 has not been confirmed")
+    assert "Download diagnostics" in message
+    assert f"({_VERIFY_URL})" in message

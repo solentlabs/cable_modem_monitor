@@ -23,6 +23,8 @@ start_docker_daemon() {
 
     echo "✗ Docker daemon failed to start after 30s"
     [ -f /tmp/docker-init.log ] && echo "Log:" && tail -5 /tmp/docker-init.log
+    # dockerd's own error (iptables, cgroups, storage) is only in its log
+    [ -f /tmp/dockerd.log ] && echo "dockerd log:" && tail -20 /tmp/dockerd.log
     return 1
 }
 

@@ -387,6 +387,8 @@ reason; adding an event type for them would not improve diagnostics.
 | `orchestration/policy.py` | `"Unknown signal: %s"` (WARNING) | Defensive guard that should never fire. |
 | `orchestration/collector.py` | `"No active session [%s] — Authenticating"` (DEBUG) | Pre-auth lifecycle noise. `SessionReused` fires on the reuse path; this fires on the non-reuse path as a single debug line. |
 | `orchestration/actions/hnap_action.py` | `"Interpolated %s: ${%s} → ..."` (DEBUG ×2) | Variable interpolation detail for action payload construction. |
+| `auth/form.py` | `"Login form action not found on %s..."` (ERROR) | A declared source that stopped resolving is a config defect; the static action keeps the login working, so the login does not fail. |
+| `auth/form_pbkdf2.py` | `"CSRF cookie %r absent after login..."` (ERROR) | A declared `csrf_source: cookie` that yields nothing is a config defect; the modem accepted the login, so the login does not fail. |
 | `orchestration/modem_health.py` | ICMP/HTTP probe debug calls (DEBUG ×4) | Individual probe failures below the aggregate `HealthStatusReport` signal. Documented above in § probe/health. |
 
 ## Test pattern

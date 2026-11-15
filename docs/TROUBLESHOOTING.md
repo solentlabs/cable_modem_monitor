@@ -397,7 +397,7 @@ Use the `cable_modem_monitor.orphaned_statistics` service. It works in two steps
 
 ### Step 1 — Preview
 
-1. Go to **Developer Tools → Actions**
+1. Go to **Tools → Actions**
 2. Select action: **Cable Modem Monitor: List Orphaned Statistics**
 3. Leave **Execute** unchecked
 4. Click **Perform Action**
@@ -423,7 +423,7 @@ The response lists orphaned entity IDs as comments. Nothing is deleted. Example:
 
 After reviewing the list:
 
-1. In **Developer Tools → Actions**, select **Cable Modem Monitor: List Orphaned Statistics** again
+1. In **Tools → Actions**, select **Cable Modem Monitor: List Orphaned Statistics** again
 2. Check **Execute**
 3. Click **Perform Action**
 
@@ -446,7 +446,7 @@ The service clears all orphaned statistics directly via HA's recorder and return
 Those sensors wrote a recorder row on most polls. The recorder keeps state history for `purge_keep_days` (default 10), so the rows remain only if you raised it. They are state history, not statistics, so `orphaned_statistics` does not touch them.
 
 **Solution:**
-Run Home Assistant's `recorder.purge_entities` action from **Developer Tools → Actions** in YAML mode. The IDs below use the default `cable_modem` prefix; copy yours from History if they differ. Purging is permanent.
+Run Home Assistant's `recorder.purge_entities` action from **Tools → Actions** in YAML mode. The IDs below use the default `cable_modem` prefix; copy yours from History if they differ. Purging is permanent.
 
 Removed sensors, all history:
 
@@ -549,15 +549,16 @@ Schema migrations are one-way. Newer integration versions migrate older config e
 
 **Solution:**
 
-1. Open **HACS** → **Cable Modem Monitor**
-2. Click the **⋯** menu → **Redownload**
-3. Click **Need a different version?**
-4. Pick the version you actually wanted (latest stable, or a specific release tag) from the **Release** dropdown
-5. Click **Download** and restart Home Assistant
+1. Open **Settings** → **Marketplace** → **Cable Modem Monitor**
+2. Click the **⋮** menu → **Install another version**
+3. Pick the version you actually wanted (latest stable, or a specific release tag) from the list
+4. Click **Install** and restart Home Assistant
+
+On Home Assistant before 2026.11, use HACS instead: open **Cable Modem Monitor**, click the **⋯** menu → **Redownload**, click **Need a different version?**, pick the version from the **Release** dropdown, then **Download**.
 
 If you're stuck after rolling back too far, delete and re-add the integration after returning to a compatible version.
 
-> The HA `update.install` service is not supported for this integration. Use the HACS picker above instead.
+> A branch name is not an installable version. Installs come from the zip attached to each release, and a branch has none, so `update.install` with a branch name fails. Pick a release with the version picker above.
 
 ---
 

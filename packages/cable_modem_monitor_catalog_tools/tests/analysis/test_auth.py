@@ -720,6 +720,11 @@ class TestParseFormParams:
             "pass": "secret",
         }
 
+    def test_text_is_decoded(self) -> None:
+        """The text fallback returns decoded names and values, as the params array does."""
+        post_data = {"text": "a%20b=x%2Cy&plus=p+q&pct=100%25"}
+        assert parse_form_params(post_data) == {"a b": "x,y", "plus": "p q", "pct": "100%"}
+
     def test_empty(self) -> None:
         """Empty postData returns empty dict."""
         assert parse_form_params({}) == {}

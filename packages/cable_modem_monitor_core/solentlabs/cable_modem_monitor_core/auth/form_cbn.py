@@ -3,15 +3,18 @@
 Replicates the browser-side login flow from Compal modem firmware:
 
 1. **GET login page** — receive ``sessionToken`` cookie.
-2. **Encrypt password** — ``compal_encrypt(password, sessionToken)``
+2. **Read the model** (``hw_model_fun`` only) — getter POST whose reply
+   fills ``{hw_model}`` in ``cipher_prefix`` and rotates the token.
+3. **Encrypt** — the password, and the entered username unless
+   ``username_value`` is set: ``compal_encrypt(value, sessionToken, prefix)``
    using AES-256-CBC with key=SHA256(token), IV=MD5(token).
-3. **POST login** — send to ``setter_endpoint`` with
+4. **POST login** — send to ``setter_endpoint`` with
    ``token=<tok>&fun=<login_fun>&Username=<username>&Password=<encrypted>``.
-4. **Check response** — body contains ``"successful"`` and ``SID=<N>``.
+5. **Check response** — body contains ``"successful"`` and ``SID=<N>``.
    A body without it carries one of four other firmware outcomes rather
    than always meaning a wrong password; see ``_classify_login_failure``
    and AUTH_CBN_SPEC.md § Login Token Vocabulary.
-5. **Set SID cookie** — extracted from response body, stored on session.
+6. **Set SID cookie** — extracted from response body, stored on session.
 
 ``ConnectionError`` and ``Timeout`` are re-raised for the collector to
 classify as ``CONNECTIVITY`` (UC-30/UC-31). An unreachable modem has
@@ -28,12 +31,14 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Callable
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
+from xml.etree.ElementTree import ParseError
 
+import defusedxml.ElementTree as DefusedET
 import requests
 
 from ..connectivity import is_connectivity_error
-from ..models.modem_config.auth import FormCbnAuth
+from ..models.modem_config.auth import CBN_HW_MODEL_PLACEHOLDER, FormCbnAuth
 from ..protocol.cbn import compal_encrypt
 from .base import AuthContext, AuthResult, BaseAuthManager, LoginLockoutError
 
@@ -47,11 +52,21 @@ _SID_RE = re.compile(r"SID=(\d+)")
 # Token Vocabulary carries the reasoning per group, and the catalog gate
 # test_cbn_login_token_coverage.py reads the tokens back out of each entry's
 # captured firmware JS so a new firmware line cannot add one unnoticed.
-_LOCKOUT_TOKENS = frozenset({"lockedout", "cbnAccessDenied"})
-_RESTART_TOKENS = frozenset({"cbnLogin", "cbnFirstInstall"})
+#
+# The SB8200 AC01 firmware (js/Login.js, js/common_api.js, Loginpwdcfg.html)
+# adds its own spelling of each outcome. Both lines share each set: an entry
+# is not asked which firmware it runs, and the tokens are distinct.
+_LOCKOUT_TOKENS = frozenset({"lockedout", "cbnAccessDenied", "MaxAttemptReached"})
+_RESTART_TOKENS = frozenset({"cbnLogin", "cbnFirstInstall", "GUILogin", "GUIFirstInstall"})
 _BLOCKED_TOKENS = frozenset({"cbnBlockContent"})
+# Branches the manager reaches without a token test of its own, listed so the
+# fleet gate can tell them from an unhandled token. loginpwdcfg arrives with
+# "successful" (forced password change page); idloginincorrect is the
+# wrong-password branch every unknown body already takes.
+_SUCCESS_VARIANT_TOKENS = frozenset({"loginpwdcfg"})
+_REJECTED_TOKENS = frozenset({"idloginincorrect"})
 
-HANDLED_LOGIN_TOKENS = _LOCKOUT_TOKENS | _RESTART_TOKENS | _BLOCKED_TOKENS
+HANDLED_LOGIN_TOKENS = _LOCKOUT_TOKENS | _RESTART_TOKENS | _BLOCKED_TOKENS | _SUCCESS_VARIANT_TOKENS | _REJECTED_TOKENS
 
 
 def _first_token(body: str, tokens: frozenset[str]) -> str:
@@ -150,7 +165,7 @@ class FormCbnAuthManager(BaseAuthManager):
         Args:
             session: Session to configure with auth state.
             base_url: Modem base URL.
-            username: Username credential (ignored — CBN uses username_value).
+            username: Username credential, encrypted unless username_value is set.
             password: Password credential.
             timeout: Per-request timeout in seconds.
             log_level: Logging level for non-error messages.
@@ -185,19 +200,29 @@ class FormCbnAuthManager(BaseAuthManager):
                 response=response,
             )
 
-        # Step 3: Encrypt password
+        # Step 3: Read the hardware model the envelope prefix names. The
+        # firmware's LoginFunc refuses to post without it, so do we.
+        model_outcome = self._read_hw_model(session, base_url, session_token, timeout, log_level)
+        if isinstance(model_outcome, AuthResult):
+            return model_outcome
+        hw_model, session_token = model_outcome
+
+        # Step 4: Encrypt password, and the entered username unless the
+        # firmware's login page has no username field (username_value)
         try:
-            encrypted = compal_encrypt(password, session_token)
+            username_field, encrypted = self._encode_credentials(username, password, session_token, hw_model)
         except ImportError as exc:
             return AuthResult(success=False, error=str(exc))
 
-        # Step 4: POST login — token must be first parameter
+        # Step 5: POST login — token must be first parameter. Values are
+        # URL-encoded as the browser's form serialization sends them: base64
+        # padding travels as %3D.
         setter_url = f"{base_url}{config.setter_endpoint}"
         post_body = (
             f"token={session_token}"
             f"&fun={config.login_fun}"
-            f"&Username={config.username_value}"
-            f"&Password={encrypted}"
+            f"&Username={quote(username_field, safe='')}"
+            f"&Password={quote(encrypted, safe='')}"
         )
         log(log_level, "CBN auth: posting login to %s", setter_url)
         outcome = _send(
@@ -214,7 +239,7 @@ class FormCbnAuthManager(BaseAuthManager):
             return outcome
         login_response = outcome
 
-        # Step 5: Check response for success + extract SID
+        # Step 6: Check response for success + extract SID
         # Status must be 200 — a 302 redirect to the login page would
         # contain "successful" in JS templates, causing false-positive.
         if login_response.status_code != 200:
@@ -236,7 +261,7 @@ class FormCbnAuthManager(BaseAuthManager):
                 response=login_response,
             )
 
-        # Step 6: Set SID cookie on session
+        # Step 7: Set SID cookie on session
         sid_value = sid_match.group(1)
         hostname = urlparse(base_url).hostname or ""
         session.cookies.set(config.sid_cookie_name, sid_value, domain=hostname)
@@ -248,6 +273,63 @@ class FormCbnAuthManager(BaseAuthManager):
             response=login_response,
             response_url=config.setter_endpoint,
         )
+
+    def _encode_credentials(self, username: str, password: str, session_token: str, hw_model: str) -> tuple[str, str]:
+        """The ``Username`` and ``Password`` login values, before URL encoding."""
+        config = self._config
+        prefix = config.cipher_prefix.replace(CBN_HW_MODEL_PLACEHOLDER, hw_model)
+        encrypted = compal_encrypt(password, session_token, prefix)
+        if config.username_value is not None:
+            return config.username_value, encrypted
+        return compal_encrypt(username, session_token, prefix), encrypted
+
+    def _read_hw_model(
+        self,
+        session: requests.Session,
+        base_url: str,
+        session_token: str,
+        timeout: int,
+        log_level: int,
+    ) -> tuple[str, str] | AuthResult:
+        """``(hw_model, session_token)`` after the ``hw_model_fun`` read, or the failure.
+
+        Without ``hw_model_fun`` nothing is sent: ``("", session_token)``.
+        """
+        config = self._config
+        if config.hw_model_fun is None:
+            return "", session_token
+        getter_url = f"{base_url}{config.getter_endpoint}"
+        _logger.log(log_level, "CBN auth: reading %s from fun=%s", config.hw_model_element, config.hw_model_fun)
+        outcome = _send(
+            lambda: session.post(
+                getter_url,
+                data=f"token={session_token}&fun={config.hw_model_fun}",
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=timeout,
+            ),
+            "Model read failed",
+        )
+        if isinstance(outcome, AuthResult):
+            return outcome
+
+        # No credential has been sent yet, so a failed read is not a verdict
+        # on one: busy keeps it off AUTH_FAILED, whose breaker would stop
+        # polling and ask for a new password (#200).
+        missing = f"Getter fun={config.hw_model_fun} reply has no <{config.hw_model_element}>"
+        if not outcome.ok:
+            return AuthResult(
+                success=False, busy=True, error=f"{missing}: HTTP {outcome.status_code}", response=outcome
+            )
+        try:
+            element = DefusedET.fromstring(outcome.text).find(f".//{config.hw_model_element}")
+        except ParseError:
+            element = None
+        hw_model = (element.text or "").strip() if element is not None else ""
+        if not hw_model:
+            return AuthResult(success=False, busy=True, error=missing, response=outcome)
+        # The getter reply rotates the token; CBN_Encrypt reads the cookie at
+        # call time, so the login keys on the rotated one.
+        return hw_model, session.cookies.get(config.session_cookie_name) or session_token
 
 
 def create_manager(config: FormCbnAuth) -> FormCbnAuthManager:

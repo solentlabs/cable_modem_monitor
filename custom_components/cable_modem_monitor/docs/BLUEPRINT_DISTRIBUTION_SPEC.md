@@ -264,14 +264,12 @@ This spec does NOT address:
 
 - **Static Lovelace dashboards via HACS dashboard category.** Separate
   concern with no documented current demand. The existing
-  `cable_modem_monitor.generate_dashboard` service (implemented in
+  `cable_modem_monitor.generate_dashboard_card` service (implemented in
   [`dev_tools.py`](../dev_tools.py), registered in
   [`services.py`](../services.py)) covers most dashboard use cases via the
   copy-paste developer-tool pattern.
-- **Dashboard generator productization or JS dashboard strategies.**
-  Separate concern, documented in a separate forthcoming spec.
-- **Custom Lovelace cards.** General HA frontend components, not
-  modem-specific.
+- **Custom Lovelace cards.** Not a blueprint concern; see
+  [DASHBOARD_CARD_SPEC.md](DASHBOARD_CARD_SPEC.md).
 - **HACS distribution of blueprints.** Deferred until the growth triggers
   in the Growth Path section are met.
 - **Auto-population of bundled blueprints inside the integration directory.**

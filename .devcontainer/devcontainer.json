@@ -99,7 +99,7 @@
   // Enable Docker-in-Docker for running docker commands inside the container
   // This runs a Docker daemon INSIDE the container, works on all platforms (Windows, macOS, Linux)
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {
       "version": "latest",
       "moby": false
     },
