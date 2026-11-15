@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The debug log no longer shows the session ID on Compal logins.** After a
   successful login on the CH7465MT and the SB8200 AC01 firmware, the debug log
   recorded the modem's session ID. It now records only its length.
+- **The Cable Modem card no longer fills the log while you edit it.** Each
+  refresh of the card logged a "Generated dashboard" line at info level;
+  it is now a debug line.
 
 ## [3.14.15-beta.7] - 2026-11-14
 

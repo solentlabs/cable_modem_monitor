@@ -841,8 +841,8 @@ def build_card_config(hass: HomeAssistant, options: Mapping[str, Any]) -> dict[s
             "No entities found for this modem — it may still be starting up, or its entities may be disabled"
         )
 
-    _LOGGER.info(
-        "Generated dashboard: %d DS channels, %d US channels, prefix=%s",
+    _LOGGER.debug(
+        "Built Cable Modem card: %d DS channels, %d US channels, prefix=%s",
         len(downstream_info),
         len(upstream_info),
         _get_entity_prefix(entry, resolver),
