@@ -43,6 +43,10 @@ Categorize each drifted package by **where it is declared**:
     (dev-only, not shipped)
   - `pip install` pins in `.github/workflows/*.yml`
   - `rev:` lines in `.pre-commit-config.yaml`
+  - feature pins (`ghcr.io/devcontainers/features/<name>:<major>`) in
+    `.devcontainer/devcontainer.json`. This skill covers them instead of
+    a Dependabot `devcontainers` entry: one update process, not two, and
+    Dependabot's PRs would target `main` rather than the open beta branch.
 
 **Lint, format and type tools move as one.** `ruff`, `black` and `mypy`
 are exact pins with one version each across CI (`tests.yml`), pre-commit,
@@ -67,6 +71,19 @@ grep -nE '(ruff|black|mypy)(==|>=)|rev: v?[0-9]' .github/workflows/*.yml \
 ```
 
 Build the list of `(package, installed, latest)` for our declared deps.
+
+Neither reads `.devcontainer/devcontainer.json`. For each feature pinned
+there, compare its major to the latest release:
+
+```bash
+gh api repos/devcontainers/features/contents/src/<name>/devcontainer-feature.json \
+  --jq '.content' | base64 -d | grep -m1 '"version"'
+```
+
+A newer major is a file edit; the gate is the Devcontainer CI job, which
+runs on a push touching `.devcontainer/**` and has no local mirror.
+Feature majors can track the runner OS: beta.7's Devcontainer CI broke
+when `ubuntu-latest` moved to 26.04 with docker-in-docker still on `:2`.
 
 ### 2. Split into free vs HA-constrained
 

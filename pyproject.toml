@@ -13,15 +13,15 @@ dependencies = [
     # Runtime dependencies
     "requests>=2.34.2",   # HTTP client for modem polling
     "pydantic>=2.0",      # Data validation and modeling
-    "har-capture~=0.16.1", # HAR sanitization + PII validation; library API (custom_patterns kwarg) used in catalog scripts; 0.16.1 redacts a value under a JSON SSID key instead of only flagging it; 0.14.1 is a hard floor: below 0.14.0 an SNMP OID tail read as a public IP, and below 0.14.1 a login response that equals a redacted cookie value was collapsed to a bare placeholder; below 0.13.1 serials, IPv6 and 10.x addresses went unredacted and password-label redaction overwrote JavaScript
+    "har-capture~=0.19.0", # HAR sanitization + PII validation; library API (custom_patterns kwarg) used in catalog scripts; 0.16.1 redacts a value under a JSON SSID key instead of only flagging it; 0.14.1 is a hard floor: below 0.14.0 an SNMP OID tail read as a public IP, and below 0.14.1 a login response that equals a redacted cookie value was collapsed to a bare placeholder; below 0.13.1 serials, IPv6 and 10.x addresses went unredacted and password-label redaction overwrote JavaScript
 ]
 
 [project.optional-dependencies]
 dev = [
     # Development tools; black, ruff and mypy pins match .github/workflows/tests.yml,
     # .pre-commit-config.yaml and requirements-dev.txt, bump them together
-    "black==26.1.0",      # Code formatter
-    "ruff==0.15.12",      # Linter and import sorter
+    "black==26.10.1",      # Code formatter
+    "ruff==0.17.5",      # Linter and import sorter
     "mypy==2.1.0",        # Static type checker
     "pytest>=8.0",        # Test runner
     "pytest-cov>=5.0",    # Coverage reporting
