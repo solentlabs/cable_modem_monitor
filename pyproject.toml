@@ -22,7 +22,7 @@ dev = [
     # .pre-commit-config.yaml and requirements-dev.txt, bump them together
     "black==26.10.1",      # Code formatter
     "ruff==0.17.5",      # Linter and import sorter
-    "mypy==2.1.0",        # Static type checker
+    "mypy==2.4.1",        # Static type checker
     "pytest>=8.0",        # Test runner
     "pytest-cov>=5.0",    # Coverage reporting
 ]

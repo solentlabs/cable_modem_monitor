@@ -37,7 +37,7 @@ repos:
   # package for type resolution — too heavy for pre-commit's isolated env.
   # CI and `mypy . --config-file=mypy.ini` (project venv) check everything.
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.1.0
+    rev: v2.4.1
     hooks:
       - id: mypy
         additional_dependencies:

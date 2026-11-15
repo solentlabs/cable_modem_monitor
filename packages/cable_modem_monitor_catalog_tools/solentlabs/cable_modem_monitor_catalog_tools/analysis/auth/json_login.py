@@ -320,7 +320,8 @@ def _is_ciphertext(value: Any) -> bool:
 
 def _login_page(entries: list[dict[str, Any]], index: int, cipher_key: str) -> dict[str, Any] | None:
     """The latest page before the login with a password input that builds the ciphertext key."""
-    for entry in reversed(entries[:index]):
+    # A slice, not reversed(): mypy 2.4 types reversed() over dict[str, Any] items as Any.
+    for entry in entries[:index][::-1]:
         if entry["request"].get("method", "").upper() != "GET":
             continue
         text = entry["response"].get("content", {}).get("text", "") or ""
