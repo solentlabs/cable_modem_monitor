@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The ARRIS SB8200 with AC01 firmware sends the headers its browser login
+  sends (#231).** Every request to the modem now carries the `Origin`,
+  `Referer` and `X-Requested-With` headers present on every login and data
+  request in three browser captures from two owners. Setup on this firmware
+  still dropped the connection with the previous beta.
 - **The debug log no longer shows the session ID on Compal logins.** After a
   successful login on the CH7465MT and the SB8200 AC01 firmware, the debug log
   recorded the modem's session ID. It now records only its length.
