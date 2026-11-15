@@ -43,10 +43,12 @@ comment so future-you knows why `validate-ci` doesn't cover it.
 
 ## Owned-deps check
 
-`validate-ci` ends with `scripts/check_owned_deps.py`, which reports only
-packages declared in our requirements files and pyproject.toml, not the
-transitive HA or test-harness tree. When it shows drift, propose a
-separate deps-update commit before pushing.
+`validate-ci` ends with `scripts/check_owned_deps.py`, which lists only
+declared versions that need a commit (a Python pin or cap excluding a
+latest release HA can install, or a pre-commit rev, Actions ref or dev
+container feature behind its latest tag) and known CVEs in our `==` pins.
+When it lists something, propose a separate deps-update commit before
+pushing, made with the `ha-safe-deps-bump` skill.
 
 ## HA compatibility gate
 

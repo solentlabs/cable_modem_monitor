@@ -154,7 +154,7 @@ jobs:
           python-version: "3.12"
 
       # ruff, black and mypy pins also live in .pre-commit-config.yaml,
-      # requirements-dev.txt, requirements-security.txt (mypy) and the
+      # requirements-dev.txt and the
       # root and Core pyproject.toml dev lists; bump every copy together.
       - name: Install dependencies
         run: |

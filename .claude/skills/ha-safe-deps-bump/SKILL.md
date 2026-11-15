@@ -15,12 +15,12 @@ the HACS/HA install on deploy (the beta.4 incident: `requests` and
 
 ## When to Use
 
-- The `make validate-ci` footer or `scripts/check_owned_deps.py` reports
-  declared dependencies with newer versions available.
+- The `make validate-ci` footer (`scripts/check_owned_deps.py`) lists a
+  declared version behind its latest release, or a known vulnerability in
+  one of our `==` pins. It runs before every push and is the project's only
+  update and CVE check: Dependabot is off, with no version-update PRs and
+  no alerts, because both cluttered the project.
 - A periodic lifecycle dependency refresh.
-- NOT for security patches — Dependabot is scoped to security-only and
-  handles those (see the dependabot strategy). This skill is the
-  non-security lifecycle bump.
 
 ## Key Rule — what may move and what may not
 
@@ -41,7 +41,7 @@ Categorize each drifted package by **where it is declared**:
   - `packages/cable_modem_monitor_catalog_tools/pyproject.toml` (never installed by HA)
   - `[dependency-groups]` in the Core and Catalog `pyproject.toml` files
     (dev-only, not shipped)
-  - `pip install` pins in `.github/workflows/*.yml`
+  - `pip install` pins and `uses: owner/repo@vN` refs in `.github/workflows/*.yml`
   - `rev:` lines in `.pre-commit-config.yaml`
   - feature pins (`ghcr.io/devcontainers/features/<name>:<major>`) in
     `.devcontainer/devcontainer.json`. This skill covers them instead of
@@ -50,7 +50,7 @@ Categorize each drifted package by **where it is declared**:
 
 **Lint, format and type tools move as one.** `ruff`, `black` and `mypy`
 are exact pins with one version each across CI (`tests.yml`), pre-commit,
-`requirements-dev.txt`, `requirements-security.txt` (mypy) and the
+`requirements-dev.txt` and the
 pyproject dev lists. Bumping one copy and leaving the rest lets a rule
 pass locally and fail in CI. Find every copy and change them in the
 same commit:
@@ -66,21 +66,19 @@ grep -nE '(ruff|black|mypy)(==|>=)|rev: v?[0-9]' .github/workflows/*.yml \
 
 ```bash
 .venv/bin/python scripts/check_owned_deps.py
-# same source data, machine-readable:
-.venv/bin/python -m pip list --outdated --format=json
 ```
 
-Build the list of `(package, installed, latest)` for our declared deps.
+Each row is a declared version that needs a commit: a Python pin or cap
+that excludes the latest release, or a pre-commit `rev:`, Actions ref or
+dev container feature behind its latest tag (compared at the pin's
+precision, so `@v6` is behind only when v7 exists). It reads declared
+versions, not the venv, so a floor that already admits the latest is not
+listed. A latest release HA cannot install is not listed either: its own
+HA constraint excludes it, or it requires a version of an HA-constrained
+package that the HA test environment does not have (types-requests 2.33
+needs urllib3 2; HA 2025.1 holds urllib3 below 2).
 
-Neither reads `.devcontainer/devcontainer.json`. For each feature pinned
-there, compare its major to the latest release:
-
-```bash
-gh api repos/devcontainers/features/contents/src/<name>/devcontainer-feature.json \
-  --jq '.content' | base64 -d | grep -m1 '"version"'
-```
-
-A newer major is a file edit; the gate is the Devcontainer CI job, which
+A dev container feature bump is gated by the Devcontainer CI job, which
 runs on a push touching `.devcontainer/**` and has no local mirror.
 Feature majors can track the runner OS: beta.7's Devcontainer CI broke
 when `ubuntu-latest` moved to 26.04 with docker-in-docker still on `:2`.
@@ -91,22 +89,13 @@ Grep each drifted package name to find its declaration file and bucket it
 per the Key Rule. If a package is declared in both a published
 `pyproject.toml` runtime list and a dev file, treat it as HA-constrained.
 
-### 3. Decide whether each free package is even a file change
+### 3. Confirm each listed cap is not deliberate
 
-Compare the **declared spec** (not the installed version) to the latest.
-The drift report (`pip list --outdated`) measures the local venv, not
-our declarations, so most "drift" on this floor-based project is just a
-stale venv:
-
-- Floor already permits the latest (e.g. `pytest-mock>=3.12.0` and a
-  newer release out) → **nothing to commit.** CI and users install fresh and
-  already get the latest; only the local `.venv` is behind. Sync it with
-  `pip install -U <pkg>` if desired — no tracked change.
-- Spec **excludes** the latest — a cap (`~=`, `<`) or pin (`==`), which
-  includes the shared `ruff`/`black`/`mypy` pins and pre-commit `rev:`
-  lines → this is the only case that needs a file edit, and caps are usually
-  deliberate (`har-capture~=0.13.1`, `types-requests<2.33.0`). Confirm the
-  reason in the nearby comment before touching it.
+Every listed row is a file edit, but caps are sometimes deliberate
+(`har-capture~=`). Read the reason in the nearby comment before moving
+one. A floor that admits the latest is never listed: CI and users
+install fresh and already get it; only the local `.venv` lags, and
+`pip install -U <pkg>` syncs it with no tracked change.
 
 The build is the gate: notify when old, update only if it stays green.
 Floored deps already track latest in CI, so they are effectively updated

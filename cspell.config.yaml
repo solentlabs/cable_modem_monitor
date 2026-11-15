@@ -449,6 +449,7 @@ words:
   - dataclasses
   - defusedxml
   - delenv
+  - devrelease # packaging.version.Version.is_devrelease
   - docstrings
   - dunder
   - fixturenames

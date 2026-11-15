@@ -23,7 +23,6 @@ pre-commit run --all-files
 | **mypy** | Type checking | Pre-commit, CI |
 | **CodeQL** | Security analysis | CI only (GitHub) |
 | **Bandit** | Python security | Optional local |
-| **Semgrep** | Security patterns | Optional local |
 
 ---
 
