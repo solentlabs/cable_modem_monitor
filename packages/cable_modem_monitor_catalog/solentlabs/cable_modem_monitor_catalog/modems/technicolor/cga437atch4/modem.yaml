@@ -58,7 +58,7 @@ detection:
   http_headers:
     - "WebServer"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config:

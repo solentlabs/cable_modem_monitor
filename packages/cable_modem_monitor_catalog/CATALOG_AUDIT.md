@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**53 configurations supported** — 35 confirmed on real hardware, 18 awaiting verification.
+**53 configurations supported** — 36 confirmed on real hardware, 17 awaiting verification.
 
 ---
 
@@ -64,7 +64,6 @@ and share a diagnostics snapshot.
 | NE6037 | JSON-RPC | Play | — | captured |
 | CGA2121 | HTML | Telia | generated | n/a |
 | CGA4236 | HTML | Unknown | — | n/a |
-| CGA437ATCH4 | HTML | Vectra | — | captured |
 | CGA6444VF | HTML | Vodafone | — | n/a |
 | TC4400 | HTML | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia, Teksavvy | — | n/a |
 
@@ -118,6 +117,7 @@ Entries with an open capability gap are listed above, not here.
 | F3896LG-VMB | HTML | Virgin Media UK | generated | captured |
 | F3896LG-ZG | HTML | Ziggo | — | not captured |
 | DM1000 | HTML | Koodo | hybrid | captured |
+| CGA437ATCH4 | HTML | Vectra | — | captured |
 | XB10 | HTML | Xfinity | — | not captured |
 | XB6 | HTML | Rogers | — | n/a |
 | XB7 | HTML | Rogers, Comcast, Xfinity | generated | n/a |
