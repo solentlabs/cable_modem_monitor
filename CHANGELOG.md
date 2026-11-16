@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CGA6444VF waits 20 s per request.** After Vodafone firmware
+  6.0.0L-R36-RT, the channel request answered in 11.3 s in another
+  project's report, past the 10 s default, which would leave the modem
+  Unreachable with no data. (#120)
 - **A failed custom config test reports every step.** When
   `configuration.yaml` sets a log level for the integration under `logger:`,
   the report dropped its debug lines, including the address the login was sent

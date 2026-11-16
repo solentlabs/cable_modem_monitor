@@ -2,6 +2,7 @@ manufacturer: Technicolor
 model: CGA6444VF
 transport: http
 default_host: "192.168.0.1"
+timeout: 20
 
 auth:
   strategy: form_pbkdf2
