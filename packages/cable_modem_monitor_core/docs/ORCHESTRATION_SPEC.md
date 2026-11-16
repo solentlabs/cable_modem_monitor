@@ -279,7 +279,7 @@ Example — stub response (login-page detection false negative):
 
 Example — successful collection with no channels:
 
-- **Log** (INFO): `"Parse complete [MODEL]: 0 DS, 0 US channels"`
+- **Log** (INFO): `"Collection complete [MODEL] — DS: 0, US: 0 (95ms)"`
 - **Signal**: `CollectorSignal.OK`
 - **ModemResult.modem_data**: `{downstream: [], upstream: [], system_info: {...}}`
 

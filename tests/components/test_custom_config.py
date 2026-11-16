@@ -16,6 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant import config_entries
+from homeassistant.components.logger import _get_logger_class
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import issue_registry as ir
@@ -95,6 +96,20 @@ BAD_YAML_CASES = [
 ]
 # fmt: on
 
+# ┌────────────────────────────────────────────┬──────────────────────────────────┐
+# │ logger named under HA's `logger: logs:`    │ description                      │
+# ├────────────────────────────────────────────┼──────────────────────────────────┤
+# │ solentlabs.cable_modem_monitor_core        │ package level set by the user    │
+# │ solentlabs.cable_modem_monitor_core.test   │ a module's own level set         │
+# └────────────────────────────────────────────┴──────────────────────────────────┘
+#
+# fmt: off
+HA_LEVEL_OVERRIDE_CASES = [
+    ("solentlabs.cable_modem_monitor_core",       "package level set by the user"),
+    ("solentlabs.cable_modem_monitor_core.test",  "a module's own level set"),
+]
+# fmt: on
+
 
 # =============================================================================
 # Pure helpers
@@ -158,6 +173,25 @@ def test_capture_attempt_keeps_added_debug_lines_out_of_has_log():
     assert [r.getMessage() for r in records] == ["detail only the report should hold", "a line HA logs anyway"]
     assert seen == ["a line HA logs anyway"]
     assert package.propagate is True
+
+
+@pytest.mark.parametrize(("configured", "desc"), HA_LEVEL_OVERRIDE_CASES, ids=[c[-1] for c in HA_LEVEL_OVERRIDE_CASES])
+def test_capture_attempt_keeps_debug_under_ha_logger_overrides(configured: str, desc: str, monkeypatch):
+    """HA's logger class ignores setLevel on a configured logger; the report still gets DEBUG."""
+    configured_logger = logging.getLogger(configured)
+    # HA's own class: setLevel is a no-op for a logger named in `logger: logs:`.
+    level_before = configured_logger.level
+    monkeypatch.setattr(configured_logger, "__class__", _get_logger_class({configured: logging.INFO}))
+    # The base method is what HA's orig_setLevel calls; HA's override ignores setLevel here.
+    logging.Logger.setLevel(configured_logger, logging.INFO)
+    try:
+        with capture_attempt() as records:
+            logging.getLogger("solentlabs.cable_modem_monitor_core.test").debug("Form login: POST /login")
+
+        assert [r.getMessage() for r in records] == ["Form login: POST /login"], desc
+        assert configured_logger.level == logging.INFO, desc
+    finally:
+        logging.Logger.setLevel(configured_logger, level_before)
 
 
 def test_build_report_scrubs_and_sanitizes():

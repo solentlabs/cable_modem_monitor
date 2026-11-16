@@ -19,8 +19,8 @@ class PollEvent:
     Attributes:
         timestamp: When the poll was recorded.
         model: Modem model tag from the log line.
-        duration_s: Wall-clock poll time in seconds.  0.0 when the
-            duration source (HA fetch_complete) is unavailable.
+        duration_s: Wall-clock poll time in seconds, from the
+            ``Collection complete`` elapsed time.  0.0 on a failed poll.
         success: Whether the parse stage completed without error.
         ds_channels: Downstream channel count (0 on failure).
         us_channels: Upstream channel count (0 on failure).
@@ -78,7 +78,8 @@ class RecoveryEvent:
     Attributes:
         timestamp: When recovery was detected.
         model: Modem model tag.
-        transition: Recovery type (e.g. ``"backoff_cleared"``).
+        transition: Recovery type (``"backoff_cleared"``, ``"recovery_window_open (reason)"``,
+            ``"recovery_window_closed (Ns)"``).
     """
 
     timestamp: datetime

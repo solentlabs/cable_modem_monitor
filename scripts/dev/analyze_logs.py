@@ -22,6 +22,7 @@ from pathlib import Path
 from statistics import mean, median
 
 from solentlabs.cable_modem_monitor_core.analysis import (
+    TS_PATTERN,
     CoreAnalysis,
     RecoveryEvent,
     parse_core_logs,
@@ -32,18 +33,26 @@ from solentlabs.cable_modem_monitor_core.analysis import (
 # HA-specific patterns — custom_components.cable_modem_monitor loggers
 # ---------------------------------------------------------------------------
 
-_TS = r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})"
+_TS = TS_PATTERN
+
+# Intervals render through _format_interval in the integration's __init__.py:
+# "every 10m 30s", or "manual only" / "disabled" when off.
+_INTERVAL = r"(every [\dhms ]+|manual only|disabled)"
 
 HA_PATTERNS: dict[str, re.Pattern[str]] = {
-    "startup": re.compile(_TS + r" .+Cable Modem Monitor (v[\d.a-z-]+) starting \[(.+?)\]"),
-    "initialized": re.compile(_TS + r" .+Initialized \[(.+?)\] — polling every (\d+)m"),
+    # An optional parenthesised marker may follow the version, e.g. "(local dev)".
+    "startup": re.compile(_TS + r" .+Cable Modem Monitor (v\S+)(?: \([^)]*\))? starting \[(.+?)\]"),
+    "initialized": re.compile(
+        _TS + r" .+Initialized \[(.+?)\] — Polling " + _INTERVAL + ", health checks " + _INTERVAL
+    ),
     "fetch_complete": re.compile(
         _TS + r" .+Finished fetching (.+?) data in ([\d.]+) seconds " + r"\(success: (True|False)\)"
     ),
     "first_poll_no_data": re.compile(_TS + r" .+First poll complete \[(.+?)\] — no data"),
-    "deferred_sensors": re.compile(_TS + r" .+Deferred data sensors created \[(.+?)\] — (\d+) entities"),
-    "health_started": re.compile(_TS + r" .+Health monitoring started \[(.+?)\] — every (\d+)s"),
+    "deferred_sensors": re.compile(_TS + r" .+Deferred data sensors created \[(.+?)\] — (\d+) data-dependent entities"),
+    "health_started": re.compile(_TS + r" .+Health monitoring started \[(.+?)\] — " + _INTERVAL),
     "health_recovery": re.compile(_TS + r" .+Health recovery \[(.+?)\] — scheduling immediate poll"),
+    "integration_line": re.compile(_TS + r" (DEBUG|INFO|WARNING|ERROR|CRITICAL) .*cable_modem_monitor"),
 }
 
 
@@ -61,12 +70,14 @@ class HAAnalysis:
         model: Modem model from startup log line.
         version: Monitor version from startup log line.
         start_time: First timestamp seen (startup).
-        end_time: Last poll timestamp.
-        poll_interval_m: Configured poll interval in minutes.
-        health_interval_s: Configured health-check interval in seconds.
+        end_time: Timestamp of the last integration log line.
+        poll_interval_s: Configured poll interval in seconds (0 = manual only).
+        health_interval_s: Configured health-check interval in seconds (0 = disabled).
         deferred_entity_count: Number of deferred sensor entities.
         first_poll_no_data: Whether the first poll returned no data.
         ha_recoveries: HA-layer recovery events (health_recovery trigger).
+        debug_logged: Whether any Core line is at DEBUG, so polls after the
+            first and steady-state health checks are in the log.
     """
 
     core: CoreAnalysis = field(default_factory=CoreAnalysis)
@@ -74,11 +85,12 @@ class HAAnalysis:
     version: str = ""
     start_time: str = ""
     end_time: str = ""
-    poll_interval_m: int = 0
+    poll_interval_s: int = 0
     health_interval_s: int = 0
     deferred_entity_count: int = 0
     first_poll_no_data: bool = False
     ha_recoveries: list[RecoveryEvent] = field(default_factory=list)
+    debug_logged: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -90,13 +102,9 @@ def _enrich_poll_durations(
     core: CoreAnalysis,
     lines: list[str],
 ) -> None:
-    """Match fetch_complete lines to Core polls and fill in duration_s.
-
-    The Core parser produces polls with duration_s=0 because
-    fetch_complete is an HA-layer log line.  This function walks
-    the lines a second time, matching each non-health fetch_complete
-    to the next unfinished poll in order.
-    """
+    """Set each poll's duration_s from the matching HA fetch_complete line, in order."""
+    # Core fills duration_s on success only; HA's DEBUG fetch_complete line
+    # replaces it with the coordinator's update time and covers failed polls.
     poll_idx = 0
     for line in lines:
         m = HA_PATTERNS["fetch_complete"].search(line)
@@ -108,6 +116,12 @@ def _enrich_poll_durations(
         if poll_idx < len(core.polls):
             core.polls[poll_idx].duration_s = float(m.group(3))
             poll_idx += 1
+
+
+def _interval_seconds(text: str) -> int:
+    """Seconds in an interval rendered by _format_interval; 0 when off."""
+    units = {"h": 3600, "m": 60, "s": 1}
+    return sum(int(n) * units[u] for n, u in re.findall(r"(\d+)([hms])", text))
 
 
 def parse_ha_logs(lines: list[str]) -> HAAnalysis:
@@ -127,6 +141,13 @@ def parse_ha_logs(lines: list[str]) -> HAAnalysis:
     result = HAAnalysis(core=core)
 
     for line in lines:
+        m = HA_PATTERNS["integration_line"].search(line)
+        if m:
+            result.end_time = m.group(1)
+            # Polls and health checks are Core's lines; DEBUG elsewhere hides them still.
+            core_debug = m.group(2) == "DEBUG" and "solentlabs.cable_modem_monitor_core" in line
+            result.debug_logged = result.debug_logged or core_debug
+
         m = HA_PATTERNS["startup"].search(line)
         if m:
             result.start_time = m.group(1)
@@ -136,12 +157,13 @@ def parse_ha_logs(lines: list[str]) -> HAAnalysis:
 
         m = HA_PATTERNS["initialized"].search(line)
         if m:
-            result.poll_interval_m = int(m.group(3))
+            result.poll_interval_s = _interval_seconds(m.group(3))
+            result.health_interval_s = _interval_seconds(m.group(4))
             continue
 
         m = HA_PATTERNS["health_started"].search(line)
         if m:
-            result.health_interval_s = int(m.group(3))
+            result.health_interval_s = _interval_seconds(m.group(3))
             continue
 
         m = HA_PATTERNS["first_poll_no_data"].search(line)
@@ -164,10 +186,6 @@ def parse_ha_logs(lines: list[str]) -> HAAnalysis:
                 )
             )
             continue
-
-    # Derive end_time from last poll
-    if core.polls:
-        result.end_time = core.polls[-1].timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:23]
 
     # Enrich Core polls with HA fetch_complete durations
     _enrich_poll_durations(core, lines)
@@ -221,8 +239,16 @@ def _report_header(results: HAAnalysis) -> list[str]:
         duration = end - start
         lines.append(f"  Duration: {_fmt_duration(duration)}")
         lines.append(f"  Period:   {start:%Y-%m-%d %H:%M} — {end:%H:%M}")
-    if results.poll_interval_m:
-        lines.append(f"  Config:   poll={results.poll_interval_m}m, " f"health={results.health_interval_s}s")
+    if results.poll_interval_s or results.health_interval_s:
+        poll_s, health_s = results.poll_interval_s, results.health_interval_s
+        poll = _fmt_duration(timedelta(seconds=poll_s)) if poll_s else "manual only"
+        health = _fmt_duration(timedelta(seconds=health_s)) if health_s else "disabled"
+        lines.append(f"  Config:   poll={poll}, health={health}")
+    if not results.debug_logged and (results.core.polls or results.core.health_checks):
+        # Successes after the first poll log at DEBUG; failures always log.
+        # A rate from an INFO log counts every failure and almost no success.
+        lines.append("  Log:      INFO log, steady-state polls and health checks absent;")
+        lines.append("            counts are logged events, not rates")
     lines.append("")
     return lines
 
@@ -241,7 +267,7 @@ def _report_polling(results: HAAnalysis) -> list[str]:
     lines.append(f"  Total polls:     {total}")
     lines.append(f"  Successful:      {len(successful)}")
     lines.append(f"  Failed:          {len(failed)}")
-    if total > 0:
+    if total > 0 and results.debug_logged:
         lines.append(f"  Success rate:    {len(successful) / total * 100:.1f}%")
 
     if successful:
@@ -263,7 +289,8 @@ def _report_polling(results: HAAnalysis) -> list[str]:
         lines.append("")
         lines.append("  Failed polls:")
         for p in failed:
-            lines.append(f"    {p.timestamp:%H:%M:%S} — {p.duration_s:.1f}s")
+            measured = f" — {p.duration_s:.1f}s" if p.duration_s else ""
+            lines.append(f"    {p.timestamp:%H:%M:%S}{measured}")
     lines.append("")
     return lines
 
@@ -285,13 +312,16 @@ def _report_health(results: HAAnalysis) -> list[str]:
     if degraded:
         lines.append(f"  Degraded:        {len(degraded)}")
 
-    if responsive:
-        icmp_vals = [h.icmp_ms for h in responsive]
-        http_vals = [h.tcp_ms for h in responsive]
+    # 0.0 means the probe did not run (TCP skipped during collection,
+    # ICMP off): no sample, not a zero-latency one.
+    icmp_vals = [h.icmp_ms for h in responsive if h.icmp_ms]
+    http_vals = [h.tcp_ms for h in responsive if h.tcp_ms]
+    if icmp_vals:
         lines.append("")
         lines.append(f"  ICMP (avg):      {mean(icmp_vals):.1f}ms")
         lines.append(f"  ICMP (p95):      {_percentile(icmp_vals, 95):.1f}ms")
         lines.append(f"  ICMP (max):      {max(icmp_vals):.1f}ms")
+    if http_vals:
         lines.append(f"  TCP (avg):  {mean(http_vals):.1f}ms")
         lines.append(f"  TCP (p95):  {_percentile(http_vals, 95):.1f}ms")
         lines.append(f"  TCP (max):  {max(http_vals):.1f}ms")
@@ -429,17 +459,20 @@ def _report_verdict(results: HAAnalysis) -> list[str]:
         if len(failed) == 1 and not polls[0].success:
             lines.append("  First-poll failure only (cold start) — OK")
         else:
-            issues.append(f"{len(failed)} poll failures " f"({len(failed) / total * 100:.1f}%)")
+            share = f"({len(failed) / total * 100:.1f}%)" if results.debug_logged else "logged"
+            issues.append(f"{len(failed)} poll failure(s) {share}")
 
-    responsive = [h for h in results.core.health_checks if h.status == "responsive"]
-    if responsive:
-        http_vals = [h.tcp_ms for h in responsive]
+    http_vals = [h.tcp_ms for h in results.core.health_checks if h.status == "responsive" and h.tcp_ms]
+    if http_vals:
         http_med = median(http_vals)
         spike_count = sum(1 for v in http_vals if v > http_med * 3)
         if spike_count > 0:
             issues.append(f"{spike_count} health latency spike(s) " f"(>{http_med * 3:.0f}ms)")
 
-    if not issues:
+    if not polls and not results.core.health_checks:
+        # Nothing read is not nothing wrong: a format drift reads as zero events.
+        lines.append("  NO DATA — no poll or health check lines recognized")
+    elif not issues:
         lines.append("  CLEAN — no issues detected")
     else:
         for issue in issues:

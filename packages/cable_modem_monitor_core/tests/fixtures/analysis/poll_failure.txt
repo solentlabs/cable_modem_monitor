@@ -1,2 +1,2 @@
-2025-04-01 10:00:01.100 DEBUG solentlabs.cable_modem_monitor_core.orchestration — Poll [T100] — auth: basic, endpoint: /status, session: none
-2025-04-01 10:00:02.200 INFO solentlabs.cable_modem_monitor_core.orchestration.collector — Connection failed during auth [T100]
+2025-04-01 10:00:01.100 INFO solentlabs.cable_modem_monitor_core.orchestration — Poll [T100] — auth: BasicAuth, url: http://modem.example, credentials: yes, session: none
+2025-04-01 10:00:11.200 WARNING solentlabs.cable_modem_monitor_core.orchestration — Connection failed during auth [T100] strategy=basic — ReadTimeout: Read timed out. (read timeout=10)

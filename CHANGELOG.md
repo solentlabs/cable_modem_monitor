@@ -14,6 +14,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   config against the modem and saves it only if the test passes, so trying a
   change no longer means deleting the modem and adding it again.
 
+### Fixed
+
+- **A failed custom config test reports every step.** When
+  `configuration.yaml` sets a log level for the integration under `logger:`,
+  the report dropped its debug lines, including the address the login was sent
+  to. It now holds every step whatever level Home Assistant logs at.
+- **The bundled soak log analyser reads current logs.** Its patterns still
+  matched log lines renamed earlier and no timestamp carrying a UTC offset, so
+  a real log read as empty and was reported clean. In Core's `CORE_PATTERNS`,
+  `parse_complete` is now `collection_complete`, `poll_start` is gone, and
+  `recovery_open` and `recovery_close` are new. An INFO-level log now reports
+  counts rather than success rates, because successful polls after the first
+  only appear at DEBUG.
+
 ## [3.14.15-beta.8] - 2026-11-15
 
 ### Added

@@ -64,15 +64,15 @@ After reviewing the `format_report` output, comment on each area:
 |--------|---------|-------------|
 | Responsive rate | 100% | < 100% — connectivity issues |
 | ICMP latency avg | < 5ms | > 10ms — network congestion |
-| HTTP latency avg | < 100ms | > 500ms — modem overloaded |
+| TCP latency avg | < 100ms | > 500ms — modem overloaded |
 | Outage count | 0 | > 0 — modem went unreachable |
 
 #### Timing Consistency
 
 Compare observed intervals against configured values:
 
-- **Poll interval**: Should match the configured `poll_interval_m`
-  (default 5m). Jitter > 10% suggests contention or blocking.
+- **Poll interval**: Should match the configured `poll_interval_s`
+  (default 10m). Jitter > 10% suggests contention or blocking.
 - **Health interval**: Should match `health_interval_s` (default 30s).
   Large gaps suggest the health monitor was interrupted.
 
@@ -91,7 +91,7 @@ Summarize findings with this structure:
 ## Soak Analysis: {model} ({duration})
 
 ### Configuration
-- Poll interval: {poll_interval_m}m
+- Poll interval: {poll_interval_s}s
 - Health interval: {health_interval_s}s
 - Version: {version}
 
@@ -121,6 +121,11 @@ Summarize findings with this structure:
 
 ## Notes
 
+- At HA's default INFO level, a poll or health check logs only on the
+  first poll and on status changes; steady-state lines are DEBUG. An
+  INFO log yields a handful of events, so rates and intervals need a
+  DEBUG soak. A `NO DATA` verdict means no line was recognized, not
+  that the run was clean.
 - `parse_ha_logs` is in `scripts/dev/analyze_logs.py` (HA-specific,
   NOT in Core: ARCHITECTURE.md § Invariants, no HA dependencies in Core)
 - The Core-level `analyze_logs` MCP tool only parses Core patterns;

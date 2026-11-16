@@ -86,7 +86,7 @@ def test_get_package_versions_not_installed():
 # ├──────────────┼───────────────────────┼──────────────┼──────────────┤
 # │ 600          │ 30                    │ every 10m    │ every 30s    │
 # │ 30           │ 0                     │ every 30s    │ disabled     │
-# │ 0            │ 60                    │ manual only  │ every 60s    │
+# │ 0            │ 60                    │ manual only  │ every 1m     │
 # │ 0            │ 0                     │ manual only  │ disabled     │
 # └──────────────┴───────────────────────┴──────────────┴──────────────┘
 #
