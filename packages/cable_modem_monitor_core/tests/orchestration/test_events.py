@@ -26,9 +26,12 @@ from solentlabs.cable_modem_monitor_core.orchestration.events import (
     EventLevel,
     HealthRecoveryDetected,
     HealthStatusReport,
+    HnapSessionExpired,
+    JsonRpcSessionExpired,
     LoginPageDriftDetected,
     RecoveryWindowOpened,
     ResourceFetched,
+    SessionRetryFailed,
     ZeroChannelsNoSystemInfo,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.logging import log_event
@@ -78,6 +81,11 @@ def test_event_level_values_match_stdlib():
         ),
         (HealthRecoveryDetected(model="SB8200", previous_status="degraded"), EventLevel.INFO),
         (RecoveryWindowOpened(model="SB8200", reason="restart_command", window_seconds=300.0), EventLevel.INFO),
+        # A session expiry the same-poll retry recovers is routine; the
+        # retry's failure is the one that warns (LOGGING_SPEC § Phase: session).
+        (HnapSessionExpired(model="SB8200", status_code=404), EventLevel.INFO),
+        (JsonRpcSessionExpired(model="SB8200", method="CM.getDownstream", code="expired"), EventLevel.INFO),
+        (SessionRetryFailed(model="SB8200", signal_name="LOAD_AUTH", streak=1, threshold=6), EventLevel.WARNING),
     ],
 )
 def test_fixed_level_events(event, expected_level):

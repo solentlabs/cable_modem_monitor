@@ -267,7 +267,7 @@ Example — HTTP 401 on a data page:
 
 Example — HNAP 404 on reused session:
 
-- **Log** (WARNING): `"HNAP HTTP 404 on reused session [MODEL] — session likely expired"`
+- **Log** (INFO): `"HNAP session expired [MODEL] — HTTP 404"`
 - **Signal**: `CollectorSignal.LOAD_AUTH`
 - **ModemResult.error**: `"HNAP HTTP 404 — session expired"`
 

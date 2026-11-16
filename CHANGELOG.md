@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `recovery_open` and `recovery_close` are new. An INFO-level log now reports
   counts rather than success rates, because successful polls after the first
   only appear at DEBUG.
+- **A session expiry the next login recovers no longer warns.** A modem that
+  ends its session every 30 minutes logged a warning each time, though the
+  same poll logged in again and collected. HNAP and JSON-RPC expiries now log
+  at INFO, and a failed retry, which counts toward the auth circuit breaker,
+  now warns. (#215)
 
 ## [3.14.15-beta.8] - 2026-11-15
 

@@ -1834,7 +1834,7 @@ class TestJsonRpcLoadPath:
 
     def test_expired_code_is_load_auth(self, caplog: pytest.LogCaptureFixture) -> None:
         """The declared expiry code is a stale session, logged with its method and code."""
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.INFO):
             result, _, _ = self._run(
                 [_rpc_reply({"jsonrpc": "2.0", "error": {"code": "msgLoginExpiredText", "message": ""}, "id": 1})]
             )
