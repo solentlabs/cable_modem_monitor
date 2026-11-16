@@ -144,6 +144,25 @@
           "scan_interval": "Ogni quanto interrogare i dati del modem. Predefinito 10 minuti. Imposta su 00:00:00 per disattivare il polling automatico (solo manuale tramite il pulsante Aggiorna).",
           "health_check_interval": "Ogni quanto verificare la raggiungibilita del modem. Predefinito 30 secondi. Imposta su 00:00:00 per disattivare le verifiche di stato."
         }
+      },
+      "custom_config": {
+        "title": "Configurazione personalizzata",
+        "description": "Invia prova questa configurazione sul tuo modem; non viene salvato nulla finché una prova non riesce. Le prove fallite scrivono un \"custom config report\" nel [registro]({logs_url}). [Guida]({guide_url})",
+        "data": {
+          "host": "Indirizzo IP del Modem",
+          "username": "Nome utente",
+          "password": "Password",
+          "scan_interval": "Intervallo di Polling Dati",
+          "health_check_interval": "Intervallo Verifica Stato",
+          "modem_config": "Configurazione del modem (modem.yaml)"
+        },
+        "data_description": {
+          "host": "Di solito 192.168.100.1",
+          "username": "Lascia vuoto se non richiesto.",
+          "password": "Vuoto mantiene la password attuale.",
+          "scan_interval": "Ogni quanto interrogare i dati del modem. Predefinito 10 minuti. Imposta su 00:00:00 per disattivare il polling automatico (solo manuale tramite il pulsante Aggiorna).",
+          "health_check_interval": "Ogni quanto verificare la raggiungibilita del modem. Predefinito 30 secondi. Imposta su 00:00:00 per disattivare le verifiche di stato."
+        }
       }
     },
     "error": {
@@ -153,7 +172,9 @@
       "modem_busy": "Il modem è occupato e ha rifiutato l'accesso. Non è un problema di credenziali; chiudi la pagina web del modem se è aperta, poi riprova.",
       "session_rejected": "Accesso riuscito, ma il modem ha rifiutato la richiesta di dati. Non è un problema di credenziali; consulta l'avviso nel registro di Home Assistant.",
       "parse_failed": "Connesso, ma impossibile leggere i dati del modem.",
-      "unknown": "Errore imprevisto. Controlla i log di Home Assistant."
+      "unknown": "Errore imprevisto. Controlla i log di Home Assistant.",
+      "custom_attempt_failed": "La prova non è riuscita. Apri il registro di Home Assistant e cerca \"custom config report\": mostra ogni passaggio e la risposta del modem. Qui un accesso fallito può dipendere dalla configurazione modificata, non solo da nome utente o password.",
+      "custom_yaml_invalid": "La configurazione del modem non è YAML valido o non corrisponde al formato di modem.yaml. I dettagli sono nel rapporto di configurazione personalizzata nel registro di Home Assistant."
     },
     "abort": {
       "unknown_model": "Il modem configurato non è presente nel catalogo."

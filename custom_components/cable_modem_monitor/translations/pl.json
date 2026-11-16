@@ -144,6 +144,25 @@
           "scan_interval": "Jak często pobierać dane z modemu. Domyślnie 10 minut. Ustaw 00:00:00, aby wyłączyć automatyczne odpytywanie (tylko ręcznie przyciskiem Aktualizuj).",
           "health_check_interval": "Jak często sprawdzać dostępność modemu. Domyślnie 30 sekund. Ustaw 00:00:00, aby wyłączyć sprawdzanie dostępności."
         }
+      },
+      "custom_config": {
+        "title": "Własna konfiguracja",
+        "description": "Zatwierdź testuje tę konfigurację na twoim modemie; nic nie zostanie zapisane, dopóki test się nie powiedzie. Nieudane testy zapisują \"custom config report\" w [dzienniku]({logs_url}). [Przewodnik]({guide_url})",
+        "data": {
+          "host": "Adres IP modemu",
+          "username": "Nazwa użytkownika",
+          "password": "Hasło",
+          "scan_interval": "Interwał odpytywania danych",
+          "health_check_interval": "Interwał sprawdzania dostępności",
+          "modem_config": "Konfiguracja modemu (modem.yaml)"
+        },
+        "data_description": {
+          "host": "Zwykle 192.168.100.1",
+          "username": "Pozostaw puste, jeśli nie jest wymagane.",
+          "password": "Puste pole zachowuje obecne hasło.",
+          "scan_interval": "Jak często pobierać dane z modemu. Domyślnie 10 minut. Ustaw 00:00:00, aby wyłączyć automatyczne odpytywanie (tylko ręcznie przyciskiem Aktualizuj).",
+          "health_check_interval": "Jak często sprawdzać dostępność modemu. Domyślnie 30 sekund. Ustaw 00:00:00, aby wyłączyć sprawdzanie dostępności."
+        }
       }
     },
     "error": {
@@ -153,7 +172,9 @@
       "modem_busy": "Modem jest zajęty i odrzucił logowanie. To nie problem z danymi logowania; zamknij stronę modemu, jeśli jest otwarta, i spróbuj ponownie.",
       "session_rejected": "Logowanie powiodło się, ale modem odrzucił żądanie danych. To nie problem z danymi logowania; sprawdź ostrzeżenie w dzienniku Home Assistant.",
       "parse_failed": "Połączono, ale nie udało się odczytać danych modemu.",
-      "unknown": "Nieoczekiwany błąd. Sprawdź logi Home Assistant."
+      "unknown": "Nieoczekiwany błąd. Sprawdź logi Home Assistant.",
+      "custom_attempt_failed": "Test się nie powiódł. Otwórz dziennik Home Assistant i wyszukaj \"custom config report\": pokazuje każdy krok i odpowiedź modemu. Tutaj błąd logowania może wynikać z edytowanej konfiguracji, a nie tylko z nazwy użytkownika lub hasła.",
+      "custom_yaml_invalid": "Konfiguracja modemu nie jest poprawnym YAML lub nie pasuje do formatu modem.yaml. Szczegóły są w raporcie własnej konfiguracji w dzienniku Home Assistant."
     },
     "abort": {
       "unknown_model": "Skonfigurowany modem nie został znaleziony w katalogu."

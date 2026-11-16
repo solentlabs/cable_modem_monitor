@@ -144,6 +144,25 @@
           "scan_interval": "Hur ofta modemdata hämtas. Standard 10 minuter. Ställ in 00:00:00 för att inaktivera automatisk pollning (manuellt via Uppdatera-knappen).",
           "health_check_interval": "Hur ofta modemets tillgänglighet kontrolleras. Standard 30 sekunder. Ställ in 00:00:00 för att inaktivera hälsokontroller."
         }
+      },
+      "custom_config": {
+        "title": "Egen konfiguration",
+        "description": "Skicka testar den här konfigurationen mot ditt modem; inget sparas förrän ett test lyckas. Misslyckade test skriver en \"custom config report\" till [loggen]({logs_url}). [Guide]({guide_url})",
+        "data": {
+          "host": "Modemets IP-adress",
+          "username": "Användarnamn",
+          "password": "Lösenord",
+          "scan_interval": "Datapollningsintervall",
+          "health_check_interval": "Hälsokontrollintervall",
+          "modem_config": "Modemkonfiguration (modem.yaml)"
+        },
+        "data_description": {
+          "host": "Vanligtvis 192.168.100.1",
+          "username": "Lämna tomt om det inte krävs.",
+          "password": "Tomt behåller nuvarande lösenord.",
+          "scan_interval": "Hur ofta modemdata hämtas. Standard 10 minuter. Ställ in 00:00:00 för att inaktivera automatisk pollning (manuellt via Uppdatera-knappen).",
+          "health_check_interval": "Hur ofta modemets tillgänglighet kontrolleras. Standard 30 sekunder. Ställ in 00:00:00 för att inaktivera hälsokontroller."
+        }
       }
     },
     "error": {
@@ -153,7 +172,9 @@
       "modem_busy": "Modemet är upptaget och avvisade inloggningen. Inget problem med inloggningsuppgifterna; stäng modemets webbsida om den är öppen och försök igen.",
       "session_rejected": "Inloggningen lyckades, men modemet avvisade databegäran. Inget problem med inloggningsuppgifterna; se varningen i Home Assistant-loggen.",
       "parse_failed": "Ansluten men kunde inte läsa modemdata.",
-      "unknown": "Oväntat fel. Kontrollera Home Assistant-loggarna."
+      "unknown": "Oväntat fel. Kontrollera Home Assistant-loggarna.",
+      "custom_attempt_failed": "Testet misslyckades. Öppna Home Assistant-loggen och sök efter \"custom config report\": den visar varje steg och vad modemet svarade. En misslyckad inloggning här kan bero på din redigerade konfiguration, inte bara på användarnamn eller lösenord.",
+      "custom_yaml_invalid": "Modemkonfigurationen är inte giltig YAML eller följer inte modem.yaml-formatet. Detaljerna finns i rapporten för egen konfiguration i Home Assistant-loggen."
     },
     "abort": {
       "unknown_model": "Konfigurerat modem hittades inte i katalogen."

@@ -55,6 +55,7 @@ The integration reads from the modem's local web interface; the only write actio
 ## Contributing and modem support
 
 - [Modem request guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) — how to capture the data needed to add your modem
+- [Add modem with custom config](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/CUSTOM_CONFIG.md) — edit your modem's config and test it during setup
 - [Contributing guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md) — workflow, code style, and PR guidelines
 - [Getting started for developers](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/setup/GETTING_STARTED.md) — environment setup, running tests, first commit
 

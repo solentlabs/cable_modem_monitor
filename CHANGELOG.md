@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Edit a custom config after setup.** A modem added with custom config now
+  shows its `modem.yaml` on its **Configure** screen. Each submit tests the
+  config against the modem and saves it only if the test passes, so trying a
+  change no longer means deleting the modem and adding it again.
+
 ## [3.14.15-beta.8] - 2026-11-15
 
 ### Added

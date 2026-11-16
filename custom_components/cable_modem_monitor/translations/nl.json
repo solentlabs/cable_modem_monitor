@@ -144,6 +144,25 @@
           "scan_interval": "Hoe vaak modemgegevens worden opgehaald. Standaard 10 minuten. Stel in op 00:00:00 om automatisch pollen uit te schakelen (alleen handmatig via de knop Bijwerken).",
           "health_check_interval": "Hoe vaak de bereikbaarheid van de modem wordt gecontroleerd. Standaard 30 seconden. Stel in op 00:00:00 om bereikbaarheidscontroles uit te schakelen."
         }
+      },
+      "custom_config": {
+        "title": "Eigen configuratie",
+        "description": "Verzenden test deze configuratie op je modem; er wordt niets opgeslagen totdat een test slaagt. Mislukte tests schrijven een \"custom config report\" naar het [logboek]({logs_url}). [Handleiding]({guide_url})",
+        "data": {
+          "host": "Modem IP-adres",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord",
+          "scan_interval": "Data-poll-interval",
+          "health_check_interval": "Bereikbaarheidscontrole-interval",
+          "modem_config": "Modemconfiguratie (modem.yaml)"
+        },
+        "data_description": {
+          "host": "Meestal 192.168.100.1",
+          "username": "Leeg laten indien niet vereist.",
+          "password": "Leeg laten behoudt het huidige wachtwoord.",
+          "scan_interval": "Hoe vaak modemgegevens worden opgehaald. Standaard 10 minuten. Stel in op 00:00:00 om automatisch pollen uit te schakelen (alleen handmatig via de knop Bijwerken).",
+          "health_check_interval": "Hoe vaak de bereikbaarheid van de modem wordt gecontroleerd. Standaard 30 seconden. Stel in op 00:00:00 om bereikbaarheidscontroles uit te schakelen."
+        }
       }
     },
     "error": {
@@ -153,7 +172,9 @@
       "modem_busy": "De modem is bezig en heeft de aanmelding geweigerd. Geen probleem met de inloggegevens; sluit de webpagina van de modem als die open staat en probeer het opnieuw.",
       "session_rejected": "Aanmelding geslaagd, maar de modem weigerde het gegevensverzoek. Geen probleem met de inloggegevens; zie de waarschuwing in het Home Assistant-logboek.",
       "parse_failed": "Verbonden, maar kon de modemgegevens niet lezen.",
-      "unknown": "Onverwachte fout. Controleer de Home Assistant-logs."
+      "unknown": "Onverwachte fout. Controleer de Home Assistant-logs.",
+      "custom_attempt_failed": "De test is mislukt. Open het Home Assistant-logboek en zoek op \"custom config report\": daar staat elke stap en wat het modem antwoordde. Een mislukte aanmelding kan hier ook door je bewerkte configuratie komen, niet alleen door gebruikersnaam of wachtwoord.",
+      "custom_yaml_invalid": "De modemconfiguratie is geen geldige YAML of past niet bij het modem.yaml-formaat. De details staan in het custom-config-rapport in het Home Assistant-logboek."
     },
     "abort": {
       "unknown_model": "Geconfigureerde modem niet gevonden in de catalogus."

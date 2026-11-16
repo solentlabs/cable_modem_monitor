@@ -1221,6 +1221,8 @@ def _health_recovery_inputs():
     from custom_components.cable_modem_monitor import _attach_health_sync_listeners
 
     hass = MagicMock()
+    # A mocked hass never runs the task; close the coroutine so it is not left unawaited.
+    hass.async_create_task.side_effect = lambda coro: coro.close()
     health_coord = MagicMock()
     health_coord.data = MagicMock()
     health_coord.data.health_status = HealthStatus.RESPONSIVE

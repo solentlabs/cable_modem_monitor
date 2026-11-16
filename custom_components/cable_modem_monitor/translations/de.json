@@ -144,6 +144,25 @@
           "scan_interval": "Wie oft Modemdaten abgefragt werden. Standard 10 Minuten. Auf 00:00:00 setzen, um automatische Abfragen zu deaktivieren (nur manuell über den Aktualisieren-Button).",
           "health_check_interval": "Wie oft die Erreichbarkeit des Modems geprüft wird. Standard 30 Sekunden. Auf 00:00:00 setzen, um Erreichbarkeitsprüfungen zu deaktivieren."
         }
+      },
+      "custom_config": {
+        "title": "Eigene Konfiguration",
+        "description": "Absenden testet diese Konfiguration mit deinem Modem; gespeichert wird erst, wenn ein Test erfolgreich ist. Fehlgeschlagene Tests schreiben einen \"custom config report\" ins [Protokoll]({logs_url}). [Anleitung]({guide_url})",
+        "data": {
+          "host": "Modem-IP-Adresse",
+          "username": "Benutzername",
+          "password": "Passwort",
+          "scan_interval": "Daten-Abfrageintervall",
+          "health_check_interval": "Erreichbarkeitsprüfung",
+          "modem_config": "Modemkonfiguration (modem.yaml)"
+        },
+        "data_description": {
+          "host": "Normalerweise 192.168.100.1",
+          "username": "Leer lassen, wenn nicht erforderlich.",
+          "password": "Leer = aktuelles Passwort behalten.",
+          "scan_interval": "Wie oft Modemdaten abgefragt werden. Standard 10 Minuten. Auf 00:00:00 setzen, um automatische Abfragen zu deaktivieren (nur manuell über den Aktualisieren-Button).",
+          "health_check_interval": "Wie oft die Erreichbarkeit des Modems geprüft wird. Standard 30 Sekunden. Auf 00:00:00 setzen, um Erreichbarkeitsprüfungen zu deaktivieren."
+        }
       }
     },
     "error": {
@@ -153,7 +172,9 @@
       "modem_busy": "Das Modem ist ausgelastet und hat die Anmeldung abgewiesen. Kein Problem mit den Anmeldedaten; schließen Sie die Weboberfläche des Modems, falls geöffnet, und versuchen Sie es erneut.",
       "session_rejected": "Anmeldung erfolgreich, aber das Modem hat die Datenanfrage abgelehnt. Kein Problem mit den Anmeldedaten; siehe die Warnung im Home Assistant Protokoll.",
       "parse_failed": "Verbunden, aber Modemdaten konnten nicht gelesen werden.",
-      "unknown": "Unerwarteter Fehler. Home Assistant-Logs prüfen."
+      "unknown": "Unerwarteter Fehler. Home Assistant-Logs prüfen.",
+      "custom_attempt_failed": "Der Test ist fehlgeschlagen. Öffne das Home Assistant-Protokoll und suche nach \"custom config report\": Dort steht jeder Schritt und was das Modem geantwortet hat. Ein Anmeldefehler kann hier auch von deiner bearbeiteten Konfiguration kommen, nicht nur von Benutzername oder Passwort.",
+      "custom_yaml_invalid": "Die Modemkonfiguration ist kein gültiges YAML oder entspricht nicht dem modem.yaml-Format. Details stehen im Custom-Config-Bericht im Home Assistant-Protokoll."
     },
     "abort": {
       "unknown_model": "Konfiguriertes Modem nicht im Katalog gefunden."

@@ -144,6 +144,25 @@
           "scan_interval": "Fréquence d'interrogation des données du modem. Par défaut 10 minutes. Réglez sur 00:00:00 pour désactiver l'interrogation automatique (mise à jour manuelle uniquement via le bouton Actualiser).",
           "health_check_interval": "Fréquence de vérification de l'accessibilité du modem. Par défaut 30 secondes. Réglez sur 00:00:00 pour désactiver les vérifications d'état."
         }
+      },
+      "custom_config": {
+        "title": "Configuration personnalisée",
+        "description": "Valider teste cette configuration sur votre modem ; rien n'est enregistré tant qu'un test n'a pas réussi. Les tests échoués écrivent un \"custom config report\" dans le [journal]({logs_url}). [Guide]({guide_url})",
+        "data": {
+          "host": "Adresse IP du Modem",
+          "username": "Nom d'utilisateur",
+          "password": "Mot de passe",
+          "scan_interval": "Intervalle d'Interrogation des Données",
+          "health_check_interval": "Intervalle de Vérification de l'État",
+          "modem_config": "Configuration du modem (modem.yaml)"
+        },
+        "data_description": {
+          "host": "Généralement 192.168.100.1",
+          "username": "Laisser vide si non requis.",
+          "password": "Vide conserve le mot de passe actuel.",
+          "scan_interval": "Fréquence d'interrogation des données du modem. Par défaut 10 minutes. Réglez sur 00:00:00 pour désactiver l'interrogation automatique (mise à jour manuelle uniquement via le bouton Actualiser).",
+          "health_check_interval": "Fréquence de vérification de l'accessibilité du modem. Par défaut 30 secondes. Réglez sur 00:00:00 pour désactiver les vérifications d'état."
+        }
       }
     },
     "error": {
@@ -153,7 +172,9 @@
       "modem_busy": "Le modem est occupé et a refusé la connexion. Ce n'est pas un problème d'identifiants ; fermez la page web du modem si elle est ouverte, puis réessayez.",
       "session_rejected": "Connexion réussie, mais le modem a refusé la requête de données. Ce n'est pas un problème d'identifiants ; consultez l'avertissement dans le journal Home Assistant.",
       "parse_failed": "Connecté, mais impossible de lire les données du modem.",
-      "unknown": "Erreur inattendue. Vérifiez les journaux de Home Assistant."
+      "unknown": "Erreur inattendue. Vérifiez les journaux de Home Assistant.",
+      "custom_attempt_failed": "Le test a échoué. Ouvrez le journal de Home Assistant et recherchez \"custom config report\" : il montre chaque étape et la réponse du modem. Ici, un échec de connexion peut venir de votre configuration modifiée, pas seulement du nom d'utilisateur ou du mot de passe.",
+      "custom_yaml_invalid": "La configuration du modem n'est pas du YAML valide ou ne correspond pas au format modem.yaml. Les détails figurent dans le rapport de configuration personnalisée du journal de Home Assistant."
     },
     "abort": {
       "unknown_model": "Le modem configuré est introuvable dans le catalogue."

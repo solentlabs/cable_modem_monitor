@@ -286,6 +286,71 @@ async def test_passing_attempt_creates_the_entry_with_the_custom_fields(hass: Ho
 
 
 # =============================================================================
+# Options flow — editing a saved custom entry
+# =============================================================================
+
+
+async def _configure_custom_entry(hass: HomeAssistant, attempt: CustomAttempt, modem_config: str) -> tuple[Any, Any]:
+    """Open Configure on a custom entry and submit ``modem_config``; return (entry, result)."""
+    entry = _custom_entry(hass, user="a: 1\n", base="a: 0\n")
+    with (
+        patch(f"{_CF}.CATALOG_PATH", FAKE_CATALOG),
+        patch(f"{_CF}.run_custom_attempt", AsyncMock(return_value=attempt)),
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+    ):
+        result: Any = await hass.config_entries.options.async_init(entry.entry_id)
+        form = {str(k): k.default() for k in result["data_schema"].schema}
+        form.update(modem_config=modem_config, password="")
+        result = await hass.config_entries.options.async_configure(result["flow_id"], user_input=form)
+    return entry, result
+
+
+async def test_configure_shows_the_saved_config_on_custom_entries_only(hass: HomeAssistant):
+    """A custom entry's Configure opens custom_config with its text; an ordinary entry's has no config field."""
+    custom = _custom_entry(hass, user="a: 1\n", base="a: 0\n")
+    ordinary = MockConfigEntry(domain=DOMAIN, data=dict(MOCK_ENTRY_DATA))
+    ordinary.add_to_hass(hass)
+
+    custom_form: Any = await hass.config_entries.options.async_init(custom.entry_id)
+    ordinary_form: Any = await hass.config_entries.options.async_init(ordinary.entry_id)
+
+    assert custom_form["step_id"] == "custom_config"
+    assert {str(k): k.default() for k in custom_form["data_schema"].schema}["modem_config"] == "a: 1\n"
+    assert ordinary_form["step_id"] == "init"
+    assert "modem_config" not in {str(k) for k in ordinary_form["data_schema"].schema}
+
+
+async def test_configure_failure_logs_the_report_and_saves_nothing(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+):
+    """A failed test re-shows the form with the user's text and leaves the entry as it was."""
+    failed = CustomAttempt(
+        validation=None, error=PermissionError("auth_error:invalid_auth:rejected"), records=[], scrub=lambda t: t
+    )
+
+    entry, result = await _configure_custom_entry(hass, failed, "a: 2\n")
+
+    assert result["step_id"] == "custom_config"
+    assert result["errors"] == {"base": "custom_attempt_failed"}
+    assert {str(k): k.default() for k in result["data_schema"].schema}["modem_config"] == "a: 2\n"
+    assert len([r for r in caplog.records if "custom config report" in r.getMessage()]) == 1
+    assert entry.data[CONF_CUSTOM_MODEM_YAML] == "a: 1\n"
+
+
+async def test_configure_pass_saves_the_text_and_keeps_the_base(hass: HomeAssistant):
+    """A pass stores the new text; the base text, base version and password stay."""
+    passed = CustomAttempt(validation=dict(MOCK_VALIDATION_RESULT), error=None, records=[], scrub=lambda t: t)
+
+    entry, result = await _configure_custom_entry(hass, passed, "a: 2\n")
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.data[CONF_CUSTOM_MODEM_YAML] == "a: 2\n"
+    assert entry.data[CONF_CUSTOM_BASE_YAML] == "a: 0\n"
+    assert entry.data[CONF_CUSTOM_BASE_VERSION] == "1"
+    assert entry.data["password"] == MOCK_ENTRY_DATA["password"]
+
+
+# =============================================================================
 # Startup catalog sync
 # =============================================================================
 

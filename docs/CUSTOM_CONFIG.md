@@ -29,6 +29,10 @@ Setup contract: [CONFIG_FLOW_SPEC.md § Custom Config Setup](../custom_component
 Keep a copy of your config in a text file as you go. Closing the dialog
 discards your edits.
 
+To change the config of a modem already added this way, open its
+**Configure** screen: it shows your saved config with the connection
+settings, and each submit tests it the same way.
+
 Only `modem.yaml` is editable. How the modem's pages are read
 (`parser.yaml`) comes from the catalog.
 

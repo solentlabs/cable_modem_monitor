@@ -1162,6 +1162,7 @@ def test_deferred_creation_on_first_data(mock_runtime_data):
         modem_data=MOCK_MODEM_DATA,
     )
     listener_fn()
+    coord.hass.async_create_task.call_args[0][0].close()  # a mocked hass never runs it
 
     # Entities should be added
     add_entities.assert_called_once()
@@ -1554,6 +1555,7 @@ def test_deferred_creation_unload_after_first_data_removes_listener_once(mock_ru
         modem_data=MOCK_MODEM_DATA,
     )
     listener_fn()
+    coord.hass.async_create_task.call_args[0][0].close()  # a mocked hass never runs it
     cleanup()
 
     assert removed == [1]
@@ -1603,7 +1605,8 @@ def test_deferred_creation_schedules_re_notification(mock_runtime_data):
 
     # Re-notification task should be scheduled
     coord.hass.async_create_task.assert_called_once()
-    task_name = coord.hass.async_create_task.call_args[0][1]
+    coro, task_name = coord.hass.async_create_task.call_args[0]
+    coro.close()  # a mocked hass never runs it
     assert task_name == "cable_modem_deferred_entity_state"
 
 

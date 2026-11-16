@@ -315,6 +315,8 @@ def mock_data_coordinator(mock_modem_snapshot: ModemSnapshot) -> MagicMock:
     coord.last_update_success = True
     coord.last_exception = None
     coord.update_interval = "0:10:00"
+    # A mocked hass never runs the task; close the coroutine so it is not left unawaited.
+    coord.hass.async_create_task.side_effect = lambda coro, *_: coro.close()
     return coord
 
 

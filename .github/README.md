@@ -142,6 +142,7 @@ This integration supports modems from ARRIS, CommScope, Compal, Hitron, Motorola
 The catalog grows when contributors with hardware step up. Two paths:
 
 - **Modem not listed?** Use [har-capture](https://github.com/solentlabs/har-capture) to record your modem's web interface, then [file a request](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml). See the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) for the user-facing walkthrough.
+- **Modem close but not working?** [Add modem with custom config](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/CUSTOM_CONFIG.md) lets you edit its config and test it during setup.
 - **Want to help more?** If you have AI access, you can analyze captures and propose catalog entries yourself. See [AI-Assisted Catalog Contribution](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#ai-assisted-catalog-contribution).
 
 **Modem listed as ⏳ Awaiting?** [Report it working](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_verification.yml) to help verify support.

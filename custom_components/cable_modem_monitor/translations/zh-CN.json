@@ -144,6 +144,25 @@
           "scan_interval": "调制解调器数据的轮询频率。默认 10 分钟。设为 00:00:00 可禁用自动轮询（仅通过「更新」按钮手动获取）。",
           "health_check_interval": "检查调制解调器是否可达的频率。默认 30 秒。设为 00:00:00 可禁用健康检查。"
         }
+      },
+      "custom_config": {
+        "title": "自定义配置",
+        "description": "“提交”会在您的调制解调器上测试此配置；测试通过之前不会保存任何内容。失败的测试会在[日志]({logs_url})中写入 \"custom config report\"。[指南]({guide_url})",
+        "data": {
+          "host": "调制解调器 IP 地址",
+          "username": "用户名",
+          "password": "密码",
+          "scan_interval": "数据轮询间隔",
+          "health_check_interval": "健康检查间隔",
+          "modem_config": "调制解调器配置 (modem.yaml)"
+        },
+        "data_description": {
+          "host": "通常是 192.168.100.1",
+          "username": "如果不需要请留空。",
+          "password": "留空则保留当前密码。",
+          "scan_interval": "调制解调器数据的轮询频率。默认 10 分钟。设为 00:00:00 可禁用自动轮询（仅通过「更新」按钮手动获取）。",
+          "health_check_interval": "检查调制解调器是否可达的频率。默认 30 秒。设为 00:00:00 可禁用健康检查。"
+        }
       }
     },
     "error": {
@@ -153,7 +172,9 @@
       "modem_busy": "调制解调器正忙，拒绝了本次登录。这不是凭据问题；如果打开着调制解调器网页请先关闭，然后重试。",
       "session_rejected": "登录成功，但调制解调器拒绝了数据请求。这不是凭据问题；请查看 Home Assistant 日志中的警告。",
       "parse_failed": "已连接但无法读取调制解调器数据。",
-      "unknown": "意外错误。请查看 Home Assistant 日志。"
+      "unknown": "意外错误。请查看 Home Assistant 日志。",
+      "custom_attempt_failed": "测试失败。打开 Home Assistant 日志并搜索 \"custom config report\"：其中显示每个步骤以及调制解调器的响应。此处的登录失败可能来自您编辑的配置，而不仅是用户名或密码。",
+      "custom_yaml_invalid": "调制解调器配置不是有效的 YAML，或不符合 modem.yaml 格式。详细信息见 Home Assistant 日志中的自定义配置报告。"
     },
     "abort": {
       "unknown_model": "在目录中未找到已配置的调制解调器。"

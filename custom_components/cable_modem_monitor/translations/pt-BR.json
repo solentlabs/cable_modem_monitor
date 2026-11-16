@@ -144,6 +144,25 @@
           "scan_interval": "Com que frequência consultar os dados do modem. Padrão 10 minutos. Defina como 00:00:00 para desativar a consulta automática (apenas manual pelo botão Atualizar).",
           "health_check_interval": "Com que frequência verificar a acessibilidade do modem. Padrão 30 segundos. Defina como 00:00:00 para desativar as verificações de saúde."
         }
+      },
+      "custom_config": {
+        "title": "Configuração personalizada",
+        "description": "Enviar testa esta configuração no seu modem; nada é salvo até que um teste seja bem-sucedido. Testes com falha gravam um \"custom config report\" no [log]({logs_url}). [Guia]({guide_url})",
+        "data": {
+          "host": "Endereço IP do Modem",
+          "username": "Usuário",
+          "password": "Senha",
+          "scan_interval": "Intervalo de Consulta de Dados",
+          "health_check_interval": "Intervalo de Verificação de Saúde",
+          "modem_config": "Configuração do modem (modem.yaml)"
+        },
+        "data_description": {
+          "host": "Geralmente 192.168.100.1",
+          "username": "Deixe em branco se não for necessário.",
+          "password": "Em branco mantém a senha atual.",
+          "scan_interval": "Com que frequência consultar os dados do modem. Padrão 10 minutos. Defina como 00:00:00 para desativar a consulta automática (apenas manual pelo botão Atualizar).",
+          "health_check_interval": "Com que frequência verificar a acessibilidade do modem. Padrão 30 segundos. Defina como 00:00:00 para desativar as verificações de saúde."
+        }
       }
     },
     "error": {
@@ -153,7 +172,9 @@
       "modem_busy": "O modem está ocupado e recusou o login. Não é um problema de credenciais; feche a página web do modem, se estiver aberta, e tente novamente.",
       "session_rejected": "Login realizado com sucesso, mas o modem recusou a requisição de dados. Não é um problema de credenciais; consulte o aviso no log do Home Assistant.",
       "parse_failed": "Conectado, mas não foi possível ler os dados do modem.",
-      "unknown": "Erro inesperado. Verifique os logs do Home Assistant."
+      "unknown": "Erro inesperado. Verifique os logs do Home Assistant.",
+      "custom_attempt_failed": "O teste falhou. Abra o log do Home Assistant e pesquise \"custom config report\": ele mostra cada etapa e o que o modem respondeu. Aqui, uma falha de login pode vir da sua configuração editada, não só do usuário ou da senha.",
+      "custom_yaml_invalid": "A configuração do modem não é um YAML válido ou não segue o formato do modem.yaml. Os detalhes estão no relatório de configuração personalizada no log do Home Assistant."
     },
     "abort": {
       "unknown_model": "Modem configurado não encontrado no catálogo."
