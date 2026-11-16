@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**53 configurations supported** — 36 confirmed on real hardware, 17 awaiting verification.
+**53 configurations supported** — 37 confirmed on real hardware, 16 awaiting verification.
 
 ---
 
@@ -55,7 +55,6 @@ and share a diagnostics snapshot.
 | Modem | Transport | ISPs | Capture | Restart |
 |-------|-----------|------|---------|---------|
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
-| SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | — | not captured |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated | n/a |
 | C3700 | HTML | Comcast, Cox, Spectrum | synthetic | not captured |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | hybrid | captured |
@@ -96,6 +95,7 @@ Entries with an open capability gap are listed above, not here.
 | SB6183 | HTML | Comcast, Cox, Spectrum, Xfinity, Mediacom | synthetic | n/a |
 | SB6190 (form-nonce) | HTML | Comcast, Spectrum | — | n/a |
 | SB8200 (body-token) | HTML | Spectrum | synthetic | n/a |
+| SB8200 (Form Login CBN) | CBN | Comcast, Cox, Spectrum, Xfinity | — | not captured |
 | SB8200 (HNAP) | HNAP | Cox | — | n/a |
 | SB8200 (php) | HTML | RCN | — | n/a |
 | SBG7400AC2 | HTML | Cox | — | captured |

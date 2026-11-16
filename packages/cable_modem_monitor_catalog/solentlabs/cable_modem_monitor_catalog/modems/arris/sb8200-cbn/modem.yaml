@@ -37,7 +37,7 @@ hardware:
   firmware: AC01
   release_date: "2023"
 
-status: awaiting_verification
+status: confirmed
 
 sources:
   auth_config: "Firmware JS in test_data/modem.har ([#231](https://github.com/solentlabs/cable_modem_monitor/issues/231)): encrypt_cryptoJS.js CBN_Encrypt, js/Login.js LoginFunc, js/common_api.js loadGlobalValue. Same firmware and JS as the [#109](https://github.com/solentlabs/cable_modem_monitor/issues/109) capture."
