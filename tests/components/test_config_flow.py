@@ -36,6 +36,7 @@ from custom_components.cable_modem_monitor.config_flow import (
     _validation_failure_key,
 )
 from custom_components.cable_modem_monitor.const import DOMAIN, EntityPrefix
+from custom_components.cable_modem_monitor.custom_config import CustomYamlError
 
 from .conftest import (
     FAKE_CATALOG,
@@ -138,6 +139,7 @@ def test_prefix_options_none_in_use():
 # │ ValueError       │ "something unexpected"                  │ unknown             │ unexpected exception     │
 # │ PermissionError  │ "denied"                                │ invalid_auth        │ auth-shaped fallback     │
 # │ RuntimeError     │ "boom"                                  │ unknown             │ generic fallback         │
+# │ CustomYamlError  │ "bad yaml"                              │ custom_yaml_invalid │ custom config rejected   │
 # └──────────────────┴─────────────────────────────────────────┴─────────────────────┴──────────────────────────┘
 #
 # The last two reach the handler without the "{kind}:{key}:{msg}" encoding,
@@ -152,6 +154,7 @@ VALIDATION_ERROR_CASES = [
     (ValueError,      "something unexpected",                      "unknown",             "unexpected_error"),
     (PermissionError, "denied",                                    "invalid_auth",        "bare_permission_error"),
     (RuntimeError,    "boom",                                      "unknown",             "bare_runtime_error"),
+    (CustomYamlError, "bad yaml",                                  "custom_yaml_invalid", "custom_yaml_error"),
 ]
 # fmt: on
 
@@ -489,6 +492,9 @@ async def test_full_flow_creates_entry(hass: HomeAssistant):
     # Successful validation creates config entry
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Solent Labs TPS-2000 (192.168.100.1)"
+    # unique_id is the entity prefix (_async_create_validated_entry); a
+    # change in how it is derived must fail here.
+    assert result["result"].unique_id == EntityPrefix.NONE
     assert result["data"]["protocol"] == "http"
     assert result["data"]["manufacturer"] == "Solent Labs"
     assert result["data"]["channel_identity"] == "number"

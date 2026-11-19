@@ -21,8 +21,8 @@ rules:
     status: done
     comment: config_flow.py with selectors and data_description; connection settings in entry.data, poll intervals in entry.options.
   config-flow-test-coverage:
-    status: todo
-    comment: config_flow.py at 90% line coverage (rule requires 100%, including reauth and options flows); happy-flow tests do not assert the created entry's unique_id. Duplicate abort is tested (test_config_flow.py already_configured).
+    status: done
+    comment: config_flow.py at 100% including reauth and options flows (tests/components/test_config_flow.py, test_config_flow_guards.py); error recovery, the created entry's unique_id and the duplicate abort are asserted.
   dependency-transparency:
     status: done
     comment: Core and catalog are MIT, on PyPI, published by .github/workflows/publish.yml from v* tags via trusted publishing.
@@ -96,7 +96,7 @@ rules:
     comment: Auth failure calls entry.async_start_reauth; async_step_reauth_confirm updates credentials (__init__.py, config_flow.py).
   test-coverage:
     status: todo
-    comment: Integration total 96%, but the rule is above 95% per module. Below it are repairs.py 70%, config_flow.py 90% and config_flow_helpers.py 94%.
+    comment: Integration total 98%, but the rule is above 95% per module. Below it are repairs.py 70% and config_flow_helpers.py 94%.
 
   # Gold
   devices:
