@@ -130,6 +130,12 @@ make ha-compat-check
 Keep only if green; revert if red. Default outcome is "held, newer
 available, floor intentionally conservative."
 
+### 5a. Re-grade the HA quality scale
+
+Follow the re-grading procedure in the docstring of
+`scripts/generate_quality_scale_table.py`. A rule or grade change goes in
+its own `docs` commit, not the `chore(deps)` one.
+
 ### 6. Commit
 
 A standalone `chore(deps)` commit, never folded into feature work. Body
