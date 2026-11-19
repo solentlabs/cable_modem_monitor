@@ -15,8 +15,8 @@ rules:
     status: done
     comment: brand/icon.png, icon.svg, logo.png in the integration directory.
   common-modules:
-    status: todo
-    comment: Coordinators done (coordinator.py CableModemDataCoordinator, CableModemHealthCoordinator). Base entity still open (no entity.py); ModemSensorBase, HealthSensorBase (sensor.py) and _ButtonBase (button.py) each build the same DeviceInfo.
+    status: done
+    comment: Coordinators in coordinator.py (CableModemDataCoordinator, CableModemHealthCoordinator); base entity CableModemEntity in entity.py builds DeviceInfo and has_entity_name for every sensor and button base.
   config-flow:
     status: done
     comment: config_flow.py with selectors and data_description; connection settings in entry.data, poll intervals in entry.options.
@@ -52,7 +52,7 @@ rules:
     comment: Every entity sets _attr_unique_id scoped by entry_id (sensor.py, button.py).
   has-entity-name:
     status: done
-    comment: _attr_has_entity_name = True on every base class (sensor.py, button.py).
+    comment: Set for every sensor and button by CableModemEntity (entity.py).
   runtime-data:
     status: done
     comment: entry.runtime_data = CableModemRuntimeData in async_setup_entry; typed alias CableModemConfigEntry (coordinator.py).

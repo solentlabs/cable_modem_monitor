@@ -6,6 +6,8 @@ All fixtures return realistic but deterministic data for reproducible tests.
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -51,6 +53,7 @@ from custom_components.cable_modem_monitor.const import (
 from custom_components.cable_modem_monitor.coordinator import (
     CableModemRuntimeData,
 )
+from custom_components.cable_modem_monitor.core.log_buffer import _MONITORED_LOGGERS
 
 # ---------------------------------------------------------------------------
 # Canned modem data — realistic minimal set
@@ -185,6 +188,23 @@ STUB_MODEM_CONFIG = _make_stub_modem_config()
 # ---------------------------------------------------------------------------
 # Config flow test data — canned catalog entries
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _restore_monitored_loggers() -> Iterator[None]:
+    """Restore the diagnostics log buffer's loggers after each test.
+
+    setup_log_buffer attaches a handler to process-global loggers and,
+    by design, keeps it across reloads; a test that runs the real setup
+    would otherwise leak a filled buffer into later tests.
+    """
+    saved = {name: (logging.getLogger(name).level, logging.getLogger(name).handlers[:]) for name in _MONITORED_LOGGERS}
+    yield
+    for name, (level, handlers) in saved.items():
+        logger = logging.getLogger(name)
+        logger.level = level
+        logger.handlers = list(handlers)
+
 
 FAKE_CATALOG = Path("/fake/catalog")
 

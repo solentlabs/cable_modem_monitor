@@ -1640,6 +1640,7 @@ The HA adapter layer consists of these modules:
 |--------|---------------|
 | `__init__.py` | Component setup (`async_setup` service registration), entry startup/unload, migration dispatch, device registry, `async_remove_entry` cleanup |
 | `coordinator.py` | `CableModemDataCoordinator` (poll + per-poll jobs) and `CableModemHealthCoordinator`; `CableModemRuntimeData` dataclass + `CableModemConfigEntry` type alias |
+| `entity.py` | `CableModemEntity` — base for every sensor and button: device link (`DeviceInfo`) and `has_entity_name` |
 | `recovery_adapter.py` | Recovery cadence listener — observer into Core + dispatcher signal that flips `update_interval` while a window is open |
 | `mapping_manager.py` | Channel identity mapping (`ChannelMap`) — builds per-poll mapping between channel number/id and entity unique_id |
 | `channel_bond_notifier.py` | Pure logic for channel-bond onboarding — selects `NotifierAction` given totals, whether state is stored, and recovery state |

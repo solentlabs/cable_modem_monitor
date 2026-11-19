@@ -7,7 +7,6 @@ operations, and dual-logger setup.
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -172,19 +171,6 @@ class TestLogBufferAdd:
 
 class TestSetupLogBuffer:
     """Verify handler installation on both monitored loggers."""
-
-    @pytest.fixture(autouse=True)
-    def _save_and_restore_loggers(self) -> Iterator[None]:
-        """Save and restore logger state around each test."""
-        saved: dict[str, tuple[int, list[logging.Handler]]] = {}
-        for name in _MONITORED_LOGGERS:
-            lg = logging.getLogger(name)
-            saved[name] = (lg.level, lg.handlers[:])
-        yield
-        for name in _MONITORED_LOGGERS:
-            lg = logging.getLogger(name)
-            lg.level = saved[name][0]
-            lg.handlers = list(saved[name][1])
 
     @staticmethod
     def _make_hass() -> MagicMock:

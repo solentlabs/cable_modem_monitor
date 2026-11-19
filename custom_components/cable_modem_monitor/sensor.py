@@ -32,7 +32,6 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -51,16 +50,15 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
 
 from .const import (
     CONF_CHANNEL_IDENTITY,
-    CONF_ENTITY_PREFIX,
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONSUMED_SYSTEM_INFO_FIELDS,
     DISPLAY_ONLY_SYSTEM_INFO_FIELDS,
-    DOMAIN,
     ChannelIdentity,
 )
 from .coordinator import CableModemConfigEntry
-from .lib.utils import get_device_name, parse_uptime_to_seconds
+from .entity import CableModemEntity
+from .lib.utils import parse_uptime_to_seconds
 from .mapping_manager import SlotKey, build_channel_map
 
 _LOGGER = logging.getLogger(__name__)
@@ -235,10 +233,9 @@ def _humanize_field_name(field: str) -> str:
 class ModemSensorBase(
     CoordinatorEntity[DataUpdateCoordinator[ModemSnapshot]],
     SensorEntity,
+    CableModemEntity,
 ):
     """Base class for sensors that read from the data coordinator."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -247,15 +244,7 @@ class ModemSensorBase(
     ) -> None:
         """Initialize with data coordinator and config entry."""
         super().__init__(coordinator)
-        self._entry = entry
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=get_device_name(
-                entry.data.get(CONF_ENTITY_PREFIX, "default"),
-                model=entry.runtime_data.modem_identity.model,
-                host=entry.data.get("host", ""),
-            ),
-        )
+        CableModemEntity.__init__(self, entry)
 
     @property
     def _snapshot(self) -> ModemSnapshot:
@@ -309,10 +298,10 @@ class _HoldsLastValueMixin:
 class HealthSensorBase(  # pyright: ignore[reportIncompatibleVariableOverride]
     CoordinatorEntity[DataUpdateCoordinator[HealthInfo]],
     SensorEntity,
+    CableModemEntity,
 ):
     """Base class for sensors that read from the health coordinator."""
 
-    _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
@@ -322,15 +311,7 @@ class HealthSensorBase(  # pyright: ignore[reportIncompatibleVariableOverride]
     ) -> None:
         """Initialize with health coordinator and config entry."""
         super().__init__(coordinator)
-        self._entry = entry
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=get_device_name(
-                entry.data.get(CONF_ENTITY_PREFIX, "default"),
-                model=entry.runtime_data.modem_identity.model,
-                host=entry.data.get("host", ""),
-            ),
-        )
+        CableModemEntity.__init__(self, entry)
 
     @property
     def _health_info(self) -> HealthInfo:
