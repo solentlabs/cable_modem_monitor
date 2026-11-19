@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from collections.abc import Mapping
 from pathlib import Path
@@ -950,17 +951,17 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     ) -> config_entries.ConfigFlowResult:
         """Create the config entry from the selections and the validation result."""
 
-        # Deduplicate by entity_prefix — the prefix is by design the
-        # per-entry disambiguator (it controls every entity_id this
-        # integration creates), so two entries claiming the same
-        # prefix would collide regardless of host or model. Any other
-        # combination — different prefix at same host, same prefix
-        # across host changes, etc. — is the user's intent and
-        # should not be blocked.
+        # Two dedup keys (CONFIG_FLOW_SPEC § Config Entry Uniqueness).
+        # entity_prefix: it controls every entity_id this integration
+        # creates, so two entries with the same prefix collide.
+        # host: one modem is one entry. The local dev harness skips the
+        # host check so a bench can stack entries on the default IP.
         hostname, _ = parse_host_input(conn[CONF_HOST])
         entity_prefix = conn.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE)
         await self.async_set_unique_id(str(entity_prefix))
         self._abort_if_unique_id_configured()
+        if not os.getenv("CMM_LOCAL_DEV"):
+            self._async_abort_entries_match({CONF_HOST: hostname})
 
         display_name = build_model_display_name(summary)
         title = f"{summary.manufacturer} {summary.model} ({hostname})"

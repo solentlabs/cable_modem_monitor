@@ -63,8 +63,8 @@ rules:
     status: done
     comment: ConfigEntryError on catalog-load failure; an unreachable modem continues setup with deferred entities (__init__.py); auth failure starts reauth (coordinator.py).
   unique-config-entry:
-    status: todo
-    comment: Deliberate deviation. unique_id is the entity prefix (config_flow.py _async_create_validated_entry), so the same modem can be added twice under different prefixes.
+    status: done
+    comment: Setup aborts on a matching host (_async_abort_entries_match) or entity prefix (unique_id) in config_flow.py _async_create_validated_entry. No hardware ID is readable across the catalog, so host is the key. The local dev harness (CMM_LOCAL_DEV) skips the host check.
 
   # Silver
   action-exceptions:

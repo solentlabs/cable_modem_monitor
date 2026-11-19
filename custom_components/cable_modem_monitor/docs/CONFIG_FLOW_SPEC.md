@@ -601,6 +601,21 @@ Existing entries keep loading only while their file keeps its name; when
 a file may be renamed is set in
 [MODEM_DIRECTORY_SPEC.md § modem.yaml / modem-{variant}.yaml](../../../packages/cable_modem_monitor_core/docs/MODEM_DIRECTORY_SPEC.md#modemyaml--modem-variantyaml-required).
 
+### Config Entry Uniqueness
+
+Setup aborts with `already_configured` when either key matches an existing
+entry:
+
+- **Entity prefix** (the entry's `unique_id`). The prefix controls every
+  entity_id, so two entries with one prefix collide.
+- **Host** (the parsed hostname). One modem is one entry, as HA's
+  `unique-config-entry` rule requires. Modems expose no hardware ID every
+  catalog entry can read, so the host is the key.
+
+When the `CMM_LOCAL_DEV` env var is set (the local test harness,
+`docker-compose.test.yml`), the host check is skipped so a bench can add
+several modems at the default IP under different prefixes.
+
 ---
 
 ## Reconfiguration (Options Flow)

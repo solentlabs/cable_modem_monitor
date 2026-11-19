@@ -1556,13 +1556,32 @@ async def test_duplicate_entity_prefix_aborts(hass: HomeAssistant):
     assert result["reason"] == "already_configured"
 
 
-async def test_different_entity_prefix_at_same_host_succeeds(hass: HomeAssistant):
-    """Same hostname with a different entity_prefix is allowed.
+_HOST_DEDUP_CASES = [
+    # (host entered, CMM_LOCAL_DEV set, expected result type)
+    ("192.168.100.1", False, FlowResultType.ABORT),
+    ("http://192.168.100.1", False, FlowResultType.ABORT),
+    ("192.168.100.1", True, FlowResultType.CREATE_ENTRY),
+    ("192.168.0.1", False, FlowResultType.CREATE_ENTRY),
+]
 
-    Supports the swap-modem and multi-view workflows (e.g. testing a
-    different modem on the same default IP, or running two dashboards
-    against the same modem with different entity prefixes).
-    """
+
+@pytest.mark.parametrize(
+    ("host", "local_dev", "expected"),
+    _HOST_DEDUP_CASES,
+    ids=["same-host", "same-host-with-scheme", "same-host-local-dev", "other-host"],
+)
+async def test_host_dedup_with_different_entity_prefix(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    host: str,
+    local_dev: bool,
+    expected: FlowResultType,
+):
+    """A second entry at an already-configured host aborts unless CMM_LOCAL_DEV is set."""
+    if local_dev:
+        monkeypatch.setenv("CMM_LOCAL_DEV", "1")
+    else:
+        monkeypatch.delenv("CMM_LOCAL_DEV", raising=False)
     existing = MockConfigEntry(
         domain=DOMAIN,
         version=2,
@@ -1600,10 +1619,12 @@ async def test_different_entity_prefix_at_same_host_succeeds(hass: HomeAssistant
         )
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
-            user_input={"host": "192.168.100.1"},
+            user_input={"host": host},
         )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] is expected
+    if expected is FlowResultType.ABORT:
+        assert result["reason"] == "already_configured"
 
 
 # -----------------------------------------------------------------------

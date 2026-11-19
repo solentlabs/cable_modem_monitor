@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   config against the modem and saves it only if the test passes, so trying a
   change no longer means deleting the modem and adding it again.
 
+### Changed
+
+- **A modem can be added only once.** Setup now stops with "This modem is
+  already configured" when an entry for that address exists, whatever entity
+  prefix is chosen. To swap in a different modem at the same address, delete
+  the old entry first. Entries already set up are not affected.
+
 ### Fixed
 
 - **CGA6444VF waits 20 s per request.** After Vodafone firmware
