@@ -13,7 +13,7 @@ Usage:
     python scripts/generate_quality_scale_table.py            # rewrite in place
     python scripts/generate_quality_scale_table.py --check    # exit 1 if stale
 
-Re-grading (run after a catalog update or a dependency bump):
+Re-grading (run after a dependency bump; ha-safe-deps-bump step 5a):
     1. Compare TIERS with ALL_RULES in HA core's current
        script/hassfest/quality_scale.py; add or drop rules in both TIERS
        and quality_scale.yaml.
