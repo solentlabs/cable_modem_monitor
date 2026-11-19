@@ -9,8 +9,8 @@ rules:
     status: done
     comment: Services registered in async_setup (__init__.py, services.async_register_services); ServiceValidationError when the target entry is not loaded.
   appropriate-polling:
-    status: done
-    comment: Data poll 10 min, health probe 30 s, both user-configurable (const.py DEFAULT_SCAN_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL).
+    status: todo
+    comment: Deliberate deviation. Defaults are data poll 10 min, health probe 30 s (const.py), but the options flow lets users change both, which HA's rule excludes. The interval is a documented user remedy for fragile modem web servers (#117, TROUBLESHOOTING.md § Multiple Home Assistant Instances, Netgear sign-outs), and HA's alternative (polling off plus an automation) cannot set the two intervals separately.
   brands:
     status: done
     comment: brand/icon.png, icon.svg, logo.png in the integration directory.
