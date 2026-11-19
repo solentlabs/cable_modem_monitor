@@ -189,8 +189,8 @@ async_setup_entry(hass, entry)
  │         post_processor, base_url, username, password, ...)
  │     → (orchestrator, health_monitor, modem_identity)
  │
- ├─ 4. Create data DataUpdateCoordinator
- │     update_method wraps orchestrator.get_modem_data()
+ ├─ 4. Create CableModemDataCoordinator (coordinator.py)
+ │     _async_update_data wraps orchestrator.get_modem_data()
  │     update_interval from config (or None if disabled)
  │
  ├─ 4a. Attach the recovery cadence listener (see § Recovery Adapter)
@@ -199,8 +199,8 @@ async_setup_entry(hass, entry)
  │      Registers the observer on Core, installs the cadence listener,
  │      and registers an unsubscribe callback for entry unload.
  │
- ├─ 5. Create health DataUpdateCoordinator (if health_monitor)
- │     update_method wraps health_monitor.ping()
+ ├─ 5. Create CableModemHealthCoordinator (if health_monitor)
+ │     _async_update_data wraps health_monitor.ping()
  │     update_interval from config (or None if disabled)
  │
  ├─ 5a. Attach health sync listeners (if health_monitor)
@@ -349,22 +349,30 @@ recovery.
 
 ## Data Coordinator
 
-Wraps `orchestrator.get_modem_data()` in HA's `DataUpdateCoordinator`.
+`CableModemDataCoordinator` in `coordinator.py` subclasses HA's
+`DataUpdateCoordinator` and wraps `orchestrator.get_modem_data()`. Each
+poll then runs, in order: availability logging, the auth-stop
+announcement (§ Reauth Flow), the channel map rebuild, channel-bond
+onboarding (§ Notifications), and the `cable_modem_monitor_data_updated`
+event.
 
 ```python
-async def _async_update_data() -> ModemSnapshot:
-    return await hass.async_add_executor_job(
-        orchestrator.get_modem_data
-    )
+class CableModemDataCoordinator(DataUpdateCoordinator[ModemSnapshot]):
+    def __init__(self, hass, entry, orchestrator, modem_identity, scan_interval):
+        super().__init__(
+            hass,
+            logger,
+            name=f"Cable Modem {coordinator_label(entry)}",
+            update_interval=timedelta(seconds=scan_interval),  # or None
+            config_entry=entry,
+        )
 
-data_coordinator = DataUpdateCoordinator(
-    hass,
-    logger,
-    name=f"Cable Modem {coordinator_label}",
-    update_method=_async_update_data,
-    update_interval=timedelta(seconds=scan_interval),  # or None
-    config_entry=entry,
-)
+    async def _async_update_data(self) -> ModemSnapshot:
+        snapshot = await self.hass.async_add_executor_job(
+            self._orchestrator.get_modem_data
+        )
+        # ...per-poll jobs listed above...
+        return snapshot
 ```
 
 Where `coordinator_label` is `"{model} ({host})"` when model is known,
@@ -386,7 +394,7 @@ ENTITY_MODEL_SPEC § Availability).
 
 **Availability is logged per transition, not per poll.** Because the
 coordinator never raises, HA's built-in once-per-transition unavailable
-logging never engages, so `_async_update_data` tracks the edge itself: a
+logging never engages, so the data coordinator tracks the edge itself: a
 WARNING (`"Modem unavailable [MODEL] — status"`) the first time a poll
 comes back with an error, and an INFO (`"Modem available again
 [MODEL]"`) on the first poll that succeeds afterwards. A sustained
@@ -440,23 +448,23 @@ See ORCHESTRATION_USE_CASES.md UC-84 for the full scenario.
 
 ## Health Coordinator
 
-Second `DataUpdateCoordinator` wrapping `health_monitor.ping()`.
+`CableModemHealthCoordinator` in `coordinator.py`, a second
+`DataUpdateCoordinator` subclass wrapping `health_monitor.ping()`.
 Independent cadence from the data coordinator.
 
 ```python
-async def _async_update_health() -> HealthInfo:
-    return await hass.async_add_executor_job(
-        health_monitor.ping
-    )
+class CableModemHealthCoordinator(DataUpdateCoordinator[HealthInfo]):
+    def __init__(self, hass, entry, health_monitor, health_check_interval):
+        super().__init__(
+            hass,
+            logger,
+            name=f"Cable Modem {coordinator_label(entry)} Health",
+            update_interval=timedelta(seconds=health_check_interval),  # or None
+            config_entry=entry,
+        )
 
-health_coordinator = DataUpdateCoordinator(
-    hass,
-    logger,
-    name=f"Cable Modem {coordinator_label} Health",
-    update_method=_async_update_health,
-    update_interval=timedelta(seconds=health_check_interval),  # or None
-    config_entry=entry,
-)
+    async def _async_update_data(self) -> HealthInfo:
+        return await self.hass.async_add_executor_job(self._health_monitor.ping)
 ```
 
 **Conditional creation:** Only created if at least one probe works
@@ -608,11 +616,9 @@ reference recovery state directly — they read
 `orchestrator.recovery_active` or render snapshot truth.
 
 `__init__.py` imports `attach_recovery_cadence_listener` directly
-and calls it once during `async_setup_entry`. `coordinator.py`
-stays a pure types module (`CableModemRuntimeData` +
-`CableModemConfigEntry`); health-sync wiring is a small private
-helper in `__init__.py` because it's local to startup and
-conceptually separate from Core's recovery observer.
+and calls it once during `async_setup_entry`. Health-sync wiring is
+a small private helper in `__init__.py` because it's local to startup
+and conceptually separate from Core's recovery observer.
 
 ### Health Sync Listeners
 
@@ -1633,7 +1639,7 @@ The HA adapter layer consists of these modules:
 | Module | Responsibility |
 |--------|---------------|
 | `__init__.py` | Component setup (`async_setup` service registration), entry startup/unload, migration dispatch, device registry, `async_remove_entry` cleanup |
-| `coordinator.py` | `CableModemRuntimeData` dataclass + `CableModemConfigEntry` type alias |
+| `coordinator.py` | `CableModemDataCoordinator` (poll + per-poll jobs) and `CableModemHealthCoordinator`; `CableModemRuntimeData` dataclass + `CableModemConfigEntry` type alias |
 | `recovery_adapter.py` | Recovery cadence listener — observer into Core + dispatcher signal that flips `update_interval` while a window is open |
 | `mapping_manager.py` | Channel identity mapping (`ChannelMap`) — builds per-poll mapping between channel number/id and entity unique_id |
 | `channel_bond_notifier.py` | Pure logic for channel-bond onboarding — selects `NotifierAction` given totals, whether state is stored, and recovery state |

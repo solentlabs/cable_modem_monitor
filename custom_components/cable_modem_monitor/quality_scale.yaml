@@ -16,7 +16,7 @@ rules:
     comment: brand/icon.png, icon.svg, logo.png in the integration directory.
   common-modules:
     status: todo
-    comment: No entity.py. ModemSensorBase, HealthSensorBase (sensor.py) and _ButtonBase (button.py) each build the same DeviceInfo. coordinator.py holds runtime types; coordinators are plain DataUpdateCoordinator built in __init__.py.
+    comment: Coordinators done (coordinator.py CableModemDataCoordinator, CableModemHealthCoordinator). Base entity still open (no entity.py); ModemSensorBase, HealthSensorBase (sensor.py) and _ButtonBase (button.py) each build the same DeviceInfo.
   config-flow:
     status: done
     comment: config_flow.py with selectors and data_description; connection settings in entry.data, poll intervals in entry.options.
@@ -61,7 +61,7 @@ rules:
     comment: The connection step runs the full auth and parse validation before creating the entry (config_flow.py async_step_connection).
   test-before-setup:
     status: done
-    comment: ConfigEntryError on catalog-load failure; an unreachable modem continues setup with deferred entities; auth failure starts reauth (__init__.py).
+    comment: ConfigEntryError on catalog-load failure; an unreachable modem continues setup with deferred entities (__init__.py); auth failure starts reauth (coordinator.py).
   unique-config-entry:
     status: todo
     comment: Deliberate deviation. unique_id is the entity prefix (config_flow.py _async_create_validated_entry), so the same modem can be added twice under different prefixes.
@@ -87,13 +87,13 @@ rules:
     comment: manifest.json codeowners.
   log-when-unavailable:
     status: todo
-    comment: Logs once per transition (__init__.py _log_availability_transition, tested in tests/components/test_init.py), but the unavailable line is WARNING; the rule requires info.
+    comment: Logs once per transition (coordinator.py _log_availability_transition, tested in tests/components/test_init.py and test_poll_behavior.py), but the unavailable line is WARNING; the rule requires info.
   parallel-updates:
     status: done
     comment: PARALLEL_UPDATES = 0 in sensor.py and button.py.
   reauthentication-flow:
     status: done
-    comment: Auth failure calls entry.async_start_reauth; async_step_reauth_confirm updates credentials (__init__.py, config_flow.py).
+    comment: Auth failure calls entry.async_start_reauth; async_step_reauth_confirm updates credentials (coordinator.py, config_flow.py).
   test-coverage:
     status: todo
     comment: Integration total 98%, but the rule is above 95% per module. Below it are repairs.py 70% and config_flow_helpers.py 94%.

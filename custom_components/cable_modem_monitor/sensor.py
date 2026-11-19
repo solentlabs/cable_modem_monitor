@@ -810,7 +810,7 @@ class ChannelSensor(ModemSensorBase):
         """Find this channel via pre-built slot maps on runtime_data.
 
         Slot maps are rebuilt once per poll in the coordinator update
-        callback (see ``__init__._async_update_data``).  Sensors do an
+        callback (see ``CableModemDataCoordinator._async_update_data``).  Sensors do an
         O(1) dict lookup here.
         """
         if self._snapshot.modem_data is None:

@@ -18,12 +18,10 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Mapping
-from dataclasses import replace
-from datetime import timedelta
 from importlib.metadata import version as pkg_version
 from typing import Any
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryError
@@ -51,7 +49,6 @@ from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemSnapshot,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
-    CollectorSignal,
     ConnectionStatus,
     HealthStatus,
 )
@@ -60,23 +57,9 @@ from solentlabs.cable_modem_monitor_core.post_processor import (
 )
 
 from .card import async_register_card
-from .channel_bond_notifier import (
-    ChannelTotals,
-    evaluate,
-    format_onboarding_message,
-    format_verification_request,
-    needs_verification_request,
-    verification_issue_url,
-)
-from .channel_bond_storage import (
-    BondState,
-    async_load_bond_state,
-    async_remove_bond_state,
-    async_save_bond_state,
-)
+from .channel_bond_storage import async_remove_bond_state
 from .const import (
     CONF_CHANNEL_IDENTITY,
-    CONF_CHANNEL_ONBOARDING_ELIGIBLE,
     CONF_CUSTOM_MODEM_YAML,
     CONF_ENTITY_PREFIX,
     CONF_HEALTH_CHECK_INTERVAL,
@@ -96,7 +79,12 @@ from .const import (
     VERSION,
     ChannelIdentity,
 )
-from .coordinator import CableModemConfigEntry, CableModemRuntimeData
+from .coordinator import (
+    CableModemConfigEntry,
+    CableModemDataCoordinator,
+    CableModemHealthCoordinator,
+    CableModemRuntimeData,
+)
 from .core.log_buffer import setup_log_buffer
 from .custom_config import parse_modem_yaml
 from .lib.utils import get_device_name
@@ -136,236 +124,6 @@ def _get_package_versions() -> str:
         except Exception:  # noqa: BLE001
             parts.append(f"{label}: not installed")
     return ", ".join(parts)
-
-
-async def _check_channel_bond_onboarding(
-    hass: HomeAssistant,
-    entry: CableModemConfigEntry,
-    snapshot: ModemSnapshot,
-    orchestrator: Orchestrator,
-    model: str,
-    verification_url: str | None,
-) -> None:
-    """Fire the one-time onboarding notification, and the one-time verification request, once the modem is online.
-
-    Silent on the first post-upgrade poll (no retroactive onboarding) and
-    while a recovery window is open. Persists the baseline to a dedicated
-    ``Store`` — not entry data — so writes don't trip the integration's
-    update listener.
-
-    Totals changing after onboarding is deliberately not reported; see
-    HA_ADAPTER_SPEC.md § Notifications and #197. The counts stay on the
-    DS and US Channel Count sensors every poll.
-    """
-    modem_data = snapshot.modem_data
-    if not modem_data:
-        return
-    system_info = modem_data.get("system_info", {})
-    ds = system_info.get("downstream_channel_count")
-    us = system_info.get("upstream_channel_count")
-    if not isinstance(ds, int) or not isinstance(us, int):
-        return
-
-    current = ChannelTotals(downstream=ds, upstream=us)
-    stored = await async_load_bond_state(hass, entry.entry_id)
-    onboarding_eligible = bool(entry.data.get(CONF_CHANNEL_ONBOARDING_ELIGIBLE, False))
-
-    action = evaluate(
-        current=current,
-        stored=stored,
-        onboarding_eligible=onboarding_eligible,
-        recovery_active=orchestrator.recovery_active,
-    )
-
-    if action == "onboarding":
-        # A fresh entry is asked to help confirm its model inside the onboarding message.
-        state = BondState(current.downstream, current.upstream, verification_asked=verification_url is not None)
-        await async_save_bond_state(hass, entry.entry_id, state)
-        await hass.services.async_call(
-            "persistent_notification",
-            "create",
-            {
-                "title": "Cable Modem Monitor: Modem online",
-                "message": format_onboarding_message(model=model, current=current, verification_url=verification_url),
-                "notification_id": f"cable_modem_monitor_onboarding_{entry.entry_id}",
-            },
-        )
-        return
-
-    # An entry with no onboarding left to fire is asked once on its own (HA_ADAPTER_SPEC § Channel bond onboarding).
-    recovery_active = orchestrator.recovery_active
-    if action == "silent_init":
-        baseline = BondState(current.downstream, current.upstream)
-        if verification_url is not None and needs_verification_request(
-            current=current, stored=baseline, recovery_active=recovery_active
-        ):
-            await _ask_for_verification(hass, entry, model, baseline, verification_url)
-        else:
-            await async_save_bond_state(hass, entry.entry_id, baseline)
-        return
-
-    if (
-        stored is not None
-        and verification_url is not None
-        and needs_verification_request(current=current, stored=stored, recovery_active=recovery_active)
-    ):
-        await _ask_for_verification(hass, entry, model, stored, verification_url)
-
-
-async def _ask_for_verification(
-    hass: HomeAssistant,
-    entry: CableModemConfigEntry,
-    model: str,
-    stored: BondState,
-    verification_url: str,
-) -> None:
-    """Ask the entry to help confirm its model, then record that it was asked."""
-    await hass.services.async_call(
-        "persistent_notification",
-        "create",
-        {
-            "title": "Cable Modem Monitor: Help confirm your modem",
-            "message": format_verification_request(model=model, verification_url=verification_url),
-            "notification_id": f"cable_modem_monitor_verification_{entry.entry_id}",
-        },
-    )
-    # Recorded only after the notification landed: a failed call is retried on the next poll.
-    await async_save_bond_state(hass, entry.entry_id, replace(stored, verification_asked=True))
-
-
-def _rebuild_channel_map(
-    entry: ConfigEntry,
-    snapshot: ModemSnapshot,
-    identity_mode: ChannelIdentity,
-) -> None:
-    """Rebuild channel map on runtime_data after a poll.
-
-    No-op when runtime_data is not yet set (first poll, before Step 9)
-    or when the snapshot has no modem_data.
-    """
-    runtime = getattr(entry, "runtime_data", None)
-    if runtime is None or snapshot.modem_data is None:
-        return
-    runtime.channel_map = build_channel_map(
-        snapshot.modem_data.get("downstream", []),
-        snapshot.modem_data.get("upstream", []),
-        identity_mode,
-    )
-
-
-async def _announce_auth_stop(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    snapshot: ModemSnapshot,
-    orchestrator: Orchestrator,
-    model: str,
-    lockout_reported: list[bool],
-) -> None:
-    """Tell the user why polling stopped when the auth breaker opens."""
-    # Reauth is HA's surface for a credential lockout: a
-    # "Reauthentication required" notification with the fix form.
-    # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reauthentication-flow/
-    # Contract: HA_ADAPTER_SPEC.md § Reauth Flow, UC-81, UC-81a, UC-87.
-    # Core integrations trigger this by raising ConfigEntryAuthFailed,
-    # but that also flips every entity unavailable; our Status sensor is
-    # the sole outage announcer (#178), so we call the API directly.
-    if snapshot.connection_status is not ConnectionStatus.AUTH_FAILED:
-        return
-    # Breaker open — not a lone AUTH_FAILED poll — is the trigger:
-    # definitive credential rejections trip it immediately (UC-87),
-    # stale-session failures only after 6 in a row (UC-81), so
-    # transient flakes never interrupt the user.
-    diagnostics = orchestrator.diagnostics()
-    if not diagnostics.circuit_breaker_open:
-        return
-    # SignalPolicy.apply collapses four signals into AUTH_FAILED, and
-    # the blocked polls that follow carry no signal at all, so the
-    # latched trip reason is the only thing that tells the routes apart
-    # (UC-81a).
-    if diagnostics.circuit_trip_signal is CollectorSignal.AUTH_LOCKOUT:
-        await _notify_auth_lockout(hass, entry, model, lockout_reported)
-        return
-    # HA dedupes inside async_start_reauth too; this guard keeps the
-    # WARNING to one line per lockout instead of one per poll.
-    if any(entry.async_get_active_flows(hass, {SOURCE_REAUTH})):
-        return
-    _LOGGER.warning(
-        "Auth circuit breaker open [%s] — starting reauthentication flow",
-        model,
-    )
-    entry.async_start_reauth(hass)
-
-
-async def _notify_auth_lockout(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    model: str,
-    lockout_reported: list[bool],
-) -> None:
-    """Notify about a firmware lockout without inviting a login attempt."""
-    # Never the reauth form: submitting it calls validate_connection, a
-    # real login, and the config flow is stateless by design (UC-86), so
-    # the open breaker does not stop it. Prompting a locked-out user
-    # invites hand-fed attempts at a modem that locked itself to stop
-    # them (#117). The message says nothing about credentials for the
-    # same reason.
-    if lockout_reported[0]:
-        return
-    _LOGGER.warning(
-        "Auth circuit breaker open [%s] — firmware lockout, not prompting for credentials",
-        model,
-    )
-    # Waiting alone never resumes polling: the breaker clears only by
-    # orchestrator reconstruction (ORCHESTRATION_SPEC § Auth Circuit
-    # Breaker, "Recovery paths"), so the reload is part of the remedy.
-    await hass.services.async_call(
-        "persistent_notification",
-        "create",
-        {
-            "title": "Cable Modem Monitor: Modem locked out logins",
-            "message": (
-                f"{model} reported a login lockout, so polling has stopped. "
-                f"Wait for the modem to clear it, or power cycle the modem, "
-                f"then reload the integration to resume polling. If it keeps "
-                f"happening, download diagnostics (Settings > Devices & "
-                f"Services > Cable Modem Monitor > ...) and open an issue."
-            ),
-            "notification_id": f"cable_modem_monitor_auth_lockout_{entry.entry_id}",
-        },
-    )
-    # Latch only after the notification landed — a failed call must be
-    # retried on the next poll, not swallowed into permanent silence.
-    lockout_reported[0] = True
-
-
-def _log_availability_transition(
-    snapshot: ModemSnapshot,
-    model: str,
-    reported_unavailable: list[bool],
-) -> None:
-    """Log one line per availability edge rather than one per poll."""
-    # The coordinator never raises (Core returns snapshots carrying an
-    # error field instead), so HA's built-in once-per-transition
-    # unavailable logging never engages and we track the edge ourselves.
-    if snapshot.error:
-        if not reported_unavailable[0]:
-            reported_unavailable[0] = True
-            _LOGGER.warning(
-                "Modem unavailable [%s] — %s",
-                model,
-                snapshot.connection_status.value,
-            )
-    elif reported_unavailable[0]:
-        reported_unavailable[0] = False
-        _LOGGER.info("Modem available again [%s]", model)
-
-
-def _build_snapshot_payload(snapshot: ModemSnapshot) -> dict[str, Any]:
-    """Build the event bus payload from a ModemSnapshot.
-
-    Full snapshot — PII stripping is the consumer's responsibility (CMMT).
-    """
-    return snapshot.to_event_payload().model_dump()
 
 
 async def async_migrate_entry(
@@ -556,41 +314,10 @@ async def async_setup_entry(
         _LOGGER.exception("Failed to load modem configuration from %s", source)
         raise ConfigEntryError(f"Failed to load modem configuration from {source}: {err}") from err
 
-    # Step 6: Create data DataUpdateCoordinator
-    host = entry.data[CONF_HOST]
-    model = entry.data.get(CONF_MODEL, host)
-    coordinator_label = f"{model} ({host})" if model != host else host
-
+    # Step 6: Create the data coordinator (CableModemDataCoordinator)
+    model = entry.data.get(CONF_MODEL, entry.data[CONF_HOST])
     identity_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
-    verification_url = verification_issue_url(modem_identity)
-
-    # Mutable cells so the edge survives across polls (Silver
-    # log-when-unavailable); see _log_availability_transition. The
-    # lockout cell resets on entry reload, which is also the only thing
-    # that clears the breaker, so it tracks it exactly.
-    reported_unavailable = [False]
-    lockout_reported = [False]
-
-    async def _async_update_data() -> ModemSnapshot:
-        snapshot = await hass.async_add_executor_job(orchestrator.get_modem_data)
-        _log_availability_transition(snapshot, model, reported_unavailable)
-        await _announce_auth_stop(hass, entry, snapshot, orchestrator, model, lockout_reported)
-        _rebuild_channel_map(entry, snapshot, identity_mode)
-        await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, model, verification_url)
-        hass.bus.async_fire(
-            "cable_modem_monitor_data_updated",
-            _build_snapshot_payload(snapshot),
-        )
-        return snapshot
-
-    data_coordinator = DataUpdateCoordinator[ModemSnapshot](
-        hass,
-        _LOGGER,
-        name=f"Cable Modem {coordinator_label}",
-        update_method=_async_update_data,
-        update_interval=(timedelta(seconds=scan_interval) if scan_interval > 0 else None),
-        config_entry=entry,
-    )
+    data_coordinator = CableModemDataCoordinator(hass, entry, orchestrator, modem_identity, scan_interval)
 
     # Step 6a: Install the recovery cadence listener — switches the
     # data coordinator's interval to 30s while a recovery window is
@@ -599,21 +326,10 @@ async def async_setup_entry(
     # observer; other modules don't subscribe.
     attach_recovery_cadence_listener(hass, entry, orchestrator, data_coordinator)
 
-    # Step 7: Create health DataUpdateCoordinator (conditional)
-    health_coordinator: DataUpdateCoordinator[HealthInfo] | None = None
+    # Step 7: Create the health coordinator (conditional)
+    health_coordinator: CableModemHealthCoordinator | None = None
     if health_monitor is not None:
-
-        async def _async_update_health() -> HealthInfo:
-            return await hass.async_add_executor_job(health_monitor.ping)
-
-        health_coordinator = DataUpdateCoordinator[HealthInfo](
-            hass,
-            _LOGGER,
-            name=f"Cable Modem {coordinator_label} Health",
-            update_method=_async_update_health,
-            update_interval=(timedelta(seconds=health_check_interval) if health_check_interval > 0 else None),
-            config_entry=entry,
-        )
+        health_coordinator = CableModemHealthCoordinator(hass, entry, health_monitor, health_check_interval)
 
     # Step 7b: Health sync listeners — immediate poll on health recovery,
     # immediate health refresh when a successful poll contradicts stale health
