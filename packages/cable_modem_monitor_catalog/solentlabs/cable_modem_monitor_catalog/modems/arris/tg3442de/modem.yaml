@@ -43,6 +43,12 @@ actions:
     method: POST
     endpoint: "/php/logout.php"
     requires_session: true
+  restart:
+    type: http
+    method: POST
+    endpoint: "/php/ajaxSet_status_restart.php"
+    json_body:
+      RestartReset: "Restart"
 
 hardware:
   docsis_version: "3.1"
@@ -54,6 +60,7 @@ status: confirmed
 sources:
   release_date: "[tk-world.de, 2018-08-27](https://www.tk-world.de/blog/vodafone-station-neuer-standard-router-fuer-kabeltarife/) — Vodafone Station became Vodafone Germany's standard cable router on 2018-08-28"
   auth_config: "[#86 Arris TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"
+  restart_action: "test_data/modem.har entries 7-8, from the 2026-11-19 follow-up capture: status_restart_data.js builds {RestartReset: Restart}, and POST /php/ajaxSet_status_restart.php carries that body and answers 200"
   chipset: "[TG3442DE Teardown](https://github.com/nox-x/TG3442DE-Teardown)"
   isps: "[CommScope press release, 2020-06-11](https://www.vistancenetworks.com/press-releases/2020/vodafone-germany-and-commscope-bring-higher-speeds-into-the-connected-home/): 'more than one million Vodafone Germany subscribers are using CommScope's DOCSIS 3.1 Touchstone TG3442 Gateway in their homes'."
 
@@ -79,6 +86,14 @@ notes: |
   modem is confirmed working that way (#86). Rationale in
   ARCHITECTURE_DECISIONS § Auth login POSTs do not carry
   session.query_params.
+
+  Fixture: test_data/modem.har is a maintainer-assembled composite. Entries
+  0-6 are the original synthetic parser evidence. Entries 7-8 are the
+  restart-page script and observed restart request from the 2026-11-19
+  follow-up capture of the same firmware family. The source capture's
+  js_FWVersion matches the existing fixture; physical-device continuity was
+  not established. Its csrfNonce header was hand-redacted to
+  test_csrf_nonce_xyz; request and response structure and bodies are unchanged.
 
 references:
   issues:
