@@ -140,7 +140,7 @@ observed, round-trip the parser against the evidence. Never retro-label
 by editing the HAR, since real captured bytes may be mixed in. A
 full-session capture replaces the fixture whenever one arrives.
 
-Two further forms are distinguished by evidence basis and status:
+Four further forms are distinguished by evidence basis and status:
 
 **Reconstruction (sibling template).** When no HAR exists but a
 sibling model's live parse output proves structural compatibility (a
@@ -189,6 +189,23 @@ with the login, version and CM status pages from the 2026-01-05
 capture); Ubee EVW32C-0N, issue #221 (the 2026-10-01 session, with the
 reboot request from the 2026-10-02 capture).
 
+**Synthetic base with an observed action.** When the existing fixture
+is synthetic and a later real capture of the same model, but not
+provably the same unit, supplies an action the base lacks (usually
+restart), the captured entries are transplanted whole into the
+synthetic fixture as in a hybrid. Each keeps its own `startedDateTime`
+and `pageref`, its source page is added to `log.pages`, and nothing is
+edited beyond the sanctioned PII redaction. `log.creator` names both
+parts (`composite (synthetic + har-capture)`). The synthetic base sets
+the label, so the audit reads `synthetic`, never `hybrid`. `log.comment`
+lists every transplanted entry with its index in the source capture,
+states the evidence linking the two (matching firmware version and
+device flags) and says that physical-device continuity was not
+established; the `modem.yaml` `notes:` block repeats this. The
+transplanted entries certify the observed request only; the synthetic
+entries certify nothing new. A full-session capture replaces the whole
+fixture. First use: Arris TG3442DE, issue #86 (restart from PR #234).
+
 **Sibling transplant (action the target's capture lacks).** When a
 real full-session capture of the target never sent an action (usually
 restart) and a same-family sibling's real capture did, the sibling's
@@ -210,7 +227,7 @@ You provide one of:
 - A HAR file path (local) — most common when you're working on your own modem.
 - A GitHub issue number with an attached HAR — when triaging a submission.
 - A modem manufacturer + model name — looks up an existing HAR in the catalog (useful for re-running the pipeline on a known-good HAR, e.g. after a Core change).
-- A follow-up capture for an entry already in the catalog, supplying what the first lacked (usually a restart). Analyze it alone, then fold the entries it adds into the existing fixture as a [hybrid](#assembled-fixtures) so the golden still round-trips.
+- A follow-up capture for an entry already in the catalog, supplying what the first lacked (usually a restart). Analyze it alone, then fold the entries it adds into the existing fixture so the golden still round-trips. The existing fixture picks the [assembled form](#assembled-fixtures): a real capture of the same unit makes a hybrid; a synthetic fixture makes a synthetic base with an observed action.
 
 ## Pipeline Flow
 
@@ -569,8 +586,13 @@ staging and commits are yours to make.
 
 Once tests are green and the diff looks right:
 
-1. Create a branch, stage the new catalog files, commit with a clear
-   message (e.g. `Add catalog entry for {manufacturer} {model}`).
+1. Create a branch, stage the new catalog files and commit. The
+   message must pass commitlint: a `type(scope):` header such as
+   `feat(catalog): add {manufacturer} {model}`, and body lines wrapped
+   at 100 characters (see
+   [CONTRIBUTING.md § Commit Message Format](../../../CONTRIBUTING.md#commit-message-format)).
+   Run `make commit-lint` after committing; before the first commit it
+   has nothing to check and passes.
 2. Open a PR against `main` (or the active release branch). Reference
    the originating issue with `Related to #N` — never `Fixes #N`
    (see [CONTRIBUTING.md § Issue Closing Policy](../../../CONTRIBUTING.md#issue-closing-policy)).

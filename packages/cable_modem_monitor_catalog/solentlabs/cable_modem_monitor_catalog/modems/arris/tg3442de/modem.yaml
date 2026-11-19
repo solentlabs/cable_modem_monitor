@@ -87,13 +87,14 @@ notes: |
   ARCHITECTURE_DECISIONS § Auth login POSTs do not carry
   session.query_params.
 
-  Fixture: test_data/modem.har is a maintainer-assembled composite. Entries
-  0-6 are the original synthetic parser evidence. Entries 7-8 are the
-  restart-page script and observed restart request from the 2026-11-19
+  Fixture: test_data/modem.har is a contributor-assembled composite (#234).
+  Entries 0-6 are the original synthetic parser evidence. Entries 7-8 are
+  the restart-page script and observed restart request from the 2026-11-19
   follow-up capture of the same firmware family. The source capture's
   js_FWVersion matches the existing fixture; physical-device continuity was
   not established. Its csrfNonce header was hand-redacted to
-  test_csrf_nonce_xyz; request and response structure and bodies are unchanged.
+  test_csrf_nonce_xyz; request and response structure and bodies are
+  unchanged.
 
 references:
   issues:

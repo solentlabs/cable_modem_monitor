@@ -498,6 +498,10 @@ def _capture_kind(har_path: Path) -> str:
     # Vocabulary matches MODEM_INTAKE_WORKFLOW.md § Assembled fixtures.
     if "reconstructed" in creator:
         return "reconstructed"
+    # An assembled fixture takes its weakest part's label: a composite on a
+    # synthetic base is not every-byte-observed, so it never reads hybrid.
+    if "synthetic" in creator:
+        return "synthetic"
     if "composite" in creator:
         return "hybrid"
     if any(tool in creator for tool in _REAL_CAPTURE_TOOLS):

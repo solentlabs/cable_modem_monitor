@@ -100,7 +100,7 @@ Entries with an open capability gap are listed above, not here.
 | SB8200 (php) | HTML | RCN | — | n/a |
 | SBG7400AC2 | HTML | Cox | — | captured |
 | SBG8300 | HTML | Comcast, Cox, Spectrum | — | captured |
-| TG3442DE | HTML | Vodafone DE | hybrid | captured |
+| TG3442DE | HTML | Vodafone DE | synthetic | captured |
 | TG3442S | HTML | LIWEST | — | captured |
 | TM1602A | HTML | Spectrum | — | n/a |
 | CH7465MT | CBN | Magenta AT | — | captured |
