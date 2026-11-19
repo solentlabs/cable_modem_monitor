@@ -1557,24 +1557,26 @@ async def test_duplicate_entity_prefix_aborts(hass: HomeAssistant):
 
 
 _HOST_DEDUP_CASES = [
-    # (host entered, CMM_LOCAL_DEV set, expected result type)
-    ("192.168.100.1", False, FlowResultType.ABORT),
-    ("http://192.168.100.1", False, FlowResultType.ABORT),
-    ("192.168.100.1", True, FlowResultType.CREATE_ENTRY),
-    ("192.168.0.1", False, FlowResultType.CREATE_ENTRY),
+    # (host entered, CMM_LOCAL_DEV set, existing entry disabled, expected result type)
+    ("192.168.100.1", False, False, FlowResultType.ABORT),
+    ("http://192.168.100.1", False, False, FlowResultType.ABORT),
+    ("192.168.100.1", False, True, FlowResultType.ABORT),
+    ("192.168.100.1", True, False, FlowResultType.CREATE_ENTRY),
+    ("192.168.0.1", False, False, FlowResultType.CREATE_ENTRY),
 ]
 
 
 @pytest.mark.parametrize(
-    ("host", "local_dev", "expected"),
+    ("host", "local_dev", "disabled", "expected"),
     _HOST_DEDUP_CASES,
-    ids=["same-host", "same-host-with-scheme", "same-host-local-dev", "other-host"],
+    ids=["same-host", "same-host-with-scheme", "same-host-disabled-entry", "same-host-local-dev", "other-host"],
 )
 async def test_host_dedup_with_different_entity_prefix(
     hass: HomeAssistant,
     monkeypatch: pytest.MonkeyPatch,
     host: str,
     local_dev: bool,
+    disabled: bool,
     expected: FlowResultType,
 ):
     """A second entry at an already-configured host aborts unless CMM_LOCAL_DEV is set."""
@@ -1587,6 +1589,7 @@ async def test_host_dedup_with_different_entity_prefix(
         version=2,
         data=MOCK_ENTRY_DATA,
         unique_id="other_prefix",  # different from what the new flow will use
+        disabled_by=config_entries.ConfigEntryDisabler.USER if disabled else None,
     )
     existing.add_to_hass(hass)
 
