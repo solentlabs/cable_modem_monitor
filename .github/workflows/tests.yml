@@ -156,10 +156,14 @@ jobs:
       # ruff, black and mypy pins also live in .pre-commit-config.yaml,
       # requirements-dev.txt and the
       # root and Core pyproject.toml dev lists; bump every copy together.
+      # Home Assistant is installed so mypy checks the adapter against real
+      # HA types; on Python 3.12 this resolves to 2025.1.x, the oldest
+      # release the integration supports (hacs.json), as in the local venv.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install ruff==0.17.6 black==26.10.1 mypy==2.4.1 types-requests types-PyYAML pytest-socket pydantic types-cryptography requests-mock har-capture~=0.19.0
+          pip install "homeassistant>=2025.1.0"
           pip install -e packages/cable_modem_monitor_core
           pip install -e packages/cable_modem_monitor_catalog
 

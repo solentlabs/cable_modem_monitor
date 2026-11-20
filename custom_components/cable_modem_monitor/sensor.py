@@ -283,12 +283,12 @@ class _StickyAvailabilityMixin:
         return self.coordinator.last_update_success
 
 
-class _HoldsLastValueMixin:
+class _HoldsLastValueMixin[V]:
     """Holds the last non-None native value across transient data gaps."""
 
-    _held_value: Any = None
+    _held_value: V | None = None
 
-    def _hold_last(self, current: Any) -> Any:
+    def _hold_last(self, current: V | None) -> V | None:
         """Return current, or the last non-None value when current is None."""
         if current is not None:
             self._held_value = current
@@ -581,7 +581,7 @@ class ModemErrorRateSensor(_SystemInfoSensor):
         return float(value) if value is not None else None
 
 
-class ModemSoftwareVersionSensor(_StickyAvailabilityMixin, _HoldsLastValueMixin, _SystemInfoSensor):
+class ModemSoftwareVersionSensor(_StickyAvailabilityMixin, _HoldsLastValueMixin[str], _SystemInfoSensor):
     """Software version sensor — sticky, so an outage doesn't log; a firmware push still does (#178)."""
 
     def __init__(
@@ -679,7 +679,7 @@ class ModemLastBootTimeSensor(  # pyright: ignore[reportIncompatibleVariableOver
         return self._stable_boot_time
 
 
-class SystemInfoFieldSensor(_HoldsLastValueMixin, _SystemInfoSensor):
+class SystemInfoFieldSensor(_HoldsLastValueMixin[str | int | float], _SystemInfoSensor):
     """Dynamic sensor for Tier 3 system_info fields.
 
     Created for each system_info field not consumed by a dedicated
