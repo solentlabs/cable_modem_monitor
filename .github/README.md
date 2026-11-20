@@ -436,6 +436,7 @@ Cable Modem Monitor is maintained by one person, in the evenings, around a day j
 ### Related Solent Labs Projects
 
 - [har-capture](https://github.com/solentlabs/har-capture) - Zero-dependency Python library for sanitizing HAR files. Contributors use it to capture a modem's web interface for a modem request without exposing passwords or network credentials.
+- [Internet Health Monitor](https://github.com/solentlabs/internet_health_monitor) - Latency, jitter and loss for the gateway and the next two hops, DNS latency, reachability, and optional speed tests with a bufferbloat grade. In beta.
 
 ## Legal & Safety
 

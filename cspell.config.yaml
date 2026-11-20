@@ -519,6 +519,7 @@ words:
   - yarl
 
   # Network / socket / HTTP
+  - bufferbloat
   - callsite
   - Callsite
   - callsites
