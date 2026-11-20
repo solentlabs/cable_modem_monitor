@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shows its `modem.yaml` on its **Configure** screen. Each submit tests the
   config against the modem and saves it only if the test passes, so trying a
   change no longer means deleting the modem and adding it again.
+- **A Restart button for the Arris TG3442DE (#234, contributed by
+  @hajekj).** A capture of the modem's own restart page records the
+  request it sends and the modem's answer, so the entry ships a Restart
+  action.
+- **Technicolor CGA437ATCH4 confirmed on hardware (#227).** Hardware 1.0,
+  software CGA437ATCH1-TCH4-23.2-REL-50-RQ, 25 downstream and 5 upstream
+  channels locked.
+- **Arris SB8200 Form Login CBN confirmed on hardware (#231).** Hardware
+  3.0, software AC01.02.003_072823_8200.03.07.735.CT, 34 downstream and 4
+  upstream channels locked. Enter the modem's address without `http://`;
+  setup picks HTTPS, and over HTTP the modem answers with its login page.
 
 ### Changed
 
