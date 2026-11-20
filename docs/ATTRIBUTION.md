@@ -71,7 +71,8 @@ This integration relies on the following open source libraries:
 ### Development & Testing
 
 - **pytest** (<https://pytest.org/>) - Testing framework
-- **pytest-homeassistant-custom-component** - HA testing utilities
+- **pytest-homeassistant-custom-component** - HA testing utilities (floor Home Assistant)
+- **pytest-homeassistant** - HA testing utilities (current Home Assistant)
 - **ruff** (<https://github.com/astral-sh/ruff>) - Code linting
 
 ---

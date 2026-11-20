@@ -36,7 +36,13 @@ Categorize each drifted package by **where it is declared**:
   because a newer release exists — only on a deliberate need, and only
   within HA's ceiling (proven by `ha-compat-check`).
 - **Free → BUMP.** Everything HA never installs:
-  - `requirements-dev.txt`, `requirements-security.txt`, `tests/requirements.txt`
+  - `requirements-dev.txt`, `requirements-security.txt`,
+    `tests/requirements-common.txt`, `tests/requirements.txt`
+  - `tests/requirements-ha-latest.txt`: the current Home Assistant pin.
+    `homeassistant` and `pytest-homeassistant` move together to the same
+    stable release, never a beta; `make ha-latest-test` is its gate
+    (ARCHITECTURE_DECISIONS.md § Adapter tests run on the floor and on a
+    pinned current Home Assistant)
   - root `pyproject.toml` (dev / optional extras)
   - `packages/cable_modem_monitor_catalog_tools/pyproject.toml` (never installed by HA)
   - `[dependency-groups]` in the Core and Catalog `pyproject.toml` files

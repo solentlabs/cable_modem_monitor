@@ -1,21 +1,7 @@
+# Adapter tests on the oldest supported Home Assistant; on Python 3.12 this
+# resolves to 2025.1.x. The current-HA run is requirements-ha-latest.txt.
+-r requirements-common.txt
+
 # Home Assistant core (>= 2025.1.0 for pydantic v2 compatibility)
 homeassistant>=2025.1.0
-
-# Test framework
-pytest>=8.0.0
-pytest-mock>=3.15.0
-pytest-asyncio>=0.23.0
-pytest-cov>=4.1.0
 pytest-homeassistant-custom-component>=0.13.0
-requests-mock>=1.12.0
-
-# Integration tests (SSL certificate generation)
-cryptography>=44.0.0
-
-# Required by integration
-har-capture>=0.16.1
-beautifulsoup4>=4.12.0
-requests>=2.32.3
-lxml>=6.0.0
-defusedxml>=0.7.1
-pydantic>=2.0.0

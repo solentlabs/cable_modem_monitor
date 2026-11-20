@@ -20,7 +20,6 @@ from homeassistant.components.logger import _get_logger_class
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import issue_registry as ir
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 
 from custom_components.cable_modem_monitor.config_flow_helpers import (
@@ -43,6 +42,7 @@ from custom_components.cable_modem_monitor.custom_config import (
 )
 from custom_components.cable_modem_monitor.diagnostics import _custom_config_section
 from custom_components.cable_modem_monitor.repairs import async_sync_with_catalog
+from tests.ha_harness import MockConfigEntry
 
 from .conftest import FAKE_CATALOG, MOCK_ENTRY_DATA, MOCK_SINGLE_VARIANT, MOCK_SUMMARIES, MOCK_VALIDATION_RESULT
 

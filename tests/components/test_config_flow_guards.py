@@ -17,13 +17,13 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.cable_modem_monitor.config_flow import (
     CableModemMonitorConfigFlow,
     OptionsFlowHandler,
 )
 from custom_components.cable_modem_monitor.const import DOMAIN
+from tests.ha_harness import MockConfigEntry
 
 from .conftest import (
     FAKE_CATALOG,

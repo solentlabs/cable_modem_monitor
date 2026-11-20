@@ -22,7 +22,6 @@ from homeassistant.helpers import (
     entity_registry as er,
 )
 from homeassistant.util import slugify
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     HealthInfo,
     ModemIdentity,
@@ -40,6 +39,7 @@ from custom_components.cable_modem_monitor.const import (
     DOMAIN,
     EntityPrefix,
 )
+from tests.ha_harness import MockConfigEntry
 
 from .conftest import MOCK_ENTRY_DATA, MOCK_MODEM_DATA, MOCK_SYSTEM_INFO
 

@@ -1,4 +1,4 @@
-.PHONY: help setup test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression catalog-field-sweep pii-check spell-check catalog-readme-check suppression-check import-check ha-compat-check changelog-check commit-lint install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
+.PHONY: help setup test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check validate validate-ci validate-host intake-regression catalog-field-sweep pii-check spell-check catalog-readme-check suppression-check import-check ha-compat-check ha-latest-test changelog-check commit-lint install-hooks docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
 
 # Pin tool invocations to the project venv so that subprocesses
 # without venv on PATH (release.py shelling out, fresh clones, CI
@@ -31,6 +31,7 @@ help:
 	@echo "  make quick-check  - Quick checks (lint + format, skip type-check)"
 	@echo "  make validate-host - Cross-platform validation (auto-installs tools)"
 	@echo "  make validate-ci   - Full CI-like validation (lint + tests + ha-compat)"
+	@echo "  make ha-latest-test - Adapter tests on the pinned current Home Assistant (fetches Python 3.14)"
 	@echo "  make spell-check   - Spell check catalog YAML, docs and scripts (requires Node.js)"
 	@echo "  make changelog-check - Validate CHANGELOG.md structure"
 	@echo "  make commit-lint   - Validate this branch's commit messages (requires Node.js)"
@@ -130,7 +131,7 @@ validate:
 # hacs/action@main, which runs in a GitHub-hosted Docker context with
 # external network checks against home-assistant/brands and HACS APIs;
 # not reasonably reproducible locally — same exception class as hassfest).
-validate-ci: check test intake-regression pii-check spell-check catalog-readme-check suppression-check import-check ha-compat-check autoclose-check commit-lint link-check changelog-check
+validate-ci: check test ha-latest-test intake-regression pii-check spell-check catalog-readme-check suppression-check import-check ha-compat-check autoclose-check commit-lint link-check changelog-check
 	@echo "✅ Full CI validation passed!"
 	@echo "🔍 Checking declared dependencies for available updates..."
 	@$(VENV_BIN)/python scripts/check_owned_deps.py
@@ -184,6 +185,23 @@ suppression-check:
 # hook checks changed files only; this sweeps all of them.
 import-check:
 	@$(VENV_BIN)/python scripts/check_import_isolation.py
+
+# Adapter tests on the pinned current Home Assistant — mirrors CI
+# test-ha-latest. The pin is tests/requirements-ha-latest.txt
+# (ARCHITECTURE_DECISIONS.md § Adapter tests run on the floor and on a pinned
+# current Home Assistant). Current HA needs Python 3.14: a private venv holds
+# a current uv (the main venv's uv is pinned by Home Assistant and predates
+# 3.14), and that uv fetches Python 3.14, so no system Python is required.
+# Both venvs sit inside .venv so linters and pytest skip them.
+HA_LATEST_UV := .venv/uv-tool/bin/uv
+HA_LATEST_VENV := .venv/ha-latest
+ha-latest-test:
+	@echo "🏠 Running adapter tests on the pinned current Home Assistant..."
+	@test -x $(HA_LATEST_UV) || { $(VENV_BIN)/python -m venv .venv/uv-tool && .venv/uv-tool/bin/pip install --quiet uv; }
+	@$(HA_LATEST_UV) venv --quiet --allow-existing --python 3.14 $(HA_LATEST_VENV)
+	@$(HA_LATEST_UV) pip install --quiet --python $(HA_LATEST_VENV)/bin/python -r tests/requirements-ha-latest.txt -e packages/cable_modem_monitor_core -e packages/cable_modem_monitor_catalog
+	@$(HA_LATEST_VENV)/bin/python -c "import homeassistant.const as c; print('Home Assistant', c.__version__)"
+	@$(HA_LATEST_VENV)/bin/pytest -q --tb=short -p no:cacheprovider
 
 # HA dependency compatibility — mirrors CI ha-compat-check job.
 # Validates that Core/Catalog declared dep floors are satisfiable under

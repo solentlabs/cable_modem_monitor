@@ -21,7 +21,6 @@ import pytest
 from homeassistant.config_entries import SOURCE_REAUTH
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError, HomeAssistantError
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemIdentity,
@@ -55,6 +54,7 @@ from custom_components.cable_modem_monitor.coordinator import (
     _check_channel_bond_onboarding,
 )
 from custom_components.cable_modem_monitor.migrations import async_run_migrations
+from tests.ha_harness import MockConfigEntry
 
 from .conftest import MOCK_ENTRY_DATA, STUB_MODEM_CONFIG, _make_stub_modem_config
 

@@ -261,3 +261,34 @@ def test_main_without_homeassistant_says_ha_was_not_checked(
 
     assert "har-capture" in out
     assert "HA support of these releases was not checked" in out
+
+
+def test_main_lists_current_ha_pin_the_floor_cannot_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The current-HA pin is bumped on its own release line; the floor HA filter never hides it."""
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "requirements-common.txt").write_text("pytest-mock>=3.15.0\n")
+    (tests_dir / "requirements-ha-latest.txt").write_text(
+        "-r requirements-common.txt\nhomeassistant==2026.11.2\npytest-homeassistant==2026.11.2\n"
+    )
+    monkeypatch.setattr(_mod, "ROOT", tmp_path)
+    pypi = {
+        "homeassistant": _mod.Release("2026.11.3", ("urllib3>=2",)),
+        "pytest-homeassistant": _mod.Release("2026.11.3", ("homeassistant==2026.11.3",)),
+        "pytest-mock": _mod.Release("3.15.1"),
+    }
+    monkeypatch.setattr(_mod, "_pypi_latest", pypi.get)
+    monkeypatch.setattr(_mod, "_git_tags", lambda repo: [])
+    monkeypatch.setattr(_mod, "_ghcr_tags", lambda image: [])
+    monkeypatch.setattr(_mod, "_osv_advisories", lambda packages: {})
+    monkeypatch.setattr(_mod, "_ha_env", lambda: _HA)
+
+    assert _mod.main() == 0
+    out = capsys.readouterr().out
+
+    assert "homeassistant" in out
+    assert "pytest-homeassistant" in out
+    assert "tests/requirements-ha-latest.txt" in out
+    assert "pytest-mock" not in out

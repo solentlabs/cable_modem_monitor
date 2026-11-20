@@ -18,11 +18,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import (
-    MockConfigEntry,
-    async_capture_events,
-    async_mock_service,
-)
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemIdentity,
     ModemSnapshot,
@@ -38,6 +33,11 @@ from custom_components.cable_modem_monitor.const import (
     CONF_CHANNEL_ONBOARDING_ELIGIBLE,
     CONF_SCAN_INTERVAL,
     DOMAIN,
+)
+from tests.ha_harness import (
+    MockConfigEntry,
+    async_capture_events,
+    async_mock_service,
 )
 
 from .conftest import MOCK_DOWNSTREAM, MOCK_ENTRY_DATA, MOCK_MODEM_DATA
