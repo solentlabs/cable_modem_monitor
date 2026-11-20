@@ -118,8 +118,11 @@ async def test_every_entity_links_to_the_device(hass: HomeAssistant, prefix: Ent
     """All sensors and buttons attach to one device with the prefix's name."""
     entry, _, _ = await _set_up(hass, prefix)
 
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
-    assert device is not None
+    # async_get_device is deprecated from HA 2026.10; this lookup exists on the floor too.
+    devices = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+    assert len(devices) == 1
+    device = devices[0]
+    assert (DOMAIN, entry.entry_id) in device.identifiers
     assert device.name == device_name
 
     entities = er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
