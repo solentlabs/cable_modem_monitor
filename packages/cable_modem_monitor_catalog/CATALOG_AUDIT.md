@@ -16,7 +16,7 @@ Definitions and rules:
 |-------|---------|
 | `—` | Recorded from real hardware by a browser or capture tool |
 | `hybrid` | Assembled from multiple real captures of the same unit; every byte observed |
-| `reconstructed` | Built on a sibling model's template; structure never observed on this hardware |
+| `reconstructed` | Holds a sibling model's or another unit's bytes; that part never observed on this unit |
 | `synthetic` | Built from partial evidence; the fixture names its producer |
 | `generated` | Built from partial evidence; no producer recorded in the file |
 
@@ -39,10 +39,10 @@ accepts it.
 | `n/a` | No restart declared |
 
 An entry showing `not captured` would benefit from a capture that includes
-pressing Restart. Read it with the Capture column: a restart inside a
-`synthetic`, `generated` or `reconstructed` fixture was written to match Core,
-not observed. Where a config replays against several fixtures, one holding the
-restart is enough.
+pressing Restart. Read it with the Capture column: a restart inside a fixture
+not marked `—` or `hybrid` may not have been observed on this unit, and the
+entry's notes say where it came from. Where a config replays against several
+fixtures, one holding the restart is enough.
 
 ---
 
@@ -57,7 +57,7 @@ and share a diagnostics snapshot.
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated | n/a |
 | C3700 | HTML | Comcast, Cox, Spectrum | synthetic | not captured |
-| CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | hybrid | captured |
+| CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | reconstructed | captured |
 | CM2500 | HTML | Comcast, Cox, Spectrum | reconstructed | captured |
 | CM600 | HTML | Comcast, Cox, Spectrum, TWC | synthetic | not captured |
 | NE6037 | JSON-RPC | Play | — | captured |
@@ -91,7 +91,7 @@ Entries with an open capability gap are listed above, not here.
 | S33 | HNAP | Comcast, Cox, Spectrum, Xfinity | — | captured |
 | S33 (v2) | HNAP | Comcast, Cox, Spectrum, Xfinity | — | not captured |
 | S33 (v3) | HNAP | Comcast, Cox, Spectrum, Xfinity | — | not captured |
-| SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom | hybrid | n/a |
+| SB6141 | HTML | Comcast, Cox, Spectrum, TWC, Mediacom | reconstructed | n/a |
 | SB6183 | HTML | Comcast, Cox, Spectrum, Xfinity, Mediacom | synthetic | n/a |
 | SB6190 (form-nonce) | HTML | Comcast, Spectrum | — | n/a |
 | SB8200 (body-token) | HTML | Spectrum | synthetic | n/a |

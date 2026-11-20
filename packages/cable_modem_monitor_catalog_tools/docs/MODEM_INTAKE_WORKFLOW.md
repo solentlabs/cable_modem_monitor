@@ -111,7 +111,10 @@ An assembled fixture is not an edited capture — it is a new artifact
 that must declare itself:
 
 - `log.creator.name` identifies the fixture as assembled (the fleet
-  convention: synthetic fixtures self-identify in `creator`).
+  convention: synthetic fixtures self-identify in `creator`). The
+  audit's Capture label follows the weakest part: a composite reads
+  `hybrid` only when `creator` says `hybrid`; any other composite reads
+  `reconstructed`, or `synthetic` on a synthetic base.
 - `log.comment` in the HAR states how it was assembled, names the
   sources and the evidence issue, and lists everything not observed
   on the target unit.
@@ -175,7 +178,8 @@ destroyed one capture's data responses — one capture is the template
 and the entries it lacks are transplanted whole from the others. Each
 transplanted entry keeps its own `startedDateTime` and `pageref`, and
 its source page is added to `log.pages`. `log.creator` names the
-fixture a composite. Every byte comes from a referenced capture;
+fixture a hybrid composite (`composite (hybrid of two same-device
+captures)`). Every byte comes from a referenced capture;
 nothing is fabricated, and no values are edited beyond the sanctioned
 PII value redaction. `log.comment` lists every transplanted entry and
 states the same-device and firmware continuity evidence (device
@@ -217,8 +221,10 @@ names, default values); without that match, leave the action out.
 its evidence issue, states that the entries were not observed on the
 target, and cites the matching form. The `modem.yaml` `notes:` block
 repeats this and says a capture of the action on the target replaces
-the transplant. The entry stays `awaiting_verification`: the transplant
-certifies the request shape, not that the action works on the target.
+the transplant. `log.creator` names the fixture a composite without the
+word `hybrid`, so the audit reads `reconstructed`. The entry stays
+`awaiting_verification`: the transplant certifies the request shape,
+not that the action works on the target.
 
 ## Inputs
 

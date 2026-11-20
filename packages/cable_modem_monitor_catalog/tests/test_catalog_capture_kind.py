@@ -1,8 +1,9 @@
 """Tests for the audit's capture-kind column: ``_capture_kind`` reads the HAR creator.
 
 Vocabulary is MODEM_INTAKE_WORKFLOW.md § Assembled fixtures. An assembled
-fixture takes the label of its weakest part, so a composite built on a
-synthetic base reads ``synthetic``, not ``hybrid``.
+fixture takes the label of its weakest part: a composite reads ``hybrid``
+only when its creator says so, ``synthetic`` on a synthetic base, and
+``reconstructed`` otherwise.
 """
 
 from __future__ import annotations
@@ -28,6 +29,8 @@ _capture_kind = _module._capture_kind
 # │ fixtures_to_har (synthetic)                       │ synthetic     │ synthetic producer           │
 # │ composite (hybrid of two same-device captures)    │ hybrid        │ real captures, same unit     │
 # │ composite (synthetic + har-capture)               │ synthetic     │ synthetic base wins          │
+# │ composite (real session + sibling restart)        │ reconstructed │ sibling-model transplant     │
+# │ composite (signal page + another unit's pages)    │ reconstructed │ parts from different units   │
 # │ reconstructed (xb7 template + diagnostics)        │ reconstructed │ sibling template             │
 # │ (empty)                                           │ generated     │ no recorded producer         │
 # └───────────────────────────────────────────────────┴───────────────┴──────────────────────────────┘
@@ -40,6 +43,8 @@ CREATOR_CASES = [
     ("fixtures_to_har (synthetic)",                      "synthetic",     "synthetic_producer"),
     ("composite (hybrid of two same-device captures)",   "hybrid",        "same_unit_composite"),
     ("composite (synthetic + har-capture)",              "synthetic",     "synthetic_base_composite"),
+    ("composite (real session + sibling restart)",       "reconstructed", "sibling_transplant"),
+    ("composite (signal page + another unit's pages)",    "reconstructed", "cross_unit_composite"),
     ("reconstructed (xb7 template + diagnostics)",       "reconstructed", "reconstruction"),
     ("",                                                 "generated",     "no_producer"),
 ]
