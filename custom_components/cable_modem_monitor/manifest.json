@@ -8,7 +8,8 @@
     "websocket_api"
   ],
   "categories": [
-    "computers_network.routers_network"
+    "computers_network.routers_network",
+    "computers_network.monitoring"
   ],
   "codeowners": [
     "@solentlabs"

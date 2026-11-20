@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The Marketplace also lists the integration under Monitoring.** The
+  manifest adds the `computers_network.monitoring` category after
+  `computers_network.routers_network`, which stays the primary one.
+
 ### Fixed
 
 - **The intake tools read a CBN login's encryption from the captured
