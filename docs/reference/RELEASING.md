@@ -310,6 +310,12 @@ The integration zip contains only runtime files — `docs/` is excluded from
 the zip build. Spec files stay in the repo for contributors but don't
 ship to users.
 
+Every artifact carries the MIT notice, the license's one condition:
+`release.yml` adds the root `LICENSE` to the zip, and each package keeps
+a copy beside its `pyproject.toml` that hatchling puts in the wheel and
+the source distribution. `tests/lib/test_license.py` fails when a copy
+drifts from the root file.
+
 ### Install flow
 
 1. The Marketplace (or HACS) downloads `cable_modem_monitor.zip` from the GitHub release

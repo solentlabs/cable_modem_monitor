@@ -89,6 +89,8 @@ jobs:
           # feature/*; release.yml does not re-run them — by the time
           # we tag, tests have already passed on the same commit.
           zip -r ../../cable_modem_monitor.zip . -x 'docs/*' 'brand/*' '*__pycache__*'
+          # MIT's one condition: the notice goes with every copy.
+          zip -j "$GITHUB_WORKSPACE/cable_modem_monitor.zip" "$GITHUB_WORKSPACE/LICENSE"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
