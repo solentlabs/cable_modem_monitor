@@ -123,7 +123,9 @@ python_functions = ["test_*"]
 norecursedirs = ["cable-modem-monitor-ql", ".git", "__pycache__", ".venv", "codeql"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "-v --strict-markers --tb=short --disable-warnings"
+# pytest-homeassistant documents this: its httpx alias must install before
+# the respx plugin imports httpx, and plugin load order is not fixed.
+addopts = "-v --strict-markers --tb=short --disable-warnings -p no:respx"
 markers = [
     "integration: Integration tests that may require network access",
     "unit: Unit tests that don't require external dependencies",
