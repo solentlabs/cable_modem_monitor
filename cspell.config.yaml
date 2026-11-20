@@ -582,6 +582,7 @@ words:
   - nonpositive
   - recognised
   - recognises
+  - untimed
   - serialisable
   - serialised
   - serialises

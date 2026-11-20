@@ -128,6 +128,86 @@ def test_form_cbn_fields(entries: list[dict[str, Any]], differs: dict[str, Any])
     assert auth.fields == {**_DEFAULTS, **differs}
 
 
+# =============================================================================
+# Encryption fields from the captured CBN_Encrypt script
+# =============================================================================
+
+
+def _script(text: str, path: str = "/js/encrypt_cryptoJS.js") -> dict[str, Any]:
+    """A captured script response."""
+    return {
+        "request": {"method": "GET", "url": f"{_HOST}{path}", "headers": []},
+        "response": {
+            "status": 200,
+            "headers": [{"name": "Content-Type", "value": "application/javascript"}],
+            "content": {"size": len(text), "mimeType": "application/javascript", "text": text},
+        },
+    }
+
+
+def _model_getter(fun: str = "1") -> dict[str, Any]:
+    """A pre-login getter call whose reply names the hardware model."""
+    reply = "<GlobalSettings><HwModel>M1</HwModel></GlobalSettings>"
+    return _post("/xml/getter.xml", f"token=T0&fun={fun}", response=reply)
+
+
+_PLAIN_PREFIX = 'function CBN_Encrypt(EncryptString)\n{\n\treturn $.base64.encode( ":" +ciphertext.toString());\n}'
+_MODEL_PREFIX = (
+    "function CBN_Encrypt(EncryptString, HwModel)\n{\n"
+    '\treturn $.base64.encode("HS:" + HwModel + ":" +ciphertext.toString());\n}'
+    "'Username':CBN_Encrypt($(\"input[name='loginUsername']\").val(),sessionStorage.getItem('HwModel')),"
+)
+_UNSET = object()
+_NO_USER = {"username_value": _UNSET}
+_MODEL_FIELDS = {**_NO_USER, "cipher_prefix": "HS:{hw_model}:", "hw_model_fun": 1}
+_ENCRYPTED_LOGIN = _login(username="REDACTED")
+
+_PLAIN = [_script(_PLAIN_PREFIX), _login(), _getter("10")]
+_MODEL = [_script(_MODEL_PREFIX), _model_getter(), _ENCRYPTED_LOGIN, _getter("10")]
+_MODEL_NO_GETTER = [_script(_MODEL_PREFIX), _ENCRYPTED_LOGIN, _getter("10")]
+_MODEL_GETTER_AFTER = [_script(_MODEL_PREFIX), _ENCRYPTED_LOGIN, _model_getter()]
+_NO_SCRIPT = [_login(), _getter("10")]
+
+# ┌──────────────────────────────────────────────────┬───────────────────────────────┬─────────────────────────┐
+# │ captured                                         │ fields                        │ description             │
+# ├──────────────────────────────────────────────────┼───────────────────────────────┼─────────────────────────┤
+# │ plain prefix, username sent as is                │ cipher_prefix ":"             │ CH7465MT shape          │
+# │ model prefix, model getter first, encrypted user │ prefix + fun, no username     │ SB8200 AC01 shape       │
+# │ model prefix, no model getter                    │ neither, no username, warning │ Core needs both         │
+# │ model prefix, model getter only after the login  │ neither, no username, warning │ the read precedes login │
+# │ no script                                        │ username copied, warning      │ prefix unchecked        │
+# └──────────────────────────────────────────────────┴───────────────────────────────┴─────────────────────────┘
+#
+# fmt: off
+ENCRYPTION_CASES: list[tuple[list[dict[str, Any]], dict[str, Any], str | None, str]] = [
+    # (entries,             fields,                  warning,          id)
+    (_PLAIN,                {"cipher_prefix": ":"},  None,             "plain-prefix"),
+    (_MODEL,                _MODEL_FIELDS,           None,             "model-prefix"),
+    (_MODEL_NO_GETTER,      _NO_USER,                "HS:{hw_model}:", "no-model-getter"),
+    (_MODEL_GETTER_AFTER,   _NO_USER,                "HS:{hw_model}:", "model-getter-after"),
+    (_NO_SCRIPT,            {},                      "CBN_Encrypt",    "no-script"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "entries,differs,warning", [c[:3] for c in ENCRYPTION_CASES], ids=[c[3] for c in ENCRYPTION_CASES]
+)
+def test_form_cbn_encryption_fields(
+    entries: list[dict[str, Any]], differs: dict[str, Any], warning: str | None
+) -> None:
+    """The captured CBN_Encrypt decides cipher_prefix, hw_model_fun and whether the username is copied."""
+    warnings: list[str] = []
+    auth = detect_auth(entries, "cbn", warnings, [])
+    expected = {**_DEFAULTS, **differs}
+    assert auth.fields == {k: v for k, v in expected.items() if v is not _UNSET}
+    cbn_warnings = [w for w in warnings if "CBN_Encrypt" in w or "hw_model" in w]
+    if warning is None:
+        assert cbn_warnings == []
+    else:
+        assert any(warning in w for w in cbn_warnings), cbn_warnings
+
+
 def test_no_successful_attempt_takes_the_first() -> None:
     """Without a successful body, the first login stands; its fields are the same call shape."""
     auth = detect_auth([_login(fun="3", response=""), _login(fun="4", response="idloginincorrect")], "cbn", [], [])

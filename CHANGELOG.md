@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The intake tools read a CBN login's encryption from the captured
+  script.** For a firmware whose `CBN_Encrypt` adds the hardware model, as on
+  the Arris SB8200 AC01 (#231), the generated `modem.yaml` now carries
+  `cipher_prefix` and `hw_model_fun`, and no longer copies the redacted
+  username into `username_value`. Without the script in the capture, a
+  warning says the prefix was not checked.
+
 ## [3.14.15-beta.9] - 2026-11-20
 
 ### Added

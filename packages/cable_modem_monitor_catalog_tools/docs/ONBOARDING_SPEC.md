@@ -488,10 +488,16 @@ attempt whose body says `successful` when one does, else the first:
 | `getter_endpoint` | The path most other `token`-first `fun` calls go to |
 | `login_page` | The login request's `Referer` path |
 | `session_cookie_name` | The request cookie whose value is the login's `token` |
-| `username_value` | The login's `Username` value |
+| `username_value` | The login's `Username` value, unless a captured script encrypts it (`'Username':CBN_Encrypt(…)`): the capture then holds ciphertext or its redaction, and Core encrypts the entered username |
+| `cipher_prefix` | The text the captured `CBN_Encrypt` puts before the ciphertext: its string literals, with the function's model parameter as `{hw_model}` |
+| `hw_model_fun` | With `{hw_model}` in the prefix, the `fun` of the getter call before the login whose reply holds `<HwModel>` |
 
 A field absent from the capture keeps its model default, and
-`generate_config` omits every field equal to one.
+`generate_config` omits every field equal to one. A prefix holding
+`{hw_model}` with no such getter call is a warning naming the prefix,
+and neither field is emitted, since Core rejects the prefix without
+`hw_model_fun`. A capture without `CBN_Encrypt` is a warning that the
+prefix was not checked.
 
 #### HTTP transport
 
