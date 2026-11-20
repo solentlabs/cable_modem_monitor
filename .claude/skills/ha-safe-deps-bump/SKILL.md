@@ -36,7 +36,13 @@ Categorize each drifted package by **where it is declared**:
   because a newer release exists — only on a deliberate need, and only
   within HA's ceiling (proven by `ha-compat-check`).
 - **Free → BUMP.** Everything HA never installs:
-  - `requirements-dev.txt`, `requirements-security.txt`, `tests/requirements.txt`
+  - `requirements-dev.txt`, `requirements-security.txt`,
+    `tests/requirements-common.txt`, `tests/requirements.txt`
+  - `tests/requirements-ha-latest.txt`: the current Home Assistant pin.
+    `homeassistant` and `pytest-homeassistant` move together to the same
+    stable release, never a beta; `make ha-latest-test` is its gate
+    (ARCHITECTURE_DECISIONS.md § Adapter tests run on the floor and on a
+    pinned current Home Assistant)
   - root `pyproject.toml` (dev / optional extras)
   - `packages/cable_modem_monitor_catalog_tools/pyproject.toml` (never installed by HA)
   - `[dependency-groups]` in the Core and Catalog `pyproject.toml` files
@@ -129,6 +135,12 @@ make ha-compat-check
 
 Keep only if green; revert if red. Default outcome is "held, newer
 available, floor intentionally conservative."
+
+### 5a. Re-grade the HA quality scale
+
+Follow the re-grading procedure in the docstring of
+`scripts/generate_quality_scale_table.py`. A rule or grade change goes in
+its own `docs` commit, not the `chore(deps)` one.
 
 ### 6. Commit
 

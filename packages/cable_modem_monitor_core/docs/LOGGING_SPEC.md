@@ -156,8 +156,8 @@ and strips the query string from `url` and scrubs the password from
 | `LogoutExecuted` | DEBUG | Logout action sent |
 | `LogoutFailed` | WARNING | Logout action failed |
 | `PostLoginFetchFailed` | WARNING | A `session.post_login_endpoints` path did not answer 2xx; collection continues |
-| `HnapSessionExpired` | WARNING | HNAP HTTP error on a reused session — session likely expired |
-| `JsonRpcSessionExpired` | WARNING | A JSON-RPC data call answered the entry's `session_expired_code` |
+| `HnapSessionExpired` | INFO | HNAP HTTP error on a reused session — session likely expired |
+| `JsonRpcSessionExpired` | INFO | A JSON-RPC data call answered the entry's `session_expired_code` |
 | `StubPageDetected` | WARNING | 0 of N expected parser anchors found — stub/login page served at data URL |
 
 Fields — `LogoutFailed`: `model`, `reason: str`
@@ -172,7 +172,7 @@ Fields — `StubPageDetected`: `model`, `path: str`, `anchors_found: int`,
 |---|---|---|
 | `SessionRetryStarted` | INFO | Single-poll session retry started for LOAD_AUTH or LOAD_INTEGRITY |
 | `SessionRetrySucceeded` | INFO | Retry succeeded — fresh login obtained in same poll |
-| `SessionRetryFailed` | INFO | Retry failed — policy recording signal as auth failure |
+| `SessionRetryFailed` | WARNING | Retry failed — policy recording signal as auth failure |
 | `StuckSessionCleared` | INFO | Reused session dropped after repeated connection failures while the modem answers probes |
 
 Fields — `SessionRetryStarted` / `SessionRetrySucceeded`: `model`, `signal_name: str`

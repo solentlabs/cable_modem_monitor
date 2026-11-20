@@ -1,4 +1,4 @@
-2025-04-01 10:00:01.123 DEBUG solentlabs.cable_modem_monitor_core.orchestration — Poll [T100] — auth: basic, endpoint: /status, session: none
-2025-04-01 10:00:02.456 INFO solentlabs.cable_modem_monitor_core.parsers — Parse complete [T100]: 32 DS, 8 US
-2025-04-01 10:05:01.789 DEBUG solentlabs.cable_modem_monitor_core.orchestration — Poll [T100] — auth: basic, endpoint: /status, session: reuse
-2025-04-01 10:05:03.012 INFO solentlabs.cable_modem_monitor_core.parsers — Parse complete [T100]: 32 DS, 8 US
+2025-04-01 10:00:01.123 INFO solentlabs.cable_modem_monitor_core.orchestration — Poll [T100] — auth: BasicAuth, url: http://modem.example, credentials: yes, session: none
+2025-04-01 10:00:02.456 INFO solentlabs.cable_modem_monitor_core.orchestration — Collection complete [T100] — DS: 32, US: 8 (1333ms)
+2025-04-01 10:05:01.789 DEBUG solentlabs.cable_modem_monitor_core.orchestration — Poll [T100] — auth: BasicAuth, url: http://modem.example, credentials: yes, session: reuse
+2025-04-01 10:05:03.012 DEBUG solentlabs.cable_modem_monitor_core.orchestration — Collection complete [T100] — DS: 32, US: 8 (1223ms)

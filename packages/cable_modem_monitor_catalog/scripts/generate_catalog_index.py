@@ -498,8 +498,14 @@ def _capture_kind(har_path: Path) -> str:
     # Vocabulary matches MODEM_INTAKE_WORKFLOW.md § Assembled fixtures.
     if "reconstructed" in creator:
         return "reconstructed"
+    # An assembled fixture takes its weakest part's label: a composite on a
+    # synthetic base is not every-byte-observed, so it never reads hybrid.
+    if "synthetic" in creator:
+        return "synthetic"
+    # Only a same-unit composite is every-byte-observed, and it says so in
+    # its creator; a sibling transplant or a mix of units is not.
     if "composite" in creator:
-        return "hybrid"
+        return "hybrid" if "hybrid" in creator else "reconstructed"
     if any(tool in creator for tool in _REAL_CAPTURE_TOOLS):
         return "real"
     return "synthetic"
@@ -581,7 +587,7 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         "|-------|---------|",
         "| `—` | Recorded from real hardware by a browser or capture tool |",
         "| `hybrid` | Assembled from multiple real captures of the same unit; every byte observed |",
-        "| `reconstructed` | Built on a sibling model's template; structure never observed on this hardware |",
+        "| `reconstructed` | Holds a sibling model's or another unit's bytes; that part never observed on this unit |",
         "| `synthetic` | Built from partial evidence; the fixture names its producer |",
         "| `generated` | Built from partial evidence; no producer recorded in the file |",
         "",
@@ -605,10 +611,10 @@ def generate_catalog_audit(output_path: Path | None = None) -> str:  # noqa: C90
         "| `n/a` | No restart declared |",
         "",
         "An entry showing `not captured` would benefit from a capture that includes",
-        "pressing Restart. Read it with the Capture column: a restart inside a",
-        "`synthetic`, `generated` or `reconstructed` fixture was written to match Core,",
-        "not observed. Where a config replays against several fixtures, one holding the",
-        "restart is enough.",
+        "pressing Restart. Read it with the Capture column: a restart inside a fixture",
+        "not marked `—` or `hybrid` may not have been observed on this unit, and the",
+        "entry's notes say where it came from. Where a config replays against several",
+        "fixtures, one holding the restart is enough.",
         "",
         "---",
         "",

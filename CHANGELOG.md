@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.15-beta.9] - 2026-11-20
+
+### Added
+
+- **Edit a custom config after setup.** A modem added with custom config now
+  shows its `modem.yaml` on its **Configure** screen. Each submit tests the
+  config against the modem and saves it only if the test passes, so trying a
+  change no longer means deleting the modem and adding it again.
+- **A Restart button for the Arris TG3442DE (#234, contributed by
+  @hajekj).** A capture of the modem's own restart page records the
+  request it sends and the modem's answer, so the entry ships a Restart
+  action.
+- **Technicolor CGA437ATCH4 confirmed on hardware (#227).** Hardware 1.0,
+  software CGA437ATCH1-TCH4-23.2-REL-50-RQ, 25 downstream and 5 upstream
+  channels locked.
+- **Arris SB8200 Form Login CBN confirmed on hardware (#231).** Hardware
+  3.0, software AC01.02.003_072823_8200.03.07.735.CT, 34 downstream and 4
+  upstream channels locked. Enter the modem's address without `http://`;
+  setup picks HTTPS, and over HTTP the modem answers with its login page.
+
+### Changed
+
+- **A modem can be added only once.** Setup now stops with "This modem is
+  already configured" when an entry for that address exists, whatever entity
+  prefix is chosen. To swap in a different modem at the same address, delete
+  the old entry first. Entries already set up are not affected.
+
+### Fixed
+
+- **CGA6444VF waits 20 s per request.** After Vodafone firmware
+  6.0.0L-R36-RT, the channel request answered in 11.3 s in another
+  project's report, past the 10 s default, which would leave the modem
+  Unreachable with no data. (#120)
+- **A failed custom config test reports every step.** When
+  `configuration.yaml` sets a log level for the integration under `logger:`,
+  the report dropped its debug lines, including the address the login was sent
+  to. It now holds every step whatever level Home Assistant logs at.
+- **The bundled soak log analyser reads current logs.** Its patterns still
+  matched log lines renamed earlier and no timestamp carrying a UTC offset, so
+  a real log read as empty and was reported clean. In Core's `CORE_PATTERNS`,
+  `parse_complete` is now `collection_complete`, `poll_start` is gone, and
+  `recovery_open` and `recovery_close` are new. An INFO-level log now reports
+  counts rather than success rates, because successful polls after the first
+  only appear at DEBUG.
+- **A session expiry the next login recovers no longer warns.** A modem that
+  ends its session every 30 minutes logged a warning each time, though the
+  same poll logged in again and collected. HNAP and JSON-RPC expiries now log
+  at INFO, and a failed retry, which counts toward the auth circuit breaker,
+  now warns. (#215)
+
 ## [3.14.15-beta.8] - 2026-11-15
 
 ### Added

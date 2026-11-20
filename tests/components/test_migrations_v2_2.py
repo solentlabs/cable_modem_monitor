@@ -7,11 +7,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.cable_modem_monitor import async_migrate_entry
 from custom_components.cable_modem_monitor.const import DOMAIN
 from custom_components.cable_modem_monitor.migrations import v2_2_frequency_statistics as v2_2
+from tests.ha_harness import MockConfigEntry
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 

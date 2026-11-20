@@ -73,19 +73,30 @@ def is_privacy_safe_email(email: str) -> bool:
     )
 
 
-def get_required_python_version():
-    """Parse pyproject.toml to get the required Python version."""
+def get_python_version_bounds():
+    """Parse pyproject.toml requires-python into (floor, ceiling); ceiling is None when open."""
     if not os.path.exists("pyproject.toml"):
-        return (3, 11)  # Default fallback
+        return (3, 11), None  # Default fallback
 
     with open("pyproject.toml") as f:
         content = f.read()
 
     # Match requires-python = ">=3.12" or ">=3.12,<3.13" etc.
-    match = re.search(r'requires-python\s*=\s*">=(\d+)\.(\d+)', content)
-    if match:
-        return (int(match.group(1)), int(match.group(2)))
-    return (3, 11)  # Default fallback
+    match = re.search(r'requires-python\s*=\s*">=(\d+)\.(\d+)(?:\s*,\s*<(\d+)\.(\d+))?', content)
+    if not match:
+        return (3, 11), None  # Default fallback
+    floor = (int(match.group(1)), int(match.group(2)))
+    ceiling = (int(match.group(3)), int(match.group(4))) if match.group(3) else None
+    return floor, ceiling
+
+
+def python_version_ok(current, floor, ceiling):
+    """True when floor <= current < ceiling (no ceiling: floor only, same major)."""
+    # Above the ceiling, the unbounded dev homeassistant requirement resolves
+    # a newer HA line and mypy checks the adapter against the wrong API.
+    if current < floor or current[0] != floor[0]:
+        return False
+    return ceiling is None or current < ceiling
 
 
 def get_debian_version():
@@ -227,12 +238,14 @@ def main():  # noqa: C901
     # 2. Check Python version against pyproject.toml requirement
     print_step("Checking Python version...")
     current_major, current_minor = sys.version_info[:2]
-    required_major, required_minor = get_required_python_version()
+    floor, ceiling = get_python_version_bounds()
+    required_major, required_minor = floor
+    requirement = f">={required_major}.{required_minor}" + (f",<{ceiling[0]}.{ceiling[1]}" if ceiling else "")
 
-    if current_major == required_major and current_minor >= required_minor:
-        print_success(f"Python {current_major}.{current_minor} found (requirement: {required_major}.{required_minor})")
+    if python_version_ok((current_major, current_minor), floor, ceiling):
+        print_success(f"Python {current_major}.{current_minor} found (requirement: {requirement})")
     else:
-        print_error(f"Python {current_major}.{current_minor} found, but {required_major}.{required_minor} required")
+        print_error(f"Python {current_major}.{current_minor} found, but {requirement} required")
         print_python_install_instructions(required_major, required_minor)
         sys.exit(1)
     print("")

@@ -1,10 +1,10 @@
-2025-04-01 10:00:00.100 INFO custom_components.cable_modem_monitor — Cable Modem Monitor v3.14.0-alpha.9 starting [T100]
-2025-04-01 10:00:00.200 INFO custom_components.cable_modem_monitor — Initialized [T100] — polling every 5m
-2025-04-01 10:00:00.300 INFO custom_components.cable_modem_monitor — Health monitoring started [T100] — every 30s
-2025-04-01 10:00:00.400 INFO custom_components.cable_modem_monitor — First poll complete [T100] — no data
-2025-04-01 10:00:00.500 INFO custom_components.cable_modem_monitor — Deferred data sensors created [T100] — 24 entities
-2025-04-01 10:00:30.100 DEBUG solentlabs.cable_modem_monitor_core.health — Health check [T100]: responsive (ICMP 1.2ms, HTTP GET 45.6ms, 1234 bytes)
-2025-04-01 10:05:01.100 INFO solentlabs.cable_modem_monitor_core.parsers — Parse complete [T100]: 32 DS, 8 US
-2025-04-01 10:05:03.200 INFO custom_components.cable_modem_monitor — Finished fetching modem data in 2.1 seconds (success: True)
-2025-04-01 10:10:01.100 INFO solentlabs.cable_modem_monitor_core.parsers — Parse complete [T100]: 32 DS, 8 US
-2025-04-01 10:10:02.500 INFO custom_components.cable_modem_monitor — Finished fetching modem data in 1.4 seconds (success: True)
+2025-04-01 10:00:00.100-04:00 INFO (MainThread) [custom_components.cable_modem_monitor] Cable Modem Monitor v3.14.0-alpha.9 starting [Acme T100] — core: v3.14.0-alpha.9, catalog: v3.14.0-alpha.9
+2025-04-01 10:00:00.300-04:00 INFO (MainThread) [custom_components.cable_modem_monitor] First poll complete [T100] — no data (unreachable)
+2025-04-01 10:00:00.350-04:00 INFO (MainThread) [custom_components.cable_modem_monitor] Health monitoring started [T100] — every 30s
+2025-04-01 10:00:00.400-04:00 INFO (MainThread) [custom_components.cable_modem_monitor] Initialized [T100] — Polling every 5m, health checks every 30s. Enable debug logging for per-poll details.
+2025-04-01 10:00:30.100-04:00 INFO (SyncWorker_3) [solentlabs.cable_modem_monitor_core.orchestration.modem_health] Health check [T100]: responsive — ICMP 1.2ms, TCP 45.6ms
+2025-04-01 10:05:01.100-04:00 INFO (SyncWorker_5) [solentlabs.cable_modem_monitor_core.orchestration.collector] Collection complete [T100] — DS: 32, US: 8 (2100ms)
+2025-04-01 10:05:01.150-04:00 INFO (MainThread) [custom_components.cable_modem_monitor.sensor] Deferred data sensors created [T100] — 24 data-dependent entities
+2025-04-01 10:05:03.200-04:00 DEBUG (MainThread) [custom_components.cable_modem_monitor] Finished fetching Cable Modem T100 data in 2.100 seconds (success: True)
+2025-04-01 10:10:01.100-04:00 DEBUG (SyncWorker_2) [solentlabs.cable_modem_monitor_core.orchestration.collector] Collection complete [T100] — DS: 32, US: 8 (1400ms)
+2025-04-01 10:10:02.500-04:00 DEBUG (MainThread) [custom_components.cable_modem_monitor] Finished fetching Cable Modem T100 data in 1.400 seconds (success: True)

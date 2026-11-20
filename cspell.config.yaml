@@ -60,6 +60,7 @@ ignoreWords:
   # Contributor handles (CHANGELOG credits) and encoded fragments in test data
   - Boby
   - squatto
+  - hajekj
   - dvcm
   - Dsensors
   # German example heading in the link-checker slug tests
@@ -580,6 +581,7 @@ words:
   - Formalises
   - nonpositive
   - recognised
+  - recognises
   - serialisable
   - serialised
   - serialises

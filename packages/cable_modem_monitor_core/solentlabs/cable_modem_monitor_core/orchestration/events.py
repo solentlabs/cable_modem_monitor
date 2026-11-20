@@ -226,7 +226,7 @@ class HnapSessionExpired:
 
     model: str
     status_code: int
-    level: EventLevel = field(default=EventLevel.WARNING, init=False)
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
 
 
 @dataclass
@@ -236,7 +236,7 @@ class JsonRpcSessionExpired:
     model: str
     method: str
     code: str
-    level: EventLevel = field(default=EventLevel.WARNING, init=False)
+    level: EventLevel = field(default=EventLevel.INFO, init=False)
 
 
 @dataclass
@@ -289,7 +289,7 @@ class SessionRetryFailed:
     signal_name: str  # "LOAD_AUTH" or "LOAD_INTEGRITY"
     streak: int
     threshold: int
-    level: EventLevel = field(default=EventLevel.INFO, init=False)
+    level: EventLevel = field(default=EventLevel.WARNING, init=False)
 
 
 # ---------------------------------------------------------------------------

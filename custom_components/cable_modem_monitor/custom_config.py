@@ -92,7 +92,7 @@ class _AttemptHandler(logging.Handler):
     """Collects the attempt thread's records and passes on only what HA would have logged anyway."""
 
     def __init__(self, records: list[logging.LogRecord], thread_id: int, thresholds: dict[str, int]) -> None:
-        """Collect ``thread_id``'s records; forward any record at or above its package's prior level."""
+        """Collect ``thread_id``'s records; forward any record at or above its logger's prior level."""
         super().__init__(logging.DEBUG)
         self._records = records
         self._thread_id = thread_id
@@ -102,12 +102,34 @@ class _AttemptHandler(logging.Handler):
         """Keep the attempt's records; hand HA's handlers only what they would have received."""
         if record.thread == self._thread_id:
             self._records.append(record)
-        for name, threshold in self._thresholds.items():
-            if record.name == name or record.name.startswith(f"{name}."):
-                parent = logging.getLogger(name).parent
-                if record.levelno >= threshold and parent is not None:
-                    parent.handle(record)
-                return
+        matches = [name for name in self._thresholds if record.name == name or record.name.startswith(f"{name}.")]
+        if not matches:
+            return
+        # The nearest leveled ancestor held the prior threshold; the package
+        # (shortest match) is where propagation was cut, so its parent is HA's.
+        threshold = self._thresholds[max(matches, key=len)]
+        parent = logging.getLogger(min(matches, key=len)).parent
+        if record.levelno >= threshold and parent is not None:
+            parent.handle(record)
+
+
+def _set_level(logger: logging.Logger, level: int) -> None:
+    """Set a logger's level even when HA's logger integration pins it."""
+    # HA's logger class makes setLevel a no-op for loggers named under
+    # `logger: logs:`; orig_setLevel is its own bypass (logger/helpers.py).
+    getattr(logger, "orig_setLevel", logger.setLevel)(level)
+
+
+def _leveled_loggers() -> list[logging.Logger]:
+    """The captured packages, then every descendant that has a level of its own."""
+    descendants = sorted(
+        name
+        for name, logger in list(logging.Logger.manager.loggerDict.items())
+        if isinstance(logger, logging.Logger)
+        and logger.level != logging.NOTSET
+        and any(name.startswith(f"{package}.") for package in _CAPTURED_LOGGERS)
+    )
+    return [logging.getLogger(name) for name in (*_CAPTURED_LOGGERS, *descendants)]
 
 
 # One capture at a time: two would each detach the loggers from HA's
@@ -122,23 +144,29 @@ def capture_attempt() -> Iterator[list[logging.LogRecord]]:
     # HA logs at. They stop propagating meanwhile, and the handler forwards
     # only records at or above the prior level, so HA's log gets nothing the
     # attempt added: those lines are unscrubbed, and only the report is.
+    # A descendant with its own level (a module named under HA's `logger:
+    # logs:`) would still drop DEBUG, so it is lowered too.
     with _CAPTURE_LOCK:
         records: list[logging.LogRecord] = []
-        loggers = [logging.getLogger(name) for name in _CAPTURED_LOGGERS]
-        saved = [(lg.level, lg.propagate) for lg in loggers]
-        thresholds = {lg.name: lg.getEffectiveLevel() for lg in loggers}
+        packages = [logging.getLogger(name) for name in _CAPTURED_LOGGERS]
+        leveled = _leveled_loggers()
+        saved_levels = [lg.level for lg in leveled]
+        saved_propagate = [lg.propagate for lg in packages]
+        thresholds = {lg.name: lg.getEffectiveLevel() for lg in leveled}
         handler = _AttemptHandler(records, threading.get_ident(), thresholds)
-        for lg in loggers:
-            lg.setLevel(logging.DEBUG)
+        for lg in leveled:
+            _set_level(lg, logging.DEBUG)
+        for lg in packages:
             lg.propagate = False
             lg.addHandler(handler)
         try:
             yield records
         finally:
-            for lg, (level, propagate) in zip(loggers, saved, strict=True):
+            for lg, propagate in zip(packages, saved_propagate, strict=True):
                 lg.removeHandler(handler)
-                lg.setLevel(level)
                 lg.propagate = propagate
+            for lg, level in zip(leveled, saved_levels, strict=True):
+                _set_level(lg, level)
 
 
 def build_report(

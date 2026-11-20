@@ -6,13 +6,13 @@ orchestrator diagnostics.
 Public API:
     Models: PollEvent, HealthEvent, BackoffEvent, RecoveryEvent, CoreAnalysis
     Parsers: parse_core_logs, parse_diagnostics
-    Utilities: parse_ts
+    Utilities: parse_ts, TS_PATTERN
 """
 
 from __future__ import annotations
 
 from .diagnostics import parse_diagnostics
-from .log_parser import CORE_PATTERNS, parse_core_logs, parse_ts
+from .log_parser import CORE_PATTERNS, TS_PATTERN, parse_core_logs, parse_ts
 from .models import (
     BackoffEvent,
     CoreAnalysis,
@@ -28,6 +28,7 @@ __all__ = [
     "HealthEvent",
     "PollEvent",
     "RecoveryEvent",
+    "TS_PATTERN",
     "parse_core_logs",
     "parse_diagnostics",
     "parse_ts",

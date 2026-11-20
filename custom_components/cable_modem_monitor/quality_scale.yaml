@@ -1,0 +1,175 @@
+# Self-assessment against the Home Assistant Integration Quality Scale.
+# Format and rule set follow HA core's hassfest (script/hassfest/quality_scale.py).
+# HA grades only core integrations; this file is not reviewed by HA.
+# done = meets the rule as written; exempt = the rule's own exception applies;
+# todo = not met, including deliberate deviations (the comment says which).
+rules:
+  # Bronze
+  action-setup:
+    status: done
+    comment: Services registered in async_setup (__init__.py, services.async_register_services); ServiceValidationError when the target entry is not loaded.
+  appropriate-polling:
+    status: todo
+    comment: Deliberate deviation. Defaults are data poll 10 min, health probe 30 s (const.py), but the options flow lets users change both, which HA's rule excludes. The interval is a documented user remedy for fragile modem web servers (#117, TROUBLESHOOTING.md § Multiple Home Assistant Instances, Netgear sign-outs), and HA's alternative (polling off plus an automation) cannot set the two intervals separately.
+  brands:
+    status: done
+    comment: brand/icon.png, icon.svg, logo.png in the integration directory.
+  common-modules:
+    status: done
+    comment: Coordinators in coordinator.py (CableModemDataCoordinator, CableModemHealthCoordinator); base entity CableModemEntity in entity.py builds DeviceInfo and has_entity_name for every sensor and button base.
+  config-flow:
+    status: done
+    comment: config_flow.py with selectors and data_description; connection settings in entry.data, poll intervals in entry.options.
+  config-flow-test-coverage:
+    status: done
+    comment: config_flow.py at 100% including reauth and options flows (tests/components/test_config_flow.py, test_config_flow_guards.py); error recovery, the created entry's unique_id and the duplicate abort are asserted.
+  dependency-transparency:
+    status: done
+    comment: Core and catalog are MIT, on PyPI, published by .github/workflows/publish.yml from v* tags via trusted publishing.
+  docs-actions:
+    status: done
+    comment: .github/README.md Services; docs/EXAMPLES.md.
+  docs-conditions:
+    status: exempt
+    comment: The integration provides no conditions.
+  docs-high-level-description:
+    status: done
+    comment: .github/README.md and README.md introductions.
+  docs-installation-instructions:
+    status: done
+    comment: .github/README.md Installation (Marketplace, beta install).
+  docs-removal-instructions:
+    status: done
+    comment: .github/README.md Removing the Integration.
+  docs-triggers:
+    status: exempt
+    comment: The integration provides no triggers.
+  entity-event-setup:
+    status: done
+    comment: Subscriptions in async_added_to_hass with async_on_remove cleanup (sensor.py ModemStatusSensor).
+  entity-unique-id:
+    status: done
+    comment: Every entity sets _attr_unique_id scoped by entry_id (sensor.py, button.py).
+  has-entity-name:
+    status: done
+    comment: Set for every sensor and button by CableModemEntity (entity.py).
+  runtime-data:
+    status: done
+    comment: entry.runtime_data = CableModemRuntimeData in async_setup_entry; typed alias CableModemConfigEntry (coordinator.py).
+  test-before-configure:
+    status: done
+    comment: The connection step runs the full auth and parse validation before creating the entry (config_flow.py async_step_connection).
+  test-before-setup:
+    status: done
+    comment: ConfigEntryError on catalog-load failure; an unreachable modem continues setup with deferred entities (__init__.py); auth failure starts reauth (coordinator.py).
+  unique-config-entry:
+    status: done
+    comment: Setup aborts on a matching host (_async_abort_entries_match) or entity prefix (unique_id) in config_flow.py _async_create_validated_entry. No hardware ID is readable across the catalog, so host is the key. The local dev harness (CMM_LOCAL_DEV) skips the host check.
+
+  # Silver
+  action-exceptions:
+    status: done
+    comment: Services raise ServiceValidationError, restart failure raises HomeAssistantError (services.py, button.py, dev_tools.py, card/commands.py).
+  config-entry-unloading:
+    status: done
+    comment: async_unload_entry unloads platforms; listeners use entry.async_on_unload (__init__.py).
+  docs-configuration-parameters:
+    status: done
+    comment: .github/README.md Options covers every options-flow field.
+  docs-installation-parameters:
+    status: todo
+    comment: .github/README.md Setup omits the Entity ID Prefix field asked in the model step (strings.json config.step.model).
+  entity-unavailable:
+    status: todo
+    comment: Deliberate deviation (#178). Software version, last boot time and system-info sensors stay available and hold their last value during an outage (sensor.py _StickyAvailabilityMixin); measurement sensors go unavailable.
+  integration-owner:
+    status: done
+    comment: manifest.json codeowners.
+  log-when-unavailable:
+    status: todo
+    comment: Logs once per transition (coordinator.py _log_availability_transition, tested in tests/components/test_init.py and test_poll_behavior.py), but the unavailable line is WARNING; the rule requires info.
+  parallel-updates:
+    status: done
+    comment: PARALLEL_UPDATES = 0 in sensor.py and button.py.
+  reauthentication-flow:
+    status: done
+    comment: Auth failure calls entry.async_start_reauth; async_step_reauth_confirm updates credentials (coordinator.py, config_flow.py).
+  test-coverage:
+    status: todo
+    comment: Integration total 98%, but the rule is above 95% per module. Below it are repairs.py 70% and config_flow_helpers.py 94%.
+
+  # Gold
+  devices:
+    status: done
+    comment: Device registry entry with manufacturer, model, model_id, sw_version, hw_version, configuration_url (__init__.py).
+  diagnostics:
+    status: done
+    comment: diagnostics.py excludes credentials and scrubs addresses; 100% covered.
+  discovery:
+    status: todo
+    comment: Not implemented. Not assessed whether any catalog modem announces via SSDP, mDNS or DHCP.
+  discovery-update-info:
+    status: todo
+    comment: Depends on discovery.
+  docs-data-update:
+    status: done
+    comment: .github/README.md Options states poll and health intervals, defaults and limits.
+  docs-examples:
+    status: done
+    comment: docs/EXAMPLES.md, docs/examples/automations.
+  docs-known-limitations:
+    status: done
+    comment: .github/README.md Known Limitations.
+  docs-supported-devices:
+    status: done
+    comment: .github/README.md Supported Modems and the generated catalog index.
+  docs-supported-functions:
+    status: done
+    comment: .github/README.md Available Sensors, Controls, Services.
+  docs-troubleshooting:
+    status: done
+    comment: docs/TROUBLESHOOTING.md.
+  docs-use-cases:
+    status: done
+    comment: .github/README.md At a Glance and Features; docs/EXAMPLES.md.
+  dynamic-devices:
+    status: exempt
+    comment: One static device per config entry, tied to the entry's lifecycle.
+  entity-category:
+    status: done
+    comment: Health, info, system-info and error sensors are DIAGNOSTIC; Reset Entities is CONFIG (sensor.py, button.py).
+  entity-device-class:
+    status: todo
+    comment: Latency sensors report ms without SensorDeviceClass.DURATION (sensor.py PingLatencySensor, TcpLatencySensor, HttpLatencySensor). Others set TIMESTAMP, FREQUENCY, DATA_SIZE, DATA_RATE.
+  entity-disabled-by-default:
+    status: todo
+    comment: No entity is disabled by default. Per-channel sensors are the noisy set (#178).
+  entity-translations:
+    status: todo
+    comment: Deliberate. Entity names are English _attr_name literals; rationale in docs/TRANSLATION_GUIDE.md.
+  exception-translations:
+    status: todo
+    comment: No exceptions block in strings.json; raises carry no translation_key.
+  icon-translations:
+    status: todo
+    comment: Deliberate, follows entity-translations. Icons set with _attr_icon, no icons.json (docs/TRANSLATION_GUIDE.md).
+  reconfiguration-flow:
+    status: todo
+    comment: Deliberate. No async_step_reconfigure; host and credentials change in the options flow (custom_components/cable_modem_monitor/docs/CONFIG_FLOW_SPEC.md).
+  repair-issues:
+    status: done
+    comment: Fixable repair issue when a custom config's catalog file changes (repairs.py).
+  stale-devices:
+    status: exempt
+    comment: One static device per config entry, tied to the entry's lifecycle.
+
+  # Platinum
+  async-dependency:
+    status: todo
+    comment: Deliberate. Core is synchronous and runs in the executor (packages/cable_modem_monitor_core/docs/ARCHITECTURE_DECISIONS.md).
+  inject-websession:
+    status: todo
+    comment: Deliberate. Core uses its own requests session (same decision as async-dependency).
+  strict-typing:
+    status: todo
+    comment: Core and catalog ship no py.typed; mypy.ini does not apply strict settings to custom_components.

@@ -510,6 +510,15 @@ since users paste it into LLM chats and public issues.
 becomes an entry, so it is never polled. Closing the dialog discards
 the text; the guide tells users to keep their YAML outside the dialog.
 
+**Editing a saved custom entry.** Configure on a custom entry opens the
+`custom_config` options step: the Configure fields plus the modem
+config, filled with `custom_modem_yaml`. Each submit runs one attempt
+as above, after the options flow's wait for a quiet modem. A pass
+saves the text and the other fields; `custom_base_yaml` and
+`custom_base_version` keep their values. A failure logs the attempt
+report and saves nothing. Text that matches the catalog file returns
+the entry to it at the reload that follows (below).
+
 **Returning to the catalog.** At each startup a custom entry compares
 the installed catalog file with its own YAML and with
 `custom_base_yaml`, on the parsed YAML (comments, formatting and key
@@ -569,7 +578,8 @@ custom_base_version: "3.14.15"     # integration version that supplied the base 
 ```
 
 A custom entry loads `custom_modem_yaml` wherever any other entry loads
-its variant file: startup, options-flow and reauth validation. The
+its variant file: startup and reauth validation. Configure tests the
+text submitted with it (§ Custom Config Setup). The
 diagnostics download carries the diff from base to user text
 ([HA_ADAPTER_SPEC.md § Diagnostics Platform](HA_ADAPTER_SPEC.md#diagnostics-platform)).
 
@@ -578,7 +588,8 @@ and can't be stored in the config entry — the package is already a hard
 runtime dependency. So auth config, page URLs, session config, and parser
 class are all loaded from the package at startup. This means modem config
 fixes (corrected page URLs, updated auth params) apply automatically on
-restart without reconfiguration.
+restart without reconfiguration. A custom config entry is the exception
+until it returns to the catalog file (§ Custom Config Setup).
 
 **Variant resolution at startup:** The loader resolves the
 `manufacturer/model/variant` tuple to a config file:
@@ -589,6 +600,21 @@ restart without reconfiguration.
 Existing entries keep loading only while their file keeps its name; when
 a file may be renamed is set in
 [MODEM_DIRECTORY_SPEC.md § modem.yaml / modem-{variant}.yaml](../../../packages/cable_modem_monitor_core/docs/MODEM_DIRECTORY_SPEC.md#modemyaml--modem-variantyaml-required).
+
+### Config Entry Uniqueness
+
+Setup aborts with `already_configured` when either key matches an existing
+entry:
+
+- **Entity prefix** (the entry's `unique_id`). The prefix controls every
+  entity_id, so two entries with one prefix collide.
+- **Host** (the parsed hostname). One modem is one entry, as HA's
+  `unique-config-entry` rule requires. Modems expose no hardware ID every
+  catalog entry can read, so the host is the key.
+
+When the `CMM_LOCAL_DEV` env var is set (the local test harness,
+`docker-compose.test.yml`), the host check is skipped so a bench can add
+several modems at the default IP under different prefixes.
 
 ---
 
@@ -602,12 +628,12 @@ Configure.
 - Host, username, password (without re-selecting modem)
 - Data poll interval (30s–86400s, or disabled for manual-only)
 - Health check interval (10s–86400s, or disabled)
-- Full reconfiguration (restart from Step 1)
+- The modem config, on a custom config entry (§ Custom Config Setup)
 
-**What cannot change without reconfiguration:**
+**What cannot change:**
 
 - Manufacturer, model, variant — these determine the parser and auth
-  config. Changing them means starting over.
+  config. Changing them means deleting the entry and adding it again.
 
 **No Reconfigure step.** Configure is the one place to change connection
 details; the integration provides no `async_step_reconfigure`. It would

@@ -26,7 +26,6 @@ from homeassistant.const import CONF_HOST, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_core.config_loader import load_modem_config
@@ -37,7 +36,6 @@ from solentlabs.cable_modem_monitor_core.orchestration.models import (
 
 from .config_flow_helpers import detect_probes
 from .const import (
-    CONF_ENTITY_PREFIX,
     CONF_LEGACY_SSL,
     CONF_MODEM_DIR,
     CONF_SUPPORTS_HEAD,
@@ -46,7 +44,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import ActiveOperation, CableModemConfigEntry
-from .lib.utils import get_device_name
+from .entity import CableModemEntity
 from .services import async_request_modem_refresh
 
 _LOGGER = logging.getLogger(__name__)
@@ -106,26 +104,19 @@ def hold_active_operation(
 # ------------------------------------------------------------------
 
 
-class _ButtonBase(ButtonEntity):
+class _ButtonBase(ButtonEntity, CableModemEntity):
     """Base class for modem buttons.
 
-    Uses plain ButtonEntity — buttons trigger actions, they don't
-    consume coordinator data.  Device linkage via identifiers.
+    No coordinator — buttons trigger actions, they don't consume
+    coordinator data. Device linkage comes from CableModemEntity.
     """
 
-    _attr_has_entity_name = True
-
     def __init__(self, entry: CableModemConfigEntry) -> None:
-        """Initialize the button with config entry."""
-        self._entry = entry
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=get_device_name(
-                entry.data.get(CONF_ENTITY_PREFIX, "default"),
-                model=entry.runtime_data.modem_identity.model,
-                host=entry.data.get("host", ""),
-            ),
-        )
+        """Attach to the modem device."""
+        # Explicit, as in the sensor bases: no HA class before
+        # CableModemEntity in the MRO defines __init__ today; if one did,
+        # super().__init__ would stop reaching this one.
+        CableModemEntity.__init__(self, entry)
 
     async def _notify(
         self,

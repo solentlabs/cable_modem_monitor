@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from collections.abc import Mapping
 from pathlib import Path
@@ -45,6 +46,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.logging import log_event
 
 from .config_flow_detect import DetectionPlan, Tier1, plan_detection
 from .config_flow_helpers import (
+    CustomAttempt,
     async_brand_icon_url,
     build_model_display_name,
     build_model_options,
@@ -155,6 +157,37 @@ def _validation_failure_key(exc: Exception) -> str:
         return "custom_yaml_invalid"
     _LOGGER.error("Unexpected validation error", exc_info=exc)
     return "unknown"
+
+
+def _catalog_file_label(modem_dir: str, variant: str | None) -> str:
+    """The variant file, relative to the catalog (e.g. ``arris/sb8200/modem.yaml``)."""
+    return f"{modem_dir}/modem-{variant}.yaml" if variant else f"{modem_dir}/modem.yaml"
+
+
+def _log_custom_failure(attempt: CustomAttempt, *, catalog_file: str, host: str) -> str:
+    """Log a failed custom config attempt's report; return the form error key."""
+    error = attempt.error or RuntimeError("unknown")
+    error_key = _validation_failure_key(error)
+    # The report carries the detail (an LLM reads it); the form points at
+    # the report instead of reusing normal setup's credential advice,
+    # since an edited config fails a login as readily as a bad password.
+    detail = str(error)
+    if detail.startswith(("auth_error:", "collection_error:")):
+        detail = detail.split(":", 2)[-1]  # drop the "{kind}:{key}:" encoding
+    # One WARNING record: HA's log page on HAOS keeps WARNING and up, so
+    # the step lines survive inside it.
+    _LOGGER.warning(
+        "%s",
+        build_report(
+            version=VERSION,
+            catalog_file=catalog_file,
+            host=host,
+            outcome=f"{error_key}: {detail}",
+            records=attempt.records,
+            scrub=attempt.scrub,
+        ),
+    )
+    return error_key if isinstance(error, CustomYamlError) else "custom_attempt_failed"
 
 
 # =============================================================================
@@ -839,11 +872,6 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     # Custom config loop (CONFIG_FLOW_SPEC § Custom Config Setup)
     # -----------------------------------------------------------------
 
-    def _catalog_file_label(self) -> str:
-        """The selected variant file, relative to the catalog (e.g. ``arris/sb8200/modem.yaml``)."""
-        name = f"modem-{self._selected_variant}.yaml" if self._selected_variant else "modem.yaml"
-        return str((self._get_selected_modem_dir() / name).relative_to(CATALOG_PATH))
-
     async def async_step_custom_config(
         self,
         user_input: dict[str, Any] | None = None,
@@ -886,28 +914,12 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                 self._selected_summary, self._connection_input, attempt.validation, custom=custom
             )
 
-        error = attempt.error or RuntimeError("unknown")
-        error_key = _validation_failure_key(error)
-        # The report carries the detail (an LLM reads it); the form points at
-        # the report instead of reusing normal setup's credential advice,
-        # since an edited config fails a login as readily as a bad password.
-        detail = str(error)
-        if detail.startswith(("auth_error:", "collection_error:")):
-            detail = detail.split(":", 2)[-1]  # drop the "{kind}:{key}:" encoding
-        outcome = f"{error_key}: {detail}"
-        form_key = error_key if isinstance(error, CustomYamlError) else "custom_attempt_failed"
-        # One WARNING record: HA's log page on HAOS keeps WARNING and up, so
-        # the step lines survive inside it.
-        _LOGGER.warning(
-            "%s",
-            build_report(
-                version=VERSION,
-                catalog_file=self._catalog_file_label(),
-                host=self._connection_input[CONF_HOST],
-                outcome=outcome,
-                records=attempt.records,
-                scrub=attempt.scrub,
+        form_key = _log_custom_failure(
+            attempt,
+            catalog_file=_catalog_file_label(
+                str(self._get_selected_modem_dir().relative_to(CATALOG_PATH)), self._selected_variant
             ),
+            host=self._connection_input[CONF_HOST],
         )
         return self._show_custom_config_form(errors={"base": form_key})
 
@@ -939,17 +951,17 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     ) -> config_entries.ConfigFlowResult:
         """Create the config entry from the selections and the validation result."""
 
-        # Deduplicate by entity_prefix — the prefix is by design the
-        # per-entry disambiguator (it controls every entity_id this
-        # integration creates), so two entries claiming the same
-        # prefix would collide regardless of host or model. Any other
-        # combination — different prefix at same host, same prefix
-        # across host changes, etc. — is the user's intent and
-        # should not be blocked.
+        # Two dedup keys (CONFIG_FLOW_SPEC § Config Entry Uniqueness).
+        # entity_prefix: it controls every entity_id this integration
+        # creates, so two entries with the same prefix collide.
+        # host: one modem is one entry. The local dev harness skips the
+        # host check so a bench can stack entries on the default IP.
         hostname, _ = parse_host_input(conn[CONF_HOST])
         entity_prefix = conn.get(CONF_ENTITY_PREFIX, EntityPrefix.NONE)
         await self.async_set_unique_id(str(entity_prefix))
         self._abort_if_unique_id_configured()
+        if not os.getenv("CMM_LOCAL_DEV"):
+            self._async_abort_entries_match({CONF_HOST: hostname})
 
         display_name = build_model_display_name(summary)
         title = f"{summary.manufacturer} {summary.model} ({hostname})"
@@ -1111,53 +1123,102 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self,
         user_input: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
-        """Show the options form."""
-        if user_input is not None:
-            # Preserve password if user left it blank
-            if not user_input.get(CONF_PASSWORD):
-                user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
-            return await self._async_validate(user_input)
+        """Show the options form; a custom config entry gets the custom_config step."""
+        if CONF_CUSTOM_MODEM_YAML in self.config_entry.data:
+            return await self.async_step_custom_config(user_input)
+        if user_input is None:
+            return self._show_options_form("init", self._current_values())
+        self._keep_blank_password(user_input)
+        return await self._async_validate(user_input)
+
+    async def async_step_custom_config(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Edit a custom config entry's settings and modem config; save only when a test passes."""
+        if user_input is None:
+            return self._show_options_form("custom_config", self._current_values())
+        self._keep_blank_password(user_input)
 
         entry = self.config_entry
-        data = entry.data
-        options = entry.options
+        await self._wait_for_quiet_modem(entry)
+        attempt = await run_custom_attempt(
+            self.hass,
+            host=user_input[CONF_HOST],
+            username=user_input.get(CONF_USERNAME, ""),
+            password=user_input.get(CONF_PASSWORD, ""),
+            modem_dir=CATALOG_PATH / entry.data[CONF_MODEM_DIR],
+            variant=entry.data.get(CONF_VARIANT),
+            modem_yaml_text=user_input[_FIELD_MODEM_CONFIG],
+        )
+        if attempt.validation is None:
+            form_key = _log_custom_failure(
+                attempt,
+                catalog_file=_catalog_file_label(entry.data[CONF_MODEM_DIR], entry.data.get(CONF_VARIANT)),
+                host=user_input[CONF_HOST],
+            )
+            return self._show_options_form("custom_config", user_input, errors={"base": form_key})
+        # The base text and version stay: they record where the config started.
+        return self._apply_validated_options(
+            user_input, attempt.validation, extra={CONF_CUSTOM_MODEM_YAML: user_input[_FIELD_MODEM_CONFIG]}
+        )
 
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_HOST,
-                        default=data.get(CONF_HOST, "192.168.100.1"),
-                    ): str,
-                    vol.Optional(
-                        CONF_USERNAME,
-                        default=data.get(CONF_USERNAME, ""),
-                    ): str,
-                    vol.Optional(CONF_PASSWORD, default=""): str,
-                    vol.Required(
-                        CONF_SCAN_INTERVAL,
-                        default=_seconds_to_duration(
-                            options.get(
-                                CONF_SCAN_INTERVAL,
-                                data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-                            )
-                        ),
-                    ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
-                    vol.Required(
-                        CONF_HEALTH_CHECK_INTERVAL,
-                        default=_seconds_to_duration(
-                            options.get(
-                                CONF_HEALTH_CHECK_INTERVAL,
-                                data.get(
-                                    CONF_HEALTH_CHECK_INTERVAL,
-                                    DEFAULT_HEALTH_CHECK_INTERVAL,
-                                ),
-                            )
-                        ),
-                    ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
-                }
+    def _keep_blank_password(self, user_input: dict[str, Any]) -> None:
+        """A blank password field keeps the stored password."""
+        if not user_input.get(CONF_PASSWORD):
+            user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
+
+    def _current_values(self) -> dict[str, Any]:
+        """The entry's current settings, as the options form fields."""
+        data = self.config_entry.data
+        options = self.config_entry.options
+        return {
+            CONF_HOST: data.get(CONF_HOST, "192.168.100.1"),
+            CONF_USERNAME: data.get(CONF_USERNAME, ""),
+            CONF_SCAN_INTERVAL: options.get(CONF_SCAN_INTERVAL, data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)),
+            CONF_HEALTH_CHECK_INTERVAL: options.get(
+                CONF_HEALTH_CHECK_INTERVAL,
+                data.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL),
             ),
+            _FIELD_MODEM_CONFIG: data.get(CONF_CUSTOM_MODEM_YAML, ""),
+        }
+
+    def _show_options_form(
+        self,
+        step_id: str,
+        values: Mapping[str, Any],
+        *,
+        errors: dict[str, str] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Render the options form filled from ``values``; the custom_config step adds the modem config."""
+        fields: dict[Any, Any] = {
+            vol.Required(CONF_HOST, default=values.get(CONF_HOST, "")): str,
+            vol.Optional(CONF_USERNAME, default=values.get(CONF_USERNAME, "")): str,
+            vol.Optional(CONF_PASSWORD, default=""): str,
+            vol.Required(
+                CONF_SCAN_INTERVAL,
+                default=_seconds_to_duration(
+                    _duration_to_seconds(values.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+                ),
+            ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
+            vol.Required(
+                CONF_HEALTH_CHECK_INTERVAL,
+                default=_seconds_to_duration(
+                    _duration_to_seconds(values.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL))
+                ),
+            ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
+        }
+        placeholders = None
+        if step_id == "custom_config":
+            fields[vol.Required(_FIELD_MODEM_CONFIG, default=values.get(_FIELD_MODEM_CONFIG, ""))] = (
+                selector.TextSelector(selector.TextSelectorConfig(multiline=True))
+            )
+            placeholders = {"guide_url": _CUSTOM_CONFIG_GUIDE_URL, "logs_url": _HA_LOGS_PATH}
+        return self.async_show_form(
+            step_id=step_id,
+            data_schema=vol.Schema(fields),
+            errors=errors,
+            description_placeholders=placeholders,
         )
 
     async def _async_validate(self, user_input: dict[str, Any]) -> config_entries.ConfigFlowResult:
@@ -1184,7 +1245,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 variant=entry.data.get(CONF_VARIANT),
             )
         except Exception as exc:
-            return self._show_form_with_error(user_input, _validation_failure_key(exc))
+            return self._show_options_form("init", user_input, errors={"base": _validation_failure_key(exc)})
 
         return self._apply_validated_options(user_input, validation)
 
@@ -1220,7 +1281,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             password=password,
             modem_dir=modem_dir,
             variant=variant,
-            modem_yaml_text=entry.data.get(CONF_CUSTOM_MODEM_YAML),
         )
 
     async def _wait_for_quiet_modem(
@@ -1259,8 +1319,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self,
         inp: dict[str, Any],
         validation: dict[str, Any],
+        *,
+        extra: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
-        """Apply validated options changes."""
+        """Apply validated options changes; ``extra`` adds entry data fields."""
         hostname, _ = parse_host_input(inp[CONF_HOST])
         entry = self.config_entry
 
@@ -1276,6 +1338,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             CONF_SUPPORTS_HEAD: validation["supports_head"],
             # Auth strategy setup params, each under its own key (opaque here)
             **validation.get("setup_params", {}),
+            **(extra or {}),
         }
 
         mfr = entry.data[CONF_MANUFACTURER]
@@ -1293,46 +1356,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_SCAN_INTERVAL: scan,
                 CONF_HEALTH_CHECK_INTERVAL: health,
             },
-        )
-
-    def _show_form_with_error(
-        self,
-        saved: dict[str, Any],
-        error_key: str,
-    ) -> config_entries.ConfigFlowResult:
-        """Re-show options form with error message."""
-        errors = {"base": error_key}
-        entry = self.config_entry
-        data = entry.data
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_HOST,
-                        default=saved.get(CONF_HOST, data.get(CONF_HOST, "")),
-                    ): str,
-                    vol.Optional(
-                        CONF_USERNAME,
-                        default=saved.get(CONF_USERNAME, data.get(CONF_USERNAME, "")),
-                    ): str,
-                    vol.Optional(CONF_PASSWORD, default=""): str,
-                    vol.Required(
-                        CONF_SCAN_INTERVAL,
-                        default=_seconds_to_duration(
-                            _duration_to_seconds(saved.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
-                        ),
-                    ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
-                    vol.Required(
-                        CONF_HEALTH_CHECK_INTERVAL,
-                        default=_seconds_to_duration(
-                            _duration_to_seconds(saved.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL))
-                        ),
-                    ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
-                }
-            ),
-            errors=errors,
         )
 
 

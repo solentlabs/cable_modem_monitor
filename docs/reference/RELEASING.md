@@ -23,7 +23,9 @@ Releases follow a PR-based workflow:
   startup banner is still the tell: it appends `(local dev)` whenever
   the `CMM_LOCAL_DEV` env var is set (`docker-compose.test.yml` sets
   it for the local harness), so a dev-tree install self-identifies in
-  the log regardless of the version it reports. Whether a *specific*
+  the log regardless of the version it reports. The same variable lets
+  the config flow add several entries at one host
+  (CONFIG_FLOW_SPEC § Config Entry Uniqueness). Whether a *specific*
   change is live is confirmed by behavior, not the number.
 - **Never run `gh release create` manually.** Let CI handle it.
 - **Dogfood on local HA** before stable releases (maintainer launches,

@@ -1,0 +1,2 @@
+2025-04-01 10:00:05.100 INFO solentlabs.cable_modem_monitor_core.orchestration — Recovery window open [T100] — reason: connectivity_outage
+2025-04-01 10:03:35.200 INFO solentlabs.cable_modem_monitor_core.orchestration — Recovery window closed [T100] — elapsed: 210s, last snapshot docsis: Operational

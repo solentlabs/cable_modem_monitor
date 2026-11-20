@@ -142,6 +142,7 @@ This integration supports modems from ARRIS, CommScope, Compal, Hitron, Motorola
 The catalog grows when contributors with hardware step up. Two paths:
 
 - **Modem not listed?** Use [har-capture](https://github.com/solentlabs/har-capture) to record your modem's web interface, then [file a request](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml). See the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) for the user-facing walkthrough.
+- **Modem close but not working?** [Add modem with custom config](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/CUSTOM_CONFIG.md) lets you edit its config and test it during setup.
 - **Want to help more?** If you have AI access, you can analyze captures and propose catalog entries yourself. See [AI-Assisted Catalog Contribution](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md#ai-assisted-catalog-contribution).
 
 **Modem listed as ⏳ Awaiting?** [Report it working](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_verification.yml) to help verify support.
@@ -375,6 +376,19 @@ To uninstall completely, delete every modem entry as above, then open **Settings
 ## Troubleshooting
 
 **📖 The [Troubleshooting Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)** covers connection problems, missing sensors, and duplicate entities.
+
+## Quality Scale
+
+Home Assistant grades only its built-in integrations against its [Integration Quality Scale](https://contributors.home-assistant.io/core/quality-scale/). This is a self-assessment against the same rules; each rule's status and evidence is in [quality_scale.yaml](../custom_components/cable_modem_monitor/quality_scale.yaml). A tier is reached when all of its rules and every rule below it are met.
+
+<!-- BEGIN GENERATED: quality-scale (from custom_components/cable_modem_monitor/quality_scale.yaml; run scripts/generate_quality_scale_table.py) -->
+| Tier | Rules met | Open rules |
+| ---- | --------- | ---------- |
+| 🥉 Bronze | 19 / 20 | [`appropriate-polling`](https://contributors.home-assistant.io/core/quality-scale/appropriate-polling/) |
+| 🥈 Silver | 6 / 10 | [`docs-installation-parameters`](https://contributors.home-assistant.io/core/quality-scale/docs-installation-parameters/), [`entity-unavailable`](https://contributors.home-assistant.io/core/quality-scale/entity-unavailable/), [`log-when-unavailable`](https://contributors.home-assistant.io/core/quality-scale/log-when-unavailable/), [`test-coverage`](https://contributors.home-assistant.io/core/quality-scale/test-coverage/) |
+| 🥇 Gold | 13 / 21 | [`discovery`](https://contributors.home-assistant.io/core/quality-scale/discovery/), [`discovery-update-info`](https://contributors.home-assistant.io/core/quality-scale/discovery-update-info/), [`entity-device-class`](https://contributors.home-assistant.io/core/quality-scale/entity-device-class/), [`entity-disabled-by-default`](https://contributors.home-assistant.io/core/quality-scale/entity-disabled-by-default/), [`entity-translations`](https://contributors.home-assistant.io/core/quality-scale/entity-translations/), [`exception-translations`](https://contributors.home-assistant.io/core/quality-scale/exception-translations/), [`icon-translations`](https://contributors.home-assistant.io/core/quality-scale/icon-translations/), [`reconfiguration-flow`](https://contributors.home-assistant.io/core/quality-scale/reconfiguration-flow/) |
+| 🏆 Platinum | 0 / 3 | [`async-dependency`](https://contributors.home-assistant.io/core/quality-scale/async-dependency/), [`inject-websession`](https://contributors.home-assistant.io/core/quality-scale/inject-websession/), [`strict-typing`](https://contributors.home-assistant.io/core/quality-scale/strict-typing/) |
+<!-- END GENERATED: quality-scale -->
 
 ## Privacy & Security
 

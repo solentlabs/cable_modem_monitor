@@ -57,7 +57,13 @@ Formatter - 120 char lines, Python 3.12 target.
 
 ### mypy Configuration
 
-Type checker - config in `pyproject.toml`. Warns on return any, allows gradual typing.
+Type checker - config in `mypy.ini`. Warns on return any, allows gradual typing.
+
+**Which Home Assistant it checks against.** Locally and in CI, mypy
+reads the installed Home Assistant: on the pinned Python 3.12 that is
+2025.1.x, the oldest release the integration supports (`hacs.json`).
+Neither run checks against current Home Assistant, which requires a
+newer Python.
 
 ### Common Fixes
 

@@ -144,6 +144,25 @@
           "scan_interval": "How often to poll modem data. Default 10 minutes. Set to 00:00:00 to disable automatic polling (manual only via Update button).",
           "health_check_interval": "How often to check modem reachability. Default 30 seconds. Set to 00:00:00 to disable health checks."
         }
+      },
+      "custom_config": {
+        "title": "Custom config",
+        "description": "Submit tests this config against your modem; nothing is saved until a test passes. Failed tests write a \"custom config report\" to the [log]({logs_url}). [Guide]({guide_url})",
+        "data": {
+          "host": "Modem IP Address",
+          "username": "Username",
+          "password": "Password",
+          "scan_interval": "Data Poll Interval",
+          "health_check_interval": "Health Check Interval",
+          "modem_config": "Modem config (modem.yaml)"
+        },
+        "data_description": {
+          "host": "Usually 192.168.100.1",
+          "username": "Leave blank if not required.",
+          "password": "Blank keeps current password.",
+          "scan_interval": "How often to poll modem data. Default 10 minutes. Set to 00:00:00 to disable automatic polling (manual only via Update button).",
+          "health_check_interval": "How often to check modem reachability. Default 30 seconds. Set to 00:00:00 to disable health checks."
+        }
       }
     },
     "error": {
@@ -153,7 +172,9 @@
       "modem_busy": "The modem is busy and turned the login away. Not a credential problem; close the modem's web page if it is open, then retry.",
       "session_rejected": "Logged in successfully, but the modem refused the data request. Not a credential problem; see the warning in the Home Assistant log.",
       "parse_failed": "Connected but couldn't read modem data.",
-      "unknown": "Unexpected error. Check Home Assistant logs."
+      "unknown": "Unexpected error. Check Home Assistant logs.",
+      "custom_attempt_failed": "The test failed. Open the Home Assistant log and search for \"custom config report\": it shows each step and what the modem answered. A login failure here can come from your edited config, not only the username or password.",
+      "custom_yaml_invalid": "The modem config is not valid YAML, or doesn't match the modem.yaml format. The details are in the custom config report in the Home Assistant log."
     },
     "abort": {
       "unknown_model": "Configured modem not found in catalog."

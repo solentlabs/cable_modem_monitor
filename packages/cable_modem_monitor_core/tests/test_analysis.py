@@ -19,8 +19,16 @@ from solentlabs.cable_modem_monitor_core.analysis import (
 )
 from solentlabs.cable_modem_monitor_core.analysis.log_parser import CORE_PATTERNS
 from solentlabs.cable_modem_monitor_core.orchestration.events import (
+    AuthFailed,
     AuthSucceeded,
+    CollectionComplete,
+    ConnectivityFailureDetected,
     EventLevel,
+    HealthBackoffCleared,
+    HealthStatusReport,
+    RecoveryWindowClosed,
+    RecoveryWindowOpened,
+    StatusTransition,
 )
 from solentlabs.cable_modem_monitor_core.orchestration.logging import _format
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
@@ -28,6 +36,64 @@ from solentlabs.cable_modem_monitor_core.orchestration.models import (
 )
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "analysis"
+
+# A log formatter's prefix ahead of the message; patterns skip it with " .+".
+_TS_PREFIX = "2025-04-01 10:00:01.123 INFO solentlabs.cable_modem_monitor_core — "
+
+# ---------------------------------------------------------------------------
+# CORE_PATTERNS — one line rendered by log_event() per pattern
+# ---------------------------------------------------------------------------
+
+# ┌─────────────────────┬───────────────────────────────────────────────┐
+# │ pattern key         │ event rendered by _format()                   │
+# ├─────────────────────┼───────────────────────────────────────────────┤
+# │ auth_success        │ AuthSucceeded                                 │
+# │ auth_fail           │ AuthFailed (connection error, no response)    │
+# │ collection_complete │ CollectionComplete                            │
+# │ health_*            │ HealthStatusReport, one per status            │
+# │ status_transition   │ StatusTransition                              │
+# │ connectivity_fail   │ ConnectivityFailureDetected                   │
+# │ backoff_clear       │ HealthBackoffCleared                          │
+# │ recovery_open/close │ RecoveryWindowOpened / RecoveryWindowClosed   │
+# └─────────────────────┴───────────────────────────────────────────────┘
+#
+# fmt: off
+RENDERED_CASES = [
+    # (pattern key,         rendered message)
+    ("auth_success",        _format(AuthSucceeded("T100", "form", 200, "", EventLevel.INFO))),
+    ("auth_fail",           _format(AuthFailed("T100", "form", "ReadTimeout", None, None, None, None, None))),
+    ("collection_complete", _format(CollectionComplete("T100", 24, 4, 2429.0, EventLevel.INFO))),
+    ("health_responsive",   _format(HealthStatusReport("T100", "responsive", True, "ICMP 1.3ms, TCP 1.3ms"))),
+    ("health_unresponsive", _format(HealthStatusReport("T100", "unresponsive", True, "ICMP timeout"))),
+    ("health_degraded",     _format(HealthStatusReport("T100", "degraded", True, "ICMP 2.0ms, TCP timeout"))),
+    ("status_transition",   _format(StatusTransition("T100", "online", "unreachable"))),
+    ("connectivity_fail",   _format(ConnectivityFailureDetected("T100", 1, 1))),
+    ("backoff_clear",       _format(HealthBackoffCleared("T100"))),
+    ("recovery_open",       _format(RecoveryWindowOpened("T100", "connectivity_outage", 300.0))),
+    ("recovery_close",      _format(RecoveryWindowClosed("T100", 210.0, "Operational"))),
+]
+# fmt: on
+
+# ---------------------------------------------------------------------------
+# Timestamps — with and without a UTC offset
+# ---------------------------------------------------------------------------
+
+# ┌───────────────┬───────────────────────────────┐
+# │ id            │ stamp                         │
+# ├───────────────┼───────────────────────────────┤
+# │ minus_offset  │ 2025-04-01 10:00:01.123-04:00 │
+# │ plus_offset   │ 2025-04-01 10:00:01.123+05:30 │
+# │ no_offset     │ 2025-04-01 10:00:01.123       │
+# └───────────────┴───────────────────────────────┘
+#
+# fmt: off
+TIMESTAMP_CASES = [
+    # (id,            stamp,                            expected local time)
+    ("minus_offset",  "2025-04-01 10:00:01.123-04:00",  datetime(2025, 4, 1, 10, 0, 1, 123000)),
+    ("plus_offset",   "2025-04-01 10:00:01.123+05:30",  datetime(2025, 4, 1, 10, 0, 1, 123000)),
+    ("no_offset",     "2025-04-01 10:00:01.123",        datetime(2025, 4, 1, 10, 0, 1, 123000)),
+]
+# fmt: on
 
 # ---------------------------------------------------------------------------
 # parse_core_logs — table-driven over fixture files
@@ -41,6 +107,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures" / "analysis"
 # │ health_responsive    │ 0     │ 3      │ 0       │ 0          │ 0           │
 # │ health_mixed.txt     │ 0     │ 4      │ 0       │ 0          │ 0           │
 # │ connectivity.txt     │ 0     │ 0      │ 2       │ 1          │ 1           │
+# │ recovery_window.txt  │ 0     │ 0      │ 0       │ 2          │ 0           │
 # │ empty.txt            │ 0     │ 0      │ 0       │ 0          │ 0           │
 # └──────────────────────┴───────┴────────┴─────────┴────────────┴─────────────┘
 #
@@ -52,6 +119,7 @@ PARSE_CASES = [
     ("health_responsive.txt",  0,     3,      0,        0,          0),
     ("health_mixed.txt",       0,     4,      0,        0,          0),
     ("connectivity.txt",       0,     0,      2,        1,          1),
+    ("recovery_window.txt",    0,     0,      0,        2,          0),
     ("empty.txt",              0,     0,      0,        0,          0),
 ]
 # fmt: on
@@ -98,7 +166,7 @@ class TestPollFields:
         assert poll.ds_channels == 32
         assert poll.us_channels == 8
         assert poll.model == "T100"
-        assert poll.duration_s == 0.0
+        assert poll.duration_s == pytest.approx(1.333)
 
     def test_failed_poll_defaults(self) -> None:
         lines = (FIXTURES_DIR / "poll_failure.txt").read_text().splitlines()
@@ -158,12 +226,21 @@ class TestConnectivityFields:
         assert result.recoveries[0].transition == "backoff_cleared"
         assert result.recoveries[0].model == "T100"
 
+    def test_recovery_window_open_and_close(self) -> None:
+        lines = (FIXTURES_DIR / "recovery_window.txt").read_text().splitlines()
+        result = parse_core_logs(lines)
+
+        assert [r.transition for r in result.recoveries] == [
+            "recovery_window_open (connectivity_outage)",
+            "recovery_window_closed (210s)",
+        ]
+
     def test_status_transition_text(self) -> None:
         lines = (FIXTURES_DIR / "connectivity.txt").read_text().splitlines()
         result = parse_core_logs(lines)
 
         ts, desc = result.transitions[0]
-        assert desc == "offline -> online"
+        assert desc == "unreachable → online"
         assert isinstance(ts, datetime)
 
 
@@ -171,15 +248,34 @@ class TestConnectivityFields:
 # CORE_PATTERNS vs the adapter that produces the lines
 # ---------------------------------------------------------------------------
 
-_TS_PREFIX = "2025-04-01 10:00:01.123 INFO solentlabs.cable_modem_monitor_core.orchestration — "
+
+def test_every_pattern_has_a_rendered_case() -> None:
+    """A pattern added without an adapter-rendered case would drift unseen."""
+    assert {case[0] for case in RENDERED_CASES} == set(CORE_PATTERNS)
+
+
+@pytest.mark.parametrize(("key", "message"), RENDERED_CASES, ids=[c[0] for c in RENDERED_CASES])
+def test_pattern_matches_rendered_line(key: str, message: str) -> None:
+    """Each pattern reads the line log_event() renders today."""
+    match = CORE_PATTERNS[key].search(_TS_PREFIX + message)
+    assert match is not None, f"{key} cannot read: {message}"
+    assert match.group(1) == "2025-04-01 10:00:01.123"
+    assert match.group(2) == "T100"
+
+
+@pytest.mark.parametrize(("case_id", "stamp", "expected"), TIMESTAMP_CASES, ids=[c[0] for c in TIMESTAMP_CASES])
+def test_timestamp_with_or_without_utc_offset(case_id: str, stamp: str, expected: datetime) -> None:
+    """A UTC offset after the milliseconds is dropped; the local time is kept."""
+    line = f"{stamp} INFO solentlabs.cable_modem_monitor_core — " + _format(
+        CollectionComplete("T100", 24, 4, 100.0, EventLevel.INFO)
+    )
+    result = parse_core_logs([line])
+    assert len(result.polls) == 1
+    assert result.polls[0].timestamp == expected
 
 
 class TestPatternsMatchAdapterOutput:
-    """Patterns are matched against real adapter output, not hand-typed lines.
-
-    The auth_success pattern had drifted out of sync with the adapter and
-    nothing caught it: no handler consumes it, so a stale regex is silent.
-    """
+    """Field groups on auth_success, which no handler consumes."""
 
     @pytest.mark.parametrize(
         ("response_url", "expected_landed"),

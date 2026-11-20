@@ -14,6 +14,7 @@ Common issues and solutions for Cable Modem Monitor.
   - [Degraded Mode (Web Server Hung)](#2b-degraded-mode-web-server-hung)
   - [Combo Modem/Routers (Two IP Addresses)](#5-combo-modemrouters-two-ip-addresses)
   - [Multiple Home Assistant Instances](#7-multiple-home-assistant-instances-polling-the-same-modem)
+  - [Your Modem Differs From the Catalog Config](#8-your-modem-differs-from-the-catalog-config)
 - [Understanding the Status Sensor](#understanding-the-status-sensor)
 - [Understanding Log Output](#understanding-log-output)
 - [Upstream Sensors Not Appearing](#upstream-sensors-not-appearing)
@@ -221,6 +222,17 @@ The modem stays operational: the DOCSIS data plane is independent of the managem
 
 - Raise the poll interval on both instances. Lower frequency gives the modem headroom; higher frequency makes collisions worse.
 - If you need the data in more than one Home Assistant instance, poll the modem from one and replicate sensor states between instances at the HA level (template sensors, MQTT bridge, statistics integration) rather than polling the modem twice.
+
+#### 8. Your Modem Differs From the Catalog Config
+
+**Symptoms:**
+
+- Setup fails the same way every time, with the right host and credentials
+- Your firmware or hardware version differs from the one the catalog lists
+
+**Solution:**
+
+- Use [Add modem with custom config](CUSTOM_CONFIG.md) to edit the modem's config and test it against your modem during setup. An AI assistant can help you read the results.
 
 ---
 

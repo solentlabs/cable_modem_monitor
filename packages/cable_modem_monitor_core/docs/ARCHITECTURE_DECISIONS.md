@@ -15,7 +15,7 @@ files; this document explains the choices that shaped them.
 | [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
 | [Recovery Architecture](#recovery-architecture) | Restart vs recovery, restart never state-gated, generic timing, reboot-signal vote, observer callback, no session preservation |
-| [Testing Strategy](#testing-strategy) | HAR replay, conformance gates every modem, greenfield from specs, fresh-context capture, test placement by code under test |
+| [Testing Strategy](#testing-strategy) | HAR replay, conformance gates every modem, greenfield from specs, fresh-context capture, test placement by code under test, adapter tests on the floor and a pinned current Home Assistant |
 | [Onboarding](#onboarding) | MCP for deterministic steps, catalog_tools owns the spec, inference vs assembly, no fallback |
 | [Config Flow](#config-flow) | Cross-directory grouping, variant label design |
 | [Extension Model](#extension-model) | How to add modems, formats, parsers, auth strategies, transports |
@@ -1938,6 +1938,34 @@ grep or import gate is not available for this: any such check must
 either forbid imports scope 3 legitimately needs, or infer intent from
 call shape. Scope definitions live in
 [ARCHITECTURE.md § Testing](ARCHITECTURE.md#testing).
+
+---
+
+### Adapter tests run on the floor and on a pinned current Home Assistant
+
+**Decision:** The root `tests/` suite runs twice: on the oldest supported
+Home Assistant (`hacs.json`, Python 3.12) and on one pinned stable
+release of current Home Assistant (Python 3.14), each with the test
+harness that release supports. The current pin lives in
+`tests/requirements-ha-latest.txt` and moves only through the
+`ha-safe-deps-bump` skill. Both runs gate CI and `make validate-ci`.
+
+**Rationale:** Users run releases far newer than the floor, and only
+this run exercises the adapter on one. A floating "latest" would let a
+Home Assistant release fail a CMM release with no CMM change; a pin
+changes only in a commit, tested like any other. Home Assistant
+documents no version matrix for custom integrations.
+
+**Constrains:**
+
+- Only stable releases are pinned, never a beta.
+- `homeassistant` and `pytest-homeassistant` move together, to the same
+  version.
+- Tests import Home Assistant's test helpers through
+  `tests/ha_harness.py`. `pytest-homeassistant-custom-component` ends at
+  HA 2026.10.4 and HA's `pytest-homeassistant` begins at 2026.11.0, so
+  neither harness serves both runs.
+- Test code uses only what both releases provide.
 
 ---
 

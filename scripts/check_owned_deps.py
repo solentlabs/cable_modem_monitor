@@ -7,7 +7,8 @@ It lists only what needs a commit:
 - a Python spec (pin or cap) in a requirements file, a pyproject.toml or a
   workflow ``pip install`` line that excludes the latest PyPI release; a
   floor that already permits the latest is not listed, and neither is a
-  latest release HA cannot install (see ``ha_supports``)
+  latest release HA cannot install (see ``ha_supports``), except in the
+  current Home Assistant pin file, which the floor HA never installs
 - a pre-commit hook ``rev:`` behind the repository's latest stable tag
 - a GitHub Actions ``uses: owner/repo@vN`` ref behind the latest tag, at the
   ref's precision (``@v4`` compares majors)
@@ -47,7 +48,17 @@ ROOT = Path(__file__).parent.parent
 
 _INTERNAL_PREFIX = "solentlabs-"
 _TIMEOUT = 10
-_REQUIREMENTS = ("requirements-dev.txt", "requirements-security.txt", "tests/requirements.txt")
+_REQUIREMENTS = (
+    "requirements-dev.txt",
+    "requirements-security.txt",
+    "tests/requirements-common.txt",
+    "tests/requirements.txt",
+    "tests/requirements-ha-latest.txt",
+)
+# Declared for the current Home Assistant run, not installed under the floor
+# HA, so the floor's constraints never hide a bump here (ARCHITECTURE_DECISIONS.md
+# § Adapter tests run on the floor and on a pinned current Home Assistant).
+_CURRENT_HA = frozenset({"tests/requirements-ha-latest.txt"})
 _REQ_LINE = re.compile(r"^([A-Za-z0-9][A-Za-z0-9_.-]*)(?:\[[^\]]*\])?\s*(.*)$")
 _PIP_TOKEN = re.compile(r"^([A-Za-z0-9][A-Za-z0-9_.-]*)((?:==|~=|>=|<=|<|>|!=).+)$")
 _ACTION_REF = re.compile(r"uses:\s*([\w.-]+/[\w.-]+)(?:/[\w./-]+)?@(v\d+(?:\.\d+)*)\s*$")
@@ -384,7 +395,7 @@ def _findings(
         release = pypi.get(d.name)
         if not isinstance(release, Release) or not spec_excludes(d.spec, release.version):
             continue
-        if ha is None or ha_supports(d.name, release, ha):
+        if ha is None or d.where in _CURRENT_HA or ha_supports(d.name, release, ha):
             found.setdefault((d.name, d.spec, release.version), []).append(d.where)
     for p in other:
         available = tags.get(p.source)

@@ -13,10 +13,13 @@ wiring logic only. Catalog validity is tested in the catalog test suite.
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.config_entries import SOURCE_REAUTH
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError, HomeAssistantError
 from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
@@ -30,9 +33,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
 )
 
 from custom_components.cable_modem_monitor import (
-    _announce_auth_stop,
     _async_update_listener,
-    _check_channel_bond_onboarding,
     _create_core_components,
     _get_package_versions,
     _log_operational_summary,
@@ -44,9 +45,16 @@ from custom_components.cable_modem_monitor import (
     async_unload_entry,
 )
 from custom_components.cable_modem_monitor.channel_bond_storage import BondState
-from custom_components.cable_modem_monitor.const import PLATFORMS
-from custom_components.cable_modem_monitor.coordinator import CableModemRuntimeData
+from custom_components.cable_modem_monitor.const import DOMAIN, PLATFORMS
+from custom_components.cable_modem_monitor.coordinator import (
+    CableModemDataCoordinator,
+    CableModemHealthCoordinator,
+    CableModemRuntimeData,
+    _announce_auth_stop,
+    _check_channel_bond_onboarding,
+)
 from custom_components.cable_modem_monitor.migrations import async_run_migrations
+from tests.ha_harness import MockConfigEntry
 
 from .conftest import MOCK_ENTRY_DATA, STUB_MODEM_CONFIG, _make_stub_modem_config
 
@@ -86,7 +94,7 @@ def test_get_package_versions_not_installed():
 # ├──────────────┼───────────────────────┼──────────────┼──────────────┤
 # │ 600          │ 30                    │ every 10m    │ every 30s    │
 # │ 30           │ 0                     │ every 30s    │ disabled     │
-# │ 0            │ 60                    │ manual only  │ every 60s    │
+# │ 0            │ 60                    │ manual only  │ every 1m     │
 # │ 0            │ 0                     │ manual only  │ disabled     │
 # └──────────────┴───────────────────────┴──────────────┴──────────────┘
 #
@@ -136,6 +144,31 @@ async def test_async_migrate_entry_delegates():
 
     assert result is True
     mock_migrate.assert_awaited_once_with(hass, entry, 2)
+
+
+async def test_async_migrate_entry_stops_when_major_migration_fails():
+    """A failed major migration fails the entry and skips the minor step."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_id"
+    entry.version = 1
+    entry.minor_version = 1
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.async_run_migrations",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.v2_2_frequency_statistics.async_migrate",
+            new_callable=AsyncMock,
+        ) as mock_minor,
+    ):
+        result = await async_migrate_entry(hass, entry)
+
+    assert result is False
+    mock_minor.assert_not_awaited()
 
 
 # -----------------------------------------------------------------------
@@ -620,18 +653,15 @@ async def test_setup_entry_happy_path():
     mock_health_coord = MagicMock()
     mock_health_coord.async_config_entry_first_refresh = AsyncMock()
 
-    # DataUpdateCoordinator[Type](...) → subscript returns a callable mock
-    mock_duc = MagicMock()
-    mock_duc.__getitem__.return_value.side_effect = [
-        mock_data_coord,
-        mock_health_coord,
-    ]
-
     with (
         patch("custom_components.cable_modem_monitor.setup_log_buffer"),
         patch(
-            "custom_components.cable_modem_monitor.DataUpdateCoordinator",
-            mock_duc,
+            "custom_components.cable_modem_monitor.CableModemDataCoordinator",
+            return_value=mock_data_coord,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.CableModemHealthCoordinator",
+            return_value=mock_health_coord,
         ),
         patch("custom_components.cable_modem_monitor._update_device_registry"),
         patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener") as mock_attach,
@@ -826,11 +856,11 @@ async def test_channel_bond_fresh_setup_fires_onboarding():
 
     with (
         patch(
-            "custom_components.cable_modem_monitor.async_load_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_load_bond_state",
             AsyncMock(return_value=None),
         ),
         patch(
-            "custom_components.cable_modem_monitor.async_save_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_save_bond_state",
             AsyncMock(),
         ) as mock_save,
     ):
@@ -860,8 +890,8 @@ async def test_channel_bond_onboarding_carries_the_verification_link():
     hass, entry, orchestrator, snapshot = _make_bond_test_harness(entry_data={"channel_onboarding_eligible": True})
 
     with (
-        patch("custom_components.cable_modem_monitor.async_load_bond_state", AsyncMock(return_value=None)),
-        patch("custom_components.cable_modem_monitor.async_save_bond_state", AsyncMock()),
+        patch("custom_components.cable_modem_monitor.coordinator.async_load_bond_state", AsyncMock(return_value=None)),
+        patch("custom_components.cable_modem_monitor.coordinator.async_save_bond_state", AsyncMock()),
     ):
         await _check_channel_bond_onboarding(
             hass, entry, snapshot, orchestrator, "TPS-2000", "https://example.invalid/verify"
@@ -908,8 +938,10 @@ async def test_verification_request_is_asked_once_per_entry(eligible, stored, ur
     hass, entry, orchestrator, snapshot = _make_bond_test_harness(entry_data={"channel_onboarding_eligible": eligible})
 
     with (
-        patch("custom_components.cable_modem_monitor.async_load_bond_state", AsyncMock(return_value=stored)),
-        patch("custom_components.cable_modem_monitor.async_save_bond_state", AsyncMock()) as mock_save,
+        patch(
+            "custom_components.cable_modem_monitor.coordinator.async_load_bond_state", AsyncMock(return_value=stored)
+        ),
+        patch("custom_components.cable_modem_monitor.coordinator.async_save_bond_state", AsyncMock()) as mock_save,
     ):
         await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", url)
 
@@ -934,11 +966,11 @@ async def test_channel_bond_upgraded_entry_silent_init():
 
     with (
         patch(
-            "custom_components.cable_modem_monitor.async_load_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_load_bond_state",
             AsyncMock(return_value=None),
         ),
         patch(
-            "custom_components.cable_modem_monitor.async_save_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_save_bond_state",
             AsyncMock(),
         ) as mock_save,
     ):
@@ -963,11 +995,11 @@ async def test_channel_bond_change_no_longer_notifies():
 
     with (
         patch(
-            "custom_components.cable_modem_monitor.async_load_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_load_bond_state",
             AsyncMock(return_value=prior),
         ),
         patch(
-            "custom_components.cable_modem_monitor.async_save_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_save_bond_state",
             AsyncMock(),
         ) as mock_save,
     ):
@@ -993,11 +1025,11 @@ async def test_channel_bond_recovered_totals_no_longer_notify():
 
     with (
         patch(
-            "custom_components.cable_modem_monitor.async_load_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_load_bond_state",
             AsyncMock(return_value=prior),
         ),
         patch(
-            "custom_components.cable_modem_monitor.async_save_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_save_bond_state",
             AsyncMock(),
         ) as mock_save,
     ):
@@ -1017,11 +1049,11 @@ async def test_channel_bond_steady_counts_no_op():
 
     with (
         patch(
-            "custom_components.cable_modem_monitor.async_load_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_load_bond_state",
             AsyncMock(return_value=stored),
         ),
         patch(
-            "custom_components.cable_modem_monitor.async_save_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_save_bond_state",
             AsyncMock(),
         ) as mock_save,
     ):
@@ -1046,11 +1078,11 @@ async def test_channel_bond_recovery_suppresses_change():
 
     with (
         patch(
-            "custom_components.cable_modem_monitor.async_load_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_load_bond_state",
             AsyncMock(return_value=stored),
         ),
         patch(
-            "custom_components.cable_modem_monitor.async_save_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_save_bond_state",
             AsyncMock(),
         ) as mock_save,
     ):
@@ -1069,11 +1101,11 @@ async def test_channel_bond_missing_snapshot_data_no_op():
 
     with (
         patch(
-            "custom_components.cable_modem_monitor.async_load_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_load_bond_state",
             AsyncMock(return_value=None),
         ) as mock_load,
         patch(
-            "custom_components.cable_modem_monitor.async_save_bond_state",
+            "custom_components.cable_modem_monitor.coordinator.async_save_bond_state",
             AsyncMock(),
         ) as mock_save,
     ):
@@ -1125,7 +1157,7 @@ async def test_channel_bond_no_modem_data_no_op():
     )
 
     with patch(
-        "custom_components.cable_modem_monitor.async_load_bond_state",
+        "custom_components.cable_modem_monitor.coordinator.async_load_bond_state",
         AsyncMock(),
     ) as mock_load:
         await _check_channel_bond_onboarding(hass, entry, snapshot, orchestrator, "TPS-2000", None)
@@ -1172,7 +1204,7 @@ def _rebuild_inputs(*, with_runtime: bool, with_modem_data: bool) -> tuple[Any, 
 
 def test_rebuild_channel_map_no_runtime_data_no_op():
     """Pre-Step-9 entry without runtime_data returns silently."""
-    from custom_components.cable_modem_monitor import _rebuild_channel_map
+    from custom_components.cable_modem_monitor.coordinator import _rebuild_channel_map
 
     entry, snapshot, identity = _rebuild_inputs(with_runtime=False, with_modem_data=True)
 
@@ -1183,7 +1215,7 @@ def test_rebuild_channel_map_no_runtime_data_no_op():
 
 def test_rebuild_channel_map_no_modem_data_no_op():
     """Snapshot without modem_data leaves runtime.channel_map untouched."""
-    from custom_components.cable_modem_monitor import _rebuild_channel_map
+    from custom_components.cable_modem_monitor.coordinator import _rebuild_channel_map
 
     entry, snapshot, identity = _rebuild_inputs(with_runtime=True, with_modem_data=False)
 
@@ -1195,7 +1227,7 @@ def test_rebuild_channel_map_no_modem_data_no_op():
 
 def test_rebuild_channel_map_builds_map():
     """With runtime + modem_data, channel_map is rebuilt from snapshot."""
-    from custom_components.cable_modem_monitor import _rebuild_channel_map
+    from custom_components.cable_modem_monitor.coordinator import _rebuild_channel_map
 
     entry, snapshot, identity = _rebuild_inputs(with_runtime=True, with_modem_data=True)
 
@@ -1221,6 +1253,8 @@ def _health_recovery_inputs():
     from custom_components.cable_modem_monitor import _attach_health_sync_listeners
 
     hass = MagicMock()
+    # A mocked hass never runs the task; close the coroutine so it is not left unawaited.
+    hass.async_create_task.side_effect = lambda coro: coro.close()
     health_coord = MagicMock()
     health_coord.data = MagicMock()
     health_coord.data.health_status = HealthStatus.RESPONSIVE
@@ -1669,21 +1703,20 @@ class TestFirmwareLockoutDoesNotPromptForCredentials:
         assert hass.services.async_call.await_count == 2
 
 
-async def test_update_data_triggers_reauth_on_breaker_open():
-    """The coordinator update path wires the reauth trigger end to end."""
-    hass = MagicMock()
+def _data_coordinator(hass: HomeAssistant, orchestrator: MagicMock) -> tuple[CableModemDataCoordinator, Any]:
+    """A data coordinator on a real hass for a registered entry; manual polling."""
+    entry = MockConfigEntry(domain=DOMAIN, version=2, minor_version=2, data=MOCK_ENTRY_DATA)
+    entry.add_to_hass(hass)
+    identity = ModemIdentity(manufacturer="Solent Labs", model="TPS-2000", status="confirmed")
+    return CableModemDataCoordinator(hass, entry, orchestrator, identity, 0), entry
 
+
+@pytest.mark.usefixtures("enable_custom_integrations")
+async def test_update_data_triggers_reauth_on_breaker_open(hass: HomeAssistant):
+    """The coordinator update path wires the reauth trigger end to end."""
     mock_orch = MagicMock()
-    mock_orch.supports_restart = False
     mock_orch.diagnostics.return_value.circuit_breaker_open = True
     mock_orch.diagnostics.return_value.circuit_trip_signal = CollectorSignal.AUTH_FAILED
-    mock_identity = ModemIdentity(
-        manufacturer="Solent Labs",
-        model="TPS-2000",
-        docsis_version="3.0",
-        release_date="2024",
-        status="confirmed",
-    )
     snapshot = ModemSnapshot(
         connection_status=ConnectionStatus.AUTH_FAILED,
         docsis_status=DocsisStatus.UNKNOWN,
@@ -1691,59 +1724,20 @@ async def test_update_data_triggers_reauth_on_breaker_open():
         collector_signal=CollectorSignal.AUTH_FAILED,
         error="auth failed",
     )
-    mock_orch.get_modem_data = MagicMock()
+    mock_orch.get_modem_data.return_value = snapshot
+    coordinator, entry = _data_coordinator(hass, mock_orch)
 
-    async def _mock_executor(func, *args):
-        if func is mock_orch.get_modem_data:
-            return snapshot
-        if not args:
-            return "core: v1.0.0, catalog: v1.0.0"
-        # _create_core_components — health_monitor None keeps the test
-        # to a single (data) coordinator.
-        return (mock_orch, None, mock_identity, ())
-
-    hass.async_add_executor_job = _mock_executor
-    hass.config_entries.async_forward_entry_setups = AsyncMock()
-
-    entry = MagicMock()
-    entry.data = MOCK_ENTRY_DATA
-    entry.options = {}
-    entry.entry_id = "test_123"
-    entry.async_get_active_flows.return_value = []
-
-    mock_data_coord = MagicMock()
-    mock_data_coord.async_config_entry_first_refresh = AsyncMock()
-    mock_duc = MagicMock()
-    mock_duc.__getitem__.return_value.side_effect = [mock_data_coord]
-
-    with (
-        patch("custom_components.cable_modem_monitor.setup_log_buffer"),
-        patch("custom_components.cable_modem_monitor.DataUpdateCoordinator", mock_duc),
-        patch("custom_components.cable_modem_monitor._update_device_registry"),
-        patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener"),
-    ):
-        assert await async_setup_entry(hass, entry) is True
-        update_method = mock_duc.__getitem__.return_value.call_args_list[0].kwargs["update_method"]
-        result = await update_method()
+    result = await coordinator._async_update_data()
+    await hass.async_block_till_done()
 
     assert result is snapshot
-    entry.async_start_reauth.assert_called_once_with(hass)
+    assert len(list(entry.async_get_active_flows(hass, {SOURCE_REAUTH}))) == 1
 
 
-async def test_unavailable_logged_once_per_transition(caplog):
+async def test_unavailable_logged_once_per_transition(hass: HomeAssistant, caplog):
     """Silver log-when-unavailable: one line per edge, not per poll."""
-    hass = MagicMock()
-
     mock_orch = MagicMock()
-    mock_orch.supports_restart = False
     mock_orch.diagnostics.return_value.circuit_breaker_open = False
-    mock_identity = ModemIdentity(
-        manufacturer="Solent Labs",
-        model="TPS-2000",
-        docsis_version="3.0",
-        release_date="2024",
-        status="confirmed",
-    )
 
     def _snapshot(*, ok: bool) -> ModemSnapshot:
         if ok:
@@ -1771,43 +1765,58 @@ async def test_unavailable_logged_once_per_transition(caplog):
         _snapshot(ok=True),
         _snapshot(ok=False),
     ]
-    pending = list(sequence)
-    mock_orch.get_modem_data = MagicMock()
+    mock_orch.get_modem_data.side_effect = sequence
+    coordinator, _ = _data_coordinator(hass, mock_orch)
 
-    async def _mock_executor(func, *args):
-        if func is mock_orch.get_modem_data:
-            return pending.pop(0)
-        if not args:
-            return "core: v1.0.0, catalog: v1.0.0"
-        return (mock_orch, None, mock_identity, ())
-
-    hass.async_add_executor_job = _mock_executor
-    hass.config_entries.async_forward_entry_setups = AsyncMock()
-
-    entry = MagicMock()
-    entry.data = MOCK_ENTRY_DATA
-    entry.options = {}
-    entry.entry_id = "test_123"
-    entry.async_get_active_flows.return_value = []
-
-    mock_data_coord = MagicMock()
-    mock_data_coord.async_config_entry_first_refresh = AsyncMock()
-    mock_duc = MagicMock()
-    mock_duc.__getitem__.return_value.side_effect = [mock_data_coord]
-
-    with (
-        patch("custom_components.cable_modem_monitor.setup_log_buffer"),
-        patch("custom_components.cable_modem_monitor.DataUpdateCoordinator", mock_duc),
-        patch("custom_components.cable_modem_monitor._update_device_registry"),
-        patch("custom_components.cable_modem_monitor.attach_recovery_cadence_listener"),
-    ):
-        assert await async_setup_entry(hass, entry) is True
-        update_method = mock_duc.__getitem__.return_value.call_args_list[0].kwargs["update_method"]
-        with caplog.at_level(logging.INFO, logger="custom_components.cable_modem_monitor"):
-            for _ in sequence:
-                await update_method()
+    with caplog.at_level(logging.INFO, logger="custom_components.cable_modem_monitor"):
+        for _ in sequence:
+            await coordinator._async_update_data()
 
     # Three consecutive failures produce one "unavailable" line, not three;
     # the later outage produces a second one after the recovery edge.
     assert caplog.text.count("Modem unavailable") == 2
     assert caplog.text.count("Modem available again") == 1
+
+
+# ┌──────────┬─────────────────────┬──────────────────────────────┐
+# │ interval │ update_interval     │ description                  │
+# ├──────────┼─────────────────────┼──────────────────────────────┤
+# │ 600      │ 600 s               │ scheduled polling            │
+# │ 0        │ None                │ manual only / disabled       │
+# └──────────┴─────────────────────┴──────────────────────────────┘
+#
+# fmt: off
+INTERVAL_CASES = [
+    # (interval, expected,              id)
+    (600,        timedelta(seconds=600), "scheduled"),
+    (0,          None,                   "disabled"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("interval,expected", [c[:2] for c in INTERVAL_CASES], ids=[c[2] for c in INTERVAL_CASES])
+async def test_coordinator_intervals(hass: HomeAssistant, interval: int, expected: timedelta | None):
+    """Both coordinators schedule at the configured interval; 0 turns scheduling off."""
+    entry = MockConfigEntry(domain=DOMAIN, version=2, minor_version=2, data=MOCK_ENTRY_DATA)
+    entry.add_to_hass(hass)
+    identity = ModemIdentity(manufacturer="Solent Labs", model="TPS-2000", status="confirmed")
+
+    data = CableModemDataCoordinator(hass, entry, MagicMock(), identity, interval)
+    health = CableModemHealthCoordinator(hass, entry, MagicMock(), interval)
+
+    assert data.update_interval == expected
+    assert health.update_interval == expected
+    assert data.name == "Cable Modem TPS-2000 (192.168.100.1)"
+    assert health.name == "Cable Modem TPS-2000 (192.168.100.1) Health"
+
+
+async def test_health_coordinator_runs_probe(hass: HomeAssistant):
+    """A health refresh returns the monitor's probe result."""
+    entry = MockConfigEntry(domain=DOMAIN, version=2, minor_version=2, data=MOCK_ENTRY_DATA)
+    entry.add_to_hass(hass)
+    monitor = MagicMock()
+    monitor.ping.return_value = sentinel = MagicMock()
+
+    health = CableModemHealthCoordinator(hass, entry, monitor, 0)
+
+    assert await health._async_update_data() is sentinel

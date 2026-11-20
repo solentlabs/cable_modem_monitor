@@ -16,10 +16,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant import config_entries
+from homeassistant.components.logger import _get_logger_class
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import issue_registry as ir
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 
 from custom_components.cable_modem_monitor.config_flow_helpers import (
@@ -42,6 +42,7 @@ from custom_components.cable_modem_monitor.custom_config import (
 )
 from custom_components.cable_modem_monitor.diagnostics import _custom_config_section
 from custom_components.cable_modem_monitor.repairs import async_sync_with_catalog
+from tests.ha_harness import MockConfigEntry
 
 from .conftest import FAKE_CATALOG, MOCK_ENTRY_DATA, MOCK_SINGLE_VARIANT, MOCK_SUMMARIES, MOCK_VALIDATION_RESULT
 
@@ -92,6 +93,20 @@ BAD_YAML_CASES = [
     ("a: [1",          "YAML syntax", "not YAML"),
     ("- 1\n",          "mapping",     "not a mapping"),
     ("unknown_key: 1", "schema",      "fails ModemConfig"),
+]
+# fmt: on
+
+# ┌────────────────────────────────────────────┬──────────────────────────────────┐
+# │ logger named under HA's `logger: logs:`    │ description                      │
+# ├────────────────────────────────────────────┼──────────────────────────────────┤
+# │ solentlabs.cable_modem_monitor_core        │ package level set by the user    │
+# │ solentlabs.cable_modem_monitor_core.test   │ a module's own level set         │
+# └────────────────────────────────────────────┴──────────────────────────────────┘
+#
+# fmt: off
+HA_LEVEL_OVERRIDE_CASES = [
+    ("solentlabs.cable_modem_monitor_core",       "package level set by the user"),
+    ("solentlabs.cable_modem_monitor_core.test",  "a module's own level set"),
 ]
 # fmt: on
 
@@ -158,6 +173,25 @@ def test_capture_attempt_keeps_added_debug_lines_out_of_has_log():
     assert [r.getMessage() for r in records] == ["detail only the report should hold", "a line HA logs anyway"]
     assert seen == ["a line HA logs anyway"]
     assert package.propagate is True
+
+
+@pytest.mark.parametrize(("configured", "desc"), HA_LEVEL_OVERRIDE_CASES, ids=[c[-1] for c in HA_LEVEL_OVERRIDE_CASES])
+def test_capture_attempt_keeps_debug_under_ha_logger_overrides(configured: str, desc: str, monkeypatch):
+    """HA's logger class ignores setLevel on a configured logger; the report still gets DEBUG."""
+    configured_logger = logging.getLogger(configured)
+    # HA's own class: setLevel is a no-op for a logger named in `logger: logs:`.
+    level_before = configured_logger.level
+    monkeypatch.setattr(configured_logger, "__class__", _get_logger_class({configured: logging.INFO}))
+    # The base method is what HA's orig_setLevel calls; HA's override ignores setLevel here.
+    logging.Logger.setLevel(configured_logger, logging.INFO)
+    try:
+        with capture_attempt() as records:
+            logging.getLogger("solentlabs.cable_modem_monitor_core.test").debug("Form login: POST /login")
+
+        assert [r.getMessage() for r in records] == ["Form login: POST /login"], desc
+        assert configured_logger.level == logging.INFO, desc
+    finally:
+        logging.Logger.setLevel(configured_logger, level_before)
 
 
 def test_build_report_scrubs_and_sanitizes():
@@ -283,6 +317,71 @@ async def test_passing_attempt_creates_the_entry_with_the_custom_fields(hass: Ho
     assert result["data"][CONF_CUSTOM_MODEM_YAML] == "edited: true"
     assert result["data"][CONF_CUSTOM_BASE_YAML] == _CATALOG_YAML
     assert result["data"][CONF_CUSTOM_BASE_VERSION]
+
+
+# =============================================================================
+# Options flow — editing a saved custom entry
+# =============================================================================
+
+
+async def _configure_custom_entry(hass: HomeAssistant, attempt: CustomAttempt, modem_config: str) -> tuple[Any, Any]:
+    """Open Configure on a custom entry and submit ``modem_config``; return (entry, result)."""
+    entry = _custom_entry(hass, user="a: 1\n", base="a: 0\n")
+    with (
+        patch(f"{_CF}.CATALOG_PATH", FAKE_CATALOG),
+        patch(f"{_CF}.run_custom_attempt", AsyncMock(return_value=attempt)),
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+    ):
+        result: Any = await hass.config_entries.options.async_init(entry.entry_id)
+        form = {str(k): k.default() for k in result["data_schema"].schema}
+        form.update(modem_config=modem_config, password="")
+        result = await hass.config_entries.options.async_configure(result["flow_id"], user_input=form)
+    return entry, result
+
+
+async def test_configure_shows_the_saved_config_on_custom_entries_only(hass: HomeAssistant):
+    """A custom entry's Configure opens custom_config with its text; an ordinary entry's has no config field."""
+    custom = _custom_entry(hass, user="a: 1\n", base="a: 0\n")
+    ordinary = MockConfigEntry(domain=DOMAIN, data=dict(MOCK_ENTRY_DATA))
+    ordinary.add_to_hass(hass)
+
+    custom_form: Any = await hass.config_entries.options.async_init(custom.entry_id)
+    ordinary_form: Any = await hass.config_entries.options.async_init(ordinary.entry_id)
+
+    assert custom_form["step_id"] == "custom_config"
+    assert {str(k): k.default() for k in custom_form["data_schema"].schema}["modem_config"] == "a: 1\n"
+    assert ordinary_form["step_id"] == "init"
+    assert "modem_config" not in {str(k) for k in ordinary_form["data_schema"].schema}
+
+
+async def test_configure_failure_logs_the_report_and_saves_nothing(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+):
+    """A failed test re-shows the form with the user's text and leaves the entry as it was."""
+    failed = CustomAttempt(
+        validation=None, error=PermissionError("auth_error:invalid_auth:rejected"), records=[], scrub=lambda t: t
+    )
+
+    entry, result = await _configure_custom_entry(hass, failed, "a: 2\n")
+
+    assert result["step_id"] == "custom_config"
+    assert result["errors"] == {"base": "custom_attempt_failed"}
+    assert {str(k): k.default() for k in result["data_schema"].schema}["modem_config"] == "a: 2\n"
+    assert len([r for r in caplog.records if "custom config report" in r.getMessage()]) == 1
+    assert entry.data[CONF_CUSTOM_MODEM_YAML] == "a: 1\n"
+
+
+async def test_configure_pass_saves_the_text_and_keeps_the_base(hass: HomeAssistant):
+    """A pass stores the new text; the base text, base version and password stay."""
+    passed = CustomAttempt(validation=dict(MOCK_VALIDATION_RESULT), error=None, records=[], scrub=lambda t: t)
+
+    entry, result = await _configure_custom_entry(hass, passed, "a: 2\n")
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.data[CONF_CUSTOM_MODEM_YAML] == "a: 2\n"
+    assert entry.data[CONF_CUSTOM_BASE_YAML] == "a: 0\n"
+    assert entry.data[CONF_CUSTOM_BASE_VERSION] == "1"
+    assert entry.data["password"] == MOCK_ENTRY_DATA["password"]
 
 
 # =============================================================================

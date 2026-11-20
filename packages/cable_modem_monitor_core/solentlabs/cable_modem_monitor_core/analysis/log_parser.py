@@ -6,18 +6,21 @@ are handled by the HA analysis layer.
 
 Pattern source of truth — ORCHESTRATION_SPEC.md logging contracts:
 
-- **ModemDataCollector § Logging Contract**: ``parse_complete``,
+- **ModemDataCollector § Logging Contract**: ``collection_complete``,
   ``auth_fail``, ``auth_success`` — collection outcomes and auth
   lifecycle.
-- **Orchestrator § Logging Contract**: ``poll_start``,
-  ``status_transition``, ``connectivity_fail``, ``backoff_clear`` —
-  polling state machine.
+- **Orchestrator § Logging Contract**: ``status_transition``,
+  ``connectivity_fail``, ``backoff_clear`` — polling state machine.
+- **Recovery § Logging Contract**: ``recovery_open``,
+  ``recovery_close`` — recovery window lifecycle.
 - **HealthMonitor § Logging Contract**: ``health_responsive``,
   ``health_unresponsive``, ``health_degraded`` — probe results.
 
 If a log format changes in the spec, update the corresponding
 ``CORE_PATTERNS`` entry here and the test fixtures in
-``tests/fixtures/analysis/``.
+``tests/fixtures/analysis/``. ``tests/test_analysis.py`` matches every
+pattern against the line ``log_event()`` renders, so a renamed message
+fails there rather than reading as zero events.
 """
 
 from __future__ import annotations
@@ -38,7 +41,10 @@ from .models import (
 # Timestamp format shared across all Core log lines
 # ---------------------------------------------------------------------------
 
-_TS = r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})"
+# A log formatter may write a UTC offset after the milliseconds (``-05:00``).
+# It is matched and dropped: group 1 is the local time the line shows.
+TS_PATTERN = r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})(?:[+-]\d{2}:\d{2})?"
+_TS = TS_PATTERN
 
 
 def parse_ts(ts_str: str) -> datetime:
@@ -55,11 +61,10 @@ def parse_ts(ts_str: str) -> datetime:
 # ---------------------------------------------------------------------------
 
 CORE_PATTERNS: dict[str, re.Pattern[str]] = {
-    "poll_start": re.compile(_TS + r" .+Poll \[(.+?)\] — auth: (\w+), .+session: (\w+)"),
     "auth_success": re.compile(_TS + r" .+Auth succeeded \[(.+?)\] — strategy: (\w+), status=(\d+)(?:, landed: (.+))?"),
     "auth_fail": re.compile(_TS + r" .+Connection failed during auth \[(.+?)\]"),
-    "parse_complete": re.compile(_TS + r" .+Parse complete \[(.+?)\]: (\d+) DS, (\d+) US"),
-    "health_responsive": re.compile(_TS + r" .+Health check \[(.+?)\]: responsive \((.+?)\)"),
+    "collection_complete": re.compile(_TS + r" .+Collection complete \[(.+?)\] — DS: (\d+), US: (\d+) \((\d+)ms\)"),
+    "health_responsive": re.compile(_TS + r" .+Health check \[(.+?)\]: responsive — (.+)"),
     "health_unresponsive": re.compile(_TS + r" .+Health check \[(.+?)\]: unresponsive"),
     "health_degraded": re.compile(_TS + r" .+Health check \[(.+?)\]: degraded"),
     "status_transition": re.compile(_TS + r" .+Status transition \[(.+?)\]: (.+)"),
@@ -67,6 +72,8 @@ CORE_PATTERNS: dict[str, re.Pattern[str]] = {
         _TS + r" .+Connection failure \[(.+?)\] — unreachable " + r"\(streak: (\d+), backoff: (\d+)"
     ),
     "backoff_clear": re.compile(_TS + r" .+Health recovery detected \[(.+?)\] — clearing connectivity backoff"),
+    "recovery_open": re.compile(_TS + r" .+Recovery window open \[(.+?)\] — reason: (\S+)"),
+    "recovery_close": re.compile(_TS + r" .+Recovery window closed \[(.+?)\] — elapsed: (\d+)s"),
 }
 
 
@@ -77,13 +84,13 @@ CORE_PATTERNS: dict[str, re.Pattern[str]] = {
 
 def _handle_poll(line: str, analysis: CoreAnalysis) -> bool:
     """Try poll-related patterns.  Return True if matched."""
-    m = CORE_PATTERNS["parse_complete"].search(line)
+    m = CORE_PATTERNS["collection_complete"].search(line)
     if m:
         analysis.polls.append(
             PollEvent(
                 timestamp=parse_ts(m.group(1)),
                 model=m.group(2),
-                duration_s=0.0,
+                duration_s=int(m.group(5)) / 1000,
                 success=True,
                 ds_channels=int(m.group(3)),
                 us_channels=int(m.group(4)),
@@ -156,7 +163,19 @@ def _handle_health(line: str, analysis: CoreAnalysis) -> bool:
 
 
 def _handle_connectivity(line: str, analysis: CoreAnalysis) -> bool:
-    """Try connectivity failure, backoff, and transition patterns."""
+    """Try connectivity failure, backoff, recovery window, and transition patterns."""
+    m = CORE_PATTERNS["recovery_open"].search(line)
+    if m:
+        transition = f"recovery_window_open ({m.group(3)})"
+        analysis.recoveries.append(RecoveryEvent(parse_ts(m.group(1)), m.group(2), transition))
+        return True
+
+    m = CORE_PATTERNS["recovery_close"].search(line)
+    if m:
+        transition = f"recovery_window_closed ({m.group(3)}s)"
+        analysis.recoveries.append(RecoveryEvent(parse_ts(m.group(1)), m.group(2), transition))
+        return True
+
     m = CORE_PATTERNS["backoff_clear"].search(line)
     if m:
         analysis.recoveries.append(

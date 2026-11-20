@@ -604,7 +604,8 @@ DeviceInfo(
 **Device name is set on every entity's DeviceInfo**, not just in
 `_update_device_registry`. This ensures HA generates correct
 entity_ids at registration time (before the device registry update
-runs).
+runs). `CableModemEntity` in `entity.py` builds that DeviceInfo once for
+every sensor and button base.
 
 ### Entity Prefix
 
@@ -756,8 +757,9 @@ Example: `abc123_cable_modem_ds_ofdm_ch_159_power`
 
 ### Entity Names
 
-All sensor classes set `_attr_has_entity_name = True`. HA generates
-the full entity name from `{device_name} {sensor_name}`.
+Every entity sets `has_entity_name` through `CableModemEntity`
+(`entity.py`). HA generates the full entity name from
+`{device_name} {sensor_name}`.
 
 Channel sensor names depend on identity mode:
 

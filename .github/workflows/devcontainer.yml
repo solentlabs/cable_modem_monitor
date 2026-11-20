@@ -13,6 +13,7 @@ on:
       - "scripts/dev/**"
       - "requirements-dev.txt"
       - "tests/requirements.txt"
+      - "tests/requirements-common.txt"
   pull_request:
     paths:
       - ".devcontainer/**"
@@ -21,6 +22,7 @@ on:
       - "scripts/dev/**"
       - "requirements-dev.txt"
       - "tests/requirements.txt"
+      - "tests/requirements-common.txt"
 
 jobs:
   build:

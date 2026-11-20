@@ -1,0 +1,8 @@
+# Adapter tests on one pinned stable release of current Home Assistant
+# (Python 3.14). Both pins move together, through the ha-safe-deps-bump
+# skill; never a beta. ARCHITECTURE_DECISIONS.md § Adapter tests run on
+# the floor and on a pinned current Home Assistant.
+-r requirements-common.txt
+
+homeassistant==2026.11.2
+pytest-homeassistant==2026.11.2

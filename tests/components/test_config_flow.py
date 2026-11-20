@@ -17,7 +17,6 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     ModemIdentity,
     ModemSnapshot,
@@ -36,6 +35,8 @@ from custom_components.cable_modem_monitor.config_flow import (
     _validation_failure_key,
 )
 from custom_components.cable_modem_monitor.const import DOMAIN, EntityPrefix
+from custom_components.cable_modem_monitor.custom_config import CustomYamlError
+from tests.ha_harness import MockConfigEntry
 
 from .conftest import (
     FAKE_CATALOG,
@@ -138,6 +139,7 @@ def test_prefix_options_none_in_use():
 # │ ValueError       │ "something unexpected"                  │ unknown             │ unexpected exception     │
 # │ PermissionError  │ "denied"                                │ invalid_auth        │ auth-shaped fallback     │
 # │ RuntimeError     │ "boom"                                  │ unknown             │ generic fallback         │
+# │ CustomYamlError  │ "bad yaml"                              │ custom_yaml_invalid │ custom config rejected   │
 # └──────────────────┴─────────────────────────────────────────┴─────────────────────┴──────────────────────────┘
 #
 # The last two reach the handler without the "{kind}:{key}:{msg}" encoding,
@@ -152,6 +154,7 @@ VALIDATION_ERROR_CASES = [
     (ValueError,      "something unexpected",                      "unknown",             "unexpected_error"),
     (PermissionError, "denied",                                    "invalid_auth",        "bare_permission_error"),
     (RuntimeError,    "boom",                                      "unknown",             "bare_runtime_error"),
+    (CustomYamlError, "bad yaml",                                  "custom_yaml_invalid", "custom_yaml_error"),
 ]
 # fmt: on
 
@@ -489,6 +492,9 @@ async def test_full_flow_creates_entry(hass: HomeAssistant):
     # Successful validation creates config entry
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Solent Labs TPS-2000 (192.168.100.1)"
+    # unique_id is the entity prefix (_async_create_validated_entry); a
+    # change in how it is derived must fail here.
+    assert result["result"].unique_id == EntityPrefix.NONE
     assert result["data"]["protocol"] == "http"
     assert result["data"]["manufacturer"] == "Solent Labs"
     assert result["data"]["channel_identity"] == "number"
@@ -1550,18 +1556,40 @@ async def test_duplicate_entity_prefix_aborts(hass: HomeAssistant):
     assert result["reason"] == "already_configured"
 
 
-async def test_different_entity_prefix_at_same_host_succeeds(hass: HomeAssistant):
-    """Same hostname with a different entity_prefix is allowed.
+_HOST_DEDUP_CASES = [
+    # (host entered, CMM_LOCAL_DEV set, existing entry disabled, expected result type)
+    ("192.168.100.1", False, False, FlowResultType.ABORT),
+    ("http://192.168.100.1", False, False, FlowResultType.ABORT),
+    ("192.168.100.1", False, True, FlowResultType.ABORT),
+    ("192.168.100.1", True, False, FlowResultType.CREATE_ENTRY),
+    ("192.168.0.1", False, False, FlowResultType.CREATE_ENTRY),
+]
 
-    Supports the swap-modem and multi-view workflows (e.g. testing a
-    different modem on the same default IP, or running two dashboards
-    against the same modem with different entity prefixes).
-    """
+
+@pytest.mark.parametrize(
+    ("host", "local_dev", "disabled", "expected"),
+    _HOST_DEDUP_CASES,
+    ids=["same-host", "same-host-with-scheme", "same-host-disabled-entry", "same-host-local-dev", "other-host"],
+)
+async def test_host_dedup_with_different_entity_prefix(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    host: str,
+    local_dev: bool,
+    disabled: bool,
+    expected: FlowResultType,
+):
+    """A second entry at an already-configured host aborts unless CMM_LOCAL_DEV is set."""
+    if local_dev:
+        monkeypatch.setenv("CMM_LOCAL_DEV", "1")
+    else:
+        monkeypatch.delenv("CMM_LOCAL_DEV", raising=False)
     existing = MockConfigEntry(
         domain=DOMAIN,
         version=2,
         data=MOCK_ENTRY_DATA,
         unique_id="other_prefix",  # different from what the new flow will use
+        disabled_by=config_entries.ConfigEntryDisabler.USER if disabled else None,
     )
     existing.add_to_hass(hass)
 
@@ -1594,10 +1622,12 @@ async def test_different_entity_prefix_at_same_host_succeeds(hass: HomeAssistant
         )
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
-            user_input={"host": "192.168.100.1"},
+            user_input={"host": host},
         )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] is expected
+    if expected is FlowResultType.ABORT:
+        assert result["reason"] == "already_configured"
 
 
 # -----------------------------------------------------------------------
