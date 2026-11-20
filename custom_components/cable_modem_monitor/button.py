@@ -111,6 +111,13 @@ class _ButtonBase(ButtonEntity, CableModemEntity):
     coordinator data. Device linkage comes from CableModemEntity.
     """
 
+    def __init__(self, entry: CableModemConfigEntry) -> None:
+        """Attach to the modem device."""
+        # Explicit, as in the sensor bases: no HA class before
+        # CableModemEntity in the MRO defines __init__ today; if one did,
+        # super().__init__ would stop reaching this one.
+        CableModemEntity.__init__(self, entry)
+
     async def _notify(
         self,
         title: str,
