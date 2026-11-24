@@ -35,7 +35,7 @@ class XMLColumnMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> XMLColumnMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 

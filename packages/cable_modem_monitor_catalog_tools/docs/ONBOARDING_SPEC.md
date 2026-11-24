@@ -1690,7 +1690,6 @@ only generate parser.py when necessary.
 
 | Situation | Why parser.yaml can't handle it |
 |-----------|-------------------------------|
-| Complex uptime string parsing (e.g., "3 days 2h 15m" → seconds) | Requires procedural string logic |
 | Restart window filtering (zero power/SNR during reboot) | Requires runtime state |
 | Frequency range → center conversion | Arithmetic on extracted values |
 | Non-standard data layout that doesn't fit any format strategy | Extraction logic too complex for config |
@@ -1701,6 +1700,7 @@ only generate parser.py when necessary.
 | Situation | parser.yaml solution |
 |-----------|---------------------|
 | Multi-table field merging | `merge_by` on companion table |
+| Uptime in any shape (e.g., "3 days 2h 15m", raw seconds) | `type: uptime` with `format` |
 | Companion column the firmware fills with another column's values | `skip_columns` on companion table |
 | Different column layouts per channel type | Multiple `tables[]` entries |
 | Unit stripping | `unit` field on column/row mapping |

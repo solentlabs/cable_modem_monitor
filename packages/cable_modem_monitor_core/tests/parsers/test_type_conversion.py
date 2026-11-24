@@ -424,25 +424,15 @@ def test_uptime_rejects_a_clock_time(input_format: str) -> None:
     assert convert_value(_CLOCK_TIME, "uptime", input_format=input_format) is None
 
 
-def test_uptime_no_format_returns_value_unchanged(caplog) -> None:
-    """uptime type without input_format logs warning, returns value as-is."""
+@pytest.mark.parametrize("input_format", ["", "unknown_format_string"], ids=["no-format", "unknown-format"])
+def test_uptime_invalid_format_parses_nothing(caplog, input_format: str) -> None:
+    """An invalid uptime format yields None with a warning; config load rejects it first."""
     import logging
 
     with caplog.at_level(logging.WARNING):
-        result = convert_value("3600", "uptime")
-    # No format specified — value passes through, warning logged
-    assert result == "3600"
-    assert "uptime type requires a format" in caplog.text
-
-
-def test_uptime_unknown_format_returns_value_unchanged(caplog) -> None:
-    """uptime with non-'seconds' non-placeholder format logs warning, returns value."""
-    import logging
-
-    with caplog.at_level(logging.WARNING):
-        result = convert_value("3600", "uptime", input_format="unknown_format_string")
-    assert result == "3600"
-    assert "Unknown uptime format" in caplog.text
+        result = convert_value("3600", "uptime", input_format=input_format)
+    assert result is None
+    assert "Invalid uptime format" in caplog.text
 
 
 def test_uptime_negative_seconds_returns_none() -> None:

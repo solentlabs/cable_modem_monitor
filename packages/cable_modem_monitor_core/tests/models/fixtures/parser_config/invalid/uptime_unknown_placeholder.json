@@ -1,0 +1,21 @@
+{
+  "_expected_error": "unknown placeholders",
+  "_config": {
+    "system_info": {
+      "sources": [
+        {
+          "format": "html_fields",
+          "resource": "/home.html",
+          "fields": [
+            {
+              "label": "System Up Time",
+              "field": "system_uptime",
+              "type": "uptime",
+              "format": "{weeks}w {days}d"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

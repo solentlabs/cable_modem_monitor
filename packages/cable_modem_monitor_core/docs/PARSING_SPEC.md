@@ -407,8 +407,9 @@ json, xml, hnap, javascript).
 The `uptime` type normalizes raw uptime values to a canonical format:
 `"N days HHh:MMm:SSs"` (e.g., `"17 days 00h:51m:30s"`).
 
-Requires a `format` field declaring the raw input format. Preset
-formats:
+Requires a `format` field declaring the raw input format; a field with
+no format, an unknown preset or an unknown placeholder fails at config
+load. Preset formats:
 
 - `seconds` — raw integer seconds (e.g., `"1471890"`)
 

@@ -6,20 +6,44 @@ Used across all format-specific modules.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from ..field_registry import FIELD_TYPES
 
+# Placeholders an uptime ``format`` pattern may use (PARSING_SPEC § Uptime Normalization).
+UPTIME_COMPONENTS = ("days", "hours", "minutes", "seconds")
 
-def _check_field_type(field_type: str) -> None:
-    """Validate that a field type is one of the canonical FIELD_TYPES.
+_PLACEHOLDER = re.compile(r"\{(\w*)\}")
 
-    Raises ValueError with the invalid type and the valid set.
+
+def uptime_format_error(input_format: str) -> str | None:
+    """Why ``input_format`` is not a valid uptime format, or None when it is."""
+    if input_format == "seconds":
+        return None
+    if not input_format:
+        return "type 'uptime' requires a format: 'seconds' or a {days}/{hours}/{minutes}/{seconds} pattern"
+    names = _PLACEHOLDER.findall(input_format)
+    if not names:
+        return f"uptime format '{input_format}' is neither 'seconds' nor a placeholder pattern"
+    unknown = sorted(set(names) - set(UPTIME_COMPONENTS))
+    if unknown:
+        return f"uptime format '{input_format}' has unknown placeholders {unknown}"
+    return None
+
+
+def _check_field_type(field_type: str, field_format: str = "") -> None:
+    """Validate that a field type is one of the canonical FIELD_TYPES, and an uptime field's format.
+
+    Raises ValueError with the invalid type and the valid set, or with the
+    uptime format's problem (PARSING_SPEC § Uptime Normalization).
     """
     if field_type not in FIELD_TYPES:
         raise ValueError(f"invalid field type '{field_type}', must be one of " f"{sorted(FIELD_TYPES)}")
+    if field_type == "uptime" and (error := uptime_format_error(field_format)):
+        raise ValueError(error)
 
 
 class ColumnMapping(BaseModel):
@@ -38,7 +62,7 @@ class ColumnMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> ColumnMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 
@@ -57,7 +81,7 @@ class RowMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> RowMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 
@@ -85,7 +109,7 @@ class ChannelMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> ChannelMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 
@@ -126,7 +150,7 @@ class JsonChannelMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> JsonChannelMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
     @model_validator(mode="after")

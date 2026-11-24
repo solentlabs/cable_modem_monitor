@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **An uptime field must declare a valid format.** A `parser.yaml` whose
+  `type: uptime` field has no `format`, an unknown preset or an unknown
+  placeholder now fails when the config loads, so a custom config shows
+  the reason at its test step instead of reporting raw uptime text. Every
+  catalog modem already declares one.
 - **The Marketplace also lists the integration under Monitoring.** The
   manifest adds the `computers_network.monitoring` category after
   `computers_network.routers_network`, which stays the primary one.

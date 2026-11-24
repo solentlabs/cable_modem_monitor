@@ -49,7 +49,7 @@ class HTMLFieldMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> HTMLFieldMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 
@@ -80,7 +80,7 @@ class HNAPFieldMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> HNAPFieldMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 
@@ -111,7 +111,7 @@ class JSSystemInfoFieldMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> JSSystemInfoFieldMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 
@@ -157,7 +157,7 @@ class JSONSystemInfoFieldMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> JSONSystemInfoFieldMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 
@@ -263,7 +263,7 @@ class JSVarsFieldMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> JSVarsFieldMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 
@@ -300,7 +300,7 @@ class XMLSystemInfoFieldMapping(BaseModel):
     @model_validator(mode="after")
     def validate_field_type(self) -> XMLSystemInfoFieldMapping:
         """Ensure type is a valid FIELD_TYPES value."""
-        _check_field_type(self.type)
+        _check_field_type(self.type, self.format)
         return self
 
 

@@ -12,7 +12,7 @@ files; this document explains the choices that shaped them.
 | [Core Schema Model](#core-schema-model) | What enters Core's schema vs what stays user-side; catalog stores source-faithful strings and maps only observed values, display normalizes; derived and dynamic fields, health as its own structure |
 | [Transport and Constraint Model](#transport-and-constraint-model) | Transport as protocol identifier, JSON-RPC as a transport, generated constraint tables, implicit capabilities, shared protocol primitives, config as parameters |
 | [Auth Architecture](#auth-architecture) | Strategy discreteness, session lifecycle, CSRF token source, failure logging, credential reconfiguration as reconstruction |
-| [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch |
+| [Parsing Architecture](#parsing-architecture) | Three roles, per-section format selection, parser.py as escape hatch, declared uptime formats |
 | [Session and Action Model](#session-and-action-model) | Signal/policy separation, session reuse, restart-only actions |
 | [Recovery Architecture](#recovery-architecture) | Restart vs recovery, restart never state-gated, generic timing, reboot-signal vote, observer callback, no session preservation |
 | [Testing Strategy](#testing-strategy) | HAR replay, conformance gates every modem, greenfield from specs, fresh-context capture, test placement by code under test, adapter tests on the floor and a pinned current Home Assistant |
@@ -1420,6 +1420,31 @@ across the fleet at low counts.
 - Core does not detect duplicated cells from their values.
 - `skip_columns` applies only to companion tables. It never removes a
   channel.
+
+### Uptime shape is a declared parameter, not inferred
+
+**Decision:** Every `type: uptime` field declares its `format`: `seconds`
+or a `{days}`/`{hours}`/`{minutes}`/`{seconds}` pattern
+([PARSING_SPEC.md § Uptime Normalization](PARSING_SPEC.md#uptime-normalization)).
+Core has no default grammar, and a field without a valid format fails at
+config load.
+
+**Rationale:** The format records the shape the modem's own capture
+shows, the uptime case of
+[§ Catalog maps only values its own capture shows](#catalog-maps-only-values-its-own-capture-shows).
+Its precision is what rejects firmware garbage: the S33 page writes a
+clock time where uptime belongs, and a bare `HH:MM:SS` or a bare integer
+(seconds, or DOCSIS hundredths of a second) is ambiguous without one.
+Contributors do not write it by hand: intake tests the captured value
+against every format the catalog has committed and emits the one that
+parses
+([ONBOARDING_SPEC.md § Canonical output fields](../../cable_modem_monitor_catalog_tools/docs/ONBOARDING_SPEC.md#canonical-output-fields)).
+
+**Constrains:**
+
+- No fallback or inferred uptime grammar in Core.
+- A new uptime shape adds a `format` line from its capture, and so joins
+  intake's candidate list for every modem after it.
 
 ---
 

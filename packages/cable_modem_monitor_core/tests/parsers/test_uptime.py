@@ -114,6 +114,7 @@ _CLOCK_TIME = "Fri Feb 27 20:54:00 2026"
 # │ "x 50 days ..."               │ _D_HMS       │ None                  │ leading text rejected    │
 # │ "1308:19:22"                  │ _OPT_D_CLOCK │ "54 days ..."         │ hours past 24, no days   │
 # │ ""                            │ _D_HMS       │ None                  │ empty                    │
+# │ "3600"                        │ "" / minutes │ None                  │ invalid format           │
 # └───────────────────────────────┴──────────────┴───────────────────────┴──────────────────────────┘
 #
 # fmt: off
@@ -143,8 +144,8 @@ TRAP_CASES = [
                                                      "0 days 02h:30m:00s",   "optional-trailing-segment-absent"),
     ("02h:30m:15s",                  "{hours}h:{minutes}m[:{seconds}s]",
                                                      "0 days 02h:30m:15s",   "optional-trailing-segment-present"),
-    ("3600",                         "",             "3600",                 "no-format-passthrough"),
-    ("3600",                         "minutes",      "3600",                 "unknown-format-passthrough"),
+    ("3600",                         "",             None,                   "no-format-parses-nothing"),
+    ("3600",                         "minutes",      None,                   "unknown-format-parses-nothing"),
 ]
 # fmt: on
 

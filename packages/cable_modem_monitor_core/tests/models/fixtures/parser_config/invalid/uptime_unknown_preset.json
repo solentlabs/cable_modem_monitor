@@ -1,0 +1,21 @@
+{
+  "_expected_error": "neither 'seconds' nor a placeholder pattern",
+  "_config": {
+    "system_info": {
+      "sources": [
+        {
+          "format": "html_fields",
+          "resource": "/home.html",
+          "fields": [
+            {
+              "label": "System Up Time",
+              "field": "system_uptime",
+              "type": "uptime",
+              "format": "minutes"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

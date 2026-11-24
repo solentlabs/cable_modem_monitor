@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import re
 
+from ..models.parser_config.common import UPTIME_COMPONENTS, uptime_format_error
+
 _logger = logging.getLogger(__name__)
 
 
@@ -16,17 +18,15 @@ def parse_uptime(value: str, input_format: str) -> str | None:
 
     Custom formats use ``{days}``, ``{hours}``, ``{minutes}``, ``{seconds}``
     placeholders (e.g., ``"D: {days} H: {hours} M: {minutes} S: {seconds}"``).
-    Missing components default to 0.
+    Missing components default to 0. Config load rejects any other format
+    (``uptime_format_error``), so an invalid one here parses nothing.
     """
-    if not input_format:
-        _logger.warning("uptime type requires a format")
-        return value
+    if uptime_format_error(input_format):
+        _logger.warning("Invalid uptime format '%s'", input_format)
+        return None
     if input_format == "seconds":
         return _uptime_from_seconds(value)
-    if "{" in input_format:
-        return _uptime_from_pattern(value, input_format)
-    _logger.warning("Unknown uptime format '%s'", input_format)
-    return value
+    return _uptime_from_pattern(value, input_format)
 
 
 def _uptime_from_seconds(value: str) -> str | None:
@@ -40,8 +40,6 @@ def _uptime_from_seconds(value: str) -> str | None:
         return None
     return _format_uptime_canonical(total)
 
-
-_UPTIME_COMPONENTS = ("days", "hours", "minutes", "seconds")
 
 # Cache compiled patterns to avoid recompilation on each poll.
 _uptime_pattern_cache: dict[str, re.Pattern[str]] = {}
@@ -81,7 +79,7 @@ def _compile_uptime_segment(segment: str) -> str:
     parts = re.split(r"\{(days|hours|minutes|seconds)\}", segment)
     out: list[str] = []
     for part in parts:
-        if part in _UPTIME_COMPONENTS:
+        if part in UPTIME_COMPONENTS:
             out.append(f"\\s*(?P<{part}>\\d+)")
         else:
             escaped = re.escape(part)

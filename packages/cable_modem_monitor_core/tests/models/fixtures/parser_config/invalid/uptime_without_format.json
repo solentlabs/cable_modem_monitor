@@ -1,0 +1,20 @@
+{
+  "_expected_error": "type 'uptime' requires a format",
+  "_config": {
+    "system_info": {
+      "sources": [
+        {
+          "format": "html_fields",
+          "resource": "/home.html",
+          "fields": [
+            {
+              "label": "System Up Time",
+              "field": "system_uptime",
+              "type": "uptime"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
