@@ -22,9 +22,12 @@ actions:
     type: http
     method: GET
     endpoint: "/home_loggedout.jst"
-    # source_inferred from global.js (not observed in HAR traffic).
-    # requires_session not set (defaults to false) — pending contributor confirmation
-    # whether a Cookie header appears in the logout request.
+    requires_session: true
+    # global.js in test_data/modem.har links this page; the request itself
+    # is not in the capture. The RDK-B web UI page
+    # (https://github.com/rdkcentral/webui/blob/8ac407e5f75f243a8d01615d664b2e6e61522b8b/source/Styles/xb3/jst/home_loggedout.jst#L22-L40)
+    # destroys the session its DUKSID cookie names, so the call needs a live
+    # session.
   restart:
     type: http
     method: POST
