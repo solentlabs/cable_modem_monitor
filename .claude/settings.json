@@ -29,5 +29,19 @@
       "Bash(gh release edit*)",
       "Bash(gh release delete*)"
     ]
+  },
+  "_comment_hooks": "UserPromptSubmit: remind Claude to use diagnose-user-report when a prompt carries a log, error, issue or reply (scripts/dev/diagnose_reminder_hook.py).",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/dev/diagnose_reminder_hook.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
