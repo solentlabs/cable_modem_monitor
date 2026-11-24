@@ -73,6 +73,8 @@ notes: |
   XML POST API: /xml/getter.xml and /xml/setter.xml, fun=N dispatch.
   Rotating sessionToken cookie on every response.
   AES-256-CBC encrypted login (CBN_Encrypt from encrypt_cryptoJS.js).
+  Restart is not yet confirmed on hardware: the #231 confirmation does
+  not mention pressing it.
 
   test_data/modem.har is the #231 har-capture session. The contributor
   redacted the login field values and session tokens and stripped

@@ -58,6 +58,9 @@ notes: |
   Parser is identical to MB8611.
   Default credentials: admin / motorola
   Compatible: MB8611 (same parser and HNAP protocol).
+  Restart is not yet confirmed on MB8600 hardware: the action comes from
+  the MB8611 restart-flow HAR (#60), and no MB8600 issue (#40) reports
+  pressing it.
 
 references:
   issues:

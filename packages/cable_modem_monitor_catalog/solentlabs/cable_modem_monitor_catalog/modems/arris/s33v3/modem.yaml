@@ -69,6 +69,8 @@ notes: |
   AT01.01.* firmware line but has no observed uptime response yet.
   Reboot params mirrored from S33 fix (#146); pre-fetch defaults
   are the safety net pending variant validation.
+  Restart is not yet confirmed on S33v3 hardware: no S33v3 issue
+  (#98, #201) reports pressing it.
   HNAP responses carry debug timing data on the first HTTP header
   line, which Python flags as a malformed header (#98). urllib3
   recovers and the body parses fine; the resulting warning is

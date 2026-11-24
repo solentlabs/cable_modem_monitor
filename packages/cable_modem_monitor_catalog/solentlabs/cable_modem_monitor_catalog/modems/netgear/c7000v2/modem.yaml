@@ -58,6 +58,12 @@ notes: |
   carry both Authorization and the XSRF_TOKEN cookie that the modem sets
   on the initial GET /. Same pattern as CM1200 (HTTPS variant).
 
+  Restart is not yet confirmed on v3.14 hardware. Before v3.14 the button
+  restarted the modem
+  ([#61, 2025-12-19](https://github.com/solentlabs/cable_modem_monitor/issues/61#issuecomment-3673003173))
+  and later failed with "Modem Restart Failed"
+  ([#61, 2026-01-25](https://github.com/solentlabs/cable_modem_monitor/issues/61#issuecomment-3797206871)).
+
 references:
   issues:
     - "[#61 — [Modem Request] C7000v2](https://github.com/solentlabs/cable_modem_monitor/issues/61)"

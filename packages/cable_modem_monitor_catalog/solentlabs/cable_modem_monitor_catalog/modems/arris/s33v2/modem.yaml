@@ -56,6 +56,8 @@ notes: |
   Compatible: S33 (same parser, MD5 HMAC).
   Reboot params mirrored from S33 fix (#146); pre-fetch defaults
   are the safety net pending variant validation.
+  Restart is not yet confirmed on S33v2 hardware: no S33v2 issue reports
+  pressing it (#117's reboots are modem crashes, not the button).
   Modem UI swaps CustomerConnSystemUpTime display with clock time (JS bug); HNAP API returns real uptime.
   Known anti-brute-force: LOCKUP (temp lock) and REBOOT (forces restart).
 
