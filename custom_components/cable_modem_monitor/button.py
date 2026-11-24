@@ -239,7 +239,11 @@ class RestartModemButton(_ButtonBase):
         # The notification above stays as the persistent record; this is
         # what an automation or the UI actually sees as the action result.
         if not result.success:
-            raise HomeAssistantError(f"{model} restart did not dispatch: {result.error}")
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="restart_not_dispatched",
+                translation_placeholders={"model": model, "error": str(result.error)},
+            )
 
 
 class UpdateModemDataButton(_ButtonBase):

@@ -235,8 +235,10 @@ async def test_restart_button_press_failure(
     button.hass.services.async_call = AsyncMock()
     mock_data_coordinator.async_request_refresh = AsyncMock()
 
-    with pytest.raises(HomeAssistantError, match="restart did not dispatch"):
+    with pytest.raises(HomeAssistantError) as exc_info:
         await button.async_press()
+    assert exc_info.value.translation_key == "restart_not_dispatched"
+    assert (exc_info.value.translation_placeholders or {}).get("error") == "command_failed"
 
     # The notification stays as the persistent record, and the refresh must
     # still run before the raise so the dashboard reflects current state.

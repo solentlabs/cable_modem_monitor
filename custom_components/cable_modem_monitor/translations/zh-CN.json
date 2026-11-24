@@ -179,5 +179,28 @@
     "abort": {
       "unknown_model": "在目录中未找到已配置的调制解调器。"
     }
+  },
+  "exceptions": {
+    "no_modem_configured": {
+      "message": "未配置线缆调制解调器"
+    },
+    "no_modem_data": {
+      "message": "没有可用的调制解调器数据——调制解调器必须在线"
+    },
+    "no_entities": {
+      "message": "未找到此调制解调器的实体——它可能仍在启动，或其实体已被禁用"
+    },
+    "modem_not_found": {
+      "message": "未找到与所请求目标对应的已加载线缆调制解调器"
+    },
+    "restart_not_dispatched": {
+      "message": "{model} 重启指令未发出：{error}"
+    },
+    "config_load_failed_catalog": {
+      "message": "无法从目录加载调制解调器配置：{error}"
+    },
+    "config_load_failed_custom": {
+      "message": "无法从自定义配置加载调制解调器配置：{error}"
+    }
   }
 }

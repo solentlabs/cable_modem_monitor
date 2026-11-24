@@ -6,8 +6,9 @@ translations/*.json (runtime). If they drift apart, labels show as raw
 key names in the UI.
 
 Translated scope is deliberately limited to the config and options
-flows — the surface a user meets during setup. Everything else
-(services, and entity names if they are ever added) stays English and
+flows, the surface a user meets during setup, and the exception
+messages an action or setup raises. Everything else (services, and
+entity names if they are ever added) stays English and
 relies on Home Assistant's per-key fallback. See
 docs/TRANSLATION_GUIDE.md for why.
 
@@ -43,7 +44,7 @@ _TRANSLATIONS_DIR = _COMPONENT_DIR / "translations"
 
 # Sections carried by every language file. strings.json and en.json hold
 # more than this; other languages deliberately do not.
-_TRANSLATED_SCOPE = ("config", "options")
+_TRANSLATED_SCOPE = ("config", "options", "exceptions")
 
 # English values that may legitimately appear untranslated in any
 # language: the product name, and loanwords that are spelled the same

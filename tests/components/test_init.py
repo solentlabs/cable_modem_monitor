@@ -298,9 +298,10 @@ async def test_setup_entry_catalog_failure():
 
     with (
         patch("custom_components.cable_modem_monitor.setup_log_buffer"),
-        pytest.raises(ConfigEntryError, match="catalog"),
+        pytest.raises(ConfigEntryError) as exc_info,
     ):
         await async_setup_entry(hass, entry)
+    assert exc_info.value.translation_key == "config_load_failed_catalog"
 
 
 # -----------------------------------------------------------------------

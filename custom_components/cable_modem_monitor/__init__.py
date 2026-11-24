@@ -310,9 +310,13 @@ async def async_setup_entry(
         # ConfigEntryError (not ConfigEntryNotReady). The modem being
         # unreachable is a different case: the first poll never raises
         # and setup proceeds with deferred entities (see § Data Coordinator).
-        source = "custom config" if CONF_CUSTOM_MODEM_YAML in entry.data else "catalog"
-        _LOGGER.exception("Failed to load modem configuration from %s", source)
-        raise ConfigEntryError(f"Failed to load modem configuration from {source}: {err}") from err
+        custom = CONF_CUSTOM_MODEM_YAML in entry.data
+        _LOGGER.exception("Failed to load modem configuration from %s", "custom config" if custom else "catalog")
+        raise ConfigEntryError(
+            translation_domain=DOMAIN,
+            translation_key="config_load_failed_custom" if custom else "config_load_failed_catalog",
+            translation_placeholders={"error": str(err)},
+        ) from err
 
     # Step 6: Create the data coordinator (CableModemDataCoordinator)
     model = entry.data.get(CONF_MODEL, entry.data[CONF_HOST])

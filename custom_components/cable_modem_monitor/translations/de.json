@@ -179,5 +179,28 @@
     "abort": {
       "unknown_model": "Konfiguriertes Modem nicht im Katalog gefunden."
     }
+  },
+  "exceptions": {
+    "no_modem_configured": {
+      "message": "Kein Kabelmodem eingerichtet"
+    },
+    "no_modem_data": {
+      "message": "Keine Modemdaten verfügbar – das Modem muss online sein"
+    },
+    "no_entities": {
+      "message": "Für dieses Modem wurden keine Entitäten gefunden – es startet möglicherweise noch, oder seine Entitäten sind deaktiviert"
+    },
+    "modem_not_found": {
+      "message": "Für das angegebene Ziel wurde kein geladenes Kabelmodem gefunden"
+    },
+    "restart_not_dispatched": {
+      "message": "Neustart von {model} wurde nicht ausgelöst: {error}"
+    },
+    "config_load_failed_catalog": {
+      "message": "Modemkonfiguration aus dem Katalog konnte nicht geladen werden: {error}"
+    },
+    "config_load_failed_custom": {
+      "message": "Modemkonfiguration aus der eigenen Konfiguration konnte nicht geladen werden: {error}"
+    }
   }
 }

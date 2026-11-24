@@ -159,7 +159,7 @@ def create_request_refresh_handler(
         """Handle the request_refresh service call."""
         entries = _resolve_target_entries(hass, call)
         if not entries:
-            raise ServiceValidationError("No loaded cable modem found for the requested target")
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="modem_not_found")
 
         for entry in entries:
             model = entry.runtime_data.modem_identity.model
@@ -178,7 +178,7 @@ def create_request_health_check_handler(
         """Handle the request_health_check service call."""
         entries = _resolve_target_entries(hass, call)
         if not entries:
-            raise ServiceValidationError("No loaded cable modem found for the requested target")
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="modem_not_found")
 
         for entry in entries:
             runtime = entry.runtime_data

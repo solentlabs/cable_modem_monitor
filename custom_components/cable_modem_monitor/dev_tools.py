@@ -643,7 +643,7 @@ def _resolve_dashboard_target(
     """Resolve the config entry and, when the last poll succeeded, its modem data."""
     entry = _resolve_config_entry_for_device(hass, device_id) if device_id else _find_loaded_entry(hass)
     if entry is None:
-        raise ServiceValidationError("No cable modem configured")
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_modem_configured")
 
     snapshot = entry.runtime_data.data_coordinator.data
     return entry, (snapshot.modem_data if snapshot is not None else None)
@@ -837,9 +837,7 @@ def build_card_config(hass: HomeAssistant, options: Mapping[str, Any]) -> dict[s
 
     if len(cards) == int(note_added):
         # An empty cards: list is invalid Lovelace and explains nothing.
-        raise ServiceValidationError(
-            "No entities found for this modem — it may still be starting up, or its entities may be disabled"
-        )
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_entities")
 
     _LOGGER.debug(
         "Built Cable Modem card: %d DS channels, %d US channels, prefix=%s",
@@ -1023,13 +1021,13 @@ def create_convert_channel_identity_handler(
         else:
             entry = _find_loaded_entry(hass)
         if entry is None:
-            raise ServiceValidationError("No cable modem configured")
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_modem_configured")
 
         target_mode = ChannelIdentity(entry.data.get(CONF_CHANNEL_IDENTITY, ChannelIdentity.ID))
 
         snapshot = entry.runtime_data.data_coordinator.data
         if snapshot is None or snapshot.modem_data is None:
-            raise ServiceValidationError("No modem data available — the modem must be online")
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_modem_data")
 
         channels = _build_channel_lookup(snapshot.modem_data)
         prefix = _get_entity_prefix(entry, _EntityResolver(hass, entry))
@@ -1106,7 +1104,7 @@ def create_orphaned_statistics_handler(
         else:
             entry = _find_loaded_entry(hass)
         if entry is None:
-            raise ServiceValidationError("No cable modem configured")
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_modem_configured")
 
         prefix = _get_entity_prefix(entry, _EntityResolver(hass, entry))
 

@@ -179,5 +179,28 @@
     "abort": {
       "unknown_model": "Konfigurerat modem hittades inte i katalogen."
     }
+  },
+  "exceptions": {
+    "no_modem_configured": {
+      "message": "Inget kabelmodem har konfigurerats"
+    },
+    "no_modem_data": {
+      "message": "Inga modemdata tillgängliga — modemet måste vara online"
+    },
+    "no_entities": {
+      "message": "Inga entiteter hittades för det här modemet — det kanske fortfarande startar, eller så är dess entiteter inaktiverade"
+    },
+    "modem_not_found": {
+      "message": "Inget inläst kabelmodem hittades för det begärda målet"
+    },
+    "restart_not_dispatched": {
+      "message": "Omstarten av {model} skickades inte: {error}"
+    },
+    "config_load_failed_catalog": {
+      "message": "Det gick inte att läsa in modemkonfigurationen från katalogen: {error}"
+    },
+    "config_load_failed_custom": {
+      "message": "Det gick inte att läsa in modemkonfigurationen från den egna konfigurationen: {error}"
+    }
   }
 }

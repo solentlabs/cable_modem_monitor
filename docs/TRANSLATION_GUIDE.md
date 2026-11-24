@@ -45,11 +45,13 @@ Home Assistant automatically loads the appropriate translation file based on the
 
 - **Config flow**: Setup wizard titles, descriptions, field labels, and error messages
 - **Options flow**: Settings page titles, descriptions, and field labels
+- **Exception messages**: errors an action or setup raises (`exceptions` in `strings.json`)
 
 ### Translated Scope Is Deliberately Limited
 
-Only the config and options flows are translated. Four things are
-explicitly **out of scope** and stay English:
+Only the config and options flows and the exception messages are
+translated. Four things are explicitly **out of scope** and stay
+English:
 
 - **Repair issues** and their fix flows (`issues` in `strings.json`)
 
@@ -62,11 +64,13 @@ This is a maintenance decision, not an oversight. Home Assistant falls
 back to English per key, so an untranslated surface degrades cleanly.
 The config and options flows are a small, stable set that a user meets
 once during setup, which is where translation earns the most and costs
-the least. Entity names in particular are dominated by per-channel
-sensors whose text is mostly standardized technical vocabulary
-(`DS`, `QAM`, `SNR`, channel numbers) that is not translated in any
-language — localizing them would change roughly one word in five while
-adding hundreds of strings to maintain in every language, forever.
+the least. Exception messages are a handful of keys a user reads when
+an action fails, and Home Assistant's Gold tier requires them. Entity
+names in particular are dominated by per-channel sensors whose text is
+mostly standardized technical vocabulary (`DS`, `QAM`, `SNR`, channel
+numbers) that is not translated in any language — localizing them would
+change roughly one word in five while adding hundreds of strings to
+maintain in every language, forever.
 
 Entity icons follow from this. Home Assistant's `icons.json` keys
 entity icons by translation key, and untranslated entities have none,

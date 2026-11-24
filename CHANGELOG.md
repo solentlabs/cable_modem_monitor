@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Error messages are translated.** When an action, the Restart button or
+  setup fails, Home Assistant shows the message in all 12 supported
+  languages instead of English only. The English text is unchanged. This
+  completes the Gold quality-scale rule `exception-translations`.
+
 ### Changed
 
 - **The Marketplace also lists the integration under Monitoring.** The

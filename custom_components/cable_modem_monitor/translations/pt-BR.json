@@ -179,5 +179,28 @@
     "abort": {
       "unknown_model": "Modem configurado não encontrado no catálogo."
     }
+  },
+  "exceptions": {
+    "no_modem_configured": {
+      "message": "Nenhum modem a cabo configurado"
+    },
+    "no_modem_data": {
+      "message": "Nenhum dado do modem disponível — o modem precisa estar online"
+    },
+    "no_entities": {
+      "message": "Nenhuma entidade encontrada para este modem — ele pode ainda estar iniciando, ou suas entidades podem estar desativadas"
+    },
+    "modem_not_found": {
+      "message": "Nenhum modem a cabo carregado encontrado para o destino solicitado"
+    },
+    "restart_not_dispatched": {
+      "message": "A reinicialização do {model} não foi enviada: {error}"
+    },
+    "config_load_failed_catalog": {
+      "message": "Não foi possível carregar a configuração do modem a partir do catálogo: {error}"
+    },
+    "config_load_failed_custom": {
+      "message": "Não foi possível carregar a configuração do modem a partir da configuração personalizada: {error}"
+    }
   }
 }

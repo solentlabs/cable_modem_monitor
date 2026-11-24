@@ -283,5 +283,28 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "no_modem_configured": {
+      "message": "No cable modem configured"
+    },
+    "no_modem_data": {
+      "message": "No modem data available — the modem must be online"
+    },
+    "no_entities": {
+      "message": "No entities found for this modem — it may still be starting up, or its entities may be disabled"
+    },
+    "modem_not_found": {
+      "message": "No loaded cable modem found for the requested target"
+    },
+    "restart_not_dispatched": {
+      "message": "{model} restart did not dispatch: {error}"
+    },
+    "config_load_failed_catalog": {
+      "message": "Failed to load modem configuration from catalog: {error}"
+    },
+    "config_load_failed_custom": {
+      "message": "Failed to load modem configuration from custom config: {error}"
+    }
   }
 }

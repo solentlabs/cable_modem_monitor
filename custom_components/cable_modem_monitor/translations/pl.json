@@ -179,5 +179,28 @@
     "abort": {
       "unknown_model": "Skonfigurowany modem nie został znaleziony w katalogu."
     }
+  },
+  "exceptions": {
+    "no_modem_configured": {
+      "message": "Nie skonfigurowano modemu kablowego"
+    },
+    "no_modem_data": {
+      "message": "Brak danych z modemu — modem musi być online"
+    },
+    "no_entities": {
+      "message": "Nie znaleziono encji dla tego modemu — może się jeszcze uruchamiać lub jego encje są wyłączone"
+    },
+    "modem_not_found": {
+      "message": "Nie znaleziono załadowanego modemu kablowego dla wskazanego celu"
+    },
+    "restart_not_dispatched": {
+      "message": "Ponowne uruchomienie {model} nie zostało wysłane: {error}"
+    },
+    "config_load_failed_catalog": {
+      "message": "Nie udało się wczytać konfiguracji modemu z katalogu: {error}"
+    },
+    "config_load_failed_custom": {
+      "message": "Nie udało się wczytać konfiguracji modemu z własnej konfiguracji: {error}"
+    }
   }
 }

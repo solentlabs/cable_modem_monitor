@@ -179,5 +179,28 @@
     "abort": {
       "unknown_model": "Le modem configuré est introuvable dans le catalogue."
     }
+  },
+  "exceptions": {
+    "no_modem_configured": {
+      "message": "Aucun modem câble configuré"
+    },
+    "no_modem_data": {
+      "message": "Aucune donnée du modem disponible — le modem doit être en ligne"
+    },
+    "no_entities": {
+      "message": "Aucune entité trouvée pour ce modem — il est peut-être encore en cours de démarrage, ou ses entités sont désactivées"
+    },
+    "modem_not_found": {
+      "message": "Aucun modem câble chargé trouvé pour la cible demandée"
+    },
+    "restart_not_dispatched": {
+      "message": "Le redémarrage de {model} n'a pas été envoyé : {error}"
+    },
+    "config_load_failed_catalog": {
+      "message": "Impossible de charger la configuration du modem depuis le catalogue : {error}"
+    },
+    "config_load_failed_custom": {
+      "message": "Impossible de charger la configuration du modem depuis la configuration personnalisée : {error}"
+    }
   }
 }

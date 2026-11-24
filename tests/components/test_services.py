@@ -849,8 +849,9 @@ async def test_request_refresh_no_entries_raises() -> None:
     handler = create_request_refresh_handler(hass)
     call = _make_mock_call()
 
-    with pytest.raises(ServiceValidationError, match="No loaded cable modem"):
+    with pytest.raises(ServiceValidationError) as exc_info:
         await handler(call)
+    assert exc_info.value.translation_key == "modem_not_found"
 
 
 # -----------------------------------------------------------------------
@@ -902,8 +903,9 @@ async def test_request_health_check_no_entries_raises() -> None:
     handler = create_request_health_check_handler(hass)
     call = _make_mock_call()
 
-    with pytest.raises(ServiceValidationError, match="No loaded cable modem"):
+    with pytest.raises(ServiceValidationError) as exc_info:
         await handler(call)
+    assert exc_info.value.translation_key == "modem_not_found"
 
 
 # -----------------------------------------------------------------------
@@ -1243,10 +1245,11 @@ def test_generate_dashboard_raises_when_nothing_resolves(
             "custom_components.cable_modem_monitor.dev_tools.er.async_get",
             return_value=_FakeEntityRegistry(entry.entry_id, empty=True),
         ),
-        pytest.raises(ServiceValidationError, match="No entities found for this modem"),
+        pytest.raises(ServiceValidationError) as exc_info,
     ):
         handler = create_generate_dashboard_card_handler(hass)
         handler(_make_mock_call({"include_status_card": True}))
+    assert exc_info.value.translation_key == "no_entities"
 
 
 def test_generate_dashboard_handler_with_error_rates_opt_in(
@@ -1373,10 +1376,11 @@ def test_generate_dashboard_no_totals_card_alone_still_raises(
             "custom_components.cable_modem_monitor.dev_tools.er.async_get",
             return_value=_FakeEntityRegistry(entry.entry_id, empty=True),
         ),
-        pytest.raises(ServiceValidationError, match="No entities found for this modem"),
+        pytest.raises(ServiceValidationError) as exc_info,
     ):
         handler = create_generate_dashboard_card_handler(hass)
         handler(_make_mock_call({"include_errors": True}))
+    assert exc_info.value.translation_key == "no_entities"
 
 
 def test_generate_dashboard_handler_no_restart_support(
@@ -1462,8 +1466,9 @@ def test_generate_dashboard_no_entry_raises() -> None:
     call = MagicMock()
     call.data = {}
 
-    with pytest.raises(ServiceValidationError, match="No cable modem configured"):
+    with pytest.raises(ServiceValidationError) as exc_info:
         handler(call)
+    assert exc_info.value.translation_key == "no_modem_configured"
 
 
 def _registered(*unique_suffixes: str, entry_id: str = "test_entry") -> list[MagicMock]:
@@ -1799,9 +1804,10 @@ async def test_convert_no_entry_raises(mock_runtime_data) -> None:
             "homeassistant.components.recorder.statistics.async_list_statistic_ids",
             new_callable=AsyncMock,
         ) as mock_list,
-        pytest.raises(ServiceValidationError, match="No cable modem configured"),
+        pytest.raises(ServiceValidationError) as exc_info,
     ):
         await handler(call)
+    assert exc_info.value.translation_key == "no_modem_configured"
 
     mock_list.assert_not_called()
 
@@ -1822,9 +1828,10 @@ async def test_convert_no_modem_data_raises(mock_runtime_data) -> None:
             "homeassistant.components.recorder.statistics.async_list_statistic_ids",
             new_callable=AsyncMock,
         ) as mock_list,
-        pytest.raises(ServiceValidationError, match="modem must be online"),
+        pytest.raises(ServiceValidationError) as exc_info,
     ):
         await handler(call)
+    assert exc_info.value.translation_key == "no_modem_data"
 
     mock_list.assert_not_called()
 
@@ -2075,9 +2082,10 @@ async def test_list_orphaned_no_entry_raises() -> None:
             "homeassistant.components.recorder.statistics.async_list_statistic_ids",
             new_callable=AsyncMock,
         ) as mock_list,
-        pytest.raises(ServiceValidationError, match="No cable modem configured"),
+        pytest.raises(ServiceValidationError) as exc_info,
     ):
         await handler(call)
+    assert exc_info.value.translation_key == "no_modem_configured"
 
     mock_list.assert_not_called()
 

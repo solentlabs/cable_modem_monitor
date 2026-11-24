@@ -179,5 +179,28 @@
     "abort": {
       "unknown_model": "Geconfigureerde modem niet gevonden in de catalogus."
     }
+  },
+  "exceptions": {
+    "no_modem_configured": {
+      "message": "Geen kabelmodem ingesteld"
+    },
+    "no_modem_data": {
+      "message": "Geen modemgegevens beschikbaar — het modem moet online zijn"
+    },
+    "no_entities": {
+      "message": "Geen entiteiten gevonden voor dit modem — het start mogelijk nog op, of de entiteiten zijn uitgeschakeld"
+    },
+    "modem_not_found": {
+      "message": "Geen geladen kabelmodem gevonden voor het opgegeven doel"
+    },
+    "restart_not_dispatched": {
+      "message": "Herstart van {model} is niet verzonden: {error}"
+    },
+    "config_load_failed_catalog": {
+      "message": "Modemconfiguratie uit de catalogus kon niet worden geladen: {error}"
+    },
+    "config_load_failed_custom": {
+      "message": "Modemconfiguratie uit de eigen configuratie kon niet worden geladen: {error}"
+    }
   }
 }

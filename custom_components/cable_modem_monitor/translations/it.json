@@ -179,5 +179,28 @@
     "abort": {
       "unknown_model": "Il modem configurato non è presente nel catalogo."
     }
+  },
+  "exceptions": {
+    "no_modem_configured": {
+      "message": "Nessun modem via cavo configurato"
+    },
+    "no_modem_data": {
+      "message": "Nessun dato del modem disponibile — il modem deve essere online"
+    },
+    "no_entities": {
+      "message": "Nessuna entità trovata per questo modem — potrebbe essere ancora in avvio, oppure le sue entità sono disabilitate"
+    },
+    "modem_not_found": {
+      "message": "Nessun modem via cavo caricato trovato per la destinazione richiesta"
+    },
+    "restart_not_dispatched": {
+      "message": "Il riavvio di {model} non è stato inviato: {error}"
+    },
+    "config_load_failed_catalog": {
+      "message": "Impossibile caricare la configurazione del modem dal catalogo: {error}"
+    },
+    "config_load_failed_custom": {
+      "message": "Impossibile caricare la configurazione del modem dalla configurazione personalizzata: {error}"
+    }
   }
 }

@@ -148,8 +148,8 @@ rules:
     status: todo
     comment: Deliberate. Entity names are English _attr_name literals; rationale in docs/TRANSLATION_GUIDE.md.
   exception-translations:
-    status: todo
-    comment: No exceptions block in strings.json; raises carry no translation_key.
+    status: done
+    comment: Every user-facing raise is keyed to the exceptions section of strings.json, translated in all 12 languages.
   icon-translations:
     status: todo
     comment: Deliberate, follows entity-translations. Icons set with _attr_icon, no icons.json (docs/TRANSLATION_GUIDE.md).

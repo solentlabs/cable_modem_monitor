@@ -1247,7 +1247,10 @@ button also keeps its persistent notification as the durable record, and
 raises only after refreshing the coordinator so the dashboard still
 reflects current state. Returning an error dict, or smuggling an error
 string back in a result field, is not a valid failure path (Silver
-`action-exceptions`).
+`action-exceptions`). Every user-facing raise, setup's
+`ConfigEntryError` included, passes `translation_domain` and a
+`translation_key` from the `exceptions` section of `strings.json`,
+never an inline message (Gold `exception-translations`).
 
 Distinguish this from legitimate empty results, which are returned
 normally and are not errors: "no statistics to migrate", "no orphaned
