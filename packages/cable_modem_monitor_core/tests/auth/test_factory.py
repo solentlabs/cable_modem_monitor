@@ -82,3 +82,17 @@ def test_factory_none_auth_when_auth_missing() -> None:
     config = ModemConfig.model_validate(data)
     manager = create_auth_manager(config)
     assert isinstance(manager, NoneAuthManager)
+
+
+def test_factory_hands_session_query_params_to_the_manager() -> None:
+    """The login requests of strategies that use them carry the session's query params (TG3442DE ``_n``)."""
+    data = load_fixture(FIXTURES_DIR / "auth_form_sjcl.json")
+    data["session"] = {**data.get("session", {}), "query_params": {"_n": "12345"}}
+    manager = create_auth_manager(ModemConfig.model_validate(data))
+    assert manager.login_query_params == {"_n": "12345"}
+
+
+def test_factory_leaves_login_query_params_empty_without_session_params() -> None:
+    """No session query params, no login query params."""
+    manager = create_auth_manager(ModemConfig.model_validate(load_fixture(FIXTURES_DIR / "auth_form_sjcl.json")))
+    assert manager.login_query_params == {}

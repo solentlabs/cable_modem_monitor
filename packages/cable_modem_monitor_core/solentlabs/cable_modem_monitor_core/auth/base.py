@@ -148,6 +148,17 @@ class BaseAuthManager(abc.ABC):
     def __init__(self) -> None:
         """Start with no recorded derived secrets."""
         self._derived_secrets: set[str] = set()
+        # ``session.query_params``, set by the factory. Only strategies whose
+        # firmware adds them to its own login requests append them
+        # (ARCHITECTURE_DECISIONS.md § Auth login POSTs and session.query_params).
+        self.login_query_params: dict[str, str] = {}
+
+    def _with_login_query(self, url: str) -> str:
+        """Append ``login_query_params`` to ``url``, as the firmware's own login request carries them."""
+        if not self.login_query_params:
+            return url
+        sep = "&" if "?" in url else "?"
+        return url + sep + "&".join(f"{k}={v}" for k, v in self.login_query_params.items())
 
     def derived_secrets(self) -> frozenset[str]:
         """Credential-derived values the last login put on the wire; scrubbed like the password."""

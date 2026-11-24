@@ -54,7 +54,11 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
             strategy,
         )
         return NoneAuthManager()
-    return module.create_manager(auth)  # type: ignore[no-any-return]
+    manager: BaseAuthManager = module.create_manager(auth)
+    session = getattr(config, "session", None)
+    if session is not None and session.query_params:
+        manager.login_query_params = dict(session.query_params)
+    return manager
 
 
 def create_auth_manager_for_action(auth_config: AuthConfig) -> BaseAuthManager:

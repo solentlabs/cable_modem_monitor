@@ -438,6 +438,30 @@ class TestFormSjclAuthManager:
         assert result.success is False
         assert "decryption failed" in result.error.lower()
 
+    def test_ajax_requests_carry_the_session_query_params(self, session: requests.Session) -> None:
+        """Login and session-check POSTs carry ``_n`` like the firmware's ajax prefilter; the page GET does not."""
+        manager = FormSjclAuthManager(_make_config())
+        manager.login_query_params = {"_n": "12345"}
+
+        login_resp = MagicMock()
+        login_resp.status_code = 200
+        login_resp.json.return_value = {"p_status": "AdminMatch", "encryptData": _TEST_ENCRYPTED_NONCE}
+        session_resp = MagicMock()
+        session_resp.status_code = 200
+
+        with (
+            patch.object(session, "get", return_value=_page_response(_login_page_html())) as mock_get,
+            patch.object(session, "post", side_effect=[login_resp, session_resp]) as mock_post,
+        ):
+            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+
+        assert result.success is True
+        assert mock_get.call_args.args[0] == "http://192.168.0.1/"
+        assert [c.args[0] for c in mock_post.call_args_list] == [
+            "http://192.168.0.1/php/ajaxSet_Password.php?_n=12345",
+            "http://192.168.0.1/php/ajaxSet_Session.php?_n=12345",
+        ]
+
     def test_no_session_validation(self, session: requests.Session) -> None:
         """Succeeds without session validation when endpoint is empty."""
         config = _make_config(session_validation_endpoint="")

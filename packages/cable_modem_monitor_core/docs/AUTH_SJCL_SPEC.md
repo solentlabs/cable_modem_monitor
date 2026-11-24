@@ -73,7 +73,7 @@ Step-by-step with explicit encoding at every boundary:
    ":" and ",".  Python json.dumps() default (no separators arg) matches.
    ciphertext = AES-CCM(key, hex_decode(myIv), plaintext.utf8, aad=encrypt_aad.utf8)
 
-4. POST login (login_endpoint):
+4. POST login (login_endpoint, with session.query_params such as _n):
    {"EncryptData": hex(ciphertext), "Name": "<user>", "AuthData": "<encrypt_aad>"}
    Response: {"p_status": "AdminMatch", "encryptData": "<hex>"}
    Success: "Match" after the first character (AdminMatch), or "Default".
@@ -85,7 +85,8 @@ Step-by-step with explicit encoding at every boundary:
    Result: CSRF nonce (UTF-8 string)
    Set csrf_header on session for subsequent requests
 
-6. POST session validation (session_validation_endpoint, optional):
+6. POST session validation (session_validation_endpoint, optional,
+   with session.query_params):
    Empty POST (no body) with csrf_header -> finalizes session
    Accepts HTTP 200 as success regardless of response body
 ```
@@ -101,7 +102,7 @@ Touchstone firmware family, not inherent to SJCL:
 | POST field names | `EncryptData`, `Name`, `AuthData` | `base_95x.js` login() function | Other vendors may use different field names |
 | Plaintext structure | `{"Password": "<pw>", "Nonce": "<sessionId>"}` | `base_95x.js` login() function | JSON keys are firmware-specific |
 | Response encrypted field | `encryptData` (lowercase 'e') | HAR response from ajaxSet_Password.php | Field name is firmware-specific |
-| Success field and values | `p_status` holds `Match` past index 0 (`AdminMatch`) or equals `Default`; `Lockout` is a lockout; a bare `Match` is not a login | `base_95x.js` loginPasswordChk() ([#86 capture, 2026-04-03](https://github.com/solentlabs/cable_modem_monitor/issues/86#issuecomment-4184953174)) | Success detection is firmware-specific |
+| Success field and values | `p_status` holds `Match` past index 0 (`AdminMatch`) or equals `Default`; `Lockout` is a lockout; a bare `Match` is not a login | `base_95x.js` loginPasswordChk(); TG3442DE `test_data/modem.har`: `AdminMatch` at entries 47 and 211, `Lockout` at 329 | Success detection is firmware-specific |
 | PBKDF2 hash algorithm | SHA-256 | SJCL default | Universal for SJCL but hardcoded in code |
 
 A second SJCL wire format did appear (`json_sjcl` below). It differs on
@@ -221,7 +222,7 @@ rather than listing them here.
 | Firmware source | Establishes |
 |---|---|
 | `sjclCrypto.js` | Salt and IV encoding rules, default crypto parameters |
-| `base_95x.js` ([#86 capture](https://github.com/solentlabs/cable_modem_monitor/issues/86#issuecomment-4184953174)) | `form_sjcl` wire format, JS variable names, POST field names |
+| `base_95x.js` (TG3442DE `test_data/modem.har` entry 10) | `form_sjcl` wire format, JS variable names, POST field names |
 | `login.php` (actionHandler UI) | `json_sjcl` wire format, token source, busy branch |
 
 ## Platform Notes
@@ -249,10 +250,6 @@ Each `ModemSummary` carries `manufacturer`, `model`, `status`,
 
 ## Known Gaps
 
-- **`form_sjcl` firmware JS is outside the catalog**: `base_95x.js`
-  is read from the [#86 capture](https://github.com/solentlabs/cable_modem_monitor/issues/86#issuecomment-4184953174); the TG3442DE
-  fixture does not record it. A full-session TG3442DE capture would
-  bring it in.
 - **One modem per wire format**: each strategy's assumptions come from
   a single firmware.
 - **`encryptflag` not checked** (`form_sjcl`): The login page has an

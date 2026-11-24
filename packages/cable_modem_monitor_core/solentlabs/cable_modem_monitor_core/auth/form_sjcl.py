@@ -107,7 +107,10 @@ class FormSjclAuthManager(BaseAuthManager):
 
         config = self._config
         page_url = f"{base_url}{config.login_page}"
-        login_url = f"{base_url}{config.login_endpoint}"
+        # The firmware's ajax prefilter adds session.query_params (Arris
+        # ``_n``) to its AJAX calls, the login and session check included;
+        # the login page GET is not AJAX and carries none.
+        login_url = self._with_login_query(f"{base_url}{config.login_endpoint}")
 
         # Step 1: GET login page, extract JS variables
         page_vars = _fetch_page_vars(session, page_url, timeout)
@@ -179,7 +182,7 @@ class FormSjclAuthManager(BaseAuthManager):
 
         # Step 6: Session validation (optional)
         if config.session_validation_endpoint:
-            validation_url = f"{base_url}{config.session_validation_endpoint}"
+            validation_url = self._with_login_query(f"{base_url}{config.session_validation_endpoint}")
             val_result = _validate_session(session, validation_url, timeout)
             if isinstance(val_result, AuthResult):
                 return val_result

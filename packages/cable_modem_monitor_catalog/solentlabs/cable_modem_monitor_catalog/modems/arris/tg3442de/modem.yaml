@@ -55,13 +55,17 @@ hardware:
   chipset: "Intel Puma 7 (FHCE2752M)"
   release_date: "2018"
 
+detection:
+  http_headers:
+    - "null"
+
 status: confirmed
 
 sources:
   release_date: "[tk-world.de, 2018-08-27](https://www.tk-world.de/blog/vodafone-station-neuer-standard-router-fuer-kabeltarife/) — Vodafone Station became Vodafone Germany's standard cable router on 2018-08-28"
-  auth_config: "[#86 Arris TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"
-  logout_action: '[#86 capture, 2026-04-03](https://github.com/solentlabs/cable_modem_monitor/issues/86#issuecomment-4184953174) entry 19 and the 2026-04-12 #86 recapture: POST /php/logout.php answers 200; base_95x.js calls createServerRecord("php/logout.php")'
-  restart_action: "test_data/modem.har entries 7-8, from the 2026-11-19 follow-up capture: status_restart_data.js builds {RestartReset: Restart}, and POST /php/ajaxSet_status_restart.php carries that body and answers 200"
+  auth_config: "[#86 Arris TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86); test_data/modem.har ([#234](https://github.com/solentlabs/cable_modem_monitor/pull/234)) entries 47 and 211: POST /php/ajaxSet_Password.php?_n answers p_status AdminMatch; base_95x.js at entry 10"
+  logout_action: 'test_data/modem.har entries 19, 43, 187, 207, 305 and 325: POST /php/logout.php answers 200; base_95x.js calls createServerRecord("php/logout.php")'
+  restart_action: "test_data/modem.har entries 277-281: status_restart_data.js builds {RestartReset: Restart}, and POST /php/ajaxSet_status_restart.php carries that body and answers 200"
   chipset: "[TG3442DE Teardown](https://github.com/nox-x/TG3442DE-Teardown)"
   isps: "[CommScope press release, 2020-06-11](https://www.vistancenetworks.com/press-releases/2020/vodafone-germany-and-commscope-bring-higher-speeds-into-the-connected-home/): 'more than one million Vodafone Germany subscribers are using CommScope's DOCSIS 3.1 Touchstone TG3442 Gateway in their homes'."
 
@@ -69,6 +73,8 @@ attribution:
   contributors:
     - github: https://github.com/samuelengelking
       contribution: "HAR captures and initial modem request"
+    - github: https://github.com/hajekj
+      contribution: "Restart support and the full-session capture (#234)"
 
 isps:
   - Vodafone DE
@@ -83,23 +89,28 @@ notes: |
   Variant check: firmware has isModel6442 flag (this modem is NOT 6442).
   Session timeout: 600s (logoutTime JS variable).
 
-  The firmware adds _n to its own login POST; Core's login omits it and the
-  modem is confirmed working that way (#86). Rationale in
-  ARCHITECTURE_DECISIONS § Auth login POSTs do not carry
-  session.query_params.
+  The firmware's ajax prefilter adds _n to its AJAX calls, the login POST
+  and session check included (test_data/modem.har entries 47 and 282); the
+  login page GET carries none. Core sends the same (ARCHITECTURE_DECISIONS
+  § Auth login POSTs carry session.query_params only where the firmware
+  does). Earlier releases logged in without _n, which the modem also
+  accepted (#86).
 
-  Fixture: test_data/modem.har is a contributor-assembled composite (#234).
-  Entries 0-6 are the original synthetic parser evidence. Entries 7-8 are
-  the restart-page script and observed restart request from the 2026-11-19
-  follow-up capture of the same firmware family. The source capture's
-  js_FWVersion matches the existing fixture; physical-device continuity was
-  not established. Its csrfNonce header was hand-redacted to
-  test_csrf_nonce_xyz; request and response structure and bodies are
-  unchanged.
-  Replace the fixture with a real full-session capture (login, status
-  pages, restart) when a TG3442DE owner contributes one; it would also
-  put base_95x.js in the catalog (AUTH_SJCL_SPEC § Known Gaps).
+  Fixture: test_data/modem.har is one full session (login, every status
+  page, restart, logins after the reboot) captured with har-capture on
+  2026-11-24 for #234, through localhost:8080. The restart's reboot took
+  about 4 min 20 s (entry 281 to the first answered request, entry 304).
+  The last login (entry 329, the first after the reboot) answered
+  p_status Lockout with p_waitTime 1; why the modem refused it is not
+  known.
+  Hand-redacted at intake, values only: EncryptData in the three login
+  POSTs and encryptData in the two login responses, each replaced with a
+  same-length non-secret hex string. Both are encrypted with a key derived
+  from the password, so with the page's salt and IV they allow offline
+  password guessing; har-capture does not treat them as credentials. The
+  replay harness builds its own login responses, so no test reads them.
 
 references:
   issues:
     - "[#86 — [Modem Request] Arris Touchstone TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"
+    - "[#234 — feat(catalog): add TG3442DE restart support](https://github.com/solentlabs/cable_modem_monitor/pull/234)"

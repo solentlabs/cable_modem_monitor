@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Arris TG3442DE logs in the way its own web page does.** The login
+  and session-check requests now carry the firmware's `_n` parameter, as
+  the modem's page sends them. Earlier releases left it off, which the
+  modem also accepted. The TG3442DE's test data is now one real session
+  contributed by @hajekj (#234), replacing a partly hand-built one.
 - **The poll and health check intervals now have limits (#117).** The
   Configure screen accepts 00:00:00 (off) or a time inside each range:
   polling 30 seconds to 24 hours, health checks 10 seconds to 24 hours.
