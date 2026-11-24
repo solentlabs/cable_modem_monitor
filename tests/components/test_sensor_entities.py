@@ -17,6 +17,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor.const import UNIT_CONVERTERS
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     HealthInfo,
     ModemSnapshot,
@@ -234,6 +235,46 @@ def test_channel_sensor_state_class(mock_runtime_data, field, expected, desc):
     sensors = [s for s in created if isinstance(s, ChannelSensor) and s._field == field]
     assert sensors
     assert {s.state_class for s in sensors} == {expected}
+
+
+# Stored unit is base SI; the suggested unit is what HA shows
+# (ENTITY_MODEL_SPEC § Unit metadata). MHz needs Home Assistant's frequency
+# converter (2026.5+); without it frequency suggests nothing.
+#
+# ┌─────────────┬────────┬───────────┐
+# │ field       │ native │ suggested │
+# ├─────────────┼────────┼───────────┤
+# │ power       │ dBmV   │ —         │
+# │ snr         │ dB     │ —         │
+# │ frequency   │ Hz     │ MHz / —   │
+# │ corrected   │ —      │ —         │
+# │ uncorrected │ —      │ —         │
+# └─────────────┴────────┴───────────┘
+#
+# fmt: off
+CHANNEL_UNIT_CASES = [
+    ("power",       "dBmV", None),
+    ("snr",         "dB",   None),
+    ("frequency",   "Hz",   "MHz" if SensorDeviceClass.FREQUENCY in UNIT_CONVERTERS else None),
+    ("corrected",   None,   None),
+    ("uncorrected", None,   None),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "field,native_unit,suggested_unit",
+    CHANNEL_UNIT_CASES,
+    ids=[case[0] for case in CHANNEL_UNIT_CASES],
+)
+def test_channel_sensor_units(mock_runtime_data, field, native_unit, suggested_unit):
+    """Every created channel sensor of a field stores its base unit and suggests its display unit."""
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    created = _create_channel_sensors(coord, entry, MOCK_MODEM_DATA)
+    sensors = [s for s in created if isinstance(s, ChannelSensor) and s._field == field]
+    assert sensors
+    assert {s.native_unit_of_measurement for s in sensors} == {native_unit}
+    assert {s.suggested_unit_of_measurement for s in sensors} == {suggested_unit}
 
 
 @pytest.mark.parametrize(

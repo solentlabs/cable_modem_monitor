@@ -152,7 +152,7 @@ cards:
       - entity: sensor.cable_modem_us_ch_5_power
         name: US Ch 5
   - type: history-graph
-    title: Upstream Frequency (MHz)
+    title: Upstream Frequency
     hours_to_show: 24
     entities:
       - entity: sensor.cable_modem_us_ch_1_frequency

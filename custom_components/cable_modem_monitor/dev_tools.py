@@ -251,9 +251,9 @@ def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
         return {
             "ds_power": "DS Power (dBmV)",
             "ds_snr": "DS SNR (dB)",
-            "ds_freq": "DS Frequency (MHz)",
+            "ds_freq": "DS Frequency",
             "us_power": "US Power (dBmV)",
-            "us_freq": "US Frequency (MHz)",
+            "us_freq": "US Frequency",
             "corrected": "Corrected Errors",
             "uncorrected": "Uncorrected Errors",
             "corrected_rate": "Corrected Error Rate",
@@ -262,9 +262,9 @@ def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
     return {
         "ds_power": "Downstream Power Levels (dBmV)",
         "ds_snr": "Downstream Signal-to-Noise Ratio (dB)",
-        "ds_freq": "Downstream Frequency (MHz)",
+        "ds_freq": "Downstream Frequency",
         "us_power": "Upstream Power Levels (dBmV)",
-        "us_freq": "Upstream Frequency (MHz)",
+        "us_freq": "Upstream Frequency",
         "corrected": "Corrected Errors (Total)",
         "uncorrected": "Uncorrected Errors (Total)",
         "corrected_rate": "Corrected Error Rate (errors/min)",

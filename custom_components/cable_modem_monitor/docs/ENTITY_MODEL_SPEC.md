@@ -192,13 +192,16 @@ format depend on the user's channel identity mode — see
 channel, not that this channel carried a value in the creating poll —
 see [Capability Gating](#capability-gating).
 
+¹ Suggested on Home Assistant 2026.5 and later; Hz on earlier versions
+([§ System Info Pass-Through](#system-info-pass-through), Unit metadata).
+
 **Position mode** (`channel_identity: "number"`):
 
 | Entity | unique_id suffix | Unit | device_class | state_class | Condition |
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_ds_ch_{n}_power` | dBmV | — | MEASUREMENT | Always |
 | SNR | `_ds_ch_{n}_snr` | dB | — | MEASUREMENT | Always |
-| Frequency | `_ds_ch_{n}_frequency` | Hz | FREQUENCY | — | If published |
+| Frequency | `_ds_ch_{n}_frequency` | Hz, suggested MHz¹ | FREQUENCY | — | If published |
 | Corrected | `_ds_ch_{n}_corrected` | — | — | TOTAL_INCREASING | If published |
 | Uncorrected | `_ds_ch_{n}_uncorrected` | — | — | TOTAL_INCREASING | If published |
 
@@ -208,7 +211,7 @@ see [Capability Gating](#capability-gating).
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_ds_{type}_ch_{id}_power` | dBmV | — | MEASUREMENT | Always |
 | SNR | `_ds_{type}_ch_{id}_snr` | dB | — | MEASUREMENT | Always |
-| Frequency | `_ds_{type}_ch_{id}_frequency` | Hz | FREQUENCY | — | If published |
+| Frequency | `_ds_{type}_ch_{id}_frequency` | Hz, suggested MHz¹ | FREQUENCY | — | If published |
 | Corrected | `_ds_{type}_ch_{id}_corrected` | — | — | TOTAL_INCREASING | If published |
 | Uncorrected | `_ds_{type}_ch_{id}_uncorrected` | — | — | TOTAL_INCREASING | If published |
 
@@ -224,14 +227,14 @@ regardless of mode. Additional Tier 2/3 fields from parser output
 | Entity | unique_id suffix | Unit | device_class | state_class | Condition |
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_us_ch_{n}_power` | dBmV | — | MEASUREMENT | Always |
-| Frequency | `_us_ch_{n}_frequency` | Hz | FREQUENCY | — | If published |
+| Frequency | `_us_ch_{n}_frequency` | Hz, suggested MHz¹ | FREQUENCY | — | If published |
 
 **ID mode** (`channel_identity: "id"`):
 
 | Entity | unique_id suffix | Unit | device_class | state_class | Condition |
 |--------|-----------------|------|--------------|-------------|-----------|
 | Power | `_us_{type}_ch_{id}_power` | dBmV | — | MEASUREMENT | Always |
-| Frequency | `_us_{type}_ch_{id}_frequency` | Hz | FREQUENCY | — | If published |
+| Frequency | `_us_{type}_ch_{id}_frequency` | Hz, suggested MHz¹ | FREQUENCY | — | If published |
 
 **Attributes on every US channel sensor:** `channel_number`,
 `channel_id`, `channel_type`. Both identifiers are always present
@@ -514,7 +517,12 @@ the one Core stores, always base SI
 ([FIELD_REGISTRY.md § Naming Rules](../../../packages/cable_modem_monitor_core/docs/FIELD_REGISTRY.md#naming-rules-all-tiers)).
 Where that is not the unit users read, the field also declares a
 suggested unit and HA scales the state for display: provisioned speed
-is stored in bit/s and shown in Mbit/s. HA stamps a suggested unit into
+is stored in bit/s and shown in Mbit/s, and channel frequency in Hz and
+shown in MHz. Home Assistant converts frequency only from 2026.5, and
+earlier versions refuse to add an entity that suggests a unit they cannot
+convert, so the frequency suggestion is made only where
+`UNIT_CONVERTERS` has the frequency device class (¹ in the channel
+tables); elsewhere frequency shows in Hz. HA stamps a suggested unit into
 the entity registry the first time it sees an entity and never revisits
 it, so changing this table moves only newly created entities. Existing
 ones follow the **Discontinued entities** paths above — the entity's

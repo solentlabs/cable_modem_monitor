@@ -30,6 +30,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.components.sensor.const import UNIT_CONVERTERS
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -167,6 +168,13 @@ _US_METRICS = [
 ]
 
 # fmt: on
+
+# Channel fields whose stored base SI unit is not the unit users read: HA
+# shows the suggested unit instead (ENTITY_MODEL_SPEC § Unit metadata).
+# Home Assistant converts frequency from 2026.5; earlier versions refuse to
+# add an entity that suggests a unit they cannot convert, so frequency
+# stays in Hz there.
+_CHANNEL_SUGGESTED_UNITS = {"frequency": "MHz"} if _FREQ in UNIT_CONVERTERS else {}
 
 # Power and SNR are always created for downstream; power for upstream.
 # Other metrics follow ENTITY_MODEL_SPEC.md, Capability Gating.
@@ -784,6 +792,8 @@ class ChannelSensor(ModemSensorBase):
             self._attr_state_class = state_class
         if unit:
             self._attr_native_unit_of_measurement = unit
+        if suggested := _CHANNEL_SUGGESTED_UNITS.get(field):
+            self._attr_suggested_unit_of_measurement = suggested
         if device_class:
             self._attr_device_class = device_class
 

@@ -204,6 +204,14 @@ def test_dashboard_titles_long():
     assert titles["us_power"] == "Upstream Power Levels (dBmV)"
 
 
+@pytest.mark.parametrize("short_titles", [True, False], ids=["short", "long"])
+def test_frequency_titles_carry_no_unit(short_titles: bool) -> None:
+    """The axis shows Hz or MHz depending on the entity's display unit, so the title names none."""
+    titles = _get_dashboard_titles(short_titles=short_titles)
+    for key in ("ds_freq", "us_freq"):
+        assert "Hz" not in titles[key]
+
+
 # -----------------------------------------------------------------------
 # Card builders
 # -----------------------------------------------------------------------

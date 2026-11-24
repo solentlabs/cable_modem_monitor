@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Channel frequency shows in MHz, and the frequency charts no longer
+  claim a unit.** On Home Assistant 2026.5 and later, newly created channel
+  frequency sensors display MHz (the stored value stays in Hz). Existing
+  sensors keep Hz until you press Reset Entities or change the sensor's
+  display unit. Earlier Home Assistant versions cannot convert frequency,
+  so the sensors stay in Hz there. The generated dashboard's frequency
+  chart titles used to say "(MHz)" over values in Hz; they now name no
+  unit, and the chart's axis shows the real one.
 - **An uptime field must declare a valid format.** A `parser.yaml` whose
   `type: uptime` field has no `format`, an unknown preset or an unknown
   placeholder now fails when the config loads, so a custom config shows
