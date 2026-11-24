@@ -174,7 +174,9 @@
       "parse_failed": "Conectado, mas não foi possível ler os dados do modem.",
       "unknown": "Erro inesperado. Verifique os logs do Home Assistant.",
       "custom_attempt_failed": "O teste falhou. Abra o log do Home Assistant e pesquise \"custom config report\": ele mostra cada etapa e o que o modem respondeu. Aqui, uma falha de login pode vir da sua configuração editada, não só do usuário ou da senha.",
-      "custom_yaml_invalid": "A configuração do modem não é um YAML válido ou não segue o formato do modem.yaml. Os detalhes estão no relatório de configuração personalizada no log do Home Assistant."
+      "custom_yaml_invalid": "A configuração do modem não é um YAML válido ou não segue o formato do modem.yaml. Os detalhes estão no relatório de configuração personalizada no log do Home Assistant.",
+      "scan_interval_out_of_range": "Digite 00:00:00 para desativar a consulta, ou um tempo de 30 segundos a 24 horas.",
+      "health_check_interval_out_of_range": "Digite 00:00:00 para desativar as verificações de estado, ou um tempo de 10 segundos a 24 horas."
     },
     "abort": {
       "unknown_model": "Modem configurado não encontrado no catálogo."

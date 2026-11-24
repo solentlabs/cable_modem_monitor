@@ -22,9 +22,9 @@ cards:
       - entity: sensor.cable_modem_last_boot_time
         name: Last Boot
         format: datetime
-      - entity: sensor.cable_modem_downstream_channel_count
+      - entity: sensor.cable_modem_ds_channel_count
         name: DS Channel Count
-      - entity: sensor.cable_modem_upstream_channel_count
+      - entity: sensor.cable_modem_us_channel_count
         name: US Channel Count
       - entity: sensor.cable_modem_total_corrected_errors
         name: Total Corrected Errors

@@ -6,8 +6,8 @@ We release security updates for the following versions:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.x.x   | :white_check_mark: |
-| < 2.0   | :x:                |
+| 3.14.x  | :white_check_mark: |
+| < 3.14  | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -17,10 +17,9 @@ We take the security of Cable Modem Monitor seriously. If you believe you have f
 
 **Please do NOT report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via one of the following methods:
+Instead, report them privately:
 
-1. **Preferred**: Open a [Security Advisory](https://github.com/solentlabs/cable_modem_monitor/security/advisories/new) on GitHub
-2. **Alternative**: Email the maintainer directly at the email address listed in the [GitHub profile](https://github.com/kwschulz)
+- Open a private [Security Advisory](https://github.com/solentlabs/cable_modem_monitor/security/advisories/new) on GitHub
 
 ### What to Include
 
@@ -51,7 +50,7 @@ Please include as much of the following information as possible:
 
 When using Cable Modem Monitor:
 
-1. **Credentials**: All modem credentials are stored in Home Assistant's encrypted storage
+1. **Credentials**: Modem credentials are stored in the Home Assistant config entry (Home Assistant's `.storage` directory), which Home Assistant does not encrypt. Protect access to your Home Assistant configuration
 2. **HTTPS**: Use HTTPS when accessing modems that support SSL/TLS
 3. **Network Access**: Ensure your Home Assistant instance is properly secured if exposed to the internet
 4. **Updates**: Keep the integration updated to receive the latest security patches
@@ -62,13 +61,13 @@ When using Cable Modem Monitor:
 - **Read-Only Access**: This integration only reads data from your modem and does not modify its configuration (except for the optional restart button feature)
 - **Local Network**: The integration communicates only with devices on your local network
 - **No Cloud Services**: All data stays local - no information is sent to external services
-- **Authentication**: Supports Basic Auth and Form-based authentication with encrypted credential storage
+- **Authentication**: Supports the login methods listed in the [README](.github/README.md); credentials are sent only to the modem
 
 ### Security-Related Configuration
 
-- SSL certificate verification is currently not configurable - the integration will attempt to verify SSL certificates when connecting via HTTPS
-- Failed authentication attempts are logged but do not trigger account lockouts
-- Network timeouts are set to 30 seconds to prevent hanging connections
+- SSL certificates are not verified: cable modems serve self-signed certificates, so HTTPS encrypts the connection but does not authenticate the modem
+- Rejected credentials trip a circuit breaker that stops further login attempts until you re-enter credentials or reload the integration; some modems lock out or restart after repeated bad logins
+- Requests time out after 10 seconds by default; some modems' catalog entries set up to 20
 
 ## Acknowledgments
 

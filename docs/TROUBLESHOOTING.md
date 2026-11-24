@@ -83,7 +83,7 @@ See [ORCHESTRATION_SPEC.md § HealthMonitor](../packages/cable_modem_monitor_cor
 
 - Status sensor shows "Degraded"
 - Ping Latency shows a value (e.g., 1-5ms)
-- HTTP Latency shows "Unavailable"
+- HTTP Latency (on modems that have it) stops updating
 - All channel sensors show "Unavailable"
 - Modem web interface doesn't load in browser either
 
@@ -105,19 +105,17 @@ WARNING: Health check [MB7621]: degraded — ICMP 2.0ms, TCP timeout, HTTP HEAD 
 
 **Recovery Options:**
 
-1. **Wait for internal watchdog** (often works within hours)
-   - Most modems have internal monitoring that will restart the hung web server
-   - The integration will automatically recover once HTTP responds
+1. **Wait** — some modems restart a hung web server on their own; others stay hung until power-cycled
+   - The integration recovers automatically once HTTP responds
 
 2. **Power cycle the modem** (immediate fix)
    - Unplug modem for 30 seconds, then reconnect
    - Will briefly interrupt internet connectivity
 
-3. **Reload integration after recovery**
-   - Once HTTP is working again, reload the integration to recreate all sensors
-   - Settings > Devices & Services > Cable Modem Monitor > ... > Reload
+3. **Wait for the next poll after recovery**
+   - Once HTTP is working again, the channel sensors come back on the next poll
 
-**Note:** If you only see a few sensors instead of 100+, the integration may have started while in degraded mode. Reload the integration after HTTP recovers to get all channel sensors.
+**Note:** If the integration started while the modem was degraded, it creates the channel sensors on its first successful poll after HTTP recovers. No reload is needed.
 
 #### 3. Wrong Credentials
 
@@ -298,8 +296,8 @@ counter resets (modem reboot), recovery events.
 1. **Diagnostics download** — Settings → Devices & Services → Cable
    Modem Monitor → Download Diagnostics. The JSON includes
    `last_poll_at`, streak counters, reuse state, and channel counts.
-2. **Integration page activity log** — per-poll uptime entries on
-   the integration's device page.
+2. **Integration page activity log** — status changes on the
+   integration's device page.
 
 **Failures are always visible:**
 
@@ -410,7 +408,7 @@ Use the `cable_modem_monitor.orphaned_statistics` service. It works in two steps
 ### Step 1 — Preview
 
 1. Go to **Tools → Actions**
-2. Select action: **Cable Modem Monitor: List Orphaned Statistics**
+2. Select action: **Cable Modem Monitor: Orphaned Statistics**
 3. Leave **Execute** unchecked
 4. Click **Perform Action**
 
@@ -441,7 +439,7 @@ never listed. Example:
 
 After reviewing the list:
 
-1. In **Tools → Actions**, select **Cable Modem Monitor: List Orphaned Statistics** again
+1. In **Tools → Actions**, select **Cable Modem Monitor: Orphaned Statistics** again
 2. Check **Execute**
 3. Click **Perform Action**
 
@@ -632,8 +630,10 @@ Channel sensors include channel type for DOCSIS 3.1 compatibility:
 
 ### Sensor Attributes
 
-Each channel sensor exposes these attributes:
+Each channel sensor exposes the channel's other fields as attributes, for example:
 
 - `channel_id`: CMTS-assigned channel identifier (stable per frequency)
+- `channel_number`: The channel's position in the modem's table
 - `channel_type`: Modulation type (qam, ofdm, atdma, ofdma)
-- `frequency`: Channel frequency in Hz (power/SNR sensors only)
+- `frequency`: Channel frequency in Hz (on every channel sensor except the frequency sensor itself)
+- `lock_status`, `modulation`, `symbol_rate`: where the modem reports them

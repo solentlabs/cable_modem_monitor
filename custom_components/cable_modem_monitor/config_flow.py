@@ -81,6 +81,10 @@ from .const import (
     DEFAULT_HEALTH_CHECK_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MAX_HEALTH_CHECK_INTERVAL,
+    MAX_SCAN_INTERVAL,
+    MIN_HEALTH_CHECK_INTERVAL,
+    MIN_SCAN_INTERVAL,
     VERSION,
     ChannelIdentity,
     EntityPrefix,
@@ -1101,6 +1105,24 @@ def _seconds_to_duration(seconds: int) -> dict[str, int]:
     return {"hours": hours, "minutes": minutes, "seconds": secs}
 
 
+# Each interval is 0 (off) or inside its range; checked before the
+# connection test, on the field itself.
+_INTERVAL_BOUNDS = (
+    (CONF_SCAN_INTERVAL, MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL),
+    (CONF_HEALTH_CHECK_INTERVAL, MIN_HEALTH_CHECK_INTERVAL, MAX_HEALTH_CHECK_INTERVAL),
+)
+
+
+def _interval_errors(user_input: Mapping[str, Any]) -> dict[str, str]:
+    """Field errors for intervals that are neither 0 (off) nor inside their range."""
+    errors: dict[str, str] = {}
+    for field, low, high in _INTERVAL_BOUNDS:
+        seconds = _duration_to_seconds(user_input[field])
+        if seconds and not low <= seconds <= high:
+            errors[field] = f"{field}_out_of_range"
+    return errors
+
+
 def _duration_to_seconds(duration: dict[str, int] | int) -> int:
     """Convert a DurationSelector dict to seconds.
 
@@ -1129,6 +1151,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is None:
             return self._show_options_form("init", self._current_values())
         self._keep_blank_password(user_input)
+        if errors := _interval_errors(user_input):
+            return self._show_options_form("init", user_input, errors=errors)
         return await self._async_validate(user_input)
 
     async def async_step_custom_config(
@@ -1139,6 +1163,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is None:
             return self._show_options_form("custom_config", self._current_values())
         self._keep_blank_password(user_input)
+        if errors := _interval_errors(user_input):
+            return self._show_options_form("custom_config", user_input, errors=errors)
 
         entry = self.config_entry
         await self._wait_for_quiet_modem(entry)

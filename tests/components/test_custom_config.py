@@ -371,6 +371,25 @@ async def test_configure_failure_logs_the_report_and_saves_nothing(
     assert entry.data[CONF_CUSTOM_MODEM_YAML] == "a: 1\n"
 
 
+async def test_configure_rejects_an_out_of_range_interval_before_testing(hass: HomeAssistant):
+    """The custom config Configure screen refuses a bad interval on its field and never runs the test."""
+    entry = _custom_entry(hass, user="a: 1\n", base="a: 0\n")
+    attempt = AsyncMock()
+    with (
+        patch(f"{_CF}.CATALOG_PATH", FAKE_CATALOG),
+        patch(f"{_CF}.run_custom_attempt", attempt),
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+    ):
+        result: Any = await hass.config_entries.options.async_init(entry.entry_id)
+        form = {str(k): k.default() for k in result["data_schema"].schema}
+        form.update(password="", scan_interval={"hours": 0, "minutes": 0, "seconds": 5})
+        result = await hass.config_entries.options.async_configure(result["flow_id"], user_input=form)
+
+    assert result["step_id"] == "custom_config"
+    assert result["errors"] == {"scan_interval": "scan_interval_out_of_range"}
+    attempt.assert_not_called()
+
+
 async def test_configure_pass_saves_the_text_and_keeps_the_base(hass: HomeAssistant):
     """A pass stores the new text; the base text, base version and password stay."""
     passed = CustomAttempt(validation=dict(MOCK_VALIDATION_RESULT), error=None, records=[], scrub=lambda t: t)

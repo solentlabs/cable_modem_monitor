@@ -54,7 +54,6 @@ translated. Four things are explicitly **out of scope** and stay
 English:
 
 - **Repair issues** and their fix flows (`issues` in `strings.json`)
-
 - **Service (action) names and descriptions**
 - **Entity names** — sensors, buttons, and their per-channel variants
 - **Persistent notifications** — the text is built in Python, not in
@@ -145,7 +144,7 @@ visible by reading the diff.
 - Use formal but approachable tone
 - Match Home Assistant's existing terminology for your language
 - Keep error messages helpful and actionable
-- Preserve placeholders like `{detected_modem}` and `{parser_selected_at}`
+- Preserve placeholders like `{manufacturer}`, `{variant}` and `{error}`
 - Test that the JSON is valid before submitting
 
 ## For Developers
@@ -159,9 +158,10 @@ translating them.
 
 1. Add the string to `strings.json`
 2. Copy `strings.json` over `translations/en.json` — they must match exactly
-3. If the string is **in scope** (config or options flow), translate it in
-   all other language files. If it is out of scope (a service or entity
-   name), do nothing — the other files should not carry it at all
+3. If the string is **in scope** (config or options flow, or an exception
+   message), translate it in all other language files. If it is out of
+   scope (a service or entity name), do nothing — the other files should
+   not carry it at all
 4. Run `python3 scripts/dev/check-translations-sync.py`
 
 > **Translate only the keys that changed. Never regenerate a whole language
@@ -195,7 +195,7 @@ or a loanword like `Password` in Italian or `Variant` in Dutch — add it to
 
 1. Copy `en.json` to `{language_code}.json`
 2. Remove any sections outside the translated scope (see above) — keep
-   `config` and `options`
+   `config`, `options` and `exceptions`
 3. Translate all remaining string values
 4. Test the integration with Home Assistant in that language
 5. Run `python3 scripts/dev/check-translations-sync.py`
@@ -218,7 +218,7 @@ The translation files follow Home Assistant's [translation format](https://devel
 {
   "config": {
     "step": {
-      "user": {
+      "connection": {
         "title": "...",
         "description": "...",
         "data": { ... },

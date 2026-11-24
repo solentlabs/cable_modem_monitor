@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The poll and health check intervals now have limits (#117).** The
+  Configure screen accepts 00:00:00 (off) or a time inside each range:
+  polling 30 seconds to 24 hours, health checks 10 seconds to 24 hours.
+  Earlier 3.14 releases accepted any time, including one-second polling
+  that logs in to the modem every second. A setting saved outside the
+  range keeps working until you next save Configure.
 - **Channel frequency shows in MHz, and the frequency charts no longer
   claim a unit.** On Home Assistant 2026.5 and later, newly created channel
   frequency sensors display MHz (the stored value stays in Hz). Existing

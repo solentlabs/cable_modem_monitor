@@ -174,7 +174,9 @@
       "parse_failed": "Connecté, mais impossible de lire les données du modem.",
       "unknown": "Erreur inattendue. Vérifiez les journaux de Home Assistant.",
       "custom_attempt_failed": "Le test a échoué. Ouvrez le journal de Home Assistant et recherchez \"custom config report\" : il montre chaque étape et la réponse du modem. Ici, un échec de connexion peut venir de votre configuration modifiée, pas seulement du nom d'utilisateur ou du mot de passe.",
-      "custom_yaml_invalid": "La configuration du modem n'est pas du YAML valide ou ne correspond pas au format modem.yaml. Les détails figurent dans le rapport de configuration personnalisée du journal de Home Assistant."
+      "custom_yaml_invalid": "La configuration du modem n'est pas du YAML valide ou ne correspond pas au format modem.yaml. Les détails figurent dans le rapport de configuration personnalisée du journal de Home Assistant.",
+      "scan_interval_out_of_range": "Saisissez 00:00:00 pour désactiver l'interrogation, ou une durée de 30 secondes à 24 heures.",
+      "health_check_interval_out_of_range": "Saisissez 00:00:00 pour désactiver les vérifications de l'état, ou une durée de 10 secondes à 24 heures."
     },
     "abort": {
       "unknown_model": "Le modem configuré est introuvable dans le catalogue."

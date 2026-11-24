@@ -73,13 +73,13 @@ body:
 
         ## Diagnostics File
 
-        Settings → Devices & Services → Cable Modem Monitor → device → three-dot menu → **Download Diagnostics**. Drag and drop below. The file is automatically sanitized (MAC addresses, serial numbers, IPs); review before sharing if you'd like to double-check.
+        Settings → Devices & Services → Cable Modem Monitor → device → three-dot menu → **Download Diagnostics**. Drag and drop below. Review it before sharing: the integration does not sanitize the file itself. Only its recent log lines have private IP addresses and file paths removed.
 
   - type: textarea
     id: diagnostics_file
     attributes:
       label: Diagnostics File
-      description: Drag and drop your diagnostics JSON file here. This is the verification artifact — without it, the report can't promote a modem from Awaiting to Verified.
+      description: Drag and drop your diagnostics JSON file here. This is the verification artifact — without it, the report can't promote a modem from Awaiting to Confirmed.
       placeholder: "Drag and drop your diagnostics .json file here"
     validations:
       required: true

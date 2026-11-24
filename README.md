@@ -11,8 +11,8 @@ Monitor your cable modem's signal quality, power levels, and error rates from Ho
 
 - **Per-channel signal quality.** Power (dBmV), SNR, and frequency for every downstream and upstream channel.
 - **Error tracking.** Corrected and uncorrected error counts, plus per-minute error rates.
-- **Connection health.** Status, uptime, last boot time, and reboot detection from counter resets.
-- **Health probes.** Ping, TCP and HTTP latency on a separate cadence from the full data poll.
+- **Connection health.** Status, last boot time (shown as time since boot), and reboot detection from counter resets.
+- **Health probes.** TCP latency, plus ping and HTTP latency where the modem answers them, on a separate cadence from the full data poll.
 - **Remote restart.** Reboot the modem from a Home Assistant button.
 - **Local-only.** No cloud, no telemetry. Credentials stay in the Home Assistant config entry; the integration sends them only to the modem.
 
@@ -39,7 +39,7 @@ Cable Modem Monitor is maintained by one person, in the evenings, around a day j
 1. Open **Settings → Marketplace**, search for "Cable Modem Monitor" and select **Install**. On Home Assistant before 2026.11, install it from HACS instead.
 2. If Home Assistant asks for a restart, restart it.
 3. Settings → Devices & Services → Add Integration → "Cable Modem Monitor". The setup page may open on its own after the install.
-4. Pick your manufacturer and model, enter your modem's IP (usually `192.168.100.1`) and credentials if required.
+4. Choose **Add modem**, pick your manufacturer (or **Auto-detect**) and model, then enter your modem's IP (usually `192.168.100.1`) and credentials if required.
 
 ## Privacy and security
 

@@ -174,7 +174,9 @@
       "parse_failed": "已连接但无法读取调制解调器数据。",
       "unknown": "意外错误。请查看 Home Assistant 日志。",
       "custom_attempt_failed": "测试失败。打开 Home Assistant 日志并搜索 \"custom config report\"：其中显示每个步骤以及调制解调器的响应。此处的登录失败可能来自您编辑的配置，而不仅是用户名或密码。",
-      "custom_yaml_invalid": "调制解调器配置不是有效的 YAML，或不符合 modem.yaml 格式。详细信息见 Home Assistant 日志中的自定义配置报告。"
+      "custom_yaml_invalid": "调制解调器配置不是有效的 YAML，或不符合 modem.yaml 格式。详细信息见 Home Assistant 日志中的自定义配置报告。",
+      "scan_interval_out_of_range": "输入 00:00:00 以关闭轮询，或输入 30 秒到 24 小时之间的时间。",
+      "health_check_interval_out_of_range": "输入 00:00:00 以关闭健康检查，或输入 10 秒到 24 小时之间的时间。"
     },
     "abort": {
       "unknown_model": "在目录中未找到已配置的调制解调器。"

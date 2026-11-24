@@ -1157,6 +1157,81 @@ async def test_options_flow_validation_failure(hass: HomeAssistant):
     assert result["errors"]["base"] == "network_unreachable"
 
 
+def _duration(seconds: int) -> dict[str, int]:
+    """DurationSelector value for a number of seconds."""
+    return {"hours": seconds // 3600, "minutes": seconds % 3600 // 60, "seconds": seconds % 60}
+
+
+# Interval bounds (const.py): polling 30 s to 24 h, health checks 10 s to
+# 24 h; 00:00:00 turns either off. An out-of-range value is refused on its
+# own field before the connection test runs.
+#
+# ┌──────────────────────────┬──────────┬──────────┬──────────────────────────────────────┐
+# │ case                     │ poll (s) │ health   │ error                                │
+# ├──────────────────────────┼──────────┼──────────┼──────────────────────────────────────┤
+# │ both off                 │ 0        │ 0        │ —                                    │
+# │ both at their floor      │ 30       │ 10       │ —                                    │
+# │ both at 24 hours         │ 86400    │ 86400    │ —                                    │
+# │ poll below floor         │ 29       │ 30       │ scan_interval_out_of_range           │
+# │ poll above 24 hours      │ 86401    │ 30       │ scan_interval_out_of_range           │
+# │ health below floor       │ 600      │ 9        │ health_check_interval_out_of_range   │
+# │ health above 24 hours    │ 600      │ 86401    │ health_check_interval_out_of_range   │
+# └──────────────────────────┴──────────┴──────────┴──────────────────────────────────────┘
+#
+# fmt: off
+INTERVAL_CASES = [
+    ("both_off",          0,     0,     {}),
+    ("both_at_floor",     30,    10,    {}),
+    ("both_at_24h",       86400, 86400, {}),
+    ("poll_below_floor",  29,    30,    {"scan_interval": "scan_interval_out_of_range"}),
+    ("poll_above_24h",    86401, 30,    {"scan_interval": "scan_interval_out_of_range"}),
+    ("health_below_floor", 600,  9,     {"health_check_interval": "health_check_interval_out_of_range"}),
+    ("health_above_24h",  600,   86401, {"health_check_interval": "health_check_interval_out_of_range"}),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize("desc,poll,health,errors", INTERVAL_CASES, ids=[c[0] for c in INTERVAL_CASES])
+async def test_options_interval_bounds(
+    hass: HomeAssistant, desc: str, poll: int, health: int, errors: dict[str, str]
+) -> None:
+    """Each interval is 00:00:00 (off) or inside its range; otherwise its field shows an error."""
+    entry = _options_entry(hass)
+
+    with (
+        patch("custom_components.cable_modem_monitor.async_setup_entry", return_value=True),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.load_modem_catalog",
+            return_value=MOCK_SUMMARIES,
+        ),
+        patch(
+            "custom_components.cable_modem_monitor.config_flow.validate_connection",
+            side_effect=_deferred_validation(MOCK_VALIDATION_RESULT),
+        ) as validate,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        result: Any = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            user_input={
+                "host": "192.168.100.1",
+                "username": "admin",
+                "password": "pass",
+                "scan_interval": _duration(poll),
+                "health_check_interval": _duration(health),
+            },
+        )
+
+    if errors:
+        assert result["type"] is FlowResultType.FORM
+        assert result["errors"] == errors
+        validate.assert_not_called()
+    else:
+        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["data"]["scan_interval"] == poll
+        assert result["data"]["health_check_interval"] == health
+
+
 async def test_options_password_preserved(hass: HomeAssistant):
     """Blank password in options preserves existing password from entry data."""
     entry = _options_entry(hass)

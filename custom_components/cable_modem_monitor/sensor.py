@@ -7,7 +7,7 @@ is pure HA presentation.
 Entity types:
     - Status: 10-level priority cascade over connection/health/DOCSIS
     - Modem Info: static metadata from ModemIdentity
-    - System: channel counts, error totals, software version, uptime
+    - System: channel counts, error totals, software version, last boot time
     - Per-channel: power, SNR, frequency, corrected/uncorrected
     - LAN stats: bytes, packets, errors, drops per interface
     - Health: ICMP, TCP and HTTP latency (from health coordinator)

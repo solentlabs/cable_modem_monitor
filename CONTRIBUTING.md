@@ -26,7 +26,7 @@ The encouraged contribution path is **expanding modem support** — the catalog 
 
 ### Why scope-before-code matters
 
-Review is the bottleneck on any project, solo or team. Generation cost has dropped to near-zero with AI assistance; review cost is still bounded by human reading speed and judgment, with reviewer attention degrading measurably past 60–90 minutes per session ([Sadowski et al., *Modern Code Review: A Case Study at Google*, FSE 2018](https://sback.it/publications/icse2018seip.pdf)). The only way to keep the project from breaking under that asymmetry is to align on scope before code is written.
+Review is the bottleneck on any project, solo or team. Generation cost has dropped to near-zero with AI assistance; review cost is still bounded by human reading speed and judgment, and reviewer performance drops after about 60 minutes at a time ([SmartBear, *Best Practices for Code Review*](https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/)). The only way to keep the project from breaking under that asymmetry is to align on scope before code is written.
 
 This discipline predates AI. Rust requires an [RFC](https://github.com/rust-lang/rfcs) for substantial changes; Python uses [PEPs](https://peps.python.org/pep-0001/); Kubernetes uses [KEPs](https://github.com/kubernetes/enhancements); Home Assistant routes architectural changes through a dedicated [architecture repo](https://github.com/home-assistant/architecture). The cost of misaligned implementation has always exceeded the cost of a design discussion. AI just makes skipping the step more tempting, and more expensive when it happens.
 

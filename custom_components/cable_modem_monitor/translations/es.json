@@ -174,7 +174,9 @@
       "parse_failed": "Conectado, pero no se pudieron leer los datos del módem.",
       "unknown": "Error inesperado. Revisa los registros de Home Assistant.",
       "custom_attempt_failed": "La prueba falló. Abre el registro de Home Assistant y busca \"custom config report\": muestra cada paso y lo que respondió el módem. Aquí un fallo de inicio de sesión puede deberse a tu configuración editada, no solo al usuario o la contraseña.",
-      "custom_yaml_invalid": "La configuración del módem no es YAML válido o no coincide con el formato de modem.yaml. Los detalles están en el informe de configuración personalizada del registro de Home Assistant."
+      "custom_yaml_invalid": "La configuración del módem no es YAML válido o no coincide con el formato de modem.yaml. Los detalles están en el informe de configuración personalizada del registro de Home Assistant.",
+      "scan_interval_out_of_range": "Introduce 00:00:00 para desactivar la consulta, o un tiempo de 30 segundos a 24 horas.",
+      "health_check_interval_out_of_range": "Introduce 00:00:00 para desactivar las verificaciones de estado, o un tiempo de 10 segundos a 24 horas."
     },
     "abort": {
       "unknown_model": "El módem configurado no se encuentra en el catálogo."

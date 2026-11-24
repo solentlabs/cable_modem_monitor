@@ -174,7 +174,9 @@
       "parse_failed": "Verbonden, maar kon de modemgegevens niet lezen.",
       "unknown": "Onverwachte fout. Controleer de Home Assistant-logs.",
       "custom_attempt_failed": "De test is mislukt. Open het Home Assistant-logboek en zoek op \"custom config report\": daar staat elke stap en wat het modem antwoordde. Een mislukte aanmelding kan hier ook door je bewerkte configuratie komen, niet alleen door gebruikersnaam of wachtwoord.",
-      "custom_yaml_invalid": "De modemconfiguratie is geen geldige YAML of past niet bij het modem.yaml-formaat. De details staan in het custom-config-rapport in het Home Assistant-logboek."
+      "custom_yaml_invalid": "De modemconfiguratie is geen geldige YAML of past niet bij het modem.yaml-formaat. De details staan in het custom-config-rapport in het Home Assistant-logboek.",
+      "scan_interval_out_of_range": "Voer 00:00:00 in om het opvragen uit te schakelen, of een tijd van 30 seconden tot 24 uur.",
+      "health_check_interval_out_of_range": "Voer 00:00:00 in om de statuscontroles uit te schakelen, of een tijd van 10 seconden tot 24 uur."
     },
     "abort": {
       "unknown_model": "Geconfigureerde modem niet gevonden in de catalogus."

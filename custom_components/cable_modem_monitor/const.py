@@ -47,6 +47,7 @@ CONF_CUSTOM_BASE_VERSION = "custom_base_version"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_HEALTH_CHECK_INTERVAL = "health_check_interval"
 
+# Interval ranges are enforced in the options flow; 0 turns either off.
 # Defaults — data polling
 DEFAULT_SCAN_INTERVAL = 600  # 10 minutes
 MIN_SCAN_INTERVAL = 30

@@ -57,8 +57,8 @@ A custom Home Assistant integration that monitors your cable modem's signal qual
 
 - 📊 **[Signal Quality](#understanding-the-values)**: Power levels, SNR, frequency for every channel
 - ⚠️ **[Error Tracking](#corrected-vs-uncorrected-errors)**: Corrected & uncorrected errors per channel
-- 🔌 **[Connection Health](#modem-status)**: Status, uptime, and last boot time
-- 💓 **[Modem Health](#latency-monitoring)**: Real-time ping, TCP and HTTP latency monitoring
+- 🔌 **[Connection Health](#modem-status)**: Status and last boot time (shown as time since boot)
+- 💓 **[Modem Health](#latency-monitoring)**: Real-time TCP latency, plus ping and HTTP latency where the modem answers them
 - 📈 **[Trends](#examples)**: Full historical data for analysis and graphing
 
 **What it does:**
@@ -95,7 +95,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/latency.png" alt="Modem Latency Monitoring" width="500">
 </picture>
 <!-- markdownlint-enable MD033 --><br>
-<em>Ping, TCP and HTTP latency monitoring for real-time health assessment</em>
+<em>Latency monitoring for real-time health assessment: TCP always, ping and HTTP where the modem answers them</em>
 
 <!-- markdownlint-disable MD033 -->
 <picture>
@@ -112,11 +112,11 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
 ### Monitoring & Data Collection
 
 - **Comprehensive Channel Monitoring**: Tracks all downstream and upstream channels
-- **Per-Channel Metrics**: Power (dBmV), SNR (dB), frequency (Hz), corrected and uncorrected errors
+- **Per-Channel Metrics**: Power (dBmV), SNR (dB), frequency (MHz on Home Assistant 2026.5 and later, Hz before), corrected and uncorrected errors
 - **Summary Sensors**: Total corrected and uncorrected downstream errors, where the modem's catalog entry declares them
 - **Unified Status**: One sensor combining connection, health and DOCSIS lock (see [Modem Status](#modem-status))
-- **System Information**: Software version, uptime, channel counts, and last boot time
-- **Health Monitoring**: Ping, TCP and HTTP latency, plus an automatic health status
+- **System Information**: Software version, channel counts, and last boot time (shown as time since boot)
+- **Health Monitoring**: TCP latency, ping and HTTP latency where the modem answers them, plus an automatic health status
 - **Login protection**: Rejected credentials trip a circuit breaker that stops further login attempts until you re-enter credentials or reload the integration; on some modems repeated bad logins cause a lockout or even a restart
 
 ### Control & Automation
@@ -178,33 +178,35 @@ On Home Assistant before 2026.11, in HACS open **Cable Modem Monitor**, click th
 
 1. Go to **Settings → Devices & Services → Add Integration**
 2. Search for **Cable Modem Monitor**
-3. Pick a manufacturer (or **All** to see every catalog entry)
-4. Select your modem model and choose Channel Number mode (recommended — stable entity IDs across reboots) or Channel ID mode
-5. Enter your modem's IP address (typically `192.168.100.1`) and credentials if required
+3. Choose **Add modem**. For a modem that is not in the catalog, choose **Add modem with custom config** instead (see [Custom Config](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/CUSTOM_CONFIG.md))
+4. Pick a manufacturer, **All** to see every catalog entry, or **Auto-detect** to look for your modem on the network
+5. Select your modem model, the entity ID prefix, and Channel Number mode (recommended — stable entity IDs across reboots) or Channel ID mode
+6. If your model has more than one firmware variant, pick the one that matches your modem
+7. Enter your modem's IP address (typically `192.168.100.1`) and credentials if required
 
 <!-- markdownlint-disable MD033 -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step1-manufacturer-dark.png">
-  <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step1-manufacturer.png" alt="Setup step 1: pick a manufacturer" width="420">
+  <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step1-manufacturer.png" alt="Setup step 4: pick a manufacturer" width="420">
 </picture>
 <!-- markdownlint-enable MD033 --><br>
-<em>Step 3 — Pick a manufacturer (or All)</em>
+<em>Step 4 — Pick a manufacturer, All, or Auto-detect</em>
 
 <!-- markdownlint-disable MD033 -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step2-modem-dark.png">
-  <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step2-modem.png" alt="Setup step 2: select modem and channel naming" width="420">
+  <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step2-modem.png" alt="Setup step 5: select modem and channel naming" width="420">
 </picture>
 <!-- markdownlint-enable MD033 --><br>
-<em>Step 4 — Select your modem and channel naming</em>
+<em>Step 5 — Select your modem and channel naming</em>
 
 <!-- markdownlint-disable MD033 -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step3-connection-dark.png">
-  <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step3-connection.png" alt="Setup step 3: connection details" width="420">
+  <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step3-connection.png" alt="Setup step 7: connection details" width="420">
 </picture>
 <!-- markdownlint-enable MD033 --><br>
-<em>Step 5 — Enter connection details</em>
+<em>Step 7 — Enter connection details</em>
 
 ### Options
 
@@ -212,8 +214,8 @@ After setup, configure via **Settings → Devices & Services → Cable Modem Mon
 
 - **Host**: Update modem IP / URL
 - **Credentials**: Update username/password if your modem requires authentication
-- **Polling Interval**: How often to fetch full modem status (30 seconds – 24 hours, default: 10 minutes)
-- **Health Check Interval**: How often to run lightweight reachability probes (default: 30 seconds). Status comes from ICMP ping and a TCP connect; an HTTP HEAD measures latency where the modem supports it
+- **Polling Interval**: How often to fetch full modem status: 30 seconds to 24 hours (default: 10 minutes), or 00:00:00 to turn automatic polling off and poll only with the Update Modem Data button
+- **Health Check Interval**: How often to run lightweight reachability probes: 10 seconds to 24 hours (default: 30 seconds), or 00:00:00 to turn health checks off. Status comes from ICMP ping and a TCP connect; an HTTP HEAD measures latency where the modem supports it
 
 Modem Model and Channel Identity are install-time choices, not editable here. See [Known Limitations](#known-limitations).
 
@@ -264,9 +266,9 @@ Firmware and hardware versions also appear on the device info card. Other system
 
 ### Latency Monitoring
 
-- `sensor.cable_modem_ping_latency`: Ping response time in milliseconds
 - `sensor.cable_modem_tcp_latency`: TCP connect time in milliseconds
-- `sensor.cable_modem_http_latency`: HTTP response time in milliseconds
+- `sensor.cable_modem_ping_latency`: Ping response time in milliseconds, where the modem answers ping
+- `sensor.cable_modem_http_latency`: HTTP response time in milliseconds, where the modem answers an HTTP HEAD request
 
 ### Summary Sensors
 
@@ -287,7 +289,7 @@ Replace `{type}` with channel type (qam, ofdm) and `X` with the channel number:
 
 - `sensor.cable_modem_ds_{type}_ch_X_power`: Power level in dBmV
 - `sensor.cable_modem_ds_{type}_ch_X_snr`: Signal-to-Noise Ratio in dB
-- `sensor.cable_modem_ds_{type}_ch_X_frequency`: Channel frequency in Hz
+- `sensor.cable_modem_ds_{type}_ch_X_frequency`: Channel frequency (MHz on Home Assistant 2026.5 and later, Hz before)
 - `sensor.cable_modem_ds_{type}_ch_X_corrected`: Corrected errors
 - `sensor.cable_modem_ds_{type}_ch_X_uncorrected`: Uncorrected errors
 
@@ -296,21 +298,21 @@ Replace `{type}` with channel type (qam, ofdm) and `X` with the channel number:
 Replace `{type}` with channel type (atdma, ofdma) and `X` with the channel number:
 
 - `sensor.cable_modem_us_{type}_ch_X_power`: Transmit power level in dBmV
-- `sensor.cable_modem_us_{type}_ch_X_frequency`: Channel frequency in Hz
+- `sensor.cable_modem_us_{type}_ch_X_frequency`: Channel frequency (MHz on Home Assistant 2026.5 and later, Hz before)
 
 ### Controls
 
-The integration registers three buttons under the modem device:
+The integration registers two buttons under the modem device, plus Restart where the modem supports it:
 
 - **Restart Modem**: Reboots the modem remotely (requires modem credentials)
 - **Update Modem Data**: Triggers an immediate poll outside the regular cadence
-- **Reset Entities**: Clears entity registry entries for this modem (useful after a modem swap or schema migration)
+- **Reset Entities**: Re-detects which health probes the modem answers and recreates its entities under their default IDs, so their history carries over
 
 ### Services
 
 - **`cable_modem_monitor.generate_dashboard_card`**: Generates the YAML for one Lovelace card tailored to your modem's channel layout, to paste into a dashboard through Add card > By card > Manual. Configurable: which graphs to include (status card, downstream/upstream power/SNR/frequency, errors, latency), `graph_hours` window (1–168), and short-title mode.
 - **`cable_modem_monitor.request_refresh`**: Triggers an immediate data poll for the selected device.
-- **`cable_modem_monitor.request_health_check`**: Runs an immediate health probe (ICMP / TCP / HTTP) outside the regular cadence.
+- **`cable_modem_monitor.request_health_check`**: Runs an immediate health probe (ICMP and TCP, plus HTTP where the modem supports it) outside the regular cadence.
 - **`cable_modem_monitor.convert_channel_identity`**: Renames recorder statistics from the previous Channel Identity mode to the current one, so historical graphs survive a remove-and-re-add in the other mode. Modem must be online.
 - **`cable_modem_monitor.orphaned_statistics`**: Lists recorder statistics left behind by a mode switch, channel rebonding, or a prefix change; call again with `execute: true` to purge them. See [Ghost Statistics in History](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#ghost-statistics-in-history).
 
@@ -370,7 +372,7 @@ To uninstall completely, delete every modem entry as above, then open **Settings
 - **Model is fixed at install time.** It identifies which modem this entry monitors. To point at a different modem, remove the integration and add it again.
 - **Channel Identity (number vs ID) is chosen at setup and not changeable afterward.** To switch modes, remove and re-add the integration in the other mode, then call the `convert_channel_identity` service to carry your recorder statistics across.
 - **Remote restart depends on the modem.** The Restart button appears only for modems whose firmware exposes a supported reboot path; others are monitored read-only.
-- **Channel-bond change alerts track totals only.** The notification fires when the total downstream or upstream channel count changes, not on a per-type reshuffle that leaves the total unchanged (for example a DOCSIS 3.1 provisioning change that swaps one QAM channel for one OFDM channel).
+- **Channel-bond changes do not notify.** One notification announces the first poll; after that the DS and US Channel Count sensors carry the totals. To be alerted to a change, use the [channel count automation](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/examples/automations/alert-channel-count.yaml).
 - **Requires a reachable modem interface on your LAN.** Modems whose status page has been disabled by the ISP, or exposed only through the provider's cloud app, cannot be polled. See [ISP Disabled Web Interface](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md#6-isp-disabled-web-interface).
 
 ## Troubleshooting
