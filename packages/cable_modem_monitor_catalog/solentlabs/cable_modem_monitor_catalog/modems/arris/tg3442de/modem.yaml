@@ -95,6 +95,9 @@ notes: |
   not established. Its csrfNonce header was hand-redacted to
   test_csrf_nonce_xyz; request and response structure and bodies are
   unchanged.
+  Replace the fixture with a real full-session capture (login, status
+  pages, restart) when a TG3442DE owner contributes one; it would also
+  put base_95x.js in the catalog (AUTH_SJCL_SPEC § Known Gaps).
 
 references:
   issues:
