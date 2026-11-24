@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Orphaned Statistics never touches another integration's history, and
+  says what it cleared.** It used to list any statistic whose ID started
+  with the modem's prefix, so a sensor from another integration named
+  "Cable Modem ..." could be purged. Now an ID counts only when no entity
+  of any integration owns it. The preview says that only long-term
+  statistics are cleared (state history is left to the recorder), the
+  purge reports how many IDs the recorder actually removed, and a purge
+  that times out on a large database reports its progress instead of
+  failing partway without a count.
 - **The intake tools read a CBN login's encryption from the captured
   script.** For a firmware whose `CBN_Encrypt` adds the hardware model, as on
   the Arris SB8200 AC01 (#231), the generated `modem.yaml` now carries

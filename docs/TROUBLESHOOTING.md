@@ -414,17 +414,23 @@ Use the `cable_modem_monitor.orphaned_statistics` service. It works in two steps
 3. Leave **Execute** unchecked
 4. Click **Perform Action**
 
-The response lists orphaned entity IDs as comments. Nothing is deleted. Example:
+The response lists orphaned statistic IDs as comments. Nothing is deleted.
+An ID counts as orphaned only when no entity of any integration owns it, so
+another integration's sensor that happens to be named "Cable Modem ..." is
+never listed. Example:
 
 ```text
-# Found 3 orphaned entity record(s) for modem prefix 'cable_modem'.
-# These have no registered entity. They were likely left behind
-# by a mode switch, channel rebonding (ID mode), or a prefix change.
+# Found 3 statistic ID(s) for modem prefix 'cable_modem' with no entity.
+# No integration has an entity with these IDs. They were likely left
+# behind by a mode switch, channel rebonding (ID mode), or a prefix change.
+#
+# Purging clears their long-term statistics only. Recorded state history
+# is not touched; the recorder removes it on its own schedule.
 #
 # To purge all of them: call this service again with execute: true.
 # WARNING: execute: true is permanent and cannot be undone.
 #
-# Preview of first orphaned entities (not a runnable action):
+# Orphaned statistic IDs (not a runnable action):
 #
 # sensor.cable_modem_ds_qam_ch_21_corrected
 # sensor.cable_modem_ds_qam_ch_21_power
@@ -439,7 +445,7 @@ After reviewing the list:
 2. Check **Execute**
 3. Click **Perform Action**
 
-The service clears all orphaned statistics directly via HA's recorder and returns the count purged. This cannot be undone.
+The service clears the long-term statistics of every orphaned ID through HA's recorder and reports how many the recorder no longer lists. Recorded state history is not touched; the recorder removes it after its `purge_keep_days`. If the recorder is too slow on a large database, the purge stops, reports how many it cleared, and asks you to run it again. This cannot be undone.
 
 > **Note:** To keep history after switching channel identity modes, run `cable_modem_monitor.convert_channel_identity` first. It renames statistics to match the current mode.
 

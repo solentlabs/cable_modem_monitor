@@ -255,7 +255,7 @@
     },
     "orphaned_statistics": {
       "name": "Orphaned Statistics",
-      "description": "Finds recorder statistics for this modem that have no registered entity — left behind by a mode switch, channel rebonding (ID mode), or a prefix change. Without execute, returns a preview of orphaned entities. With execute: true, purges them all directly. Purge is permanent.",
+      "description": "Finds recorder statistics under this modem's prefix that no entity owns — left behind by a mode switch, channel rebonding (ID mode), or a prefix change. Without execute, returns a preview. With execute: true, clears their long-term statistics; recorded state history is left to the recorder's own purge. Clearing is permanent.",
       "fields": {
         "device_id": {
           "name": "Device",
@@ -263,7 +263,7 @@
         },
         "execute": {
           "name": "Execute",
-          "description": "Set to true to purge all orphaned statistics immediately. Default is false (preview only). Purge is permanent and cannot be undone."
+          "description": "Set to true to clear the long-term statistics of every orphaned ID immediately. Default is false (preview only). Clearing is permanent and cannot be undone."
         }
       }
     }

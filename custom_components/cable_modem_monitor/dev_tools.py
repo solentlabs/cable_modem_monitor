@@ -1066,6 +1066,11 @@ def create_convert_channel_identity_handler(
     return handle_convert
 
 
+# Seconds one recorder batch may take before the purge stops and reports
+# how far it got.
+_CLEAR_BATCH_TIMEOUT_S = 30
+
+
 async def _clear_statistic_batch(hass: HomeAssistant, ids: list[str]) -> None:
     """Clear one batch of statistic IDs via the recorder and wait for completion."""
     batch_done = asyncio.Event()
@@ -1074,18 +1079,25 @@ async def _clear_statistic_batch(hass: HomeAssistant, ids: list[str]) -> None:
         hass.loop.call_soon_threadsafe(batch_done.set)
 
     get_instance(hass).async_clear_statistics(ids, on_done=_on_done)
-    async with asyncio.timeout(30):
+    async with asyncio.timeout(_CLEAR_BATCH_TIMEOUT_S):
         await batch_done.wait()
 
 
-async def _purge_statistic_ids(hass: HomeAssistant, statistic_ids: list[str]) -> int:
-    """Purge statistic IDs in batches of 100. Returns total count purged."""
+async def _purge_statistic_ids(hass: HomeAssistant, statistic_ids: list[str]) -> tuple[int, bool]:
+    """Purge statistic IDs in batches of 100; return (IDs actually gone, whether every batch finished)."""
+    from homeassistant.components.recorder.statistics import async_list_statistic_ids
+
     batch_size = 100
-    purged = 0
+    finished = True
     for i in range(0, len(statistic_ids), batch_size):
-        await _clear_statistic_batch(hass, statistic_ids[i : i + batch_size])
-        purged += len(statistic_ids[i : i + batch_size])
-    return purged
+        try:
+            await _clear_statistic_batch(hass, statistic_ids[i : i + batch_size])
+        except TimeoutError:
+            finished = False
+            break
+    # The recorder reports nothing back, so count what is actually gone.
+    remaining = {s["statistic_id"] for s in await async_list_statistic_ids(hass)}
+    return len(set(statistic_ids) - remaining), finished
 
 
 def create_orphaned_statistics_handler(
@@ -1121,24 +1133,23 @@ def create_orphaned_statistics_handler(
             }
 
         registry = er.async_get(hass)
-        # Registered entities come from every config entry, not just this
-        # one. Each modem's entity_ids start with `cable_modem_`
-        # (ENTITY_MODEL_SPEC § Entity Prefix), so the prefix filter above
-        # also matches a second modem's statistics; scoping the registry
-        # to one entry would report those as orphans and purge them.
-        registered_entity_ids = {
-            e.entity_id
-            for other in hass.config_entries.async_entries(DOMAIN)
-            for e in registry.entities.get_entries_for_config_entry_id(other.entry_id)
-        }
-
-        orphaned = sorted(our_stat_ids - registered_entity_ids)
+        # The prefix matches by name only: a second modem's entities and
+        # any other integration's entity named under `sensor.cable_modem_`
+        # match too (ENTITY_MODEL_SPEC § Entity Prefix). An ID is orphaned
+        # only when no entity of any integration owns it: no registry entry
+        # and no current state (a YAML entity without a unique_id has a
+        # state but no registry entry).
+        orphaned = sorted(
+            stat_id
+            for stat_id in our_stat_ids
+            if registry.async_get(stat_id) is None and hass.states.get(stat_id) is None
+        )
 
         if not orphaned:
             return {
                 "yaml": (
                     f"# No orphaned statistics found for modem prefix '{prefix}'.\n"
-                    f"# All {len(our_stat_ids)} statistics have registered entities."
+                    f"# All {len(our_stat_ids)} statistics have an entity."
                 ),
                 "count": 0,
             }
@@ -1147,16 +1158,21 @@ def create_orphaned_statistics_handler(
         total = len(orphaned)
 
         if execute:
-            purged = await _purge_statistic_ids(hass, orphaned)
+            cleared, finished = await _purge_statistic_ids(hass, orphaned)
             _LOGGER.warning(
-                "Purged %d orphaned statistics for prefix '%s'",
-                purged,
+                "Cleared statistics for %d of %d orphaned IDs for prefix '%s'%s",
+                cleared,
+                total,
                 prefix,
+                "" if finished else " (stopped: recorder timed out)",
             )
-            return {
-                "yaml": f"# Purged {purged} orphaned statistics for modem prefix '{prefix}'.",
-                "count": purged,
-            }
+            summary = f"# Cleared statistics for {cleared} of {total} orphaned IDs for modem prefix '{prefix}'."
+            if not finished:
+                summary += (
+                    f"\n# The recorder did not finish a batch within {_CLEAR_BATCH_TIMEOUT_S}s, so the purge"
+                    "\n# stopped. Run it again to clear the rest."
+                )
+            return {"yaml": summary, "count": cleared}
 
         _LOGGER.debug(
             "Orphaned statistics preview: %d found for prefix '%s'",
@@ -1164,14 +1180,17 @@ def create_orphaned_statistics_handler(
             prefix,
         )
         lines = [
-            f"# Found {total} orphaned entity record(s) for modem prefix '{prefix}'.",
-            "# These have no registered entity. They were likely left behind",
-            "# by a mode switch, channel rebonding (ID mode), or a prefix change.",
+            f"# Found {total} statistic ID(s) for modem prefix '{prefix}' with no entity.",
+            "# No integration has an entity with these IDs. They were likely left",
+            "# behind by a mode switch, channel rebonding (ID mode), or a prefix change.",
+            "#",
+            "# Purging clears their long-term statistics only. Recorded state history",
+            "# is not touched; the recorder removes it on its own schedule.",
             "#",
             "# To purge all of them: call this service again with execute: true.",
             "# WARNING: execute: true is permanent and cannot be undone.",
             "#",
-            "# Orphaned entities (not a runnable action):",
+            "# Orphaned statistic IDs (not a runnable action):",
             "#",
         ]
         for stat_id in orphaned:

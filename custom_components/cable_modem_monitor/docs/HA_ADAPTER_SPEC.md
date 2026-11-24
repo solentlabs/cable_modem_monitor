@@ -1336,6 +1336,15 @@ back to the settings-derived name only before any entity registers. On a
 renamed install this is a behavior change — both previously matched zero
 statistic IDs and silently did nothing.
 
+The prefix matches by name, so it also matches a second modem's entities
+and any other integration's entity named under `sensor.cable_modem_`.
+`orphaned_statistics` therefore lists an ID only when no entity of any
+integration owns it: no registry entry and no current state. Its purge
+clears long-term statistics only (`async_clear_statistics`), never states,
+and reports the IDs the recorder no longer lists rather than the number
+requested. A batch the recorder does not finish in time stops the purge
+with that count and a prompt to run it again.
+
 ### `request_refresh`
 
 Triggers an immediate modem data poll, bypassing connectivity backoff.

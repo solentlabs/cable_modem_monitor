@@ -2070,6 +2070,46 @@ def _make_mock_entry_minimal(mock_runtime_data):
     return entry
 
 
+def _set_ownership(hass: MagicMock, mock_er: MagicMock, registered: list[str], stateful: tuple[str, ...] = ()) -> None:
+    """Answer registry and state lookups: an ID is owned when registered or holding a state."""
+    # No probe sensor by unique ID, so the prefix comes from entry settings.
+    mock_er.return_value.async_get_entity_id.return_value = None
+    mock_er.return_value.async_get.side_effect = lambda eid: MagicMock() if eid in registered else None
+    hass.states.get.side_effect = lambda eid: MagicMock() if eid in stateful else None
+
+
+class _FakeRecorder:
+    """Recorder stub whose statistic list reflects what was cleared.
+
+    ``stuck`` IDs are accepted but never removed; ``hang_after`` batches
+    complete and the next never signals done.
+    """
+
+    def __init__(
+        self, hass: MagicMock, stat_ids: list[str], stuck: tuple[str, ...] = (), hang_after: int | None = None
+    ):
+        self._hass = hass
+        self._stats = list(stat_ids)
+        self._stuck = set(stuck)
+        self._hang_after = hang_after
+        self.batches: list[list[str]] = []
+        hass.loop.call_soon_threadsafe.side_effect = lambda fn: fn()
+        self.instance = MagicMock()
+        self.instance.async_clear_statistics.side_effect = self._clear
+
+    def _clear(self, ids: list[str], *, on_done=None) -> None:
+        if self._hang_after is not None and len(self.batches) >= self._hang_after:
+            return
+        self.batches.append(list(ids))
+        gone = set(ids) - self._stuck
+        self._stats = [sid for sid in self._stats if sid not in gone]
+        if on_done:
+            self._hass.loop.call_soon_threadsafe(on_done)
+
+    async def list_ids(self, _hass) -> list[dict[str, str]]:
+        return [{"statistic_id": sid} for sid in self._stats]
+
+
 async def test_list_orphaned_no_entry_raises() -> None:
     """No loaded entry → handler raises, recorder untouched."""
     hass = MagicMock()
@@ -2212,7 +2252,7 @@ async def test_list_orphaned_filtering(
         # prefix-boundary probe: a stat that starts with the prefix but lacks the _ separator
         + [{"statistic_id": f"sensor.{prefix}extra_suffix"}]
     )
-    registered = [MagicMock(entity_id=f"sensor.{prefix}_{s}") for s in active_suffixes]
+    registered = [f"sensor.{prefix}_{s}" for s in active_suffixes]
 
     with (
         patch(
@@ -2222,7 +2262,7 @@ async def test_list_orphaned_filtering(
         ),
         patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
     ):
-        mock_er.return_value.entities.get_entries_for_config_entry_id.return_value = registered
+        _set_ownership(hass, mock_er, registered)
         result = await handler(call)
 
     assert result["count"] == expected_count
@@ -2249,52 +2289,135 @@ async def test_list_orphaned_filtering(
 
 @pytest.mark.asyncio
 async def test_list_orphaned_execute_clears_statistics(mock_runtime_data) -> None:
-    """execute=True calls recorder async_clear_statistics in batches and returns purge count."""
+    """execute=True clears in batches of 100 and reports the IDs the recorder no longer lists."""
     entry = _make_mock_entry_minimal(mock_runtime_data)
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry]
     handler = create_orphaned_statistics_handler(hass)
-    call = _make_mock_call({"execute": True})
 
     prefix = _get_entity_prefix(entry)
     # 150 orphaned stats — spans two internal batches of 100
     orphaned_ids = sorted(f"sensor.{prefix}_ch_{i:03d}_power" for i in range(150))
-    stat_ids = [{"statistic_id": sid} for sid in orphaned_ids]
-
-    cleared_batches: list[list[str]] = []
-    # call_soon_threadsafe is mocked — make it invoke the callback immediately
-    hass.loop.call_soon_threadsafe.side_effect = lambda fn: fn()
-
-    def fake_async_clear_statistics(ids: list[str], *, on_done=None) -> None:
-        cleared_batches.append(list(ids))
-        if on_done:
-            hass.loop.call_soon_threadsafe(on_done)
-
-    mock_recorder = MagicMock()
-    mock_recorder.async_clear_statistics.side_effect = fake_async_clear_statistics
+    recorder = _FakeRecorder(hass, orphaned_ids)
 
     with (
-        patch(
-            "homeassistant.components.recorder.statistics.async_list_statistic_ids",
-            new_callable=AsyncMock,
-            return_value=stat_ids,
-        ),
+        patch("homeassistant.components.recorder.statistics.async_list_statistic_ids", side_effect=recorder.list_ids),
         patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
-        patch(
-            "custom_components.cable_modem_monitor.dev_tools.get_instance",
-            return_value=mock_recorder,
-        ),
+        patch("custom_components.cable_modem_monitor.dev_tools.get_instance", return_value=recorder.instance),
     ):
-        mock_er.return_value.entities.get_entries_for_config_entry_id.return_value = []
-        result = await handler(call)
+        _set_ownership(hass, mock_er, [])
+        result = await handler(_make_mock_call({"execute": True}))
 
     assert result["count"] == 150
-    assert "Purged 150" in result["yaml"]
-    # Two batches: first 100, then 50
-    assert len(cleared_batches) == 2
-    assert len(cleared_batches[0]) == 100
-    assert len(cleared_batches[1]) == 50
-    assert cleared_batches[0] + cleared_batches[1] == orphaned_ids
+    assert "Cleared statistics for 150 of 150" in result["yaml"]
+    assert [len(b) for b in recorder.batches] == [100, 50]
+    assert recorder.batches[0] + recorder.batches[1] == orphaned_ids
+
+
+# ┌─────────────────────────┬──────────────┬─────────┬────────────────────────────────────────────┐
+# │ case                    │ recorder     │ count   │ yaml says                                  │
+# ├─────────────────────────┼──────────────┼─────────┼────────────────────────────────────────────┤
+# │ an ID the recorder kept │ 1 stuck ID   │ 149     │ Cleared statistics for 149 of 150          │
+# │ second batch times out  │ hangs at 2nd │ 100     │ 100 of 150, did not finish, run again      │
+# └─────────────────────────┴──────────────┴─────────┴────────────────────────────────────────────┘
+#
+# fmt: off
+PURGE_OUTCOME_CASES = [
+    ("one_id_kept",        ("ch_000",), None, 149, ["Cleared statistics for 149 of 150"]),
+    ("second_batch_hangs", (),          1,    100, ["100 of 150", "did not finish", "Run it again"]),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "desc,stuck_suffixes,hang_after,expected_count,expected_text",
+    PURGE_OUTCOME_CASES,
+    ids=[c[0] for c in PURGE_OUTCOME_CASES],
+)
+async def test_list_orphaned_execute_reports_what_was_cleared(
+    mock_runtime_data,
+    desc: str,
+    stuck_suffixes: tuple[str, ...],
+    hang_after: int | None,
+    expected_count: int,
+    expected_text: list[str],
+) -> None:
+    """The reported count is what the recorder stopped listing, not what was requested."""
+    entry = _make_mock_entry_minimal(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+    handler = create_orphaned_statistics_handler(hass)
+
+    prefix = _get_entity_prefix(entry)
+    orphaned_ids = sorted(f"sensor.{prefix}_ch_{i:03d}_power" for i in range(150))
+    stuck = tuple(f"sensor.{prefix}_{s}_power" for s in stuck_suffixes)
+    recorder = _FakeRecorder(hass, orphaned_ids, stuck=stuck, hang_after=hang_after)
+
+    with (
+        patch("homeassistant.components.recorder.statistics.async_list_statistic_ids", side_effect=recorder.list_ids),
+        patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
+        patch("custom_components.cable_modem_monitor.dev_tools.get_instance", return_value=recorder.instance),
+        patch("custom_components.cable_modem_monitor.dev_tools._CLEAR_BATCH_TIMEOUT_S", 0.01),
+    ):
+        _set_ownership(hass, mock_er, [])
+        result = await handler(_make_mock_call({"execute": True}))
+
+    assert result["count"] == expected_count
+    for text in expected_text:
+        assert text in result["yaml"]
+
+
+# A statistic whose ID merely starts with this modem's prefix may belong to
+# another integration: someone names a Ping or template sensor "Cable Modem
+# ...". Only an ID that no entity owns is an orphan.
+#
+# ┌──────────────────────────────┬────────────┬───────┬─────────┐
+# │ case                         │ registered │ state │ orphan  │
+# ├──────────────────────────────┼────────────┼───────┼─────────┤
+# │ foreign registered entity    │ yes        │ yes   │ no      │
+# │ foreign registered, no state │ yes        │ no    │ no      │
+# │ YAML entity, no unique_id    │ no         │ yes   │ no      │
+# │ nothing owns it              │ no         │ no    │ yes     │
+# └──────────────────────────────┴────────────┴───────┴─────────┘
+#
+# fmt: off
+OWNERSHIP_CASES = [
+    ("foreign_registered",          True,  True,  False),
+    ("foreign_registered_no_state", True,  False, False),
+    ("yaml_entity_state_only",      False, True,  False),
+    ("nothing_owns_it",             False, False, True),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "desc,registered,has_state,is_orphan",
+    OWNERSHIP_CASES,
+    ids=[c[0] for c in OWNERSHIP_CASES],
+)
+async def test_list_orphaned_needs_no_owner_of_any_integration(
+    mock_runtime_data, desc: str, registered: bool, has_state: bool, is_orphan: bool
+) -> None:
+    """A colliding name owned by another integration is never listed or purged."""
+    entry = _make_mock_entry_minimal(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+    handler = create_orphaned_statistics_handler(hass)
+
+    prefix = _get_entity_prefix(entry)
+    colliding = f"sensor.{prefix}_round_trip_time"
+    recorder = _FakeRecorder(hass, [colliding])
+
+    with (
+        patch("homeassistant.components.recorder.statistics.async_list_statistic_ids", side_effect=recorder.list_ids),
+        patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
+        patch("custom_components.cable_modem_monitor.dev_tools.get_instance", return_value=recorder.instance),
+    ):
+        _set_ownership(hass, mock_er, [colliding] if registered else [], (colliding,) if has_state else ())
+        result = await handler(_make_mock_call({"execute": True}))
+
+    assert result["count"] == int(is_orphan), result["yaml"]
+    assert recorder.batches == ([[colliding]] if is_orphan else [])
 
 
 # A second modem's statistics are not this entry's orphans.
@@ -2318,19 +2441,6 @@ def _make_two_modem_entries(mock_runtime_data) -> tuple[MagicMock, MagicMock]:
     entry_b = _make_mock_entry(mock_runtime_data, entry_id="entry_b")
     entry_b.data = {CONF_ENTITY_PREFIX: EntityPrefix.MODEL}
     return entry_a, entry_b
-
-
-def _registry_lookup_by_entry(by_entry_id: dict[str, list[str]]):
-    """Registry stub that answers per config entry, as the real registry does.
-
-    A single ``return_value`` would hand every entry the same entities and
-    hide whether the caller scoped its lookup correctly.
-    """
-
-    def _lookup(entry_id: str) -> list[MagicMock]:
-        return [MagicMock(entity_id=eid) for eid in by_entry_id.get(entry_id, [])]
-
-    return _lookup
 
 
 @pytest.mark.asyncio
@@ -2359,9 +2469,7 @@ async def test_list_orphaned_excludes_a_second_modems_statistics(mock_runtime_da
         ),
         patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
     ):
-        mock_er.return_value.entities.get_entries_for_config_entry_id.side_effect = _registry_lookup_by_entry(
-            {"entry_a": [a_live], "entry_b": b_live}
-        )
+        _set_ownership(hass, mock_er, [a_live, *b_live])
         result = await handler(_make_mock_call())
 
     assert result["count"] == 1, "only entry A's own orphan is an orphan"
@@ -2380,39 +2488,20 @@ async def test_list_orphaned_execute_never_purges_a_second_modems_statistics(moc
     hass = MagicMock()
     hass.config_entries.async_entries.return_value = [entry_a, entry_b]
     handler = create_orphaned_statistics_handler(hass)
-    hass.loop.call_soon_threadsafe.side_effect = lambda fn: fn()
 
     a_orphan = f"sensor.{prefix_a}_ds_qam_ch_21_power"
     b_live = [f"sensor.{prefix_b}_ds_ch_1_power", f"sensor.{prefix_b}_ds_ch_2_power"]
-    stat_ids = [{"statistic_id": sid} for sid in [a_orphan, *b_live]]
-
-    cleared: list[str] = []
-
-    def fake_async_clear_statistics(ids: list[str], *, on_done=None) -> None:
-        cleared.extend(ids)
-        if on_done:
-            hass.loop.call_soon_threadsafe(on_done)
-
-    mock_recorder = MagicMock()
-    mock_recorder.async_clear_statistics.side_effect = fake_async_clear_statistics
+    recorder = _FakeRecorder(hass, [a_orphan, *b_live])
 
     with (
-        patch(
-            "homeassistant.components.recorder.statistics.async_list_statistic_ids",
-            new_callable=AsyncMock,
-            return_value=stat_ids,
-        ),
+        patch("homeassistant.components.recorder.statistics.async_list_statistic_ids", side_effect=recorder.list_ids),
         patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
-        patch(
-            "custom_components.cable_modem_monitor.dev_tools.get_instance",
-            return_value=mock_recorder,
-        ),
+        patch("custom_components.cable_modem_monitor.dev_tools.get_instance", return_value=recorder.instance),
     ):
-        mock_er.return_value.entities.get_entries_for_config_entry_id.side_effect = _registry_lookup_by_entry(
-            {"entry_a": [], "entry_b": b_live}
-        )
+        _set_ownership(hass, mock_er, b_live)
         result = await handler(_make_mock_call({"execute": True}))
 
+    cleared = [sid for batch in recorder.batches for sid in batch]
     assert cleared == [a_orphan], "purge reached another modem's history"
     assert result["count"] == 1
 
@@ -2438,7 +2527,7 @@ async def test_list_orphaned_preview_large_list_shows_execute_hint(mock_runtime_
         ),
         patch("homeassistant.helpers.entity_registry.async_get") as mock_er,
     ):
-        mock_er.return_value.entities.get_entries_for_config_entry_id.return_value = []
+        _set_ownership(hass, mock_er, [])
         result = await handler(call)
 
     assert result["count"] == 150
