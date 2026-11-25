@@ -4,5 +4,5 @@
 # the floor and on a pinned current Home Assistant.
 -r requirements-common.txt
 
-homeassistant==2026.11.2
-pytest-homeassistant==2026.11.2
+homeassistant==2026.11.3
+pytest-homeassistant==2026.11.3
