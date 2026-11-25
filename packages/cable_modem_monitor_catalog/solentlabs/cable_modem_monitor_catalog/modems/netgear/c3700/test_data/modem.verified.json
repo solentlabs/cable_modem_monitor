@@ -1,0 +1,95 @@
+{
+  "verified_at": "2026-11-25",
+  "version": "3.14.15-beta.9",
+  "config_entry": {
+    "title": "Netgear C3700 (192.168.0.1)",
+    "host": "192.168.0.1",
+    "manufacturer": "Netgear",
+    "model": "C3700",
+    "variant": null,
+    "protocol": "http",
+    "legacy_ssl": false,
+    "has_credentials": true,
+    "supports_icmp": true,
+    "supports_head": false,
+    "channel_identity": "number"
+  },
+  "core_diagnostics": {
+    "poll_duration": 1.3215281309967395,
+    "auth_failure_streak": 0,
+    "circuit_breaker_open": false,
+    "circuit_trip_signal": null,
+    "session_is_valid": true,
+    "auth_strategy": "basic",
+    "connectivity_streak": 0,
+    "connectivity_backoff_remaining": 0,
+    "stale_session_recovery_streak": 0,
+    "session_reuse_disabled": false,
+    "resource_fetches": [
+      {
+        "path": "/DocsisStatus.htm",
+        "duration_ms": 916.2,
+        "size_bytes": 40939,
+        "status_code": 200,
+        "content_type": "text/html"
+      },
+      {
+        "path": "/RouterStatus.htm",
+        "duration_ms": 222.2,
+        "size_bytes": 123403,
+        "status_code": 200,
+        "content_type": "text/html"
+      }
+    ],
+    "last_poll_at": "2026-11-25T23:39:11.664253+00:00",
+    "last_stub_body": {},
+    "system_info_fields_missing": [],
+    "system_info_fields_failed": {},
+    "login_page_drift": []
+  },
+  "data_coordinator": {
+    "last_update_success": true,
+    "update_interval": "0:10:00"
+  },
+  "health_coordinator": {
+    "last_update_success": true,
+    "update_interval": "0:00:30"
+  },
+  "modem_data": {
+    "connection_status": "online",
+    "collector_signal": "ok",
+    "health_status": "responsive",
+    "icmp_latency_ms": 182.675,
+    "tcp_latency_ms": 4.210248996969312,
+    "http_latency_ms": null,
+    "error": ""
+  },
+  "system_info": {
+    "docsis_status": "Operational",
+    "provisioned_speed_down": 600000000,
+    "provisioned_speed_up": 24000000,
+    "hardware_version": "C279T00-01",
+    "software_version": "V2.02.18",
+    "system_uptime": "116 days 14:52:32",
+    "downstream_channel_count": 8,
+    "upstream_channel_count": 4,
+    "total_corrected": 2363,
+    "total_uncorrected": 3178
+  },
+  "downstream_channels": [
+    {"lock_status": "locked", "channel_type": "qam", "channel_id": 4, "channel_number": 1, "modulation": "QAM256", "frequency": 363000000, "power": 5.7, "snr": 45.4, "corrected": 326, "uncorrected": 468},
+    {"lock_status": "locked", "channel_type": "qam", "channel_id": 7, "channel_number": 2, "modulation": "QAM256", "frequency": 381000000, "power": 5.7, "snr": 45.4, "corrected": 225, "uncorrected": 83},
+    {"lock_status": "locked", "channel_type": "qam", "channel_id": 2, "channel_number": 3, "modulation": "QAM256", "frequency": 351000000, "power": 5.9, "snr": 45.4, "corrected": 348, "uncorrected": 553},
+    {"lock_status": "locked", "channel_type": "qam", "channel_id": 9, "channel_number": 4, "modulation": "QAM256", "frequency": 393000000, "power": 6.0, "snr": 45.4, "corrected": 278, "uncorrected": 555},
+    {"lock_status": "locked", "channel_type": "qam", "channel_id": 5, "channel_number": 5, "modulation": "QAM256", "frequency": 369000000, "power": 5.6, "snr": 45.4, "corrected": 304, "uncorrected": 492},
+    {"lock_status": "locked", "channel_type": "qam", "channel_id": 6, "channel_number": 6, "modulation": "QAM256", "frequency": 375000000, "power": 5.6, "snr": 44.9, "corrected": 265, "uncorrected": 472},
+    {"lock_status": "locked", "channel_type": "qam", "channel_id": 8, "channel_number": 7, "modulation": "QAM256", "frequency": 387000000, "power": 5.6, "snr": 45.2, "corrected": 268, "uncorrected": 381},
+    {"lock_status": "locked", "channel_type": "qam", "channel_id": 10, "channel_number": 8, "modulation": "QAM256", "frequency": 399000000, "power": 5.8, "snr": 45.2, "corrected": 349, "uncorrected": 174}
+  ],
+  "upstream_channels": [
+    {"lock_status": "locked", "channel_type": "atdma", "channel_id": 41, "channel_number": 1, "frequency": 17800000, "symbol_rate": 5120000, "power": 49.5},
+    {"lock_status": "locked", "channel_type": "atdma", "channel_id": 42, "channel_number": 2, "frequency": 24200000, "symbol_rate": 5120000, "power": 49.2},
+    {"lock_status": "locked", "channel_type": "atdma", "channel_id": 43, "channel_number": 3, "frequency": 30600000, "symbol_rate": 5120000, "power": 49.7},
+    {"lock_status": "locked", "channel_type": "atdma", "channel_id": 44, "channel_number": 4, "frequency": 37000000, "symbol_rate": 5120000, "power": 48.7}
+  ]
+}

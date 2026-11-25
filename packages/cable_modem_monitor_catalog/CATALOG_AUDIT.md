@@ -2,7 +2,7 @@
 
 > Auto-generated. Run `scripts/generate_catalog_index.py` to refresh.
 
-**53 configurations supported** — 37 confirmed on real hardware, 16 awaiting verification.
+**53 configurations supported** — 38 confirmed on real hardware, 15 awaiting verification.
 
 ---
 
@@ -56,7 +56,6 @@ and share a diagnostics snapshot.
 |-------|-----------|------|---------|---------|
 | S34 | HNAP | Comcast, Cox, Spectrum, Xfinity | synthetic | not captured |
 | G54 | HTML | Cox, Spectrum, Xfinity | generated | n/a |
-| C3700 | HTML | Comcast, Cox, Spectrum | synthetic | not captured |
 | CM2000 | HTML | Comcast, Cox, Spectrum, Xfinity | reconstructed | captured |
 | CM2500 | HTML | Comcast, Cox, Spectrum | reconstructed | captured |
 | CM600 | HTML | Comcast, Cox, Spectrum, TWC | synthetic | not captured |
@@ -108,6 +107,7 @@ Entries with an open capability gap are listed above, not here.
 | MB7621 | HTML | Comcast, Cox, Spectrum, TWC, CableOne, RCN, Comcast Xfinity, Suddenlink, BrightHouse | — | captured |
 | MB8600 | HNAP | Comcast, Xfinity, Cox, Spectrum | synthetic | not captured |
 | MB8611 | HNAP | Comcast, Xfinity, Cox, Spectrum | synthetic | captured |
+| C3700 | HTML | Comcast, Cox, Spectrum | synthetic | not captured |
 | C6250 | HTML | Comcast | — | captured |
 | C7000v2 | HTML | Comcast | — | not captured |
 | CM1100 | HTML | Comcast | — | n/a |

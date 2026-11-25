@@ -46,6 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Netgear C3700 logs in with the challenge cookie.** Firmware
+  V2.02.18 refuses Basic credentials sent without the `XSRF_TOKEN`
+  cookie its first 401 sets, so setup failed with "credentials rejected"
+  even with the right password. The C3700 now uses the same login as the
+  C7000v2 and C6250.
 - **Orphaned Statistics never touches another integration's history, and
   says what it cleared.** It used to list any statistic whose ID started
   with the modem's prefix, so a sensor from another integration named
@@ -81,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   3.0, software AC01.02.003_072823_8200.03.07.735.CT, 34 downstream and 4
   upstream channels locked. Enter the modem's address without `http://`;
   setup picks HTTPS, and over HTTP the modem answers with its login page.
+- **Netgear C3700 confirmed on hardware.** Hardware C279T00-01, software
+  V2.02.18, 8 downstream and 4 upstream channels locked.
 
 ### Changed
 
