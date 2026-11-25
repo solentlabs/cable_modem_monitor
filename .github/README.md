@@ -186,6 +186,14 @@ On Home Assistant before 2026.11, in HACS open **Cable Modem Monitor**, click th
 
 <!-- markdownlint-disable MD033 -->
 <picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step0-add-dark.png">
+  <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step0-add.png" alt="Setup step 3: add modem, or add modem with custom config" width="420">
+</picture>
+<!-- markdownlint-enable MD033 --><br>
+<em>Step 3 — Add modem, or add modem with custom config</em>
+
+<!-- markdownlint-disable MD033 -->
+<picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step1-manufacturer-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step1-manufacturer.png" alt="Setup step 4: pick a manufacturer" width="420">
 </picture>
