@@ -2,9 +2,10 @@
 
 Channel Frequency sensors no longer have a ``state_class``.  Home
 Assistant raises a "no longer has a state class" Repairs warning for
-every entity that has long-term statistics but no ``state_class``, so
-the statistics recorded under the old class are cleared once.  The
-warnings clear on the recorder's next hourly statistics run.
+an entity that still has long-term statistics but no ``state_class``
+(the recorder's ``update_statistics_issues``), so the statistics
+recorded under the old class are cleared once at upgrade, leaving
+nothing to warn about.
 
 This is a minor-version step, not a ``v{N}_to_v{M}`` file, so the
 registry does not discover it; ``async_migrate_entry`` calls it.

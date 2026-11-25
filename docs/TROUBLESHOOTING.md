@@ -495,10 +495,10 @@ data:
 - **Settings → Repairs** lists one "no longer has a state class" warning per channel **Frequency** sensor, for example 32 on a 24x8 modem
 
 **Cause:**
-A channel's frequency is its slot in the channel plan, not a measurement, so the Frequency sensors have no `state_class` and feed no long-term statistics. Home Assistant warns about any sensor that has statistics recorded but no `state_class`. The upgrade clears those statistics once; the warnings then disappear on their own at the recorder's next hourly statistics run. The sensors keep their values and attributes.
+A channel's frequency is its slot in the channel plan, not a measurement, so the Frequency sensors have no `state_class` and feed no long-term statistics. Home Assistant warns about a sensor that still has statistics recorded but no `state_class`. The upgrade clears those statistics once, at startup, so an upgrade normally shows no warning. The sensors keep their values and attributes.
 
 **Solution:**
-Wait an hour after the upgrade. If a warning stays, the statistics came back, for example because an older version was reinstalled. Report it with diagnostics.
+A warning that appears means the old statistics are still there, most often because an older version was reinstalled after the upgrade: the clean-up runs only once. Report it with diagnostics.
 
 ---
 

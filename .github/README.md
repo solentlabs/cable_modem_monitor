@@ -19,10 +19,12 @@
 A custom Home Assistant integration that monitors your cable modem's signal quality, power levels and error rates, so line problems show up before they cause outages.
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/dashboard-screenshot-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard" width="500">
 </picture>
+</p>
 <!-- markdownlint-enable MD033 -->
 
 > **⭐ If you find this integration useful, please star this repo!**
@@ -74,36 +76,44 @@ A custom Home Assistant integration that monitors your cable modem's signal qual
 Track your cable modem's health with comprehensive dashboards and real-time monitoring:
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/downstream-power-levels-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/downstream-power-levels.png" alt="Downstream Power Levels" width="500">
-</picture>
-<!-- markdownlint-enable MD033 --><br>
+</picture><br>
 <em>Real-time power level monitoring across all downstream channels</em>
+</p>
+<!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/signal-to-noise-ratio-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/signal-to-noise-ratio.png" alt="Signal-to-Noise Ratio" width="500">
-</picture>
-<!-- markdownlint-enable MD033 --><br>
+</picture><br>
 <em>SNR tracking helps identify signal quality issues before they cause problems</em>
+</p>
+<!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/latency-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/latency.png" alt="Modem Latency Monitoring" width="500">
-</picture>
-<!-- markdownlint-enable MD033 --><br>
+</picture><br>
 <em>Latency monitoring for real-time health assessment: TCP always, ping and HTTP where the modem answers them</em>
+</p>
+<!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/corrected-errors-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/corrected-errors.png" alt="Corrected Errors" width="500">
-</picture>
-<!-- markdownlint-enable MD033 --><br>
+</picture><br>
 <em>Track corrected errors over time to spot developing line issues</em>
+</p>
+<!-- markdownlint-enable MD033 -->
 
 ---
 
@@ -185,36 +195,44 @@ On Home Assistant before 2026.11, in HACS open **Cable Modem Monitor**, click th
 7. Enter your modem's IP address (typically `192.168.100.1`) and credentials if required
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step0-add-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step0-add.png" alt="Setup step 3: add modem, or add modem with custom config" width="420">
-</picture>
-<!-- markdownlint-enable MD033 --><br>
+</picture><br>
 <em>Step 3 — Add modem, or add modem with custom config</em>
+</p>
+<!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step1-manufacturer-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step1-manufacturer.png" alt="Setup step 4: pick a manufacturer" width="420">
-</picture>
-<!-- markdownlint-enable MD033 --><br>
+</picture><br>
 <em>Step 4 — Pick a manufacturer, All, or Auto-detect</em>
+</p>
+<!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step2-modem-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step2-modem.png" alt="Setup step 5: select modem and channel naming" width="420">
-</picture>
-<!-- markdownlint-enable MD033 --><br>
+</picture><br>
 <em>Step 5 — Select your modem and channel naming</em>
+</p>
+<!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step3-connection-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/setup-step3-connection.png" alt="Setup step 7: connection details" width="420">
-</picture>
-<!-- markdownlint-enable MD033 --><br>
+</picture><br>
 <em>Step 7 — Enter connection details</em>
+</p>
+<!-- markdownlint-enable MD033 -->
 
 ### Options
 
@@ -228,10 +246,12 @@ After setup, configure via **Settings → Devices & Services → Cable Modem Mon
 Modem Model and Channel Identity are install-time choices, not editable here. See [Known Limitations](#known-limitations).
 
 <!-- markdownlint-disable MD033 -->
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/cable-modem-settings-dark.png">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/cable-modem-settings.png" alt="Cable Modem Settings dialog" width="420">
 </picture>
+</p>
 <!-- markdownlint-enable MD033 -->
 
 ---
