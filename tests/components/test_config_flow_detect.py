@@ -183,6 +183,22 @@ async def test_exactly_one_named_entry_gets_the_confirm_page_whatever_else_match
     assert result["description_placeholders"]["model"] == "Acme M4"
 
 
+async def test_confirm_page_escapes_the_unconfirmed_marker_inside_the_bold_name(hass: HomeAssistant):
+    """The description bolds ``{model}``; a raw trailing ``*`` would break the bold and render the asterisks."""
+    unconfirmed = ModemSummary(
+        manufacturer="Acme",
+        model="M7",
+        default_host=H1,
+        auth_strategy="none",
+        status="awaiting_verification",
+        path=FAKE_CATALOG / "acme" / "m7",
+    )
+    result: Any = await _start(hass, [_d(H1, models=[unconfirmed], page_names=[unconfirmed])])
+
+    assert result.get("step_id") == "detect_confirm"
+    assert result["description_placeholders"]["model"] == "Acme M7 \\*"
+
+
 async def test_two_named_entries_are_a_choice_not_a_confirmation(hass: HomeAssistant):
     result: Any = await _start(hass, [_d(H1, models=[M1, M2, M3], page_names=[M2, M3])])
 

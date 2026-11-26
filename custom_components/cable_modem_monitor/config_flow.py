@@ -44,7 +44,7 @@ from solentlabs.cable_modem_monitor_core.detection import detect
 from solentlabs.cable_modem_monitor_core.orchestration.events import DetectionChosen
 from solentlabs.cable_modem_monitor_core.orchestration.logging import log_event
 
-from .config_flow_detect import DetectionPlan, Tier1, plan_detection
+from .config_flow_detect import DetectionPlan, Tier1, markdown_literal, plan_detection
 from .config_flow_helpers import (
     CustomAttempt,
     async_brand_icon_url,
@@ -531,7 +531,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         return self.async_show_form(
             step_id="detect_confirm",
             description_placeholders={
-                "model": build_model_display_name(candidate.summary),
+                "model": markdown_literal(build_model_display_name(candidate.summary)),
                 "host": host,
             },
             data_schema=vol.Schema(

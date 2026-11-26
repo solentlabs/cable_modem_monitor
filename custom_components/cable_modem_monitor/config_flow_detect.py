@@ -19,6 +19,8 @@ MAX_PICK_LIST = 4
 Route = Literal["confirm", "pick", "filtered_models", "manufacturers", "no_match"]
 
 _UNSAFE = re.compile(r"[`\x00-\x1f\x7f]")
+# Markdown punctuation that could open or close emphasis, code or a link.
+_MARKDOWN = re.compile(r"([\\`*_\[\]])")
 
 
 @dataclass(frozen=True)
@@ -76,6 +78,11 @@ def plan_detection(detections: list[Detection]) -> DetectionPlan:
 def code_span(text: str) -> str:
     """Quote device-supplied text as one markdown code span so it cannot render as markup."""
     return f"`{_UNSAFE.sub(' ', text).strip()}`"
+
+
+def markdown_literal(text: str) -> str:
+    """Backslash-escape ``text`` so markdown renders it as written, e.g. the unconfirmed ``*`` marker."""
+    return _MARKDOWN.sub(r"\\\1", text)
 
 
 def describe_observations(detections: list[Detection]) -> str:
