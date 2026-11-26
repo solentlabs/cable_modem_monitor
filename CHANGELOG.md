@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cookie its first 401 sets, so setup failed with "credentials rejected"
   even with the right password. The C3700 now uses the same login as the
   C7000v2 and C6250.
+- **The Netgear C3700's Restart button reboots the modem.** It posted
+  without the restart page's security token, so the modem refused it and
+  did not reboot, while Home Assistant reported success. It now loads that
+  page first and sends the page's form, as the C6250 does.
 - **Auto-detect's "Modem Found" page shows an unconfirmed modem's name in
   bold.** The `*` that marks a modem not yet confirmed on hardware broke
   the bold, so the page showed stray asterisks around the name.
