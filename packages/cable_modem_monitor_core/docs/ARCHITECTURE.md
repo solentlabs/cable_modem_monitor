@@ -1034,10 +1034,12 @@ the capture:
   and the MB7621's password fields.
 
 **What replay does not verify: the request line past method, path,
-and login query-param names.** A login POST must carry the query-param
-*names* the capture recorded at that path (values are never compared —
-a dynamic `?id=` changes per page load), which is what makes a missing
-parameter fail the replay. Everything else inside the request is
+and query-param names.** A login POST, and a restart, must carry the
+query-param *names* the capture recorded at that path (values are never
+compared — a dynamic `?id=` changes per page load), which is what makes
+a missing parameter fail the replay. The restart check is what fails a
+C3700 restart that drops the RouterStatus form id, which the firmware
+refuses. Everything else inside the request is
 invisible: a header, a form-encoded field (outside a restart's body,
 above), or a query value that Core omits or invents matches the
 capture regardless. Where a modem

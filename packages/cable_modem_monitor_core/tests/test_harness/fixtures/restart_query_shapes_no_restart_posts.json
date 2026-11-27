@@ -1,0 +1,43 @@
+{
+  "_description": "Other paths and methods do not contribute: a GET at the restart path, a POST elsewhere",
+  "restart_method": "POST",
+  "restart_endpoint": "/goform/RouterStatus",
+  "expected_shapes": [],
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/goform/RouterStatus?id=1"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {
+          "text": ""
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/other.cgi?x=1",
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "text": "buttonSelect=2"
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {
+            "name": "Location",
+            "value": "http://192.168.100.1/Reboot.htm"
+          }
+        ],
+        "content": {
+          "text": ""
+        }
+      }
+    }
+  ]
+}

@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   placeholder now fails when the config loads, so a custom config shows
   the reason at its test step instead of reporting raw uptime text. Every
   catalog modem already declares one.
+- **The test harness fails a restart that drops a recorded query
+  parameter.** A restart must carry the query-parameter names its capture
+  recorded, as a login already must, so a C3700 restart without the
+  RouterStatus form id fails its replay instead of receiving the captured
+  reboot answer.
 - **The Marketplace also lists the integration under Monitoring.** The
   manifest adds the `computers_network.monitoring` category after
   `computers_network.routers_network`, which stays the primary one.

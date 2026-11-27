@@ -1,0 +1,45 @@
+{
+  "_description": "A restart POST to a bare path records the empty shape",
+  "restart_method": "POST",
+  "restart_endpoint": "/goform/RouterStatus",
+  "expected_shapes": [
+    []
+  ],
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/RouterStatus.htm"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {
+          "text": "<form action='/goform/RouterStatus?id=111'></form>"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/goform/RouterStatus",
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "text": "buttonSelect=2"
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {
+            "name": "Location",
+            "value": "http://192.168.100.1/Reboot.htm"
+          }
+        ],
+        "content": {
+          "text": ""
+        }
+      }
+    }
+  ]
+}

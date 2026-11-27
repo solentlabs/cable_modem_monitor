@@ -26,6 +26,7 @@ from .routes import (
     build_form_bodies,
     build_json_body_keys,
     build_login_query_shapes,
+    build_query_shapes,
     build_routes,
     normalize_path,
     unrecorded_body_keys,
@@ -293,16 +294,22 @@ class _MockHandler(BaseHTTPRequestHandler):
         # the response the firmware only gave the ?id= request, which is
         # how a missing query parameter stayed green for four months
         # (#189) — the query-string edition of the #82 body-key rule.
-        if method == "POST" and path == server.login_action and server.login_query_shapes:
-            sent = frozenset(parse_qs(query, keep_blank_values=True))
-            if sent not in server.login_query_shapes:
-                captured = " | ".join(
-                    ",".join(sorted(shape)) or "(none)" for shape in sorted(server.login_query_shapes, key=sorted)
-                )
-                self._fail_request(
-                    f"login POST query params not in the capture: "
-                    f"sent [{','.join(sorted(sent)) or '(none)'}], captured [{captured}]"
-                )
+        if method == "POST" and path == server.login_action:
+            mismatch = _query_shape_mismatch(server.login_query_shapes, query)
+            if mismatch:
+                self._fail_request(f"login POST query params not in the capture: {mismatch}")
+                return True
+
+        # The same rule for the declared restart: a C3700 restart that drops
+        # the RouterStatus form id is refused by the firmware, and tier-3
+        # lookup would otherwise hand it the captured reboot answer. A restart
+        # sharing the login endpoint is left to the login rule above.
+        if server.auth_handler.is_restart_request(method, path) and not server.auth_handler.is_login_request(
+            method, path
+        ):
+            mismatch = _query_shape_mismatch(server.restart_query_shapes, query)
+            if mismatch:
+                self._fail_request(f"restart query params not in the capture: {mismatch}")
                 return True
 
         return False
@@ -341,6 +348,15 @@ class _MockHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         """Suppress default stderr logging."""
         _logger.debug(format, *args)
+
+
+def _query_shape_mismatch(shapes: frozenset[frozenset[str]], query: str) -> str:
+    """Describe a query whose param names match no captured shape; ``""`` when one matches or none was captured."""
+    sent = frozenset(parse_qs(query, keep_blank_values=True))
+    if not shapes or sent in shapes:
+        return ""
+    captured = " | ".join(",".join(sorted(shape)) or "(none)" for shape in sorted(shapes, key=sorted))
+    return f"sent [{','.join(sorted(sent)) or '(none)'}], captured [{captured}]"
 
 
 def _find_route(
@@ -572,6 +588,10 @@ class HARMockServer(HTTPServer):
         self.json_body_keys = build_json_body_keys(har_entries)
         self.form_bodies = build_form_bodies(har_entries)
         self.login_query_shapes = build_login_query_shapes(har_entries, self.login_action)
+        self.restart_query_shapes = build_query_shapes(
+            har_entries,
+            lambda method, url: self.auth_handler.is_restart_request(method, normalize_path(urlparse(url).path)),
+        )
         self.login_page = self.auth_handler.login_page
         self.token_prefix = self.auth_handler.token_prefix
         self.post_login_endpoints = _extract_post_login_endpoints(modem_config)

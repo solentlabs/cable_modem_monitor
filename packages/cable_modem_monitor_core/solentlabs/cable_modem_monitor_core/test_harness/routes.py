@@ -9,6 +9,7 @@ import base64
 import contextlib
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import parse_qs, parse_qsl, urljoin, urlparse
@@ -270,15 +271,23 @@ def build_login_query_shapes(
     if not login_path:
         return frozenset()
     norm = normalize_path(login_path)
+    return build_query_shapes(
+        har_entries, lambda method, url: method == "POST" and normalize_path(urlparse(url).path) == norm
+    )
+
+
+def build_query_shapes(
+    har_entries: list[dict[str, Any]],
+    matches: Callable[[str, str], bool],
+) -> frozenset[frozenset[str]]:
+    """Query-param name sets of the captured requests ``matches(method, url)`` selects."""
     shapes: set[frozenset[str]] = set()
     for entry in har_entries:
         request = entry.get("request", {})
-        if request.get("method", "GET").upper() != "POST":
+        url = str(request.get("url", ""))
+        if not matches(str(request.get("method", "GET")).upper(), url):
             continue
-        parsed = urlparse(request.get("url", ""))
-        if normalize_path(parsed.path) != norm:
-            continue
-        shapes.add(frozenset(parse_qs(parsed.query, keep_blank_values=True)))
+        shapes.add(frozenset(parse_qs(urlparse(url).query, keep_blank_values=True)))
     return frozenset(shapes)
 
 
