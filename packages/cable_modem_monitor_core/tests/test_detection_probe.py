@@ -553,6 +553,29 @@ def test_candidates_rank_the_entry_whose_config_signals_are_in_the_reply() -> No
     assert_event_emitted(events, DetectionMatched, host=site.host, signals=["/check.jst"], candidates=2)
 
 
+def test_a_signal_several_candidates_share_is_logged_once() -> None:
+    """Entries of one firmware family share a signal; the log names what the reply showed, once each."""
+    with serve() as site:
+        site.routes["/"] = Reply(
+            headers={"Content-Type": "text/html", "Set-Cookie": "XSRF_TOKEN=1; Path=/"},
+            body=b'<form action="/check.jst"><input type="text">',
+        )
+        catalog = [
+            ModemSummary(
+                manufacturer="Acme",
+                model=model,
+                default_host=site.host,
+                landing_signals=LandingSignals(paths, ("XSRF_TOKEN",)),
+            )
+            for model, paths in (("One", ()), ("Two", ("/check.jst",)), ("Three", ()))
+        ]
+
+        with capture_events() as events:
+            detect(catalog, timeout=TIMEOUT)
+
+    assert_event_emitted(events, DetectionMatched, signals=["XSRF_TOKEN", "/check.jst"], candidates=3)
+
+
 def test_a_login_form_removes_a_no_auth_entry_from_the_candidates() -> None:
     with serve() as site:
         site.routes["/"] = Reply(headers={"Content-Type": "text/html"}, body=b'<input type="password" name="pw">')

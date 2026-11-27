@@ -340,7 +340,8 @@ def detect(summaries: list[ModemSummary], *, timeout: float = 3.0) -> list[Detec
                 models=[f"{s.manufacturer} {s.model}" for s in match.models],
                 buckets=match.buckets,
                 matched=match.matched,
-                signals=[signal for c in candidates for signal in c.signals],
+                # One firmware family's entries share signals; name each once.
+                signals=list(dict.fromkeys(signal for c in candidates for signal in c.signals)),
                 candidates=len(candidates),
             ),
         )
