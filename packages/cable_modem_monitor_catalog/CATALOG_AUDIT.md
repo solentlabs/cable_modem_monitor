@@ -107,7 +107,7 @@ Entries with an open capability gap are listed above, not here.
 | MB7621 | HTML | Comcast, Cox, Spectrum, TWC, CableOne, RCN, Comcast Xfinity, Suddenlink, BrightHouse | — | captured |
 | MB8600 | HNAP | Comcast, Xfinity, Cox, Spectrum | synthetic | not captured |
 | MB8611 | HNAP | Comcast, Xfinity, Cox, Spectrum | synthetic | captured |
-| C3700 | HTML | Comcast, Cox, Spectrum | synthetic | not captured |
+| C3700 | HTML | Comcast, Cox, Spectrum | hybrid | captured |
 | C6250 | HTML | Comcast | — | captured |
 | C7000v2 | HTML | Comcast | — | not captured |
 | CM1100 | HTML | Comcast | — | n/a |
