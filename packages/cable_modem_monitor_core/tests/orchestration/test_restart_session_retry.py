@@ -75,6 +75,7 @@ def _action(method: str = "POST") -> MagicMock:
     action.params = {"restart": "1"}
     action.json_body = None
     action.headers = None
+    action.refused = None
     return action
 
 

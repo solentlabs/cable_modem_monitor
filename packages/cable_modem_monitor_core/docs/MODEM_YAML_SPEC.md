@@ -1419,6 +1419,36 @@ actions:
 | `action_auth` | AuthConfig | no | Per-action auth config. When present, a fresh session is created, authenticated with the given strategy, the action is executed on that temporary session, and the session is discarded. The collector's session is untouched. Any auth strategy is valid. |
 | `port` | int (1–65535) | no | Port for the action's request and its `action_auth` login, in place of the configured modem URL's port; the host is unchanged. For firmware that serves the action from a second web server, such as an admin GUI on its own port with its own login. |
 | `scheme` | `http` \| `https` | no | Scheme for the action's request and its `action_auth` login, in place of the configured modem URL's scheme. For a second web server that speaks plain HTTP while the main one is reached over HTTPS: setup picks one scheme for the modem, and a second port may not serve it. A port written in the configured URL stays, except the default of the scheme being replaced (80 for `http`, 443 for `https`), which goes with it. |
+| `refused` | map | no | How the firmware answers an action it refuses without an error status. `redirect`: path substring of the `Location` a refusing 3xx carries. A response matching it is a refused action. Unset: every status below 400 is success. See Refusal detection below. |
+
+**Refusal detection.** Without `refused`, an action answered with any
+status below 400 succeeded, and a dropped connection counts as sent
+because the reboot itself drops it. Some firmware refuses with a
+redirect instead: the Netgear C3700 answers a restart that lacks its
+form's security token with 302 to `/ErrorMsg.htm` and does not reboot,
+while the accepted restart answers 302 to `/Reboot.htm`. Declaring
+
+```yaml
+    refused:
+      redirect: "/ErrorMsg.htm"
+```
+
+makes that answer a refused action: the restart fails and opens no
+recovery window (ORCHESTRATION_USE_CASES.md UC-89), and a refused
+logout keeps the local session (UC-06). `redirect` is matched against
+the path of the `Location` header, which the C3700 sends as an
+absolute URL.
+
+The block names the refusal, never the success page, on purpose. It can
+only turn an observed refusal into a failure: if new firmware moves its
+error page, the action falls back to the default rather than reporting
+a working restart as failed. A success-page criterion would fail the
+other way, which is why login's `success.redirect` carries the
+firmware-drift warning in [form](#form). A firmware that refuses with
+an error body under 200 would add a body criterion to the same block,
+not a second field. Declare `refused` only from a capture that shows the
+refusal, and cite it in `sources.restart_action`; the intake pipeline
+does not propose it.
 
 A restart served from a second port logs in there with `action_auth`,
 using the same username and password as the main login:

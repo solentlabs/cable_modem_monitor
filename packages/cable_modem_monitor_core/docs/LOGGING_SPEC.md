@@ -299,7 +299,7 @@ Fields — `RecoveryObserverException`: `model`, `exc_type: str`
 
 Fields — `ActionStarted` / `ActionCompleted` / `ActionConnectionLost`:
 `model`, `transport: str` (`"hnap"` / `"http"` / `"cbn"` / `"json_rpc"`), `action_name: str`
-Fields — `ActionCompleted`: adds `status_code: int | None`, `result: str`
+Fields — `ActionCompleted`: adds `status_code: int | None`, `result: str`. For `http`, `result` is `ok`, `error` (status 400 or above) or `refused` (a redirect matching the action's declared `refused.redirect`)
 Fields — `ActionFailed`: `model`, `transport: str`, `action_name: str`, `reason: str`
 Fields — `ActionPreFetchFailed`: `model`, `transport: str`, `action_name: str`,
 `reason: str`, `fallback_endpoint: str | None`

@@ -35,6 +35,7 @@ def _make_action(
     action.params = params
     action.json_body = json_body
     action.headers = headers
+    action.refused = None
     return action
 
 

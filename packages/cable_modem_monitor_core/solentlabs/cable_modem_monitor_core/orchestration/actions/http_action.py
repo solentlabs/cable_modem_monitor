@@ -20,6 +20,7 @@ import logging
 import re
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 import requests
 import requests.cookies
@@ -129,6 +130,8 @@ def execute_http_action(
                 timeout=timeout,
                 allow_redirects=False,
             )
+        refused_to = _declared_refusal(action, resp)
+        succeeded = resp.ok and not refused_to
         log_event(
             _logger,
             ActionCompleted(
@@ -136,16 +139,17 @@ def execute_http_action(
                 transport="http",
                 action_name=action_name,
                 status_code=resp.status_code,
-                result="ok" if resp.ok else "error",
+                result="refused" if refused_to else ("ok" if resp.ok else "error"),
                 level=level,
             ),
         )
-        # A status the modem refused is a refused action. Only a lost
-        # connection is read as success, and only because the reboot
-        # itself is what drops it.
+        # A status the modem refused is a refused action, and so is a redirect
+        # to the refusal page the entry declares. Only a lost connection is
+        # read as success, and only because the reboot itself is what drops it.
+        target = f" to {refused_to}" if refused_to else ""
         return ActionResult(
-            success=resp.ok,
-            message=f"Action {'completed' if resp.ok else 'refused'} with status {resp.status_code}",
+            success=succeeded,
+            message=f"Action {'completed' if succeeded else 'refused'} with status {resp.status_code}{target}",
             details={"status_code": resp.status_code},
             # The data path's stale-session verdict (LOAD_AUTH); any other status says nothing about the session.
             session_refused=resp.status_code in (401, 403),
@@ -157,6 +161,14 @@ def execute_http_action(
             message="Action sent (connection lost)",
             connection_lost=True,
         )
+
+
+def _declared_refusal(action: HttpAction, resp: requests.Response) -> str:
+    """The ``Location`` path of a 3xx matching the action's declared refusal; ``""`` otherwise."""
+    if action.refused is None or not 300 <= resp.status_code < 400:
+        return ""
+    location_path = urlparse(resp.headers.get("Location", "")).path
+    return location_path if location_path and action.refused.redirect in location_path else ""
 
 
 def _resolve_endpoint(

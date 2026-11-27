@@ -59,7 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Netgear C3700's Restart button reboots the modem.** It posted
   without the restart page's security token, so the modem refused it and
   did not reboot, while Home Assistant reported success. It now loads that
-  page first and sends the page's form, as the C6250 does.
+  page first and sends the page's form, as the C6250 does. If the modem
+  still refuses a restart, Home Assistant now reports the failure: an
+  HTTP action can declare the page its firmware redirects a refusal to
+  (`refused.redirect`), and the C3700 declares `/ErrorMsg.htm`.
 - **Auto-detect's "Modem Found" page shows an unconfirmed modem's name in
   bold.** The `*` that marks a modem not yet confirmed on hardware broke
   the bold, so the page showed stray asterisks around the name.

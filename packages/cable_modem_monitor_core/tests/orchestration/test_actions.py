@@ -121,6 +121,78 @@ class TestExecuteHttpAction:
         assert result.success is True
 
 
+# ┌───────────────┬────────┬────────────────────────────────────┬─────────┬───────────────────────────────────┐
+# │ refused       │ status │ Location                           │ success │ description                       │
+# ├───────────────┼────────┼────────────────────────────────────┼─────────┼───────────────────────────────────┤
+# │ (unset)       │ 302    │ http://192.168.0.1:80/ErrorMsg.htm │ True    │ undeclared: any 3xx is success    │
+# │ /ErrorMsg.htm │ 302    │ http://192.168.0.1:80/ErrorMsg.htm │ False   │ absolute Location, refusal path   │
+# │ /ErrorMsg.htm │ 302    │ /ErrorMsg.htm                      │ False   │ relative Location, refusal path   │
+# │ /ErrorMsg.htm │ 302    │ http://192.168.0.1:80/Reboot.htm   │ True    │ other redirect is success         │
+# │ /ErrorMsg.htm │ 302    │ (none)                             │ True    │ 3xx without Location is success   │
+# │ /ErrorMsg.htm │ 200    │ /ErrorMsg.htm                      │ True    │ only a 3xx is judged              │
+# │ /ErrorMsg.htm │ 500    │ (none)                             │ False   │ error status still fails          │
+# └───────────────┴────────┴────────────────────────────────────┴─────────┴───────────────────────────────────┘
+#
+# fmt: off
+REFUSED_REDIRECT_CASES = [
+    # (refused,         status, location,                              success, description)
+    (None,              302,    "http://192.168.0.1:80/ErrorMsg.htm",  True,    "undeclared: any 3xx is success"),
+    ("/ErrorMsg.htm",   302,    "http://192.168.0.1:80/ErrorMsg.htm",  False,   "absolute Location, refusal path"),
+    ("/ErrorMsg.htm",   302,    "/ErrorMsg.htm",                       False,   "relative Location, refusal path"),
+    ("/ErrorMsg.htm",   302,    "http://192.168.0.1:80/Reboot.htm",    True,    "other redirect is success"),
+    ("/ErrorMsg.htm",   302,    None,                                  True,    "3xx without Location is success"),
+    ("/ErrorMsg.htm",   200,    "/ErrorMsg.htm",                       True,    "only a 3xx is judged"),
+    ("/ErrorMsg.htm",   500,    None,                                  False,   "error status still fails"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "refused,status,location,success,desc",
+    REFUSED_REDIRECT_CASES,
+    ids=[c[4] for c in REFUSED_REDIRECT_CASES],
+)
+def test_declared_refusal_redirect(
+    refused: str | None, status: int, location: str | None, success: bool, desc: str
+) -> None:
+    """A 3xx to the declared refusal page fails the action; anything else keeps today's verdict."""
+    session = MagicMock(spec=requests.Session)
+    resp = MagicMock()
+    resp.status_code = status
+    resp.ok = status < 400
+    resp.headers = {"Location": location} if location else {}
+    session.request.return_value = resp
+    fields: dict[str, Any] = {"refused": {"redirect": refused}} if refused else {}
+    action = HttpAction.model_validate({"type": "http", "method": "POST", "endpoint": "/goform/RouterStatus", **fields})
+
+    result = execute_http_action(session, "http://192.168.0.1", action)
+
+    assert result.success is success, desc
+    assert result.details["status_code"] == status
+
+
+def test_declared_refusal_keeps_a_dropped_connection_as_sent() -> None:
+    """The refusal check reads an answer; a reboot that drops the connection gave none."""
+    session = MagicMock(spec=requests.Session)
+    session.request.side_effect = requests.ConnectionError("reset")
+    action = HttpAction.model_validate(
+        {"type": "http", "method": "POST", "endpoint": "/goform/RouterStatus", "refused": {"redirect": "/ErrorMsg.htm"}}
+    )
+
+    result = execute_http_action(session, "http://192.168.0.1", action)
+
+    assert result.success is True
+    assert result.connection_lost is True
+
+
+def test_refused_block_must_name_a_redirect() -> None:
+    """A refusal block that names nothing would check nothing while reading as configured."""
+    with pytest.raises(ValueError, match="redirect"):
+        HttpAction.model_validate(
+            {"type": "http", "method": "POST", "endpoint": "/goform/RouterStatus", "refused": {"redirect": ""}}
+        )
+
+
 class _RecordingServer(HTTPServer):
     """Local server that records each path it serves."""
 

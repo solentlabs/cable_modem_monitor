@@ -157,8 +157,9 @@ only one authenticated session.
 - Session is released (modem's web UI is accessible to user)
 - `session_is_valid` may be False after logout (strategy-dependent)
 - If logout fails, collection still succeeds (logout is best-effort)
-- A refused logout (non-2xx) keeps the local session — the modem still
-  holds it, so the next poll reuses the cookie instead of orphaning it
+- A refused logout (non-2xx, or a redirect matching the logout's declared
+  `refused.redirect`) keeps the local session — the modem still holds it,
+  so the next poll reuses the cookie instead of orphaning it
 
 ---
 
@@ -1180,13 +1181,14 @@ is a no-op, because the vote opens a window only when none is active.
 **Preconditions:** `actions.restart` is declared. The user presses
 restart. Nothing raises: the modem answers, but it answers no.
 
-Two ways this arrives, both returning `ActionResult(success=False)`
+Three ways this arrives, all returning `ActionResult(success=False)`
 rather than an exception:
 
 | Step | Action | Observable |
 |------|--------|-----------|
 | 1 | `actions.restart` declares `action_auth` and the per-action login is refused (bad or missing credentials → HTTP 401). The command is never sent. | ERROR log: `Restart command failed [MODEL] — Per-action auth failed: Login returned HTTP 401` |
 | 2 | Or the command itself is sent and the modem answers 4xx/5xx. | ERROR log: `Restart command failed [MODEL] — Action refused with status 401` |
+| 3 | Or the modem answers a redirect whose `Location` path contains the restart's declared `refused.redirect` (MODEM_YAML_SPEC § Action schema — `type: http`). | ERROR log: `Restart command failed [MODEL] — Action refused with status 302 to /ErrorMsg.htm` |
 
 **Assertions:**
 

@@ -20,6 +20,8 @@ actions:
       enable_apmode: "0"
       wantype: dhcp
     pre_fetch_url: /RouterStatus.htm
+    refused:
+      redirect: /ErrorMsg.htm
 
 hardware:
   docsis_version: "3.0"
@@ -40,9 +42,9 @@ sources:
     "test_data/modem.har entry 236, maintainer restart recording of the same C3700 (2026-11-27,
     fw V2.02.18): after a /RouterStatus.htm pre-fetch, the form's POST to
     /goform/RouterStatus?id=N with its four hidden fields was answered 302 to /Reboot.htm and
-    the unit rebooted. Maintainer live test (2026-11-26; raw records not committed): POST
-    /goform/RouterStatus with buttonSelect=2 alone was answered 302 to /ErrorMsg.htm (security
-    token expired) and the unit did not reboot"
+    the unit rebooted. Refusal (refused.redirect): maintainer live test (2026-11-26) and the
+    2026-11-27 recording (raw records not committed): POST /goform/RouterStatus with no form id
+    was answered 302 to /ErrorMsg.htm (security token expired) and the unit did not reboot"
   chipset: "[BCM3383 Datasheet](https://www.prnewswire.com/news-releases/broadcom-launches-gigabit-docsis-cable-gateway-family-186004842.html)"
   detection_hints: "Maintainer verified"
   release_date: "[NETGEAR C3700 product page, Wayback first capture 2014-03-19](https://web.archive.org/web/20140319021052/http://www.netgear.com/home/products/networking/cable-modems-routers/C3700.aspx) (page footer © 1996-2014). CableLabs lists a C3700_3000 certification in 2013 (wave 99, [CableLabs list](https://web.archive.org/web/20260216183300/https://www.cablelabs.com/wp-content/uploads/2013/10/Certified_Products.pdf)); 2014 is the year the retail page first appears."

@@ -12,6 +12,13 @@ from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, model_val
 from .auth import AuthConfig
 
 
+class ActionRefusal(BaseModel):
+    """How firmware answers an action it refuses without an error status. See MODEM_YAML_SPEC.md § Refusal detection."""
+
+    model_config = ConfigDict(extra="forbid")
+    redirect: str = Field(min_length=1)
+
+
 class HttpAction(BaseModel):
     """Standard HTTP request action."""
 
@@ -30,6 +37,7 @@ class HttpAction(BaseModel):
     pre_fetch_url: str = ""
     endpoint_pattern: str = ""
     action_auth: AuthConfig | None = None
+    refused: ActionRefusal | None = None
 
     @model_validator(mode="after")
     def _params_and_json_body_exclusive(self) -> HttpAction:
