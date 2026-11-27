@@ -10,7 +10,6 @@
 <!-- Build Status -->
 [![GitHub Actions](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)
 [![CodeQL](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/codeql.yml/badge.svg)](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/codeql.yml)
-[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 <!-- Meta -->
 [![AI Assisted](https://img.shields.io/badge/AI-Claude%20Assisted-5A67D8.svg)](https://claude.ai)
