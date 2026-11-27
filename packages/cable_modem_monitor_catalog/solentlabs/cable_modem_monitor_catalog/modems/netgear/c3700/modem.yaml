@@ -61,7 +61,9 @@ isps:
   - Spectrum
 
 notes: |
-  Combo modem/router device with 24x8 channel bonding (DOCSIS 3.0).
+  Combo modem/router device with 8x4 channel bonding (DOCSIS 3.0), per the
+  NETGEAR C3700 product page (Wayback capture 2014-03-19, cited under
+  sources.release_date): "Modem 8x4 CableLabs certified DOCSIS 3.0".
   Multi-page parsing: DocsisStatus.htm for channel data, RouterStatus.htm
   for system info. Channel data in pipe-delimited JavaScript:
   InitDsTableTagValue() and InitUsTableTagValue().
